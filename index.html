@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classroom Economy App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CE</div>
+        <div>
+          <div class="brand-title">Classroom Economy</div>
+          <div class="brand-subtitle">Student app shell</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="profile">Student Profile</button>
+        <button class="nav-item" data-view="store">Store Kiosk</button>
+        <button class="nav-item" data-view="portfolio">Stock Portfolio</button>
+        <button class="nav-item" data-view="trade">Stock Trade</button>
+        <button class="nav-item" data-view="stockProfile">Stock Profile</button>
+        <button class="nav-item" data-view="rating">Analyst Rating</button>
+      </nav>
+      <div class="sidebar-card">
+        <div class="eyebrow">Connection mode</div>
+        <strong>Mock data</strong>
+        <p>Ready to connect to Apps Script when the backend endpoint is deployed.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Student dashboard</div>
+          <h1 id="pageTitle">Student Profile</h1>
+        </div>
+        <div class="identity-card">
+          <label for="globalCardId">Card ID</label>
+          <select id="globalCardId"></select>
+        </div>
+      </header>
+
+      <section id="profile" class="view active"></section>
+      <section id="store" class="view"></section>
+      <section id="portfolio" class="view"></section>
+      <section id="trade" class="view"></section>
+      <section id="stockProfile" class="view"></section>
+      <section id="rating" class="view"></section>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
