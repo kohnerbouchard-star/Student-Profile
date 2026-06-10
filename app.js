@@ -109,7 +109,7 @@ async function handleLogin(event) {
     mergeSnapshot(result.snapshot || {});
 
     if (result.profile) {
-      state.profile = result.profile;
+      state.profile = normalizeProfile(result.profile);
     }
 
     showApp();
@@ -297,15 +297,16 @@ function renderProfile() {
 
   document.getElementById("profile").innerHTML = `
     <div class="grid cols-4">
-      ${metric("Balance", money(s.balance), "Available to spend or invest", "This is your current classroom economy balance.")}
-      ${metric("Inventory", inventoryCount, "Items you have bought", "These are items recorded on your account.")}
-      ${metric("Shop Spent", money(totalSpent), "Total recent purchases", "This counts your store purchase activity.")}
-      ${metric("Investments", (state.portfolio || []).length, "Current positions", "A position means you currently own shares.")}
+      ${metric("Balance", money(s.balance), "Available to spend or invest", "Your current classroom economy balance.")}
+      ${metric("Inventory", inventoryCount, "Items you have bought", "Items recorded on your account.")}
+      ${metric("Shop Spent", money(totalSpent), "Total recent purchases", "Money you have spent in the shop.")}
+      ${metric("Investments", (state.portfolio || []).length, "Current positions", "Stocks you currently own.")}
     </div>
 
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
-        <h2 class="card-title">My Account ${tip("This information comes from your student account.")}</h2>
+        <h2 class="card-title">My Account</h2>
+        ${help("This section shows your student account details.")}
         <div class="mini-list">
           ${mini("Name", s.name)}
           ${mini("Grade", s.grade || "—")}
@@ -316,13 +317,15 @@ function renderProfile() {
       </div>
 
       <div class="card">
-        <h2 class="card-title">Recent Activity ${tip("Your newest confirmed account actions appear here.")}</h2>
+        <h2 class="card-title">Recent Activity</h2>
+        ${help("Newest purchases, trades, rewards, and account changes show here. Dates are shown in Korea time when possible.")}
         ${table(transactions.slice(0, 10), ["timestamp", "mode", "amount", "endingBalance", "itemName", "status"], "No activity yet. Once you buy, trade, or submit a prediction, it will appear here.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">My Items ${tip("Items you bought from the shop appear here.")}</h2>
+      <h2 class="card-title">My Items</h2>
+      ${help("Items you bought from the shop appear here.")}
       ${table(state.inventory || [], ["itemName", "category", "quantityPurchased", "totalSpent", "lastPurchased"], "No items yet. Visit the Shop to buy your first item.")}
     </div>`;
 }
@@ -338,20 +341,21 @@ function renderStore() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Buy an Item ${tip("Choose an item and quantity, then submit your purchase.")}</h2>
+          <h2 class="card-title">Buy an Item</h2>
           <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Ready" : "Unavailable"}</span>
         </div>
+        ${help("Choose an item and quantity. Your balance and item stock are checked before the purchase is saved.")}
 
         <div class="form-grid" id="storeForm">
           <label>
-            <span class="field-label">Item ${tip("The list shows the item price and current stock.")}</span>
+            <span class="field-label">Item</span>
             <select id="storeItem">
               ${items.map((item) => `<option value="${sanitize(item.itemId)}">${sanitize(item.itemName)} · ${money(item.price)} · Stock ${sanitize(item.inventory === "" ? "—" : item.inventory)}</option>`).join("")}
             </select>
           </label>
 
           <label>
-            <span class="field-label">Quantity ${tip("Choose how many you want to buy.")}</span>
+            <span class="field-label">Quantity</span>
             <input id="storeQty" type="number" min="1" value="1" />
           </label>
 
@@ -363,15 +367,17 @@ function renderStore() {
 
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Shop Items ${tip("These are the items currently available to buy.")}</h2>
+          <h2 class="card-title">Shop Items</h2>
           <span class="badge">${items.length} available</span>
         </div>
+        ${help("The item list shows price, category, and current stock when available.")}
         ${table(items, ["itemName", "price", "inventory", "category", "description"], "The shop is empty right now. Check again later.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">Purchase History ${tip("Your recent shop purchases appear here.")}</h2>
+      <h2 class="card-title">Purchase History</h2>
+      ${help("Your recent shop purchases appear here after they are confirmed.")}
       ${table(purchases, ["timestamp", "itemName", "amount", "endingBalance", "status"], "No purchases yet.")}
     </div>`;
 }
@@ -441,11 +447,12 @@ function renderPortfolio() {
     <div class="grid cols-3">
       ${metric("Holdings", rows.length, "Active positions", "How many different stocks you currently own.")}
       ${metric("Market Value", money(marketValue), "Current portfolio", "Estimated value of your current shares.")}
-      ${metric("Gain / Loss", money(gainLoss), gainLoss >= 0 ? "Currently positive" : "Currently negative", "Difference between what your shares cost and what they are worth now.")}
+      ${metric("Gain / Loss", money(gainLoss), gainLoss >= 0 ? "Currently positive" : "Currently negative", "Difference between your cost and current value.")}
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">My Positions ${tip("This table shows stocks you currently own.")}</h2>
+      <h2 class="card-title">My Positions</h2>
+      ${help("This table shows stocks you currently own. Gain / loss updates when prices refresh.")}
       ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No investments yet. Use the Trade Desk to buy your first shares.")}
     </div>`;
 }
@@ -464,25 +471,26 @@ function renderTrade() {
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Place a Trade ${tip("Choose BUY to purchase shares or SELL to sell shares you already own.")}</h2>
+          <h2 class="card-title">Place a Trade</h2>
           <span class="badge ${can("STOCK_TRADE") ? "good" : "bad"}">${can("STOCK_TRADE") ? "Ready" : "Unavailable"}</span>
         </div>
+        ${help("BUY spends your balance. SELL gives money back if you own enough shares.")}
 
         <div class="form-grid" id="tradeForm">
           <label>
-            <span class="field-label">Action ${tip("BUY spends your balance. SELL gives you money back if you own enough shares.")}</span>
+            <span class="field-label">Action</span>
             <select id="tradeAction"><option>BUY</option><option>SELL</option></select>
           </label>
 
           <label>
-            <span class="field-label">Stock ${tip("Pick the company ticker you want to trade.")}</span>
+            <span class="field-label">Stock</span>
             <select id="tradeTicker">
               ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)} · ${money(m.currentPrice)}</option>`).join("")}
             </select>
           </label>
 
           <label class="span-2">
-            <span class="field-label">Shares ${tip("Enter the number of shares. Use whole numbers only.")}</span>
+            <span class="field-label">Shares</span>
             <input id="tradeShares" type="number" min="1" value="1" />
           </label>
 
@@ -493,13 +501,15 @@ function renderTrade() {
       </div>
 
       <div class="card">
-        <h2 class="card-title">Recent Trades ${tip("Your newest stock activity appears here.")}</h2>
+        <h2 class="card-title">Recent Trades</h2>
+        ${help("Your newest stock activity appears here after each confirmed trade.")}
         ${table(stockTx, ["timestamp", "mode", "itemId", "itemName", "amount", "endingBalance", "status"], "No stock trades yet.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">Market Board ${tip("Use this table to compare current prices before trading.")}</h2>
+      <h2 class="card-title">Market Board</h2>
+      ${help("Use this table to compare current prices before trading.")}
       ${table(marketRows.slice(0, 40), ["ticker", "companyName", "sector", "currentPrice", "changePct", "trend", "assetType"], "No market data is available right now.")}
     </div>`;
 }
@@ -550,7 +560,8 @@ function renderStockProfile() {
   document.getElementById("stockProfile").innerHTML = `
     <div class="card" style="margin-bottom:16px;">
       <label>
-        <span class="field-label">Choose a Stock ${tip("Select a ticker to see a quick profile.")}</span>
+        <span class="field-label">Choose a Stock</span>
+        ${help("Select a ticker to see a quick profile.")}
         <select id="stockProfileTicker" onchange="renderStockProfileDetail()">
           ${rows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
         </select>
@@ -583,13 +594,15 @@ function renderStockProfileDetail() {
         <div>${sanitize(m.trend || "")}</div>
         <div class="mini-list" style="margin-top:14px;">
           ${mini("Sector", m.sector || "—")}
-          ${mini("Change %", m.changePct || "—")}
+          ${mini("Change", formatPercentLike(m.changePct))}
           ${mini("Asset Type", m.assetType || "—")}
+          ${mini("Last Updated", formatDateTime(m.lastUpdated))}
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">My Holding ${tip("This shows whether you currently own this stock.")}</h2>
+        <h2 class="card-title">My Holding</h2>
+        ${help("This shows whether you currently own this stock.")}
         <div class="mini-list">
           ${holdingSummary(m.ticker)}
         </div>
@@ -608,7 +621,7 @@ function holdingSummary(ticker) {
     mini("Shares", holding.sharesOwned),
     mini("Average Buy", money(holding.avgBuyPrice)),
     mini("Total Cost", money(holding.totalCost)),
-    mini("Last Updated", holding.lastUpdated || "—")
+    mini("Last Updated", formatDateTime(holding.lastUpdated))
   ].join("");
 }
 
@@ -620,30 +633,31 @@ function renderRating() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Submit a Prediction ${tip("Make a prediction using a rating, target price, and short reason.")}</h2>
+          <h2 class="card-title">Submit a Prediction</h2>
           <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Ready" : "Unavailable"}</span>
         </div>
+        ${help("Choose a stock, make a prediction, set a target price, and explain your thinking.")}
 
         <div class="form-grid" id="ratingForm">
           <label>
-            <span class="field-label">Stock ${tip("Choose the company your prediction is about.")}</span>
+            <span class="field-label">Stock</span>
             <select id="ratingTicker">
               ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
             </select>
           </label>
 
           <label>
-            <span class="field-label">Prediction ${tip("BUY means you expect strength, HOLD means neutral, SELL means weakness.")}</span>
+            <span class="field-label">Prediction</span>
             <select id="ratingValue"><option>BUY</option><option>HOLD</option><option>SELL</option></select>
           </label>
 
           <label class="span-2">
-            <span class="field-label">Target Price ${tip("Your estimated future price for this stock.")}</span>
+            <span class="field-label">Target Price</span>
             <input id="targetPrice" type="number" min="0" step="0.01" placeholder="Example: 125.00" />
           </label>
 
           <label class="span-2">
-            <span class="field-label">Reason ${tip("Explain your thinking in at least 10 characters.")}</span>
+            <span class="field-label">Reason</span>
             <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
           </label>
 
@@ -654,7 +668,8 @@ function renderRating() {
       </div>
 
       <div class="card">
-        <h2 class="card-title">Prediction History ${tip("Your recent predictions appear here.")}</h2>
+        <h2 class="card-title">Prediction History</h2>
+        ${help("Your recent predictions appear here after they are confirmed.")}
         ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No predictions yet.")}
       </div>
     </div>`;
@@ -770,18 +785,180 @@ async function callApi(body) {
 }
 
 function mergeSnapshot(snapshot) {
+  const normalized = normalizeSnapshot(snapshot || {});
+
   state = {
     ...emptyState(),
     ...state,
-    ...snapshot,
-    profile: snapshot.profile || state.profile || null,
-    store: snapshot.store || [],
-    transactions: snapshot.transactions || [],
-    inventory: snapshot.inventory || [],
-    market: snapshot.market || [],
-    portfolio: snapshot.portfolio || [],
-    ratings: snapshot.ratings || []
+    ...normalized,
+    profile: normalized.profile || state.profile || null,
+    store: normalized.store,
+    transactions: normalized.transactions,
+    inventory: normalized.inventory,
+    market: normalized.market,
+    portfolio: normalized.portfolio,
+    ratings: normalized.ratings
   };
+}
+
+function normalizeSnapshot(snapshot) {
+  const profileSource = snapshot.profile || snapshot.student || snapshot.currentStudent || snapshot.account || null;
+
+  return {
+    profile: profileSource ? normalizeProfile(profileSource) : null,
+    store: getFirstArray(snapshot, ["store", "storeItems", "items", "availableItems"]).map(normalizeStoreItem),
+    transactions: getFirstArray(snapshot, ["transactions", "recentTransactions", "history", "transactionHistory", "activity", "recentActivity"])
+      .map(normalizeTransaction)
+      .sort(sortNewestFirst),
+    inventory: getFirstArray(snapshot, ["inventory", "studentInventory", "itemsOwned", "ownedItems"]).map(normalizeInventoryItem),
+    market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
+    portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
+    ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst)
+  };
+}
+
+function normalizeProfile(row) {
+  return {
+    name: pick(row, ["name", "studentName", "Student_Name", "Student Name", "Name"]),
+    grade: pick(row, ["grade", "Grade"]),
+    homeroom: pick(row, ["homeroom", "Homeroom", "Class", "class"]),
+    jobTitle: pick(row, ["jobTitle", "Job_Title", "Job Title", "Job", "job"]),
+    balance: toNumber(pick(row, ["balance", "Balance", "Current_Balance", "Current Balance"])),
+    active: pick(row, ["active", "Active", "Status", "status"]) || "Active"
+  };
+}
+
+function normalizeStoreItem(row) {
+  return {
+    itemId: pick(row, ["itemId", "Item_ID", "Item ID", "id", "ID"]),
+    itemName: pick(row, ["itemName", "Item_Name", "Item Name", "name", "Name"]),
+    price: toNumber(pick(row, ["price", "Price"])),
+    inventory: pick(row, ["inventory", "Inventory", "Stock", "stock"]),
+    category: pick(row, ["category", "Category"]),
+    description: pick(row, ["description", "Description", "Notes", "notes"])
+  };
+}
+
+function normalizeTransaction(row) {
+  const action = pick(row, ["mode", "Mode", "action", "Action", "Type", "type"]);
+  const ticker = pick(row, ["ticker", "Ticker"]);
+  const itemId = pick(row, ["itemId", "Item_ID", "Item ID", "Ticker", "ticker"]);
+  const itemName = pick(row, ["itemName", "Item_Name", "Item Name", "Company_Name", "Company Name", "Ticker", "ticker", "Note", "note"]);
+
+  return {
+    timestamp: pick(row, ["timestamp", "Timestamp", "time", "Time", "date", "Date"]),
+    mode: normalizeMode(action || (ticker ? "STOCK_TRADE" : "ACTIVITY")),
+    amount: toNumber(pick(row, ["amount", "Amount", "Total_Value", "Total Value", "totalValue", "Price", "price"])),
+    endingBalance: toNumber(pick(row, ["endingBalance", "Ending_Balance", "Ending Balance", "Balance_After", "Balance After", "balanceAfter"])),
+    itemId,
+    itemName,
+    status: pick(row, ["status", "Status", "Reward_Status", "Reward Status"]),
+    note: pick(row, ["note", "Note", "Reason", "reason"])
+  };
+}
+
+function normalizeInventoryItem(row) {
+  return {
+    itemName: pick(row, ["itemName", "Item_Name", "Item Name", "Name", "name"]),
+    category: pick(row, ["category", "Category"]),
+    quantityPurchased: toNumber(pick(row, ["quantityPurchased", "Quantity_Purchased", "Quantity Purchased", "Qty", "qty", "Quantity", "quantity"])),
+    totalSpent: toNumber(pick(row, ["totalSpent", "Total_Spent", "Total Spent", "Amount", "amount"])),
+    lastPurchased: pick(row, ["lastPurchased", "Last_Purchased", "Last Purchased", "Last_Updated", "Last Updated", "Timestamp", "timestamp"])
+  };
+}
+
+function normalizeMarketRow(row) {
+  return {
+    ticker: pick(row, ["ticker", "Ticker"]),
+    companyName: pick(row, ["companyName", "Company_Name", "Company Name", "Name", "name"]),
+    sector: pick(row, ["sector", "Sector"]),
+    currentPrice: toNumber(pick(row, ["currentPrice", "Current_Price", "Current Price", "Price", "price"])),
+    changePct: pick(row, ["changePct", "Change_%", "Change %", "Change", "change"]),
+    trend: pick(row, ["trend", "Trend"]),
+    assetType: pick(row, ["assetType", "Asset_Type", "Asset Type", "Type", "type"]),
+    lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated", "Timestamp", "timestamp"])
+  };
+}
+
+function normalizePortfolioRow(row) {
+  return {
+    ticker: pick(row, ["ticker", "Ticker"]),
+    sharesOwned: toNumber(pick(row, ["sharesOwned", "Shares_Owned", "Shares Owned", "Shares", "shares"])),
+    avgBuyPrice: toNumber(pick(row, ["avgBuyPrice", "Avg_Buy_Price", "Avg Buy Price", "Average Buy Price"])),
+    totalCost: toNumber(pick(row, ["totalCost", "Total_Cost", "Total Cost"])),
+    currentPrice: toNumber(pick(row, ["currentPrice", "Current Price", "Current_Price"])),
+    marketValue: toNumber(pick(row, ["marketValue", "Market Value", "Market_Value"])),
+    gainLoss: toNumber(pick(row, ["gainLoss", "Unrealized Gain/Loss", "Unrealized_Gain_Loss", "Unrealized Gain Loss"])),
+    lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated"])
+  };
+}
+
+function normalizeRatingRow(row) {
+  return {
+    timestamp: pick(row, ["timestamp", "Timestamp", "Date", "date"]),
+    ticker: pick(row, ["ticker", "Ticker"]),
+    rating: pick(row, ["rating", "Rating", "Prediction", "prediction"]),
+    targetPrice: toNumber(pick(row, ["targetPrice", "Target_Price", "Target Price"])),
+    reason: pick(row, ["reason", "Reason"]),
+    rewardStatus: pick(row, ["rewardStatus", "Reward_Status", "Reward Status", "Status", "status"]),
+    rewardAmount: toNumber(pick(row, ["rewardAmount", "Reward_Amount", "Reward Amount"])),
+    endOfDayPrice: toNumber(pick(row, ["endOfDayPrice", "End_Of_Day_Price", "End Of Day Price"])),
+    accuracy: pick(row, ["accuracy", "Accuracy_%", "Accuracy %"])
+  };
+}
+
+function getFirstArray(source, keys) {
+  for (const key of keys) {
+    if (Array.isArray(source[key])) return source[key];
+  }
+  return [];
+}
+
+function pick(row, keys) {
+  if (!row) return "";
+
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+      return row[key];
+    }
+  }
+
+  const normalizedMap = {};
+  Object.keys(row).forEach((key) => {
+    normalizedMap[normalizeKey(key)] = row[key];
+  });
+
+  for (const key of keys) {
+    const normalized = normalizeKey(key);
+    if (normalizedMap[normalized] !== undefined && normalizedMap[normalized] !== null && normalizedMap[normalized] !== "") {
+      return normalizedMap[normalized];
+    }
+  }
+
+  return "";
+}
+
+function normalizeKey(key) {
+  return String(key || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeMode(value) {
+  const mode = String(value || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/-/g, "_")
+    .toUpperCase();
+
+  if (mode === "BUY" || mode === "SELL") return `STOCK_${mode}`;
+  if (mode.includes("STORE")) return "STORE_PURCHASE";
+  if (mode.includes("RATING") || mode.includes("PREDICTION")) return "PREDICTION";
+  return mode || "ACTIVITY";
+}
+
+function sortNewestFirst(a, b) {
+  return parseDateValue(b.timestamp || b.lastUpdated || b.lastPurchased) - parseDateValue(a.timestamp || a.lastUpdated || a.lastPurchased);
 }
 
 function findMarket(ticker) {
@@ -792,6 +969,13 @@ function normalizeCardId(value) {
   return String(value ?? "")
     .trim()
     .replace(/\.0$/, "");
+}
+
+function toNumber(value) {
+  if (value === "" || value === null || value === undefined) return 0;
+  const cleaned = String(value).replace(/[$,]/g, "").trim();
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function money(value) {
@@ -812,21 +996,22 @@ function sanitize(value) {
   }[char]));
 }
 
-function metric(label, value, note, tipText) {
+function metric(label, value, note, helpText) {
   return `
     <div class="metric">
-      <div class="label">${sanitize(label)} ${tipText ? tip(tipText) : ""}</div>
+      <div class="label">${sanitize(label)}</div>
       <div class="value">${sanitize(value)}</div>
       <div class="note">${sanitize(note || "")}</div>
+      ${helpText ? help(helpText) : ""}
     </div>`;
 }
 
 function mini(label, value) {
-  return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(value ?? "")}</strong></div>`;
+  return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(formatMiniValue(label, value))}</strong></div>`;
 }
 
-function tip(text) {
-  return `<span class="tooltip" tabindex="0" data-tip="${sanitize(text)}">?</span>`;
+function help(text) {
+  return `<p class="help-text">${sanitize(text)}</p>`;
 }
 
 function sum(rows, key) {
@@ -919,7 +1104,9 @@ function labelize(value) {
     gainLoss: "Gain / Loss",
     targetPrice: "Target",
     rewardStatus: "Result",
-    rewardAmount: "Reward"
+    rewardAmount: "Reward",
+    lastUpdated: "Updated",
+    lastPurchased: "Last Bought"
   };
 
   return sanitize(labels[value] || String(value).replace(/([A-Z])/g, " $1").replaceAll("_", " ").trim());
@@ -927,6 +1114,14 @@ function labelize(value) {
 
 function formatValue(key, value) {
   if (value === undefined || value === null || value === "") return "";
+
+  if (/timestamp|date|updated|purchased/i.test(key)) {
+    return sanitize(formatDateTime(value));
+  }
+
+  if (/changePct|accuracy/i.test(key)) {
+    return sanitize(formatPercentLike(value));
+  }
 
   if (/amount|balance|price|cost|spent|value|reward|target/i.test(key)) {
     return sanitize(money(value));
@@ -946,6 +1141,72 @@ function formatValue(key, value) {
   }
 
   return sanitize(value);
+}
+
+function formatMiniValue(label, value) {
+  if (/updated|date|purchased/i.test(label)) return formatDateTime(value);
+  return value ?? "";
+}
+
+function formatPercentLike(value) {
+  if (value === undefined || value === null || value === "") return "—";
+
+  const number = Number(String(value).replace("%", ""));
+  if (!Number.isFinite(number)) return String(value);
+
+  if (String(value).includes("%")) return `${number.toFixed(2)}%`;
+  if (Math.abs(number) <= 1) return `${(number * 100).toFixed(2)}%`;
+  return `${number.toFixed(2)}%`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  if (value instanceof Date) {
+    return formatDateObject(value);
+  }
+
+  const text = String(value).trim();
+  if (!text) return "—";
+
+  const parsed = parseDateValue(text);
+  if (!parsed) return text;
+
+  return formatDateObject(new Date(parsed));
+}
+
+function parseDateValue(value) {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+
+  const text = String(value).trim();
+  if (!text) return 0;
+
+  const normalized = text
+    .replace(/\./g, "-")
+    .replace(" ", "T");
+
+  const direct = Date.parse(normalized);
+  if (!Number.isNaN(direct)) return direct;
+
+  const fallback = Date.parse(text);
+  if (!Number.isNaN(fallback)) return fallback;
+
+  return 0;
+}
+
+function formatDateObject(date) {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Seoul",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(date);
+  } catch (_) {
+    return date.toLocaleString();
+  }
 }
 
 function cleanErrorMessage(message) {
