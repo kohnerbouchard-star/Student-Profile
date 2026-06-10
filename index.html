@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Classroom Economy Student Portal</title>
+  <title>Classroom Economy Market Simulation</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,23 +13,23 @@
         <div class="brand-mark">CE</div>
         <div>
           <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle dark-text">Student portal</div>
+          <div class="brand-subtitle dark-text">Market simulation</div>
         </div>
       </div>
 
       <h1>Welcome back</h1>
-      <p class="login-copy">Scan or enter your student code to open your dashboard. Your code stays hidden after sign in.</p>
+      <p class="login-copy">Enter or scan your student code to open your market simulation account.</p>
 
       <form id="loginForm" class="login-form">
         <label>
           <span class="field-label">Student Code</span>
-          <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Scan or enter student code" />
+          <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Enter or scan student code" />
         </label>
-        <button class="primary-btn" type="submit">Open Dashboard</button>
+        <button class="primary-btn" type="submit">Open Account</button>
       </form>
 
       <div id="loginError" class="status-box bad hidden"></div>
-      <div class="helper-card">Your dashboard shows only your account, purchases, trades, and ratings.</div>
+      <div class="helper-card">Your account shows your balance, store activity, portfolio, trades, and forecasts.</div>
     </div>
   </section>
 
@@ -39,32 +39,32 @@
         <div class="brand-mark">CE</div>
         <div>
           <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle">My student dashboard</div>
+          <div class="brand-subtitle">Market simulation</div>
         </div>
       </div>
 
       <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" data-view="profile">My Dashboard</button>
-        <button class="nav-item" data-view="store">Shop</button>
-        <button class="nav-item" data-view="portfolio">Investments</button>
-        <button class="nav-item" data-view="trade">Trade Desk</button>
-        <button class="nav-item" data-view="stockProfile">Market Explorer</button>
-        <button class="nav-item" data-view="rating">Predictions</button>
+        <button class="nav-item active" data-view="profile">Overview</button>
+        <button class="nav-item" data-view="store">Store</button>
+        <button class="nav-item" data-view="portfolio">Portfolio</button>
+        <button class="nav-item" data-view="trade">Trading</button>
+        <button class="nav-item" data-view="stockProfile">Market Data</button>
+        <button class="nav-item" data-view="rating">Forecasts</button>
       </nav>
 
       <div class="sidebar-card">
         <div class="eyebrow">Today</div>
-        <strong id="connectionMode">Synced account</strong>
-        <p id="connectionCopy">Successful actions update your dashboard automatically.</p>
+        <strong id="connectionMode">Account active</strong>
+        <p id="connectionCopy">Balances and activity update after each confirmed action.</p>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div class="page-heading">
-          <div class="eyebrow">Student dashboard</div>
-          <h1 id="pageTitle">My Dashboard</h1>
-          <p id="pageSubtitle" class="page-subtitle">Track your balance, shop items, investments, and market predictions.</p>
+          <div class="eyebrow">Market simulation</div>
+          <h1 id="pageTitle">Overview</h1>
+          <p id="pageSubtitle" class="page-subtitle">Review your balance, portfolio, items, and recent activity.</p>
         </div>
 
         <div class="identity-card">
@@ -97,5 +97,6 @@
   <script src="inventory-empty-state-fix.js"></script>
   <script src="api-retry-fix.js"></script>
   <script src="mobile-ux-fix.js"></script>
+  <script src="ui-brand-refresh.js"></script>
 </body>
 </html>
