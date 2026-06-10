@@ -322,9 +322,239 @@ select:focus, input:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(15, 23, 42, .12);
 }
 
+/* Econovaria-style login screen */
+.login-screen--econovaria {
+  min-height: 100vh;
+  padding: clamp(18px, 3vw, 42px);
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(17, 24, 39, .94)),
+    radial-gradient(circle at 18% 22%, rgba(234, 88, 12, .22), transparent 30%),
+    radial-gradient(circle at 88% 78%, rgba(37, 99, 235, .18), transparent 34%),
+    #0f172a;
+}
+
+.login-shell {
+  width: min(1120px, 100%);
+  min-height: min(680px, calc(100vh - 56px));
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(380px, .72fr);
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .38);
+}
+
+.login-briefing {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(30px, 4vw, 56px);
+  color: #fff;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(160deg, rgba(15, 23, 42, .98), rgba(30, 41, 59, .86));
+  background-size: 42px 42px, 42px 42px, auto;
+}
+
+.login-briefing::after {
+  content: '';
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  bottom: 134px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(234,88,12,.08), rgba(234,88,12,.72), rgba(148,163,184,.16));
+}
+
+.login-brand--terminal {
+  margin-bottom: auto;
+}
+
+.login-brand--terminal .brand-mark {
+  background: #fff;
+  color: #0f172a;
+}
+
+.login-brand--terminal .brand-title {
+  color: #fff;
+  font-size: 17px;
+}
+
+.login-brand--terminal .brand-subtitle {
+  color: #fb923c;
+}
+
+.briefing-kicker,
+.access-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fb923c;
+}
+
+.login-briefing h1 {
+  max-width: 520px;
+  margin: 22px 0 12px;
+  font-size: clamp(46px, 6vw, 76px);
+  line-height: .92;
+  letter-spacing: -.07em;
+}
+
+.briefing-copy {
+  max-width: 520px;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.briefing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 46px;
+  max-width: 560px;
+}
+
+.briefing-grid div {
+  padding: 15px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .055);
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+
+.briefing-grid span {
+  display: block;
+  color: #fb923c;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  margin-bottom: 10px;
+}
+
+.briefing-grid strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: -.01em;
+}
+
+.briefing-grid small {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.market-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 34px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgba(34, 197, 94, .12);
+}
+
+.login-access-card {
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: clamp(28px, 4vw, 52px);
+  box-shadow: none;
+  background: #ffffff;
+}
+
+.access-header h2 {
+  margin: 10px 0 8px;
+  font-size: clamp(30px, 3.4vw, 44px);
+  line-height: 1.02;
+  letter-spacing: -.06em;
+}
+
+.login-access-card .login-copy {
+  max-width: 390px;
+  color: #64748b;
+  margin-bottom: 28px;
+}
+
+.login-access-card .login-form {
+  gap: 14px;
+}
+
+.login-access-card input {
+  min-height: 52px;
+  font-size: 17px;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.login-access-card .primary-btn {
+  min-height: 52px;
+  border-radius: 13px;
+}
+
+.access-note {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.access-note strong {
+  color: #111827;
+}
+
 @media (max-width: 980px) {
   .sidebar {
     background: #0f172a;
+  }
+
+  .login-shell {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .login-briefing {
+    padding: 28px;
+  }
+
+  .login-briefing h1 {
+    font-size: 42px;
+  }
+
+  .briefing-grid {
+    margin-top: 28px;
+  }
+
+  .market-status-strip {
+    padding-top: 28px;
+  }
+
+  .login-access-card {
+    border-radius: 0;
   }
 }
 
@@ -346,6 +576,48 @@ select:focus, input:focus, textarea:focus {
     box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
   }
 
+  .login-screen--econovaria {
+    padding: 14px;
+    min-height: 100dvh;
+  }
+
+  .login-shell {
+    border-radius: 22px;
+  }
+
+  .login-briefing {
+    padding: 22px;
+  }
+
+  .login-brand--terminal {
+    margin-bottom: 34px;
+  }
+
+  .login-briefing h1 {
+    font-size: 36px;
+  }
+
+  .briefing-copy {
+    font-size: 15px;
+  }
+
+  .briefing-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .briefing-grid div {
+    padding: 12px;
+  }
+
+  .login-access-card {
+    padding: 24px;
+  }
+
+  .access-header h2 {
+    font-size: 30px;
+  }
+
   .mobile-tabbar {
     background: rgba(255, 255, 255, .98) !important;
     border-top: 1px solid var(--line) !important;
@@ -361,5 +633,15 @@ select:focus, input:focus, textarea:focus {
     background: #0f172a !important;
     color: #ffffff !important;
     box-shadow: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .briefing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-status-strip span:last-child {
+    flex-basis: 100%;
   }
 }
