@@ -1,12 +1,10 @@
-const API_URL = "";
-const SESSION_KEY = "classroomEconomySessionV2";
-const STATE_KEY = "classroomEconomyStateV2";
+const API_URL = "https://silent-haze-ca17.kohner.workers.dev";
 
 const PERMISSION_SETS = {
   STUDENT: {
     label: "Student",
     views: ["profile", "store", "portfolio", "trade", "stockProfile", "rating"],
-    actions: ["STORE_PURCHASE", "STOCK_TRADE", "ANALYST_RATING"]
+    actions: ["STORE_PURCHASE", "STOCK_TRADE", "SUBMIT_RATING"]
   },
   READ_ONLY: {
     label: "Read only",
@@ -15,7 +13,7 @@ const PERMISSION_SETS = {
   }
 };
 
-let state = loadState();
+let state = emptyState();
 let currentSession = null;
 
 const views = {
@@ -32,66 +30,62 @@ document.addEventListener("DOMContentLoaded", init);
 function init() {
   document.getElementById("loginForm").addEventListener("submit", handleLogin);
   document.getElementById("logoutButton").addEventListener("click", logout);
-  document.querySelectorAll(".nav-item").forEach(btn => {
+
+  document.querySelectorAll(".nav-item").forEach((btn) => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
-  const saved = null
-  if (saved) {
-    try {
-      const session = JSON.parse(saved);
-      if (session && session.maskedCode && findStudentByCard(session.maskedCode)) {
-        currentSession = session;
-        showApp();
-        return;
-      }
-    } catch (_) {}
-  }
+
   showLogin();
 }
 
-function loadState() {
-  const saved = null
-  const base = {};
-  base.ratings = base.ratings || [];
-  if (!saved) return base;
-  try {
-    const parsed = JSON.parse(saved);
-    parsed.ratings = parsed.ratings || [];
-    return parsed;
-  } catch (_) {
-    return base;
-  }
-}
-
-function saveState() {
-  /* storage disabled */
+function emptyState() {
+  return {
+    profile: null,
+    store: [],
+    transactions: [],
+    inventory: [],
+    market: [],
+    portfolio: [],
+    ratings: []
+  };
 }
 
 async function handleLogin(event) {
   event.preventDefault();
+
   const input = document.getElementById("loginCardId");
-  const rawCardId = normalizeCardId(input.value);
+  const accessCode = normalizeCardId(input.value);
+
   clearLoginError();
 
-  if (!rawCardId) return showLoginError("Enter your Access Code.");
-
-  if (API_URL) {
-    try {
-      const result = await callApi({ action: "LOGIN", cardId: rawCardId });
-      if (!result.ok) return showLoginError(result.message || "Login failed.");
-      if (result.snapshot) mergeSnapshot(result.snapshot);
-      startSession({
-        cardId: normalizeCardId(result.maskedCode || rawCardId),
-        role: result.role || "STUDENT",
-        token: result.sessionToken || "",
-        permissions: result.permissions || PERMISSION_SETS.STUDENT.actions
-      });
-      return;
-    } catch (err) {
-      return showLoginError("Could not reach the backend. Check API_URL or use local prototype mode.");
-    }
+  if (!accessCode) {
+    return showLoginError("Enter your Access Code.");
   }
-  return showLoginError("Backend connection is required. Deploy Apps Script and connect the app before student use.");
+
+  const result = await callApi({
+    action: "LOGIN",
+    accessCode
+  });
+
+  input.value = "";
+
+  if (!result || result.ok !== true) {
+    return showLoginError(result && result.message ? result.message : "Login failed.");
+  }
+
+  currentSession = {
+    role: "STUDENT",
+    token: result.token,
+    permissions: PERMISSION_SETS.STUDENT.actions
+  };
+
+  mergeSnapshot(result.snapshot || {});
+
+  if (result.profile) {
+    state.profile = result.profile;
+  }
+
+  showApp();
 }
 
 function showApp() {
@@ -101,9 +95,16 @@ function showApp() {
   switchView("profile");
 }
 
-function logout() {
+async function logout() {
+  if (currentSession && currentSession.token) {
+    await callApi({
+      action: "LOGOUT",
+      token: currentSession.token
+    });
+  }
+
   currentSession = null;
-  /* storage disabled */
+  state = emptyState();
   showLogin();
 }
 
@@ -118,60 +119,74 @@ function showLoginError(message) {
   el.textContent = message;
   el.classList.remove("hidden");
 }
-function clearLoginError() { document.getElementById("loginError").classList.add("hidden"); }
+
+function clearLoginError() {
+  const el = document.getElementById("loginError");
+  el.textContent = "";
+  el.classList.add("hidden");
+}
+
+function selectedStudent() {
+  return state.profile || null;
+}
 
 function updateIdentity() {
   const s = selectedStudent();
   if (!s) return;
+
   const role = currentSession?.role || "STUDENT";
   const label = PERMISSION_SETS[role]?.label || role;
-  document.getElementById("identityName").textContent = s.Student_Name || "Student";
-  document.getElementById("identityMeta").textContent = `Grade ${s.Grade || "—"} · ${s.Homeroom || "—"}`;
+
+  document.getElementById("identityName").textContent = s.name || "Student";
+  document.getElementById("identityMeta").textContent = `Grade ${s.grade || "—"} · ${s.homeroom || "—"}`;
   document.getElementById("permissionSummary").innerHTML = `<span class="badge good">${sanitize(label)}</span> ${actionBadges()}`;
-  document.getElementById("connectionMode").textContent = API_URL ? "Connected backend" : "Local prototype";
-  document.getElementById("connectionCopy").textContent = API_URL
-    ? "Writes are sent to Apps Script and locked before touching Google Sheets."
-    : "Writes are saved in this browser only until you connect Apps Script.";
+  document.getElementById("connectionMode").textContent = "Cloudflare Worker connected";
+  document.getElementById("connectionCopy").textContent = "GitHub UI sends approved actions through Cloudflare to Apps Script. Sheets stay private.";
 }
 
 function actionBadges() {
   const allowed = currentSession?.permissions || [];
   if (!allowed.length) return `<span class="badge">No writes</span>`;
-  return allowed.map(a => `<span class="badge">${sanitize(labelizeAction(a))}</span>`).join(" ");
+  return allowed.map((a) => `<span class="badge">${sanitize(labelizeAction(a))}</span>`).join(" ");
 }
 
-function can(action) { return (currentSession?.permissions || []).includes(action); }
+function can(action) {
+  return (currentSession?.permissions || []).includes(action);
+}
+
 function requirePermission(action) {
-  if (!can(action)) throw new Error("You do not have permission to perform this action.");
+  if (!can(action)) {
+    throw new Error("You do not have permission to perform this action.");
+  }
 }
-
-function normalizeCardId(value) { return String(value ?? "").trim().replace(/\.0$/, ""); }
-function findStudentByCard(cardId) {
-  const target = normalizeCardId(cardId).toLowerCase();
-  return (state.students || []).find(s => normalizeCardId(s.Access Code).toLowerCase() === target);
-}
-function selectedCard() { return currentSession?.maskedCode || ""; }
-function selectedStudent() { return findStudentByCard(selectedCard()); }
-function money(v) { return Number(v || 0).toLocaleString(undefined, {style:"currency", currency:"USD"}); }
-function num(v, d=2) { return Number(v || 0).toLocaleString(undefined, {maximumFractionDigits:d, minimumFractionDigits:d}); }
-function percent(v) { return `${(Number(v || 0)*100).toFixed(2)}%`; }
-function nowStamp() { return new Date().toISOString().slice(0,16).replace("T", " "); }
-function todayStamp() { return new Date().toISOString().slice(0,10); }
-function sanitize(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-function labelizeAction(a) { return String(a).replaceAll("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
 
 function switchView(view) {
   if (!selectedStudent()) return showLogin();
-  if (!(PERMISSION_SETS[currentSession.role]?.views || []).includes(view)) return;
-  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view === view));
-  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === view));
-  document.getElementById("pageTitle").textContent = views[view];
+
+  const allowedViews = PERMISSION_SETS[currentSession?.role || "STUDENT"]?.views || [];
+  if (!allowedViews.includes(view)) return;
+
+  document.querySelectorAll(".nav-item").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === view);
+  });
+
+  document.querySelectorAll(".view").forEach((section) => {
+    section.classList.toggle("active", section.id === view);
+  });
+
+  document.getElementById("pageTitle").textContent = views[view] || "Student Dashboard";
   renderCurrentView();
 }
-function currentView() { return document.querySelector(".view.active").id; }
+
+function currentView() {
+  return document.querySelector(".view.active")?.id || "profile";
+}
+
 function renderCurrentView() {
   if (!selectedStudent()) return showLogin();
+
   const view = currentView();
+
   if (view === "profile") renderProfile();
   if (view === "store") renderStore();
   if (view === "portfolio") renderPortfolio();
@@ -182,326 +197,567 @@ function renderCurrentView() {
 
 function renderProfile() {
   const s = selectedStudent();
-  const card = normalizeCardId(s.Access Code);
-  const tx = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Status === "Success").slice(-10).reverse();
-  const att = state.attendance.filter(a => normalizeCardId(a.Access Code) === card).slice(-8).reverse();
-  const purchases = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "STORE_PURCHASE").slice(-8).reverse();
-  const totalDeposits = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "DEPOSIT"), "Amount");
-  const totalRewards = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "REWARD"), "Amount");
-  const totalFines = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "FINE"), "Amount");
-  const totalSpent = sum(purchases, "Amount");
+  const transactions = state.transactions || [];
+  const purchases = transactions.filter((t) => t.mode === "STORE_PURCHASE");
+  const totalSpent = sum(purchases, "amount");
+  const inventoryCount = sum(state.inventory || [], "quantityPurchased");
+
   document.getElementById("profile").innerHTML = `
     <div class="grid cols-4">
-      ${metric("Current Balance", money(s.Balance), s.Student_Name)}
-      ${metric("Attendance Streak", `${Number(s.Attendance_Streak || 0)} days`, s.Homeroom)}
-      ${metric("Total Rewards", money(totalRewards), "Rewards earned")}
-      ${metric("Total Spent", money(totalSpent), "Store purchases")}
+      ${metric("Current Balance", money(s.balance), s.name || "Student")}
+      ${metric("Inventory Items", inventoryCount, "Total items purchased")}
+      ${metric("Store Spent", money(totalSpent), "Store purchases")}
+      ${metric("Portfolio Positions", (state.portfolio || []).length, "Active holdings")}
     </div>
+
     <div class="grid cols-2" style="margin-top:16px;">
-<div class="card">
+      <div class="card">
         <h2>Student Details</h2>
         <div class="mini-list">
-          ${mini("Name", s.Student_Name)}${mini("Access Code", normalizeCardId(s.Access Code))}${mini("Grade", s.Grade)}${mini("Homeroom", s.Homeroom)}${mini("Job", s.Job_Title || "No job assigned")}
-          ${mini("Deposits", money(totalDeposits))}${mini("Fines", money(totalFines))}
+          ${mini("Name", s.name)}
+          ${mini("Grade", s.grade || "—")}
+          ${mini("Homeroom", s.homeroom || "—")}
+          ${mini("Job", s.jobTitle || "No job assigned")}
+          ${mini("Account", s.active || "Active")}
         </div>
       </div>
+
+      <div class="card">
+        <h2>Recent Transactions</h2>
+        ${table(transactions.slice(0, 10), ["timestamp", "mode", "amount", "endingBalance", "itemName", "status"], "No transactions yet.")}
+      </div>
     </div>
-    <div class="grid cols-2" style="margin-top:16px;">
-      <div class="card"><h2>Recent Attendance</h2>${table(att, ["Timestamp", "Status", "Check_In_Time", "Note"], "No attendance records yet.")}</div>
-      <div class="card"><h2>Recent Transactions</h2>${table(tx, ["Timestamp", "Mode", "Amount", "Ending_Balance", "Note"], "No transactions yet.")}</div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>Inventory</h2>
+      ${table(state.inventory || [], ["itemName", "category", "quantityPurchased", "totalSpent", "lastPurchased"], "No inventory yet.")}
     </div>`;
 }
 
 function renderStore() {
   const s = selectedStudent();
-  const card = normalizeCardId(s.Access Code);
-  const items = state.storeItems.filter(i => String(i.Active).toLowerCase() === "yes");
-  const purchases = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "STORE_PURCHASE").slice(-12).reverse();
+  const items = state.store || [];
+  const purchases = (state.transactions || [])
+    .filter((t) => t.mode === "STORE_PURCHASE")
+    .slice(0, 12);
+
   document.getElementById("store").innerHTML = `
     <div class="grid cols-2">
       <div class="card">
-        <div class="card-title-row"><h2>Purchase Item</h2><span class="badge ${can('STORE_PURCHASE') ? 'good' : 'bad'}">${can('STORE_PURCHASE') ? 'Write allowed' : 'No write permission'}</span></div>
-        <div class="form-grid">
-          <label><span class="field-label">Item</span><select id="storeItem">${items.map(i => `<option value="${sanitize(i.Item_ID)}">${sanitize(i.Item_Name)} · ${money(i.Price)} · Stock ${sanitize(i.Inventory)}</option>`).join("")}</select></label>
-          <label><span class="field-label">Quantity</span><input id="storeQty" type="number" min="1" value="1" /></label>
-          <button class="primary-btn span-2" type="button" ${can('STORE_PURCHASE') ? '' : 'disabled'} onclick="purchaseItem()">Purchase</button>
+        <div class="card-title-row">
+          <h2>Purchase Item</h2>
+          <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Write allowed" : "No write permission"}</span>
         </div>
-        <div id="storeStatus" class="status-box">This will submit as ${sanitize(s.Student_Name)} only.</div>
+
+        <div class="form-grid">
+          <label>
+            <span class="field-label">Item</span>
+            <select id="storeItem">
+              ${items.map((item) => `<option value="${sanitize(item.itemId)}">${sanitize(item.itemName)} · ${money(item.price)} · Stock ${sanitize(item.inventory === "" ? "—" : item.inventory)}</option>`).join("")}
+            </select>
+          </label>
+
+          <label>
+            <span class="field-label">Quantity</span>
+            <input id="storeQty" type="number" min="1" value="1" />
+          </label>
+
+          <button class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem()">Purchase</button>
+        </div>
+
+        <div id="storeStatus" class="status-box">This will submit as ${sanitize(s.name)} only.</div>
       </div>
+
       <div class="card">
-        <div class="card-title-row"><h2>Available Store Items</h2><span class="badge">${items.length} active</span></div>
-        ${table(items, ["Item_ID", "Item_Name", "Price", "Inventory", "Category", "Description"], "No store items.")}
+        <div class="card-title-row">
+          <h2>Available Store Items</h2>
+          <span class="badge">${items.length} active</span>
+        </div>
+        ${table(items, ["itemId", "itemName", "price", "inventory", "category", "description"], "No store items.")}
       </div>
     </div>
-    <div class="card" style="margin-top:16px;"><h2>Your Purchase History</h2>${table(purchases, ["Timestamp", "Item_Name", "Amount", "Ending_Balance", "Note"], "No purchases yet.")}</div>`;
+
+    <div class="card" style="margin-top:16px;">
+      <h2>Your Purchase History</h2>
+      ${table(purchases, ["timestamp", "itemName", "amount", "endingBalance", "status"], "No purchases yet.")}
+    </div>`;
 }
 
 async function purchaseItem() {
   const status = document.getElementById("storeStatus");
+
   try {
     requirePermission("STORE_PURCHASE");
+
     const itemId = document.getElementById("storeItem").value;
-    const qty = Number(document.getElementById("storeQty").value || 1);
-    await submitAction("STORE_PURCHASE", { itemId, qty }, () => localPurchaseItem(itemId, qty));
-    showStatus(status, true, "Purchase submitted.");
-    renderStore();
+    const quantity = Number(document.getElementById("storeQty").value || 1);
+
+    const result = await submitAction("STORE_PURCHASE", {
+      itemId,
+      quantity
+    });
+
+    showStatus(status, result.ok === true, result.message || "Purchase submitted.");
+    renderCurrentView();
     updateIdentity();
+
   } catch (err) {
     showStatus(status, false, err.message);
   }
 }
 
-function localPurchaseItem(itemId, qty) {
-  const s = selectedStudent();
-  const item = state.storeItems.find(i => String(i.Item_ID) === String(itemId));
-  if (!item || qty <= 0) throw new Error("Invalid item or quantity.");
-  if (Number(item.Inventory || 0) < qty) throw new Error("Not enough inventory.");
-  const total = Number(item.Price || 0) * qty;
-  if (Number(s.Balance || 0) < total) throw new Error("Not enough balance.");
-  const starting = Number(s.Balance || 0);
-  s.Balance = Number((starting - total).toFixed(2));
-  item.Inventory = Number(item.Inventory || 0) - qty;
-  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Access Code:s.Access Code, Student_Name:s.Student_Name, Mode:"STORE_PURCHASE", Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:item.Item_ID, Item_Name:item.Item_Name, Note:`Purchased ${qty} × ${item.Item_Name}`, Status:"Success"});
-  saveState();
-  return { ok: true, message: "Purchase completed." };
-}
-
 function renderPortfolio() {
-  const card = normalizeCardId(selectedCard());
-  updatePortfolioMarketValues(card);
-  const rows = state.portfolio.filter(p => normalizeCardId(p.Access Code) === card && Number(p.Shares_Owned || 0) > 0);
-  const marketValue = sum(rows, "Market Value");
-  const gainLoss = sum(rows, "Unrealized Gain/Loss");
+  const rows = state.portfolio || [];
+  const marketValue = rows.reduce((total, row) => {
+    const market = findMarket(row.ticker);
+    return total + Number(row.sharesOwned || 0) * Number(market?.currentPrice || row.avgBuyPrice || 0);
+  }, 0);
+  const totalCost = sum(rows, "totalCost");
+  const gainLoss = marketValue - totalCost;
+
+  const displayRows = rows.map((row) => {
+    const market = findMarket(row.ticker);
+    const currentPrice = Number(market?.currentPrice || row.avgBuyPrice || 0);
+    const positionValue = Number(row.sharesOwned || 0) * currentPrice;
+    return {
+      ticker: row.ticker,
+      sharesOwned: row.sharesOwned,
+      avgBuyPrice: row.avgBuyPrice,
+      currentPrice,
+      marketValue: positionValue,
+      gainLoss: positionValue - Number(row.totalCost || 0),
+      lastUpdated: row.lastUpdated || ""
+    };
+  });
+
   document.getElementById("portfolio").innerHTML = `
     <div class="grid cols-3">
       ${metric("Holdings", rows.length, "Active positions")}
       ${metric("Market Value", money(marketValue), "Current portfolio")}
       ${metric("Unrealized Gain/Loss", money(gainLoss), gainLoss >= 0 ? "Positive" : "Negative")}
     </div>
-    <div class="card" style="margin-top:16px;"><h2>Portfolio Positions</h2>${table(rows, ["Ticker", "Shares_Owned", "Avg_Buy_Price", "Current Price", "Market Value", "Unrealized Gain/Loss", "Last_Updated"], "No stock portfolio found.")}</div>`;
+
+    <div class="card" style="margin-top:16px;">
+      <h2>Portfolio Positions</h2>
+      ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No stock portfolio found.")}
+    </div>`;
 }
 
 function renderTrade() {
-  const card = normalizeCardId(selectedCard());
-  const marketRows = state.market.filter(m => String(m.Active).toLowerCase() === "yes");
-  const stockTx = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && String(t.Mode || "").startsWith("STOCK_")).slice(-10).reverse();
+  const marketRows = state.market || [];
+  const stockTx = (state.transactions || [])
+    .filter((t) => String(t.mode || "").startsWith("STOCK"))
+    .slice(0, 10);
+
   document.getElementById("trade").innerHTML = `
-    <div class="market-ticker">${marketRows.slice(0,24).map(m => `<div class="ticker-pill"><strong>${sanitize(m.Ticker)}</strong> ${money(m.Current_Price)} <span class="${Number(m.Change_Amount)>=0?'positive':'negative'}">${Number(m.Change_Amount)>=0?'+':''}${num(m.Change_Amount)}</span></div>`).join("")}</div>
+    <div class="market-ticker">
+      ${marketRows.slice(0, 24).map((m) => `<div class="ticker-pill"><strong>${sanitize(m.ticker)}</strong> ${money(m.currentPrice)} <span>${sanitize(m.trend || "")}</span></div>`).join("")}
+    </div>
+
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
-        <div class="card-title-row"><h2>Submit Stock Trade</h2><span class="badge ${can('STOCK_TRADE') ? 'good' : 'bad'}">${can('STOCK_TRADE') ? 'Write allowed' : 'No write permission'}</span></div>
-        <div class="form-grid">
-          <label><span class="field-label">Action</span><select id="tradeAction"><option>BUY</option><option>SELL</option></select></label>
-          <label><span class="field-label">Ticker</span><select id="tradeTicker">${marketRows.map(m => `<option value="${sanitize(m.Ticker)}">${sanitize(m.Ticker)} · ${sanitize(m.Company_Name)} · ${money(m.Current_Price)}</option>`).join("")}</select></label>
-          <label class="span-2"><span class="field-label">Shares</span><input id="tradeShares" type="number" min="1" value="1" /></label>
-          <button class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'} onclick="submitTrade()">Submit Trade</button>
+        <div class="card-title-row">
+          <h2>Submit Stock Trade</h2>
+          <span class="badge ${can("STOCK_TRADE") ? "good" : "bad"}">${can("STOCK_TRADE") ? "Write allowed" : "No write permission"}</span>
         </div>
-        <div id="tradeStatus" class="status-box">Trades submit as your logged-in Access Code only.</div>
+
+        <div class="form-grid">
+          <label>
+            <span class="field-label">Action</span>
+            <select id="tradeAction"><option>BUY</option><option>SELL</option></select>
+          </label>
+
+          <label>
+            <span class="field-label">Ticker</span>
+            <select id="tradeTicker">
+              ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)} · ${money(m.currentPrice)}</option>`).join("")}
+            </select>
+          </label>
+
+          <label class="span-2">
+            <span class="field-label">Shares</span>
+            <input id="tradeShares" type="number" min="1" value="1" />
+          </label>
+
+          <button class="primary-btn span-2" type="button" ${can("STOCK_TRADE") ? "" : "disabled"} onclick="submitTrade()">Submit Trade</button>
+        </div>
+
+        <div id="tradeStatus" class="status-box">Trades submit as your logged-in session only.</div>
       </div>
-      <div class="card"><h2>Your Recent Stock Activity</h2>${table(stockTx, ["Timestamp", "Mode", "Item_ID", "Item_Name", "Amount", "Ending_Balance", "Status"], "No stock activity yet.")}</div>
+
+      <div class="card">
+        <h2>Your Recent Stock Activity</h2>
+        ${table(stockTx, ["timestamp", "mode", "itemId", "itemName", "amount", "endingBalance", "status"], "No stock activity yet.")}
+      </div>
     </div>
-    <div class="card" style="margin-top:16px;"><h2>Live Market</h2>${table(marketRows.slice(0,40), ["Ticker", "Company_Name", "Sector", "Current_Price", "Change_%", "Change_Amount", "Trend", "Asset_Type"], "No market data.")}</div>`;
+
+    <div class="card" style="margin-top:16px;">
+      <h2>Live Market</h2>
+      ${table(marketRows.slice(0, 40), ["ticker", "companyName", "sector", "currentPrice", "changePct", "trend", "assetType"], "No market data.")}
+    </div>`;
 }
 
 async function submitTrade() {
   const status = document.getElementById("tradeStatus");
+
   try {
     requirePermission("STOCK_TRADE");
-    const tradeAction = document.getElementById("tradeAction").value;
+
+    const action = document.getElementById("tradeAction").value;
     const ticker = document.getElementById("tradeTicker").value;
     const shares = Number(document.getElementById("tradeShares").value || 0);
-    await submitAction("STOCK_TRADE", { tradeAction, ticker, shares }, () => localStockTrade(tradeAction, ticker, shares));
-    showStatus(status, true, "Trade submitted.");
-    renderTrade();
+
+    const result = await submitAction("STOCK_TRADE", {
+      action,
+      ticker,
+      shares
+    });
+
+    showStatus(status, result.ok === true, result.message || "Trade submitted.");
+    renderCurrentView();
     updateIdentity();
+
   } catch (err) {
     showStatus(status, false, err.message);
   }
 }
 
-function localStockTrade(action, ticker, shares) {
-  const s = selectedStudent();
-  const market = state.market.find(m => String(m.Ticker) === String(ticker));
-  if (!market || shares <= 0) throw new Error("Invalid trade.");
-  const price = Number(market.Current_Price || 0);
-  const total = Number((price * shares).toFixed(2));
-  let position = state.portfolio.find(p => normalizeCardId(p.Access Code) === normalizeCardId(s.Access Code) && p.Ticker === ticker);
-  const starting = Number(s.Balance || 0);
-
-  if (action === "BUY") {
-    if (starting < total) throw new Error("Not enough balance for this trade.");
-    s.Balance = Number((starting - total).toFixed(2));
-    if (!position) {
-      position = {Access Code:s.Access Code, Student_Name:s.Student_Name, Ticker:ticker, Shares_Owned:0, Avg_Buy_Price:price, Total_Cost:0, "Current Price":price, "Market Value":0, "Unrealized Gain/Loss":0, Last_Updated:nowStamp()};
-      state.portfolio.push(position);
-    }
-    const oldShares = Number(position.Shares_Owned || 0);
-    const oldCost = Number(position.Total_Cost || 0);
-    position.Shares_Owned = oldShares + shares;
-    position.Total_Cost = Number((oldCost + total).toFixed(2));
-    position.Avg_Buy_Price = Number((position.Total_Cost / position.Shares_Owned).toFixed(2));
-  } else {
-    if (!position || Number(position.Shares_Owned || 0) < shares) throw new Error("Not enough shares to sell.");
-    position.Shares_Owned = Number(position.Shares_Owned) - shares;
-    s.Balance = Number((starting + total).toFixed(2));
-    position.Total_Cost = Number((position.Avg_Buy_Price * position.Shares_Owned).toFixed(2));
-  }
-  position["Current Price"] = price;
-  position["Market Value"] = Number((Number(position.Shares_Owned || 0) * price).toFixed(2));
-  position["Unrealized Gain/Loss"] = Number((position["Market Value"] - Number(position.Total_Cost || 0)).toFixed(2));
-  position.Last_Updated = nowStamp();
-
-  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Access Code:s.Access Code, Student_Name:s.Student_Name, Mode:`STOCK_${action}`, Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:ticker, Item_Name:market.Company_Name, Note:`${action} ${shares} shares @ ${money(price)}`, Status:"Success"});
-  saveState();
-  return { ok: true, message: "Trade completed." };
-}
-
 function renderStockProfile() {
-  const rows = state.market.filter(m => String(m.Active).toLowerCase() === "yes");
-  const defaultTicker = rows[0]?.Ticker || "";
+  const rows = state.market || [];
+  const defaultTicker = rows[0]?.ticker || "";
+
   document.getElementById("stockProfile").innerHTML = `
     <div class="card" style="margin-bottom:16px;">
-      <label><span class="field-label">Choose Ticker</span><select id="stockProfileTicker" onchange="renderStockProfileDetail()">${rows.map(m => `<option value="${sanitize(m.Ticker)}">${sanitize(m.Ticker)} · ${sanitize(m.Company_Name)}</option>`).join("")}</select></label>
+      <label>
+        <span class="field-label">Choose Ticker</span>
+        <select id="stockProfileTicker" onchange="renderStockProfileDetail()">
+          ${rows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
+        </select>
+      </label>
     </div>
     <div id="stockProfileDetail"></div>`;
-  document.getElementById("stockProfileTicker").value = defaultTicker;
+
+  if (defaultTicker) {
+    document.getElementById("stockProfileTicker").value = defaultTicker;
+  }
+
   renderStockProfileDetail();
 }
 
 function renderStockProfileDetail() {
   const ticker = document.getElementById("stockProfileTicker")?.value;
-  const m = state.market.find(x => x.Ticker === ticker) || state.market[0];
-  if (!m) return;
-  const n = state.news.filter(x => x.Ticker === m.Ticker).slice(0,5);
-  const f = state.financials.find(x => x.Ticker === m.Ticker) || {};
+  const m = findMarket(ticker) || (state.market || [])[0];
+
+  if (!m) {
+    document.getElementById("stockProfileDetail").innerHTML = `<div class="empty">No market data.</div>`;
+    return;
+  }
+
   document.getElementById("stockProfileDetail").innerHTML = `
     <div class="stock-hero">
       <div class="card">
-        <div class="eyebrow">${sanitize(m.Sector)} · ${sanitize(m.Asset_Type)}</div>
-        <h2>${sanitize(m.Company_Name)} <span class="badge">${sanitize(m.Ticker)}</span></h2>
-        <div class="large-price">${money(m.Current_Price)}</div>
-        <div class="${Number(m.Change_Amount)>=0?'positive':'negative'}">${Number(m.Change_Amount)>=0?'+':''}${num(m.Change_Amount)} (${percent(m["Change_%"])})</div>
-        <div class="mini-list" style="margin-top:14px;">${mini("Trend", m.Trend)}${mini("Volatility", m.Volatility)}${mini("Last Updated", m.Last_Updated)}</div>
+        <div class="eyebrow">${sanitize(m.sector || "Market")} · ${sanitize(m.assetType || "Asset")}</div>
+        <h2>${sanitize(m.companyName || m.ticker)} <span class="badge">${sanitize(m.ticker)}</span></h2>
+        <div class="large-price">${money(m.currentPrice)}</div>
+        <div>${sanitize(m.trend || "")}</div>
+        <div class="mini-list" style="margin-top:14px;">
+          ${mini("Sector", m.sector || "—")}
+          ${mini("Change %", m.changePct || "—")}
+          ${mini("Asset Type", m.assetType || "—")}
+        </div>
       </div>
-      <div class="card"><h2>Financials</h2><div class="mini-list">${mini("Revenue", money(f.Revenue))}${mini("Profit", money(f.Profit))}${mini("Debt", money(f.Debt))}${mini("Cash", money(f.Cash))}${mini("Risk", f.Risk_Rating || "")}</div></div>
-    </div>
-    <div class="card" style="margin-top:16px;"><h2>Latest News</h2>${table(n, ["Timestamp", "Headline", "Impact_Type", "Price_Impact_%", "Status"], "No stock news.")}</div>`;
+
+      <div class="card">
+        <h2>Holding</h2>
+        <div class="mini-list">
+          ${holdingSummary(m.ticker)}
+        </div>
+      </div>
+    </div>`;
+}
+
+function holdingSummary(ticker) {
+  const holding = (state.portfolio || []).find((p) => p.ticker === ticker);
+
+  if (!holding) {
+    return mini("Shares", "0") + mini("Status", "No current position");
+  }
+
+  return [
+    mini("Shares", holding.sharesOwned),
+    mini("Average Buy", money(holding.avgBuyPrice)),
+    mini("Total Cost", money(holding.totalCost)),
+    mini("Last Updated", holding.lastUpdated || "—")
+  ].join("");
 }
 
 function renderRating() {
-  const card = normalizeCardId(selectedCard());
-  const marketRows = state.market.filter(m => String(m.Active).toLowerCase() === "yes");
-  const ratings = (state.ratings || []).filter(r => normalizeCardId(r.Access Code) === card).slice(-12).reverse();
+  const marketRows = state.market || [];
+  const ratings = (state.ratings || []).slice(0, 12);
+
   document.getElementById("rating").innerHTML = `
     <div class="grid cols-2">
       <div class="card">
-        <div class="card-title-row"><h2>Submit Analyst Rating</h2><span class="badge ${can('ANALYST_RATING') ? 'good' : 'bad'}">${can('ANALYST_RATING') ? 'Write allowed' : 'No write permission'}</span></div>
-        <div class="form-grid">
-          <label><span class="field-label">Ticker</span><select id="ratingTicker">${marketRows.map(m => `<option value="${sanitize(m.Ticker)}">${sanitize(m.Ticker)} · ${sanitize(m.Company_Name)}</option>`).join("")}</select></label>
-          <label><span class="field-label">Rating</span><select id="ratingValue"><option>Buy</option><option>Hold</option><option>Sell</option></select></label>
-          <label class="span-2"><span class="field-label">Target Price</span><input id="targetPrice" type="number" min="0" step="0.01" placeholder="Example: 125.00" /></label>
-          <label class="span-2"><span class="field-label">Reason</span><textarea id="ratingReason" rows="4" placeholder="Explain your reasoning..."></textarea></label>
-          <button class="primary-btn span-2" type="button" ${can('ANALYST_RATING') ? '' : 'disabled'} onclick="submitRating()">Submit Rating</button>
+        <div class="card-title-row">
+          <h2>Submit Analyst Rating</h2>
+          <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Write allowed" : "No write permission"}</span>
         </div>
-        <div id="ratingStatus" class="status-box">Ratings submit as your logged-in Access Code only.</div>
+
+        <div class="form-grid">
+          <label>
+            <span class="field-label">Ticker</span>
+            <select id="ratingTicker">
+              ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
+            </select>
+          </label>
+
+          <label>
+            <span class="field-label">Rating</span>
+            <select id="ratingValue"><option>BUY</option><option>HOLD</option><option>SELL</option></select>
+          </label>
+
+          <label class="span-2">
+            <span class="field-label">Target Price</span>
+            <input id="targetPrice" type="number" min="0" step="0.01" placeholder="Example: 125.00" />
+          </label>
+
+          <label class="span-2">
+            <span class="field-label">Reason</span>
+            <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
+          </label>
+
+          <button class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating()">Submit Rating</button>
+        </div>
+
+        <div id="ratingStatus" class="status-box">Ratings submit as your logged-in session only.</div>
       </div>
-      <div class="card"><h2>Your Rating History</h2>${table(ratings, ["Timestamp", "Ticker", "Rating", "Target_Price", "Reason", "Status"], "No submitted ratings yet.")}</div>
+
+      <div class="card">
+        <h2>Your Rating History</h2>
+        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No submitted ratings yet.")}
+      </div>
     </div>`;
 }
 
 async function submitRating() {
   const status = document.getElementById("ratingStatus");
+
   try {
-    requirePermission("ANALYST_RATING");
+    requirePermission("SUBMIT_RATING");
+
     const ticker = document.getElementById("ratingTicker").value;
     const rating = document.getElementById("ratingValue").value;
     const targetPrice = Number(document.getElementById("targetPrice").value || 0);
     const reason = document.getElementById("ratingReason").value.trim();
-    await submitAction("ANALYST_RATING", { ticker, rating, targetPrice, reason }, () => localRating(ticker, rating, targetPrice, reason));
-    showStatus(status, true, "Rating submitted.");
-    renderRating();
+
+    const result = await submitAction("SUBMIT_RATING", {
+      ticker,
+      rating,
+      targetPrice,
+      reason
+    });
+
+    showStatus(status, result.ok === true, result.message || "Rating submitted.");
+
+    if (result.ok === true) {
+      document.getElementById("targetPrice").value = "";
+      document.getElementById("ratingReason").value = "";
+    }
+
+    renderCurrentView();
+
   } catch (err) {
     showStatus(status, false, err.message);
   }
 }
 
-function localRating(ticker, rating, targetPrice, reason) {
-  const s = selectedStudent();
-  if (!ticker || !rating || !targetPrice || !reason) throw new Error("Ticker, rating, target price, and reason are required.");
-  state.ratings = state.ratings || [];
-  state.ratings.push({ Timestamp: nowStamp(), Access Code: s.Access Code, Student_Name: s.Student_Name, Ticker: ticker, Rating: rating, Target_Price: targetPrice, Reason: reason, Status: "Submitted" });
-  saveState();
-  return { ok: true, message: "Rating submitted." };
-}
-
-async function submitAction(action, payload, localHandler) {
+async function submitAction(action, payload) {
   requirePermission(action);
-  const cardId = selectedCard();
-  if (!cardId) throw new Error("You are not logged in.");
 
-  if (!API_URL) throw new Error("Backend connection required.");
+  if (!currentSession || !currentSession.token) {
+    throw new Error("You are not logged in.");
+  }
 
   const result = await callApi({
     action,
-    sessionToken: currentSession.token,
+    token: currentSession.token,
     payload
   });
-  if (!result.ok) throw new Error(result.message || "Action failed.");
-  if (result.snapshot) mergeSnapshot(result.snapshot);
+
+  if (!result || result.ok !== true) {
+    throw new Error(result && result.message ? result.message : "Action failed.");
+  }
+
+  if (result.snapshot) {
+    mergeSnapshot(result.snapshot);
+  }
+
   return result;
 }
 
 async function callApi(body) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(body)
-  });
-  return await res.json();
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    let result;
+
+    try {
+      result = await response.json();
+    } catch (err) {
+      return {
+        ok: false,
+        message: "Worker returned invalid JSON."
+      };
+    }
+
+    if (!result) {
+      return {
+        ok: false,
+        message: "Backend returned no response."
+      };
+    }
+
+    return result;
+
+  } catch (err) {
+    return {
+      ok: false,
+      message: err && err.message ? err.message : String(err)
+    };
+  }
 }
 
 function mergeSnapshot(snapshot) {
-  state = { ...state, ...snapshot };
-  state.ratings = state.ratings || [];
-  saveState();
+  state = {
+    ...emptyState(),
+    ...state,
+    ...snapshot,
+    profile: snapshot.profile || state.profile || null,
+    store: snapshot.store || [],
+    transactions: snapshot.transactions || [],
+    inventory: snapshot.inventory || [],
+    market: snapshot.market || [],
+    portfolio: snapshot.portfolio || [],
+    ratings: snapshot.ratings || []
+  };
 }
 
-function updatePortfolioMarketValues(card) {
-  state.portfolio.filter(p => normalizeCardId(p.Access Code) === card).forEach(p => {
-    const m = state.market.find(x => x.Ticker === p.Ticker);
-    if (!m) return;
-    const price = Number(m.Current_Price || 0);
-    p["Current Price"] = price;
-    p["Market Value"] = Number((Number(p.Shares_Owned || 0) * price).toFixed(2));
-    p["Unrealized Gain/Loss"] = Number((Number(p["Market Value"] || 0) - Number(p.Total_Cost || 0)).toFixed(2));
+function findMarket(ticker) {
+  return (state.market || []).find((m) => String(m.ticker) === String(ticker));
+}
+
+function normalizeCardId(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\.0$/, "");
+}
+
+function money(value) {
+  const n = Number(value || 0);
+  return n.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD"
   });
 }
 
-function metric(label, value, note) { return `<div class="metric"><div class="label">${sanitize(label)}</div><div class="value">${sanitize(value)}</div><div class="note">${sanitize(note || "")}</div></div>`; }
-function mini(label, value) { return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(value ?? "")}</strong></div>`; }
-function sum(rows, key) { return rows.reduce((a,r) => a + Number(r[key] || 0), 0); }
-function showStatus(el, ok, message) { el.className = `status-box ${ok ? "ok" : "bad"}`; el.textContent = message; }
-function table(rows, cols, empty) {
-  if (!rows || !rows.length) return `<div class="empty">${sanitize(empty)}</div>`;
-  return `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th>${labelize(c)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${formatValue(c, r[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+function num(value, decimals = 2) {
+  return Number(value || 0).toLocaleString(undefined, {
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: decimals
+  });
 }
-function labelize(c) { return sanitize(String(c).replaceAll("_", " ")); }
-function formatValue(k,v) {
-  if (v === undefined || v === null || v === "") return "";
-  if (/amount|balance|price|cost|spent|value|debt|cash|revenue|profit/i.test(k)) return sanitize(money(v));
-  if (/change_%|impact_%|growth_rate/i.test(k)) return sanitize(percent(v));
-  if (/gain\/loss/i.test(k)) {
-    const cls = Number(v) >= 0 ? "positive" : "negative";
-    return `<span class="${cls}">${sanitize(money(v))}</span>`;
+
+function sanitize(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function labelizeAction(action) {
+  return String(action)
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function metric(label, value, note) {
+  return `
+    <div class="metric">
+      <div class="label">${sanitize(label)}</div>
+      <div class="value">${sanitize(value)}</div>
+      <div class="note">${sanitize(note || "")}</div>
+    </div>`;
+}
+
+function mini(label, value) {
+  return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(value ?? "")}</strong></div>`;
+}
+
+function sum(rows, key) {
+  return (rows || []).reduce((total, row) => total + Number(row[key] || 0), 0);
+}
+
+function showStatus(element, ok, message) {
+  element.className = `status-box ${ok ? "ok" : "bad"}`;
+  element.textContent = message;
+}
+
+function table(rows, columns, emptyMessage) {
+  if (!rows || !rows.length) {
+    return `<div class="empty">${sanitize(emptyMessage)}</div>`;
   }
-  if (/change_amount/i.test(k)) {
-    const cls = Number(v) >= 0 ? "positive" : "negative";
-    return `<span class="${cls}">${Number(v) >= 0 ? "+" : ""}${sanitize(num(v))}</span>`;
+
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>${columns.map((col) => `<th>${labelize(col)}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `<tr>${columns.map((col) => `<td>${formatValue(col, row[col])}</td>`).join("")}</tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function labelize(value) {
+  return sanitize(
+    String(value)
+      .replace(/([A-Z])/g, " $1")
+      .replaceAll("_", " ")
+      .trim()
+  );
+}
+
+function formatValue(key, value) {
+  if (value === undefined || value === null || value === "") return "";
+
+  if (/amount|balance|price|cost|spent|value|reward|target/i.test(key)) {
+    return sanitize(money(value));
   }
-  if (/status/i.test(k)) {
-    const text = String(v);
-    const cls = text.toLowerCase().includes("success") || text.toLowerCase().includes("present") || text.toLowerCase().includes("submitted") ? "good" : "";
-    return `<span class="badge ${cls}">${sanitize(v)}</span>`;
+
+  if (/gainLoss/i.test(key)) {
+    const cls = Number(value) >= 0 ? "positive" : "negative";
+    return `<span class="${cls}">${sanitize(money(value))}</span>`;
   }
-  return sanitize(v);
+
+  if (/status|active/i.test(key)) {
+    const text = String(value);
+    const cls = text.toLowerCase().includes("success") || text.toLowerCase().includes("active") || text.toLowerCase().includes("pending")
+      ? "good"
+      : "";
+    return `<span class="badge ${cls}">${sanitize(value)}</span>`;
+  }
+
+  return sanitize(value);
 }
