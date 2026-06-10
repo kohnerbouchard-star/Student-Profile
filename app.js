@@ -2,34 +2,53 @@ const API_URL = "https://silent-haze-ca17.kohner.workers.dev";
 
 const PERMISSION_SETS = {
   STUDENT: {
-    label: "Student",
+    label: "Ready",
     views: ["profile", "store", "portfolio", "trade", "stockProfile", "rating"],
     actions: ["STORE_PURCHASE", "STOCK_TRADE", "SUBMIT_RATING"]
   },
   READ_ONLY: {
-    label: "Read only",
+    label: "View only",
     views: ["profile", "store", "portfolio", "trade", "stockProfile", "rating"],
     actions: []
+  }
+};
+
+const VIEW_COPY = {
+  profile: {
+    title: "My Dashboard",
+    subtitle: "A quick look at your balance, recent activity, inventory, and investments."
+  },
+  store: {
+    title: "Shop",
+    subtitle: "Buy classroom items with your current balance. Purchases update your account after they are confirmed."
+  },
+  portfolio: {
+    title: "Investments",
+    subtitle: "Track your current holdings and how your positions are doing in the market."
+  },
+  trade: {
+    title: "Trade Desk",
+    subtitle: "Buy or sell shares during the trading window. Check your balance and holdings first."
+  },
+  stockProfile: {
+    title: "Market Explorer",
+    subtitle: "Look through available companies and compare prices before making a move."
+  },
+  rating: {
+    title: "Predictions",
+    subtitle: "Submit a market prediction with a target price and a short reason."
   }
 };
 
 let state = emptyState();
 let currentSession = null;
 
-const views = {
-  profile: "Student Profile",
-  store: "Store Kiosk",
-  portfolio: "Stock Portfolio",
-  trade: "Stock Trade",
-  stockProfile: "Stock Profile",
-  rating: "Analyst Rating"
-};
-
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
   document.getElementById("loginForm").addEventListener("submit", handleLogin);
   document.getElementById("logoutButton").addEventListener("click", logout);
+  document.getElementById("refreshButton").addEventListener("click", refreshDashboard);
 
   document.querySelectorAll(".nav-item").forEach((btn) => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
@@ -63,10 +82,10 @@ async function handleLogin(event) {
   if (isButtonLoading(button)) return;
 
   if (!accessCode) {
-    return showLoginError("Enter your Access Code.");
+    return showLoginError("Enter your student code first.");
   }
 
-  setButtonLoading(button, true, "Signing in...");
+  setButtonLoading(button, true, "Opening dashboard...");
   setControlsDisabled(form, true, [button]);
 
   try {
@@ -78,7 +97,7 @@ async function handleLogin(event) {
     input.value = "";
 
     if (!result || result.ok !== true) {
-      return showLoginError(result && result.message ? result.message : "Login failed.");
+      return showLoginError(cleanErrorMessage(result && result.message ? result.message : "Login failed. Try scanning your code again."));
     }
 
     currentSession = {
@@ -94,7 +113,10 @@ async function handleLogin(event) {
     }
 
     showApp();
+    showGlobalStatus("ok", "Dashboard opened. Your latest account data is loaded.");
 
+  } catch (err) {
+    showLoginError(cleanErrorMessage(err.message || String(err)));
   } finally {
     setControlsDisabled(form, false, [button]);
     setButtonLoading(button, false);
@@ -125,8 +147,44 @@ async function logout() {
 
     currentSession = null;
     state = emptyState();
+    hideGlobalStatus();
     showLogin();
 
+  } finally {
+    setButtonLoading(button, false);
+  }
+}
+
+async function refreshDashboard() {
+  const button = document.getElementById("refreshButton");
+
+  if (isButtonLoading(button)) return;
+
+  if (!currentSession || !currentSession.token) {
+    showGlobalStatus("bad", "Sign in again to refresh your dashboard.");
+    return showLogin();
+  }
+
+  setButtonLoading(button, true, "Refreshing...");
+  showGlobalStatus("loading", "Refreshing your latest dashboard data...");
+
+  try {
+    const result = await callApi({
+      action: "GET_SNAPSHOT",
+      token: currentSession.token
+    });
+
+    if (!result || result.ok !== true) {
+      throw new Error(result && result.message ? result.message : "Refresh failed.");
+    }
+
+    if (result.snapshot) mergeSnapshot(result.snapshot);
+    renderCurrentView();
+    updateIdentity();
+    showGlobalStatus("ok", "Dashboard refreshed.");
+
+  } catch (err) {
+    showGlobalStatus("bad", cleanErrorMessage(err.message || String(err)));
   } finally {
     setButtonLoading(button, false);
   }
@@ -150,6 +208,21 @@ function clearLoginError() {
   el.classList.add("hidden");
 }
 
+function showGlobalStatus(type, message) {
+  const el = document.getElementById("globalStatus");
+  if (!el) return;
+  el.className = `global-status ${type || ""}`;
+  el.textContent = message;
+  el.classList.remove("hidden");
+}
+
+function hideGlobalStatus() {
+  const el = document.getElementById("globalStatus");
+  if (!el) return;
+  el.textContent = "";
+  el.classList.add("hidden");
+}
+
 function selectedStudent() {
   return state.profile || null;
 }
@@ -163,15 +236,9 @@ function updateIdentity() {
 
   document.getElementById("identityName").textContent = s.name || "Student";
   document.getElementById("identityMeta").textContent = `Grade ${s.grade || "—"} · ${s.homeroom || "—"}`;
-  document.getElementById("permissionSummary").innerHTML = `<span class="badge good">${sanitize(label)}</span> ${actionBadges()}`;
-  document.getElementById("connectionMode").textContent = "Cloudflare Worker connected";
-  document.getElementById("connectionCopy").textContent = "GitHub UI sends approved actions through Cloudflare to Apps Script. Sheets stay private.";
-}
-
-function actionBadges() {
-  const allowed = currentSession?.permissions || [];
-  if (!allowed.length) return `<span class="badge">No writes</span>`;
-  return allowed.map((a) => `<span class="badge">${sanitize(labelizeAction(a))}</span>`).join(" ");
+  document.getElementById("permissionSummary").innerHTML = `<span class="badge good">${sanitize(label)}</span><span class="badge">Live account</span>`;
+  document.getElementById("connectionMode").textContent = "Synced account";
+  document.getElementById("connectionCopy").textContent = "Your dashboard updates after confirmed actions.";
 }
 
 function can(action) {
@@ -180,7 +247,7 @@ function can(action) {
 
 function requirePermission(action) {
   if (!can(action)) {
-    throw new Error("You do not have permission to perform this action.");
+    throw new Error("This action is not available for your account right now.");
   }
 }
 
@@ -198,7 +265,9 @@ function switchView(view) {
     section.classList.toggle("active", section.id === view);
   });
 
-  document.getElementById("pageTitle").textContent = views[view] || "Student Dashboard";
+  const copy = VIEW_COPY[view] || VIEW_COPY.profile;
+  document.getElementById("pageTitle").textContent = copy.title;
+  document.getElementById("pageSubtitle").textContent = copy.subtitle;
   renderCurrentView();
 }
 
@@ -228,15 +297,15 @@ function renderProfile() {
 
   document.getElementById("profile").innerHTML = `
     <div class="grid cols-4">
-      ${metric("Current Balance", money(s.balance), s.name || "Student")}
-      ${metric("Inventory Items", inventoryCount, "Total items purchased")}
-      ${metric("Store Spent", money(totalSpent), "Store purchases")}
-      ${metric("Portfolio Positions", (state.portfolio || []).length, "Active holdings")}
+      ${metric("Balance", money(s.balance), "Available to spend or invest", "This is your current classroom economy balance.")}
+      ${metric("Inventory", inventoryCount, "Items you have bought", "These are items recorded on your account.")}
+      ${metric("Shop Spent", money(totalSpent), "Total recent purchases", "This counts your store purchase activity.")}
+      ${metric("Investments", (state.portfolio || []).length, "Current positions", "A position means you currently own shares.")}
     </div>
 
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
-        <h2>Student Details</h2>
+        <h2 class="card-title">My Account ${tip("This information comes from your student account.")}</h2>
         <div class="mini-list">
           ${mini("Name", s.name)}
           ${mini("Grade", s.grade || "—")}
@@ -247,14 +316,14 @@ function renderProfile() {
       </div>
 
       <div class="card">
-        <h2>Recent Transactions</h2>
-        ${table(transactions.slice(0, 10), ["timestamp", "mode", "amount", "endingBalance", "itemName", "status"], "No transactions yet.")}
+        <h2 class="card-title">Recent Activity ${tip("Your newest confirmed account actions appear here.")}</h2>
+        ${table(transactions.slice(0, 10), ["timestamp", "mode", "amount", "endingBalance", "itemName", "status"], "No activity yet. Once you buy, trade, or submit a prediction, it will appear here.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Inventory</h2>
-      ${table(state.inventory || [], ["itemName", "category", "quantityPurchased", "totalSpent", "lastPurchased"], "No inventory yet.")}
+      <h2 class="card-title">My Items ${tip("Items you bought from the shop appear here.")}</h2>
+      ${table(state.inventory || [], ["itemName", "category", "quantityPurchased", "totalSpent", "lastPurchased"], "No items yet. Visit the Shop to buy your first item.")}
     </div>`;
 }
 
@@ -269,40 +338,40 @@ function renderStore() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2>Purchase Item</h2>
-          <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Write allowed" : "No write permission"}</span>
+          <h2 class="card-title">Buy an Item ${tip("Choose an item and quantity, then submit your purchase.")}</h2>
+          <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Ready" : "Unavailable"}</span>
         </div>
 
         <div class="form-grid" id="storeForm">
           <label>
-            <span class="field-label">Item</span>
+            <span class="field-label">Item ${tip("The list shows the item price and current stock.")}</span>
             <select id="storeItem">
               ${items.map((item) => `<option value="${sanitize(item.itemId)}">${sanitize(item.itemName)} · ${money(item.price)} · Stock ${sanitize(item.inventory === "" ? "—" : item.inventory)}</option>`).join("")}
             </select>
           </label>
 
           <label>
-            <span class="field-label">Quantity</span>
+            <span class="field-label">Quantity ${tip("Choose how many you want to buy.")}</span>
             <input id="storeQty" type="number" min="1" value="1" />
           </label>
 
-          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Purchase</button>
+          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Buy Item</button>
         </div>
 
-        <div id="storeStatus" class="status-box">This will submit as ${sanitize(s.name)} only.</div>
+        <div id="storeStatus" class="status-box">Purchases are submitted for ${sanitize(s.name)}.</div>
       </div>
 
       <div class="card">
         <div class="card-title-row">
-          <h2>Available Store Items</h2>
-          <span class="badge">${items.length} active</span>
+          <h2 class="card-title">Shop Items ${tip("These are the items currently available to buy.")}</h2>
+          <span class="badge">${items.length} available</span>
         </div>
-        ${table(items, ["itemId", "itemName", "price", "inventory", "category", "description"], "No store items.")}
+        ${table(items, ["itemName", "price", "inventory", "category", "description"], "The shop is empty right now. Check again later.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Your Purchase History</h2>
+      <h2 class="card-title">Purchase History ${tip("Your recent shop purchases appear here.")}</h2>
       ${table(purchases, ["timestamp", "itemName", "amount", "endingBalance", "status"], "No purchases yet.")}
     </div>`;
 }
@@ -320,21 +389,24 @@ async function purchaseItem(button) {
     const itemId = document.getElementById("storeItem").value;
     const quantity = Number(document.getElementById("storeQty").value || 1);
 
-    setButtonLoading(submitButton, true, "Purchasing...");
+    if (!itemId) throw new Error("Choose an item first.");
+    if (!Number.isFinite(quantity) || quantity < 1) throw new Error("Quantity must be at least 1.");
+
+    setButtonLoading(submitButton, true, "Buying...");
     setControlsDisabled(form, true, [submitButton]);
-    showStatus(status, null, "Submitting purchase...");
+    showStatus(status, null, "Checking your balance and item stock...");
 
     const result = await submitAction("STORE_PURCHASE", {
       itemId,
       quantity
     });
 
-    showStatus(status, result.ok === true, result.message || "Purchase submitted.");
+    showStatus(status, result.ok === true, result.message || "Purchase complete.");
     renderCurrentView();
     updateIdentity();
 
   } catch (err) {
-    showStatus(status, false, err.message);
+    showStatus(status, false, cleanErrorMessage(err.message));
   } finally {
     setControlsDisabled(form, false, [submitButton]);
     setButtonLoading(submitButton, false);
@@ -367,14 +439,14 @@ function renderPortfolio() {
 
   document.getElementById("portfolio").innerHTML = `
     <div class="grid cols-3">
-      ${metric("Holdings", rows.length, "Active positions")}
-      ${metric("Market Value", money(marketValue), "Current portfolio")}
-      ${metric("Unrealized Gain/Loss", money(gainLoss), gainLoss >= 0 ? "Positive" : "Negative")}
+      ${metric("Holdings", rows.length, "Active positions", "How many different stocks you currently own.")}
+      ${metric("Market Value", money(marketValue), "Current portfolio", "Estimated value of your current shares.")}
+      ${metric("Gain / Loss", money(gainLoss), gainLoss >= 0 ? "Currently positive" : "Currently negative", "Difference between what your shares cost and what they are worth now.")}
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Portfolio Positions</h2>
-      ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No stock portfolio found.")}
+      <h2 class="card-title">My Positions ${tip("This table shows stocks you currently own.")}</h2>
+      ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No investments yet. Use the Trade Desk to buy your first shares.")}
     </div>`;
 }
 
@@ -392,43 +464,43 @@ function renderTrade() {
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
         <div class="card-title-row">
-          <h2>Submit Stock Trade</h2>
-          <span class="badge ${can("STOCK_TRADE") ? "good" : "bad"}">${can("STOCK_TRADE") ? "Write allowed" : "No write permission"}</span>
+          <h2 class="card-title">Place a Trade ${tip("Choose BUY to purchase shares or SELL to sell shares you already own.")}</h2>
+          <span class="badge ${can("STOCK_TRADE") ? "good" : "bad"}">${can("STOCK_TRADE") ? "Ready" : "Unavailable"}</span>
         </div>
 
         <div class="form-grid" id="tradeForm">
           <label>
-            <span class="field-label">Action</span>
+            <span class="field-label">Action ${tip("BUY spends your balance. SELL gives you money back if you own enough shares.")}</span>
             <select id="tradeAction"><option>BUY</option><option>SELL</option></select>
           </label>
 
           <label>
-            <span class="field-label">Ticker</span>
+            <span class="field-label">Stock ${tip("Pick the company ticker you want to trade.")}</span>
             <select id="tradeTicker">
               ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)} · ${money(m.currentPrice)}</option>`).join("")}
             </select>
           </label>
 
           <label class="span-2">
-            <span class="field-label">Shares</span>
+            <span class="field-label">Shares ${tip("Enter the number of shares. Use whole numbers only.")}</span>
             <input id="tradeShares" type="number" min="1" value="1" />
           </label>
 
           <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can("STOCK_TRADE") ? "" : "disabled"} onclick="submitTrade(this)">Submit Trade</button>
         </div>
 
-        <div id="tradeStatus" class="status-box">Trades submit as your logged-in session only.</div>
+        <div id="tradeStatus" class="status-box">Trades are checked against your balance and current holdings.</div>
       </div>
 
       <div class="card">
-        <h2>Your Recent Stock Activity</h2>
-        ${table(stockTx, ["timestamp", "mode", "itemId", "itemName", "amount", "endingBalance", "status"], "No stock activity yet.")}
+        <h2 class="card-title">Recent Trades ${tip("Your newest stock activity appears here.")}</h2>
+        ${table(stockTx, ["timestamp", "mode", "itemId", "itemName", "amount", "endingBalance", "status"], "No stock trades yet.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2>Live Market</h2>
-      ${table(marketRows.slice(0, 40), ["ticker", "companyName", "sector", "currentPrice", "changePct", "trend", "assetType"], "No market data.")}
+      <h2 class="card-title">Market Board ${tip("Use this table to compare current prices before trading.")}</h2>
+      ${table(marketRows.slice(0, 40), ["ticker", "companyName", "sector", "currentPrice", "changePct", "trend", "assetType"], "No market data is available right now.")}
     </div>`;
 }
 
@@ -446,9 +518,12 @@ async function submitTrade(button) {
     const ticker = document.getElementById("tradeTicker").value;
     const shares = Number(document.getElementById("tradeShares").value || 0);
 
-    setButtonLoading(submitButton, true, "Submitting trade...");
+    if (!ticker) throw new Error("Choose a stock first.");
+    if (!Number.isInteger(shares) || shares < 1) throw new Error("Shares must be a whole number above 0.");
+
+    setButtonLoading(submitButton, true, "Submitting...");
     setControlsDisabled(form, true, [submitButton]);
-    showStatus(status, null, "Submitting trade...");
+    showStatus(status, null, "Checking market price and your account...");
 
     const result = await submitAction("STOCK_TRADE", {
       action,
@@ -461,7 +536,7 @@ async function submitTrade(button) {
     updateIdentity();
 
   } catch (err) {
-    showStatus(status, false, err.message);
+    showStatus(status, false, cleanErrorMessage(err.message));
   } finally {
     setControlsDisabled(form, false, [submitButton]);
     setButtonLoading(submitButton, false);
@@ -475,7 +550,7 @@ function renderStockProfile() {
   document.getElementById("stockProfile").innerHTML = `
     <div class="card" style="margin-bottom:16px;">
       <label>
-        <span class="field-label">Choose Ticker</span>
+        <span class="field-label">Choose a Stock ${tip("Select a ticker to see a quick profile.")}</span>
         <select id="stockProfileTicker" onchange="renderStockProfileDetail()">
           ${rows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
         </select>
@@ -495,7 +570,7 @@ function renderStockProfileDetail() {
   const m = findMarket(ticker) || (state.market || [])[0];
 
   if (!m) {
-    document.getElementById("stockProfileDetail").innerHTML = `<div class="empty">No market data.</div>`;
+    document.getElementById("stockProfileDetail").innerHTML = `<div class="empty">No market data is available right now.</div>`;
     return;
   }
 
@@ -514,7 +589,7 @@ function renderStockProfileDetail() {
       </div>
 
       <div class="card">
-        <h2>Holding</h2>
+        <h2 class="card-title">My Holding ${tip("This shows whether you currently own this stock.")}</h2>
         <div class="mini-list">
           ${holdingSummary(m.ticker)}
         </div>
@@ -545,42 +620,42 @@ function renderRating() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2>Submit Analyst Rating</h2>
-          <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Write allowed" : "No write permission"}</span>
+          <h2 class="card-title">Submit a Prediction ${tip("Make a prediction using a rating, target price, and short reason.")}</h2>
+          <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Ready" : "Unavailable"}</span>
         </div>
 
         <div class="form-grid" id="ratingForm">
           <label>
-            <span class="field-label">Ticker</span>
+            <span class="field-label">Stock ${tip("Choose the company your prediction is about.")}</span>
             <select id="ratingTicker">
               ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
             </select>
           </label>
 
           <label>
-            <span class="field-label">Rating</span>
+            <span class="field-label">Prediction ${tip("BUY means you expect strength, HOLD means neutral, SELL means weakness.")}</span>
             <select id="ratingValue"><option>BUY</option><option>HOLD</option><option>SELL</option></select>
           </label>
 
           <label class="span-2">
-            <span class="field-label">Target Price</span>
+            <span class="field-label">Target Price ${tip("Your estimated future price for this stock.")}</span>
             <input id="targetPrice" type="number" min="0" step="0.01" placeholder="Example: 125.00" />
           </label>
 
           <label class="span-2">
-            <span class="field-label">Reason</span>
+            <span class="field-label">Reason ${tip("Explain your thinking in at least 10 characters.")}</span>
             <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
           </label>
 
-          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Rating</button>
+          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Prediction</button>
         </div>
 
-        <div id="ratingStatus" class="status-box">Ratings submit as your logged-in session only.</div>
+        <div id="ratingStatus" class="status-box">Predictions are saved to your account.</div>
       </div>
 
       <div class="card">
-        <h2>Your Rating History</h2>
-        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No submitted ratings yet.")}
+        <h2 class="card-title">Prediction History ${tip("Your recent predictions appear here.")}</h2>
+        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No predictions yet.")}
       </div>
     </div>`;
 }
@@ -600,9 +675,13 @@ async function submitRating(button) {
     const targetPrice = Number(document.getElementById("targetPrice").value || 0);
     const reason = document.getElementById("ratingReason").value.trim();
 
-    setButtonLoading(submitButton, true, "Submitting rating...");
+    if (!ticker) throw new Error("Choose a stock first.");
+    if (!targetPrice || targetPrice <= 0) throw new Error("Enter a target price above 0.");
+    if (reason.length < 10) throw new Error("Add a short reason with at least 10 characters.");
+
+    setButtonLoading(submitButton, true, "Saving...");
     setControlsDisabled(form, true, [submitButton]);
-    showStatus(status, null, "Submitting rating...");
+    showStatus(status, null, "Saving your prediction...");
 
     const result = await submitAction("SUBMIT_RATING", {
       ticker,
@@ -611,7 +690,7 @@ async function submitRating(button) {
       reason
     });
 
-    showStatus(status, result.ok === true, result.message || "Rating submitted.");
+    showStatus(status, result.ok === true, result.message || "Prediction saved.");
 
     if (result.ok === true) {
       document.getElementById("targetPrice").value = "";
@@ -621,7 +700,7 @@ async function submitRating(button) {
     renderCurrentView();
 
   } catch (err) {
-    showStatus(status, false, err.message);
+    showStatus(status, false, cleanErrorMessage(err.message));
   } finally {
     setControlsDisabled(form, false, [submitButton]);
     setButtonLoading(submitButton, false);
@@ -632,7 +711,7 @@ async function submitAction(action, payload) {
   requirePermission(action);
 
   if (!currentSession || !currentSession.token) {
-    throw new Error("You are not logged in.");
+    throw new Error("Sign in again before submitting.");
   }
 
   const result = await callApi({
@@ -642,7 +721,7 @@ async function submitAction(action, payload) {
   });
 
   if (!result || result.ok !== true) {
-    throw new Error(result && result.message ? result.message : "Action failed.");
+    throw new Error(result && result.message ? result.message : "That did not go through. Try again.");
   }
 
   if (result.snapshot) {
@@ -669,14 +748,14 @@ async function callApi(body) {
     } catch (err) {
       return {
         ok: false,
-        message: "Worker returned invalid JSON."
+        message: "The dashboard received an unreadable response. Try refreshing."
       };
     }
 
     if (!result) {
       return {
         ok: false,
-        message: "Backend returned no response."
+        message: "No response came back. Try again."
       };
     }
 
@@ -685,7 +764,7 @@ async function callApi(body) {
   } catch (err) {
     return {
       ok: false,
-      message: err && err.message ? err.message : String(err)
+      message: "Could not connect. Check your internet and try again."
     };
   }
 }
@@ -723,13 +802,6 @@ function money(value) {
   });
 }
 
-function num(value, decimals = 2) {
-  return Number(value || 0).toLocaleString(undefined, {
-    maximumFractionDigits: decimals,
-    minimumFractionDigits: decimals
-  });
-}
-
 function sanitize(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -740,17 +812,10 @@ function sanitize(value) {
   }[char]));
 }
 
-function labelizeAction(action) {
-  return String(action)
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function metric(label, value, note) {
+function metric(label, value, note, tipText) {
   return `
     <div class="metric">
-      <div class="label">${sanitize(label)}</div>
+      <div class="label">${sanitize(label)} ${tipText ? tip(tipText) : ""}</div>
       <div class="value">${sanitize(value)}</div>
       <div class="note">${sanitize(note || "")}</div>
     </div>`;
@@ -758,6 +823,10 @@ function metric(label, value, note) {
 
 function mini(label, value) {
   return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(value ?? "")}</strong></div>`;
+}
+
+function tip(text) {
+  return `<span class="tooltip" tabindex="0" data-tip="${sanitize(text)}">?</span>`;
 }
 
 function sum(rows, key) {
@@ -833,12 +902,27 @@ function table(rows, columns, emptyMessage) {
 }
 
 function labelize(value) {
-  return sanitize(
-    String(value)
-      .replace(/([A-Z])/g, " $1")
-      .replaceAll("_", " ")
-      .trim()
-  );
+  const labels = {
+    timestamp: "Time",
+    mode: "Activity",
+    amount: "Amount",
+    endingBalance: "Balance After",
+    itemName: "Item",
+    itemId: "Ticker / Item",
+    status: "Status",
+    currentPrice: "Price",
+    changePct: "Change",
+    assetType: "Type",
+    sharesOwned: "Shares",
+    avgBuyPrice: "Avg. Buy",
+    marketValue: "Value",
+    gainLoss: "Gain / Loss",
+    targetPrice: "Target",
+    rewardStatus: "Result",
+    rewardAmount: "Reward"
+  };
+
+  return sanitize(labels[value] || String(value).replace(/([A-Z])/g, " $1").replaceAll("_", " ").trim());
 }
 
 function formatValue(key, value) {
@@ -862,4 +946,14 @@ function formatValue(key, value) {
   }
 
   return sanitize(value);
+}
+
+function cleanErrorMessage(message) {
+  const text = String(message || "Something went wrong. Try again.");
+
+  if (/unauthorized|secret|api|script|worker|backend|server|origin/i.test(text)) {
+    return "The dashboard could not confirm your request. Please refresh and try again.";
+  }
+
+  return text;
 }
