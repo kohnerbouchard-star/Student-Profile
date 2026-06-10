@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classroom Economy App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">CE</div>
+        <div>
+          <div class="brand-title">Classroom Economy</div>
+          <div class="brand-subtitle dark-text">Permissioned student portal</div>
+        </div>
+      </div>
+
+      <h1>Student Login</h1>
+      <p class="login-copy">Enter your assigned Card ID. Your session controls what you can view and what you can submit.</p>
+
+      <form id="loginForm" class="login-form">
+        <label>
+          <span class="field-label">Card ID</span>
+          <input id="loginCardId" autocomplete="off" inputmode="text" placeholder="Example: ba353911" />
+        </label>
+        <button class="primary-btn" type="submit">Log in</button>
+      </form>
+
+      <div id="loginError" class="status-box bad hidden"></div>
+      <div class="status-box">Students can only write through approved actions tied to their own logged-in Card ID.</div>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CE</div>
+        <div>
+          <div class="brand-title">Classroom Economy</div>
+          <div class="brand-subtitle">Student portal</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="profile">Student Profile</button>
+        <button class="nav-item" data-view="store">Store Kiosk</button>
+        <button class="nav-item" data-view="portfolio">Stock Portfolio</button>
+        <button class="nav-item" data-view="trade">Stock Trade</button>
+        <button class="nav-item" data-view="stockProfile">Stock Profile</button>
+        <button class="nav-item" data-view="rating">Analyst Rating</button>
+      </nav>
+      <div class="sidebar-card">
+        <div class="eyebrow">Mode</div>
+        <strong id="connectionMode">Permissioned writes</strong>
+        <p id="connectionCopy">Local prototype mode is enabled until you paste your Apps Script Web App URL into app.js.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Student dashboard</div>
+          <h1 id="pageTitle">Student Profile</h1>
+        </div>
+        <div class="identity-card">
+          <div class="identity-name" id="identityName">Student</div>
+          <div class="identity-meta" id="identityMeta">Card ID</div>
+          <div class="permission-row" id="permissionSummary"></div>
+          <button class="ghost-btn logout-btn" id="logoutButton" type="button">Log out</button>
+        </div>
+      </header>
+
+      <section id="profile" class="view active"></section>
+      <section id="store" class="view"></section>
+      <section id="portfolio" class="view"></section>
+      <section id="trade" class="view"></section>
+      <section id="stockProfile" class="view"></section>
+      <section id="rating" class="view"></section>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
