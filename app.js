@@ -53,39 +53,52 @@ function emptyState() {
 async function handleLogin(event) {
   event.preventDefault();
 
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
   const input = document.getElementById("loginCardId");
   const accessCode = normalizeCardId(input.value);
 
   clearLoginError();
 
+  if (isButtonLoading(button)) return;
+
   if (!accessCode) {
     return showLoginError("Enter your Access Code.");
   }
 
-  const result = await callApi({
-    action: "LOGIN",
-    accessCode
-  });
+  setButtonLoading(button, true, "Signing in...");
+  setControlsDisabled(form, true, [button]);
 
-  input.value = "";
+  try {
+    const result = await callApi({
+      action: "LOGIN",
+      accessCode
+    });
 
-  if (!result || result.ok !== true) {
-    return showLoginError(result && result.message ? result.message : "Login failed.");
+    input.value = "";
+
+    if (!result || result.ok !== true) {
+      return showLoginError(result && result.message ? result.message : "Login failed.");
+    }
+
+    currentSession = {
+      role: "STUDENT",
+      token: result.token,
+      permissions: PERMISSION_SETS.STUDENT.actions
+    };
+
+    mergeSnapshot(result.snapshot || {});
+
+    if (result.profile) {
+      state.profile = result.profile;
+    }
+
+    showApp();
+
+  } finally {
+    setControlsDisabled(form, false, [button]);
+    setButtonLoading(button, false);
   }
-
-  currentSession = {
-    role: "STUDENT",
-    token: result.token,
-    permissions: PERMISSION_SETS.STUDENT.actions
-  };
-
-  mergeSnapshot(result.snapshot || {});
-
-  if (result.profile) {
-    state.profile = result.profile;
-  }
-
-  showApp();
 }
 
 function showApp() {
@@ -96,16 +109,27 @@ function showApp() {
 }
 
 async function logout() {
-  if (currentSession && currentSession.token) {
-    await callApi({
-      action: "LOGOUT",
-      token: currentSession.token
-    });
-  }
+  const button = document.getElementById("logoutButton");
 
-  currentSession = null;
-  state = emptyState();
-  showLogin();
+  if (isButtonLoading(button)) return;
+
+  setButtonLoading(button, true, "Logging out...");
+
+  try {
+    if (currentSession && currentSession.token) {
+      await callApi({
+        action: "LOGOUT",
+        token: currentSession.token
+      });
+    }
+
+    currentSession = null;
+    state = emptyState();
+    showLogin();
+
+  } finally {
+    setButtonLoading(button, false);
+  }
 }
 
 function showLogin() {
@@ -249,7 +273,7 @@ function renderStore() {
           <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Write allowed" : "No write permission"}</span>
         </div>
 
-        <div class="form-grid">
+        <div class="form-grid" id="storeForm">
           <label>
             <span class="field-label">Item</span>
             <select id="storeItem">
@@ -262,7 +286,7 @@ function renderStore() {
             <input id="storeQty" type="number" min="1" value="1" />
           </label>
 
-          <button class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem()">Purchase</button>
+          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Purchase</button>
         </div>
 
         <div id="storeStatus" class="status-box">This will submit as ${sanitize(s.name)} only.</div>
@@ -283,14 +307,22 @@ function renderStore() {
     </div>`;
 }
 
-async function purchaseItem() {
+async function purchaseItem(button) {
   const status = document.getElementById("storeStatus");
+  const form = document.getElementById("storeForm");
+  const submitButton = button || document.getElementById("storeSubmitButton");
+
+  if (isButtonLoading(submitButton)) return;
 
   try {
     requirePermission("STORE_PURCHASE");
 
     const itemId = document.getElementById("storeItem").value;
     const quantity = Number(document.getElementById("storeQty").value || 1);
+
+    setButtonLoading(submitButton, true, "Purchasing...");
+    setControlsDisabled(form, true, [submitButton]);
+    showStatus(status, null, "Submitting purchase...");
 
     const result = await submitAction("STORE_PURCHASE", {
       itemId,
@@ -303,6 +335,9 @@ async function purchaseItem() {
 
   } catch (err) {
     showStatus(status, false, err.message);
+  } finally {
+    setControlsDisabled(form, false, [submitButton]);
+    setButtonLoading(submitButton, false);
   }
 }
 
@@ -361,7 +396,7 @@ function renderTrade() {
           <span class="badge ${can("STOCK_TRADE") ? "good" : "bad"}">${can("STOCK_TRADE") ? "Write allowed" : "No write permission"}</span>
         </div>
 
-        <div class="form-grid">
+        <div class="form-grid" id="tradeForm">
           <label>
             <span class="field-label">Action</span>
             <select id="tradeAction"><option>BUY</option><option>SELL</option></select>
@@ -379,7 +414,7 @@ function renderTrade() {
             <input id="tradeShares" type="number" min="1" value="1" />
           </label>
 
-          <button class="primary-btn span-2" type="button" ${can("STOCK_TRADE") ? "" : "disabled"} onclick="submitTrade()">Submit Trade</button>
+          <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can("STOCK_TRADE") ? "" : "disabled"} onclick="submitTrade(this)">Submit Trade</button>
         </div>
 
         <div id="tradeStatus" class="status-box">Trades submit as your logged-in session only.</div>
@@ -397,8 +432,12 @@ function renderTrade() {
     </div>`;
 }
 
-async function submitTrade() {
+async function submitTrade(button) {
   const status = document.getElementById("tradeStatus");
+  const form = document.getElementById("tradeForm");
+  const submitButton = button || document.getElementById("tradeSubmitButton");
+
+  if (isButtonLoading(submitButton)) return;
 
   try {
     requirePermission("STOCK_TRADE");
@@ -406,6 +445,10 @@ async function submitTrade() {
     const action = document.getElementById("tradeAction").value;
     const ticker = document.getElementById("tradeTicker").value;
     const shares = Number(document.getElementById("tradeShares").value || 0);
+
+    setButtonLoading(submitButton, true, "Submitting trade...");
+    setControlsDisabled(form, true, [submitButton]);
+    showStatus(status, null, "Submitting trade...");
 
     const result = await submitAction("STOCK_TRADE", {
       action,
@@ -419,6 +462,9 @@ async function submitTrade() {
 
   } catch (err) {
     showStatus(status, false, err.message);
+  } finally {
+    setControlsDisabled(form, false, [submitButton]);
+    setButtonLoading(submitButton, false);
   }
 }
 
@@ -503,7 +549,7 @@ function renderRating() {
           <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Write allowed" : "No write permission"}</span>
         </div>
 
-        <div class="form-grid">
+        <div class="form-grid" id="ratingForm">
           <label>
             <span class="field-label">Ticker</span>
             <select id="ratingTicker">
@@ -526,7 +572,7 @@ function renderRating() {
             <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
           </label>
 
-          <button class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating()">Submit Rating</button>
+          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Rating</button>
         </div>
 
         <div id="ratingStatus" class="status-box">Ratings submit as your logged-in session only.</div>
@@ -539,8 +585,12 @@ function renderRating() {
     </div>`;
 }
 
-async function submitRating() {
+async function submitRating(button) {
   const status = document.getElementById("ratingStatus");
+  const form = document.getElementById("ratingForm");
+  const submitButton = button || document.getElementById("ratingSubmitButton");
+
+  if (isButtonLoading(submitButton)) return;
 
   try {
     requirePermission("SUBMIT_RATING");
@@ -549,6 +599,10 @@ async function submitRating() {
     const rating = document.getElementById("ratingValue").value;
     const targetPrice = Number(document.getElementById("targetPrice").value || 0);
     const reason = document.getElementById("ratingReason").value.trim();
+
+    setButtonLoading(submitButton, true, "Submitting rating...");
+    setControlsDisabled(form, true, [submitButton]);
+    showStatus(status, null, "Submitting rating...");
 
     const result = await submitAction("SUBMIT_RATING", {
       ticker,
@@ -568,6 +622,9 @@ async function submitRating() {
 
   } catch (err) {
     showStatus(status, false, err.message);
+  } finally {
+    setControlsDisabled(form, false, [submitButton]);
+    setButtonLoading(submitButton, false);
   }
 }
 
@@ -708,8 +765,53 @@ function sum(rows, key) {
 }
 
 function showStatus(element, ok, message) {
-  element.className = `status-box ${ok ? "ok" : "bad"}`;
+  if (!element) return;
+
+  if (ok === null) {
+    element.className = "status-box loading";
+  } else {
+    element.className = `status-box ${ok ? "ok" : "bad"}`;
+  }
+
   element.textContent = message;
+}
+
+function isButtonLoading(button) {
+  return Boolean(button && button.dataset.loading === "true");
+}
+
+function setButtonLoading(button, isLoading, loadingText) {
+  if (!button) return;
+
+  if (!button.dataset.originalText) {
+    button.dataset.originalText = button.textContent.trim();
+  }
+
+  if (isLoading) {
+    button.dataset.loading = "true";
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-loading");
+    button.innerHTML = `<span class="spinner" aria-hidden="true"></span><span>${sanitize(loadingText || "Loading...")}</span>`;
+    return;
+  }
+
+  button.dataset.loading = "false";
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  button.classList.remove("is-loading");
+  button.textContent = button.dataset.originalText || "Submit";
+}
+
+function setControlsDisabled(container, disabled, exceptions = []) {
+  if (!container) return;
+
+  const exceptionSet = new Set(exceptions.filter(Boolean));
+
+  container.querySelectorAll("input, select, textarea, button").forEach((control) => {
+    if (exceptionSet.has(control)) return;
+    control.disabled = disabled;
+  });
 }
 
 function table(rows, columns, emptyMessage) {
