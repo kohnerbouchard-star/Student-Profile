@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Classroom Economy App</title>
+  <title>Classroom Economy Student Portal</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,23 +13,23 @@
         <div class="brand-mark">CE</div>
         <div>
           <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle dark-text">Permissioned student portal</div>
+          <div class="brand-subtitle dark-text">Student portal</div>
         </div>
       </div>
 
-      <h1>Student Login</h1>
-      <p class="login-copy">Enter your assigned Access Code. Your session controls what you can view and what you can submit.</p>
+      <h1>Welcome back</h1>
+      <p class="login-copy">Scan or enter your student code to open your dashboard. Your code stays hidden after sign in.</p>
 
       <form id="loginForm" class="login-form">
         <label>
-          <span class="field-label">Access Code</span>
-          <input id="loginCardId" type="password" autocomplete="off" inputmode="none" placeholder="Scan access code" />
+          <span class="field-label">Student Code</span>
+          <input id="loginCardId" type="password" autocomplete="off" inputmode="none" placeholder="Scan student code" />
         </label>
-        <button class="primary-btn" type="submit">Log in</button>
+        <button class="primary-btn" type="submit">Open Dashboard</button>
       </form>
 
       <div id="loginError" class="status-box bad hidden"></div>
-      <div class="status-box">Students can only write through approved actions tied to their own logged-in Access Code.</div>
+      <div class="helper-card">Your dashboard shows only your account, purchases, trades, and ratings.</div>
     </div>
   </section>
 
@@ -39,37 +39,46 @@
         <div class="brand-mark">CE</div>
         <div>
           <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle">Student portal</div>
+          <div class="brand-subtitle">My student dashboard</div>
         </div>
       </div>
+
       <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" data-view="profile">Student Profile</button>
-        <button class="nav-item" data-view="store">Store Kiosk</button>
-        <button class="nav-item" data-view="portfolio">Stock Portfolio</button>
-        <button class="nav-item" data-view="trade">Stock Trade</button>
-        <button class="nav-item" data-view="stockProfile">Stock Profile</button>
-        <button class="nav-item" data-view="rating">Analyst Rating</button>
+        <button class="nav-item active" data-view="profile">My Dashboard</button>
+        <button class="nav-item" data-view="store">Shop</button>
+        <button class="nav-item" data-view="portfolio">Investments</button>
+        <button class="nav-item" data-view="trade">Trade Desk</button>
+        <button class="nav-item" data-view="stockProfile">Market Explorer</button>
+        <button class="nav-item" data-view="rating">Predictions</button>
       </nav>
+
       <div class="sidebar-card">
-        <div class="eyebrow">Mode</div>
-        <strong id="connectionMode">Permissioned writes</strong>
-        <p id="connectionCopy">Local prototype mode is enabled until you paste your Apps Script Web App URL into app.js.</p>
+        <div class="eyebrow">Today</div>
+        <strong id="connectionMode">Synced account</strong>
+        <p id="connectionCopy">Successful actions update your dashboard automatically.</p>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
-        <div>
+        <div class="page-heading">
           <div class="eyebrow">Student dashboard</div>
-          <h1 id="pageTitle">Student Profile</h1>
+          <h1 id="pageTitle">My Dashboard</h1>
+          <p id="pageSubtitle" class="page-subtitle">Track your balance, shop items, investments, and market predictions.</p>
         </div>
+
         <div class="identity-card">
           <div class="identity-name" id="identityName">Student</div>
-          <div class="identity-meta" id="identityMeta">Access Code</div>
+          <div class="identity-meta" id="identityMeta">Signed in</div>
           <div class="permission-row" id="permissionSummary"></div>
-          <button class="ghost-btn logout-btn" id="logoutButton" type="button">Log out</button>
+          <div class="identity-actions">
+            <button class="ghost-btn" id="refreshButton" type="button">Refresh</button>
+            <button class="ghost-btn logout-btn" id="logoutButton" type="button">Log out</button>
+          </div>
         </div>
       </header>
+
+      <div id="globalStatus" class="global-status hidden"></div>
 
       <section id="profile" class="view active"></section>
       <section id="store" class="view"></section>
@@ -79,6 +88,7 @@
       <section id="rating" class="view"></section>
     </main>
   </div>
+
   <script src="app.js"></script>
 </body>
 </html>
