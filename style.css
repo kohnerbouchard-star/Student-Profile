@@ -101,6 +101,8 @@ tr:last-child td { border-bottom: 0; }
 label .field-label { display: block; font-size: 12px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
 .primary-btn, .ghost-btn {
   border: 0; border-radius: 12px; padding: 11px 14px; font-weight: 750; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 43px;
 }
 .primary-btn { background: var(--accent); color: #fff; }
 .primary-btn:hover { filter: brightness(.96); }
@@ -108,6 +110,7 @@ label .field-label { display: block; font-size: 12px; color: var(--muted); font-
 .status-box { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--panel-2); color: var(--muted); font-size: 14px; }
 .status-box.ok { color: var(--good); background: #ecfdf3; }
 .status-box.bad { color: var(--bad); background: #fef3f2; }
+.status-box.loading { color: #1d4ed8; background: #eff6ff; }
 .badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; background: var(--panel-2); color: #475467; }
 .badge.good { background: #dcfce7; color: var(--good); }
 .badge.bad { background: #fee2e2; color: var(--bad); }
@@ -167,8 +170,25 @@ label .field-label { display: block; font-size: 12px; color: var(--muted); font-
 .notice-card strong { color: #78350f; }
 
 button:disabled {
-  opacity: .45;
+  opacity: .55;
   cursor: not-allowed;
+}
+button.is-loading {
+  opacity: .85;
+  pointer-events: none;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  display: inline-block;
+  flex: 0 0 auto;
+  animation: spin .75s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 .permission-row {
   display: flex;
