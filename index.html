@@ -64,9 +64,10 @@
 
         <div id="loginError" class="status-box bad hidden"></div>
 
-        <div class="access-note">
-          <strong>Account view only</strong>
-          <span>Your account shows your balance, store activity, portfolio, trades, and forecasts.</span>
+        <div class="login-quote" aria-live="polite">
+          <div class="quote-label">Market note</div>
+          <p id="loginQuoteText">Every decision has a cost. Every cost teaches a lesson.</p>
+          <div id="loginQuoteCount" class="quote-count">01 / 20</div>
         </div>
       </div>
     </div>
@@ -137,5 +138,6 @@
   <script src="api-retry-fix.js"></script>
   <script src="mobile-ux-fix.js"></script>
   <script src="academic-market-copy.js"></script>
+  <script src="login-quotes.js"></script>
 </body>
 </html>
