@@ -1,4 +1,4 @@
-const API_URL = ""; // Optional: paste your deployed Apps Script Web App URL here later.
+const API_URL = "";
 const SESSION_KEY = "classroomEconomySessionV2";
 const STATE_KEY = "classroomEconomyStateV2";
 
@@ -51,7 +51,7 @@ function init() {
 
 function loadState() {
   const saved = null
-  const base = structuredClone(window.SEED_DATA || {});
+  const base = {};
   base.ratings = base.ratings || [];
   if (!saved) return base;
   try {
@@ -91,24 +91,7 @@ async function handleLogin(event) {
       return showLoginError("Could not reach the backend. Check API_URL or use local prototype mode.");
     }
   }
-
-  const student = findStudentByCard(rawCardId);
-  if (!student) return showLoginError("Access Code not found. Check the ID and try again.");
-  if (String(student.Active || "Yes").toLowerCase() === "no") return showLoginError("This Access Code is inactive.");
-
-  startSession({
-    cardId: normalizeCardId(student.Access Code),
-    role: "STUDENT",
-    token: "local-prototype-session",
-    permissions: PERMISSION_SETS.STUDENT.actions
-  });
-}
-
-function startSession(session) {
-  currentSession = session;
-  /* storage disabled */
-  document.getElementById("loginCardId").value = "";
-  showApp();
+  return showLoginError("Backend connection is required. Deploy Apps Script and connect the app before student use.");
 }
 
 function showApp() {
@@ -143,7 +126,7 @@ function updateIdentity() {
   const role = currentSession?.role || "STUDENT";
   const label = PERMISSION_SETS[role]?.label || role;
   document.getElementById("identityName").textContent = s.Student_Name || "Student";
-  document.getElementById("identityMeta").textContent = `Access Code: ${normalizeCardId(s.Access Code)} · Grade ${s.Grade || "—"} · ${s.Homeroom || "—"}`;
+  document.getElementById("identityMeta").textContent = `Grade ${s.Grade || "—"} · ${s.Homeroom || "—"}`;
   document.getElementById("permissionSummary").innerHTML = `<span class="badge good">${sanitize(label)}</span> ${actionBadges()}`;
   document.getElementById("connectionMode").textContent = API_URL ? "Connected backend" : "Local prototype";
   document.getElementById("connectionCopy").textContent = API_URL
@@ -456,7 +439,7 @@ async function submitAction(action, payload, localHandler) {
   const cardId = selectedCard();
   if (!cardId) throw new Error("You are not logged in.");
 
-  if (!API_URL) return localHandler();
+  if (!API_URL) throw new Error("Backend connection required.");
 
   const result = await callApi({
     action,

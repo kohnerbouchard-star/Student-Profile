@@ -5,8 +5,8 @@ This version keeps the login screen and restores controlled write actions.
 ## What changed
 
 - No student dropdown.
-- Students log in with Card ID.
-- The active Card ID is stored in the session.
+- Students log in with access code.
+- The active access code is stored in the session.
 - Store purchases, stock trades, analyst ratings, and clock-in actions are permission-gated.
 - Students cannot choose another student for a write action from the UI.
 - Local prototype mode saves writes in browser storage.
@@ -14,12 +14,12 @@ This version keeps the login screen and restores controlled write actions.
 
 ## Important security note
 
-Static files alone cannot provide true data privacy because `data.js` is visible in the browser. For real privacy and real Google Sheets writes, deploy `apps-script-api.gs` as a Google Apps Script Web App and paste the deployed URL into `API_URL` in `app.js`.
+Static files alone cannot provide true data privacy because `data.js` is visible in the browser. For real privacy and real Google Sheets writes, deploy `apps-script-api.gs` as a Google Apps Script Web App and do not commit deployed URLs, keys, or student data to the frontend.
 
 ## Fast setup
 
 1. Open `index.html` locally to test the UI.
-2. Use any Card ID from the uploaded workbook to log in.
+2. Use any access code from the uploaded workbook to log in.
 3. Try Store Kiosk, Stock Trade, Analyst Rating, or Clock In.
 4. In local mode, writes are saved only in that browser.
 5. To reset local demo data, clear the browser's local storage for this page.
