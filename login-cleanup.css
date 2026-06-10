@@ -1,0 +1,14 @@
+/* Login cleanup: remove decorative orange divider and terminal kicker label. */
+
+.login-briefing::after {
+  content: none !important;
+  display: none !important;
+}
+
+.briefing-kicker {
+  display: none !important;
+}
+
+.login-briefing h1 {
+  margin-top: 0;
+}
