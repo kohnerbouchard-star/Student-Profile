@@ -1,6 +1,6 @@
 // Fixes inventory empty states after item use.
 // Rows with quantityPurchased = 0 should not appear as usable items.
-// The dropdown and My Items list now show clear empty states when there are no owned usable items.
+// The dropdown, My Items list, and submit action now all use the same usable-item list.
 
 function getOwnedInventoryRows() {
   return (state.inventory || []).filter((item) => {
@@ -8,6 +8,23 @@ function getOwnedInventoryRows() {
     const hasName = String(item.itemName || item.itemId || '').trim() !== '';
     return hasName && quantity > 0;
   });
+}
+
+function getSelectedUseItem() {
+  const select = document.getElementById('useItemSelect');
+  const usableItems = getOwnedInventoryRows();
+
+  if (!select || !usableItems.length) {
+    return null;
+  }
+
+  const selectedIndex = Number(select.value || 0);
+
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= usableItems.length) {
+    return null;
+  }
+
+  return usableItems[selectedIndex];
 }
 
 function renderInventoryEmptyState(message) {
@@ -124,4 +141,52 @@ renderUseItemCard = function patchedRenderUseItemCard() {
 
       <div id="useItemStatus" class="status-box">Your teacher will receive a notification after you submit.</div>
     </div>`;
+};
+
+useItem = async function patchedUseItem(button) {
+  const status = document.getElementById('useItemStatus');
+  const form = document.getElementById('useItemForm');
+  const submitButton = button || document.getElementById('useItemSubmitButton');
+
+  if (isButtonLoading(submitButton)) return;
+
+  try {
+    requirePermission('USE_ITEM');
+
+    const selectedItem = getSelectedUseItem();
+    const quantity = Number(document.getElementById('useItemQty').value || 1);
+    const note = document.getElementById('useItemNote').value.trim();
+    const ownedQuantity = Number(selectedItem && selectedItem.quantityPurchased || 0);
+
+    if (!selectedItem) throw new Error('Choose an item first.');
+    if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Quantity must be a whole number above 0.');
+    if (quantity > ownedQuantity) throw new Error(`You only have ${ownedQuantity} of this item available.`);
+
+    setButtonLoading(submitButton, true, 'Sending request...');
+    setControlsDisabled(form, true, [submitButton]);
+    showStatus(status, null, 'Sending your item-use request...');
+
+    const result = await submitAction('USE_ITEM', {
+      itemName: selectedItem.itemName,
+      itemId: selectedItem.itemId || selectedItem.itemName,
+      quantity,
+      note
+    });
+
+    showStatus(status, true, result.message || 'Item use recorded.');
+
+    const noteBox = document.getElementById('useItemNote');
+    if (noteBox) noteBox.value = '';
+
+    if (result.snapshot) {
+      renderCurrentView();
+      updateIdentity();
+    }
+
+  } catch (err) {
+    showStatus(status, false, cleanErrorMessage(err.message));
+  } finally {
+    setControlsDisabled(form, false, [submitButton]);
+    setButtonLoading(submitButton, false);
+  }
 };
