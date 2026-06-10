@@ -8,29 +8,73 @@
   <link rel="stylesheet" href="academic-market-ui.css" />
 </head>
 <body>
-  <section id="loginScreen" class="login-screen">
-    <div class="login-card">
-      <div class="brand login-brand">
-        <div class="brand-mark">CE</div>
-        <div>
-          <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle dark-text">Market simulation</div>
+  <section id="loginScreen" class="login-screen login-screen--econovaria">
+    <div class="login-shell">
+      <aside class="login-briefing" aria-label="Market simulation briefing">
+        <div class="brand login-brand login-brand--terminal">
+          <div class="brand-mark">CE</div>
+          <div>
+            <div class="brand-title">Classroom Economy</div>
+            <div class="brand-subtitle">Market simulation</div>
+          </div>
+        </div>
+
+        <div class="briefing-kicker">Student Market Terminal</div>
+        <h1>Enter the economy.</h1>
+        <p class="briefing-copy">Manage your balance, portfolio, store purchases, trades, and forecasts inside the classroom market.</p>
+
+        <div class="briefing-grid" aria-label="Simulation modules">
+          <div>
+            <span>01</span>
+            <strong>Account</strong>
+            <small>Balance and activity</small>
+          </div>
+          <div>
+            <span>02</span>
+            <strong>Portfolio</strong>
+            <small>Assets and positions</small>
+          </div>
+          <div>
+            <span>03</span>
+            <strong>Market</strong>
+            <small>Prices and signals</small>
+          </div>
+          <div>
+            <span>04</span>
+            <strong>Forecasts</strong>
+            <small>Target price reasoning</small>
+          </div>
+        </div>
+
+        <div class="market-status-strip" aria-label="Simulation status">
+          <span class="status-dot"></span>
+          <span>Simulation ready</span>
+          <span>Data updates after confirmed actions</span>
+        </div>
+      </aside>
+
+      <div class="login-card login-access-card">
+        <div class="access-header">
+          <div class="access-eyebrow">Secure access</div>
+          <h2>Open your account</h2>
+          <p class="login-copy">Enter or scan your student code to open your market simulation account.</p>
+        </div>
+
+        <form id="loginForm" class="login-form">
+          <label>
+            <span class="field-label">Student Code</span>
+            <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Enter or scan student code" />
+          </label>
+          <button class="primary-btn" type="submit">Open Account</button>
+        </form>
+
+        <div id="loginError" class="status-box bad hidden"></div>
+
+        <div class="access-note">
+          <strong>Account view only</strong>
+          <span>Your account shows your balance, store activity, portfolio, trades, and forecasts.</span>
         </div>
       </div>
-
-      <h1>Welcome back</h1>
-      <p class="login-copy">Enter or scan your student code to open your market simulation account.</p>
-
-      <form id="loginForm" class="login-form">
-        <label>
-          <span class="field-label">Student Code</span>
-          <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Enter or scan student code" />
-        </label>
-        <button class="primary-btn" type="submit">Open Account</button>
-      </form>
-
-      <div id="loginError" class="status-box bad hidden"></div>
-      <div class="helper-card">Your account shows your balance, store activity, portfolio, trades, and forecasts.</div>
     </div>
   </section>
 
