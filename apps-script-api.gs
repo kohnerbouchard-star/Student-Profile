@@ -8,7 +8,7 @@ const SESSION_TTL_SECONDS = 6 * 60 * 60;
 const ADMIN_CARD_IDS = []; // Optional: ['teacher-card-id']
 
 const PERMISSIONS = {
-  STUDENT: ['CLOCK_IN', 'STORE_PURCHASE', 'STOCK_TRADE', 'ANALYST_RATING'],
+  STUDENT: ['STORE_PURCHASE', 'STOCK_TRADE', 'ANALYST_RATING'],
   READ_ONLY: []
 };
 
@@ -34,8 +34,7 @@ function doPost(e) {
     requirePermission_(session, body.action);
 
     return withLock_(function () {
-      if (body.action === 'CLOCK_IN') return json_(handleClockIn_(session, body.payload || {}));
-      if (body.action === 'STORE_PURCHASE') return json_(handleStorePurchase_(session, body.payload || {}));
+if (body.action === 'STORE_PURCHASE') return json_(handleStorePurchase_(session, body.payload || {}));
       if (body.action === 'STOCK_TRADE') return json_(handleStockTrade_(session, body.payload || {}));
       if (body.action === 'ANALYST_RATING') return json_(handleAnalystRating_(session, body.payload || {}));
       return json_({ ok: false, message: 'Unknown action.' });
@@ -80,22 +79,6 @@ function requirePermission_(session, action) {
   if (!allowed.includes(action)) throw new Error('You do not have permission to perform this action.');
 }
 
-function handleClockIn_(session, payload) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const student = findStudent_(ss, session.cardId);
-  if (!student) throw new Error('Student not found.');
-
-  appendByHeader_(getOrCreateSheet_(ss, SHEETS.attendance, ['Timestamp','Date','Card_ID','Student_Name','Grade','Homeroom','Class_Period','Status','Check_In_Time','Streak_After_Scan','Note','Source','Valid']), {
-    Timestamp: new Date(), Date: today_(), Card_ID: session.cardId, Student_Name: student.Student_Name,
-    Grade: student.Grade, Homeroom: student.Homeroom, Class_Period: 'App', Status: 'Present',
-    Check_In_Time: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'HH:mm'),
-    Streak_After_Scan: Number(student.Attendance_Streak || 0) + 1,
-    Note: 'Submitted from web app', Source: 'Web App', Valid: 'Yes'
-  });
-
-  appendQueue_(ss, session, 'CLOCK_IN', payload, 'Submitted');
-  return { ok: true, message: 'Clock-in submitted.', snapshot: getStudentSnapshot_(ss, session.cardId) };
-}
 
 function handleStorePurchase_(session, payload) {
   if (!payload.itemId || !payload.qty) throw new Error('Missing item or quantity.');

@@ -6,7 +6,7 @@ const PERMISSION_SETS = {
   STUDENT: {
     label: "Student",
     views: ["profile", "store", "portfolio", "trade", "stockProfile", "rating"],
-    actions: ["CLOCK_IN", "STORE_PURCHASE", "STOCK_TRADE", "ANALYST_RATING"]
+    actions: ["STORE_PURCHASE", "STOCK_TRADE", "ANALYST_RATING"]
   },
   READ_ONLY: {
     label: "Read only",
@@ -215,13 +215,7 @@ function renderProfile() {
       ${metric("Total Spent", money(totalSpent), "Store purchases")}
     </div>
     <div class="grid cols-2" style="margin-top:16px;">
-      <div class="card">
-        <div class="card-title-row"><h2>Student Actions</h2><span class="badge ${can('CLOCK_IN') ? 'good' : ''}">${can('CLOCK_IN') ? 'Allowed' : 'Locked'}</span></div>
-        <p class="muted-copy">Write actions are tied to your logged-in Card ID. You cannot submit for another student from this screen.</p>
-        <button class="primary-btn" type="button" ${can('CLOCK_IN') ? '' : 'disabled'} onclick="clockIn()">Clock In</button>
-        <div id="clockStatus" class="status-box">Use this only when attendance should be recorded from the app.</div>
-      </div>
-      <div class="card">
+<div class="card">
         <h2>Student Details</h2>
         <div class="mini-list">
           ${mini("Name", s.Student_Name)}${mini("Card ID", normalizeCardId(s.Card_ID))}${mini("Grade", s.Grade)}${mini("Homeroom", s.Homeroom)}${mini("Job", s.Job_Title || "No job assigned")}
@@ -233,38 +227,6 @@ function renderProfile() {
       <div class="card"><h2>Recent Attendance</h2>${table(att, ["Timestamp", "Status", "Check_In_Time", "Note"], "No attendance records yet.")}</div>
       <div class="card"><h2>Recent Transactions</h2>${table(tx, ["Timestamp", "Mode", "Amount", "Ending_Balance", "Note"], "No transactions yet.")}</div>
     </div>`;
-}
-
-async function clockIn() {
-  const status = document.getElementById("clockStatus");
-  try {
-    requirePermission("CLOCK_IN");
-    await submitAction("CLOCK_IN", {}, () => localClockIn());
-    showStatus(status, true, "Clock-in submitted.");
-    renderProfile();
-  } catch (err) {
-    showStatus(status, false, err.message);
-  }
-}
-
-function localClockIn() {
-  const s = selectedStudent();
-  const card = normalizeCardId(s.Card_ID);
-  const today = todayStamp();
-  const already = state.attendance.some(a => normalizeCardId(a.Card_ID) === card && String(a.Date).slice(0,10) === today);
-  if (already) throw new Error("You already clocked in today.");
-  const row = {
-    Timestamp: nowStamp(), Date: today, Card_ID: s.Card_ID, Student_Name: s.Student_Name,
-    Grade: s.Grade, Homeroom: s.Homeroom, Class_Period: "App", Status: "Present",
-    Check_In_Time: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}),
-    Streak_After_Scan: Number(s.Attendance_Streak || 0) + 1,
-    Note: "Submitted from app", Source: "Web App", Valid: "Yes"
-  };
-  state.attendance.push(row);
-  s.Attendance_Streak = row.Streak_After_Scan;
-  s.Last_Attendance_Date = today;
-  saveState();
-  return { ok: true, message: "Clock-in recorded." };
 }
 
 function renderStore() {
