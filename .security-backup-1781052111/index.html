@@ -18,18 +18,18 @@
       </div>
 
       <h1>Student Login</h1>
-      <p class="login-copy">Enter your assigned Access Code. Your session controls what you can view and what you can submit.</p>
+      <p class="login-copy">Enter your assigned Card ID. Your session controls what you can view and what you can submit.</p>
 
       <form id="loginForm" class="login-form">
         <label>
-          <span class="field-label">Access Code</span>
-          <input id="loginCardId" autocomplete="off" inputmode="text" placeholder="Example: ba353911" / type="password" autocomplete="off">
+          <span class="field-label">Card ID</span>
+          <input id="loginCardId" autocomplete="off" inputmode="text" placeholder="Example: ba353911" />
         </label>
         <button class="primary-btn" type="submit">Log in</button>
       </form>
 
       <div id="loginError" class="status-box bad hidden"></div>
-      <div class="status-box">Students can only write through approved actions tied to their own logged-in Access Code.</div>
+      <div class="status-box">Students can only write through approved actions tied to their own logged-in Card ID.</div>
     </div>
   </section>
 
@@ -65,7 +65,7 @@
         </div>
         <div class="identity-card">
           <div class="identity-name" id="identityName">Student</div>
-          <div class="identity-meta" id="identityMeta">Access Code</div>
+          <div class="identity-meta" id="identityMeta">Card ID</div>
           <div class="permission-row" id="permissionSummary"></div>
           <button class="ghost-btn logout-btn" id="logoutButton" type="button">Log out</button>
         </div>
@@ -79,6 +79,8 @@
       <section id="rating" class="view"></section>
     </main>
   </div>
+
+  <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

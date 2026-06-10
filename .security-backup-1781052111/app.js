@@ -35,11 +35,11 @@ function init() {
   document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
-  const saved = null
+  const saved = sessionStorage.getItem(SESSION_KEY);
   if (saved) {
     try {
       const session = JSON.parse(saved);
-      if (session && session.maskedCode && findStudentByCard(session.maskedCode)) {
+      if (session && session.cardId && findStudentByCard(session.cardId)) {
         currentSession = session;
         showApp();
         return;
@@ -50,7 +50,7 @@ function init() {
 }
 
 function loadState() {
-  const saved = null
+  const saved = localStorage.getItem(STATE_KEY);
   const base = structuredClone(window.SEED_DATA || {});
   base.ratings = base.ratings || [];
   if (!saved) return base;
@@ -64,7 +64,7 @@ function loadState() {
 }
 
 function saveState() {
-  /* storage disabled */
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 
 async function handleLogin(event) {
@@ -73,7 +73,7 @@ async function handleLogin(event) {
   const rawCardId = normalizeCardId(input.value);
   clearLoginError();
 
-  if (!rawCardId) return showLoginError("Enter your Access Code.");
+  if (!rawCardId) return showLoginError("Enter your Card ID.");
 
   if (API_URL) {
     try {
@@ -81,7 +81,7 @@ async function handleLogin(event) {
       if (!result.ok) return showLoginError(result.message || "Login failed.");
       if (result.snapshot) mergeSnapshot(result.snapshot);
       startSession({
-        cardId: normalizeCardId(result.maskedCode || rawCardId),
+        cardId: normalizeCardId(result.cardId || rawCardId),
         role: result.role || "STUDENT",
         token: result.sessionToken || "",
         permissions: result.permissions || PERMISSION_SETS.STUDENT.actions
@@ -93,11 +93,11 @@ async function handleLogin(event) {
   }
 
   const student = findStudentByCard(rawCardId);
-  if (!student) return showLoginError("Access Code not found. Check the ID and try again.");
-  if (String(student.Active || "Yes").toLowerCase() === "no") return showLoginError("This Access Code is inactive.");
+  if (!student) return showLoginError("Card ID not found. Check the ID and try again.");
+  if (String(student.Active || "Yes").toLowerCase() === "no") return showLoginError("This Card ID is inactive.");
 
   startSession({
-    cardId: normalizeCardId(student.Access Code),
+    cardId: normalizeCardId(student.Card_ID),
     role: "STUDENT",
     token: "local-prototype-session",
     permissions: PERMISSION_SETS.STUDENT.actions
@@ -106,7 +106,7 @@ async function handleLogin(event) {
 
 function startSession(session) {
   currentSession = session;
-  /* storage disabled */
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   document.getElementById("loginCardId").value = "";
   showApp();
 }
@@ -120,7 +120,7 @@ function showApp() {
 
 function logout() {
   currentSession = null;
-  /* storage disabled */
+  sessionStorage.removeItem(SESSION_KEY);
   showLogin();
 }
 
@@ -143,7 +143,7 @@ function updateIdentity() {
   const role = currentSession?.role || "STUDENT";
   const label = PERMISSION_SETS[role]?.label || role;
   document.getElementById("identityName").textContent = s.Student_Name || "Student";
-  document.getElementById("identityMeta").textContent = `Access Code: ${normalizeCardId(s.Access Code)} · Grade ${s.Grade || "—"} · ${s.Homeroom || "—"}`;
+  document.getElementById("identityMeta").textContent = `Card ID: ${normalizeCardId(s.Card_ID)} · Grade ${s.Grade || "—"} · ${s.Homeroom || "—"}`;
   document.getElementById("permissionSummary").innerHTML = `<span class="badge good">${sanitize(label)}</span> ${actionBadges()}`;
   document.getElementById("connectionMode").textContent = API_URL ? "Connected backend" : "Local prototype";
   document.getElementById("connectionCopy").textContent = API_URL
@@ -165,9 +165,9 @@ function requirePermission(action) {
 function normalizeCardId(value) { return String(value ?? "").trim().replace(/\.0$/, ""); }
 function findStudentByCard(cardId) {
   const target = normalizeCardId(cardId).toLowerCase();
-  return (state.students || []).find(s => normalizeCardId(s.Access Code).toLowerCase() === target);
+  return (state.students || []).find(s => normalizeCardId(s.Card_ID).toLowerCase() === target);
 }
-function selectedCard() { return currentSession?.maskedCode || ""; }
+function selectedCard() { return currentSession?.cardId || ""; }
 function selectedStudent() { return findStudentByCard(selectedCard()); }
 function money(v) { return Number(v || 0).toLocaleString(undefined, {style:"currency", currency:"USD"}); }
 function num(v, d=2) { return Number(v || 0).toLocaleString(undefined, {maximumFractionDigits:d, minimumFractionDigits:d}); }
@@ -199,13 +199,13 @@ function renderCurrentView() {
 
 function renderProfile() {
   const s = selectedStudent();
-  const card = normalizeCardId(s.Access Code);
-  const tx = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Status === "Success").slice(-10).reverse();
-  const att = state.attendance.filter(a => normalizeCardId(a.Access Code) === card).slice(-8).reverse();
-  const purchases = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "STORE_PURCHASE").slice(-8).reverse();
-  const totalDeposits = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "DEPOSIT"), "Amount");
-  const totalRewards = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "REWARD"), "Amount");
-  const totalFines = sum(state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "FINE"), "Amount");
+  const card = normalizeCardId(s.Card_ID);
+  const tx = state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Status === "Success").slice(-10).reverse();
+  const att = state.attendance.filter(a => normalizeCardId(a.Card_ID) === card).slice(-8).reverse();
+  const purchases = state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Mode === "STORE_PURCHASE").slice(-8).reverse();
+  const totalDeposits = sum(state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Mode === "DEPOSIT"), "Amount");
+  const totalRewards = sum(state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Mode === "REWARD"), "Amount");
+  const totalFines = sum(state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Mode === "FINE"), "Amount");
   const totalSpent = sum(purchases, "Amount");
   document.getElementById("profile").innerHTML = `
     <div class="grid cols-4">
@@ -218,7 +218,7 @@ function renderProfile() {
 <div class="card">
         <h2>Student Details</h2>
         <div class="mini-list">
-          ${mini("Name", s.Student_Name)}${mini("Access Code", normalizeCardId(s.Access Code))}${mini("Grade", s.Grade)}${mini("Homeroom", s.Homeroom)}${mini("Job", s.Job_Title || "No job assigned")}
+          ${mini("Name", s.Student_Name)}${mini("Card ID", normalizeCardId(s.Card_ID))}${mini("Grade", s.Grade)}${mini("Homeroom", s.Homeroom)}${mini("Job", s.Job_Title || "No job assigned")}
           ${mini("Deposits", money(totalDeposits))}${mini("Fines", money(totalFines))}
         </div>
       </div>
@@ -231,9 +231,9 @@ function renderProfile() {
 
 function renderStore() {
   const s = selectedStudent();
-  const card = normalizeCardId(s.Access Code);
+  const card = normalizeCardId(s.Card_ID);
   const items = state.storeItems.filter(i => String(i.Active).toLowerCase() === "yes");
-  const purchases = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && t.Mode === "STORE_PURCHASE").slice(-12).reverse();
+  const purchases = state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && t.Mode === "STORE_PURCHASE").slice(-12).reverse();
   document.getElementById("store").innerHTML = `
     <div class="grid cols-2">
       <div class="card">
@@ -278,7 +278,7 @@ function localPurchaseItem(itemId, qty) {
   const starting = Number(s.Balance || 0);
   s.Balance = Number((starting - total).toFixed(2));
   item.Inventory = Number(item.Inventory || 0) - qty;
-  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Access Code:s.Access Code, Student_Name:s.Student_Name, Mode:"STORE_PURCHASE", Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:item.Item_ID, Item_Name:item.Item_Name, Note:`Purchased ${qty} × ${item.Item_Name}`, Status:"Success"});
+  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Card_ID:s.Card_ID, Student_Name:s.Student_Name, Mode:"STORE_PURCHASE", Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:item.Item_ID, Item_Name:item.Item_Name, Note:`Purchased ${qty} × ${item.Item_Name}`, Status:"Success"});
   saveState();
   return { ok: true, message: "Purchase completed." };
 }
@@ -286,7 +286,7 @@ function localPurchaseItem(itemId, qty) {
 function renderPortfolio() {
   const card = normalizeCardId(selectedCard());
   updatePortfolioMarketValues(card);
-  const rows = state.portfolio.filter(p => normalizeCardId(p.Access Code) === card && Number(p.Shares_Owned || 0) > 0);
+  const rows = state.portfolio.filter(p => normalizeCardId(p.Card_ID) === card && Number(p.Shares_Owned || 0) > 0);
   const marketValue = sum(rows, "Market Value");
   const gainLoss = sum(rows, "Unrealized Gain/Loss");
   document.getElementById("portfolio").innerHTML = `
@@ -301,7 +301,7 @@ function renderPortfolio() {
 function renderTrade() {
   const card = normalizeCardId(selectedCard());
   const marketRows = state.market.filter(m => String(m.Active).toLowerCase() === "yes");
-  const stockTx = state.transactions.filter(t => normalizeCardId(t.Access Code) === card && String(t.Mode || "").startsWith("STOCK_")).slice(-10).reverse();
+  const stockTx = state.transactions.filter(t => normalizeCardId(t.Card_ID) === card && String(t.Mode || "").startsWith("STOCK_")).slice(-10).reverse();
   document.getElementById("trade").innerHTML = `
     <div class="market-ticker">${marketRows.slice(0,24).map(m => `<div class="ticker-pill"><strong>${sanitize(m.Ticker)}</strong> ${money(m.Current_Price)} <span class="${Number(m.Change_Amount)>=0?'positive':'negative'}">${Number(m.Change_Amount)>=0?'+':''}${num(m.Change_Amount)}</span></div>`).join("")}</div>
     <div class="grid cols-2" style="margin-top:16px;">
@@ -313,7 +313,7 @@ function renderTrade() {
           <label class="span-2"><span class="field-label">Shares</span><input id="tradeShares" type="number" min="1" value="1" /></label>
           <button class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'} onclick="submitTrade()">Submit Trade</button>
         </div>
-        <div id="tradeStatus" class="status-box">Trades submit as your logged-in Access Code only.</div>
+        <div id="tradeStatus" class="status-box">Trades submit as your logged-in Card ID only.</div>
       </div>
       <div class="card"><h2>Your Recent Stock Activity</h2>${table(stockTx, ["Timestamp", "Mode", "Item_ID", "Item_Name", "Amount", "Ending_Balance", "Status"], "No stock activity yet.")}</div>
     </div>
@@ -342,14 +342,14 @@ function localStockTrade(action, ticker, shares) {
   if (!market || shares <= 0) throw new Error("Invalid trade.");
   const price = Number(market.Current_Price || 0);
   const total = Number((price * shares).toFixed(2));
-  let position = state.portfolio.find(p => normalizeCardId(p.Access Code) === normalizeCardId(s.Access Code) && p.Ticker === ticker);
+  let position = state.portfolio.find(p => normalizeCardId(p.Card_ID) === normalizeCardId(s.Card_ID) && p.Ticker === ticker);
   const starting = Number(s.Balance || 0);
 
   if (action === "BUY") {
     if (starting < total) throw new Error("Not enough balance for this trade.");
     s.Balance = Number((starting - total).toFixed(2));
     if (!position) {
-      position = {Access Code:s.Access Code, Student_Name:s.Student_Name, Ticker:ticker, Shares_Owned:0, Avg_Buy_Price:price, Total_Cost:0, "Current Price":price, "Market Value":0, "Unrealized Gain/Loss":0, Last_Updated:nowStamp()};
+      position = {Card_ID:s.Card_ID, Student_Name:s.Student_Name, Ticker:ticker, Shares_Owned:0, Avg_Buy_Price:price, Total_Cost:0, "Current Price":price, "Market Value":0, "Unrealized Gain/Loss":0, Last_Updated:nowStamp()};
       state.portfolio.push(position);
     }
     const oldShares = Number(position.Shares_Owned || 0);
@@ -368,7 +368,7 @@ function localStockTrade(action, ticker, shares) {
   position["Unrealized Gain/Loss"] = Number((position["Market Value"] - Number(position.Total_Cost || 0)).toFixed(2));
   position.Last_Updated = nowStamp();
 
-  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Access Code:s.Access Code, Student_Name:s.Student_Name, Mode:`STOCK_${action}`, Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:ticker, Item_Name:market.Company_Name, Note:`${action} ${shares} shares @ ${money(price)}`, Status:"Success"});
+  state.transactions.push({Timestamp: nowStamp(), Date: todayStamp(), Card_ID:s.Card_ID, Student_Name:s.Student_Name, Mode:`STOCK_${action}`, Amount:total, Starting_Balance:starting, Ending_Balance:s.Balance, Item_ID:ticker, Item_Name:market.Company_Name, Note:`${action} ${shares} shares @ ${money(price)}`, Status:"Success"});
   saveState();
   return { ok: true, message: "Trade completed." };
 }
@@ -408,7 +408,7 @@ function renderStockProfileDetail() {
 function renderRating() {
   const card = normalizeCardId(selectedCard());
   const marketRows = state.market.filter(m => String(m.Active).toLowerCase() === "yes");
-  const ratings = (state.ratings || []).filter(r => normalizeCardId(r.Access Code) === card).slice(-12).reverse();
+  const ratings = (state.ratings || []).filter(r => normalizeCardId(r.Card_ID) === card).slice(-12).reverse();
   document.getElementById("rating").innerHTML = `
     <div class="grid cols-2">
       <div class="card">
@@ -420,7 +420,7 @@ function renderRating() {
           <label class="span-2"><span class="field-label">Reason</span><textarea id="ratingReason" rows="4" placeholder="Explain your reasoning..."></textarea></label>
           <button class="primary-btn span-2" type="button" ${can('ANALYST_RATING') ? '' : 'disabled'} onclick="submitRating()">Submit Rating</button>
         </div>
-        <div id="ratingStatus" class="status-box">Ratings submit as your logged-in Access Code only.</div>
+        <div id="ratingStatus" class="status-box">Ratings submit as your logged-in Card ID only.</div>
       </div>
       <div class="card"><h2>Your Rating History</h2>${table(ratings, ["Timestamp", "Ticker", "Rating", "Target_Price", "Reason", "Status"], "No submitted ratings yet.")}</div>
     </div>`;
@@ -446,7 +446,7 @@ function localRating(ticker, rating, targetPrice, reason) {
   const s = selectedStudent();
   if (!ticker || !rating || !targetPrice || !reason) throw new Error("Ticker, rating, target price, and reason are required.");
   state.ratings = state.ratings || [];
-  state.ratings.push({ Timestamp: nowStamp(), Access Code: s.Access Code, Student_Name: s.Student_Name, Ticker: ticker, Rating: rating, Target_Price: targetPrice, Reason: reason, Status: "Submitted" });
+  state.ratings.push({ Timestamp: nowStamp(), Card_ID: s.Card_ID, Student_Name: s.Student_Name, Ticker: ticker, Rating: rating, Target_Price: targetPrice, Reason: reason, Status: "Submitted" });
   saveState();
   return { ok: true, message: "Rating submitted." };
 }
@@ -484,7 +484,7 @@ function mergeSnapshot(snapshot) {
 }
 
 function updatePortfolioMarketValues(card) {
-  state.portfolio.filter(p => normalizeCardId(p.Access Code) === card).forEach(p => {
+  state.portfolio.filter(p => normalizeCardId(p.Card_ID) === card).forEach(p => {
     const m = state.market.find(x => x.Ticker === p.Ticker);
     if (!m) return;
     const price = Number(m.Current_Price || 0);
