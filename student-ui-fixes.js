@@ -1,5 +1,5 @@
 // Student-facing display fixes loaded after app.js.
-// Keeps pending prediction results clean and prevents NaN from appearing in tables.
+// Keeps pending prediction results clean, prevents NaN, restores tooltips, and adds item-use requests.
 
 function isBlankDisplayValue(value) {
   return value === undefined || value === null || value === '' || String(value).trim() === '';
@@ -41,6 +41,15 @@ function normalizeRatingRow(row) {
   };
 }
 
+function tip(text) {
+  return `<span class="tooltip" tabindex="0" data-tip="${sanitize(text)}">?</span>`;
+}
+
+// Keep a small visible hint for places where students need plain instructions.
+function help(text) {
+  return `<p class="help-text">${sanitize(text)}</p>`;
+}
+
 // Allow the student account to request item use from the frontend.
 if (window.PERMISSION_SETS && PERMISSION_SETS.STUDENT && !PERMISSION_SETS.STUDENT.actions.includes('USE_ITEM')) {
   PERMISSION_SETS.STUDENT.actions.push('USE_ITEM');
@@ -63,8 +72,7 @@ function renderProfile() {
 
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
-        <h2 class="card-title">My Account</h2>
-        ${help('This section shows your student account details.')}
+        <h2 class="card-title">My Account ${tip('This information comes from your student account.')}</h2>
         <div class="mini-list">
           ${mini('Name', s.name)}
           ${mini('Grade', s.grade || '—')}
@@ -75,8 +83,7 @@ function renderProfile() {
       </div>
 
       <div class="card">
-        <h2 class="card-title">Recent Activity</h2>
-        ${help('Newest purchases, trades, rewards, item-use requests, and account changes show here.')}
+        <h2 class="card-title">Recent Activity ${tip('Newest purchases, trades, rewards, item-use requests, and account changes show here. Dates are shown in Korea time when possible.')}</h2>
         ${table(transactions.slice(0, 10), ['timestamp', 'mode', 'amount', 'endingBalance', 'itemName', 'status'], 'No activity yet. Once you buy, trade, use an item, or submit a prediction, it will appear here.')}
       </div>
     </div>
@@ -84,8 +91,7 @@ function renderProfile() {
     ${renderUseItemCard()}
 
     <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">My Items</h2>
-      ${help('Items you bought from the shop appear here.')}
+      <h2 class="card-title">My Items ${tip('Items you bought from the shop appear here.')}</h2>
       ${table(state.inventory || [], ['itemName', 'category', 'quantityPurchased', 'totalSpent', 'lastPurchased'], 'No items yet. Visit the Shop to buy your first item.')}
     </div>`;
 }
@@ -97,8 +103,7 @@ function renderUseItemCard() {
   if (!usableItems.length) {
     return `
       <div class="card" style="margin-top:16px;">
-        <h2 class="card-title">Use an Item</h2>
-        ${help('Once you own an item, you can request to use it here.')}
+        <h2 class="card-title">Use an Item ${tip('Once you own an item, you can request to use it here.')}</h2>
         <div class="empty">You do not have any items available to use yet.</div>
       </div>`;
   }
@@ -106,26 +111,25 @@ function renderUseItemCard() {
   return `
     <div class="card" style="margin-top:16px;">
       <div class="card-title-row">
-        <h2 class="card-title">Use an Item</h2>
+        <h2 class="card-title">Use an Item ${tip('Choose an item you own and submit a use request. Your teacher will be notified in Google Chat.')}</h2>
         <span class="badge ${can('USE_ITEM') ? 'good' : 'bad'}">${can('USE_ITEM') ? 'Ready' : 'Unavailable'}</span>
       </div>
-      ${help('Choose an item you own and submit a use request. Your teacher will be notified in Google Chat.')}
 
       <div class="form-grid" id="useItemForm">
         <label>
-          <span class="field-label">Item</span>
+          <span class="field-label">Item ${tip('Choose the item from your inventory that you want to use.')}</span>
           <select id="useItemSelect">
             ${usableItems.map((item, index) => `<option value="${index}">${sanitize(item.itemName || 'Item')} · Owned ${sanitize(item.quantityPurchased || '—')}</option>`).join('')}
           </select>
         </label>
 
         <label>
-          <span class="field-label">Quantity</span>
+          <span class="field-label">Quantity ${tip('Choose how many of this item you want to use.')}</span>
           <input id="useItemQty" type="number" min="1" value="1" />
         </label>
 
         <label class="span-2">
-          <span class="field-label">Note for teacher</span>
+          <span class="field-label">Note for teacher ${tip('Optional. Add context so your teacher knows why you are using the item.')}</span>
           <textarea id="useItemNote" rows="3" maxlength="240" placeholder="Example: I want to use this during the next activity."></textarea>
         </label>
 
