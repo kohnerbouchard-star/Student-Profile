@@ -20,7 +20,7 @@ window.normalizeMarketRow = function normalizeMarketRow(row) {
     beta: pick(row, ["beta", "Beta"]),
     description: pick(row, ["description", "Description", "Company_Description", "Company Description", "Notes", "notes"]),
     notes: pick(row, ["notes", "Notes"]),
-    history: pick(row, ["history", "History", "priceHistory", "Price_History", "Price History", "Sparkline", "sparkline"]),
+    history: pick(row, ["history", "History", "priceHistory", "Price_History", "Price History", "Price_History_JSON", "Price History JSON", "Sparkline", "sparkline"]),
     lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated", "Timestamp", "timestamp"])
   };
 };
@@ -338,54 +338,92 @@ window.hideMarketChartTip = function hideMarketChartTip() {
   if (tooltip) tooltip.classList.add("hidden");
 };
 
-function buildMarketChartPoints(stock, range) {
+function buildMarketChartPoints(stock, range = "1D") {
   const parsed = parseMarketHistory(stock.history);
 
   if (parsed.length >= 2) {
-    const wanted = range === "1M" ? 24 : range === "1W" ? 12 : 8;
-    const sliced = parsed.slice(-wanted);
-    return sliced.map((price, index) => ({
-      label: makePointLabel(index, sliced.length, range),
-      price
+    const wanted = range === "1M" ? 24 : range === "1W" ? 14 : 9;
+    return parsed.slice(-wanted).map((point, index, arr) => ({
+      label: point.label || makePointLabel(index, arr.length, range),
+      price: point.price
     }));
   }
 
+  return generateMarketLikePricePath(stock, range);
+}
+
+function generateMarketLikePricePath(stock, range = "1D") {
   const current = Number(stock.currentPrice || 0);
   if (!current) return [];
 
-  const change = parseMarketPercent(stock.changePct);
+  const changePct = parseMarketPercent(stock.changePct);
   const steps = range === "1M" ? 24 : range === "1W" ? 14 : 9;
-  const multiplier = range === "1M" ? 2.2 : range === "1W" ? 1.45 : 1;
-  const start = change ? current / (1 + ((change * multiplier) / 100)) : current * 0.985;
-  const volatility = Math.min(Math.max(Math.abs(change || 2), 1), 9) * multiplier;
 
-  return Array.from({ length: steps }, (_, index) => {
-    const progress = index / (steps - 1);
-    const wave = Math.sin(index * 1.25) * current * (volatility / 100) * 0.16;
-    const price = start + (current - start) * progress + (index === steps - 1 ? 0 : wave);
+  const seedSource = [
+    stock.ticker,
+    stock.sector,
+    stock.currentPrice,
+    stock.changePct,
+    stock.lastUpdated,
+    range
+  ].join("|");
 
-    return {
+  const random = seededRandom(hashString(seedSource));
+  const rangeMultiplier = range === "1M" ? 2.4 : range === "1W" ? 1.55 : 1;
+
+  const baseVolatility = clamp(
+    (Math.abs(changePct) / 100) * 0.72 * rangeMultiplier + 0.008,
+    0.008,
+    0.09
+  );
+
+  const targetStart = current / Math.max(0.12, 1 + ((changePct * rangeMultiplier) / 100));
+  const logStart = Math.log(Math.max(targetStart, 0.01));
+  const logEnd = Math.log(Math.max(current, 0.01));
+
+  let logPrice = logStart;
+  let volatilityState = baseVolatility;
+  let momentum = 0;
+  const points = [];
+
+  for (let index = 0; index < steps; index += 1) {
+    const progress = index / Math.max(steps - 1, 1);
+    const targetLog = logStart + (logEnd - logStart) * progress;
+
+    if (index === 0) {
+      points.push({ label: makePointLabel(index, steps, range), price: Math.exp(logPrice) });
+      continue;
+    }
+
+    if (index === steps - 1) {
+      points.push({ label: makePointLabel(index, steps, range), price: current });
+      continue;
+    }
+
+    const jumpShock = random() > 0.88 ? normalRandom(random) * baseVolatility * 2.6 : 0;
+    const volatilityNoise = Math.abs(normalRandom(random)) * baseVolatility * 0.55;
+
+    volatilityState = clamp(
+      volatilityState * 0.72 + volatilityNoise * 0.28,
+      baseVolatility * 0.55,
+      baseVolatility * 2.25
+    );
+
+    const marketNoise = normalRandom(random) * volatilityState;
+    momentum = momentum * 0.42 + marketNoise * 0.58;
+
+    const meanReversion = (targetLog - logPrice) * 0.27;
+    const microDrift = (logEnd - logStart) / Math.max(steps - 1, 1);
+
+    logPrice = logPrice + microDrift + meanReversion + momentum + jumpShock;
+
+    points.push({
       label: makePointLabel(index, steps, range),
-      price: Math.max(price, 0)
-    };
-  });
-}
-
-function makePointLabel(index, total, range) {
-  if (index === total - 1) return "Now";
-
-  if (range === "1M") {
-    const daysBack = total - index - 1;
-    return `${daysBack}d ago`;
+      price: Math.max(Math.exp(logPrice), current * 0.05)
+    });
   }
 
-  if (range === "1W") {
-    const daysBack = Math.ceil((total - index - 1) / 2);
-    return `${daysBack}d ago`;
-  }
-
-  const hoursBack = total - index - 1;
-  return `${hoursBack}h ago`;
+  return points;
 }
 
 function parseMarketHistory(value) {
@@ -393,24 +431,136 @@ function parseMarketHistory(value) {
 
   if (Array.isArray(value)) {
     return value
-      .map((entry) => typeof entry === "object" ? entry.price ?? entry.value ?? entry.close : entry)
-      .map(toNumber)
-      .filter((number) => number > 0);
+      .map((entry, index) => parseMarketHistoryEntry(entry, index))
+      .filter((point) => point && point.price > 0);
   }
 
   const text = String(value).trim();
+  if (!text) return [];
 
-  if (text.startsWith("[")) {
+  if (text.startsWith("[") || text.startsWith("{")) {
     try {
-      return parseMarketHistory(JSON.parse(text));
+      const parsed = JSON.parse(text);
+      return parseMarketHistory(Array.isArray(parsed) ? parsed : Object.values(parsed));
     } catch (_) {}
   }
 
+  // Supports either:
+  // "101.2,102.4,103.1"
+  // or "2026-06-03 10:32:08|101.2;2026-06-03 10:37:09|102.4"
   return text
-    .split(/[,|;\s]+/)
-    .map(toNumber)
-    .filter((number) => number > 0);
+    .split(/[;\n]+/)
+    .flatMap((chunk) => chunk.includes("|") || chunk.includes(":")
+      ? [chunk]
+      : chunk.split(",")
+    )
+    .map((entry, index) => parseMarketHistoryEntry(entry, index))
+    .filter((point) => point && point.price > 0);
 }
+
+function parseMarketHistoryEntry(entry, index) {
+  if (entry === undefined || entry === null || entry === "") return null;
+
+  if (typeof entry === "number") {
+    return { label: `Point ${index + 1}`, price: entry };
+  }
+
+  if (typeof entry === "object") {
+    const price = Number(entry.price ?? entry.Price ?? entry.close ?? entry.Close ?? entry.value ?? entry.Value ?? 0);
+    const timestamp = entry.timestamp ?? entry.Timestamp ?? entry.time ?? entry.Time ?? entry.date ?? entry.Date ?? "";
+    return {
+      label: formatHistoryLabel(timestamp, index),
+      price
+    };
+  }
+
+  const text = String(entry).trim();
+  if (!text) return null;
+
+  const pipeParts = text.split("|");
+  if (pipeParts.length >= 2) {
+    return {
+      label: formatHistoryLabel(pipeParts[0], index),
+      price: toNumber(pipeParts[1])
+    };
+  }
+
+  const colonMatch = text.match(/^(.+?)[:=]\s*([$,\d.]+)$/);
+  if (colonMatch) {
+    return {
+      label: formatHistoryLabel(colonMatch[1], index),
+      price: toNumber(colonMatch[2])
+    };
+  }
+
+  return {
+    label: `Point ${index + 1}`,
+    price: toNumber(text)
+  };
+}
+
+function formatHistoryLabel(value, index) {
+  if (!value) return `Point ${index + 1}`;
+
+  const text = String(value).trim();
+  const parsed = Date.parse(text.replace(" ", "T"));
+
+  if (!Number.isNaN(parsed)) {
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Seoul",
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(new Date(parsed));
+    } catch (_) {}
+  }
+
+  return text;
+}
+
+function makePointLabel(index, total, range) {
+  if (index === total - 1) return "Now";
+
+  if (range === "1M") return `${total - index - 1}d ago`;
+  if (range === "1W") return `${Math.ceil((total - index - 1) / 2)}d ago`;
+
+  return `${total - index - 1}h ago`;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < String(value).length; index += 1) {
+    hash ^= String(value).charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function seededRandom(seed) {
+  let state = seed || 123456789;
+
+  return function random() {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function normalRandom(random) {
+  const u = Math.max(random(), 0.000001);
+  const v = Math.max(random(), 0.000001);
+
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
 
 function parseMarketPercent(value) {
   if (value === undefined || value === null || value === "") return 0;
