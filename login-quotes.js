@@ -43,7 +43,7 @@
 
   function init() {
     showQuote();
-    window.setInterval(showQuote, 20000);
+    window.setInterval(showQuote, 5000);
   }
 
   if (document.readyState === 'loading') {

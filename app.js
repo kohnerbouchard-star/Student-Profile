@@ -1144,7 +1144,9 @@ function formatValue(key, value) {
 }
 
 function formatMiniValue(label, value) {
-  if (/updated|date|purchased/i.test(label)) return formatDateTime(value);
+  if (/updated|date|last\s*bought|last\s*purchased|lastBought|lastPurchased/i.test(label)) {
+    return formatDateTime(value);
+  }
   return value ?? "";
 }
 
