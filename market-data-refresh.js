@@ -138,11 +138,6 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
         <p class="market-company-note">${sanitize(m.description || m.notes || "No company description has been added yet.")}</p>
       </div>
 
-      <div class="card">
-        <h2 class="card-title">Company News</h2>
-        <div class="status-box">News is loaded from the dashboard snapshot and filtered to the selected ticker.</div>
-        ${renderMarketCompanyNews(m)}
-      </div>
     </div>`;
 };
 
