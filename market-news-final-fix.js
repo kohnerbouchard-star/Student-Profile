@@ -1,5 +1,5 @@
 // Final market news display patch.
-// Forces imported news to render and removes the Refresh Dashboard button from the news card.
+// One Company News card only. Removes cached/legacy duplicates from older scripts.
 
 (function () {
   function first(row, keys) {
@@ -199,7 +199,18 @@
     return findMarket(ticker) || (state.market || [])[0] || null;
   }
 
-  function removeNewsRefreshButtons() {
+  function purgeDuplicateNewsCards() {
+    const cards = Array.from(document.querySelectorAll("#stockProfile .card"));
+
+    cards.forEach((card) => {
+      const title = card.querySelector(".card-title, h2");
+      const text = String(title?.textContent || "").trim().toLowerCase();
+
+      if (text === "company news" && card.id !== "marketImportedNewsCard") {
+        card.remove();
+      }
+    });
+
     document
       .querySelectorAll('#stockProfile button[onclick*="refreshDashboard"]')
       .forEach((button) => button.remove());
@@ -209,7 +220,7 @@
     const detail = document.getElementById("stockProfileDetail");
     if (!detail) return;
 
-    removeNewsRefreshButtons();
+    purgeDuplicateNewsCards();
 
     const stock = getSelectedStock();
     if (!stock) return;
@@ -236,6 +247,8 @@
       <div class="status-box">Imported news from the stock news sheet.</div>
       ${renderNewsList(stock)}
     `;
+
+    purgeDuplicateNewsCards();
   }
 
   const oldRenderStockProfileDetail =
@@ -249,6 +262,7 @@
     window.renderStockProfileDetail = function patchedRenderStockProfileDetail() {
       const result = oldRenderStockProfileDetail.apply(this, arguments);
       window.setTimeout(mountImportedNewsPanel, 0);
+      window.setTimeout(purgeDuplicateNewsCards, 50);
       return result;
     };
 
@@ -260,12 +274,14 @@
   document.addEventListener("click", function (event) {
     if (event.target.closest('[data-view="stockProfile"]')) {
       window.setTimeout(mountImportedNewsPanel, 80);
+      window.setTimeout(purgeDuplicateNewsCards, 160);
     }
   });
 
   document.addEventListener("change", function (event) {
     if (event.target && event.target.id === "stockProfileTicker") {
       window.setTimeout(mountImportedNewsPanel, 0);
+      window.setTimeout(purgeDuplicateNewsCards, 80);
     }
   });
 
@@ -280,5 +296,8 @@
     return normalized;
   };
 
+  window.killDuplicateNewsCards = purgeDuplicateNewsCards;
+
   window.setTimeout(mountImportedNewsPanel, 300);
+  window.setTimeout(purgeDuplicateNewsCards, 600);
 })();
