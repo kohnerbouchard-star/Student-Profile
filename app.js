@@ -66,6 +66,7 @@ function emptyState() {
     market: [],
     portfolio: [],
     ratings: [],
+    news: [],
     news: []
   };
 }
@@ -801,6 +802,7 @@ function mergeSnapshot(snapshot) {
     market: normalized.market,
     portfolio: normalized.portfolio,
     ratings: normalized.ratings,
+    news: normalized.news,
     news: normalized.news
   };
 }
@@ -825,6 +827,7 @@ function normalizeSnapshot(snapshot) {
     market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
     portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
     ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst),
+    news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow).sort(sortNewestFirst),
     news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow).sort(sortNewestFirst)
   };
 }
@@ -1143,6 +1146,11 @@ function labelize(value) {
 
 function formatValue(key, value) {
   if (value === undefined || value === null || value === "") return "";
+
+  if (/quantity/i.test(key)) {
+    const n = toNumber(value);
+    return sanitize(Number.isFinite(n) ? n.toLocaleString() : value);
+  }
 
   if (/timestamp|date|updated|purchased/i.test(key)) {
     return sanitize(formatDateTime(value));

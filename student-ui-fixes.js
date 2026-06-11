@@ -326,6 +326,12 @@ function formatValue(key, value) {
     return `<span class="badge ${cls}">${sanitize(text)}</span>`;
   }
 
+  if (/quantity/i.test(key)) {
+    if (!isFiniteDisplayNumber(value)) return '—';
+    const n = Number(String(value).replace(/[$,]/g, '').trim());
+    return sanitize(n.toLocaleString());
+  }
+
   if (/timestamp|date|updated|purchased/i.test(key)) {
     return sanitize(formatDateTime(value));
   }
