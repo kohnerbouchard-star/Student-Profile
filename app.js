@@ -1102,7 +1102,7 @@ function normalizeSnapshot(snapshot) {
     inventory: getFirstArray(snapshot, ["inventory", "studentInventory", "itemsOwned", "ownedItems"]).map(normalizeInventoryItem),
     market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
     portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
-    news: getFirstArray(snapshot, [\"news\", \"stockNews\", \"reports\", \"stockNewsReports\"]).map(normalizeNewsRow),
+    news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow),
     ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst)
   };
 }
