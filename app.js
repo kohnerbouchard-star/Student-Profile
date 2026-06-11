@@ -883,15 +883,31 @@ function normalizeInventoryItem(row) {
 }
 
 function normalizeMarketRow(row) {
+  const history =
+    Array.isArray(row.history)
+      ? row.history
+      : Array.isArray(row.History)
+        ? row.History
+        : pick(row, ["history", "History", "Price_History", "Price History", "priceHistory"]);
+
   return {
     ticker: pick(row, ["ticker", "Ticker"]),
     companyName: pick(row, ["companyName", "Company_Name", "Company Name", "Name", "name"]),
     sector: pick(row, ["sector", "Sector"]),
-    currentPrice: toNumber(pick(row, ["currentPrice", "Current_Price", "Current Price", "Price", "price"])),
-    changePct: pick(row, ["changePct", "Change_%", "Change %", "Change", "change"]),
+    currentPrice: toNumber(pick(row, ["currentPrice", "Current_Price", "Current Price", "Price", "price", "Close", "close"])),
+    changePct: pick(row, ["changePct", "Change_%", "Change %", "Change", "change", "Price_Change_%", "Price Change %"]),
     trend: pick(row, ["trend", "Trend"]),
     assetType: pick(row, ["assetType", "Asset_Type", "Asset Type", "Type", "type"]),
-    lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated", "Timestamp", "timestamp"])
+
+    // Pulled/calculated by backend from Stock_Price_History
+    previousClose: toNumber(pick(row, ["previousClose", "Previous_Close", "Previous Close", "Prev_Close", "Prev Close"])),
+    dayLow: toNumber(pick(row, ["dayLow", "Day_Low", "Day Low", "Low", "low"])),
+    dayHigh: toNumber(pick(row, ["dayHigh", "Day_High", "Day High", "High", "high"])),
+    volume: toNumber(pick(row, ["volume", "Volume", "Trade_Volume", "Trade Volume", "Daily_Volume", "Daily Volume"])),
+    marketCap: toNumber(pick(row, ["marketCap", "Market_Cap", "Market Cap", "Market_Value", "Market Value"])),
+    history,
+
+    lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated", "Timestamp", "timestamp", "Updated", "updated"])
   };
 }
 
