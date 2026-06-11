@@ -554,26 +554,315 @@ async function submitTrade(button) {
 }
 
 function renderStockProfile() {
-  const rows = state.market || [];
-  const defaultTicker = rows[0]?.ticker || "";
+  const market = state.market || [];
 
-  document.getElementById("stockProfile").innerHTML = `
-    <div class="card" style="margin-bottom:16px;">
-      <label>
-        <span class="field-label">Choose a Stock</span>
-        ${help("Select a ticker to see a quick profile.")}
-        <select id="stockProfileTicker" onchange="renderStockProfileDetail()">
-          ${rows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
-        </select>
-      </label>
-    </div>
-    <div id="stockProfileDetail"></div>`;
-
-  if (defaultTicker) {
-    document.getElementById("stockProfileTicker").value = defaultTicker;
+  if (!state.selectedMarketTicker && market.length) {
+    state.selectedMarketTicker = market[0].ticker;
   }
 
-  renderStockProfileDetail();
+  const selectedTicker = String(state.selectedMarketTicker || "").toUpperCase();
+
+  const selectedStock =
+    market.find((stock) => String(stock.ticker || "").toUpperCase() === selectedTicker) ||
+    market[0] ||
+    null;
+
+  if (selectedStock) {
+    state.selectedMarketTicker = String(selectedStock.ticker || "").toUpperCase();
+  }
+
+  const companyNews = selectedStock
+    ? (state.news || []).filter((item) => {
+        return String(item.ticker || "").toUpperCase() === String(selectedStock.ticker || "").toUpperCase();
+      })
+    : [];
+
+  document.getElementById("stockProfile").innerHTML = `
+    <div class="grid market-data-layout">
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <div class="eyebrow">Market data</div>
+            <h2>Companies</h2>
+          </div>
+        </div>
+
+        ${marketHelp("Click a ticker to view that company’s price data and related market news.")}
+
+        <div class="ticker-list">
+          ${
+            market.length
+              ? market.map((stock) => renderTickerButton(stock, selectedStock)).join("")
+              : `<div class="empty">No market data is available yet.</div>`
+          }
+        </div>
+      </div>
+
+      <div class="card">
+        ${
+          selectedStock
+            ? renderSelectedMarketCompany(selectedStock, companyNews)
+            : `<div class="empty">Choose a ticker to view company details.</div>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderTickerButton(stock, selectedStock) {
+  const ticker = String(stock.ticker || "").toUpperCase();
+  const isActive =
+    selectedStock &&
+    String(selectedStock.ticker || "").toUpperCase() === ticker;
+
+  return `
+    <button
+      class="ticker-button ${isActive ? "active" : ""}"
+      type="button"
+      onclick="selectMarketTicker('${marketAttr(ticker)}')"
+    >
+      <span class="ticker-symbol">${marketText(ticker)}</span>
+      <span class="ticker-company">${marketText(stock.companyName || "")}</span>
+      <span class="ticker-price">${marketMoney(stock.currentPrice || 0)}</span>
+      <span class="ticker-change">${formatChangePct(stock.changePct)}</span>
+    </button>
+  `;
+}
+
+function renderSelectedMarketCompany(stock, companyNews) {
+  return `
+    <div class="selected-company-panel">
+      <div class="company-hero">
+        <div>
+          <div class="eyebrow">Selected company</div>
+          <h2>${marketText(stock.ticker)} · ${marketText(stock.companyName || "Company")}</h2>
+          <p>${marketText(stock.sector || "No sector listed")} ${stock.assetType ? "· " + marketText(stock.assetType) : ""}</p>
+        </div>
+
+        <div class="company-price-box">
+          <div class="company-price">${marketMoney(stock.currentPrice || 0)}</div>
+          <div class="company-change">${formatChangePct(stock.changePct)}</div>
+        </div>
+      </div>
+
+      <div class="grid metrics-grid compact-metrics">
+        ${marketMetric("Ticker", marketText(stock.ticker), "Symbol", "Company market identifier.")}
+        ${marketMetric("Price", marketMoney(stock.currentPrice || 0), "Current price", "Latest simulated market price.")}
+        ${marketMetric("Trend", marketText(stock.trend || "Neutral"), "Direction", "Current simulated market trend.")}
+        ${marketMetric("News", companyNews.length, "Reports", "Company-specific news reports.")}
+      </div>
+
+      <div class="company-news-panel">
+        <div class="section-header">
+          <div>
+            <div class="eyebrow">Company news</div>
+            <h3>${marketText(stock.ticker)} Market Reports</h3>
+          </div>
+          <button class="secondary-button" type="button" onclick="refreshMarketNewsForSelectedTicker()">Refresh News</button>
+        </div>
+
+        <div id="marketNewsStatus" class="status-line"></div>
+
+        ${
+          companyNews.length
+            ? companyNews.map(renderCompanyNewsCard).join("")
+            : `<div class="empty">No news reports are available for ${marketText(stock.ticker)} yet. Run the news trigger or wait for a larger simulated price move.</div>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderCompanyNewsCard(item) {
+  const sentiment = String(item.sentiment || "Neutral").toLowerCase();
+
+  const sentimentClass =
+    sentiment === "positive"
+      ? "news-positive"
+      : sentiment === "negative"
+        ? "news-negative"
+        : "news-neutral";
+
+  return `
+    <article class="company-news-card ${sentimentClass}">
+      <div class="news-card-topline">
+        <span class="badge">${marketText(item.sentiment || "Neutral")}</span>
+        <span class="badge">${marketText(item.impact || "Low")} Impact</span>
+        <span>${marketText(item.timestamp || item.date || "")}</span>
+      </div>
+
+      <h4>${marketText(item.headline || "Market update")}</h4>
+      <p>${marketText(item.summary || "")}</p>
+
+      <div class="news-meta">
+        <span>${marketText(item.sector || "")}</span>
+        <span>${formatChangePct(item.changePct)}</span>
+        ${
+          item.priceAfter
+            ? `<span>Price: ${marketMoney(item.priceAfter)}</span>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function selectMarketTicker(ticker) {
+  const cleanTicker = String(ticker || "").trim().toUpperCase();
+
+  if (!cleanTicker) {
+    return;
+  }
+
+  state.selectedMarketTicker = cleanTicker;
+  renderStockProfile();
+}
+
+async function refreshMarketNewsForSelectedTicker() {
+  const status = document.getElementById("marketNewsStatus");
+
+  try {
+    if (status && typeof showStatus === "function") {
+      showStatus(status, null, "Refreshing company news...");
+    }
+
+    if (typeof apiRequest !== "function") {
+      throw new Error("Frontend API helper apiRequest() was not found.");
+    }
+
+    const result = await apiRequest("GET_STOCK_NEWS", {
+      ticker: state.selectedMarketTicker,
+      limit: 25
+    });
+
+    if (!result || !result.ok) {
+      throw new Error(result && result.message ? result.message : "Could not refresh market news.");
+    }
+
+    state.news = (result.news || []).map(normalizeNewsRow);
+
+    if (status && typeof showStatus === "function") {
+      showStatus(status, true, "News refreshed.");
+    }
+
+    renderStockProfile();
+
+  } catch (err) {
+    console.error(err);
+
+    if (status && typeof showStatus === "function") {
+      showStatus(status, false, err && err.message ? err.message : String(err));
+      return;
+    }
+
+    alert(err && err.message ? err.message : String(err));
+  }
+}
+
+function normalizeNewsRow(row) {
+  return {
+    timestamp: marketPick(row, ["timestamp", "Timestamp", "dateTime", "DateTime"]),
+    date: marketPick(row, ["date", "Date"]),
+    ticker: marketPick(row, ["ticker", "Ticker"]),
+    companyName: marketPick(row, ["companyName", "Company_Name", "Company Name"]),
+    sector: marketPick(row, ["sector", "Sector"]),
+    headline: marketPick(row, ["headline", "Headline"]),
+    summary: marketPick(row, ["summary", "Summary"]),
+    impact: marketPick(row, ["impact", "Impact"]),
+    sentiment: marketPick(row, ["sentiment", "Sentiment"]),
+    priceBefore: marketNumber(marketPick(row, ["priceBefore", "Price_Before", "Price Before"])),
+    priceAfter: marketNumber(marketPick(row, ["priceAfter", "Price_After", "Price After"])),
+    changePct: marketPick(row, ["changePct", "Change_%", "Change %"])
+  };
+}
+
+function formatChangePct(value) {
+  const n = Number(String(value || "").replace("%", ""));
+
+  if (isNaN(n)) {
+    return marketText(value || "0%");
+  }
+
+  return `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
+}
+
+function marketPick(row, keys) {
+  row = row || {};
+
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(row, key)) {
+      return row[key];
+    }
+  }
+
+  if (typeof pick === "function") {
+    return pick(row, keys);
+  }
+
+  return "";
+}
+
+function marketNumber(value) {
+  if (typeof toNumber === "function") {
+    return toNumber(value);
+  }
+
+  const n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
+function marketText(value) {
+  if (typeof sanitize === "function") {
+    return sanitize(value);
+  }
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function marketAttr(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function marketMoney(value) {
+  if (typeof money === "function") {
+    return money(value);
+  }
+
+  const n = Number(value) || 0;
+  return "$" + n.toFixed(2);
+}
+
+function marketHelp(text) {
+  if (typeof help === "function") {
+    return help(text);
+  }
+
+  return `<p class="helper-text">${marketText(text)}</p>`;
+}
+
+function marketMetric(label, value, title, detail) {
+  if (typeof metric === "function") {
+    return metric(label, value, title, detail);
+  }
+
+  return `
+    <div class="metric-card">
+      <div class="metric-label">${marketText(label)}</div>
+      <div class="metric-value">${value}</div>
+      <div class="metric-title">${marketText(title)}</div>
+      <div class="metric-detail">${marketText(detail)}</div>
+    </div>
+  `;
 }
 
 function renderStockProfileDetail() {
@@ -813,6 +1102,7 @@ function normalizeSnapshot(snapshot) {
     inventory: getFirstArray(snapshot, ["inventory", "studentInventory", "itemsOwned", "ownedItems"]).map(normalizeInventoryItem),
     market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
     portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
+    news: getFirstArray(snapshot, [\"news\", \"stockNews\", \"reports\", \"stockNewsReports\"]).map(normalizeNewsRow),
     ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst)
   };
 }
