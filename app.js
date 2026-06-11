@@ -74,7 +74,7 @@ async function handleLogin(event) {
 
   const form = event.currentTarget;
   const button = form.querySelector("button[type='submit']");
-  const input = document.getElementById("loginCardId");
+  const input = document.getElementById("cardId");
   const accessCode = normalizeCardId(input.value);
 
   clearLoginError();
@@ -91,7 +91,9 @@ async function handleLogin(event) {
   try {
     const result = await callApi({
       action: "LOGIN",
-      accessCode
+      accessCode,
+      code: accessCode,
+      cardId: accessCode
     });
 
     input.value = "";
@@ -102,8 +104,8 @@ async function handleLogin(event) {
 
     currentSession = {
       role: "STUDENT",
-      token: result.token,
-      permissions: PERMISSION_SETS.STUDENT.actions
+      token: result.token || result.sessionToken || "",
+      permissions: result.permissions || PERMISSION_SETS.STUDENT.actions
     };
 
     mergeSnapshot(result.snapshot || {});
@@ -802,7 +804,14 @@ function mergeSnapshot(snapshot) {
 }
 
 function normalizeSnapshot(snapshot) {
-  const profileSource = snapshot.profile || snapshot.student || snapshot.currentStudent || snapshot.account || null;
+  const profileSource =
+    snapshot.profile ||
+    snapshot.student ||
+    snapshot.currentStudent ||
+    snapshot.account ||
+    (Array.isArray(snapshot.students) ? snapshot.students[0] : null) ||
+    (Array.isArray(snapshot.studentRows) ? snapshot.studentRows[0] : null) ||
+    null;
 
   return {
     profile: profileSource ? normalizeProfile(profileSource) : null,

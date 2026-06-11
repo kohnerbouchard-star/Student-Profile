@@ -22,7 +22,14 @@ function normalizeStockTradeRow(row) {
 }
 
 function normalizeSnapshot(snapshot) {
-  const profileSource = snapshot.profile || snapshot.student || snapshot.currentStudent || snapshot.account || null;
+  const profileSource =
+    snapshot.profile ||
+    snapshot.student ||
+    snapshot.currentStudent ||
+    snapshot.account ||
+    (Array.isArray(snapshot.students) ? snapshot.students[0] : null) ||
+    (Array.isArray(snapshot.studentRows) ? snapshot.studentRows[0] : null) ||
+    null;
 
   const generalTransactions = getFirstArray(snapshot, [
     'transactions',

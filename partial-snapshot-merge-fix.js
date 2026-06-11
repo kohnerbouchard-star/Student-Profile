@@ -34,7 +34,10 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
     ...state
   };
 
-  const profileSource = hasPresentObject(snapshot, ['profile', 'student', 'currentStudent', 'account']);
+  const profileSource =
+    hasPresentObject(snapshot, ['profile', 'student', 'currentStudent', 'account']) ||
+    (Array.isArray(snapshot.students) ? snapshot.students[0] : null) ||
+    (Array.isArray(snapshot.studentRows) ? snapshot.studentRows[0] : null);
 
   if (profileSource) {
     next.profile = normalizeProfile(profileSource);
