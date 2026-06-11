@@ -16,7 +16,7 @@
 
     #loginQuoteText.login-quote-slide {
       display: block;
-      animation: quoteSlideLeftToRight 20s ease both;
+      animation: quoteSlideLeftToRight 20s linear both;
       will-change: transform, opacity;
     }
 
@@ -26,12 +26,12 @@
         transform: translateX(-22px);
       }
 
-      5% {
+      3.5% {
         opacity: 1;
         transform: translateX(0);
       }
 
-      84% {
+      94% {
         opacity: 1;
         transform: translateX(0);
       }
@@ -50,6 +50,7 @@
       }
     }
   </style>
+
 
 </head>
 <body>
