@@ -74,10 +74,6 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
   const ticker = document.getElementById("stockProfileTicker")?.value;
   const m = findMarket(ticker) || (state.market || [])[0];
 
-  if (m) {
-    state.selectedMarketTicker = String(m.ticker || "").toUpperCase();
-  }
-
   if (!m) {
     document.getElementById("stockProfileDetail").innerHTML = `<div class="empty">No market data is available right now.</div>`;
     return;
@@ -140,15 +136,6 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
       <div class="card">
         <h2 class="card-title">Company Note</h2>
         <p class="market-company-note">${sanitize(m.description || m.notes || "No company description has been added yet.")}</p>
-      </div>
-
-      <div class="card">
-        <div class="card-title-row">
-          <h2 class="card-title">Company News</h2>
-          <button class="secondary-button" type="button" onclick="refreshMarketNewsForSelectedTicker()">Refresh News</button>
-        </div>
-        <div id="marketNewsStatus" class="status-box">News is filtered to the selected ticker.</div>
-        ${renderMarketCompanyNews(m)}
       </div>
     </div>`;
 };
@@ -708,47 +695,3 @@ function formatMarketRange(low, high) {
     renderMarketRefreshSoon();
   }
 })();
-
-
-function renderMarketCompanyNews(stock) {
-  const ticker = String(stock?.ticker || "").toUpperCase();
-
-  const reports = (state.news || [])
-    .filter((item) => String(item.ticker || "").toUpperCase() === ticker)
-    .slice(0, 8);
-
-  if (!reports.length) {
-    return `<div class="empty">No news reports are available for ${sanitize(ticker)} yet. Run the news trigger or wait for a larger simulated price move.</div>`;
-  }
-
-  return `
-    <div class="company-news-list">
-      ${reports.map((item) => {
-        const sentiment = String(item.sentiment || "Neutral").toLowerCase();
-        const sentimentClass =
-          sentiment === "positive"
-            ? "news-positive"
-            : sentiment === "negative"
-              ? "news-negative"
-              : "news-neutral";
-
-        return `
-          <article class="company-news-card ${sentimentClass}">
-            <div class="news-card-topline">
-              <span class="badge">${sanitize(item.sentiment || "Neutral")}</span>
-              <span class="badge">${sanitize(item.impact || "Low")} Impact</span>
-              <span>${sanitize(item.timestamp || item.date || "")}</span>
-            </div>
-            <h4>${sanitize(item.headline || "Market update")}</h4>
-            <p>${sanitize(item.summary || "")}</p>
-            <div class="news-meta">
-              <span>${sanitize(item.sector || stock.sector || "")}</span>
-              <span>${formatMarketPercent(item.changePct)}</span>
-              ${item.priceAfter ? `<span>Price: ${money(item.priceAfter)}</span>` : ""}
-            </div>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
