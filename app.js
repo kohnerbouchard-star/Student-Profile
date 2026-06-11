@@ -65,7 +65,8 @@ function emptyState() {
     inventory: [],
     market: [],
     portfolio: [],
-    ratings: []
+    ratings: [],
+    news: []
   };
 }
 
@@ -74,7 +75,7 @@ async function handleLogin(event) {
 
   const form = event.currentTarget;
   const button = form.querySelector("button[type='submit']");
-  const input = document.getElementById("cardId");
+  const input = document.getElementById("loginCardId");
   const accessCode = normalizeCardId(input.value);
 
   clearLoginError();
@@ -799,7 +800,8 @@ function mergeSnapshot(snapshot) {
     inventory: normalized.inventory,
     market: normalized.market,
     portfolio: normalized.portfolio,
-    ratings: normalized.ratings
+    ratings: normalized.ratings,
+    news: normalized.news
   };
 }
 
@@ -822,7 +824,8 @@ function normalizeSnapshot(snapshot) {
     inventory: getFirstArray(snapshot, ["inventory", "studentInventory", "itemsOwned", "ownedItems"]).map(normalizeInventoryItem),
     market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
     portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
-    ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst)
+    ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst),
+    news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow).sort(sortNewestFirst)
   };
 }
 
@@ -899,6 +902,23 @@ function normalizePortfolioRow(row) {
     marketValue: toNumber(pick(row, ["marketValue", "Market Value", "Market_Value"])),
     gainLoss: toNumber(pick(row, ["gainLoss", "Unrealized Gain/Loss", "Unrealized_Gain_Loss", "Unrealized Gain Loss"])),
     lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated"])
+  };
+}
+
+function normalizeNewsRow(row) {
+  return {
+    timestamp: pick(row, ["timestamp", "Timestamp", "Date", "date"]),
+    date: pick(row, ["date", "Date"]),
+    ticker: pick(row, ["ticker", "Ticker"]),
+    companyName: pick(row, ["companyName", "Company_Name", "Company Name"]),
+    sector: pick(row, ["sector", "Sector"]),
+    headline: pick(row, ["headline", "Headline", "Title", "title"]),
+    summary: pick(row, ["summary", "Summary", "Description", "description", "Note", "note"]),
+    impact: pick(row, ["impact", "Impact"]),
+    sentiment: pick(row, ["sentiment", "Sentiment"]),
+    priceBefore: toNumber(pick(row, ["priceBefore", "Price_Before", "Price Before"])),
+    priceAfter: toNumber(pick(row, ["priceAfter", "Price_After", "Price After"])),
+    changePct: pick(row, ["changePct", "Change_%", "Change %", "Change"])
   };
 }
 
