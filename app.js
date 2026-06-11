@@ -65,7 +65,9 @@ function emptyState() {
     inventory: [],
     market: [],
     portfolio: [],
-    ratings: []
+    ratings: [],
+    news: [],
+    selectedMarketTicker: \"\"
   };
 }
 
@@ -720,19 +722,31 @@ function selectMarketTicker(ticker) {
 
 async function refreshMarketNewsForSelectedTicker() {
   const status = document.getElementById("marketNewsStatus");
+  const selectedFromSelect = document.getElementById("stockProfileTicker")?.value || "";
+  const ticker = String(state.selectedMarketTicker || selectedFromSelect || "").trim().toUpperCase();
 
   try {
     if (status && typeof showStatus === "function") {
       showStatus(status, null, "Refreshing company news...");
     }
 
-    if (typeof apiRequest !== "function") {
-      throw new Error("Frontend API helper apiRequest() was not found.");
+    if (!currentSession || !currentSession.token) {
+      throw new Error("Sign in again before refreshing market news.");
     }
 
-    const result = await apiRequest("GET_STOCK_NEWS", {
-      ticker: state.selectedMarketTicker,
-      limit: 25
+    if (!ticker) {
+      throw new Error("Choose a ticker first.");
+    }
+
+    state.selectedMarketTicker = ticker;
+
+    const result = await callApi({
+      action: "GET_STOCK_NEWS",
+      token: currentSession.token,
+      payload: {
+        ticker,
+        limit: 25
+      }
     });
 
     if (!result || !result.ok) {
@@ -745,7 +759,11 @@ async function refreshMarketNewsForSelectedTicker() {
       showStatus(status, true, "News refreshed.");
     }
 
-    renderStockProfile();
+    if (typeof renderStockProfileDetail === "function") {
+      renderStockProfileDetail();
+    } else {
+      renderStockProfile();
+    }
 
   } catch (err) {
     console.error(err);

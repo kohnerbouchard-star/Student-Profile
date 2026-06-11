@@ -65,6 +65,12 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
     next.ratings = ratingRows.map(normalizeRatingRow).sort(sortNewestFirst);
   }
 
+  const newsRows = getPresentArray(snapshot, ['news', 'stockNews', 'reports', 'stockNewsReports']);
+  if (newsRows !== undefined) {
+    next.news = newsRows.map(normalizeNewsRow).sort(sortNewestFirst);
+  }
+
+
   const transactionRows = getPresentArray(snapshot, [
     'transactions',
     'recentTransactions',
