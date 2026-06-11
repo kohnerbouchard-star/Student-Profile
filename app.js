@@ -67,7 +67,7 @@ function emptyState() {
     portfolio: [],
     ratings: [],
     news: [],
-    selectedMarketTicker: \"\"
+    selectedMarketTicker: ""
   };
 }
 
@@ -1299,7 +1299,7 @@ function sanitize(value) {
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
-    "\"": "&quot;",
+    """: "&quot;",
     "'": "&#39;"
   }[char]));
 }
