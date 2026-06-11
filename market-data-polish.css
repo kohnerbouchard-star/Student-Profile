@@ -1,0 +1,205 @@
+/* Market Data polish pass */
+
+#stockProfile .market-page-v2 {
+  display: grid;
+  gap: 18px;
+}
+
+#stockProfile .market-page-top {
+  align-items: stretch;
+  gap: 16px;
+}
+
+#stockProfile .market-select-card {
+  align-self: stretch;
+  min-width: 280px;
+}
+
+#stockProfile .market-snapshot-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#stockProfile .market-detail-v2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+#stockProfile .market-chart-card-v2,
+#stockProfile .market-stock-side,
+#stockProfile .market-lower-grid > .card {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .055);
+}
+
+#stockProfile .market-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+#stockProfile #marketImportedNewsCard {
+  grid-column: 1 / -1;
+}
+
+#stockProfile .market-news-briefing {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+#stockProfile .market-news-briefing .card-title {
+  margin: 0;
+  padding: 18px 20px 6px;
+  font-size: 20px;
+  letter-spacing: -.04em;
+}
+
+#stockProfile .market-news-summary {
+  margin: 0 20px 14px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+#stockProfile .market-news-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+#stockProfile .company-news-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+#stockProfile .company-news-card {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 14px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  position: relative;
+  overflow: hidden;
+}
+
+#stockProfile .company-news-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #94a3b8;
+}
+
+#stockProfile .company-news-card.news-positive::before {
+  background: #16a34a;
+}
+
+#stockProfile .company-news-card.news-negative::before {
+  background: #dc2626;
+}
+
+#stockProfile .company-news-card.news-neutral::before {
+  background: #64748b;
+}
+
+#stockProfile .news-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+#stockProfile .company-news-card h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: -.02em;
+  color: #0f172a;
+}
+
+#stockProfile .company-news-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+#stockProfile .news-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+#stockProfile .news-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+#stockProfile .market-news-briefing .empty {
+  margin: 0 20px 20px;
+}
+
+@media (max-width: 1180px) {
+  #stockProfile .market-detail-v2,
+  #stockProfile .market-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #stockProfile .market-snapshot-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #stockProfile .company-news-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  #stockProfile .market-page-top,
+  #stockProfile .market-news-summary {
+    display: grid;
+  }
+
+  #stockProfile .market-snapshot-row {
+    grid-template-columns: 1fr;
+  }
+}
