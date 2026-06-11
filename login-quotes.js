@@ -52,3 +52,44 @@
     init();
   }
 })();
+
+/* Restart quote animation whenever the rotating quote text changes. */
+(function setupLoginQuoteSlideAnimation() {
+  const apply = () => {
+    const quoteText = document.getElementById("loginQuoteText");
+    if (!quoteText || quoteText.dataset.slideObserverAttached === "true") return;
+
+    quoteText.dataset.slideObserverAttached = "true";
+
+    const restartAnimation = () => {
+      quoteText.classList.remove("login-quote-slide");
+      void quoteText.offsetWidth;
+      quoteText.classList.add("login-quote-slide");
+    };
+
+    let lastText = quoteText.textContent;
+
+    const observer = new MutationObserver(() => {
+      const nextText = quoteText.textContent;
+      if (nextText === lastText) return;
+
+      lastText = nextText;
+      restartAnimation();
+    });
+
+    observer.observe(quoteText, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+
+    restartAnimation();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", apply, { once: true });
+  } else {
+    apply();
+  }
+})();
+

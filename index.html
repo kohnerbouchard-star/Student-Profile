@@ -8,6 +8,49 @@
   <link rel="stylesheet" href="academic-market-ui.css" />
   <link rel="stylesheet" href="login-cleanup.css" />
   <link rel="stylesheet" href="brand-logo.css" />
+
+  <style id="login-quote-slide-style">
+    .login-quote {
+      overflow: hidden;
+    }
+
+    #loginQuoteText.login-quote-slide {
+      display: block;
+      animation: quoteSlideLeftToRight 20s ease both;
+      will-change: transform, opacity;
+    }
+
+    @keyframes quoteSlideLeftToRight {
+      0% {
+        opacity: 0;
+        transform: translateX(-22px);
+      }
+
+      5% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      84% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #loginQuoteText.login-quote-slide {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+  </style>
+
 </head>
 <body>
   <section id="loginScreen" class="login-screen login-screen--econovaria">

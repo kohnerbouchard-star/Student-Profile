@@ -344,3 +344,19 @@ button.is-loading { opacity: .88; pointer-events: none; }
   .form-grid .span-2 { grid-column: auto; }
   .main { padding: 20px; }
 }
+
+/* Login quote slide animation */
+.login-quote-slide {
+  animation: quoteSlideLeftToRight 650ms ease both;
+}
+
+@keyframes quoteSlideLeftToRight {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
