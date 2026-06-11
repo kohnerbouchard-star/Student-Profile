@@ -104,7 +104,9 @@ async function handleLogin(event) {
 
     currentSession = {
       role: "STUDENT",
-      token: result.token,
+      accessCode,
+      code: accessCode,
+      token: result.token || "",
       permissions: PERMISSION_SETS.STUDENT.actions
     };
 
@@ -730,7 +732,7 @@ async function refreshMarketNewsForSelectedTicker() {
       showStatus(status, null, "Refreshing company news...");
     }
 
-    if (!currentSession || !currentSession.token) {
+    if (!currentSession || (!currentSession.accessCode && !currentSession.code)) {
       throw new Error("Sign in again before refreshing market news.");
     }
 
@@ -742,7 +744,10 @@ async function refreshMarketNewsForSelectedTicker() {
 
     const result = await callApi({
       action: "GET_STOCK_NEWS",
-      token: currentSession.token,
+      accessCode: currentSession.accessCode || currentSession.code,
+      code: currentSession.code || currentSession.accessCode,
+      cardId: currentSession.accessCode || currentSession.code,
+      token: currentSession.token || "",
       payload: {
         ticker,
         limit: 25
