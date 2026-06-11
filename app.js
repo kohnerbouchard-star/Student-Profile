@@ -142,10 +142,10 @@ async function logout() {
   setButtonLoading(button, true, "Logging out...");
 
   try {
-    if (currentSession && currentSession.token) {
+    if (hasCurrentCode()) {
       await callApi({
         action: "LOGOUT",
-        token: currentSession.token
+        ...currentAuthPayload()
       });
     }
 
@@ -164,7 +164,7 @@ async function refreshDashboard() {
 
   if (isButtonLoading(button)) return;
 
-  if (!currentSession || !currentSession.token) {
+  if (!hasCurrentCode()) {
     showGlobalStatus("bad", "Sign in again to refresh your dashboard.");
     return showLogin();
   }
@@ -175,7 +175,7 @@ async function refreshDashboard() {
   try {
     const result = await callApi({
       action: "GET_SNAPSHOT",
-      token: currentSession.token
+      ...currentAuthPayload()
     });
 
     if (!result || result.ok !== true) {
@@ -253,6 +253,21 @@ function requirePermission(action) {
   if (!can(action)) {
     throw new Error("This action is not available for your account right now.");
   }
+}
+
+function currentAuthPayload() {
+  const code = currentSession?.accessCode || currentSession?.code || currentSession?.token || "";
+
+  return {
+    accessCode: code,
+    code,
+    cardId: code,
+    token: currentSession?.token || code
+  };
+}
+
+function hasCurrentCode() {
+  return Boolean(currentSession && (currentSession.accessCode || currentSession.code || currentSession.token));
 }
 
 function switchView(view) {
@@ -744,10 +759,7 @@ async function refreshMarketNewsForSelectedTicker() {
 
     const result = await callApi({
       action: "GET_STOCK_NEWS",
-      accessCode: currentSession.accessCode || currentSession.code,
-      code: currentSession.code || currentSession.accessCode,
-      cardId: currentSession.accessCode || currentSession.code,
-      token: currentSession.token || "",
+      ...currentAuthPayload(),
       payload: {
         ticker,
         limit: 25
@@ -1037,13 +1049,13 @@ async function submitRating(button) {
 async function submitAction(action, payload) {
   requirePermission(action);
 
-  if (!currentSession || !currentSession.token) {
+  if (!hasCurrentCode()) {
     throw new Error("Sign in again before submitting.");
   }
 
   const result = await callApi({
     action,
-    token: currentSession.token,
+    ...currentAuthPayload(),
     payload
   });
 
@@ -1109,6 +1121,7 @@ function mergeSnapshot(snapshot) {
     inventory: normalized.inventory,
     market: normalized.market,
     portfolio: normalized.portfolio,
+    news: normalized.news,
     ratings: normalized.ratings
   };
 }
