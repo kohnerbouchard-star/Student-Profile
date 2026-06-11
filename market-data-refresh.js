@@ -139,10 +139,7 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
       </div>
 
       <div class="card">
-        <div class="card-title-row">
-          <h2 class="card-title">Company News</h2>
-          <button class="secondary-button" type="button" onclick="refreshDashboard()">Refresh Dashboard</button>
-        </div>
+        <h2 class="card-title">Company News</h2>
         <div class="status-box">News is loaded from the dashboard snapshot and filtered to the selected ticker.</div>
         ${renderMarketCompanyNews(m)}
       </div>

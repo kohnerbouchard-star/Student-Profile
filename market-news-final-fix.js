@@ -1,6 +1,5 @@
 // Final market news display patch.
-// Supports Imported_Stock_News headers:
-// Timestamp, Ticker, Headline, Body, Impact_Type, Price_Impact_%, Volatility_Impact, Status
+// Forces imported news to render and removes the Refresh Dashboard button from the news card.
 
 (function () {
   function first(row, keys) {
@@ -21,6 +20,16 @@
 
   function normalizeImportedNews(row) {
     row = row || {};
+
+    const impactType = first(row, [
+      "Impact_Type",
+      "Impact Type",
+      "impactType",
+      "Sentiment",
+      "sentiment",
+      "Tone",
+      "tone"
+    ]);
 
     return {
       raw: row,
@@ -66,26 +75,8 @@
         "Notes",
         "notes"
       ]),
-      sentiment: first(row, [
-        "Impact_Type",
-        "Impact Type",
-        "impactType",
-        "Sentiment",
-        "sentiment",
-        "Tone",
-        "tone"
-      ]) || "Neutral",
-      impact: first(row, [
-        "Impact",
-        "impact",
-        "Impact_Level",
-        "Impact Level"
-      ]) || first(row, [
-        "Impact_Type",
-        "Impact Type",
-        "Sentiment",
-        "sentiment"
-      ]) || "Low",
+      sentiment: impactType || "Neutral",
+      impact: impactType || "Low",
       changePct: first(row, [
         "Price_Impact_%",
         "Price Impact %",
@@ -125,7 +116,7 @@
     };
   };
 
-  function activeNewsRows() {
+  function getActiveNewsRows() {
     return (state.news || [])
       .map(normalizeNewsRow)
       .filter((item) => {
@@ -134,9 +125,9 @@
       });
   }
 
-  renderMarketCompanyNews = function patchedRenderMarketCompanyNews(stock) {
+  function renderNewsList(stock) {
     const ticker = cleanTicker(stock && stock.ticker);
-    const rows = activeNewsRows();
+    const rows = getActiveNewsRows();
 
     const exactTickerReports = rows.filter((item) => cleanTicker(item.ticker) === ticker);
 
@@ -158,8 +149,7 @@
     if (!reports.length) {
       return `
         <div class="empty">
-          No imported news rows are loaded in the frontend yet.
-          Open the console and run <strong>debugNewsState()</strong>.
+          No imported news rows are loaded in the frontend yet. This means the backend snapshot is probably not sending <strong>news</strong>.
         </div>
       `;
     }
@@ -198,7 +188,86 @@
         }).join("")}
       </div>
     `;
+  }
+
+  renderMarketCompanyNews = function patchedRenderMarketCompanyNews(stock) {
+    return renderNewsList(stock);
   };
+
+  function getSelectedStock() {
+    const ticker = document.getElementById("stockProfileTicker")?.value;
+    return findMarket(ticker) || (state.market || [])[0] || null;
+  }
+
+  function removeNewsRefreshButtons() {
+    document
+      .querySelectorAll('#stockProfile button[onclick*="refreshDashboard"]')
+      .forEach((button) => button.remove());
+  }
+
+  function mountImportedNewsPanel() {
+    const detail = document.getElementById("stockProfileDetail");
+    if (!detail) return;
+
+    removeNewsRefreshButtons();
+
+    const stock = getSelectedStock();
+    if (!stock) return;
+
+    let lowerGrid = detail.querySelector(".market-lower-grid");
+
+    if (!lowerGrid) {
+      lowerGrid = document.createElement("div");
+      lowerGrid.className = "market-lower-grid";
+      detail.appendChild(lowerGrid);
+    }
+
+    let card = document.getElementById("marketImportedNewsCard");
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "marketImportedNewsCard";
+      card.className = "card";
+      lowerGrid.appendChild(card);
+    }
+
+    card.innerHTML = `
+      <h2 class="card-title">Company News</h2>
+      <div class="status-box">Imported news from the stock news sheet.</div>
+      ${renderNewsList(stock)}
+    `;
+  }
+
+  const oldRenderStockProfileDetail =
+    typeof window.renderStockProfileDetail === "function"
+      ? window.renderStockProfileDetail
+      : typeof renderStockProfileDetail === "function"
+        ? renderStockProfileDetail
+        : null;
+
+  if (oldRenderStockProfileDetail) {
+    window.renderStockProfileDetail = function patchedRenderStockProfileDetail() {
+      const result = oldRenderStockProfileDetail.apply(this, arguments);
+      window.setTimeout(mountImportedNewsPanel, 0);
+      return result;
+    };
+
+    try {
+      renderStockProfileDetail = window.renderStockProfileDetail;
+    } catch (_) {}
+  }
+
+  document.addEventListener("click", function (event) {
+    if (event.target.closest('[data-view="stockProfile"]')) {
+      window.setTimeout(mountImportedNewsPanel, 80);
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "stockProfileTicker") {
+      window.setTimeout(mountImportedNewsPanel, 0);
+    }
+  });
 
   window.debugNewsState = function debugNewsState() {
     const raw = state.news || [];
@@ -210,4 +279,6 @@
 
     return normalized;
   };
+
+  window.setTimeout(mountImportedNewsPanel, 300);
 })();
