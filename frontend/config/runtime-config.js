@@ -2,7 +2,7 @@
   global.ECONOVARIA_FRONTEND_CONFIG = global.ECONOVARIA_FRONTEND_CONFIG || {};
 
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = Object.assign({
-    useFrontendMarketNewsModule: false,
+    useFrontendMarketNewsModule: true,
     useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
     useFrontendSnapshotStoreModule: false,

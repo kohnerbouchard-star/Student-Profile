@@ -17,7 +17,7 @@ refactor.
 | `academic-market-copy.js` | Market copy text. | future `frontend/src/content/copy.js` or feature-specific copy constants | copied, future extraction target if needed |
 | `login-quotes.js` | Login quote rotation. | `frontend/src/features/auth/login-quotes.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `display-format-final-fix.js` | Display value formatting patch. | `frontend/src/utils/formatters.js`, `frontend/src/utils/currency.js` | copied |
-| `market-news-final-fix.js` | Company news normalization, rendering, and modal patch. | `frontend/src/features/market/market-news-view.js`, `market-news-modal.js`, `market-selectors.js`, `market-normalizers.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
+| `market-news-final-fix.js` | Company news normalization, rendering, and modal patch. | `frontend/src/features/market/market-news-view.js`, `market-news-modal.js`, `market-selectors.js`, `market-normalizers.js` | copied, extracted, shadow-test-ready, guarded-switch-ready, runtime-wired |
 | `market-data-layout-fix.js` | Market data layout polish around imported news card. | `frontend/src/features/market/market-profile-view.js`, `frontend/styles/market.css` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 
 No active root runtime file should be deleted, moved, renamed, or archived until

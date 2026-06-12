@@ -76,7 +76,8 @@ This list was captured before the final push checkpoint commit.
 - Root `login-quotes.js` unchanged.
 - Root `academic-market-copy.js` unchanged.
 - Active root JS/CSS files unchanged.
-- All feature flags remain `false`.
+- `useFrontendMarketNewsModule` is `true` after the Market News runtime checkpoint.
+- All other feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
 - No `frontend/src/utils/money.js` was created.
@@ -84,7 +85,7 @@ This list was captured before the final push checkpoint commit.
 Current feature flags:
 
 ```text
-useFrontendMarketNewsModule: false
+useFrontendMarketNewsModule: true
 useFrontendMarketProfileModule: false
 useFrontendApiRetryModule: false
 useFrontendSnapshotStoreModule: false
@@ -117,7 +118,8 @@ enableFrontendAuthShadowChecks: false
 - `index.html` now includes `frontend/src/legacy/frontend-runtime-loader.js` after the existing legacy scripts.
 - Existing legacy script tags were not removed or reordered.
 - Old runtime files have not been archived, deleted, moved, or renamed.
-- All feature flags remain `false`, so runtime behavior should remain legacy by default.
+- Market News is wired through the frontend runtime loader behind `useFrontendMarketNewsModule`.
+- All other feature flags remain `false`, so all other features should remain legacy by default.
 
 ## Next Recommended Step
 

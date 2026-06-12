@@ -33,3 +33,5 @@
 31. Root `index.html` loads `frontend/src/legacy/frontend-runtime-loader.js` only after existing legacy runtime scripts.
 32. With all feature flags false, `window.EconovariaFrontend.runtime.getStatus()` shows every feature disabled and no frontend bridge patches active.
 33. Legacy behavior remains active by default when the frontend runtime loader is present and all flags are false.
+34. With only `useFrontendMarketNewsModule` true, `window.EconovariaFrontend.runtime.marketNews` reports loaded and patched.
+35. With only Market News wired, Company News remains selected-ticker-only, shows the latest five selected ticker reports, opens the popup, closes by button and Escape, and does not duplicate cards or modals.
