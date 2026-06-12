@@ -77,6 +77,7 @@ This list was captured before the final push checkpoint commit.
 - Root `academic-market-copy.js` unchanged.
 - Active root JS/CSS files unchanged.
 - `useFrontendMarketNewsModule` is `true` after the Market News runtime checkpoint.
+- `useFrontendMarketProfileModule` is `true` after the Market Profile runtime checkpoint.
 - All other feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
@@ -86,7 +87,7 @@ Current feature flags:
 
 ```text
 useFrontendMarketNewsModule: true
-useFrontendMarketProfileModule: false
+useFrontendMarketProfileModule: true
 useFrontendApiRetryModule: false
 useFrontendSnapshotStoreModule: false
 useFrontendTradingModule: false
@@ -119,6 +120,7 @@ enableFrontendAuthShadowChecks: false
 - Existing legacy script tags were not removed or reordered.
 - Old runtime files have not been archived, deleted, moved, or renamed.
 - Market News is wired through the frontend runtime loader behind `useFrontendMarketNewsModule`.
+- Market Profile / Market Data is wired through the frontend runtime loader behind `useFrontendMarketProfileModule`.
 - All other feature flags remain `false`, so all other features should remain legacy by default.
 
 ## Next Recommended Step

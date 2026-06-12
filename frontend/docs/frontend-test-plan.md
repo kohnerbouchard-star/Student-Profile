@@ -35,3 +35,5 @@
 33. Legacy behavior remains active by default when the frontend runtime loader is present and all flags are false.
 34. With only `useFrontendMarketNewsModule` true, `window.EconovariaFrontend.runtime.marketNews` reports loaded and patched.
 35. With only Market News wired, Company News remains selected-ticker-only, shows the latest five selected ticker reports, opens the popup, closes by button and Escape, and does not duplicate cards or modals.
+36. With Market News and `useFrontendMarketProfileModule` true, `window.EconovariaFrontend.runtime.marketProfile` reports loaded and patched.
+37. Market Profile / Market Data rendering remains display-only and uses backend-provided market, history, financial, news, and portfolio snapshot data.
