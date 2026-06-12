@@ -111,16 +111,19 @@ enableFrontendAuthShadowChecks: false
 ## Current Completion Status
 
 - Copy phase complete.
-- Runtime transplant phase not started.
+- Runtime wiring phase started with an additive frontend runtime loader.
+- Runtime transplant feature switches have not been enabled yet.
 - Root script cleanup not started.
-- `index.html` has not been switched to frontend modules.
+- `index.html` now includes `frontend/src/legacy/frontend-runtime-loader.js` after the existing legacy scripts.
+- Existing legacy script tags were not removed or reordered.
 - Old runtime files have not been archived, deleted, moved, or renamed.
+- All feature flags remain `false`, so runtime behavior should remain legacy by default.
 
 ## Next Recommended Step
 
-1. Full branch review.
-2. Test shadow modules in the browser.
-3. Enable one feature flag at a time, starting with Market News only.
+1. Review the additive runtime loader.
+2. Enable one feature flag at a time, starting with Market News only.
+3. Run checkpoint tests after each feature.
 4. Do not switch all modules at once.
 
 ## Test Commands To Rerun
@@ -131,6 +134,10 @@ $files = Get-ChildItem -Path 'frontend' -Filter '*.js' -Recurse | Sort-Object Fu
 
 ```powershell
 node --check frontend/tests/load-shadow-modules.js
+```
+
+```powershell
+node --check frontend/src/legacy/frontend-runtime-loader.js
 ```
 
 ```powershell

@@ -30,3 +30,6 @@
 28. `window.compareLegacyAndFrontendProfile()` returns a safe comparison without UI changes.
 29. Shadow loader can load Auth/Login modules with all feature flags false.
 30. `window.compareLegacyAndFrontendAuth()` returns a safe comparison without UI changes, login requests, or access-code logging.
+31. Root `index.html` loads `frontend/src/legacy/frontend-runtime-loader.js` only after existing legacy runtime scripts.
+32. With all feature flags false, `window.EconovariaFrontend.runtime.getStatus()` shows every feature disabled and no frontend bridge patches active.
+33. Legacy behavior remains active by default when the frontend runtime loader is present and all flags are false.
