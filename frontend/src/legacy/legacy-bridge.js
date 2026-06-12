@@ -19,6 +19,10 @@
     return getFeatureFlags().useFrontendApiRetryModule === true;
   }
 
+  function isSnapshotStoreSwitchEnabled() {
+    return getFeatureFlags().useFrontendSnapshotStoreModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
@@ -29,6 +33,10 @@
 
   function getApiClientModule() {
     return app.modules.apiClient || {};
+  }
+
+  function getSnapshotStoreModule() {
+    return app.modules.snapshotStore || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -256,15 +264,79 @@
     };
   }
 
+  function getLegacyState() {
+    if (global.state && typeof global.state === "object") {
+      return global.state;
+    }
+
+    try {
+      if (state && typeof state === "object") {
+        return state;
+      }
+    } catch (_) {}
+
+    return {};
+  }
+
+  function setLegacyState(nextState) {
+    global.state = nextState;
+
+    try {
+      state = nextState;
+    } catch (_) {}
+  }
+
+  function installFrontendSnapshotStoreSwitch() {
+    if (!isSnapshotStoreSwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendSnapshotStoreModule is disabled"
+      };
+    }
+
+    const snapshotStore = getSnapshotStoreModule();
+    if (typeof snapshotStore.mergePartialSnapshot !== "function") {
+      return {
+        installed: false,
+        reason: "snapshotStore.mergePartialSnapshot is not available"
+      };
+    }
+
+    if (global.__frontendSnapshotStoreSwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendSnapshotStoreSwitchInstalled = true;
+    global.__legacyMergeSnapshotBeforeFrontendStore = global.mergeSnapshot || (typeof mergeSnapshot === "function" ? mergeSnapshot : null);
+
+    global.mergeSnapshot = function frontendMergeSnapshot(snapshot) {
+      setLegacyState(snapshotStore.mergePartialSnapshot(snapshot || {}, getLegacyState()));
+    };
+
+    try {
+      mergeSnapshot = global.mergeSnapshot;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Snapshot Store merge installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
     installFrontendMarketNewsSwitch,
     installFrontendMarketProfileSwitch,
-    installFrontendApiRetrySwitch
+    installFrontendApiRetrySwitch,
+    installFrontendSnapshotStoreSwitch
   };
 
   installFrontendMarketNewsSwitch();
   installFrontendMarketProfileSwitch();
   installFrontendApiRetrySwitch();
+  installFrontendSnapshotStoreSwitch();
 })(window);

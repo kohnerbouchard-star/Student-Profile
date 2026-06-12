@@ -5,6 +5,7 @@
     useFrontendMarketNewsModule: false,
     useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
+    useFrontendSnapshotStoreModule: false,
     enableFrontendShadowChecks: false
   }, global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS || {});
 })(window);
