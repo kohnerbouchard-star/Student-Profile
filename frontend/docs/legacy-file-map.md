@@ -25,6 +25,14 @@ Dashboard/profile display logic copied/extracted, not switched:
 - `frontend/src/features/profile/profile-selectors.js`
 - `frontend/src/features/profile/profile-normalizers.js`
 
+Auth/login display and helper logic copied/extracted, not switched:
+
+- `frontend/src/features/auth/auth-controller.js`
+- `frontend/src/features/auth/auth-service.js`
+- `frontend/src/features/auth/login-view.js`
+- `frontend/src/features/auth/auth-selectors.js`
+- `frontend/src/features/auth/auth-normalizers.js`
+
 ## api-retry-fix.js
 
 Future home:
@@ -98,12 +106,14 @@ Future homes:
 
 ## login-quotes.js
 
-Future home:
+Copied/extracted, not switched:
 
 - `frontend/src/features/auth/login-quotes.js`
 
 ## academic-market-copy.js
 
-Future home:
+Future copied/extracted home:
 
 - future `frontend/src/content/copy.js` or feature-specific copy constants
+
+Do not create `frontend/src/content/copy.js` until a copy-only slice needs it.

@@ -57,6 +57,13 @@
     "frontend/src/features/dashboard/dashboard-view.js",
     "frontend/src/features/dashboard/dashboard-controller.js",
 
+    "frontend/src/features/auth/login-quotes.js",
+    "frontend/src/features/auth/auth-normalizers.js",
+    "frontend/src/features/auth/auth-selectors.js",
+    "frontend/src/features/auth/auth-service.js",
+    "frontend/src/features/auth/login-view.js",
+    "frontend/src/features/auth/auth-controller.js",
+
     "frontend/src/legacy/legacy-bridge.js",
     "frontend/tests/module-test-harness.js"
   ];
@@ -79,7 +86,9 @@
     "window.testFrontendDashboardModule()",
     "window.compareLegacyAndFrontendDashboard()",
     "window.testFrontendProfileModule()",
-    "window.compareLegacyAndFrontendProfile()"
+    "window.compareLegacyAndFrontendProfile()",
+    "window.testFrontendAuthModule()",
+    "window.compareLegacyAndFrontendAuth()"
   ];
 
   if (!global[LOADED_URLS]) {

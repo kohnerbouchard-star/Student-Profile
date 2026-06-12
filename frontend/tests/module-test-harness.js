@@ -1113,6 +1113,156 @@
     });
   }
 
+  function getAuthModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.auth || {};
+  }
+
+  function getLegacyAuthSnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        loginPanelExists: false,
+        loginInputExists: false,
+        loginButtonExists: false,
+        currentQuoteText: "",
+        currentQuoteCount: "",
+        loginErrorVisible: null
+      };
+    }
+
+    const loginScreen = global.document.getElementById("loginScreen");
+    const loginInput = global.document.getElementById("loginCardId");
+    const loginForm = global.document.getElementById("loginForm");
+    const quoteText = global.document.getElementById("loginQuoteText");
+    const quoteCount = global.document.getElementById("loginQuoteCount");
+    const loginError = global.document.getElementById("loginError");
+
+    return {
+      loginPanelExists: Boolean(loginScreen),
+      loginInputExists: Boolean(loginInput),
+      loginButtonExists: Boolean(loginForm && loginForm.querySelector("button[type='submit']")),
+      currentQuoteText: quoteText ? String(quoteText.textContent || "").trim() : "",
+      currentQuoteCount: quoteCount ? String(quoteCount.textContent || "").trim() : "",
+      loginErrorVisible: Boolean(loginError && !loginError.classList.contains("hidden"))
+    };
+  }
+
+  function emptyAuthResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      loginPanelExists: false,
+      loginInputExists: false,
+      loginButtonExists: false,
+      currentSessionAvailable: false,
+      profileAvailable: false,
+      loginQuoteCount: 0,
+      currentQuoteText: "",
+      normalizedSample: {},
+      noLoginRequestSent: true,
+      accessCodeLogged: false,
+      legacy: getLegacyAuthSnapshot()
+    };
+  }
+
+  function testFrontendAuthModule() {
+    try {
+      const auth = getAuthModule();
+      const state = getState() || {};
+      const requiredFunctions = [
+        "normalizeLoginResponse",
+        "getCurrentSessionDisplay",
+        "getLoginViewState",
+        "renderLoginPanel",
+        "renderLoginError",
+        "renderLoginSuccess",
+        "renderLoginQuote",
+        "getNextLoginQuote",
+        "rotateLoginQuote",
+        "collectLoginFormData",
+        "classifyLoginError",
+        "testAuthModule"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof auth[name] !== "function";
+      });
+      const viewState = typeof auth.getLoginViewState === "function"
+        ? auth.getLoginViewState(global.document)
+        : {};
+      const sessionDisplay = typeof auth.getCurrentSessionDisplay === "function"
+        ? auth.getCurrentSessionDisplay({ state })
+        : {};
+      const normalizedSample = typeof auth.normalizeLoginResponse === "function"
+        ? auth.normalizeLoginResponse({
+          ok: true,
+          token: "sample-token-not-real",
+          permissions: ["GET_SNAPSHOT"],
+          profile: { name: "Sample Student" },
+          snapshot: { profile: { name: "Sample Student" } }
+        })
+        : {};
+      const quote = typeof auth.getNextLoginQuote === "function" ? auth.getNextLoginQuote(0) : {};
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Auth module functions: ${missing.join(", ")}`);
+      }
+
+      if (!viewState.loginPanelExists) {
+        messages.push("Login panel DOM was not detected. The harness can still run without altering UI.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        loginPanelExists: Boolean(viewState.loginPanelExists),
+        loginInputExists: Boolean(viewState.loginInputExists),
+        loginButtonExists: Boolean(viewState.loginButtonExists),
+        currentSessionAvailable: Boolean(sessionDisplay.sessionAvailable),
+        profileAvailable: Boolean(sessionDisplay.profileAvailable),
+        loginQuoteCount: auth.LOGIN_QUOTES && auth.LOGIN_QUOTES.length || normalizedSample.loginQuoteCount || 0,
+        currentQuoteText: viewState.currentQuoteText || quote.text || "",
+        normalizedSample: {
+          ok: normalizedSample.ok,
+          role: normalizedSample.role,
+          tokenPresent: normalizedSample.tokenPresent,
+          permissionCount: normalizedSample.permissionCount,
+          profileAvailable: normalizedSample.profileAvailable,
+          snapshotPresent: normalizedSample.snapshotPresent
+        },
+        noLoginRequestSent: true,
+        accessCodeLogged: false,
+        legacy: getLegacyAuthSnapshot()
+      };
+    } catch (error) {
+      return emptyAuthResult(`Auth shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendAuth() {
+    const result = testFrontendAuthModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        loginPanelExists: result.loginPanelExists,
+        loginInputExists: result.loginInputExists,
+        loginButtonExists: result.loginButtonExists,
+        currentSessionAvailable: result.currentSessionAvailable,
+        profileAvailable: result.profileAvailable,
+        loginQuoteCount: result.loginQuoteCount,
+        currentQuoteText: result.currentQuoteText,
+        normalizedSample: result.normalizedSample,
+        legacyLoginPanelExists: result.legacy.loginPanelExists,
+        legacyLoginInputExists: result.legacy.loginInputExists,
+        legacyLoginButtonExists: result.legacy.loginButtonExists,
+        legacyCurrentQuoteText: result.legacy.currentQuoteText,
+        noLoginRequestSent: result.noLoginRequestSent,
+        accessCodeLogged: result.accessCodeLogged
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
@@ -1131,4 +1281,6 @@
   global.compareLegacyAndFrontendDashboard = compareLegacyAndFrontendDashboard;
   global.testFrontendProfileModule = testFrontendProfileModule;
   global.compareLegacyAndFrontendProfile = compareLegacyAndFrontendProfile;
+  global.testFrontendAuthModule = testFrontendAuthModule;
+  global.compareLegacyAndFrontendAuth = compareLegacyAndFrontendAuth;
 })(window);

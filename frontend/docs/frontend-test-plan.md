@@ -28,3 +28,5 @@
 26. `window.compareLegacyAndFrontendDashboard()` returns a safe comparison without UI changes.
 27. Shadow loader can load Profile modules with all feature flags false.
 28. `window.compareLegacyAndFrontendProfile()` returns a safe comparison without UI changes.
+29. Shadow loader can load Auth/Login modules with all feature flags false.
+30. `window.compareLegacyAndFrontendAuth()` returns a safe comparison without UI changes, login requests, or access-code logging.
