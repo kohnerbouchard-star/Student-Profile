@@ -45,3 +45,5 @@
 43. Trading rendering remains preview/display-only; `STOCK_TRADE` submission and final trade state remain backend-authoritative.
 44. With `useFrontendStoreModule` true and `useFrontendInventoryModule` false, `window.EconovariaFrontend.runtime.store` reports loaded and patched while Inventory remains legacy.
 45. Store rendering remains display-only; `STORE_PURCHASE` submission and final balance/stock state remain backend-authoritative.
+46. With `useFrontendInventoryModule` true, `window.EconovariaFrontend.runtime.inventory` reports loaded and patched.
+47. Inventory rendering remains display-only; `USE_ITEM` submission and final item quantities/effects remain backend-authoritative.

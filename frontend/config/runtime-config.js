@@ -8,7 +8,7 @@
     useFrontendSnapshotStoreModule: true,
     useFrontendTradingModule: true,
     useFrontendStoreModule: true,
-    useFrontendInventoryModule: false,
+    useFrontendInventoryModule: true,
     useFrontendDashboardModule: false,
     useFrontendProfileModule: false,
     useFrontendAuthModule: false,
