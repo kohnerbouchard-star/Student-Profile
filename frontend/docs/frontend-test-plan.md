@@ -51,3 +51,5 @@
 49. Dashboard rendering remains display-only and uses backend-provided snapshot/session data.
 50. With `useFrontendProfileModule` true and `useFrontendAuthModule` false, `window.EconovariaFrontend.runtime.profile` reports loaded and patched while Auth remains legacy.
 51. Profile rendering remains display-only and uses backend-confirmed profile/session data.
+52. With `useFrontendAuthModule` true, `window.EconovariaFrontend.runtime.auth` reports loaded and patched.
+53. Auth/Login keeps `LOGIN` and `LOGOUT` backend-authoritative, does not send login requests during automated checks, and does not log access codes.

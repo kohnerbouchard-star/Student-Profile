@@ -11,7 +11,7 @@
     useFrontendInventoryModule: true,
     useFrontendDashboardModule: true,
     useFrontendProfileModule: true,
-    useFrontendAuthModule: false,
+    useFrontendAuthModule: true,
     enableFrontendShadowChecks: false,
     enableFrontendMarketNewsShadowChecks: false,
     enableFrontendMarketProfileShadowChecks: false,

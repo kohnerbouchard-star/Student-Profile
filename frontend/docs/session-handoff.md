@@ -85,7 +85,8 @@ This list was captured before the final push checkpoint commit.
 - `useFrontendInventoryModule` is `true` after the Inventory runtime checkpoint.
 - `useFrontendDashboardModule` is `true` after the Dashboard runtime checkpoint.
 - `useFrontendProfileModule` is `true` after the Profile runtime checkpoint.
-- All other feature flags remain `false`.
+- `useFrontendAuthModule` is `true` after the Auth/Login runtime checkpoint.
+- All runtime feature flags are now `true`; all shadow check flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
 - No `frontend/src/utils/money.js` was created.
@@ -102,7 +103,7 @@ useFrontendStoreModule: true
 useFrontendInventoryModule: true
 useFrontendDashboardModule: true
 useFrontendProfileModule: true
-useFrontendAuthModule: false
+useFrontendAuthModule: true
 enableFrontendShadowChecks: false
 enableFrontendStoreShadowChecks: false
 enableFrontendInventoryShadowChecks: false
@@ -135,7 +136,8 @@ enableFrontendAuthShadowChecks: false
 - Inventory is wired through the frontend runtime loader behind `useFrontendInventoryModule`.
 - Dashboard is wired through the frontend runtime loader behind `useFrontendDashboardModule`.
 - Profile is wired through the frontend runtime loader behind `useFrontendProfileModule`.
-- All other feature flags remain `false`, so all other features should remain legacy by default.
+- Auth/Login is wired through the frontend runtime loader behind `useFrontendAuthModule`.
+- All runtime feature flags are now enabled behind the additive frontend runtime loader.
 
 ## Next Recommended Step
 
