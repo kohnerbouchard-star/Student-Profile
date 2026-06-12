@@ -9,8 +9,8 @@ refactor.
 | `market-data-refresh.js` | Refreshes market data profile rendering, chart, and display helpers. | `frontend/src/features/market/market-service.js`, `market-profile-view.js`, `market-chart-view.js`, and selectors. | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `stock-trade-history-fixes.js` | Trade history rendering or display fixes. | `frontend/src/features/trading/trade-history-view.js`, `frontend/src/features/trading/trading-service.js`, `frontend/src/features/trading/trading-view.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `partial-snapshot-merge-fix.js` | Snapshot merge compatibility patch. | `frontend/src/core/snapshot-store.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
-| `use-item-permission-fix.js` | Item use permissions and inventory action safety. | `frontend/src/features/inventory/item-use-service.js`, `frontend/src/features/inventory/inventory-selectors.js` | copied, extracted, shadow-test-ready |
-| `inventory-empty-state-fix.js` | Inventory empty state display. | `frontend/src/features/inventory/inventory-view.js`, `frontend/src/components/empty-state.js` | copied, extracted, shadow-test-ready |
+| `use-item-permission-fix.js` | Item use permissions and inventory action safety. | `frontend/src/features/inventory/item-use-service.js`, `frontend/src/features/inventory/inventory-selectors.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
+| `inventory-empty-state-fix.js` | Inventory empty state display. | `frontend/src/features/inventory/inventory-view.js`, `frontend/src/components/empty-state.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `api-retry-fix.js` | API retry behavior. | `frontend/src/core/api-client.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `mobile-ux-fix.js` | Mobile interaction and layout fixes. | `frontend/styles/mobile.css` | copied |
 | `academic-market-copy.js` | Market copy text. | future `frontend/src/content/copy.js` or feature-specific copy constants | copied |

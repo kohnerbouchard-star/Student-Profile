@@ -7,6 +7,10 @@
     useFrontendApiRetryModule: false,
     useFrontendSnapshotStoreModule: false,
     useFrontendTradingModule: false,
-    enableFrontendShadowChecks: false
+    useFrontendStoreModule: false,
+    useFrontendInventoryModule: false,
+    enableFrontendShadowChecks: false,
+    enableFrontendStoreShadowChecks: false,
+    enableFrontendInventoryShadowChecks: false
   }, global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS || {});
 })(window);

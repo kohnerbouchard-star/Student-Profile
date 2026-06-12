@@ -27,6 +27,14 @@
     return getFeatureFlags().useFrontendTradingModule === true;
   }
 
+  function isStoreSwitchEnabled() {
+    return getFeatureFlags().useFrontendStoreModule === true;
+  }
+
+  function isInventorySwitchEnabled() {
+    return getFeatureFlags().useFrontendInventoryModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
@@ -45,6 +53,14 @@
 
   function getTradingModule() {
     return app.modules.trading || {};
+  }
+
+  function getStoreModule() {
+    return app.modules.store || {};
+  }
+
+  function getInventoryModule() {
+    return app.modules.inventory || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -384,6 +400,105 @@
     };
   }
 
+  function renderFrontendStore() {
+    const store = getStoreModule();
+    const root = global.document && global.document.getElementById
+      ? global.document.getElementById("store")
+      : null;
+
+    if (!root || typeof store.renderStorePanel !== "function") return;
+
+    root.innerHTML = store.renderStorePanel({
+      state: global.state || {}
+    });
+  }
+
+  function installFrontendStoreSwitch() {
+    if (!isStoreSwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendStoreModule is disabled"
+      };
+    }
+
+    const store = getStoreModule();
+    if (typeof store.renderStorePanel !== "function") {
+      return {
+        installed: false,
+        reason: "store.renderStorePanel is not available"
+      };
+    }
+
+    if (global.__frontendStoreSwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendStoreSwitchInstalled = true;
+    global.__legacyRenderStoreBeforeFrontendStore = global.renderStore || (typeof renderStore === "function" ? renderStore : null);
+    global.renderStore = renderFrontendStore;
+
+    try {
+      renderStore = global.renderStore;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Store renderer installed"
+    };
+  }
+
+  function renderFrontendUseItemCard() {
+    const inventory = getInventoryModule();
+
+    if (typeof inventory.renderInventoryPanel !== "function") {
+      return "";
+    }
+
+    return inventory.renderInventoryPanel({
+      state: global.state || {}
+    });
+  }
+
+  function installFrontendInventorySwitch() {
+    if (!isInventorySwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendInventoryModule is disabled"
+      };
+    }
+
+    const inventory = getInventoryModule();
+    if (typeof inventory.renderInventoryPanel !== "function") {
+      return {
+        installed: false,
+        reason: "inventory.renderInventoryPanel is not available"
+      };
+    }
+
+    if (global.__frontendInventorySwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendInventorySwitchInstalled = true;
+    global.__legacyRenderUseItemCardBeforeFrontendInventory = global.renderUseItemCard || (typeof renderUseItemCard === "function" ? renderUseItemCard : null);
+    global.renderUseItemCard = renderFrontendUseItemCard;
+
+    try {
+      renderUseItemCard = global.renderUseItemCard;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Inventory use-item renderer installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
@@ -391,7 +506,9 @@
     installFrontendMarketProfileSwitch,
     installFrontendApiRetrySwitch,
     installFrontendSnapshotStoreSwitch,
-    installFrontendTradingSwitch
+    installFrontendTradingSwitch,
+    installFrontendStoreSwitch,
+    installFrontendInventorySwitch
   };
 
   installFrontendMarketNewsSwitch();
@@ -399,4 +516,6 @@
   installFrontendApiRetrySwitch();
   installFrontendSnapshotStoreSwitch();
   installFrontendTradingSwitch();
+  installFrontendStoreSwitch();
+  installFrontendInventorySwitch();
 })(window);
