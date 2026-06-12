@@ -35,6 +35,14 @@
     return getFeatureFlags().useFrontendInventoryModule === true;
   }
 
+  function isDashboardSwitchEnabled() {
+    return getFeatureFlags().useFrontendDashboardModule === true;
+  }
+
+  function isProfileSwitchEnabled() {
+    return getFeatureFlags().useFrontendProfileModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
@@ -61,6 +69,14 @@
 
   function getInventoryModule() {
     return app.modules.inventory || {};
+  }
+
+  function getDashboardModule() {
+    return app.modules.dashboard || {};
+  }
+
+  function getProfileModule() {
+    return app.modules.profile || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -499,6 +515,79 @@
     };
   }
 
+  function renderFrontendDashboardProfile() {
+    const dashboard = getDashboardModule();
+    const profile = getProfileModule();
+    const root = global.document && global.document.getElementById
+      ? global.document.getElementById("profile")
+      : null;
+    const sections = [];
+
+    if (!root) return;
+
+    if (isDashboardSwitchEnabled() && typeof dashboard.renderDashboardPanel === "function") {
+      sections.push(dashboard.renderDashboardPanel({
+        state: global.state || {}
+      }));
+    }
+
+    if (isProfileSwitchEnabled() && typeof profile.renderProfilePanel === "function") {
+      sections.push(profile.renderProfilePanel({
+        state: global.state || {}
+      }));
+    }
+
+    if (!sections.length) return;
+
+    root.innerHTML = sections.join("");
+  }
+
+  function installFrontendDashboardProfileSwitch() {
+    if (!isDashboardSwitchEnabled() && !isProfileSwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendDashboardModule and useFrontendProfileModule are disabled"
+      };
+    }
+
+    const dashboard = getDashboardModule();
+    const profile = getProfileModule();
+
+    if (isDashboardSwitchEnabled() && typeof dashboard.renderDashboardPanel !== "function") {
+      return {
+        installed: false,
+        reason: "dashboard.renderDashboardPanel is not available"
+      };
+    }
+
+    if (isProfileSwitchEnabled() && typeof profile.renderProfilePanel !== "function") {
+      return {
+        installed: false,
+        reason: "profile.renderProfilePanel is not available"
+      };
+    }
+
+    if (global.__frontendDashboardProfileSwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendDashboardProfileSwitchInstalled = true;
+    global.__legacyRenderProfileBeforeFrontendDashboardProfile = global.renderProfile || (typeof renderProfile === "function" ? renderProfile : null);
+    global.renderProfile = renderFrontendDashboardProfile;
+
+    try {
+      renderProfile = global.renderProfile;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Dashboard/Profile renderer installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
@@ -508,7 +597,8 @@
     installFrontendSnapshotStoreSwitch,
     installFrontendTradingSwitch,
     installFrontendStoreSwitch,
-    installFrontendInventorySwitch
+    installFrontendInventorySwitch,
+    installFrontendDashboardProfileSwitch
   };
 
   installFrontendMarketNewsSwitch();
@@ -518,4 +608,5 @@
   installFrontendTradingSwitch();
   installFrontendStoreSwitch();
   installFrontendInventorySwitch();
+  installFrontendDashboardProfileSwitch();
 })(window);

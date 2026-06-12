@@ -20,8 +20,8 @@ Current status:
   modules, with shadow checks and guarded switches added. It is not switched on
   by default and does not replace root runtime behavior.
 - Dashboard / Profile is the current slice: copied and extracted into frontend
-  modules, with shadow checks added. It is not switched on by default and does
-  not replace root runtime behavior.
+  modules, with shadow checks and guarded switches added. It is not switched on
+  by default and does not replace root runtime behavior.
 - Auth / Login has not started.
 
 ## Required Flow

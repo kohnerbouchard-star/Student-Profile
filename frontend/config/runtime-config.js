@@ -9,8 +9,12 @@
     useFrontendTradingModule: false,
     useFrontendStoreModule: false,
     useFrontendInventoryModule: false,
+    useFrontendDashboardModule: false,
+    useFrontendProfileModule: false,
     enableFrontendShadowChecks: false,
     enableFrontendStoreShadowChecks: false,
-    enableFrontendInventoryShadowChecks: false
+    enableFrontendInventoryShadowChecks: false,
+    enableFrontendDashboardShadowChecks: false,
+    enableFrontendProfileShadowChecks: false
   }, global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS || {});
 })(window);
