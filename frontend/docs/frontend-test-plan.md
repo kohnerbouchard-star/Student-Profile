@@ -39,3 +39,5 @@
 37. Market Profile / Market Data rendering remains display-only and uses backend-provided market, history, financial, news, and portfolio snapshot data.
 38. With `useFrontendApiRetryModule` true, `window.EconovariaFrontend.runtime.apiRetry` reports the retry bridge status without double-wrapping the existing legacy retry patch.
 39. API retry keeps the existing action names and does not alter request payloads or backend responses.
+40. With `useFrontendSnapshotStoreModule` true, `window.EconovariaFrontend.runtime.snapshotStore` reports loaded and patched.
+41. Snapshot Store preserves the legacy merge behavior and treats backend snapshots as authoritative.
