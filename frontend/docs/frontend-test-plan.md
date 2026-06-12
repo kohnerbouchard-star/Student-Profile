@@ -41,3 +41,5 @@
 39. API retry keeps the existing action names and does not alter request payloads or backend responses.
 40. With `useFrontendSnapshotStoreModule` true, `window.EconovariaFrontend.runtime.snapshotStore` reports loaded and patched.
 41. Snapshot Store preserves the legacy merge behavior and treats backend snapshots as authoritative.
+42. With `useFrontendTradingModule` true, `window.EconovariaFrontend.runtime.trading` reports loaded and patched.
+43. Trading rendering remains preview/display-only; `STOCK_TRADE` submission and final trade state remain backend-authoritative.
