@@ -276,8 +276,132 @@
     });
   }
 
+  function getApiClientModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.apiClient || {};
+  }
+
+  function testFrontendApiClientModule() {
+    try {
+      const apiClient = getApiClientModule();
+      const requiredFunctions = [
+        "isRetryableBusyResult",
+        "isRetryableBusyError",
+        "isBusyMessage",
+        "getRetryDelay",
+        "callWithRetry",
+        "createApiClient",
+        "createLegacyCallApiRetryWrapper"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof apiClient[name] !== "function";
+      });
+      const expectedActions = [
+        "LOGIN",
+        "LOGOUT",
+        "GET_SNAPSHOT",
+        "GET_STOCK_HISTORY",
+        "GET_STOCK_NEWS",
+        "STORE_PURCHASE",
+        "STOCK_TRADE",
+        "SUBMIT_RATING",
+        "USE_ITEM"
+      ];
+      const actionNames = apiClient.ACTION_NAMES || {};
+      const missingActions = expectedActions.filter(function (actionName) {
+        return actionNames[actionName] !== actionName;
+      });
+      const retryableMessages = [
+        "System is busy",
+        "Service unavailable",
+        "Network error",
+        "Failed to fetch",
+        "Try again, busy lock"
+      ];
+      const nonRetryableMessages = [
+        "Insufficient balance",
+        "Invalid quantity",
+        "Market closed"
+      ];
+      const retryablePass = retryableMessages.every(function (message) {
+        return typeof apiClient.isBusyMessage === "function" && apiClient.isBusyMessage(message);
+      });
+      const nonRetryablePass = nonRetryableMessages.every(function (message) {
+        return typeof apiClient.isBusyMessage === "function" && !apiClient.isBusyMessage(message);
+      });
+      const sampleDelay = typeof apiClient.getRetryDelay === "function"
+        ? apiClient.getRetryDelay(1, { baseDelayMs: 100, maxDelayMs: 500 }, function () { return 0.5; })
+        : 0;
+      const delayInRange = sampleDelay >= 200 && sampleDelay <= 500;
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing API client functions: ${missing.join(", ")}`);
+      }
+
+      if (missingActions.length) {
+        messages.push(`Missing API action constants: ${missingActions.join(", ")}`);
+      }
+
+      if (!retryablePass) {
+        messages.push("One or more retryable busy messages were not classified as retryable.");
+      }
+
+      if (!nonRetryablePass) {
+        messages.push("One or more business-rule messages were incorrectly classified as retryable.");
+      }
+
+      if (!delayInRange) {
+        messages.push("Retry delay sample was outside expected bounds.");
+      }
+
+      return {
+        ok: messages.length === 0,
+        messages,
+        expectedActionCount: expectedActions.length,
+        missingActionCount: missingActions.length,
+        retryablePass,
+        nonRetryablePass,
+        sampleDelay,
+        legacyRetryPatchInstalled: Boolean(global.__apiRetryPatchInstalled),
+        legacyCallApiDetected: typeof global.callApi === "function"
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        messages: [`API client shadow harness failed gracefully: ${error && error.message || error}`],
+        expectedActionCount: 0,
+        missingActionCount: 0,
+        retryablePass: false,
+        nonRetryablePass: false,
+        sampleDelay: 0,
+        legacyRetryPatchInstalled: Boolean(global.__apiRetryPatchInstalled),
+        legacyCallApiDetected: typeof global.callApi === "function"
+      };
+    }
+  }
+
+  function compareLegacyAndFrontendApiRetry() {
+    const result = testFrontendApiClientModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        legacyRetryPatchInstalled: result.legacyRetryPatchInstalled,
+        legacyCallApiDetected: result.legacyCallApiDetected,
+        expectedActionCount: result.expectedActionCount,
+        missingActionCount: result.missingActionCount,
+        retryablePass: result.retryablePass,
+        nonRetryablePass: result.nonRetryablePass,
+        sampleDelay: result.sampleDelay
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
   global.compareLegacyAndFrontendMarketProfile = compareLegacyAndFrontendMarketProfile;
+  global.testFrontendApiClientModule = testFrontendApiClientModule;
+  global.compareLegacyAndFrontendApiRetry = compareLegacyAndFrontendApiRetry;
 })(window);
