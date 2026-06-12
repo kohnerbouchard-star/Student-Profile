@@ -1,5 +1,7 @@
 # Manual Test Checklist
 
+## App Smoke Test
+
 - [ ] Login with code `1234`.
 - [ ] Overview loads.
 - [ ] Store loads.
@@ -20,3 +22,34 @@
 - [ ] No active root runtime files were deleted.
 - [ ] `frontend/` folder exists.
 - [ ] Copied runtime files exist under `frontend/src/legacy/runtime-copies/`.
+
+## Shadow Module Browser Test
+
+1. Open the app normally.
+2. Login with code `1234`.
+3. Open DevTools console.
+4. Paste:
+
+```js
+const s = document.createElement("script");
+s.src = "frontend/tests/load-shadow-modules.js";
+document.head.appendChild(s);
+```
+
+5. Then run:
+
+```js
+window.loadEconovariaFrontendShadowModules()
+```
+
+6. Then run the compare functions:
+
+```js
+window.compareLegacyAndFrontendMarketNews()
+window.compareLegacyAndFrontendMarketProfile()
+window.compareLegacyAndFrontendApiRetry()
+window.compareLegacyAndFrontendSnapshotMerge()
+```
+
+7. Confirm no UI behavior changes while flags are false.
+8. Confirm no console errors.
