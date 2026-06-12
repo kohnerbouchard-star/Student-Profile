@@ -81,6 +81,7 @@ This list was captured before the final push checkpoint commit.
 - `useFrontendApiRetryModule` is `true` after the API retry runtime checkpoint.
 - `useFrontendSnapshotStoreModule` is `true` after the Snapshot Store runtime checkpoint.
 - `useFrontendTradingModule` is `true` after the Trading runtime checkpoint.
+- `useFrontendStoreModule` is `true` after the Store runtime checkpoint.
 - All other feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
@@ -94,7 +95,7 @@ useFrontendMarketProfileModule: true
 useFrontendApiRetryModule: true
 useFrontendSnapshotStoreModule: true
 useFrontendTradingModule: true
-useFrontendStoreModule: false
+useFrontendStoreModule: true
 useFrontendInventoryModule: false
 useFrontendDashboardModule: false
 useFrontendProfileModule: false
@@ -127,6 +128,7 @@ enableFrontendAuthShadowChecks: false
 - API retry is wired through the frontend runtime loader behind `useFrontendApiRetryModule`.
 - Snapshot Store is wired through the frontend runtime loader behind `useFrontendSnapshotStoreModule`.
 - Trading is wired through the frontend runtime loader behind `useFrontendTradingModule`.
+- Store is wired through the frontend runtime loader behind `useFrontendStoreModule`.
 - All other feature flags remain `false`, so all other features should remain legacy by default.
 
 ## Next Recommended Step

@@ -43,3 +43,5 @@
 41. Snapshot Store preserves the legacy merge behavior and treats backend snapshots as authoritative.
 42. With `useFrontendTradingModule` true, `window.EconovariaFrontend.runtime.trading` reports loaded and patched.
 43. Trading rendering remains preview/display-only; `STOCK_TRADE` submission and final trade state remain backend-authoritative.
+44. With `useFrontendStoreModule` true and `useFrontendInventoryModule` false, `window.EconovariaFrontend.runtime.store` reports loaded and patched while Inventory remains legacy.
+45. Store rendering remains display-only; `STORE_PURCHASE` submission and final balance/stock state remain backend-authoritative.

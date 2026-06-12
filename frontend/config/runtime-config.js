@@ -7,7 +7,7 @@
     useFrontendApiRetryModule: true,
     useFrontendSnapshotStoreModule: true,
     useFrontendTradingModule: true,
-    useFrontendStoreModule: false,
+    useFrontendStoreModule: true,
     useFrontendInventoryModule: false,
     useFrontendDashboardModule: false,
     useFrontendProfileModule: false,
