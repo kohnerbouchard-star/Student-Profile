@@ -1,5 +1,6 @@
 // Final market news display patch.
 // One Company News card only. Removes cached/legacy duplicates from older scripts.
+// Shows selected-stock news only and opens full news reports in a popup.
 
 (function () {
   function first(row, keys) {
@@ -125,38 +126,284 @@
       });
   }
 
+  function newsTimeValue(item) {
+    const value = item && (item.timestamp || item.date || "");
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function ensureNewsReportModal_() {
+    if (!document.getElementById("marketNewsPopupStyle")) {
+      const style = document.createElement("style");
+      style.id = "marketNewsPopupStyle";
+      style.textContent = `
+        .market-news-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: rgba(15, 23, 42, 0.54);
+          backdrop-filter: blur(6px);
+        }
+
+        .market-news-modal {
+          width: min(760px, 100%);
+          max-height: min(82vh, 760px);
+          overflow: auto;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          border-radius: 22px;
+          background: #ffffff;
+          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.26);
+        }
+
+        .market-news-modal-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 22px 24px 14px;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        .market-news-modal-kicker {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .market-news-modal-title {
+          margin: 0;
+          font-size: 22px;
+          line-height: 1.25;
+          color: #0f172a;
+        }
+
+        .market-news-modal-close {
+          border: 0;
+          border-radius: 999px;
+          padding: 8px 12px;
+          cursor: pointer;
+          background: #eef2f7;
+          color: #334155;
+          font-weight: 800;
+        }
+
+        .market-news-modal-body {
+          padding: 20px 24px 24px;
+        }
+
+        .market-news-modal-summary {
+          margin: 0 0 18px;
+          color: #334155;
+          line-height: 1.65;
+          font-size: 15px;
+        }
+
+        .market-news-modal-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .market-news-modal-stat {
+          padding: 12px 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          background: #f8fafc;
+        }
+
+        .market-news-modal-stat span {
+          display: block;
+          margin-bottom: 4px;
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .market-news-modal-stat strong {
+          color: #0f172a;
+          font-size: 14px;
+        }
+
+        .company-news-card {
+          cursor: pointer;
+          transition: transform 0.14s ease, box-shadow 0.14s ease;
+        }
+
+        .company-news-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
+        }
+
+        .company-news-card:focus {
+          outline: 3px solid rgba(59, 130, 246, 0.35);
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 640px) {
+          .market-news-modal-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    let modal = document.getElementById("marketNewsPopupRoot");
+
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "marketNewsPopupRoot";
+      modal.className = "market-news-modal-backdrop hidden";
+      modal.innerHTML = "";
+      document.body.appendChild(modal);
+    }
+
+    return modal;
+  }
+
+  function openNewsReportModal_(item) {
+    const modal = ensureNewsReportModal_();
+
+    const ticker = cleanTicker(item.ticker) || "Market";
+    const sentiment = item.sentiment || "Neutral";
+    const impact = item.impact || "Low";
+    const change = item.changePct !== "" && item.changePct !== undefined && item.changePct !== null
+      ? formatMarketPercent(item.changePct)
+      : "—";
+
+    modal.innerHTML = `
+      <div class="market-news-modal" role="dialog" aria-modal="true" aria-label="News report">
+        <div class="market-news-modal-header">
+          <div>
+            <div class="market-news-modal-kicker">
+              <span class="badge">${sanitize(ticker)}</span>
+              <span class="badge">${sanitize(sentiment)}</span>
+              <span class="badge">${sanitize(impact)}</span>
+            </div>
+            <h2 class="market-news-modal-title">${sanitize(item.headline || "Market update")}</h2>
+          </div>
+          <button class="market-news-modal-close" type="button" data-close-news-modal="true">Close</button>
+        </div>
+
+        <div class="market-news-modal-body">
+          <p class="market-news-modal-summary">${sanitize(item.summary || "No report details are available yet.")}</p>
+
+          <div class="market-news-modal-grid">
+            <div class="market-news-modal-stat">
+              <span>Ticker</span>
+              <strong>${sanitize(ticker)}</strong>
+            </div>
+
+            <div class="market-news-modal-stat">
+              <span>Published</span>
+              <strong>${sanitize(formatDateTime(item.timestamp || item.date || ""))}</strong>
+            </div>
+
+            <div class="market-news-modal-stat">
+              <span>Company</span>
+              <strong>${sanitize(item.companyName || ticker)}</strong>
+            </div>
+
+            <div class="market-news-modal-stat">
+              <span>Sector</span>
+              <strong>${sanitize(item.sector || "—")}</strong>
+            </div>
+
+            <div class="market-news-modal-stat">
+              <span>Price change</span>
+              <strong>${sanitize(change)}</strong>
+            </div>
+
+            <div class="market-news-modal-stat">
+              <span>Source</span>
+              <strong>${sanitize(item.sourceSheet || "Stock news")}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeNewsReportModal_() {
+    const modal = document.getElementById("marketNewsPopupRoot");
+
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.innerHTML = "";
+    }
+  }
+
+  if (!window.__marketNewsPopupEventsInstalled) {
+    window.__marketNewsPopupEventsInstalled = true;
+
+    document.addEventListener("click", function (event) {
+      const closeButton = event.target.closest("[data-close-news-modal='true']");
+      const backdrop = event.target.classList && event.target.classList.contains("market-news-modal-backdrop");
+      const card = event.target.closest(".company-news-card[data-news-index]");
+
+      if (closeButton || backdrop) {
+        closeNewsReportModal_();
+        return;
+      }
+
+      if (card) {
+        const index = Number(card.dataset.newsIndex);
+        const item = window.__selectedStockNewsReports && window.__selectedStockNewsReports[index];
+
+        if (item) {
+          openNewsReportModal_(item);
+        }
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeNewsReportModal_();
+        return;
+      }
+
+      if ((event.key === "Enter" || event.key === " ") && event.target.closest(".company-news-card[data-news-index]")) {
+        event.preventDefault();
+
+        const card = event.target.closest(".company-news-card[data-news-index]");
+        const index = Number(card.dataset.newsIndex);
+        const item = window.__selectedStockNewsReports && window.__selectedStockNewsReports[index];
+
+        if (item) {
+          openNewsReportModal_(item);
+        }
+      }
+    });
+  }
+
   function renderNewsList(stock) {
     const ticker = cleanTicker(stock && stock.ticker);
     const rows = getActiveNewsRows();
 
-    const exactTickerReports = rows.filter((item) => cleanTicker(item.ticker) === ticker);
+    const reports = rows
+      .filter((item) => cleanTicker(item.ticker) === ticker)
+      .sort((a, b) => newsTimeValue(b) - newsTimeValue(a))
+      .slice(0, 5);
 
-    const marketReports = rows.filter((item) => {
-      const t = cleanTicker(item.ticker);
-      return t === "MARKET" || t === "ALL" || t === "GENERAL";
-    });
-
-    const anyReports = rows.filter((item) => cleanTicker(item.ticker) !== ticker);
-
-    const reports = (
-      exactTickerReports.length
-        ? exactTickerReports
-        : marketReports.length
-          ? marketReports
-          : anyReports
-    ).slice(0, 8);
+    window.__selectedStockNewsReports = reports;
 
     if (!reports.length) {
       return `
         <div class="empty">
-          No imported news rows are loaded in the frontend yet. This means the backend snapshot is probably not sending <strong>news</strong>.
+          No news reports are available for <strong>${sanitize(ticker || "this stock")}</strong> yet.
         </div>
       `;
     }
 
     return `
       <div class="company-news-list">
-        ${reports.map((item) => {
+        ${reports.map((item, index) => {
           const sentiment = String(item.sentiment || "Neutral").toLowerCase();
           const sentimentClass =
             sentiment.includes("positive") || sentiment.includes("up") || sentiment.includes("beat")
@@ -166,16 +413,22 @@
                 : "news-neutral";
 
           const metaLine = [
-            cleanTicker(item.ticker) || "Market",
+            cleanTicker(item.ticker) || ticker,
             item.impact ? `${item.impact}` : "",
             item.volatilityImpact ? `Volatility ${item.volatilityImpact}` : ""
           ].filter(Boolean).join(" · ");
 
           return `
-            <article class="company-news-card ${sentimentClass}">
+            <article
+              class="company-news-card ${sentimentClass}"
+              data-news-index="${index}"
+              tabindex="0"
+              role="button"
+              aria-label="Open news report: ${sanitize(item.headline || "Market update")}"
+            >
               <div class="news-card-topline">
                 <span class="badge">${sanitize(item.sentiment || "Neutral")}</span>
-                <span>${sanitize(formatDateTime(item.timestamp || ""))}</span>
+                <span>${sanitize(formatDateTime(item.timestamp || item.date || ""))}</span>
               </div>
               <h4>${sanitize(item.headline || "Market update")}</h4>
               <p>${sanitize(item.summary || "")}</p>
@@ -242,9 +495,11 @@
       lowerGrid.appendChild(card);
     }
 
+    const ticker = cleanTicker(stock && stock.ticker);
+
     card.innerHTML = `
       <h2 class="card-title">Company News</h2>
-      <div class="status-box">Imported news from the stock news sheet.</div>
+      <div class="status-box">Showing latest 5 reports for ${sanitize(ticker || "the selected stock")}.</div>
       ${renderNewsList(stock)}
     `;
 
@@ -280,6 +535,7 @@
 
   document.addEventListener("change", function (event) {
     if (event.target && event.target.id === "stockProfileTicker") {
+      closeNewsReportModal_();
       window.setTimeout(mountImportedNewsPanel, 0);
       window.setTimeout(purgeDuplicateNewsCards, 80);
     }
@@ -297,6 +553,8 @@
   };
 
   window.killDuplicateNewsCards = purgeDuplicateNewsCards;
+  window.openNewsReportModal_ = openNewsReportModal_;
+  window.closeNewsReportModal_ = closeNewsReportModal_;
 
   window.setTimeout(mountImportedNewsPanel, 300);
   window.setTimeout(purgeDuplicateNewsCards, 600);
