@@ -50,6 +50,8 @@ window.compareLegacyAndFrontendMarketProfile()
 window.compareLegacyAndFrontendApiRetry()
 window.compareLegacyAndFrontendSnapshotMerge()
 window.compareLegacyAndFrontendTrading()
+window.compareLegacyAndFrontendStore()
+window.compareLegacyAndFrontendInventory()
 ```
 
 7. Confirm no UI behavior changes while flags are false.

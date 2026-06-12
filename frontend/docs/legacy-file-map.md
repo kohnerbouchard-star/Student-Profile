@@ -9,6 +9,13 @@ Future homes:
 - `frontend/src/core/api-client.js`
 - `frontend/src/features/*`
 
+Store logic copied/extracted, not switched:
+
+- `frontend/src/features/store/store-view.js`
+- `frontend/src/features/store/store-service.js`
+- `frontend/src/features/store/store-selectors.js`
+- `frontend/src/features/store/store-normalizers.js`
+
 ## api-retry-fix.js
 
 Future home:
@@ -52,14 +59,17 @@ Future home:
 
 ## use-item-permission-fix.js
 
-Future homes:
+Copied/extracted, not switched:
 
-- `frontend/src/core/permissions.js`
 - `frontend/src/features/inventory/item-use-service.js`
+- `frontend/src/features/inventory/inventory-selectors.js`
+
+The extracted helpers are display-only or validation-preview-only. Backend
+`USE_ITEM` remains authoritative.
 
 ## inventory-empty-state-fix.js
 
-Future homes:
+Copied/extracted, not switched:
 
 - `frontend/src/features/inventory/inventory-view.js`
 - `frontend/src/components/empty-state.js`

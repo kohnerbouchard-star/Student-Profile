@@ -648,6 +648,259 @@
     });
   }
 
+  function getStoreModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.store || {};
+  }
+
+  function getLegacyStoreSnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        hasStoreRoot: false,
+        renderedItemOrCardCount: null,
+        renderedSelectOptionCount: null,
+        selectedFilters: {}
+      };
+    }
+
+    const root = global.document.getElementById("store");
+    const selectedItem = global.document.getElementById("storeItem");
+    const quantity = global.document.getElementById("storeQty");
+    const search = global.document.getElementById("storeSearch");
+    const category = global.document.getElementById("storeCategoryFilter");
+    const sort = global.document.getElementById("storeSort");
+    const cardCount = root ? root.querySelectorAll(".store-item-card").length : 0;
+    const optionCount = root ? root.querySelectorAll("#storeItem option").length : 0;
+    const rowCount = root ? root.querySelectorAll("tbody tr").length : 0;
+
+    return {
+      hasStoreRoot: Boolean(root),
+      renderedItemOrCardCount: cardCount || optionCount || rowCount || null,
+      renderedSelectOptionCount: optionCount || null,
+      selectedFilters: {
+        selectedItemId: selectedItem && selectedItem.value || "",
+        quantity: quantity && quantity.value || "",
+        search: search && search.value || "",
+        category: category && category.value || "",
+        sortKey: sort && sort.value || ""
+      }
+    };
+  }
+
+  function emptyStoreResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      rawStoreCount: 0,
+      normalizedStoreCount: 0,
+      firstFiveStoreItemNames: [],
+      renderedPanelHasForm: false,
+      renderedPanelHasList: false,
+      legacy: getLegacyStoreSnapshot()
+    };
+  }
+
+  function testFrontendStoreModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyStoreResult("state is not available yet. Login or load a snapshot before running the Store harness.");
+      }
+
+      const store = getStoreModule();
+      const requiredFunctions = [
+        "normalizeStoreItem",
+        "getStoreItems",
+        "filterStoreItems",
+        "sortStoreItems",
+        "renderStorePanel",
+        "renderStoreItemCard",
+        "renderStoreItemList",
+        "getStoreItemStatusClass",
+        "formatStorePrice",
+        "testStoreModule"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof store[name] !== "function";
+      });
+      const rawStore = Array.isArray(state.store) ? state.store : [];
+      const normalizedRows = typeof store.getStoreItems === "function" ? store.getStoreItems(state) : [];
+      const firstFiveNames = normalizedRows.slice(0, 5).map(function (item) {
+        return item && (item.itemName || item.itemId) || "Store item";
+      });
+      const panelHtml = typeof store.renderStorePanel === "function"
+        ? store.renderStorePanel({ state })
+        : "";
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Store module functions: ${missing.join(", ")}`);
+      }
+
+      if (!rawStore.length) {
+        messages.push("state.store is empty or missing. The harness can run, but there is no store data to compare.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        rawStoreCount: rawStore.length,
+        normalizedStoreCount: normalizedRows.length,
+        firstFiveStoreItemNames: firstFiveNames,
+        renderedPanelHasForm: panelHtml.includes("storeForm"),
+        renderedPanelHasList: panelHtml.includes("Shop Items"),
+        legacy: getLegacyStoreSnapshot()
+      };
+    } catch (error) {
+      return emptyStoreResult(`Store shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendStore() {
+    const result = testFrontendStoreModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        rawStoreCount: result.rawStoreCount,
+        normalizedStoreCount: result.normalizedStoreCount,
+        firstFiveStoreItemNames: result.firstFiveStoreItemNames,
+        legacyRenderedItemOrCardCount: result.legacy.renderedItemOrCardCount,
+        legacyRenderedSelectOptionCount: result.legacy.renderedSelectOptionCount,
+        selectedFilters: result.legacy.selectedFilters
+      }
+    });
+  }
+
+  function getInventoryModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.inventory || {};
+  }
+
+  function getLegacyInventorySnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        hasProfileRoot: false,
+        renderedInventoryRowOrCardCount: null,
+        renderedUseItemOptionCount: null,
+        emptyStateDetected: null,
+        emptyStateText: ""
+      };
+    }
+
+    const root = global.document.getElementById("profile") || global.document.body;
+    const useItemSelect = global.document.getElementById("useItemSelect");
+    const emptyState = root ? root.querySelector(".empty") : null;
+    const cardCount = root ? root.querySelectorAll(".inventory-item-card, .inventory-item-row").length : 0;
+    const optionCount = useItemSelect ? useItemSelect.querySelectorAll("option").length : 0;
+    const rowCount = root ? root.querySelectorAll("tbody tr").length : 0;
+
+    return {
+      hasProfileRoot: Boolean(global.document.getElementById("profile")),
+      renderedInventoryRowOrCardCount: cardCount || rowCount || optionCount || null,
+      renderedUseItemOptionCount: optionCount || null,
+      emptyStateDetected: Boolean(emptyState),
+      emptyStateText: emptyState ? String(emptyState.textContent || "").trim() : ""
+    };
+  }
+
+  function emptyInventoryResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      rawInventoryCount: 0,
+      normalizedInventoryCount: 0,
+      firstFiveInventoryItemNames: [],
+      renderedPanelHasUseControls: false,
+      renderedPanelHasItems: false,
+      emptyStateStatus: "unknown",
+      legacy: getLegacyInventorySnapshot()
+    };
+  }
+
+  function testFrontendInventoryModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyInventoryResult("state is not available yet. Login or load a snapshot before running the Inventory harness.");
+      }
+
+      const inventory = getInventoryModule();
+      const requiredFunctions = [
+        "normalizeInventoryItem",
+        "getInventoryItems",
+        "filterInventoryItems",
+        "sortInventoryItems",
+        "renderInventoryPanel",
+        "renderInventoryItemRow",
+        "renderInventoryEmptyState",
+        "getInventoryItemStatusClass",
+        "formatInventoryQuantity",
+        "testInventoryModule",
+        "getUsableInventoryItems",
+        "getItemUsePreview",
+        "renderItemUseControls",
+        "renderItemUseStatus",
+        "classifyItemUsePermission"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof inventory[name] !== "function";
+      });
+      const rawInventory = Array.isArray(state.inventory) ? state.inventory : [];
+      const normalizedRows = typeof inventory.getInventoryItems === "function" ? inventory.getInventoryItems(state) : [];
+      const firstFiveNames = normalizedRows.slice(0, 5).map(function (item) {
+        return item && (item.itemName || item.itemId) || "Inventory item";
+      });
+      const panelHtml = typeof inventory.renderInventoryPanel === "function"
+        ? inventory.renderInventoryPanel({ state })
+        : "";
+      const emptyHtml = typeof inventory.renderInventoryEmptyState === "function"
+        ? inventory.renderInventoryEmptyState("No usable items available.")
+        : "";
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Inventory module functions: ${missing.join(", ")}`);
+      }
+
+      if (!rawInventory.length) {
+        messages.push("state.inventory is empty or missing. The harness can run, but there is no inventory data to compare.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        rawInventoryCount: rawInventory.length,
+        normalizedInventoryCount: normalizedRows.length,
+        firstFiveInventoryItemNames: firstFiveNames,
+        renderedPanelHasUseControls: panelHtml.includes("useItemForm"),
+        renderedPanelHasItems: panelHtml.includes("My Items"),
+        emptyStateStatus: emptyHtml.includes("empty") ? "renderable" : "not-detected",
+        legacy: getLegacyInventorySnapshot()
+      };
+    } catch (error) {
+      return emptyInventoryResult(`Inventory shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendInventory() {
+    const result = testFrontendInventoryModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        rawInventoryCount: result.rawInventoryCount,
+        normalizedInventoryCount: result.normalizedInventoryCount,
+        firstFiveInventoryItemNames: result.firstFiveInventoryItemNames,
+        legacyRenderedInventoryRowOrCardCount: result.legacy.renderedInventoryRowOrCardCount,
+        legacyRenderedUseItemOptionCount: result.legacy.renderedUseItemOptionCount,
+        emptyStateStatus: result.emptyStateStatus,
+        legacyEmptyStateDetected: result.legacy.emptyStateDetected,
+        legacyEmptyStateText: result.legacy.emptyStateText
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
@@ -658,4 +911,8 @@
   global.compareLegacyAndFrontendSnapshotMerge = compareLegacyAndFrontendSnapshotMerge;
   global.testFrontendTradingModule = testFrontendTradingModule;
   global.compareLegacyAndFrontendTrading = compareLegacyAndFrontendTrading;
+  global.testFrontendStoreModule = testFrontendStoreModule;
+  global.compareLegacyAndFrontendStore = compareLegacyAndFrontendStore;
+  global.testFrontendInventoryModule = testFrontendInventoryModule;
+  global.compareLegacyAndFrontendInventory = compareLegacyAndFrontendInventory;
 })(window);

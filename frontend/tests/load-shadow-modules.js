@@ -35,6 +35,18 @@
     "frontend/src/features/trading/trade-history-view.js",
     "frontend/src/features/trading/trading-view.js",
 
+    "frontend/src/features/store/store-normalizers.js",
+    "frontend/src/features/store/store-selectors.js",
+    "frontend/src/features/store/store-service.js",
+    "frontend/src/features/store/store-view.js",
+    "frontend/src/features/store/store-controller.js",
+
+    "frontend/src/features/inventory/inventory-normalizers.js",
+    "frontend/src/features/inventory/inventory-selectors.js",
+    "frontend/src/features/inventory/item-use-service.js",
+    "frontend/src/features/inventory/inventory-view.js",
+    "frontend/src/features/inventory/inventory-controller.js",
+
     "frontend/src/legacy/legacy-bridge.js",
     "frontend/tests/module-test-harness.js"
   ];
@@ -49,7 +61,11 @@
     "window.testFrontendSnapshotStoreModule()",
     "window.compareLegacyAndFrontendSnapshotMerge()",
     "window.testFrontendTradingModule()",
-    "window.compareLegacyAndFrontendTrading()"
+    "window.compareLegacyAndFrontendTrading()",
+    "window.testFrontendStoreModule()",
+    "window.compareLegacyAndFrontendStore()",
+    "window.testFrontendInventoryModule()",
+    "window.compareLegacyAndFrontendInventory()"
   ];
 
   if (!global[LOADED_URLS]) {

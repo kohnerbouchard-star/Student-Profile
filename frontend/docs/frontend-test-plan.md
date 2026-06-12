@@ -20,3 +20,7 @@
 18. No active root runtime files were deleted.
 19. `frontend/` folder exists.
 20. Copied runtime files exist under `frontend/src/legacy/runtime-copies/`.
+21. Shadow loader can load Store modules with all feature flags false.
+22. `window.compareLegacyAndFrontendStore()` returns a safe comparison without UI changes.
+23. Shadow loader can load Inventory and item-use modules with all feature flags false.
+24. `window.compareLegacyAndFrontendInventory()` returns a safe comparison without UI changes.
