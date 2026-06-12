@@ -1,7 +1,10 @@
 (function (global) {
   global.ECONOVARIA_FRONTEND_CONFIG = global.ECONOVARIA_FRONTEND_CONFIG || {};
 
-  global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = Object.assign({
+  // QA fallback: force the wired frontend runtime modules off.
+  // Do not merge caller-provided or previously cached values here, because the
+  // wired runtime can patch the legacy UI if any stale flag remains true.
+  global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
     useFrontendMarketNewsModule: false,
     useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
@@ -23,5 +26,5 @@
     enableFrontendDashboardShadowChecks: false,
     enableFrontendProfileShadowChecks: false,
     enableFrontendAuthShadowChecks: false
-  }, global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS || {});
+  };
 })(window);
