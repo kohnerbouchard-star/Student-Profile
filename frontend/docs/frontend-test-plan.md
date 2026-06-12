@@ -24,3 +24,7 @@
 22. `window.compareLegacyAndFrontendStore()` returns a safe comparison without UI changes.
 23. Shadow loader can load Inventory and item-use modules with all feature flags false.
 24. `window.compareLegacyAndFrontendInventory()` returns a safe comparison without UI changes.
+25. Shadow loader can load Dashboard modules with all feature flags false.
+26. `window.compareLegacyAndFrontendDashboard()` returns a safe comparison without UI changes.
+27. Shadow loader can load Profile modules with all feature flags false.
+28. `window.compareLegacyAndFrontendProfile()` returns a safe comparison without UI changes.

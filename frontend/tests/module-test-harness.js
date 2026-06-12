@@ -901,6 +901,218 @@
     });
   }
 
+  function getDashboardModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.dashboard || {};
+  }
+
+  function getProfileModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.profile || {};
+  }
+
+  function getLegacyDashboardProfileSnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        hasProfileRoot: false,
+        renderedDashboardCardCount: null,
+        renderedMetricCount: null,
+        renderedProfileFieldCount: null,
+        visibleProfilePanelState: "unknown",
+        displayedBalanceText: ""
+      };
+    }
+
+    const root = global.document.getElementById("profile");
+    const active = root && root.classList ? root.classList.contains("active") : false;
+    const metricCount = root ? root.querySelectorAll(".metric").length : 0;
+    const cardCount = root ? root.querySelectorAll(".card").length : 0;
+    const miniRowCount = root ? root.querySelectorAll(".mini-row").length : 0;
+    const firstMetric = root ? root.querySelector(".metric .value") : null;
+
+    return {
+      hasProfileRoot: Boolean(root),
+      renderedDashboardCardCount: cardCount || null,
+      renderedMetricCount: metricCount || null,
+      renderedProfileFieldCount: miniRowCount || null,
+      visibleProfilePanelState: root ? (active ? "active" : "inactive") : "missing",
+      displayedBalanceText: firstMetric ? String(firstMetric.textContent || "").trim() : ""
+    };
+  }
+
+  function emptyDashboardResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      profileSummaryAvailable: false,
+      transactionCount: 0,
+      inventoryCount: 0,
+      portfolioCount: 0,
+      renderedSummaryCardCount: 0,
+      renderedRecentActivity: false,
+      legacy: getLegacyDashboardProfileSnapshot()
+    };
+  }
+
+  function testFrontendDashboardModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyDashboardResult("state is not available yet. Login or load a snapshot before running the Dashboard harness.");
+      }
+
+      const dashboard = getDashboardModule();
+      const requiredFunctions = [
+        "normalizeDashboardSnapshot",
+        "getDashboardSummary",
+        "getRecentTransactions",
+        "getDashboardMarketSummary",
+        "renderDashboardPanel",
+        "renderDashboardSummaryCards",
+        "renderRecentActivity",
+        "renderDashboardEmptyState",
+        "testDashboardModule"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof dashboard[name] !== "function";
+      });
+      const summary = typeof dashboard.getDashboardSummary === "function"
+        ? dashboard.getDashboardSummary(state)
+        : {};
+      const recentRows = typeof dashboard.getRecentTransactions === "function"
+        ? dashboard.getRecentTransactions(state, 10)
+        : [];
+      const panelHtml = typeof dashboard.renderDashboardPanel === "function"
+        ? dashboard.renderDashboardPanel({ state })
+        : "";
+      const renderedSummaryCardCount = (panelHtml.match(/class="metric"/g) || []).length;
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Dashboard module functions: ${missing.join(", ")}`);
+      }
+
+      if (!state.profile) {
+        messages.push("state.profile is empty or missing. The harness can run, but profile summary data is unavailable.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        profileSummaryAvailable: Boolean(summary.profileAvailable),
+        transactionCount: Array.isArray(state.transactions) ? state.transactions.length : 0,
+        inventoryCount: Array.isArray(state.inventory) ? state.inventory.length : 0,
+        portfolioCount: Array.isArray(state.portfolio) ? state.portfolio.length : 0,
+        recentTransactionCount: recentRows.length,
+        renderedSummaryCardCount,
+        renderedRecentActivity: panelHtml.includes("dashboard-recent-activity"),
+        legacy: getLegacyDashboardProfileSnapshot()
+      };
+    } catch (error) {
+      return emptyDashboardResult(`Dashboard shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendDashboard() {
+    const result = testFrontendDashboardModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        profileSummaryAvailable: result.profileSummaryAvailable,
+        transactionCount: result.transactionCount,
+        inventoryCount: result.inventoryCount,
+        portfolioCount: result.portfolioCount,
+        renderedSummaryCardCount: result.renderedSummaryCardCount,
+        legacyRenderedDashboardCardCount: result.legacy.renderedDashboardCardCount,
+        legacyRenderedMetricCount: result.legacy.renderedMetricCount,
+        legacyVisibleProfilePanelState: result.legacy.visibleProfilePanelState
+      }
+    });
+  }
+
+  function emptyProfileResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      profileName: "",
+      profileCardId: "",
+      displayedBalance: "",
+      displayRowCount: 0,
+      renderedProfileFields: 0,
+      visibleProfilePanelState: "unknown",
+      legacy: getLegacyDashboardProfileSnapshot()
+    };
+  }
+
+  function testFrontendProfileModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyProfileResult("state is not available yet. Login or load a snapshot before running the Profile harness.");
+      }
+
+      const profile = getProfileModule();
+      const requiredFunctions = [
+        "normalizeProfile",
+        "getProfileData",
+        "getProfileDisplayRows",
+        "renderProfilePanel",
+        "renderProfileHeader",
+        "renderProfileStats",
+        "renderProfileEmptyState",
+        "testProfileModule"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof profile[name] !== "function";
+      });
+      const profileData = typeof profile.getProfileData === "function" ? profile.getProfileData(state) : null;
+      const displayRows = typeof profile.getProfileDisplayRows === "function" ? profile.getProfileDisplayRows(state) : [];
+      const panelHtml = typeof profile.renderProfilePanel === "function" ? profile.renderProfilePanel({ state }) : "";
+      const renderedProfileFields = (panelHtml.match(/class="mini-row"/g) || []).length;
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Profile module functions: ${missing.join(", ")}`);
+      }
+
+      if (!profileData) {
+        messages.push("state.profile is empty or missing. The harness can run, but profile fields are unavailable.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        profileName: profileData && profileData.name || "",
+        profileCardId: profileData && (profileData.cardId || profileData.id) || "",
+        displayedBalance: profileData ? profileData.balance : "",
+        displayRowCount: displayRows.length,
+        renderedProfileFields,
+        visibleProfilePanelState: getLegacyDashboardProfileSnapshot().visibleProfilePanelState,
+        legacy: getLegacyDashboardProfileSnapshot()
+      };
+    } catch (error) {
+      return emptyProfileResult(`Profile shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendProfile() {
+    const result = testFrontendProfileModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        profileName: result.profileName,
+        profileCardId: result.profileCardId,
+        displayedBalance: result.displayedBalance,
+        renderedProfileFields: result.renderedProfileFields,
+        legacyRenderedProfileFieldCount: result.legacy.renderedProfileFieldCount,
+        legacyDisplayedBalanceText: result.legacy.displayedBalanceText,
+        visibleProfilePanelState: result.visibleProfilePanelState
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
@@ -915,4 +1127,8 @@
   global.compareLegacyAndFrontendStore = compareLegacyAndFrontendStore;
   global.testFrontendInventoryModule = testFrontendInventoryModule;
   global.compareLegacyAndFrontendInventory = compareLegacyAndFrontendInventory;
+  global.testFrontendDashboardModule = testFrontendDashboardModule;
+  global.compareLegacyAndFrontendDashboard = compareLegacyAndFrontendDashboard;
+  global.testFrontendProfileModule = testFrontendProfileModule;
+  global.compareLegacyAndFrontendProfile = compareLegacyAndFrontendProfile;
 })(window);

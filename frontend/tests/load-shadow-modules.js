@@ -47,6 +47,16 @@
     "frontend/src/features/inventory/inventory-view.js",
     "frontend/src/features/inventory/inventory-controller.js",
 
+    "frontend/src/features/profile/profile-normalizers.js",
+    "frontend/src/features/profile/profile-selectors.js",
+    "frontend/src/features/profile/profile-view.js",
+    "frontend/src/features/profile/profile-controller.js",
+
+    "frontend/src/features/dashboard/dashboard-normalizers.js",
+    "frontend/src/features/dashboard/dashboard-selectors.js",
+    "frontend/src/features/dashboard/dashboard-view.js",
+    "frontend/src/features/dashboard/dashboard-controller.js",
+
     "frontend/src/legacy/legacy-bridge.js",
     "frontend/tests/module-test-harness.js"
   ];
@@ -65,7 +75,11 @@
     "window.testFrontendStoreModule()",
     "window.compareLegacyAndFrontendStore()",
     "window.testFrontendInventoryModule()",
-    "window.compareLegacyAndFrontendInventory()"
+    "window.compareLegacyAndFrontendInventory()",
+    "window.testFrontendDashboardModule()",
+    "window.compareLegacyAndFrontendDashboard()",
+    "window.testFrontendProfileModule()",
+    "window.compareLegacyAndFrontendProfile()"
   ];
 
   if (!global[LOADED_URLS]) {

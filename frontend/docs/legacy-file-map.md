@@ -16,6 +16,15 @@ Store logic copied/extracted, not switched:
 - `frontend/src/features/store/store-selectors.js`
 - `frontend/src/features/store/store-normalizers.js`
 
+Dashboard/profile display logic copied/extracted, not switched:
+
+- `frontend/src/features/dashboard/dashboard-view.js`
+- `frontend/src/features/dashboard/dashboard-selectors.js`
+- `frontend/src/features/dashboard/dashboard-normalizers.js`
+- `frontend/src/features/profile/profile-view.js`
+- `frontend/src/features/profile/profile-selectors.js`
+- `frontend/src/features/profile/profile-normalizers.js`
+
 ## api-retry-fix.js
 
 Future home:
