@@ -398,10 +398,140 @@
     });
   }
 
+  function getSnapshotStoreModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.snapshotStore || {};
+  }
+
+  function testFrontendSnapshotStoreModule() {
+    try {
+      const snapshotStore = getSnapshotStoreModule();
+      const requiredFunctions = [
+        "getPresentArray",
+        "hasPresentObject",
+        "mergePartialSnapshot",
+        "createSnapshotMerger"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof snapshotStore[name] !== "function";
+      });
+      const currentState = {
+        profile: { name: "Existing Student" },
+        store: [{ id: "old-store" }],
+        inventory: [{ id: "kept-inventory" }],
+        market: [{ ticker: "ABC" }],
+        portfolio: [{ ticker: "ABC", sharesOwned: 2 }],
+        ratings: [{ id: "kept-rating" }],
+        news: [{ ticker: "ABC", headline: "Kept news" }],
+        transactions: [
+          { id: "general-old", mode: "STORE_PURCHASE" },
+          { id: "stock-old", mode: "STOCK_BUY" }
+        ]
+      };
+      const partialSnapshot = {
+        storeItems: [{ id: "new-store" }],
+        stockTradeLog: [{ id: "stock-new", mode: "STOCK_SELL" }]
+      };
+      const dependencies = {
+        emptyState: function () {
+          return {
+            profile: null,
+            store: [],
+            inventory: [],
+            market: [],
+            portfolio: [],
+            ratings: [],
+            news: [],
+            transactions: []
+          };
+        },
+        normalizeProfile: function (row) { return row; },
+        normalizeStoreItem: function (row) { return row; },
+        normalizeInventoryItem: function (row) { return row; },
+        normalizeMarketRow: function (row) { return row; },
+        normalizePortfolioRow: function (row) { return row; },
+        normalizeRatingRow: function (row) { return row; },
+        normalizeNewsRow: function (row) { return row; },
+        normalizeTransaction: function (row) { return row; },
+        normalizeStockTradeRow: function (row) { return row; },
+        sortNewestFirst: function () { return 0; }
+      };
+      const merged = typeof snapshotStore.mergePartialSnapshot === "function"
+        ? snapshotStore.mergePartialSnapshot(partialSnapshot, currentState, dependencies)
+        : currentState;
+      const messages = [];
+      const storeUpdated = merged.store && merged.store[0] && merged.store[0].id === "new-store";
+      const inventoryPreserved = merged.inventory && merged.inventory[0] && merged.inventory[0].id === "kept-inventory";
+      const newsPreserved = merged.news && merged.news[0] && merged.news[0].headline === "Kept news";
+      const generalTransactionPreserved = merged.transactions && merged.transactions.some(function (row) {
+        return row.id === "general-old";
+      });
+      const stockTransactionUpdated = merged.transactions && merged.transactions.some(function (row) {
+        return row.id === "stock-new";
+      });
+
+      if (missing.length) {
+        messages.push(`Missing Snapshot Store functions: ${missing.join(", ")}`);
+      }
+
+      if (!storeUpdated) {
+        messages.push("Partial store rows were not applied.");
+      }
+
+      if (!inventoryPreserved || !newsPreserved) {
+        messages.push("Missing snapshot sections were not preserved.");
+      }
+
+      if (!generalTransactionPreserved || !stockTransactionUpdated) {
+        messages.push("Transaction merge did not preserve general rows while updating stock rows.");
+      }
+
+      return {
+        ok: messages.length === 0,
+        messages,
+        storeUpdated,
+        inventoryPreserved,
+        newsPreserved,
+        generalTransactionPreserved,
+        stockTransactionUpdated,
+        legacyMergeSnapshotDetected: typeof global.mergeSnapshot === "function"
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        messages: [`Snapshot Store shadow harness failed gracefully: ${error && error.message || error}`],
+        storeUpdated: false,
+        inventoryPreserved: false,
+        newsPreserved: false,
+        generalTransactionPreserved: false,
+        stockTransactionUpdated: false,
+        legacyMergeSnapshotDetected: typeof global.mergeSnapshot === "function"
+      };
+    }
+  }
+
+  function compareLegacyAndFrontendSnapshotMerge() {
+    const result = testFrontendSnapshotStoreModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        legacyMergeSnapshotDetected: result.legacyMergeSnapshotDetected,
+        storeUpdated: result.storeUpdated,
+        inventoryPreserved: result.inventoryPreserved,
+        newsPreserved: result.newsPreserved,
+        generalTransactionPreserved: result.generalTransactionPreserved,
+        stockTransactionUpdated: result.stockTransactionUpdated
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
   global.compareLegacyAndFrontendMarketProfile = compareLegacyAndFrontendMarketProfile;
   global.testFrontendApiClientModule = testFrontendApiClientModule;
   global.compareLegacyAndFrontendApiRetry = compareLegacyAndFrontendApiRetry;
+  global.testFrontendSnapshotStoreModule = testFrontendSnapshotStoreModule;
+  global.compareLegacyAndFrontendSnapshotMerge = compareLegacyAndFrontendSnapshotMerge;
 })(window);
