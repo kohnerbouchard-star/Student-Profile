@@ -6,7 +6,7 @@ refactor.
 | Root file | Current purpose | Planned destination | Status |
 | --- | --- | --- | --- |
 | `student-ui-fixes.js` | Student UI patch behavior. | `frontend/src/features/dashboard/`, shared components, or feature-specific views after classification. | copied |
-| `market-data-refresh.js` | Refreshes market data profile rendering, chart, and display helpers. | `frontend/src/features/market/market-service.js`, `market-profile-view.js`, `market-chart-view.js`, and selectors. | copied, extracted |
+| `market-data-refresh.js` | Refreshes market data profile rendering, chart, and display helpers. | `frontend/src/features/market/market-service.js`, `market-profile-view.js`, `market-chart-view.js`, and selectors. | copied, extracted, shadow-test-ready |
 | `stock-trade-history-fixes.js` | Trade history rendering or display fixes. | `frontend/src/features/trading/trade-history-view.js` | copied |
 | `partial-snapshot-merge-fix.js` | Snapshot merge compatibility patch. | `frontend/src/core/snapshot-store.js` | copied |
 | `use-item-permission-fix.js` | Item use permissions and inventory action safety. | `frontend/src/core/permissions.js`, `frontend/src/features/inventory/item-use-service.js` | copied |
@@ -17,7 +17,7 @@ refactor.
 | `login-quotes.js` | Login quote rotation. | `frontend/src/features/auth/login-quotes.js` | copied |
 | `display-format-final-fix.js` | Display value formatting patch. | `frontend/src/utils/formatters.js`, `frontend/src/utils/currency.js` | copied |
 | `market-news-final-fix.js` | Company news normalization, rendering, and modal patch. | `frontend/src/features/market/market-news-view.js`, `market-news-modal.js`, `market-selectors.js`, `market-normalizers.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
-| `market-data-layout-fix.js` | Market data layout polish around imported news card. | `frontend/src/features/market/market-profile-view.js`, `frontend/styles/market.css` | copied, extracted |
+| `market-data-layout-fix.js` | Market data layout polish around imported news card. | `frontend/src/features/market/market-profile-view.js`, `frontend/styles/market.css` | copied, extracted, shadow-test-ready |
 
 No active root runtime file should be deleted, moved, renamed, or archived until
 the matching module is extracted, tested, switched behind a feature flag, and

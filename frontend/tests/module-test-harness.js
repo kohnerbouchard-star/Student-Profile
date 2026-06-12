@@ -134,6 +134,150 @@
     });
   }
 
+  function getMarketProfileModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.marketProfile || {};
+  }
+
+  function findMissingMarketProfileFunctions(module) {
+    return [
+      "getMarketRows",
+      "findMarketByTicker",
+      "getSelectedTicker",
+      "getSelectedStock",
+      "parseMarketPercent",
+      "getSectorPeers",
+      "buildMarketChartPoints",
+      "renderMarketChart",
+      "renderMarketProfilePage",
+      "renderMarketProfileDetail",
+      "renderHoldingSummary",
+      "renderSectorPeers"
+    ].filter(function (name) {
+      return typeof module[name] !== "function";
+    });
+  }
+
+  function getLegacyMarketProfileSnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        hasStockProfileRoot: false,
+        renderedCardCount: null,
+        renderedChartCount: null,
+        selectedTicker: ""
+      };
+    }
+
+    const root = global.document.getElementById("stockProfile");
+    const select = global.document.getElementById("stockProfileTicker");
+
+    return {
+      hasStockProfileRoot: Boolean(root),
+      renderedCardCount: root ? root.querySelectorAll(".card").length : null,
+      renderedChartCount: root ? root.querySelectorAll(".market-chart-v2").length : null,
+      selectedTicker: select && select.value ? String(select.value).trim().toUpperCase() : ""
+    };
+  }
+
+  function emptyMarketProfileResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      rawMarketCount: 0,
+      selectedTicker: "",
+      selectedStockFound: false,
+      sectorPeerCount: 0,
+      chartPointCount: 0,
+      renderedPageHasShell: false,
+      renderedDetailHasChart: false,
+      renderedHoldingHasPosition: false,
+      legacy: getLegacyMarketProfileSnapshot()
+    };
+  }
+
+  function testFrontendMarketProfileModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyMarketProfileResult("state is not available yet. Load a snapshot before running the Market Profile harness.");
+      }
+
+      const marketProfile = getMarketProfileModule();
+      const missing = findMissingMarketProfileFunctions(marketProfile);
+      const rawMarket = Array.isArray(state.market) ? state.market : [];
+      const selectedTicker = typeof marketProfile.getSelectedTicker === "function"
+        ? marketProfile.getSelectedTicker(state)
+        : getSelectedTicker(state);
+      const selectedStock = typeof marketProfile.findMarketByTicker === "function"
+        ? marketProfile.findMarketByTicker(selectedTicker, state) || rawMarket[0] || null
+        : rawMarket[0] || null;
+      const sectorPeers = selectedStock && typeof marketProfile.getSectorPeers === "function"
+        ? marketProfile.getSectorPeers(selectedStock, state)
+        : [];
+      const chartPoints = selectedStock && typeof marketProfile.buildMarketChartPoints === "function"
+        ? marketProfile.buildMarketChartPoints(selectedStock, "1D")
+        : [];
+      const pageHtml = typeof marketProfile.renderMarketProfilePage === "function"
+        ? marketProfile.renderMarketProfilePage({ state, selectedTicker })
+        : "";
+      const detailHtml = selectedStock && typeof marketProfile.renderMarketProfileDetail === "function"
+        ? marketProfile.renderMarketProfileDetail(selectedStock, { state, range: "1D" })
+        : "";
+      const holdingHtml = selectedStock && typeof marketProfile.renderHoldingSummary === "function"
+        ? marketProfile.renderHoldingSummary(selectedStock.ticker, { state })
+        : "";
+
+      const messages = [];
+      if (missing.length) {
+        messages.push(`Missing Market Profile module functions: ${missing.join(", ")}`);
+      }
+
+      if (!rawMarket.length) {
+        messages.push("state.market is empty or missing. The harness can run, but there is no market data to compare.");
+      }
+
+      if (!selectedTicker) {
+        messages.push("No selected ticker was detected. Select a stock or load market data before comparing profile rows.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        rawMarketCount: rawMarket.length,
+        selectedTicker,
+        selectedStockFound: Boolean(selectedStock),
+        sectorPeerCount: sectorPeers.length,
+        chartPointCount: chartPoints.length,
+        renderedPageHasShell: pageHtml.includes("market-page-v2"),
+        renderedDetailHasChart: detailHtml.includes("market-chart") || detailHtml.includes("market-chart-empty"),
+        renderedHoldingHasPosition: holdingHtml.includes("Shares") || holdingHtml.includes("Status"),
+        legacy: getLegacyMarketProfileSnapshot()
+      };
+    } catch (error) {
+      return emptyMarketProfileResult(`Market Profile shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendMarketProfile() {
+    const result = testFrontendMarketProfileModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        rawMarketCount: result.rawMarketCount,
+        selectedTicker: result.selectedTicker,
+        selectedStockFound: result.selectedStockFound,
+        sectorPeerCount: result.sectorPeerCount,
+        chartPointCount: result.chartPointCount,
+        legacyRenderedCardCount: result.legacy.renderedCardCount,
+        legacyRenderedChartCount: result.legacy.renderedChartCount,
+        legacySelectedTicker: result.legacy.selectedTicker
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
+  global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
+  global.compareLegacyAndFrontendMarketProfile = compareLegacyAndFrontendMarketProfile;
 })(window);
