@@ -526,6 +526,128 @@
     });
   }
 
+  function getTradingModule() {
+    const app = global.EconovariaFrontend || {};
+    const modules = app.modules || {};
+    return modules.trading || {};
+  }
+
+  function getLegacyTradingSnapshot() {
+    if (!global.document || !global.document.querySelectorAll) {
+      return {
+        hasTradeRoot: false,
+        renderedCardCount: null,
+        renderedTickerPillCount: null,
+        renderedSubmitButton: false
+      };
+    }
+
+    const root = global.document.getElementById("trade");
+
+    return {
+      hasTradeRoot: Boolean(root),
+      renderedCardCount: root ? root.querySelectorAll(".card").length : null,
+      renderedTickerPillCount: root ? root.querySelectorAll(".ticker-pill").length : null,
+      renderedSubmitButton: Boolean(root && root.querySelector("#tradeSubmitButton"))
+    };
+  }
+
+  function emptyTradingResult(message) {
+    return {
+      ok: false,
+      messages: [message],
+      rawMarketCount: 0,
+      rawTransactionCount: 0,
+      stockTradeCount: 0,
+      firstFiveTradeModes: [],
+      renderedPageHasTradeForm: false,
+      renderedPageHasMarketBoard: false,
+      renderedHistoryHasRowsOrEmpty: false,
+      legacy: getLegacyTradingSnapshot()
+    };
+  }
+
+  function testFrontendTradingModule() {
+    try {
+      const state = getState();
+      if (!state) {
+        return emptyTradingResult("state is not available yet. Load a snapshot before running the Trading harness.");
+      }
+
+      const trading = getTradingModule();
+      const requiredFunctions = [
+        "getMarketRows",
+        "getTransactionRows",
+        "isStockTradeRow",
+        "normalizeStockTradeRow",
+        "getStockTradeRows",
+        "readTradeFormPreview",
+        "renderTradeHistoryTable",
+        "renderTradeHistoryPanel",
+        "renderMarketTicker",
+        "renderTradeForm",
+        "renderMarketBoard",
+        "renderTradingPage"
+      ];
+      const missing = requiredFunctions.filter(function (name) {
+        return typeof trading[name] !== "function";
+      });
+      const rawMarket = Array.isArray(state.market) ? state.market : [];
+      const rawTransactions = Array.isArray(state.transactions) ? state.transactions : [];
+      const stockTrades = typeof trading.getStockTradeRows === "function"
+        ? trading.getStockTradeRows(state, 10)
+        : [];
+      const pageHtml = typeof trading.renderTradingPage === "function"
+        ? trading.renderTradingPage({ state })
+        : "";
+      const historyHtml = typeof trading.renderTradeHistoryPanel === "function"
+        ? trading.renderTradeHistoryPanel(stockTrades)
+        : "";
+      const messages = [];
+
+      if (missing.length) {
+        messages.push(`Missing Trading module functions: ${missing.join(", ")}`);
+      }
+
+      if (!rawMarket.length) {
+        messages.push("state.market is empty or missing. The harness can run, but there is no market data for the trade form.");
+      }
+
+      return {
+        ok: missing.length === 0,
+        messages,
+        rawMarketCount: rawMarket.length,
+        rawTransactionCount: rawTransactions.length,
+        stockTradeCount: stockTrades.length,
+        firstFiveTradeModes: stockTrades.slice(0, 5).map(function (row) {
+          return row && row.mode || "";
+        }),
+        renderedPageHasTradeForm: pageHtml.includes("tradeForm") && pageHtml.includes("tradeSubmitButton"),
+        renderedPageHasMarketBoard: pageHtml.includes("Market Board"),
+        renderedHistoryHasRowsOrEmpty: historyHtml.includes("table") || historyHtml.includes("empty"),
+        legacy: getLegacyTradingSnapshot()
+      };
+    } catch (error) {
+      return emptyTradingResult(`Trading shadow harness failed gracefully: ${error && error.message || error}`);
+    }
+  }
+
+  function compareLegacyAndFrontendTrading() {
+    const result = testFrontendTradingModule();
+
+    return Object.assign({}, result, {
+      comparison: {
+        rawMarketCount: result.rawMarketCount,
+        rawTransactionCount: result.rawTransactionCount,
+        stockTradeCount: result.stockTradeCount,
+        firstFiveTradeModes: result.firstFiveTradeModes,
+        legacyRenderedCardCount: result.legacy.renderedCardCount,
+        legacyRenderedTickerPillCount: result.legacy.renderedTickerPillCount,
+        legacyRenderedSubmitButton: result.legacy.renderedSubmitButton
+      }
+    });
+  }
+
   global.testFrontendMarketNewsModule = testFrontendMarketNewsModule;
   global.compareLegacyAndFrontendMarketNews = compareLegacyAndFrontendMarketNews;
   global.testFrontendMarketProfileModule = testFrontendMarketProfileModule;
@@ -534,4 +656,6 @@
   global.compareLegacyAndFrontendApiRetry = compareLegacyAndFrontendApiRetry;
   global.testFrontendSnapshotStoreModule = testFrontendSnapshotStoreModule;
   global.compareLegacyAndFrontendSnapshotMerge = compareLegacyAndFrontendSnapshotMerge;
+  global.testFrontendTradingModule = testFrontendTradingModule;
+  global.compareLegacyAndFrontendTrading = compareLegacyAndFrontendTrading;
 })(window);

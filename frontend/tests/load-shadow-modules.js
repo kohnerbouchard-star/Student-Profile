@@ -31,6 +31,10 @@
     "frontend/src/features/market/market-news-view.js",
     "frontend/src/features/market/market-profile-view.js",
 
+    "frontend/src/features/trading/trading-service.js",
+    "frontend/src/features/trading/trade-history-view.js",
+    "frontend/src/features/trading/trading-view.js",
+
     "frontend/src/legacy/legacy-bridge.js",
     "frontend/tests/module-test-harness.js"
   ];
@@ -43,7 +47,9 @@
     "window.testFrontendApiClientModule()",
     "window.compareLegacyAndFrontendApiRetry()",
     "window.testFrontendSnapshotStoreModule()",
-    "window.compareLegacyAndFrontendSnapshotMerge()"
+    "window.compareLegacyAndFrontendSnapshotMerge()",
+    "window.testFrontendTradingModule()",
+    "window.compareLegacyAndFrontendTrading()"
   ];
 
   if (!global[LOADED_URLS]) {
