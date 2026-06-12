@@ -23,6 +23,17 @@
     });
   }
 
+  function displayOrDash(value) {
+    const text = String(value ?? "").trim();
+    const lower = text.toLowerCase();
+
+    if (!text || lower === "undefined" || lower === "null") {
+      return "-";
+    }
+
+    return text;
+  }
+
   // display-only
   function formatDateTime(value) {
     if (typeof global.formatDateTime === "function") {
@@ -233,7 +244,7 @@
 
             <div class="market-news-modal-stat">
               <span>Sector</span>
-              <strong>${sanitize(source.sector || "Unavailable")}</strong>
+              <strong>${sanitize(displayOrDash(source.sector))}</strong>
             </div>
 
             <div class="market-news-modal-stat">
