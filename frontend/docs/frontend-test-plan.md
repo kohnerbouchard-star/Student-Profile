@@ -47,3 +47,5 @@
 45. Store rendering remains display-only; `STORE_PURCHASE` submission and final balance/stock state remain backend-authoritative.
 46. With `useFrontendInventoryModule` true, `window.EconovariaFrontend.runtime.inventory` reports loaded and patched.
 47. Inventory rendering remains display-only; `USE_ITEM` submission and final item quantities/effects remain backend-authoritative.
+48. With `useFrontendDashboardModule` true and `useFrontendProfileModule` false, `window.EconovariaFrontend.runtime.dashboard` reports loaded and patched while Profile remains legacy.
+49. Dashboard rendering remains display-only and uses backend-provided snapshot/session data.
