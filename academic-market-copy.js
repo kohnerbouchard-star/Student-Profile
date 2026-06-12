@@ -76,6 +76,7 @@
     ['No items yet. Visit the Shop to buy your first item.', 'No items yet. Visit the Store to buy your first item.'],
     ['Buy an Item', 'Purchase Item'],
     ['Buy Item', 'Purchase Item'],
+    ['Choose an item and quantity. Your balance and item stock are checked before the purchase is saved.', 'Choose an item and quantity. Your balance and item stock are checked automatically before purchase.'],
     ['Shop Items', 'Store Items'],
     ['The shop is empty right now. Check again later.', 'The store is empty right now. Check again later.'],
     ['Your recent shop purchases appear here after they are confirmed.', 'Recent store purchases appear here after they are confirmed.'],
@@ -116,6 +117,15 @@
     if (eyebrow) eyebrow.textContent = 'Market simulation';
   }
 
+  function syncStoreCopy() {
+    const storeStatus = document.getElementById('storeStatus');
+    const currentText = String(storeStatus?.textContent || '').trim();
+
+    if (storeStatus && /^Purchases are submitted for .+\.$/.test(currentText)) {
+      storeStatus.textContent = 'Purchases are checked and saved after confirmation.';
+    }
+  }
+
   function replaceVisibleText(root = document.body) {
     if (!root) return;
 
@@ -139,6 +149,7 @@
     syncNavigation();
     syncPageHeading();
     replaceVisibleText();
+    syncStoreCopy();
 
     const mode = document.getElementById('connectionMode');
     const copy = document.getElementById('connectionCopy');
