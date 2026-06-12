@@ -11,13 +11,17 @@ On branch refactor/frontend-modular-copy-transplant
 nothing to commit, working tree clean
 ```
 
-This status was captured before creating this handoff document.
+This status was captured before updating this final copy-phase handoff document.
 
 ## Commit List On This Branch
 
 Latest first, relative to `main`:
 
 ```text
+50ad35e feat: add guarded frontend auth login switch
+bedf792 test: add auth login shadow checks
+73f764a refactor: copy auth login into frontend modules
+a638211 docs: add frontend refactor session handoff
 0805f5d feat: add guarded frontend dashboard profile switches
 4baa276 test: add dashboard profile shadow checks
 0508a5e refactor: copy dashboard profile into frontend modules
@@ -44,11 +48,12 @@ b711e7c test: add frontend module shadow test harness
 00f360c chore: scaffold frontend modular copy transplant
 ```
 
-This list was captured before the handoff commit.
+This list was captured before the final handoff update commit. The final handoff
+commit should appear above this list after commit.
 
-## Completed Work
+## Completed Copy-Phase Work
 
-- `frontend/` scaffold exists with docs, config, components, utils, core modules, feature folders, legacy bridge, and test harnesses.
+- `frontend/` scaffold exists with docs, config, components, utils, core modules, feature folders, legacy bridge, styles, and test harnesses.
 - Runtime copies exist under `frontend/src/legacy/runtime-copies/`.
 - Market News modules copied/extracted with shadow checks and disabled guarded switch.
 - Market Profile / Market Data modules copied/extracted with shadow checks and disabled guarded switch.
@@ -57,18 +62,24 @@ This list was captured before the handoff commit.
 - Trading modules copied/extracted with shadow checks and disabled guarded switch.
 - Store / Inventory modules copied/extracted with shadow checks and disabled guarded switches.
 - Dashboard / Profile modules copied/extracted with shadow checks and disabled guarded switches.
+- Auth/Login modules copied/extracted with shadow checks and disabled guarded switch.
 - Manual shadow module loader exists at `frontend/tests/load-shadow-modules.js`.
 
 ## Safety Status
 
 - Root `index.html` unchanged.
 - Root `app.js` unchanged.
+- Root `market-news-final-fix.js` unchanged.
+- Root `stock-trade-history-fixes.js` unchanged.
+- Root `use-item-permission-fix.js` unchanged.
+- Root `inventory-empty-state-fix.js` unchanged.
+- Root `login-quotes.js` unchanged.
+- Root `academic-market-copy.js` unchanged.
 - Active root JS/CSS files unchanged.
 - All feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, Worker, or worker folders were created.
 - No `frontend/src/utils/money.js` was created.
-- Root script cleanup has not started.
 
 Current feature flags:
 
@@ -82,11 +93,13 @@ useFrontendStoreModule: false
 useFrontendInventoryModule: false
 useFrontendDashboardModule: false
 useFrontendProfileModule: false
+useFrontendAuthModule: false
 enableFrontendShadowChecks: false
 enableFrontendStoreShadowChecks: false
 enableFrontendInventoryShadowChecks: false
 enableFrontendDashboardShadowChecks: false
 enableFrontendProfileShadowChecks: false
+enableFrontendAuthShadowChecks: false
 ```
 
 ## Current Known Issue
@@ -95,18 +108,20 @@ enableFrontendProfileShadowChecks: false
 - This is not a frontend refactor bug.
 - Do not investigate CORS unless explicitly asked later.
 
+## Current Completion Status
+
+- Copy phase complete.
+- Runtime transplant phase not started.
+- Root script cleanup not started.
+- `index.html` has not been switched to frontend modules.
+- Old runtime files have not been archived, deleted, moved, or renamed.
+
 ## Next Recommended Step
 
-Auth/Login copy-phase extraction only.
-
-Do not do root script cleanup yet. Do not switch `index.html` to frontend modules. Do not archive, delete, move, or rename active root runtime files.
-
-## Exact Next Codex Prompt Location
-
-Continue from:
-
-- `frontend/docs/session-handoff.md`
-- `frontend/docs/code-transplant-plan.md`
+1. Full branch review.
+2. Test shadow modules in the browser.
+3. Enable one feature flag at a time, starting with Market News only.
+4. Do not switch all modules at once.
 
 ## Test Commands To Rerun
 
@@ -148,4 +163,5 @@ window.compareLegacyAndFrontendStore()
 window.compareLegacyAndFrontendInventory()
 window.compareLegacyAndFrontendDashboard()
 window.compareLegacyAndFrontendProfile()
+window.compareLegacyAndFrontendAuth()
 ```
