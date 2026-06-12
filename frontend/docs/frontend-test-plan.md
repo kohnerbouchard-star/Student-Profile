@@ -37,3 +37,5 @@
 35. With only Market News wired, Company News remains selected-ticker-only, shows the latest five selected ticker reports, opens the popup, closes by button and Escape, and does not duplicate cards or modals.
 36. With Market News and `useFrontendMarketProfileModule` true, `window.EconovariaFrontend.runtime.marketProfile` reports loaded and patched.
 37. Market Profile / Market Data rendering remains display-only and uses backend-provided market, history, financial, news, and portfolio snapshot data.
+38. With `useFrontendApiRetryModule` true, `window.EconovariaFrontend.runtime.apiRetry` reports the retry bridge status without double-wrapping the existing legacy retry patch.
+39. API retry keeps the existing action names and does not alter request payloads or backend responses.

@@ -277,6 +277,14 @@
     const apiClient = getApiClientModule();
     const legacyCallApi = global.callApi || (typeof callApi === "function" ? callApi : null);
 
+    if (global.__apiRetryPatchInstalled) {
+      global.__frontendApiRetrySwitchInstalled = true;
+      return {
+        installed: true,
+        reason: "legacy API retry patch is already installed; frontend wrapper skipped to avoid duplicate retries"
+      };
+    }
+
     if (typeof apiClient.createLegacyCallApiRetryWrapper !== "function") {
       return {
         installed: false,
