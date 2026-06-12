@@ -43,6 +43,10 @@
     return getFeatureFlags().useFrontendProfileModule === true;
   }
 
+  function isAuthSwitchEnabled() {
+    return getFeatureFlags().useFrontendAuthModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
@@ -77,6 +81,10 @@
 
   function getProfileModule() {
     return app.modules.profile || {};
+  }
+
+  function getAuthModule() {
+    return app.modules.auth || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -588,6 +596,95 @@
     };
   }
 
+  function installFrontendAuthSwitch() {
+    if (!isAuthSwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendAuthModule is disabled"
+      };
+    }
+
+    const auth = getAuthModule();
+
+    if (
+      typeof auth.renderLoginError !== "function" ||
+      typeof auth.rotateLoginQuote !== "function"
+    ) {
+      return {
+        installed: false,
+        reason: "Auth display helpers are not available"
+      };
+    }
+
+    if (global.__frontendAuthSwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendAuthSwitchInstalled = true;
+    global.__legacyShowLoginBeforeFrontendAuth = global.showLogin || (typeof showLogin === "function" ? showLogin : null);
+    global.__legacyShowLoginErrorBeforeFrontendAuth = global.showLoginError || (typeof showLoginError === "function" ? showLoginError : null);
+    global.__legacyClearLoginErrorBeforeFrontendAuth = global.clearLoginError || (typeof clearLoginError === "function" ? clearLoginError : null);
+
+    global.showLogin = function frontendShowLogin() {
+      if (typeof global.__legacyShowLoginBeforeFrontendAuth === "function") {
+        global.__legacyShowLoginBeforeFrontendAuth();
+      }
+
+      auth.rotateLoginQuote(global.document, 0);
+    };
+
+    global.showLoginError = function frontendShowLoginError(message) {
+      const root = global.document && global.document.getElementById
+        ? global.document.getElementById("loginError")
+        : null;
+
+      if (!root) {
+        if (typeof global.__legacyShowLoginErrorBeforeFrontendAuth === "function") {
+          global.__legacyShowLoginErrorBeforeFrontendAuth(message);
+        }
+        return;
+      }
+
+      const classified = typeof auth.classifyLoginError === "function"
+        ? auth.classifyLoginError(message)
+        : { className: "bad", message };
+
+      root.className = `status-box ${classified.className || "bad"}`;
+      root.textContent = classified.message || "";
+      root.classList.remove("hidden");
+    };
+
+    global.clearLoginError = function frontendClearLoginError() {
+      const root = global.document && global.document.getElementById
+        ? global.document.getElementById("loginError")
+        : null;
+
+      if (!root) {
+        if (typeof global.__legacyClearLoginErrorBeforeFrontendAuth === "function") {
+          global.__legacyClearLoginErrorBeforeFrontendAuth();
+        }
+        return;
+      }
+
+      root.textContent = "";
+      root.classList.add("hidden");
+    };
+
+    try {
+      showLogin = global.showLogin;
+      showLoginError = global.showLoginError;
+      clearLoginError = global.clearLoginError;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Auth display helpers installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
@@ -598,7 +695,8 @@
     installFrontendTradingSwitch,
     installFrontendStoreSwitch,
     installFrontendInventorySwitch,
-    installFrontendDashboardProfileSwitch
+    installFrontendDashboardProfileSwitch,
+    installFrontendAuthSwitch
   };
 
   installFrontendMarketNewsSwitch();
@@ -609,4 +707,5 @@
   installFrontendStoreSwitch();
   installFrontendInventorySwitch();
   installFrontendDashboardProfileSwitch();
+  installFrontendAuthSwitch();
 })(window);
