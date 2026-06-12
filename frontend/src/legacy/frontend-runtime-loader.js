@@ -3,6 +3,7 @@
   app.modules = app.modules || {};
 
   const RUNTIME_NAME = "Econovaria frontend runtime loader";
+  const RUNTIME_VERSION = "20260613-marketnews2";
   const LOADED_URLS = "__econovariaFrontendRuntimeLoadedUrls";
 
   const COMMON_SCRIPT_PATHS = [
@@ -45,16 +46,12 @@
     apiRetry: {
       flag: "useFrontendApiRetryModule",
       bridge: "installFrontendApiRetrySwitch",
-      paths: [
-        "frontend/src/core/api-client.js"
-      ]
+      paths: ["frontend/src/core/api-client.js"]
     },
     snapshotStore: {
       flag: "useFrontendSnapshotStoreModule",
       bridge: "installFrontendSnapshotStoreSwitch",
-      paths: [
-        "frontend/src/core/snapshot-store.js"
-      ]
+      paths: ["frontend/src/core/snapshot-store.js"]
     },
     trading: {
       flag: "useFrontendTradingModule",
@@ -129,28 +126,11 @@
 
   const runtime = app.runtime = app.runtime || {};
   runtime.loadedUrls = runtime.loadedUrls || global[LOADED_URLS];
+  runtime.version = RUNTIME_VERSION;
 
   function now() {
     return new Date().toISOString();
   }
-
-  function setStatus(featureName, patch) {
-    const previous = runtime[featureName] || {};
-    runtime[featureName] = Object.assign({
-      loaded: false,
-      enabled: false,
-      patched: false,
-      reason: "not evaluated",
-      timestamp: now()
-    }, previous, patch || {}, {
-      timestamp: now()
-    });
-    return runtime[featureName];
-  }
-
-  FEATURE_NAMES.forEach(function (featureName) {
-    setStatus(featureName, runtime[featureName] || {});
-  });
 
   function logInfo(message, detail) {
     if (detail !== undefined) {
@@ -159,15 +139,6 @@
     }
 
     console.info(`[${RUNTIME_NAME}] ${message}`);
-  }
-
-  function logWarn(message, detail) {
-    if (detail !== undefined) {
-      console.warn(`[${RUNTIME_NAME}] ${message}`, detail);
-      return;
-    }
-
-    console.warn(`[${RUNTIME_NAME}] ${message}`);
   }
 
   function logError(message, detail) {
@@ -179,8 +150,34 @@
     console.error(`[${RUNTIME_NAME}] ${message}`);
   }
 
+  function setStatus(featureName, patch) {
+    runtime[featureName] = Object.assign({
+      loaded: false,
+      enabled: false,
+      patched: false,
+      reason: "not evaluated",
+      timestamp: now()
+    }, patch || {}, {
+      timestamp: now()
+    });
+
+    return runtime[featureName];
+  }
+
+  function resetStatuses() {
+    FEATURE_NAMES.forEach(function (featureName) {
+      setStatus(featureName, {
+        loaded: false,
+        enabled: false,
+        patched: false,
+        reason: "not evaluated"
+      });
+    });
+  }
+
   function getLoaderScriptUrl() {
     const currentScript = document.currentScript;
+
     if (currentScript && currentScript.src) {
       return currentScript.src;
     }
@@ -203,6 +200,14 @@
     return new URL("./", global.location.href);
   }
 
+  function withRuntimeVersion(path) {
+    if (path.indexOf("?") !== -1) {
+      return `${path}&v=${RUNTIME_VERSION}`;
+    }
+
+    return `${path}?v=${RUNTIME_VERSION}`;
+  }
+
   function resolveScriptUrl(path) {
     return new URL(path, getAppRootUrl()).href;
   }
@@ -217,8 +222,10 @@
     });
   }
 
-  function loadScript(path) {
-    const url = resolveScriptUrl(path);
+  function loadScript(path, options) {
+    const shouldCacheBust = !options || options.cacheBust !== false;
+    const pathToLoad = shouldCacheBust ? withRuntimeVersion(path) : path;
+    const url = resolveScriptUrl(pathToLoad);
 
     if (isScriptAlreadyLoaded(url)) {
       runtime.loadedUrls[url] = true;
@@ -269,6 +276,7 @@
 
   function uniquePaths(paths) {
     const seen = {};
+
     return paths.filter(function (path) {
       if (seen[path]) return false;
       seen[path] = true;
@@ -320,6 +328,7 @@
 
     try {
       const result = installer();
+
       return setStatus(featureName, {
         loaded: true,
         enabled: true,
@@ -328,6 +337,7 @@
       });
     } catch (error) {
       logError(`Bridge install failed for ${featureName}. Legacy behavior remains available.`, error);
+
       return setStatus(featureName, {
         loaded: true,
         enabled: true,
@@ -363,6 +373,7 @@
     runtime.initializing = (async function () {
       runtime.startedAt = now();
       runtime.initialized = false;
+      resetStatuses();
 
       try {
         await loadScript("frontend/config/runtime-config.js");
@@ -477,6 +488,7 @@
     }
   }
 
+  resetStatuses();
   runtime.featureConfigs = FEATURE_CONFIGS;
   runtime.getStatus = getStatus;
   runtime.initialize = initializeRuntime;
