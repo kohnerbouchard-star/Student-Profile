@@ -1,11 +1,10 @@
 (function (global) {
   global.ECONOVARIA_FRONTEND_CONFIG = global.ECONOVARIA_FRONTEND_CONFIG || {};
 
-  // QA fallback: force the wired frontend runtime modules off.
-  // Do not merge caller-provided or previously cached values here, because the
-  // wired runtime can patch the legacy UI if any stale flag remains true.
+  // Controlled QA: enable exactly one frontend runtime module at a time.
+  // Market News is the first module under live browser review.
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
-    useFrontendMarketNewsModule: false,
+    useFrontendMarketNewsModule: true,
     useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
     useFrontendSnapshotStoreModule: false,
