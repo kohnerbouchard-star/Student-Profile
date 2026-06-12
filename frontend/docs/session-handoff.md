@@ -18,6 +18,7 @@ This status was captured before updating this final copy-phase handoff document.
 Latest first, relative to `main`:
 
 ```text
+69cb020 docs: update frontend refactor handoff after auth copy phase
 50ad35e feat: add guarded frontend auth login switch
 bedf792 test: add auth login shadow checks
 73f764a refactor: copy auth login into frontend modules
@@ -48,22 +49,21 @@ b711e7c test: add frontend module shadow test harness
 00f360c chore: scaffold frontend modular copy transplant
 ```
 
-This list was captured before the final handoff update commit. The final handoff
-commit should appear above this list after commit.
+This list was captured before the final push checkpoint commit.
 
 ## Completed Copy-Phase Work
 
-- `frontend/` scaffold exists with docs, config, components, utils, core modules, feature folders, legacy bridge, styles, and test harnesses.
-- Runtime copies exist under `frontend/src/legacy/runtime-copies/`.
-- Market News modules copied/extracted with shadow checks and disabled guarded switch.
-- Market Profile / Market Data modules copied/extracted with shadow checks and disabled guarded switch.
-- API retry module copied/extracted with shadow checks and disabled guarded switch.
-- Snapshot store module copied/extracted with shadow checks and disabled guarded switch.
-- Trading modules copied/extracted with shadow checks and disabled guarded switch.
-- Store / Inventory modules copied/extracted with shadow checks and disabled guarded switches.
-- Dashboard / Profile modules copied/extracted with shadow checks and disabled guarded switches.
-- Auth/Login modules copied/extracted with shadow checks and disabled guarded switch.
-- Manual shadow module loader exists at `frontend/tests/load-shadow-modules.js`.
+- `frontend/` scaffold is complete with docs, config, components, utils, core modules, feature folders, legacy bridge, styles, and test harnesses.
+- Runtime copies are complete under `frontend/src/legacy/runtime-copies/`.
+- Market News modules are complete with shadow checks and disabled guarded switch.
+- Market Profile / Market Data modules are complete with shadow checks and disabled guarded switch.
+- API retry module is complete with shadow checks and disabled guarded switch.
+- Snapshot store module is complete with shadow checks and disabled guarded switch.
+- Trading modules are complete with shadow checks and disabled guarded switch.
+- Store / Inventory modules are complete with shadow checks and disabled guarded switches.
+- Dashboard / Profile modules are complete with shadow checks and disabled guarded switches.
+- Auth/Login modules are complete with shadow checks and disabled guarded switch.
+- Shadow module loader is complete at `frontend/tests/load-shadow-modules.js`.
 
 ## Safety Status
 
@@ -78,7 +78,7 @@ commit should appear above this list after commit.
 - Active root JS/CSS files unchanged.
 - All feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
-- No backend, Supabase, API, server, database, migration, Worker, or worker folders were created.
+- No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
 - No `frontend/src/utils/money.js` was created.
 
 Current feature flags:
@@ -104,7 +104,7 @@ enableFrontendAuthShadowChecks: false
 
 ## Current Known Issue
 
-- Local backend testing from `http://127.0.0.1:8080/` is blocked by Worker CORS because the Worker currently allows `https://kohnerbouchard-star.github.io` only.
+- Localhost backend testing from `http://127.0.0.1:8080/` is blocked by Cloudflare Worker CORS because the Worker currently allows `https://kohnerbouchard-star.github.io` but not `http://127.0.0.1:8080`.
 - This is not a frontend refactor bug.
 - Do not investigate CORS unless explicitly asked later.
 
