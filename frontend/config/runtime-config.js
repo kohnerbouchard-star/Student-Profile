@@ -4,6 +4,7 @@
   // Controlled QA: Market News passed browser QA.
   // Market Profile is disabled after backend market data did not load correctly.
   // Store is disabled after backend item data did not load correctly.
+  // Auth display helpers are now the next isolated module under review.
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
     useFrontendMarketNewsModule: true,
     useFrontendMarketProfileModule: false,
@@ -14,7 +15,7 @@
     useFrontendInventoryModule: false,
     useFrontendDashboardModule: false,
     useFrontendProfileModule: false,
-    useFrontendAuthModule: false,
+    useFrontendAuthModule: true,
     enableFrontendShadowChecks: false,
     enableFrontendMarketNewsShadowChecks: false,
     enableFrontendMarketProfileShadowChecks: false,
