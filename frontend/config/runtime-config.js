@@ -3,13 +3,14 @@
 
   // Controlled QA: Market News passed browser QA.
   // Market Profile is disabled after backend market data did not load correctly.
+  // Store is now the next isolated module under review.
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
     useFrontendMarketNewsModule: true,
     useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
     useFrontendSnapshotStoreModule: false,
     useFrontendTradingModule: false,
-    useFrontendStoreModule: false,
+    useFrontendStoreModule: true,
     useFrontendInventoryModule: false,
     useFrontendDashboardModule: false,
     useFrontendProfileModule: false,
