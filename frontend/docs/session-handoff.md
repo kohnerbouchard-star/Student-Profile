@@ -6,18 +6,32 @@
 
 ## Current Git Status
 
+Captured after the Auth/Login runtime checkpoint and before this final handoff
+commit:
+
 ```text
 On branch refactor/frontend-modular-copy-transplant
+Your branch is ahead of 'origin/refactor/frontend-modular-copy-transplant' by 11 commits.
 nothing to commit, working tree clean
 ```
-
-This status was captured before updating this final copy-phase handoff document.
 
 ## Commit List On This Branch
 
 Latest first, relative to `main`:
 
 ```text
+8eb6e40 feat: wire frontend auth runtime
+5d71620 feat: wire frontend profile runtime
+b96fbe9 feat: wire frontend dashboard runtime
+18d0b14 feat: wire frontend inventory runtime
+c0b15c0 feat: wire frontend store runtime
+529171f feat: wire frontend trading runtime
+8a4523d feat: wire frontend snapshot store runtime
+41306f2 feat: wire frontend api retry runtime
+ca6c5df feat: wire frontend market profile runtime
+00df4b1 feat: wire frontend market news runtime
+c0ac5d1 feat: add frontend runtime loader
+8b1c64f docs: update frontend refactor handoff after auth copy phase
 69cb020 docs: update frontend refactor handoff after auth copy phase
 50ad35e feat: add guarded frontend auth login switch
 bedf792 test: add auth login shadow checks
@@ -49,49 +63,33 @@ b711e7c test: add frontend module shadow test harness
 00f360c chore: scaffold frontend modular copy transplant
 ```
 
-This list was captured before the final push checkpoint commit.
-
-## Completed Copy-Phase Work
+## Completed Work
 
 - `frontend/` scaffold is complete with docs, config, components, utils, core modules, feature folders, legacy bridge, styles, and test harnesses.
 - Runtime copies are complete under `frontend/src/legacy/runtime-copies/`.
-- Market News modules are complete with shadow checks and disabled guarded switch.
-- Market Profile / Market Data modules are complete with shadow checks and disabled guarded switch.
-- API retry module is complete with shadow checks and disabled guarded switch.
-- Snapshot store module is complete with shadow checks and disabled guarded switch.
-- Trading modules are complete with shadow checks and disabled guarded switch.
-- Store / Inventory modules are complete with shadow checks and disabled guarded switches.
-- Dashboard / Profile modules are complete with shadow checks and disabled guarded switches.
-- Auth/Login modules are complete with shadow checks and disabled guarded switch.
+- Market News modules are copied, shadow-testable, and runtime-wired.
+- Market Profile / Market Data modules are copied, shadow-testable, and runtime-wired.
+- API retry module is copied, shadow-testable, and runtime-wired.
+- Snapshot Store module is copied, shadow-testable, and runtime-wired.
+- Trading modules are copied, shadow-testable, and runtime-wired.
+- Store / Inventory modules are copied, shadow-testable, and runtime-wired.
+- Dashboard / Profile modules are copied, shadow-testable, and runtime-wired.
+- Auth/Login modules are copied, shadow-testable, and runtime-wired.
 - Shadow module loader is complete at `frontend/tests/load-shadow-modules.js`.
+- Additive runtime loader is complete at `frontend/src/legacy/frontend-runtime-loader.js`.
 
-## Safety Status
+## Runtime Wiring Status
 
-- Root `index.html` unchanged.
-- Root `app.js` unchanged.
-- Root `market-news-final-fix.js` unchanged.
-- Root `stock-trade-history-fixes.js` unchanged.
-- Root `use-item-permission-fix.js` unchanged.
-- Root `inventory-empty-state-fix.js` unchanged.
-- Root `login-quotes.js` unchanged.
-- Root `academic-market-copy.js` unchanged.
-- Active root JS/CSS files unchanged.
-- `useFrontendMarketNewsModule` is `true` after the Market News runtime checkpoint.
-- `useFrontendMarketProfileModule` is `true` after the Market Profile runtime checkpoint.
-- `useFrontendApiRetryModule` is `true` after the API retry runtime checkpoint.
-- `useFrontendSnapshotStoreModule` is `true` after the Snapshot Store runtime checkpoint.
-- `useFrontendTradingModule` is `true` after the Trading runtime checkpoint.
-- `useFrontendStoreModule` is `true` after the Store runtime checkpoint.
-- `useFrontendInventoryModule` is `true` after the Inventory runtime checkpoint.
-- `useFrontendDashboardModule` is `true` after the Dashboard runtime checkpoint.
-- `useFrontendProfileModule` is `true` after the Profile runtime checkpoint.
-- `useFrontendAuthModule` is `true` after the Auth/Login runtime checkpoint.
-- All runtime feature flags are now `true`; all shadow check flags remain `false`.
-- Modular code is not loaded by root `index.html`.
-- No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
-- No `frontend/src/utils/money.js` was created.
+- Runtime wiring phase is complete behind feature flags.
+- `index.html` loads `frontend/src/legacy/frontend-runtime-loader.js` after the existing legacy root scripts.
+- Existing root script tags were not removed or reordered.
+- Root cleanup has not started.
+- Legacy root files are still present and available for rollback.
+- Manual browser testing is required before any cleanup, deletion, merge, or PR readiness change.
+- Next phase is browser QA and feature-by-feature confirmation.
+- Cleanup/deletion is not approved yet.
 
-Current feature flags:
+## Feature Flags
 
 ```text
 useFrontendMarketNewsModule: true
@@ -105,6 +103,11 @@ useFrontendDashboardModule: true
 useFrontendProfileModule: true
 useFrontendAuthModule: true
 enableFrontendShadowChecks: false
+enableFrontendMarketNewsShadowChecks: false
+enableFrontendMarketProfileShadowChecks: false
+enableFrontendApiRetryShadowChecks: false
+enableFrontendSnapshotStoreShadowChecks: false
+enableFrontendTradingShadowChecks: false
 enableFrontendStoreShadowChecks: false
 enableFrontendInventoryShadowChecks: false
 enableFrontendDashboardShadowChecks: false
@@ -112,60 +115,54 @@ enableFrontendProfileShadowChecks: false
 enableFrontendAuthShadowChecks: false
 ```
 
+## Safety Status
+
+- Root `index.html` changed only additively to include the frontend runtime loader after existing legacy scripts.
+- Root `app.js` is unchanged.
+- Root `market-news-final-fix.js` is unchanged.
+- Root `market-data-refresh.js` is unchanged.
+- Root `stock-trade-history-fixes.js` is unchanged.
+- Root `partial-snapshot-merge-fix.js` is unchanged.
+- Root `api-retry-fix.js` is unchanged.
+- Root `use-item-permission-fix.js` is unchanged.
+- Root `inventory-empty-state-fix.js` is unchanged.
+- Root `login-quotes.js` is unchanged.
+- Root `academic-market-copy.js` is unchanged.
+- No root runtime files were deleted, moved, renamed, archived, or cleaned up.
+- No backend, Supabase, API, server, database, migration, worker, functions, or edge-functions folders were created.
+- No `frontend/src/utils/money.js` was created.
+- Frontend modules remain display/adapter code and do not become authoritative for balances, trades, portfolio, inventory, auth, ratings, attendance, payroll, market prices, price history, or generated news.
+- Backend API action names and backend behavior were not changed.
+
 ## Current Known Issue
 
 - Localhost backend testing from `http://127.0.0.1:8080/` is blocked by Cloudflare Worker CORS because the Worker currently allows `https://kohnerbouchard-star.github.io` but not `http://127.0.0.1:8080`.
 - This is not a frontend refactor bug.
 - Do not investigate CORS unless explicitly asked later.
 
-## Current Completion Status
-
-- Copy phase complete.
-- Runtime wiring phase started with an additive frontend runtime loader.
-- Runtime transplant feature switches have not been enabled yet.
-- Root script cleanup not started.
-- `index.html` now includes `frontend/src/legacy/frontend-runtime-loader.js` after the existing legacy scripts.
-- Existing legacy script tags were not removed or reordered.
-- Old runtime files have not been archived, deleted, moved, or renamed.
-- Market News is wired through the frontend runtime loader behind `useFrontendMarketNewsModule`.
-- Market Profile / Market Data is wired through the frontend runtime loader behind `useFrontendMarketProfileModule`.
-- API retry is wired through the frontend runtime loader behind `useFrontendApiRetryModule`.
-- Snapshot Store is wired through the frontend runtime loader behind `useFrontendSnapshotStoreModule`.
-- Trading is wired through the frontend runtime loader behind `useFrontendTradingModule`.
-- Store is wired through the frontend runtime loader behind `useFrontendStoreModule`.
-- Inventory is wired through the frontend runtime loader behind `useFrontendInventoryModule`.
-- Dashboard is wired through the frontend runtime loader behind `useFrontendDashboardModule`.
-- Profile is wired through the frontend runtime loader behind `useFrontendProfileModule`.
-- Auth/Login is wired through the frontend runtime loader behind `useFrontendAuthModule`.
-- All runtime feature flags are now enabled behind the additive frontend runtime loader.
-
 ## Next Recommended Step
 
-1. Review the additive runtime loader.
-2. Enable one feature flag at a time, starting with Market News only.
-3. Run checkpoint tests after each feature.
-4. Do not switch all modules at once.
+1. Run manual browser QA on the Draft PR branch.
+2. Confirm each runtime status in `window.EconovariaFrontend.runtime`.
+3. Run the shadow comparison functions feature by feature.
+4. Keep PR #1 as draft until browser QA is complete.
+5. Do not merge yet.
+6. Do not remove old root scripts or root files until cleanup is explicitly approved.
 
 ## Test Commands To Rerun
 
 ```powershell
-$files = Get-ChildItem -Path 'frontend' -Filter '*.js' -Recurse | Sort-Object FullName; foreach ($file in $files) { node --check $file.FullName; if ($LASTEXITCODE -ne 0) { Write-Output "FAILED $($file.FullName)"; exit $LASTEXITCODE } }; Write-Output "checked $($files.Count) frontend JavaScript files"
-```
-
-```powershell
+git branch --show-current
+git status
+git log --oneline main..HEAD --max-count=80
+git diff main...HEAD --stat
+git diff main...HEAD --name-only
+git diff --check
 node --check frontend/tests/load-shadow-modules.js
 ```
 
 ```powershell
-node --check frontend/src/legacy/frontend-runtime-loader.js
-```
-
-```powershell
-git diff --check
-```
-
-```powershell
-git status
+$files = Get-ChildItem -Path 'frontend' -Filter '*.js' -Recurse | Sort-Object FullName; foreach ($file in $files) { node --check $file.FullName; if ($LASTEXITCODE -ne 0) { Write-Output "FAILED $($file.FullName)"; exit $LASTEXITCODE } }; Write-Output "checked $($files.Count) frontend JavaScript files"
 ```
 
 ## Browser Shadow Loader Commands
@@ -176,6 +173,22 @@ s.src = "frontend/tests/load-shadow-modules.js";
 document.head.appendChild(s);
 
 window.loadEconovariaFrontendShadowModules()
+```
+
+## Runtime Console Checks
+
+```js
+window.EconovariaFrontend.runtime.getStatus()
+window.EconovariaFrontend.runtime.marketNews
+window.EconovariaFrontend.runtime.marketProfile
+window.EconovariaFrontend.runtime.apiRetry
+window.EconovariaFrontend.runtime.snapshotStore
+window.EconovariaFrontend.runtime.trading
+window.EconovariaFrontend.runtime.store
+window.EconovariaFrontend.runtime.inventory
+window.EconovariaFrontend.runtime.dashboard
+window.EconovariaFrontend.runtime.profile
+window.EconovariaFrontend.runtime.auth
 ```
 
 ## Available Shadow Checks
