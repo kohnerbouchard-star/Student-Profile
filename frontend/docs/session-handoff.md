@@ -84,6 +84,7 @@ This list was captured before the final push checkpoint commit.
 - `useFrontendStoreModule` is `true` after the Store runtime checkpoint.
 - `useFrontendInventoryModule` is `true` after the Inventory runtime checkpoint.
 - `useFrontendDashboardModule` is `true` after the Dashboard runtime checkpoint.
+- `useFrontendProfileModule` is `true` after the Profile runtime checkpoint.
 - All other feature flags remain `false`.
 - Modular code is not loaded by root `index.html`.
 - No backend, Supabase, API, server, database, migration, worker, or Worker folders were created.
@@ -100,7 +101,7 @@ useFrontendTradingModule: true
 useFrontendStoreModule: true
 useFrontendInventoryModule: true
 useFrontendDashboardModule: true
-useFrontendProfileModule: false
+useFrontendProfileModule: true
 useFrontendAuthModule: false
 enableFrontendShadowChecks: false
 enableFrontendStoreShadowChecks: false
@@ -133,6 +134,7 @@ enableFrontendAuthShadowChecks: false
 - Store is wired through the frontend runtime loader behind `useFrontendStoreModule`.
 - Inventory is wired through the frontend runtime loader behind `useFrontendInventoryModule`.
 - Dashboard is wired through the frontend runtime loader behind `useFrontendDashboardModule`.
+- Profile is wired through the frontend runtime loader behind `useFrontendProfileModule`.
 - All other feature flags remain `false`, so all other features should remain legacy by default.
 
 ## Next Recommended Step

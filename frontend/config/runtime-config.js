@@ -10,7 +10,7 @@
     useFrontendStoreModule: true,
     useFrontendInventoryModule: true,
     useFrontendDashboardModule: true,
-    useFrontendProfileModule: false,
+    useFrontendProfileModule: true,
     useFrontendAuthModule: false,
     enableFrontendShadowChecks: false,
     enableFrontendMarketNewsShadowChecks: false,
