@@ -1,11 +1,11 @@
 (function (global) {
   global.ECONOVARIA_FRONTEND_CONFIG = global.ECONOVARIA_FRONTEND_CONFIG || {};
 
-  // Controlled QA: add exactly one new frontend runtime module at a time.
-  // Market News passed browser QA; Market Profile is now under live review.
+  // Controlled QA: Market News passed browser QA.
+  // Market Profile is disabled after backend market data did not load correctly.
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
     useFrontendMarketNewsModule: true,
-    useFrontendMarketProfileModule: true,
+    useFrontendMarketProfileModule: false,
     useFrontendApiRetryModule: false,
     useFrontendSnapshotStoreModule: false,
     useFrontendTradingModule: false,
