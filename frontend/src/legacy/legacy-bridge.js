@@ -15,12 +15,20 @@
     return getFeatureFlags().useFrontendMarketProfileModule === true;
   }
 
+  function isApiRetrySwitchEnabled() {
+    return getFeatureFlags().useFrontendApiRetryModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
 
   function getMarketProfileModule() {
     return app.modules.marketProfile || {};
+  }
+
+  function getApiClientModule() {
+    return app.modules.apiClient || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -202,13 +210,61 @@
     };
   }
 
+  function installFrontendApiRetrySwitch() {
+    if (!isApiRetrySwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendApiRetryModule is disabled"
+      };
+    }
+
+    const apiClient = getApiClientModule();
+    const legacyCallApi = global.callApi || (typeof callApi === "function" ? callApi : null);
+
+    if (typeof apiClient.createLegacyCallApiRetryWrapper !== "function") {
+      return {
+        installed: false,
+        reason: "apiClient.createLegacyCallApiRetryWrapper is not available"
+      };
+    }
+
+    if (typeof legacyCallApi !== "function") {
+      return {
+        installed: false,
+        reason: "legacy callApi is not available"
+      };
+    }
+
+    if (global.__frontendApiRetrySwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendApiRetrySwitchInstalled = true;
+    global.__legacyCallApiBeforeFrontendRetry = legacyCallApi;
+    global.callApi = apiClient.createLegacyCallApiRetryWrapper(legacyCallApi);
+
+    try {
+      callApi = global.callApi;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend API retry wrapper installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
     installFrontendMarketNewsSwitch,
-    installFrontendMarketProfileSwitch
+    installFrontendMarketProfileSwitch,
+    installFrontendApiRetrySwitch
   };
 
   installFrontendMarketNewsSwitch();
   installFrontendMarketProfileSwitch();
+  installFrontendApiRetrySwitch();
 })(window);

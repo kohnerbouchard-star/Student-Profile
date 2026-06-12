@@ -11,7 +11,7 @@ refactor.
 | `partial-snapshot-merge-fix.js` | Snapshot merge compatibility patch. | `frontend/src/core/snapshot-store.js` | copied |
 | `use-item-permission-fix.js` | Item use permissions and inventory action safety. | `frontend/src/core/permissions.js`, `frontend/src/features/inventory/item-use-service.js` | copied |
 | `inventory-empty-state-fix.js` | Inventory empty state display. | `frontend/src/features/inventory/inventory-view.js`, `frontend/src/components/empty-state.js` | copied |
-| `api-retry-fix.js` | API retry behavior. | `frontend/src/core/api-client.js` | copied, extracted, shadow-test-ready |
+| `api-retry-fix.js` | API retry behavior. | `frontend/src/core/api-client.js` | copied, extracted, shadow-test-ready, guarded-switch-ready |
 | `mobile-ux-fix.js` | Mobile interaction and layout fixes. | `frontend/styles/mobile.css` | copied |
 | `academic-market-copy.js` | Market copy text. | future `frontend/src/content/copy.js` or feature-specific copy constants | copied |
 | `login-quotes.js` | Login quote rotation. | `frontend/src/features/auth/login-quotes.js` | copied |
