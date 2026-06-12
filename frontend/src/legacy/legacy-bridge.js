@@ -23,6 +23,10 @@
     return getFeatureFlags().useFrontendSnapshotStoreModule === true;
   }
 
+  function isTradingSwitchEnabled() {
+    return getFeatureFlags().useFrontendTradingModule === true;
+  }
+
   function getMarketNewsModule() {
     return app.modules.marketNews || {};
   }
@@ -37,6 +41,10 @@
 
   function getSnapshotStoreModule() {
     return app.modules.snapshotStore || {};
+  }
+
+  function getTradingModule() {
+    return app.modules.trading || {};
   }
 
   function installFrontendMarketNewsSwitch() {
@@ -326,17 +334,69 @@
     };
   }
 
+  function renderFrontendTrade() {
+    const trading = getTradingModule();
+    const root = global.document && global.document.getElementById
+      ? global.document.getElementById("trade")
+      : null;
+
+    if (!root || typeof trading.renderTradingPage !== "function") return;
+
+    root.innerHTML = trading.renderTradingPage({
+      state: global.state || {}
+    });
+  }
+
+  function installFrontendTradingSwitch() {
+    if (!isTradingSwitchEnabled()) {
+      return {
+        installed: false,
+        reason: "useFrontendTradingModule is disabled"
+      };
+    }
+
+    const trading = getTradingModule();
+    if (typeof trading.renderTradingPage !== "function") {
+      return {
+        installed: false,
+        reason: "trading.renderTradingPage is not available"
+      };
+    }
+
+    if (global.__frontendTradingSwitchInstalled) {
+      return {
+        installed: true,
+        reason: "already installed"
+      };
+    }
+
+    global.__frontendTradingSwitchInstalled = true;
+    global.__legacyRenderTradeBeforeFrontendTrading = global.renderTrade || (typeof renderTrade === "function" ? renderTrade : null);
+    global.renderTrade = renderFrontendTrade;
+
+    try {
+      renderTrade = global.renderTrade;
+    } catch (_) {}
+
+    return {
+      installed: true,
+      reason: "frontend Trading renderer installed"
+    };
+  }
+
   app.modules.legacyBridge = {
     status: "guarded",
     description: "Guarded bridge for frontend modules. Default feature flags keep this disabled.",
     installFrontendMarketNewsSwitch,
     installFrontendMarketProfileSwitch,
     installFrontendApiRetrySwitch,
-    installFrontendSnapshotStoreSwitch
+    installFrontendSnapshotStoreSwitch,
+    installFrontendTradingSwitch
   };
 
   installFrontendMarketNewsSwitch();
   installFrontendMarketProfileSwitch();
   installFrontendApiRetrySwitch();
   installFrontendSnapshotStoreSwitch();
+  installFrontendTradingSwitch();
 })(window);
