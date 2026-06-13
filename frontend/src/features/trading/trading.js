@@ -25,7 +25,7 @@ function renderTrade() {
     <div class="grid cols-2" style="margin-top:16px;">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Place a Trade ${tip('Buy or sell shares during the trading window.')}</h2>
+          <h2 class="card-title">Place Order ${tip('Buy or sell shares during the trading window.')}</h2>
           <span class="badge ${can('STOCK_TRADE') ? 'good' : 'bad'}">${can('STOCK_TRADE') ? 'Ready' : 'Unavailable'}</span>
         </div>
         ${help('BUY spends your balance. SELL gives money back if you own enough shares.')}
@@ -48,15 +48,15 @@ function renderTrade() {
             <input id="tradeShares" type="number" min="1" value="1" />
           </label>
 
-          <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'} onclick="submitTrade(this)">Submit Trade</button>
+          <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'} onclick="submitTrade(this)">Place Order</button>
         </div>
 
-        <div id="tradeStatus" class="status-box">Trades are checked against your balance and current holdings.</div>
+        <div id="tradeStatus" class="status-box">Orders are checked against your balance and current holdings.</div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Recent Trades ${tip('Your confirmed stock trades appear here. If this is empty, press Refresh after trading.')}</h2>
-        ${table(stockTx, ['timestamp', 'mode', 'itemId', 'itemName', 'amount', 'endingBalance', 'status'], 'No stock trades yet. Press Refresh if you just completed a trade.')}
+        <h2 class="card-title">Recent Orders ${tip('Your confirmed market orders appear here. If this is empty, press Refresh after trading.')}</h2>
+        ${table(stockTx, ['timestamp', 'mode', 'itemId', 'itemName', 'amount', 'endingBalance', 'status'], 'No market orders yet. Press Refresh if you just completed an order.')}
       </div>
     </div>
 
@@ -93,7 +93,7 @@ async function submitTrade(button) {
       shares
     });
 
-    showStatus(status, result.ok === true, result.message || "Trade submitted.");
+    showStatus(status, result.ok === true, result.message || "Order submitted.");
     renderCurrentView();
     updateIdentity();
 
