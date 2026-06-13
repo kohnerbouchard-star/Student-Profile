@@ -1,6 +1,6 @@
 // Allows the frontend to merge partial backend snapshots without clearing missing sections.
 // This lets Apps Script return smaller/faster snapshots after actions.
-// Load after stock-trade-history-fixes.js so normalizeStockTradeRow is available.
+// Loaded after the trading stock-history compatibility helper so stock trade rows can be normalized.
 
 function getPresentArray(snapshot, keys) {
   if (!snapshot) return undefined;
@@ -99,7 +99,7 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
       ? transactionRows.map(normalizeTransaction)
       : (next.transactions || []).filter((t) => !String(t.mode || '').toUpperCase().includes('STOCK'));
 
-    const stockTransactions = stockTradeRows !== undefined
+    const stockTransactions = stockTradeRows !== undefined && typeof normalizeStockTradeRow === 'function'
       ? stockTradeRows.map(normalizeStockTradeRow)
       : (next.transactions || []).filter((t) => String(t.mode || '').toUpperCase().includes('STOCK'));
 
