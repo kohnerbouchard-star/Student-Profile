@@ -28,15 +28,15 @@ function renderPortfolio() {
 
   document.getElementById("portfolio").innerHTML = `
     <div class="grid cols-3">
-      ${metric("Holdings", rows.length, "Active positions", "How many different stocks you currently own.")}
-      ${metric("Market Value", money(marketValue), "Current portfolio", "Estimated value of your current shares.")}
+      ${metric("Holdings", rows.length, "Active positions", "How many different market assets you currently own.")}
+      ${metric("Market Value", money(marketValue), "Current portfolio", "Estimated value of your current positions.")}
       ${metric("Gain / Loss", money(gainLoss), gainLoss >= 0 ? "Currently positive" : "Currently negative", "Difference between your cost and current value.")}
     </div>
 
     <div class="card" style="margin-top:16px;">
       <h2 class="card-title">My Positions</h2>
-      ${help("This table shows stocks you currently own. Gain / loss updates when prices refresh.")}
-      ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No investments yet. Use the Trade Desk to buy your first shares.")}
+      ${help("This table shows market assets you currently own. Gain / loss updates when prices refresh.")}
+      ${table(displayRows, ["ticker", "sharesOwned", "avgBuyPrice", "currentPrice", "marketValue", "gainLoss", "lastUpdated"], "No portfolio positions yet. Use Trading to buy your first market asset.")}
     </div>`;
 }
 
