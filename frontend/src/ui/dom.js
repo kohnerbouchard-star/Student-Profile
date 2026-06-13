@@ -67,8 +67,8 @@ function isButtonLoading(button) {
 function setButtonLoading(button, isLoading, loadingText) {
   if (!button) return;
 
-  if (!button.dataset.originalText) {
-    button.dataset.originalText = button.textContent.trim();
+  if (!button.dataset.originalHtml) {
+    button.dataset.originalHtml = button.innerHTML;
   }
 
   if (isLoading) {
@@ -84,7 +84,7 @@ function setButtonLoading(button, isLoading, loadingText) {
   button.disabled = false;
   button.removeAttribute("aria-busy");
   button.classList.remove("is-loading");
-  button.textContent = button.dataset.originalText || "Submit";
+  button.innerHTML = button.dataset.originalHtml || button.textContent || "Submit";
 }
 
 function setControlsDisabled(container, disabled, exceptions = []) {
