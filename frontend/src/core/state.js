@@ -13,7 +13,6 @@ function emptyState() {
     market: [],
     portfolio: [],
     ratings: [],
-    news: [],
     news: []
   };
 }
