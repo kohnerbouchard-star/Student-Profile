@@ -13,7 +13,7 @@ function renderStore() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Buy an Item</h2>
+          <h2 class="card-title">Purchase Item</h2>
           <span class="badge ${can("STORE_PURCHASE") ? "good" : "bad"}">${can("STORE_PURCHASE") ? "Ready" : "Unavailable"}</span>
         </div>
         ${help("Choose an item and quantity. Your balance and item stock are checked before the purchase is saved.")}
@@ -31,7 +31,7 @@ function renderStore() {
             <input id="storeQty" type="number" min="1" value="1" />
           </label>
 
-          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Buy Item</button>
+          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Purchase Item</button>
         </div>
 
         <div id="storeStatus" class="status-box">Purchases are submitted for ${sanitize(s.name)}.</div>
@@ -39,17 +39,17 @@ function renderStore() {
 
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Shop Items</h2>
+          <h2 class="card-title">Store Items</h2>
           <span class="badge">${items.length} available</span>
         </div>
         ${help("The item list shows price, category, and current stock when available.")}
-        ${table(items, ["itemName", "price", "inventory", "category", "description"], "The shop is empty right now. Check again later.")}
+        ${table(items, ["itemName", "price", "inventory", "category", "description"], "The store is empty right now. Check again later.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
       <h2 class="card-title">Purchase History</h2>
-      ${help("Your recent shop purchases appear here after they are confirmed.")}
+      ${help("Recent store purchases appear here after they are confirmed.")}
       ${table(purchases, ["timestamp", "itemName", "amount", "endingBalance", "status"], "No purchases yet.")}
     </div>`;
 }
@@ -70,7 +70,7 @@ async function purchaseItem(button) {
     if (!itemId) throw new Error("Choose an item first.");
     if (!Number.isFinite(quantity) || quantity < 1) throw new Error("Quantity must be at least 1.");
 
-    setButtonLoading(submitButton, true, "Buying...");
+    setButtonLoading(submitButton, true, "Purchasing...");
     setControlsDisabled(form, true, [submitButton]);
     showStatus(status, null, "Checking your balance and item stock...");
 
