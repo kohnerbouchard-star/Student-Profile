@@ -15,7 +15,6 @@ function mergeSnapshot(snapshot) {
     market: normalized.market,
     portfolio: normalized.portfolio,
     ratings: normalized.ratings,
-    news: normalized.news,
     news: normalized.news
   };
 }
@@ -40,7 +39,6 @@ function normalizeSnapshot(snapshot) {
     market: getFirstArray(snapshot, ["market", "stocks", "stockMarket", "marketRows"]).map(normalizeMarketRow),
     portfolio: getFirstArray(snapshot, ["portfolio", "holdings", "positions", "stockPortfolio"]).map(normalizePortfolioRow),
     ratings: getFirstArray(snapshot, ["ratings", "predictions", "analystRatings", "ratingHistory"]).map(normalizeRatingRow).sort(sortNewestFirst),
-    news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow).sort(sortNewestFirst),
     news: getFirstArray(snapshot, ["news", "stockNews", "reports", "stockNewsReports"]).map(normalizeNewsRow).sort(sortNewestFirst)
   };
 }
@@ -111,15 +109,12 @@ function normalizeMarketRow(row) {
     changePct: pick(row, ["changePct", "Change_%", "Change %", "Change", "change", "Price_Change_%", "Price Change %"]),
     trend: pick(row, ["trend", "Trend"]),
     assetType: pick(row, ["assetType", "Asset_Type", "Asset Type", "Type", "type"]),
-
-    // Pulled/calculated by backend from Stock_Price_History
     previousClose: toNumber(pick(row, ["previousClose", "Previous_Close", "Previous Close", "Prev_Close", "Prev Close"])),
     dayLow: toNumber(pick(row, ["dayLow", "Day_Low", "Day Low", "Low", "low"])),
     dayHigh: toNumber(pick(row, ["dayHigh", "Day_High", "Day High", "High", "high"])),
     volume: toNumber(pick(row, ["volume", "Volume", "Trade_Volume", "Trade Volume", "Daily_Volume", "Daily Volume"])),
     marketCap: toNumber(pick(row, ["marketCap", "Market_Cap", "Market Cap", "Market_Value", "Market Value"])),
     history,
-
     lastUpdated: pick(row, ["lastUpdated", "Last_Updated", "Last Updated", "Timestamp", "timestamp", "Updated", "updated"])
   };
 }
