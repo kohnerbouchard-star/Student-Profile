@@ -43,7 +43,9 @@
       auth: {
         label: "Auth extracted",
         description: "Loads behavior-preserving auth/login wrappers only.",
-        scripts: [],
+        scripts: [
+          "frontend/src/features/auth/login-quotes.js"
+        ],
         requiredGlobals: [
           "handleLogin",
           "showLogin",
