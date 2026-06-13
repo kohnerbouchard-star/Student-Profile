@@ -4,8 +4,18 @@ window.Econovaria.core = window.Econovaria.core || {};
 function switchView(view) {
   if (!selectedStudent()) return showLogin();
 
-  const allowedViews = PERMISSION_SETS[currentSession?.role || "STUDENT"]?.views || [];
-  if (!allowedViews.includes(view)) return;
+  const role = currentSession?.role || "STUDENT";
+  const allowedViews = PERMISSION_SETS[role]?.views || [];
+
+  if (!allowedViews.includes(view)) {
+    console.warn("[Econovaria router] Blocked view navigation.", { role, view });
+
+    if (typeof showGlobalStatus === "function") {
+      showGlobalStatus("bad", "That page is not available for your account right now.");
+    }
+
+    return;
+  }
 
   document.querySelectorAll(".nav-item").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === view);
@@ -16,8 +26,12 @@ function switchView(view) {
   });
 
   const copy = VIEW_COPY[view] || VIEW_COPY.profile;
-  document.getElementById("pageTitle").textContent = copy.title;
-  document.getElementById("pageSubtitle").textContent = copy.subtitle;
+  const pageTitleEl = document.getElementById("pageTitle");
+  const pageSubtitleEl = document.getElementById("pageSubtitle");
+
+  if (pageTitleEl) pageTitleEl.textContent = copy.title;
+  if (pageSubtitleEl) pageSubtitleEl.textContent = copy.subtitle;
+
   renderCurrentView();
 }
 
