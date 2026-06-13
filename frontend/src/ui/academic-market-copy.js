@@ -8,8 +8,6 @@
     ['Shop', 'Store'],
     ['Investments', 'Portfolio'],
     ['Trade Desk', 'Trading'],
-    ['Market Explorer', 'Market Data'],
-    ['Predictions', 'Forecasts'],
     ['Submit a Prediction', 'Submit Forecast'],
     ['Submit Prediction', 'Submit Forecast'],
     ['Prediction History', 'Forecast History'],

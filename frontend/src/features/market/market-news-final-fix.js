@@ -459,7 +459,7 @@
       const title = card.querySelector(".card-title, h2");
       const text = String(title?.textContent || "").trim().toLowerCase();
 
-      if (text === "company news" && card.id !== "marketImportedNewsCard") {
+      if ((text === "company news" || text === "market briefing") && card.id !== "marketImportedNewsCard") {
         card.remove();
       }
     });
@@ -498,7 +498,7 @@
     const ticker = cleanTicker(stock && stock.ticker);
 
     card.innerHTML = `
-      <h2 class="card-title">Company News</h2>
+      <h2 class="card-title">Market Briefing</h2>
       <div class="status-box">Showing latest 5 reports for ${sanitize(ticker || "the selected stock")}.</div>
       ${renderNewsList(stock)}
     `;

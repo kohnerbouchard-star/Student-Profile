@@ -41,8 +41,8 @@ window.renderStockProfile = function renderStockProfile() {
       <div class="market-page-top">
         <div>
           <div class="eyebrow">Market data</div>
-          <h2>Market Explorer</h2>
-          <p>Review stock movement, compare company details, and connect price changes to your portfolio decisions.</p>
+          <h2>Market Data</h2>
+          <p>Review price movement, compare company details, and connect market signals to portfolio decisions.</p>
         </div>
 
         <label class="market-select-card">
