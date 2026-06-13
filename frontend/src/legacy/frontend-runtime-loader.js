@@ -3,7 +3,7 @@
   app.modules = app.modules || {};
 
   const RUNTIME_NAME = "Econovaria frontend runtime loader";
-  const RUNTIME_VERSION = "20260613-inventory1";
+  const RUNTIME_VERSION = "20260613-inventory-rollback1";
   const LOADED_URLS = "__econovariaFrontendRuntimeLoadedUrls";
 
   const COMMON_SCRIPT_PATHS = [
