@@ -26,6 +26,10 @@ function hasPresentObject(snapshot, keys) {
   return null;
 }
 
+function hasRows(rows) {
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 mergeSnapshot = function patchedMergeSnapshot(snapshot) {
   snapshot = snapshot || {};
 
@@ -44,32 +48,32 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
   }
 
   const storeRows = getPresentArray(snapshot, ['store', 'storeItems', 'items', 'availableItems']);
-  if (storeRows !== undefined) {
+  if (hasRows(storeRows)) {
     next.store = storeRows.map(normalizeStoreItem);
   }
 
   const inventoryRows = getPresentArray(snapshot, ['inventory', 'studentInventory', 'itemsOwned', 'ownedItems']);
-  if (inventoryRows !== undefined) {
+  if (hasRows(inventoryRows)) {
     next.inventory = inventoryRows.map(normalizeInventoryItem);
   }
 
   const marketRows = getPresentArray(snapshot, ['market', 'stocks', 'stockMarket', 'marketRows']);
-  if (marketRows !== undefined) {
+  if (hasRows(marketRows)) {
     next.market = marketRows.map(normalizeMarketRow);
   }
 
   const portfolioRows = getPresentArray(snapshot, ['portfolio', 'holdings', 'positions', 'stockPortfolio']);
-  if (portfolioRows !== undefined) {
+  if (hasRows(portfolioRows)) {
     next.portfolio = portfolioRows.map(normalizePortfolioRow);
   }
 
   const ratingRows = getPresentArray(snapshot, ['ratings', 'predictions', 'analystRatings', 'ratingHistory']);
-  if (ratingRows !== undefined) {
+  if (hasRows(ratingRows)) {
     next.ratings = ratingRows.map(normalizeRatingRow).sort(sortNewestFirst);
   }
 
   const newsRows = getPresentArray(snapshot, ['news', 'stockNews', 'reports', 'stockNewsReports']);
-  if (newsRows !== undefined) {
+  if (hasRows(newsRows)) {
     next.news = newsRows.map(normalizeNewsRow).sort(sortNewestFirst);
   }
 
@@ -94,12 +98,15 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
     'Stock_Trade'
   ]);
 
-  if (transactionRows !== undefined || stockTradeRows !== undefined) {
-    const generalTransactions = transactionRows !== undefined
+  const hasGeneralTransactions = hasRows(transactionRows);
+  const hasStockTransactions = hasRows(stockTradeRows);
+
+  if (hasGeneralTransactions || hasStockTransactions) {
+    const generalTransactions = hasGeneralTransactions
       ? transactionRows.map(normalizeTransaction)
       : (next.transactions || []).filter((t) => !String(t.mode || '').toUpperCase().includes('STOCK'));
 
-    const stockTransactions = stockTradeRows !== undefined && typeof normalizeStockTradeRow === 'function'
+    const stockTransactions = hasStockTransactions && typeof normalizeStockTradeRow === 'function'
       ? stockTradeRows.map(normalizeStockTradeRow)
       : (next.transactions || []).filter((t) => String(t.mode || '').toUpperCase().includes('STOCK'));
 
@@ -108,3 +115,9 @@ mergeSnapshot = function patchedMergeSnapshot(snapshot) {
 
   state = next;
 };
+
+window.Econovaria = window.Econovaria || {};
+window.Econovaria.core = window.Econovaria.core || {};
+window.Econovaria.core.snapshot = window.Econovaria.core.snapshot || {};
+Object.assign(window.Econovaria.core, { mergeSnapshot });
+Object.assign(window.Econovaria.core.snapshot, { mergeSnapshot });

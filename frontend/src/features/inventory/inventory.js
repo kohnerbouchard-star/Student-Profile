@@ -79,7 +79,7 @@ function renderUseItemCard() {
           <textarea id="useItemNote" rows="3" maxlength="240" placeholder="Example: I want to use this during the next activity."></textarea>
         </label>
 
-        <button id="useItemSubmitButton" class="primary-btn span-2" type="button" ${can('USE_ITEM') ? '' : 'disabled'} onclick="useItem(this)">Request Item Use</button>
+        <button id="useItemSubmitButton" class="primary-btn span-2" type="button" ${can('USE_ITEM') ? '' : 'disabled'} onclick="window.Econovaria.features.inventory.useItem(this)">Request Item Use</button>
       </div>
 
       <div id="useItemStatus" class="status-box">Your teacher will receive a notification after you submit.</div>

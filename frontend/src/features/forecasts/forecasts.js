@@ -2,24 +2,57 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.forecasts = window.Econovaria.features.forecasts || {};
 
+function getForecastRuntime() {
+  const root = window.Econovaria || {};
+  const stateApi = root.state || {};
+  const utils = root.utils || {};
+  const ui = root.ui || {};
+  const core = root.core || {};
+  const runtime = {
+    getState: stateApi.getState,
+    can: stateApi.can,
+    requirePermission: stateApi.requirePermission,
+    sanitize: utils.sanitize,
+    cleanErrorMessage: utils.cleanErrorMessage,
+    help: ui.help,
+    table: ui.table,
+    isButtonLoading: ui.isButtonLoading,
+    setButtonLoading: ui.setButtonLoading,
+    setControlsDisabled: ui.setControlsDisabled,
+    showStatus: ui.showStatus,
+    submitAction: core.submitAction,
+    renderCurrentView: core.renderCurrentView
+  };
+
+  const missing = Object.keys(runtime).filter((key) => typeof runtime[key] !== "function");
+
+  if (missing.length) {
+    throw new Error(`[Econovaria forecasts] Missing runtime helpers: ${missing.join(", ")}`);
+  }
+
+  return runtime;
+}
+
 function renderRating() {
-  const marketRows = state.market || [];
-  const ratings = (state.ratings || []).slice(0, 12);
+  const runtime = getForecastRuntime();
+  const appState = runtime.getState();
+  const marketRows = appState.market || [];
+  const ratings = (appState.ratings || []).slice(0, 12);
 
   document.getElementById("rating").innerHTML = `
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
           <h2 class="card-title">Submit Forecast</h2>
-          <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Ready" : "Unavailable"}</span>
+          <span class="badge ${runtime.can("SUBMIT_RATING") ? "good" : "bad"}">${runtime.can("SUBMIT_RATING") ? "Ready" : "Unavailable"}</span>
         </div>
-        ${help("Choose a stock, make a forecast, set a target price, and explain your thinking.")}
+        ${runtime.help("Choose a stock, make a forecast, set a target price, and explain your thinking.")}
 
         <div class="form-grid" id="ratingForm">
           <label>
             <span class="field-label">Stock</span>
             <select id="ratingTicker">
-              ${marketRows.map((m) => `<option value="${sanitize(m.ticker)}">${sanitize(m.ticker)} · ${sanitize(m.companyName || m.ticker)}</option>`).join("")}
+              ${marketRows.map((m) => `<option value="${runtime.sanitize(m.ticker)}">${runtime.sanitize(m.ticker)} · ${runtime.sanitize(m.companyName || m.ticker)}</option>`).join("")}
             </select>
           </label>
 
@@ -38,7 +71,7 @@ function renderRating() {
             <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
           </label>
 
-          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Forecast</button>
+          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${runtime.can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Forecast</button>
         </div>
 
         <div id="ratingStatus" class="status-box">Forecasts are saved to your account.</div>
@@ -46,21 +79,22 @@ function renderRating() {
 
       <div class="card">
         <h2 class="card-title">Forecast History</h2>
-        ${help("Your recent forecasts appear here after they are confirmed.")}
-        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No forecasts yet.")}
+        ${runtime.help("Your recent forecasts appear here after they are confirmed.")}
+        ${runtime.table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No forecasts yet.")}
       </div>
     </div>`;
 }
 
 async function submitRating(button) {
+  const runtime = getForecastRuntime();
   const status = document.getElementById("ratingStatus");
   const form = document.getElementById("ratingForm");
   const submitButton = button || document.getElementById("ratingSubmitButton");
 
-  if (isButtonLoading(submitButton)) return;
+  if (runtime.isButtonLoading(submitButton)) return;
 
   try {
-    requirePermission("SUBMIT_RATING");
+    runtime.requirePermission("SUBMIT_RATING");
 
     const ticker = document.getElementById("ratingTicker").value;
     const rating = document.getElementById("ratingValue").value;
@@ -71,31 +105,31 @@ async function submitRating(button) {
     if (!targetPrice || targetPrice <= 0) throw new Error("Enter a target price above 0.");
     if (reason.length < 10) throw new Error("Add a short reason with at least 10 characters.");
 
-    setButtonLoading(submitButton, true, "Saving...");
-    setControlsDisabled(form, true, [submitButton]);
-    showStatus(status, null, "Saving your forecast...");
+    runtime.setButtonLoading(submitButton, true, "Saving...");
+    runtime.setControlsDisabled(form, true, [submitButton]);
+    runtime.showStatus(status, null, "Saving your forecast...");
 
-    const result = await submitAction("SUBMIT_RATING", {
+    const result = await runtime.submitAction("SUBMIT_RATING", {
       ticker,
       rating,
       targetPrice,
       reason
     });
 
-    showStatus(status, result.ok === true, result.message || "Forecast saved.");
+    runtime.showStatus(status, result.ok === true, result.message || "Forecast saved.");
 
     if (result.ok === true) {
       document.getElementById("targetPrice").value = "";
       document.getElementById("ratingReason").value = "";
     }
 
-    renderCurrentView();
+    runtime.renderCurrentView();
 
   } catch (err) {
-    showStatus(status, false, cleanErrorMessage(err.message));
+    runtime.showStatus(status, false, runtime.cleanErrorMessage(err.message));
   } finally {
-    setControlsDisabled(form, false, [submitButton]);
-    setButtonLoading(submitButton, false);
+    runtime.setControlsDisabled(form, false, [submitButton]);
+    runtime.setButtonLoading(submitButton, false);
   }
 }
 

@@ -55,10 +55,19 @@
     return path.indexOf("?") >= 0 ? `${path}&v=${CACHE_VERSION}` : `${path}?v=${CACHE_VERSION}`;
   }
 
+  function getScriptPathname(src) {
+    try {
+      return new URL(src, global.location.href).pathname;
+    } catch (_) {
+      return "";
+    }
+  }
+
   function loadScript(path) {
     const src = withCacheVersion(path);
+    const requestedPathname = getScriptPathname(path);
 
-    if (Array.from(document.scripts || []).some((script) => script.src && script.src.includes(path))) {
+    if (Array.from(document.scripts || []).some((script) => getScriptPathname(script.src) === requestedPathname)) {
       return Promise.resolve({ path, status: "already-loaded" });
     }
 

@@ -147,9 +147,9 @@ function formatValue(key, value) {
 
 function formatMiniValue(label, value) {
   if (/updated|date|last\s*bought|last\s*purchased|lastBought|lastPurchased/i.test(label)) {
-    return formatDateTime(value);
+    return sanitize(formatDateTime(value));
   }
-  return value ?? "";
+  return sanitize(value ?? "");
 }
 
 function formatPercentLike(value) {
@@ -199,15 +199,20 @@ function parseDateValue(value) {
   return 0;
 }
 
-function formatDateObject(date) {
+function formatDateObject(date, timeZone) {
   try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Seoul",
+    const options = {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit"
-    }).format(date);
+    };
+
+    if (timeZone) {
+      options.timeZone = timeZone;
+    }
+
+    return new Intl.DateTimeFormat(undefined, options).format(date);
   } catch (_) {
     return date.toLocaleString();
   }

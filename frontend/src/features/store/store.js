@@ -31,7 +31,7 @@ function renderStore() {
             <input id="storeQty" type="number" min="1" value="1" />
           </label>
 
-          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="purchaseItem(this)">Purchase Item</button>
+          <button id="storeSubmitButton" class="primary-btn span-2" type="button" ${can("STORE_PURCHASE") ? "" : "disabled"} onclick="window.Econovaria.features.store.purchaseItem(this)">Purchase Item</button>
         </div>
 
         <div id="storeStatus" class="status-box">Purchases are submitted for ${sanitize(s.name)}.</div>
@@ -68,7 +68,7 @@ async function purchaseItem(button) {
     const quantity = Number(document.getElementById("storeQty").value || 1);
 
     if (!itemId) throw new Error("Choose an item first.");
-    if (!Number.isFinite(quantity) || quantity < 1) throw new Error("Quantity must be at least 1.");
+    if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be at least 1.");
 
     setButtonLoading(submitButton, true, "Purchasing...");
     setControlsDisabled(form, true, [submitButton]);

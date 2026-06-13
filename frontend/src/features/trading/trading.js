@@ -48,7 +48,7 @@ function renderTrade() {
             <input id="tradeShares" type="number" min="1" value="1" />
           </label>
 
-          <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'} onclick="submitTrade(this)">Place Order</button>
+          <button id="tradeSubmitButton" class="primary-btn span-2" type="button" ${can('STOCK_TRADE') ? '' : 'disabled'}>Place Order</button>
         </div>
 
         <div id="tradeStatus" class="status-box">Orders are checked against your balance and current holdings.</div>
@@ -64,6 +64,13 @@ function renderTrade() {
       <h2 class="card-title">Market Board ${tip('Use this table to compare current prices before trading.')}</h2>
       ${table(marketRows.slice(0, 40), ['ticker', 'companyName', 'sector', 'currentPrice', 'changePct', 'trend', 'assetType'], 'No market data is available right now.')}
     </div>`;
+
+  const tradeSubmitButton = document.getElementById('tradeSubmitButton');
+  if (tradeSubmitButton) {
+    tradeSubmitButton.addEventListener('click', (event) => {
+      window.Econovaria.features.trading.submitTrade(event.currentTarget);
+    });
+  }
 }
 
 async function submitTrade(button) {
