@@ -7,6 +7,16 @@ function normalizeCardId(value) {
     .replace(/\.0$/, "");
 }
 
+function isBlankDisplayValue(value) {
+  return value === undefined || value === null || String(value).trim() === "";
+}
+
+function isFiniteDisplayNumber(value) {
+  if (isBlankDisplayValue(value)) return false;
+  const cleaned = String(value).replace(/[$,%]/g, "").trim();
+  return Number.isFinite(Number(cleaned));
+}
+
 function toNumber(value) {
   if (value === "" || value === null || value === undefined) return 0;
   const cleaned = String(value).replace(/[$,]/g, "").trim();
@@ -15,7 +25,10 @@ function toNumber(value) {
 }
 
 function money(value) {
-  const n = Number(value || 0);
+  if (!isFiniteDisplayNumber(value)) return "—";
+
+  const n = Number(String(value).replace(/[$,]/g, "").trim());
+
   return n.toLocaleString(undefined, {
     style: "currency",
     currency: "USD"
@@ -63,11 +76,32 @@ function labelize(value) {
 }
 
 function formatValue(key, value) {
-  if (value === undefined || value === null || value === "") return "";
+  if (value === undefined || value === null || value === "") {
+    if (/rewardStatus|status/i.test(key)) {
+      return '<span class="badge warn">Pending</span>';
+    }
+
+    return "—";
+  }
+
+  if (/rewardStatus/i.test(key)) {
+    const text = String(value).trim() || "Pending";
+    const lower = text.toLowerCase();
+    const cls = lower.includes("pending") || lower.includes("unchecked") || lower.includes("not checked")
+      ? "warn"
+      : lower.includes("success") || lower.includes("paid") || lower.includes("reward") || lower.includes("complete")
+        ? "good"
+        : lower.includes("denied") || lower.includes("failed")
+          ? "bad"
+          : "";
+
+    return `<span class="badge ${cls}">${sanitize(text)}</span>`;
+  }
 
   if (/quantity/i.test(key)) {
-    const n = toNumber(value);
-    return sanitize(Number.isFinite(n) ? n.toLocaleString() : value);
+    if (!isFiniteDisplayNumber(value)) return "—";
+    const n = Number(String(value).replace(/[$,]/g, "").trim());
+    return sanitize(n.toLocaleString());
   }
 
   if (/timestamp|date|updated|purchased/i.test(key)) {
@@ -78,21 +112,34 @@ function formatValue(key, value) {
     return sanitize(formatPercentLike(value));
   }
 
-  if (/amount|balance|price|cost|spent|value|reward|target/i.test(key)) {
+  if (/rewardAmount/i.test(key)) {
+    if (!isFiniteDisplayNumber(value)) return "—";
+    return sanitize(money(value));
+  }
+
+  if (/amount|balance|price|cost|spent|value|target/i.test(key)) {
+    if (!isFiniteDisplayNumber(value)) return "—";
     return sanitize(money(value));
   }
 
   if (/gainLoss/i.test(key)) {
+    if (!isFiniteDisplayNumber(value)) return "—";
     const cls = Number(value) >= 0 ? "positive" : "negative";
     return `<span class="${cls}">${sanitize(money(value))}</span>`;
   }
 
   if (/status|active/i.test(key)) {
-    const text = String(value);
-    const cls = text.toLowerCase().includes("success") || text.toLowerCase().includes("active") || text.toLowerCase().includes("pending")
+    const text = String(value).trim() || "Pending";
+    const lower = text.toLowerCase();
+    const cls = lower.includes("success") || lower.includes("active") || lower.includes("complete")
       ? "good"
-      : "";
-    return `<span class="badge ${cls}">${sanitize(value)}</span>`;
+      : lower.includes("pending")
+        ? "warn"
+        : lower.includes("denied") || lower.includes("failed")
+          ? "bad"
+          : "";
+
+    return `<span class="badge ${cls}">${sanitize(text)}</span>`;
   }
 
   return sanitize(value);
@@ -178,6 +225,8 @@ function cleanErrorMessage(message) {
 
 Object.assign(window.Econovaria.utils, {
   normalizeCardId,
+  isBlankDisplayValue,
+  isFiniteDisplayNumber,
   toNumber,
   money,
   sanitize,
