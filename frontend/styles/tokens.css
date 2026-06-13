@@ -1,0 +1,4 @@
+/* Inert frontend token scaffold. Not loaded by the root runtime yet. */
+:root {
+  --frontend-radius-card: 8px;
+}

@@ -1,0 +1,40 @@
+/* Inert frontend market styles. Not loaded by the root runtime yet. */
+
+.market-page-v2 {
+  display: grid;
+  gap: 18px;
+}
+
+.market-page-top,
+.market-snapshot-row,
+.market-detail-v2,
+.market-lower-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.market-page-top,
+.market-detail-v2 {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+}
+
+.market-snapshot-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.market-lower-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.market-news-briefing {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 860px) {
+  .market-page-top,
+  .market-detail-v2,
+  .market-lower-grid,
+  .market-snapshot-row {
+    grid-template-columns: 1fr;
+  }
+}

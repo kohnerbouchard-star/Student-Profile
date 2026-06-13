@@ -76,7 +76,6 @@
     ['No items yet. Visit the Shop to buy your first item.', 'No items yet. Visit the Store to buy your first item.'],
     ['Buy an Item', 'Purchase Item'],
     ['Buy Item', 'Purchase Item'],
-    ['Choose an item and quantity. Your balance and item stock are checked before the purchase is saved.', 'Choose an item and quantity. Your balance and item stock are checked automatically before purchase.'],
     ['Shop Items', 'Store Items'],
     ['The shop is empty right now. Check again later.', 'The store is empty right now. Check again later.'],
     ['Your recent shop purchases appear here after they are confirmed.', 'Recent store purchases appear here after they are confirmed.'],
@@ -117,15 +116,6 @@
     if (eyebrow) eyebrow.textContent = 'Market simulation';
   }
 
-  function syncStoreCopy() {
-    const storeStatus = document.getElementById('storeStatus');
-    const currentText = String(storeStatus?.textContent || '').trim();
-
-    if (storeStatus && /^Purchases are submitted for .+\.$/.test(currentText)) {
-      storeStatus.textContent = 'Purchases are checked and saved after confirmation.';
-    }
-  }
-
   function replaceVisibleText(root = document.body) {
     if (!root) return;
 
@@ -149,7 +139,6 @@
     syncNavigation();
     syncPageHeading();
     replaceVisibleText();
-    syncStoreCopy();
 
     const mode = document.getElementById('connectionMode');
     const copy = document.getElementById('connectionCopy');
@@ -208,166 +197,4 @@
   } else {
     init();
   }
-})();
-
-(function initRuntimeStateBridge() {
-  const app = window.EconovariaFrontend = window.EconovariaFrontend || {};
-  app.modules = app.modules || {};
-  app.runtime = app.runtime || {};
-
-  function cloneValue(value, seen) {
-    if (value === null || typeof value !== 'object') return value;
-    const refs = seen || new WeakMap();
-    if (refs.has(value)) return refs.get(value);
-    const clone = Array.isArray(value) ? [] : {};
-    refs.set(value, clone);
-    Object.keys(value).forEach((key) => {
-      clone[key] = cloneValue(value[key], refs);
-    });
-    return clone;
-  }
-
-  function getSnapshot() {
-    try {
-      if (state && typeof state === 'object') return cloneValue(state);
-    } catch (_) {}
-    return {};
-  }
-
-  function rowCounts(source) {
-    const snapshot = source || getSnapshot();
-    return {
-      profile: snapshot.profile ? 1 : 0,
-      store: Array.isArray(snapshot.store) ? snapshot.store.length : 0,
-      transactions: Array.isArray(snapshot.transactions) ? snapshot.transactions.length : 0,
-      inventory: Array.isArray(snapshot.inventory) ? snapshot.inventory.length : 0,
-      market: Array.isArray(snapshot.market) ? snapshot.market.length : 0,
-      portfolio: Array.isArray(snapshot.portfolio) ? snapshot.portfolio.length : 0,
-      ratings: Array.isArray(snapshot.ratings) ? snapshot.ratings.length : 0,
-      news: Array.isArray(snapshot.news) ? snapshot.news.length : 0
-    };
-  }
-
-  window.EconovariaLegacyState = app.legacyState = {
-    status: 'ready',
-    getSnapshot,
-    rowCounts
-  };
-
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(window, 'state');
-    if (!descriptor || descriptor.configurable) {
-      Object.defineProperty(window, 'state', {
-        configurable: true,
-        enumerable: false,
-        get: getSnapshot,
-        set() {
-          console.warn('[Econovaria runtime] Ignored direct write to window.state.');
-        }
-      });
-    }
-  } catch (error) {
-    console.warn('[Econovaria runtime] Could not expose read-only window.state bridge.', error);
-  }
-
-  function countRows(value) {
-    return Array.isArray(value) ? value.length : 0;
-  }
-
-  function checkFeature(feature) {
-    const snapshot = getSnapshot();
-    const counts = rowCounts(snapshot);
-    const result = { feature, ok: true, counts, checks: [], failures: [] };
-
-    function checkCount(label, expected, actual) {
-      const ok = expected === actual;
-      result.checks.push({ label, expected, actual, ok });
-      if (!ok) result.failures.push(`${label}: expected ${expected}, got ${actual}`);
-    }
-
-    if (feature === 'marketProfile') {
-      const mod = app.modules.marketProfile || {};
-      if (typeof mod.getMarketRows !== 'function') result.failures.push('marketProfile.getMarketRows is missing');
-      else checkCount('market rows', counts.market, countRows(mod.getMarketRows(snapshot)));
-    }
-
-    if (feature === 'store') {
-      const mod = app.modules.store || {};
-      if (typeof mod.getStoreItems !== 'function') result.failures.push('store.getStoreItems is missing');
-      else checkCount('store rows', counts.store, countRows(mod.getStoreItems(snapshot)));
-    }
-
-    if (feature === 'inventory') {
-      const mod = app.modules.inventory || {};
-      if (typeof mod.getInventoryItems !== 'function') result.failures.push('inventory.getInventoryItems is missing');
-      else checkCount('inventory rows', counts.inventory, countRows(mod.getInventoryItems(snapshot)));
-      if (typeof mod.renderInventoryPanel === 'function') {
-        const html = String(mod.renderInventoryPanel({ state: snapshot }) || '');
-        if (html.includes('My Items')) result.failures.push('inventory renderer includes My Items and cannot replace legacy renderUseItemCard without duplicate item blocks');
-      }
-    }
-
-    if (feature === 'auth') {
-      const mod = app.modules.auth || {};
-      if (typeof mod.renderLoginError !== 'function') result.failures.push('auth.renderLoginError is missing');
-      if (typeof mod.rotateLoginQuote !== 'function') result.failures.push('auth.rotateLoginQuote is missing');
-    }
-
-    result.ok = result.failures.length === 0 && result.checks.every((check) => check.ok !== false);
-    return result;
-  }
-
-  function checkAll() {
-    const features = ['marketProfile', 'store', 'inventory', 'auth'];
-    const results = features.map(checkFeature);
-    return {
-      ok: results.every((result) => result.ok),
-      counts: rowCounts(),
-      results
-    };
-  }
-
-  function guardInstaller(bridge, installerName, feature) {
-    if (!bridge || typeof bridge[installerName] !== 'function' || bridge[installerName].__runtimeGuarded) return;
-    const original = bridge[installerName];
-    bridge[installerName] = function guardedInstaller() {
-      const check = checkFeature(feature);
-      if (!check.ok) {
-        return {
-          installed: false,
-          reason: `${feature} consistency check failed: ${check.failures.join('; ')}`,
-          check
-        };
-      }
-      return original.apply(this, arguments);
-    };
-    bridge[installerName].__runtimeGuarded = true;
-  }
-
-  function guardBridge(bridge) {
-    guardInstaller(bridge, 'installFrontendMarketProfileSwitch', 'marketProfile');
-    guardInstaller(bridge, 'installFrontendStoreSwitch', 'store');
-    guardInstaller(bridge, 'installFrontendInventorySwitch', 'inventory');
-    guardInstaller(bridge, 'installFrontendAuthSwitch', 'auth');
-    return bridge;
-  }
-
-  let currentBridge = app.modules.legacyBridge ? guardBridge(app.modules.legacyBridge) : null;
-  try {
-    Object.defineProperty(app.modules, 'legacyBridge', {
-      configurable: true,
-      enumerable: true,
-      get: () => currentBridge,
-      set: (nextBridge) => {
-        currentBridge = guardBridge(nextBridge);
-      }
-    });
-  } catch (error) {
-    console.warn('[Econovaria runtime] Could not guard legacy bridge assignment.', error);
-  }
-
-  app.runtime.checkFeature = checkFeature;
-  app.runtime.checkAll = checkAll;
-  window.checkEconovariaRuntimeFeature = checkFeature;
-  window.runEconovariaRuntimeChecks = checkAll;
 })();

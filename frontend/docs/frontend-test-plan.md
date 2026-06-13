@@ -1,0 +1,55 @@
+# Frontend Test Plan
+
+1. Login with code `1234`.
+2. Overview loads.
+3. Store loads.
+4. Portfolio loads.
+5. Trading loads.
+6. Market Data loads.
+7. Selecting a stock updates stock profile.
+8. Company News shows selected stock only.
+9. Company News cards open popup.
+10. Popup closes with Close button.
+11. Popup closes with Escape.
+12. Refresh button works.
+13. Logout works.
+14. No console errors.
+15. Root `app.js` still points to the current Cloudflare Worker.
+16. No Supabase dependency exists.
+17. Root `index.html` script tags were not removed.
+18. No active root runtime files were deleted.
+19. `frontend/` folder exists.
+20. Copied runtime files exist under `frontend/src/legacy/runtime-copies/`.
+21. Shadow loader can load Store modules with all feature flags false.
+22. `window.compareLegacyAndFrontendStore()` returns a safe comparison without UI changes.
+23. Shadow loader can load Inventory and item-use modules with all feature flags false.
+24. `window.compareLegacyAndFrontendInventory()` returns a safe comparison without UI changes.
+25. Shadow loader can load Dashboard modules with all feature flags false.
+26. `window.compareLegacyAndFrontendDashboard()` returns a safe comparison without UI changes.
+27. Shadow loader can load Profile modules with all feature flags false.
+28. `window.compareLegacyAndFrontendProfile()` returns a safe comparison without UI changes.
+29. Shadow loader can load Auth/Login modules with all feature flags false.
+30. `window.compareLegacyAndFrontendAuth()` returns a safe comparison without UI changes, login requests, or access-code logging.
+31. Root `index.html` loads `frontend/src/legacy/frontend-runtime-loader.js` only after existing legacy runtime scripts.
+32. With all feature flags false, `window.EconovariaFrontend.runtime.getStatus()` shows every feature disabled and no frontend bridge patches active.
+33. Legacy behavior remains active by default when the frontend runtime loader is present and all flags are false.
+34. With only `useFrontendMarketNewsModule` true, `window.EconovariaFrontend.runtime.marketNews` reports loaded and patched.
+35. With only Market News wired, Company News remains selected-ticker-only, shows the latest five selected ticker reports, opens the popup, closes by button and Escape, and does not duplicate cards or modals.
+36. With Market News and `useFrontendMarketProfileModule` true, `window.EconovariaFrontend.runtime.marketProfile` reports loaded and patched.
+37. Market Profile / Market Data rendering remains display-only and uses backend-provided market, history, financial, news, and portfolio snapshot data.
+38. With `useFrontendApiRetryModule` true, `window.EconovariaFrontend.runtime.apiRetry` reports the retry bridge status without double-wrapping the existing legacy retry patch.
+39. API retry keeps the existing action names and does not alter request payloads or backend responses.
+40. With `useFrontendSnapshotStoreModule` true, `window.EconovariaFrontend.runtime.snapshotStore` reports loaded and patched.
+41. Snapshot Store preserves the legacy merge behavior and treats backend snapshots as authoritative.
+42. With `useFrontendTradingModule` true, `window.EconovariaFrontend.runtime.trading` reports loaded and patched.
+43. Trading rendering remains preview/display-only; `STOCK_TRADE` submission and final trade state remain backend-authoritative.
+44. With `useFrontendStoreModule` true and `useFrontendInventoryModule` false, `window.EconovariaFrontend.runtime.store` reports loaded and patched while Inventory remains legacy.
+45. Store rendering remains display-only; `STORE_PURCHASE` submission and final balance/stock state remain backend-authoritative.
+46. With `useFrontendInventoryModule` true, `window.EconovariaFrontend.runtime.inventory` reports loaded and patched.
+47. Inventory rendering remains display-only; `USE_ITEM` submission and final item quantities/effects remain backend-authoritative.
+48. With `useFrontendDashboardModule` true and `useFrontendProfileModule` false, `window.EconovariaFrontend.runtime.dashboard` reports loaded and patched while Profile remains legacy.
+49. Dashboard rendering remains display-only and uses backend-provided snapshot/session data.
+50. With `useFrontendProfileModule` true and `useFrontendAuthModule` false, `window.EconovariaFrontend.runtime.profile` reports loaded and patched while Auth remains legacy.
+51. Profile rendering remains display-only and uses backend-confirmed profile/session data.
+52. With `useFrontendAuthModule` true, `window.EconovariaFrontend.runtime.auth` reports loaded and patched.
+53. Auth/Login keeps `LOGIN` and `LOGOUT` backend-authoritative, does not send login requests during automated checks, and does not log access codes.
