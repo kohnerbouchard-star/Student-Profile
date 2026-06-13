@@ -18,28 +18,28 @@ const PERMISSION_SETS = {
 
 const VIEW_COPY = {
   profile: {
-    title: "My Dashboard",
-    subtitle: "A quick look at your balance, recent activity, inventory, and investments."
+    title: "Overview",
+    subtitle: "Review your balance, portfolio, items, and recent activity."
   },
   store: {
-    title: "Shop",
-    subtitle: "Buy classroom items with your current balance. Purchases update your account after they are confirmed."
+    title: "Store",
+    subtitle: "Use your classroom balance to purchase available items."
   },
   portfolio: {
-    title: "Investments",
-    subtitle: "Track your current holdings and how your positions are doing in the market."
+    title: "Portfolio",
+    subtitle: "Track the stocks, bonds, and crypto you currently hold."
   },
   trade: {
-    title: "Trade Desk",
-    subtitle: "Buy or sell shares during the trading window. Check your balance and holdings first."
+    title: "Trading",
+    subtitle: "Buy or sell market assets during the active trading window."
   },
   stockProfile: {
-    title: "Market Explorer",
-    subtitle: "Look through available companies and compare prices before making a move."
+    title: "Market Data",
+    subtitle: "Compare prices, trends, asset types, and market movement."
   },
   rating: {
-    title: "Predictions",
-    subtitle: "Submit a market prediction with a target price and a short reason."
+    title: "Forecasts",
+    subtitle: "Submit a target price and explain your market reasoning."
   }
 };
 
