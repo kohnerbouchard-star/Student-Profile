@@ -6,6 +6,32 @@ This branch refactors the working live site into the existing `frontend/` folder
 
 Move the stable root-level frontend code into organized folders while keeping the live UI, copy, backend calls, global function names, and render output unchanged.
 
+## Move-only protocol
+
+This branch uses a strict move-only refactor protocol.
+
+Allowed changes:
+
+- Move an existing frontend file into the agreed folder system.
+- Update `index.html` script paths so the same file still loads in the same relative order.
+- Update `frontend/config/refactor-checkpoints.js` only to document or test the moved file.
+- Add docs that explain the move.
+
+Disallowed changes:
+
+- No renderer rewrites.
+- No copy edits.
+- No CSS redesigns.
+- No backend/API/action/payload changes.
+- No state model changes.
+- No replacement renderers.
+- No new feature-flag runtime system.
+- No broad cleanup commits.
+- No removing globals.
+- No changing load order unless the change is required only because a file path moved.
+
+Every move must be small enough that the browser can be tested immediately after the commit.
+
 ## Non-goals
 
 - Do not replace working legacy renderers with redesigned runtime renderers.
@@ -42,6 +68,8 @@ frontend/
 4. Keep exact backend action names and payload shapes.
 5. Test after every extraction.
 6. Delete old root code only after the folderized version is confirmed stable.
+7. Prefer one moved file per checkpoint commit.
+8. If a move requires editing function bodies, stop and create a separate review note instead.
 
 ## Recommended extraction order
 
