@@ -29,31 +29,6 @@
       : `<span class="tip" title="${sanitize(text || "")}">?</span>`;
   }
 
-  function table(rows, columns, emptyMessage) {
-    if (typeof global.table === "function") {
-      return global.table(rows, columns, emptyMessage);
-    }
-
-    if (!rows || !rows.length) {
-      return renderInventoryEmptyState(emptyMessage);
-    }
-
-    return `
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>${columns.map(function (column) {
-              return `<th>${sanitize(column)}</th>`;
-            }).join("")}</tr>
-          </thead>
-          <tbody>
-            ${rows.map(renderInventoryItemRow).join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
   function getInventoryItems(state) {
     return typeof inventory.getInventoryItems === "function" ? inventory.getInventoryItems(state) : [];
   }
@@ -88,7 +63,9 @@
     `;
   }
 
-  // display-only
+  // Use-item-card-only renderer. The legacy Overview page already renders the full
+  // My Items table after renderUseItemCard(), so this module must not render a
+  // second inventory table.
   function renderInventoryPanel(options) {
     const config = options || {};
     const state = config.state || global.state || {};
@@ -117,14 +94,7 @@
           <h2 class="card-title">Use an Item ${tip("Choose an item you own and submit a use request. Backend confirmation is required.")}</h2>
           <span class="badge ${usableItems.length ? permission.className : "warn"}">${usableItems.length ? permission.label : "Empty"}</span>
         </div>
-        ${controls}
-      </div>
-
-      <div class="card" style="margin-top:16px;">
-        <h2 class="card-title">My Items ${tip("Items you bought from the shop appear here while you still have quantity remaining.")}</h2>
-        ${usableItems.length
-          ? table(usableItems, ["itemName", "category", "quantityPurchased", "totalSpent", "lastPurchased"], "No usable items available.")
-          : renderInventoryEmptyState("No items available right now. Visit the Shop to buy an item, or refresh after a purchase.")}
+        ${controls || renderInventoryEmptyState("No item-use controls are available right now.")}
       </div>
     `;
   }
