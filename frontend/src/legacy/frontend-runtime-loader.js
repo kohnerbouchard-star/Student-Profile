@@ -3,7 +3,7 @@
   app.modules = app.modules || {};
 
   const RUNTIME_NAME = "Econovaria frontend runtime loader";
-  const RUNTIME_VERSION = "20260613-inventory-rollback1";
+  const RUNTIME_VERSION = "20260613-guarded-loader1";
   const LOADED_URLS = "__econovariaFrontendRuntimeLoadedUrls";
 
   const COMMON_SCRIPT_PATHS = [
@@ -314,6 +314,63 @@
     return typeof bridge[installerName] === "function" ? bridge[installerName] : null;
   }
 
+  function shouldRunConsistencyCheck(featureName) {
+    return ["marketProfile", "store", "inventory", "auth"].includes(featureName) &&
+      typeof global.checkEconovariaRuntimeFeature === "function";
+  }
+
+  function disableFeatureFlag(featureName) {
+    const feature = FEATURE_CONFIGS[featureName];
+    const flags = getFeatureFlags();
+
+    if (feature && flags) {
+      flags[feature.flag] = false;
+    }
+  }
+
+  function checkFeatureConsistency(featureName) {
+    if (!shouldRunConsistencyCheck(featureName)) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "no consistency check registered"
+      };
+    }
+
+    try {
+      return global.checkEconovariaRuntimeFeature(featureName) || {
+        ok: false,
+        failures: ["consistency check returned no result"]
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        failures: [error && error.message || String(error)]
+      };
+    }
+  }
+
+  function applyConsistencyGate(featureNames) {
+    return featureNames.filter(function (featureName) {
+      const check = checkFeatureConsistency(featureName);
+
+      if (check.ok === false) {
+        disableFeatureFlag(featureName);
+        setStatus(featureName, {
+          loaded: true,
+          enabled: true,
+          patched: false,
+          reason: `consistency check failed: ${(check.failures || []).join("; ") || "unknown failure"}`,
+          consistencyCheck: check
+        });
+        logError(`Feature ${featureName} blocked before legacy bridge install.`, check);
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   function installBridge(featureName) {
     const installer = getBridgeInstaller(featureName);
 
@@ -333,7 +390,8 @@
         loaded: true,
         enabled: true,
         patched: Boolean(result && result.installed),
-        reason: result && result.reason || "bridge installer completed"
+        reason: result && result.reason || "bridge installer completed",
+        consistencyCheck: result && result.check || undefined
       });
     } catch (error) {
       logError(`Bridge install failed for ${featureName}. Legacy behavior remains available.`, error);
@@ -453,12 +511,13 @@
       const loadableFeatures = enabledFeatures.filter(function (featureName) {
         return runtime[featureName] && runtime[featureName].loaded === true;
       });
+      const bridgeEligibleFeatures = applyConsistencyGate(loadableFeatures);
 
-      if (loadableFeatures.length) {
+      if (bridgeEligibleFeatures.length) {
         try {
           await loadScript("frontend/src/legacy/legacy-bridge.js");
         } catch (error) {
-          loadableFeatures.forEach(function (featureName) {
+          bridgeEligibleFeatures.forEach(function (featureName) {
             setStatus(featureName, {
               loaded: true,
               enabled: true,
@@ -472,7 +531,7 @@
           return getStatus();
         }
 
-        loadableFeatures.forEach(installBridge);
+        bridgeEligibleFeatures.forEach(installBridge);
       }
 
       runtime.initialized = true;
@@ -492,6 +551,7 @@
   runtime.featureConfigs = FEATURE_CONFIGS;
   runtime.getStatus = getStatus;
   runtime.initialize = initializeRuntime;
+  runtime.checkFeatureConsistency = checkFeatureConsistency;
 
   initializeRuntime().catch(function (error) {
     runtime.initialized = true;
