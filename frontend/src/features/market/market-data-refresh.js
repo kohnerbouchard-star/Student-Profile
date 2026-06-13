@@ -138,6 +138,11 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
         <p class="market-company-note">${sanitize(m.description || m.notes || "No company description has been added yet.")}</p>
       </div>
 
+      <div class="card market-news-briefing" id="marketImportedNewsCard">
+        <h2 class="card-title">Market Briefing</h2>
+        ${renderMarketCompanyNews(m)}
+      </div>
+
     </div>`;
 };
 
@@ -706,7 +711,7 @@ function renderMarketCompanyNews(stock) {
     .slice(0, 8);
 
   if (!reports.length) {
-    return `<div class="empty">No news reports are available for ${sanitize(ticker)} yet. Run the news generator or refresh after news is created.</div>`;
+    return `<div class="empty">No market briefing reports are available for ${sanitize(ticker)} yet. Refresh after new market news is created.</div>`;
   }
 
   return `
