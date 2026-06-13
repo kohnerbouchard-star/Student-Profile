@@ -40,6 +40,17 @@
         ]
       },
 
+      ui: {
+        label: "UI support extracted",
+        description: "Loads behavior-preserving UI support scripts only.",
+        scripts: [
+          "frontend/src/ui/student-ui-fixes.js",
+          "frontend/src/ui/mobile-ux-fix.js",
+          "frontend/src/ui/display-format-final-fix.js"
+        ],
+        requiredGlobals: []
+      },
+
       auth: {
         label: "Auth extracted",
         description: "Loads behavior-preserving auth/login wrappers only.",
