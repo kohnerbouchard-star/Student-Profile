@@ -1,20 +1,18 @@
 (function (global) {
   global.ECONOVARIA_FRONTEND_CONFIG = global.ECONOVARIA_FRONTEND_CONFIG || {};
 
-  // Controlled QA: Market News and Auth passed browser QA.
-  // Market Profile is disabled after backend market data did not load correctly.
-  // Store is disabled after backend item data did not load correctly.
-  // Inventory is disabled after duplicate item blocks and unsafe use-item behavior.
+  // Controlled QA: enable every extracted frontend runtime module.
+  // Runtime consistency gates must prevent unsafe renderer replacement.
   global.ECONOVARIA_FRONTEND_CONFIG.FEATURE_FLAGS = {
     useFrontendMarketNewsModule: true,
-    useFrontendMarketProfileModule: false,
-    useFrontendApiRetryModule: false,
-    useFrontendSnapshotStoreModule: false,
-    useFrontendTradingModule: false,
-    useFrontendStoreModule: false,
-    useFrontendInventoryModule: false,
-    useFrontendDashboardModule: false,
-    useFrontendProfileModule: false,
+    useFrontendMarketProfileModule: true,
+    useFrontendApiRetryModule: true,
+    useFrontendSnapshotStoreModule: true,
+    useFrontendTradingModule: true,
+    useFrontendStoreModule: true,
+    useFrontendInventoryModule: true,
+    useFrontendDashboardModule: true,
+    useFrontendProfileModule: true,
     useFrontendAuthModule: true,
     enableFrontendShadowChecks: false,
     enableFrontendMarketNewsShadowChecks: false,
