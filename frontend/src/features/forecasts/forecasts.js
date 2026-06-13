@@ -10,10 +10,10 @@ function renderRating() {
     <div class="grid cols-2">
       <div class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Submit a Prediction</h2>
+          <h2 class="card-title">Submit Forecast</h2>
           <span class="badge ${can("SUBMIT_RATING") ? "good" : "bad"}">${can("SUBMIT_RATING") ? "Ready" : "Unavailable"}</span>
         </div>
-        ${help("Choose a stock, make a prediction, set a target price, and explain your thinking.")}
+        ${help("Choose a stock, make a forecast, set a target price, and explain your thinking.")}
 
         <div class="form-grid" id="ratingForm">
           <label>
@@ -24,7 +24,7 @@ function renderRating() {
           </label>
 
           <label>
-            <span class="field-label">Prediction</span>
+            <span class="field-label">Forecast</span>
             <select id="ratingValue"><option>BUY</option><option>HOLD</option><option>SELL</option></select>
           </label>
 
@@ -38,16 +38,16 @@ function renderRating() {
             <textarea id="ratingReason" rows="4" placeholder="Explain your reasoning. Minimum 10 characters."></textarea>
           </label>
 
-          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Prediction</button>
+          <button id="ratingSubmitButton" class="primary-btn span-2" type="button" ${can("SUBMIT_RATING") ? "" : "disabled"} onclick="submitRating(this)">Submit Forecast</button>
         </div>
 
-        <div id="ratingStatus" class="status-box">Predictions are saved to your account.</div>
+        <div id="ratingStatus" class="status-box">Forecasts are saved to your account.</div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Prediction History</h2>
-        ${help("Your recent predictions appear here after they are confirmed.")}
-        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No predictions yet.")}
+        <h2 class="card-title">Forecast History</h2>
+        ${help("Your recent forecasts appear here after they are confirmed.")}
+        ${table(ratings, ["timestamp", "ticker", "rating", "targetPrice", "reason", "rewardStatus", "rewardAmount"], "No forecasts yet.")}
       </div>
     </div>`;
 }
@@ -73,7 +73,7 @@ async function submitRating(button) {
 
     setButtonLoading(submitButton, true, "Saving...");
     setControlsDisabled(form, true, [submitButton]);
-    showStatus(status, null, "Saving your prediction...");
+    showStatus(status, null, "Saving your forecast...");
 
     const result = await submitAction("SUBMIT_RATING", {
       ticker,
@@ -82,7 +82,7 @@ async function submitRating(button) {
       reason
     });
 
-    showStatus(status, result.ok === true, result.message || "Prediction saved.");
+    showStatus(status, result.ok === true, result.message || "Forecast saved.");
 
     if (result.ok === true) {
       document.getElementById("targetPrice").value = "";
