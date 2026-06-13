@@ -65,6 +65,11 @@ async function useItem(button) {
     if (!selectedItem) throw new Error('Choose an item first.');
     if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Quantity must be a whole number above 0.');
 
+    const owned = Number(selectedItem.quantityPurchased ?? selectedItem.quantity ?? selectedItem.qty ?? selectedItem.count ?? 0);
+    if (!Number.isFinite(owned) || quantity > owned) {
+      throw new Error(`You only have ${Number.isFinite(owned) ? owned : 0} of this item.`);
+    }
+
     setButtonLoading(submitButton, true, 'Sending request...');
     setControlsDisabled(form, true, [submitButton]);
     showStatus(status, null, 'Sending your item-use request...');
