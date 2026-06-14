@@ -41,8 +41,8 @@ window.renderStockProfile = function renderStockProfile() {
       <div class="market-page-top">
         <div>
           <div class="eyebrow">Market data</div>
-          <h2>Market Explorer</h2>
-          <p>Review stock movement, compare company details, and connect price changes to your portfolio decisions.</p>
+          <h2>Market Data</h2>
+          <p>Review price movement, compare company details, and connect market signals to portfolio decisions.</p>
         </div>
 
         <label class="market-select-card">
@@ -136,6 +136,11 @@ window.renderStockProfileDetail = function renderStockProfileDetail() {
       <div class="card">
         <h2 class="card-title">Company Note</h2>
         <p class="market-company-note">${sanitize(m.description || m.notes || "No company description has been added yet.")}</p>
+      </div>
+
+      <div class="card market-news-briefing" id="marketImportedNewsCard">
+        <h2 class="card-title">Market Briefing</h2>
+        ${renderMarketCompanyNews(m)}
       </div>
 
     </div>`;
@@ -706,7 +711,7 @@ function renderMarketCompanyNews(stock) {
     .slice(0, 8);
 
   if (!reports.length) {
-    return `<div class="empty">No news reports are available for ${sanitize(ticker)} yet. Run the news generator or refresh after news is created.</div>`;
+    return `<div class="empty">No market briefing reports are available for ${sanitize(ticker)} yet. Refresh after new market news is created.</div>`;
   }
 
   return `
@@ -721,7 +726,7 @@ function renderMarketCompanyNews(stock) {
               : "news-neutral";
 
         return `
-          <article class="company-news-card ${sentimentClass}">
+          <article class="company-news-card ${sentimentClass}" role="button" tabindex="0" data-market-news="${encodeURIComponent(JSON.stringify(item))}">
             <div class="news-card-topline">
               <span class="badge">${sanitize(item.sentiment || "Neutral")}</span>
               <span class="badge">${sanitize(item.impact || "Low")} Impact</span>
@@ -740,3 +745,183 @@ function renderMarketCompanyNews(stock) {
     </div>
   `;
 }
+
+
+function ensureMarketNewsPopupStyles() {
+  if (document.getElementById("marketNewsPopupStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "marketNewsPopupStyles";
+  style.textContent = `
+    .market-news-popup-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(6, 12, 24, 0.62);
+      backdrop-filter: blur(8px);
+    }
+
+    .market-news-popup {
+      width: min(680px, 100%);
+      max-height: min(720px, 90vh);
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 24px;
+      background: #101828;
+      color: #fff;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+      padding: 24px;
+    }
+
+    .market-news-popup h3 {
+      margin: 8px 0 12px;
+      font-size: 1.45rem;
+      line-height: 1.2;
+    }
+
+    .market-news-popup p {
+      color: rgba(255,255,255,0.78);
+      line-height: 1.6;
+    }
+
+    .market-news-popup-close {
+      float: right;
+      border: 0;
+      border-radius: 999px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .company-news-card[role="button"] {
+      cursor: pointer;
+    }
+
+    .company-news-card[role="button"]:focus-visible {
+      outline: 3px solid rgba(96, 165, 250, 0.8);
+      outline-offset: 3px;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function openMarketNewsPopup(card) {
+  const raw = card && card.getAttribute("data-market-news");
+  if (!raw) return;
+
+  let item = null;
+  try {
+    item = JSON.parse(decodeURIComponent(raw));
+  } catch (_) {
+    return;
+  }
+
+  ensureMarketNewsPopupStyles();
+
+  const existing = document.getElementById("marketNewsPopupBackdrop");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "marketNewsPopupBackdrop";
+  overlay.className = "market-news-popup-backdrop";
+  overlay.innerHTML = `
+    <section class="market-news-popup" role="dialog" aria-modal="true" aria-label="Market briefing details">
+      <button type="button" class="market-news-popup-close" data-close-news-popup aria-label="Close market briefing">×</button>
+      <div class="eyebrow">Market Briefing</div>
+      <h3>${sanitize(item.headline || "Market update")}</h3>
+      <div class="news-card-topline">
+        <span class="badge">${sanitize(item.sentiment || "Neutral")}</span>
+        <span class="badge">${sanitize(item.impact || "Low")} Impact</span>
+        <span>${sanitize(formatDateTime(item.timestamp || item.date || ""))}</span>
+      </div>
+      <p>${sanitize(item.summary || "No summary has been added for this report yet.")}</p>
+      <div class="news-meta">
+        <span>${sanitize(item.ticker || "")}</span>
+        <span>${sanitize(item.sector || "")}</span>
+        <span>${formatMarketPercent(item.changePct)}</span>
+        ${item.priceAfter ? `<span>Price: ${money(item.priceAfter)}</span>` : ""}
+      </div>
+    </section>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay || event.target.closest("[data-close-news-popup]")) {
+      close();
+    }
+  });
+
+  const onKeydown = (event) => {
+    if (event.key === "Escape") {
+      close();
+      document.removeEventListener("keydown", onKeydown);
+    }
+  };
+
+  document.addEventListener("keydown", onKeydown);
+}
+
+if (!window.__marketNewsPopupClickBound) {
+  window.__marketNewsPopupClickBound = true;
+
+  document.addEventListener("click", (event) => {
+    const card = event.target.closest(".company-news-card[data-market-news]");
+    if (!card) return;
+    openMarketNewsPopup(card);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    const card = event.target.closest(".company-news-card[data-market-news]");
+    if (!card) return;
+
+    event.preventDefault();
+    openMarketNewsPopup(card);
+  });
+}
+
+(function installMarketBriefingHoverAffordance_() {
+  const styleId = 'market-briefing-hover-affordance-style';
+
+  function install() {
+    if (!document.head || document.getElementById(styleId)) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .market-news-briefing.market-news-briefing {
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+      }
+
+      .market-news-briefing.market-news-briefing:hover,
+      .company-news-card.company-news-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        border-color: rgba(234, 88, 12, 0.28);
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', install, { once: true });
+  } else {
+    install();
+  }
+})();
+

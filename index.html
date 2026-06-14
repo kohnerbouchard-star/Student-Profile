@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="preload">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,6 +9,37 @@
   <link rel="stylesheet" href="login-cleanup.css" />
   <link rel="stylesheet" href="brand-logo.css" />
   <link rel="stylesheet" href="market-data-polish.css?v=20260611-layout1" />
+
+  <style id="app-preload-style">
+    html.preload,
+    html.preload body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(17, 24, 39, .94)),
+        radial-gradient(circle at 18% 22%, rgba(234, 88, 12, .22), transparent 30%),
+        radial-gradient(circle at 88% 78%, rgba(37, 99, 235, .18), transparent 34%),
+        #0f172a;
+    }
+
+    html.preload .login-shell,
+    html.preload #appShell {
+      opacity: 0;
+    }
+
+    html:not(.preload) .login-shell,
+    html:not(.preload) #appShell {
+      opacity: 1;
+      transition: opacity 120ms ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html:not(.preload) .login-shell,
+      html:not(.preload) #appShell {
+        transition: none;
+      }
+    }
+  </style>
 
   <style id="login-quote-slide-style">
     .login-quote {
@@ -175,19 +206,43 @@
     </main>
   </div>
 
-  <script src="app.js"></script>
-  <script src="student-ui-fixes.js"></script>
-  <script src="market-data-refresh.js?v=20260611-newsfix2"></script>
-  <script src="stock-trade-history-fixes.js"></script>
-  <script src="partial-snapshot-merge-fix.js"></script>
-  <script src="use-item-permission-fix.js"></script>
-  <script src="inventory-empty-state-fix.js"></script>
-  <script src="api-retry-fix.js"></script>
-  <script src="mobile-ux-fix.js"></script>
-  <script src="academic-market-copy.js"></script>
-  <script src="login-quotes.js"></script>
-  <script src="display-format-final-fix.js?v=20260611-formatfix1"></script>
-  <script src="market-news-final-fix.js?v=20260611-newsfix2"></script>
-  <script src="market-data-layout-fix.js?v=20260611-layout1"></script>
+  <script src="frontend/src/core/constants.js"></script>
+  <script src="frontend/src/core/state.js"></script>
+  <script src="frontend/src/utils/formatting.js"></script>
+  <script src="frontend/src/ui/dom.js"></script>
+  <script src="frontend/src/core/api.js"></script>
+  <script src="frontend/src/core/snapshot.js"></script>
+  <script src="frontend/src/features/auth/auth.js"></script>
+  <script src="frontend/src/features/dashboard/dashboard.js"></script>
+  <script src="frontend/src/features/store/store.js"></script>
+  <script src="frontend/src/features/inventory/inventory.js"></script>
+  <script src="frontend/src/features/portfolio/portfolio.js"></script>
+  <script src="frontend/src/features/trading/trading.js"></script>
+  <script src="frontend/src/features/market/market.js"></script>
+  <script src="frontend/src/features/forecasts/forecasts.js"></script>
+  <script src="frontend/src/core/router.js"></script>
+  <script src="frontend/src/core/bootstrap.js"></script>
+  <script src="frontend/src/ui/student-ui.js"></script>
+  <script src="frontend/src/features/market/market-data-refresh.js?v=20260611-newsfix2"></script>
+  <script src="frontend/src/ui/mobile.js"></script>
+  <script src="frontend/src/ui/academic-market-copy.js"></script>
+  <script src="frontend/src/features/auth/login-quotes.js?v=20260613-auth-move1"></script>
+  <script id="app-preload-release-script">
+    (function releaseAppPreload() {
+      var released = false;
+
+      function release() {
+        if (released) return;
+        released = true;
+        document.documentElement.classList.remove("preload");
+      }
+
+      window.addEventListener("load", function () {
+        window.setTimeout(release, 60);
+      }, { once: true });
+
+      window.setTimeout(release, 1800);
+    })();
+  </script>
 </body>
 </html>

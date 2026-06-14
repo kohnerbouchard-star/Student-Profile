@@ -1,82 +1,25 @@
-// Fixes inventory empty states after item use.
-// Rows with quantityPurchased = 0 should not appear as usable items.
-// The dropdown, My Items list, and submit action now all use the same usable-item list.
-
-function getOwnedInventoryRows() {
-  return (state.inventory || []).filter((item) => {
-    const quantity = Number(item.quantityPurchased || 0);
-    const hasName = String(item.itemName || item.itemId || '').trim() !== '';
-    return hasName && quantity > 0;
-  });
-}
+window.Econovaria = window.Econovaria || {};
+window.Econovaria.features = window.Econovaria.features || {};
+window.Econovaria.features.inventory = window.Econovaria.features.inventory || {};
 
 function getSelectedUseItem() {
   const select = document.getElementById('useItemSelect');
-  const usableItems = getOwnedInventoryRows();
+  const usableItems = typeof getOwnedInventoryRows === 'function'
+    ? getOwnedInventoryRows()
+    : (state.inventory || []).filter((item) => Number(item.quantityPurchased || 0) > 0);
 
-  if (!select || !usableItems.length) {
-    return null;
-  }
+  if (!select || !usableItems.length) return null;
 
   const selectedIndex = Number(select.value || 0);
-
-  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= usableItems.length) {
-    return null;
-  }
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= usableItems.length) return null;
 
   return usableItems[selectedIndex];
 }
 
-function renderInventoryEmptyState(message) {
-  return `<div class="empty">${sanitize(message)}</div>`;
-}
-
-renderProfile = function patchedRenderProfile() {
-  const s = selectedStudent();
-  const transactions = state.transactions || [];
-  const purchases = transactions.filter((t) => t.mode === 'STORE_PURCHASE');
-  const totalSpent = sum(purchases, 'amount');
-  const ownedItems = getOwnedInventoryRows();
-  const inventoryCount = sum(ownedItems, 'quantityPurchased');
-
-  document.getElementById('profile').innerHTML = `
-    <div class="grid cols-4">
-      ${metric('Balance', money(s.balance), 'Available to spend or invest', 'Your current classroom economy balance.')}
-      ${metric('Inventory', inventoryCount, 'Items available to use', 'Only items with quantity above 0 are counted here.')}
-      ${metric('Shop Spent', money(totalSpent), 'Total recent purchases', 'Money you have spent in the shop.')}
-      ${metric('Investments', (state.portfolio || []).length, 'Current positions', 'Stocks you currently own.')}
-    </div>
-
-    <div class="grid cols-2" style="margin-top:16px;">
-      <div class="card">
-        <h2 class="card-title">My Account ${tip('This information comes from your student account.')}</h2>
-        <div class="mini-list">
-          ${mini('Name', s.name)}
-          ${mini('Grade', s.grade || '—')}
-          ${mini('Homeroom', s.homeroom || '—')}
-          ${mini('Job', s.jobTitle || 'No job assigned')}
-          ${mini('Account', s.active || 'Active')}
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="card-title">Recent Activity ${tip('Newest purchases, trades, rewards, item-use requests, and account changes show here. Dates are shown in Korea time when possible.')}</h2>
-        ${table(transactions.slice(0, 10), ['timestamp', 'mode', 'amount', 'endingBalance', 'itemName', 'status'], 'No activity yet. Once you buy, trade, use an item, or submit a prediction, it will appear here.')}
-      </div>
-    </div>
-
-    ${renderUseItemCard()}
-
-    <div class="card" style="margin-top:16px;">
-      <h2 class="card-title">My Items ${tip('Items you bought from the shop appear here while you still have quantity remaining.')}</h2>
-      ${ownedItems.length
-        ? table(ownedItems, ['itemName', 'category', 'quantityPurchased', 'totalSpent', 'lastPurchased'], 'No usable items available.')
-        : renderInventoryEmptyState('No items available right now. Visit the Shop to buy an item, or refresh after a purchase.')}
-    </div>`;
-};
-
-renderUseItemCard = function patchedRenderUseItemCard() {
-  const usableItems = getOwnedInventoryRows();
+function renderUseItemCard() {
+  const usableItems = typeof getOwnedInventoryRows === 'function'
+    ? getOwnedInventoryRows()
+    : (state.inventory || []).filter((item) => Number(item.quantityPurchased || 0) > 0);
 
   if (!usableItems.length) {
     return `
@@ -136,14 +79,14 @@ renderUseItemCard = function patchedRenderUseItemCard() {
           <textarea id="useItemNote" rows="3" maxlength="240" placeholder="Example: I want to use this during the next activity."></textarea>
         </label>
 
-        <button id="useItemSubmitButton" class="primary-btn span-2" type="button" ${can('USE_ITEM') ? '' : 'disabled'} onclick="useItem(this)">Request Item Use</button>
+        <button id="useItemSubmitButton" class="primary-btn span-2" type="button" ${can('USE_ITEM') ? '' : 'disabled'} onclick="window.Econovaria.features.inventory.useItem(this)">Request Item Use</button>
       </div>
 
       <div id="useItemStatus" class="status-box">Your teacher will receive a notification after you submit.</div>
     </div>`;
-};
+}
 
-useItem = async function patchedUseItem(button) {
+async function useItem(button) {
   const status = document.getElementById('useItemStatus');
   const form = document.getElementById('useItemForm');
   const submitButton = button || document.getElementById('useItemSubmitButton');
@@ -156,11 +99,11 @@ useItem = async function patchedUseItem(button) {
     const selectedItem = getSelectedUseItem();
     const quantity = Number(document.getElementById('useItemQty').value || 1);
     const note = document.getElementById('useItemNote').value.trim();
-    const ownedQuantity = Number(selectedItem && selectedItem.quantityPurchased || 0);
+    const owned = Number(selectedItem && (selectedItem.quantityPurchased ?? selectedItem.quantity ?? selectedItem.qty ?? selectedItem.count) || 0);
 
     if (!selectedItem) throw new Error('Choose an item first.');
     if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Quantity must be a whole number above 0.');
-    if (quantity > ownedQuantity) throw new Error(`You only have ${ownedQuantity} of this item available.`);
+    if (!Number.isFinite(owned) || quantity > owned) throw new Error(`You only have ${Number.isFinite(owned) ? owned : 0} of this item.`);
 
     setButtonLoading(submitButton, true, 'Sending request...');
     setControlsDisabled(form, true, [submitButton]);
@@ -173,7 +116,7 @@ useItem = async function patchedUseItem(button) {
       note
     });
 
-    showStatus(status, true, result.message || 'Item use recorded.');
+    showStatus(status, true, result.message || 'Request sent. Your teacher has been notified.');
 
     const noteBox = document.getElementById('useItemNote');
     if (noteBox) noteBox.value = '';
@@ -189,4 +132,6 @@ useItem = async function patchedUseItem(button) {
     setControlsDisabled(form, false, [submitButton]);
     setButtonLoading(submitButton, false);
   }
-};
+}
+
+Object.assign(window.Econovaria.features.inventory, { getSelectedUseItem, renderUseItemCard, useItem });
