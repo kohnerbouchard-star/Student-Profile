@@ -891,3 +891,37 @@ if (!window.__marketNewsPopupClickBound) {
     openMarketNewsPopup(card);
   });
 }
+
+(function installMarketBriefingHoverAffordance_() {
+  const styleId = 'market-briefing-hover-affordance-style';
+
+  function install() {
+    if (!document.head || document.getElementById(styleId)) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .market-news-briefing.market-news-briefing {
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+      }
+
+      .market-news-briefing.market-news-briefing:hover,
+      .company-news-card.company-news-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        border-color: rgba(234, 88, 12, 0.28);
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', install, { once: true });
+  } else {
+    install();
+  }
+})();
+

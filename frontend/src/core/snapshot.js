@@ -14,7 +14,7 @@ function mergeSnapshot(snapshot) {
   };
 
   preserveOrUpdateSection(next, previous, base, normalized, "store");
-  preserveOrUpdateSection(next, previous, base, normalized, "transactions");
+  mergeSnapshotTransactions(next, previous, base, snapshot || {}, normalized);
   preserveOrUpdateSection(next, previous, base, normalized, "inventory");
   preserveOrUpdateSection(next, previous, base, normalized, "market");
   preserveOrUpdateSection(next, previous, base, normalized, "portfolio");
@@ -46,6 +46,93 @@ function preserveOrUpdateSection(next, previous, base, normalized, key) {
   }
 
   next[key] = Array.isArray(previous[key]) ? previous[key] : base[key];
+}
+
+function mergeSnapshotTransactions(next, previous, base, rawSnapshot, normalized) {
+  const transactionRows = getPresentArray(rawSnapshot, [
+    "transactions",
+    "recentTransactions",
+    "history",
+    "transactionHistory",
+    "activity",
+    "recentActivity"
+  ]);
+
+  const stockTradeRows = getPresentArray(rawSnapshot, [
+    "stockTrades",
+    "stockTradeLog",
+    "tradeLog",
+    "trades",
+    "recentTrades",
+    "stockTransactions",
+    "stockHistory",
+    "Stock_Trade_Log",
+    "Stock_Trade"
+  ]);
+
+  const hasGeneralTransactions = hasRows(transactionRows);
+  const hasStockTransactions = hasRows(stockTradeRows);
+
+  if (!hasGeneralTransactions && !hasStockTransactions) {
+    preserveOrUpdateSection(next, previous, base, normalized, "transactions");
+    return;
+  }
+
+  const existingTransactions = Array.isArray(previous.transactions)
+    ? previous.transactions
+    : base.transactions;
+
+  const generalTransactions = hasGeneralTransactions
+    ? transactionRows.map(normalizeTransaction)
+    : existingTransactions.filter((transaction) => !isStockTransaction(transaction));
+
+  const stockNormalizer = getStockTradeRowNormalizer();
+  const stockTransactions = hasStockTransactions
+    ? stockTradeRows.map(stockNormalizer)
+    : existingTransactions.filter(isStockTransaction);
+
+  next.transactions = [...generalTransactions, ...stockTransactions].sort(sortNewestFirst);
+}
+
+function getPresentArray(snapshot, keys) {
+  if (!snapshot) return undefined;
+
+  for (const key of keys) {
+    if (Array.isArray(snapshot[key])) {
+      return snapshot[key];
+    }
+  }
+
+  return undefined;
+}
+
+function hasRows(rows) {
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+function isStockTransaction(transaction) {
+  return String(transaction?.mode || "").toUpperCase().includes("STOCK");
+}
+
+function getStockTradeRowNormalizer() {
+  if (typeof normalizeStockTradeRow === "function") {
+    return normalizeStockTradeRow;
+  }
+
+  if (typeof window.normalizeStockTradeRow === "function") {
+    return window.normalizeStockTradeRow;
+  }
+
+  const tradingApi =
+    window.Econovaria?.features?.trading ||
+    window.Econovaria?.trading ||
+    {};
+
+  if (typeof tradingApi.normalizeStockTradeRow === "function") {
+    return tradingApi.normalizeStockTradeRow;
+  }
+
+  return normalizeTransaction;
 }
 
 function numberForSnapshot(value) {

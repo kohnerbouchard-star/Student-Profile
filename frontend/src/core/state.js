@@ -39,7 +39,18 @@ function selectedStudent() {
   return state.profile || null;
 }
 
+function isStudentUseItemAction(action) {
+  return (
+    String(action || "") === "USE_ITEM" &&
+    String(currentSession?.role || "").toUpperCase() === "STUDENT"
+  );
+}
+
 function can(action) {
+  if (isStudentUseItemAction(action)) {
+    return true;
+  }
+
   return (currentSession?.permissions || []).includes(action);
 }
 
@@ -56,6 +67,7 @@ Object.assign(window.Econovaria.state, {
   getCurrentSession,
   setCurrentSession,
   selectedStudent,
+  isStudentUseItemAction,
   can,
   requirePermission
 });
