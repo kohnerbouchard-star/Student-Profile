@@ -1,4 +1,4 @@
-/* Market Data refresh loaded after app.js. */
+/* Market Data refresh loaded after the split frontend runtime from index.html. */
 
 window.normalizeMarketRow = function normalizeMarketRow(row) {
   return {
@@ -925,3 +925,24 @@ if (!window.__marketNewsPopupClickBound) {
   }
 })();
 
+/*
+ * Market runtime namespace exports.
+ *
+ * Keep the existing window globals because router.js and inline handlers still
+ * depend on them. These namespace exports let future cleanup use the same
+ * window.Econovaria.features.market pattern as the rest of the split frontend.
+ */
+window.Econovaria = window.Econovaria || {};
+window.Econovaria.features = window.Econovaria.features || {};
+window.Econovaria.features.market = window.Econovaria.features.market || {};
+
+Object.assign(window.Econovaria.features.market, {
+  normalizeMarketRow: window.normalizeMarketRow,
+  renderStockProfile: window.renderStockProfile,
+  renderStockProfileDetail: window.renderStockProfileDetail,
+  setMarketChartRange: window.setMarketChartRange,
+  holdingSummary: window.holdingSummary,
+  selectMarketPeer: window.selectMarketPeer,
+  showMarketChartTip: window.showMarketChartTip,
+  hideMarketChartTip: window.hideMarketChartTip
+});
