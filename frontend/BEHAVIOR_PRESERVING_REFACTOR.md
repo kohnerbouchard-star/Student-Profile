@@ -14,7 +14,7 @@ Allowed changes:
 
 - Move an existing frontend file into the agreed folder system.
 - Update `index.html` script paths so the same file still loads in the same relative order.
-- Update `frontend/config/refactor-checkpoints.js` only to document or test the moved file.
+- Temporary checkpoint loader/config scaffolding has been removed from the production load path.
 - Add docs that explain the move.
 
 Disallowed changes:
