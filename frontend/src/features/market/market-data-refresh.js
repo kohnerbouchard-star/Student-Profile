@@ -753,6 +753,18 @@ function ensureMarketNewsPopupStyles() {
   const style = document.createElement("style");
   style.id = "marketNewsPopupStyles";
   style.textContent = `
+
+    .market-news-briefing {
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+
+    .market-news-briefing:hover,
+    .company-news-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+      border-color: rgba(234, 88, 12, 0.28);
+    }
+
     .market-news-popup-backdrop {
       position: fixed;
       inset: 0;
