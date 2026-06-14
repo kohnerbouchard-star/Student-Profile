@@ -1,0 +1,3360 @@
+/*******************************************************
+ CLASSROOM CARD SCANNER V2.18 FIXED STUDENT COLUMN MAPPING
+ CARD ID ONLY + KOREA TIME + FIXED COLUMNS
+ + FLEXIBLE STORE + AUTOMATIC FRIDAY PAYROLL
+ + STUDENT INVENTORY TRACKING
+ + STUDENT PROFILE SCAN SECURITY
+ + FAST MAIN SCAN PATH
+
+ Main scanner:
+   Scan!B3
+
+ Scan controls:
+   Scan!B4 = Mode
+   Scan!B5 = Amount
+   Scan!B6 = Class / Period
+   Scan!B7 = Store Item ID
+   Scan!B8 = Note
+   Scan!B10 = Last Result
+
+ Student profile scanner:
+   Student_Profile!B4
+
+ Students layout:
+   Card_ID | Student_Name | Grade | Homeroom | Balance | Job_Title | Active | Last_Updated | Attendance_Streak | Last_Attendance_Date | Notes
+
+ Transactions layout:
+   Timestamp | Date | Card_ID | Student_Name | Mode | Amount | Starting_Balance | Ending_Balance | Item_ID | Item_Name | Note | Status
+
+ Attendance_Log layout:
+   Timestamp | Date | Card_ID | Student_Name | Grade | Homeroom | Class_Period | Status | Check_In_Time | Streak_After_Scan | Bonus_Applied | Note | System_Status
+
+ Daily_Attendance layout:
+   Date | Card_ID | Student_Name | Grade | Homeroom | Class_Period | Status | Check_In_Time | Streak_After_Scan | Bonus_Applied | Note
+
+ Store supports:
+   Item_ID | Item_Name | Price | Active | Inventory | Category | Description
+
+ Student_Inventory layout:
+   Card_ID | Student_Name | Item_ID | Item_Name | Category | Quantity_Purchased | Total_Spent | Last_Purchased | Last_Updated
+
+ Payroll:
+   Manual from menu, or automatic Friday around 8:00 AM KST.
+   Pay period is Monday to Friday.
+
+ Timezone:
+   Asia/Seoul
+*******************************************************/
+
+const CFG = {
+  KOREA_TZ: 'Asia/Seoul',
+
+  SHEETS: {
+    SCAN: 'Scan',
+    STUDENTS: 'Students',
+    TRANSACTIONS: 'Transactions',
+    ATTENDANCE_LOG: 'Attendance_Log',
+    DAILY_ATTENDANCE: 'Daily_Attendance',
+    STORE: 'Store',
+    STORE_KIOSK: 'Store_Kiosk',
+    JOBS: 'Jobs',
+    SETTINGS: 'Settings',
+    DASHBOARD: 'Dashboard',
+    STUDENT_PROFILE: 'Student_Profile',
+    PAYROLL_LOG: 'Payroll_Log',
+    STUDENT_INVENTORY: 'Student_Inventory'
+  },
+
+  CELLS: {
+    MAIN_SCAN: 'B3',
+    MODE: 'B4',
+    AMOUNT: 'B5',
+    CLASS_PERIOD: 'B6',
+    ITEM_ID: 'B7',
+    NOTE: 'B8',
+    RESULT: 'B10',
+
+    PROFILE_SCAN: 'B4',
+    PROFILE_STATUS: 'C4'
+  },
+
+  MODES: [
+    'ATTENDANCE',
+    'DEPOSIT',
+    'WITHDRAW',
+    'REWARD',
+    'FINE',
+    'STORE_PURCHASE'
+  ],
+
+  HEADERS: {
+    STUDENTS: [
+      'Card_ID',
+      'Student_Name',
+      'Grade',
+      'Homeroom',
+      'Balance',
+      'Job_Title',
+      'Active',
+      'Last_Updated',
+      'Attendance_Streak',
+      'Last_Attendance_Date',
+      'Notes'
+    ],
+
+    TRANSACTIONS: [
+      'Timestamp',
+      'Date',
+      'Card_ID',
+      'Student_Name',
+      'Mode',
+      'Amount',
+      'Starting_Balance',
+      'Ending_Balance',
+      'Item_ID',
+      'Item_Name',
+      'Note',
+      'Status'
+    ],
+
+    ATTENDANCE_LOG: [
+      'Timestamp',
+      'Date',
+      'Card_ID',
+      'Student_Name',
+      'Grade',
+      'Homeroom',
+      'Class_Period',
+      'Status',
+      'Check_In_Time',
+      'Streak_After_Scan',
+      'Bonus_Applied',
+      'Note',
+      'System_Status'
+    ],
+
+    DAILY_ATTENDANCE: [
+      'Date',
+      'Card_ID',
+      'Student_Name',
+      'Grade',
+      'Homeroom',
+      'Class_Period',
+      'Status',
+      'Check_In_Time',
+      'Streak_After_Scan',
+      'Bonus_Applied',
+      'Note'
+    ],
+
+    STORE: [
+      'Item_ID',
+      'Item_Name',
+      'Price',
+      'Active',
+      'Inventory',
+      'Category',
+      'Description'
+    ],
+
+    JOBS: [
+      'Card_ID',
+      'Student_Name',
+      'Job_Title',
+      'Salary',
+      'Pay_Frequency',
+      'Active'
+    ],
+
+    SETTINGS: [
+      'Setting',
+      'Value'
+    ],
+
+    PAYROLL_LOG: [
+      'Payroll_Run_At',
+      'Pay_Period_Start',
+      'Pay_Period_End',
+      'Duration_Days',
+      'Card_ID',
+      'Student_Name',
+      'Job_Title',
+      'Salary',
+      'Pay_Frequency',
+      'Automatic',
+      'Status'
+    ],
+
+    STUDENT_INVENTORY: [
+      'Card_ID',
+      'Student_Name',
+      'Item_ID',
+      'Item_Name',
+      'Category',
+      'Quantity_Purchased',
+      'Total_Spent',
+      'Last_Purchased',
+      'Last_Updated'
+    ]
+  }
+};
+
+/*******************************************************
+ DAILY ATTENDANCE TODAY-ONLY CLEANUP
+ Keeps Daily_Attendance as a live current-day sheet.
+ Attendance_Log remains the historical record.
+*******************************************************/
+
+function purgeOldDailyAttendanceRows_(todayKey) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CFG.SHEETS.DAILY_ATTENDANCE);
+
+  // Require at least header + data area
+  if (!sheet || sheet.getLastRow() < 4) return;
+
+  const values = getUsedValues_(sheet);
+
+  if (!values || values.length < 2) return;
+
+  const headerRowIndex = findHeaderRowByNames_(values, ['Date', 'Card_ID', 'Status']);
+
+  if (headerRowIndex === -1) return;
+
+  const headers = values[headerRowIndex];
+
+  const dateCol = findHeaderIndex_(headers, ['Date']);
+
+  if (dateCol === -1) return;
+
+  // Convert zero-based array index → actual sheet row
+  const headerSheetRow = headerRowIndex + 1;
+
+  // Data should start BELOW header row
+  const firstDataRow = headerSheetRow + 1;
+
+  const rowsToKeep = [];
+
+  // Keep only today's attendance rows
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowDate = valueToDateKey_(values[i][dateCol]);
+
+    if (rowDate === todayKey) {
+      rowsToKeep.push(values[i]);
+    }
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+
+  // Clear old attendance rows ONLY below headers
+  if (lastRow >= firstDataRow) {
+    sheet
+      .getRange(
+        firstDataRow,
+        1,
+        lastRow - firstDataRow + 1,
+        lastCol
+      )
+      .clearContent();
+  }
+
+  // Re-write today's rows starting at row 4 (if headers on row 3)
+  if (rowsToKeep.length > 0) {
+    sheet
+      .getRange(
+        firstDataRow,
+        1,
+        rowsToKeep.length,
+        headers.length
+      )
+      .setValues(rowsToKeep);
+  }
+
+  clearOldAttendanceIndexProperties_(todayKey);
+}
+
+
+function clearOldAttendanceIndexProperties_(todayKey) {
+  const props = PropertiesService.getDocumentProperties();
+  const allProps = props.getProperties();
+
+  Object.keys(allProps).forEach(function(key) {
+    if (
+      key.indexOf('ATT_IDX_') === 0 &&
+      key.indexOf('ATT_IDX_' + todayKey + '_') !== 0
+    ) {
+      props.deleteProperty(key);
+    }
+  });
+}
+
+/*******************************************************
+ STUDENT PROFILE SCAN SECURITY
+*******************************************************/
+
+const PROFILE_SECURITY = {
+  MAX_CARD_LENGTH: 10,
+  MAX_ATTEMPTS_PER_MINUTE: 3,
+  LOCK_MINUTES: 5,
+  PROPERTY_PREFIX: 'STUDENT_PROFILE_SCAN_'
+};
+
+/*******************************************************
+ PERFORMANCE + STATUS PATCH NOTES
+
+ Added in V2.19 SAFE PATCH:
+ 1. Event router: onEdit only reacts to exact scanner/profile cells.
+ 2. LockService: scan/profile/purchase actions are guarded against overlap.
+ 3. Used-range reads: getUsedValues_ replaces getDataRange().getValues().
+ 4. Auto-row creation: appendRowsToSheet_ creates rows only when needed.
+ 5. Faster writes: appendRowsToSheet_ uses setValues(), not appendRow().
+ 6. Header lookup helper: getColumnByHeader_ protects against moved columns.
+ 7. Status manager: old status clears at process start and newest message overwrites old message.
+
+ Status cells:
+   Scan!B10
+   Student_Profile!C4
+   Store_Kiosk!B9
+*******************************************************/
+
+const STATUS_CONFIG = {
+  [CFG.SHEETS.SCAN]: CFG.CELLS.RESULT,
+  [CFG.SHEETS.STUDENT_PROFILE]: CFG.CELLS.PROFILE_STATUS,
+  [CFG.SHEETS.STORE_KIOSK]: 'B9'
+};
+
+
+
+/*******************************************************
+ MENU
+*******************************************************/
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Classroom Scanner')
+    .addItem('Setup / Repair Scanner', 'setupScannerV2')
+    .addItem('Force Attendance Window', 'forceAttendanceWindowSettings_')
+    .addItem('Purge Old Daily Attendance', 'purgeOldDailyAttendanceRowsFromMenu')
+    .addSeparator()
+    .addItem('Focus Main Scan Cell', 'focusMainScanCell')
+    .addItem('Clear Main Scan', 'clearMainScan')
+    .addSeparator()
+    .addItem('Setup Store Kiosk', 'setupStoreKioskTab')
+    .addItem('Process Store Kiosk Purchase', 'processStoreKioskPurchase')
+    .addSeparator()
+    .addItem('Clear Student Profile Scan', 'clearStudentProfileScan')
+    .addItem('Clear Student Profile Lock', 'clearStudentProfileLock')
+    .addSeparator()
+    .addItem('Run Job Payroll Now', 'runJobPayroll')
+    .addItem('Setup Automatic Friday Payroll', 'setupAutomaticFridayPayrollTrigger')
+    .addItem('Remove Automatic Payroll', 'removeAutomaticPayrollTriggerFromMenu')
+    .addSeparator()
+    .addItem('Generate Attendance Google Doc Report', 'generateAttendanceGoogleDocReport')
+    .addSeparator()
+    .addItem('Rebuild Student Profile Tab', 'setupStudentProfileTab')
+    .addItem('Rebuild Dashboard Tab', 'setupDashboardTab')
+    .addToUi();
+}
+
+
+
+
+function purgeOldDailyAttendanceRowsFromMenu() {
+  const todayKey = formatDate_(new Date(), 'yyyy-MM-dd');
+  purgeOldDailyAttendanceRows_(todayKey);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Daily_Attendance cleaned. Only today remains.',
+    'Attendance',
+    5
+  );
+}
+
+
+/*******************************************************
+ SETUP
+*******************************************************/
+
+function setupScannerV2() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    ss.setSpreadsheetTimeZone(CFG.KOREA_TZ);
+  } catch (err) {
+    console.log('Could not set spreadsheet timezone: ' + err.message);
+  }
+
+  setupAllSheets_();
+  setupScanTab_();
+  setupStoreKioskTab();
+  setupStudentProfileTab();
+  setupDashboardTab();
+  clearSettingsCache_();
+  rebuildTodayAttendanceIndex_();
+
+  ss.toast('Setup complete. Fast scan mode is active.', 'Done', 5);
+}
+
+
+function setupAllSheets_() {
+  const studentsSheet = getOrCreateSheet_(CFG.SHEETS.STUDENTS);
+  const transactionsSheet = getOrCreateSheet_(CFG.SHEETS.TRANSACTIONS);
+  const attendanceLogSheet = getOrCreateSheet_(CFG.SHEETS.ATTENDANCE_LOG);
+  const dailyAttendanceSheet = getOrCreateSheet_(CFG.SHEETS.DAILY_ATTENDANCE);
+  const storeSheet = getOrCreateSheet_(CFG.SHEETS.STORE);
+  getOrCreateSheet_(CFG.SHEETS.STORE_KIOSK);
+  const jobsSheet = getOrCreateSheet_(CFG.SHEETS.JOBS);
+  const settingsSheet = getOrCreateSheet_(CFG.SHEETS.SETTINGS);
+  const payrollLogSheet = getOrCreateSheet_(CFG.SHEETS.PAYROLL_LOG);
+  const studentInventorySheet = getOrCreateSheet_(CFG.SHEETS.STUDENT_INVENTORY);
+
+  getOrCreateSheet_(CFG.SHEETS.SCAN);
+  getOrCreateSheet_(CFG.SHEETS.DASHBOARD);
+  getOrCreateSheet_(CFG.SHEETS.STUDENT_PROFILE);
+
+  removeStudentIdColumns_();
+
+  ensureHeaderRow_(studentsSheet, CFG.HEADERS.STUDENTS, ['Card_ID', 'Student_Name']);
+  ensureHeaderRow_(transactionsSheet, CFG.HEADERS.TRANSACTIONS, ['Timestamp', 'Date', 'Card_ID', 'Mode']);
+  ensureHeaderRow_(attendanceLogSheet, CFG.HEADERS.ATTENDANCE_LOG, ['Timestamp', 'Date', 'Card_ID', 'Status']);
+  ensureHeaderRow_(dailyAttendanceSheet, CFG.HEADERS.DAILY_ATTENDANCE, ['Date', 'Card_ID', 'Status']);
+  ensureHeaderRow_(jobsSheet, CFG.HEADERS.JOBS, ['Card_ID', 'Salary']);
+  ensureHeaderRow_(settingsSheet, CFG.HEADERS.SETTINGS, ['Setting', 'Value']);
+  ensureHeaderRow_(payrollLogSheet, CFG.HEADERS.PAYROLL_LOG, ['Payroll_Run_At', 'Card_ID', 'Status']);
+  ensureHeaderRow_(studentInventorySheet, CFG.HEADERS.STUDENT_INVENTORY, ['Card_ID', 'Item_ID']);
+
+  ensureStoreSheet_(storeSheet);
+  seedSettings_();
+  forceAttendanceWindowSettings_();
+  formatHeaderRows_();
+  applyPlainTextFormats_();
+
+  if (studentsSheet.getLastRow() < 2) {
+    studentsSheet.getRange(2, 1, 3, 11).setValues([
+      ['CARD001', 'Sample Student 1', '10', 'HS101', 500, 'Banker', 'Yes', '', 0, '', ''],
+      ['CARD002', 'Sample Student 2', '10', 'HS101', 300, 'Store Manager', 'Yes', '', 0, '', ''],
+      ['CARD003', 'Sample Student 3', '10', 'HS101', 250, '', 'Yes', '', 0, '', '']
+    ]);
+  }
+
+  if (jobsSheet.getLastRow() < 2) {
+    jobsSheet.getRange(2, 1, 2, 6).setValues([
+      ['CARD001', 'Sample Student 1', 'Banker', 200, 'Weekly', 'Yes'],
+      ['CARD002', 'Sample Student 2', 'Store Manager', 175, 'Weekly', 'Yes']
+    ]);
+  }
+}
+
+
+function ensureStoreSheet_(storeSheet) {
+  const values = getUsedValues_(storeSheet);
+  const headerInfo = findStoreHeaderRow_(values);
+
+  if (headerInfo) return;
+
+  storeSheet.clear();
+  storeSheet.getRange('A1').setValue('Classroom Store');
+  storeSheet.getRange(3, 1, 1, CFG.HEADERS.STORE.length).setValues([CFG.HEADERS.STORE]);
+
+  storeSheet.getRange(4, 1, 4, 7).setValues([
+    ['SNACK01', 'Snack Pass', 50, 'Yes', 20, 'Reward', 'Student can claim one approved snack/item.'],
+    ['HW01', 'Homework Pass', 200, 'Yes', 10, 'Academic', 'One limited-use homework pass, teacher discretion.'],
+    ['SEAT01', 'Choose Seat', 100, 'Yes', '', 'Privilege', 'Choose seat for one class period.'],
+    ['MUSIC01', 'Pick Music', 75, 'Yes', '', 'Privilege', 'Choose school-appropriate background music.']
+  ]);
+
+  storeSheet.getRange('A1:G1').merge();
+  storeSheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+}
+
+
+/*******************************************************
+ SCAN TAB
+*******************************************************/
+
+function setupScanTab_() {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.SCAN);
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Classroom Card Scanner');
+
+  sheet.getRange('A3').setValue('Scan Card Here');
+  sheet.getRange('A4').setValue('Mode');
+  sheet.getRange('A5').setValue('Amount');
+  sheet.getRange('A6').setValue('Class / Period');
+  sheet.getRange('A7').setValue('Store Item ID');
+  sheet.getRange('A8').setValue('Note');
+  sheet.getRange('A10').setValue('Last Result');
+
+  sheet.getRange('B3').setValue('');
+  sheet.getRange('B4').setValue('ATTENDANCE');
+  sheet.getRange('B5').setValue(100);
+  sheet.getRange('B6').setValue(getSettingWithAliases_(['Default_Class_Period', 'Default_Class'], 'Homeroom'));
+  sheet.getRange('B7').setValue('');
+  sheet.getRange('B8').setValue('');
+  sheet.getRange('B10').setValue('Ready. Click B3 and scan a card.');
+
+  const modeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(CFG.MODES, true)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange('B4').setDataValidation(modeRule);
+  sheet.getRange('B3').clearDataValidations();
+  sheet.getRange('B3').setNumberFormat('@');
+  sheet.getRange('B7').setNumberFormat('@');
+
+  sheet.setColumnWidths(1, 2, 190);
+  sheet.getRange('A1:B1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+  sheet.getRange('A3:A10').setFontWeight('bold');
+  sheet.getRange('B3').setBackground('#fff2cc');
+  sheet.getRange('B10').setBackground('#e8f0fe');
+  sheet.setFrozenRows(1);
+}
+
+
+/*******************************************************
+ STORE KIOSK TAB
+ Student-facing self-purchase page.
+ Fixed cells:
+   B4 = Student Card ID
+   B6 = Store Item ID
+   B7 = Quantity
+   B9 = Result
+*******************************************************/
+
+function setupStoreKioskTab() {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.STORE_KIOSK || 'Store_Kiosk');
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Classroom Store Kiosk');
+
+  sheet.getRange('A4').setValue('1. Scan Student Card');
+  sheet.getRange('B4').setValue('');
+
+  sheet.getRange('A6').setValue('2. Store Item ID');
+  sheet.getRange('B6').setValue('');
+
+  sheet.getRange('A7').setValue('3. Quantity');
+  sheet.getRange('B7').clearContent();
+
+  sheet.getRange('A9').setValue('Result');
+  sheet.getRange('B9').setValue('Scan card, choose an item, then press Purchase.');
+
+  sheet.getRange('A12').setValue('Available Store Items');
+  sheet.getRange('A13:F13').setValues([[
+    'Item ID',
+    'Item Name',
+    'Price',
+    'Inventory',
+    'Category',
+    'Description'
+  ]]);
+
+  sheet.getRange('A14').setFormula(
+    '=FILTER({Store!A:A,Store!B:B,Store!C:C,Store!E:E,Store!F:F,Store!G:G},Store!A:A<>"",Store!D:D="Yes")'
+  );
+
+  sheet.getRange('B4').clearDataValidations().setNumberFormat('@');
+  sheet.getRange('B6').clearDataValidations().setNumberFormat('@');
+  sheet.getRange('B7').setNumberFormat('0');
+
+  const quantityRule = SpreadsheetApp.newDataValidation()
+    .requireNumberGreaterThan(0)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange('B7').setDataValidation(quantityRule);
+
+  const storeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STORE);
+  if (storeSheet) {
+    const storeValues = getUsedValues_(storeSheet);
+    const headerInfo = findStoreHeaderRow_(storeValues);
+
+    if (headerInfo) {
+      const headers = headerInfo.headers;
+      const itemIdCol = findHeaderIndex_(headers, ['Item_ID', 'Item ID', 'ItemID']);
+      const activeCol = findHeaderIndex_(headers, ['Active', 'Available']);
+      const itemIds = [];
+
+      if (itemIdCol !== -1) {
+        for (let i = headerInfo.headerRowIndex + 1; i < storeValues.length; i++) {
+          const itemId = cleanString_(storeValues[i][itemIdCol]);
+          const active = activeCol !== -1 ? storeValues[i][activeCol] : 'Yes';
+          if (itemId && isTruthy_(active)) itemIds.push(itemId);
+        }
+      }
+
+      if (itemIds.length) {
+        const rule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(itemIds, true)
+          .setAllowInvalid(false)
+          .build();
+
+        sheet.getRange('B6').setDataValidation(rule);
+      }
+    }
+  }
+
+  sheet.getRange('A1:F1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+  sheet.getRange('A4:A9').setFontWeight('bold');
+  sheet.getRange('A12:F13').setFontWeight('bold');
+  sheet.getRange('A13:F13').setBackground('#e8f0fe');
+  sheet.getRange('B4:B7').setBackground('#fff2cc');
+  sheet.getRange('B9:F9').setBackground('#e8f0fe');
+
+  sheet.setColumnWidths(1, 6, 165);
+  sheet.setFrozenRows(13);
+}
+
+
+function processStoreKioskPurchase() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CFG.SHEETS.STORE_KIOSK || 'Store_Kiosk');
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Store_Kiosk sheet not found. Run setupStoreKioskTab first.');
+    return;
+  }
+
+  const lock = LockService.getScriptLock();
+
+  if (!lock.tryLock(3000)) {
+    setStatus_(sheet, 'Store kiosk is busy. Try again.');
+    return;
+  }
+
+  try {
+    /*******************************************************
+     STORE KIOSK ACTIVE-CELL COMMIT PATCH
+
+     WHY:
+     Google Sheets sometimes does not fully commit the value in an
+     actively selected/edited input cell before a drawing/button click
+     runs the assigned script. This caused purchases to process as if
+     B4/B6/B7 were still blank or using the previous value.
+
+     WHAT THIS DOES:
+     1. Flushes pending edits.
+     2. Moves selection to the status cell B9 to force the active input
+        cell to commit.
+     3. Flushes again and waits briefly before reading inputs.
+     4. Reads getDisplayValues() so the script uses the visible kiosk text.
+    *******************************************************/
+    SpreadsheetApp.flush();
+    sheet.getRange('B9').activate();
+    SpreadsheetApp.flush();
+    Utilities.sleep(150);
+
+    clearStatus_(sheet);
+    setStatus_(sheet, 'Processing store purchase...');
+
+    const inputValues = sheet.getRange('B4:B7').getDisplayValues();
+    const cardId = cleanString_(inputValues[0][0]);
+    const itemId = cleanString_(inputValues[2][0]);
+    const quantityRaw = cleanString_(inputValues[3][0]);
+    const quantity = Number(quantityRaw);
+
+    if (!cardId || !itemId || !quantityRaw) {
+      setStatus_(sheet, 'Purchase failed: Student Card ID, Store Item ID, and Quantity are all required.');
+      return;
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setStatus_(sheet, 'Purchase failed: Quantity must be a whole number greater than 0.');
+      return;
+    }
+
+    const student = findStudentByCard_(cardId);
+
+    if (!student) {
+      setStatus_(sheet, 'Unknown Card ID.');
+      clearStoreKioskInputs_(sheet, true);
+      return;
+    }
+
+    const activeValue = cleanString_(student.active);
+    if (activeValue && !isTruthy_(activeValue)) {
+      setStatus_(sheet, 'Denied: ' + student.name + ' is inactive.');
+      clearStoreKioskInputs_(sheet, true);
+      return;
+    }
+
+    const item = findStoreItemById_(itemId);
+
+    if (!item) {
+      setStatus_(sheet, 'Store item not found: ' + itemId);
+      sheet.getRange('B6').clearContent();
+      return;
+    }
+
+    if (!isTruthy_(item.active)) {
+      setStatus_(sheet, 'Denied: ' + item.name + ' is not active.');
+      sheet.getRange('B6').clearContent();
+      return;
+    }
+
+    const currentInventory = item.inventory !== '' && !isNaN(Number(item.inventory))
+      ? Number(item.inventory)
+      : null;
+
+    if (currentInventory !== null && currentInventory <= 0) {
+      setStatus_(sheet, 'Denied: ' + item.name + ' is out of stock.');
+      sheet.getRange('B6:B7').clearContent();
+      return;
+    }
+
+    if (currentInventory !== null && quantity > currentInventory) {
+      setStatus_(
+        sheet,
+        'Purchase failed: only ' + currentInventory + ' available for ' + item.name + '.'
+      );
+      return;
+    }
+
+    const totalCost = Number(item.price) * quantity;
+
+    const result = applyBalanceChange_(
+      student,
+      'STORE_PURCHASE',
+      totalCost,
+      'Self-service store purchase: ' + item.name + ' x' + quantity,
+      item.id,
+      item.name
+    );
+
+    if (!result.success) {
+      setStatus_(sheet, result.message);
+      clearStoreKioskInputs_(sheet, true);
+      return;
+    }
+
+    reduceStoreInventoryByQuantity_(item, quantity);
+    updateStudentInventory_(student, item, quantity);
+
+    setStatus_(
+      sheet,
+      student.name + ' bought ' + quantity + ' x ' + item.name +
+      ' for ' + totalCost + '. New balance: ' + result.endingBalance
+    );
+
+    clearStoreKioskInputs_(sheet, true);
+  } catch (err) {
+    console.error(err);
+    setStatus_(sheet, 'Purchase error: ' + err.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+function clearStoreKioskInputs_(sheet, keepStatus) {
+  sheet.getRange('B4').clearContent();
+  sheet.getRange('B6').clearContent();
+  sheet.getRange('B7').clearContent();
+
+  if (!keepStatus) {
+    setStatus_(
+      sheet,
+      'Scan card, choose an item, enter quantity, then press Purchase.'
+    );
+  }
+}
+
+
+/*******************************************************
+ STUDENT PROFILE TAB
+*******************************************************/
+
+function setupStudentProfileTab() {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.STUDENT_PROFILE);
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Student Profile');
+
+  sheet.getRange('A4').setValue('Scan Student Card');
+  sheet.getRange('B4').setValue('');
+
+  sheet.getRange('A5').setValue('Status');
+  sheet.getRange('C4').setValue('Scan a card in B4 to load a student profile.');
+
+  sheet.getRange('A7').setValue('Student Name');
+  sheet.getRange('A8').setValue('Grade');
+  sheet.getRange('A9').setValue('Homeroom');
+  sheet.getRange('A10').setValue('Current Balance');
+  sheet.getRange('A11').setValue('Job Title');
+  sheet.getRange('A12').setValue('Attendance Streak');
+
+  sheet.getRange('D7').setValue('Money Summary');
+  sheet.getRange('D8').setValue('Total Deposits');
+  sheet.getRange('D9').setValue('Total Withdrawals');
+  sheet.getRange('D10').setValue('Total Rewards');
+  sheet.getRange('D11').setValue('Total Fines');
+  sheet.getRange('D12').setValue('Store Purchases');
+  sheet.getRange('D13').setValue('Total Spent');
+
+  sheet.getRange('G7').setValue('Attendance Summary');
+  sheet.getRange('G8').setValue('Present');
+  sheet.getRange('G9').setValue('Late');
+  sheet.getRange('G10').setValue('Duplicate');
+  sheet.getRange('G11').setValue('Total Attendance Scans');
+
+  sheet.getRange('B4').setNumberFormat('@');
+
+  const profileCardIdRule = SpreadsheetApp.newDataValidation()
+    .requireFormulaSatisfied('=LEN(B4)<=' + PROFILE_SECURITY.MAX_CARD_LENGTH)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange('B4').setDataValidation(profileCardIdRule);
+
+  sheet.getRange('B7').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$B:$B),"Unknown card"))');
+  sheet.getRange('B8').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$C:$C),""))');
+  sheet.getRange('B9').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$D:$D),""))');
+  sheet.getRange('B10').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$E:$E),0))');
+  sheet.getRange('B11').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$F:$F),"No job assigned"))');
+  sheet.getRange('B12').setFormula('=IF($B$4="","",IFNA(XLOOKUP($B$4,Students!$A:$A,Students!$I:$I),0))');
+
+  sheet.getRange('E8').setFormula('=IF($B$4="","",SUMIFS(Transactions!$F:$F,Transactions!$C:$C,$B$4,Transactions!$E:$E,"DEPOSIT",Transactions!$L:$L,"Success"))');
+  sheet.getRange('E9').setFormula('=IF($B$4="","",SUMIFS(Transactions!$F:$F,Transactions!$C:$C,$B$4,Transactions!$E:$E,"WITHDRAW",Transactions!$L:$L,"Success"))');
+  sheet.getRange('E10').setFormula('=IF($B$4="","",SUMIFS(Transactions!$F:$F,Transactions!$C:$C,$B$4,Transactions!$E:$E,"REWARD",Transactions!$L:$L,"Success"))');
+  sheet.getRange('E11').setFormula('=IF($B$4="","",SUMIFS(Transactions!$F:$F,Transactions!$C:$C,$B$4,Transactions!$E:$E,"FINE",Transactions!$L:$L,"Success"))');
+  sheet.getRange('E12').setFormula('=IF($B$4="","",COUNTIFS(Transactions!$C:$C,$B$4,Transactions!$E:$E,"STORE_PURCHASE",Transactions!$L:$L,"Success"))');
+  sheet.getRange('E13').setFormula('=IF($B$4="","",SUMIFS(Transactions!$F:$F,Transactions!$C:$C,$B$4,Transactions!$E:$E,"STORE_PURCHASE",Transactions!$L:$L,"Success"))');
+
+  sheet.getRange('H8').setFormula('=IF($B$4="","",COUNTIFS(Attendance_Log!$C:$C,$B$4,Attendance_Log!$H:$H,"Present"))');
+  sheet.getRange('H9').setFormula('=IF($B$4="","",COUNTIFS(Attendance_Log!$C:$C,$B$4,Attendance_Log!$H:$H,"Late"))');
+  sheet.getRange('H10').setFormula('=IF($B$4="","",COUNTIFS(Attendance_Log!$C:$C,$B$4,Attendance_Log!$H:$H,"Duplicate"))');
+  sheet.getRange('H11').setFormula('=IF($B$4="","",COUNTIF(Attendance_Log!$C:$C,$B$4))');
+
+  sheet.getRange('A16').setValue('Recent Transactions');
+  sheet.getRange('A17:E17').setValues([['Date/Time', 'Type', 'Amount', 'Ending Balance', 'Note']]);
+  sheet.getRange('A18').setFormula('=IF($B$4="","",IFNA(QUERY(SORT(FILTER({Transactions!$A$2:$A,Transactions!$E$2:$E,Transactions!$F$2:$F,Transactions!$H$2:$H,Transactions!$K$2:$K},Transactions!$C$2:$C=$B$4,Transactions!$L$2:$L="Success"),1,FALSE),"limit 10",0),"No transactions found"))');
+
+  sheet.getRange('A31').setValue('Attendance History');
+  sheet.getRange('A32:C32').setValues([['Time Stamp', 'Check-In Time', 'Status']]);
+  sheet.getRange('A33').setFormula('=IF($B$4="","",IFNA(QUERY(SORT(FILTER({Attendance_Log!$A:$A,Attendance_Log!$I:$I,Attendance_Log!$H:$H},Attendance_Log!$C:$C=$B$4),1,FALSE),"limit 10",0),"No attendance records found"))');
+
+  sheet.getRange('G16').setValue('Purchase History');
+  sheet.getRange('G17:K17').setValues([['Date/Time', 'Type', 'Amount', 'Balance After', 'Note']]);
+  sheet.getRange('G18').setFormula('=IF($B$4="","",IFNA(QUERY(SORT(FILTER({Transactions!$A$2:$A,Transactions!$E$2:$E,Transactions!$F$2:$F,Transactions!$H$2:$H,Transactions!$K$2:$K},Transactions!$C$2:$C=$B$4,Transactions!$E$2:$E="STORE_PURCHASE",Transactions!$L$2:$L="Success"),1,FALSE),"limit 10",0),"No purchases found"))');
+
+  sheet.getRange('G31').setValue('Rewards / Fines');
+  sheet.getRange('G32:K32').setValues([['Date/Time', 'Type', 'Amount', 'Balance After', 'Note']]);
+  sheet.getRange('G33').setFormula('=IF($B$4="","",IFNA(QUERY(SORT(FILTER({Transactions!$A$2:$A,Transactions!$E$2:$E,Transactions!$F$2:$F,Transactions!$H$2:$H,Transactions!$K$2:$K},Transactions!$C$2:$C=$B$4,REGEXMATCH(Transactions!$E$2:$E,"REWARD|FINE"),Transactions!$L$2:$L="Success"),1,FALSE),"limit 10",0),"No rewards or fines found"))');
+
+  sheet.getRange('A46').setValue('Student Inventory');
+  sheet.getRange('A47:F47').setValues([['Item ID', 'Item Name', 'Category', 'Qty Purchased', 'Total Spent', 'Last Purchased']]);
+  sheet.getRange('A48').setFormula('=IF($B$4="","",IFNA(QUERY(SORT(FILTER({Student_Inventory!$C$2:$C,Student_Inventory!$D$2:$D,Student_Inventory!$E$2:$E,Student_Inventory!$F$2:$F,Student_Inventory!$G$2:$G,Student_Inventory!$H$2:$H},Student_Inventory!$A$2:$A=$B$4),6,FALSE),"limit 20",0),"No inventory found"))');
+
+  sheet.getRange('A1:K1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+
+  sheet.getRange('A4:A12').setFontWeight('bold');
+  sheet.getRange('D7:D13').setFontWeight('bold');
+  sheet.getRange('G7:G11').setFontWeight('bold');
+
+  sheet.getRange('A16:E17').setFontWeight('bold');
+  sheet.getRange('A31:C32').setFontWeight('bold');
+  sheet.getRange('G16:K17').setFontWeight('bold');
+  sheet.getRange('G31:K32').setFontWeight('bold');
+  sheet.getRange('A46:F47').setFontWeight('bold');
+
+  sheet.getRange('B4').setBackground('#fff2cc');
+  sheet.getRange('C4').setBackground('#e8f0fe');
+
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, 11, 145);
+  sheet.setColumnWidth(5, 125);
+  sheet.setColumnWidth(9, 180);
+}
+
+
+/*******************************************************
+ DASHBOARD TAB
+*******************************************************/
+
+function setupDashboardTab() {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.DASHBOARD);
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Classroom Economy Dashboard');
+
+  sheet.getRange('A3').setValue('Total Students');
+  sheet.getRange('B3').setFormula('=COUNTA(Students!A2:A)');
+
+  sheet.getRange('A4').setValue('Total Class Money Supply');
+  sheet.getRange('B4').setFormula('=SUM(Students!E2:E)');
+
+  sheet.getRange('A5').setValue('Successful Transactions');
+  sheet.getRange('B5').setFormula('=COUNTIF(Transactions!L:L,"Success")');
+
+  sheet.getRange('A6').setValue('Store Purchases');
+  sheet.getRange('B6').setFormula('=COUNTIFS(Transactions!E:E,"STORE_PURCHASE",Transactions!L:L,"Success")');
+
+  sheet.getRange('A7').setValue('Rewards Given');
+  sheet.getRange('B7').setFormula('=SUMIFS(Transactions!F:F,Transactions!E:E,"REWARD",Transactions!L:L,"Success")');
+
+  sheet.getRange('A8').setValue('Fines Given');
+  sheet.getRange('B8').setFormula('=SUMIFS(Transactions!F:F,Transactions!E:E,"FINE",Transactions!L:L,"Success")');
+
+  sheet.getRange('D3').setValue('Today');
+  sheet.getRange('E3').setFormula('=TODAY()');
+
+  sheet.getRange('D4').setValue('Present Today');
+  sheet.getRange('E4').setFormula('=COUNTIFS(Daily_Attendance!A:A,TEXT(TODAY(),"yyyy-mm-dd"),Daily_Attendance!G:G,"Present")');
+
+  sheet.getRange('D5').setValue('Late Today');
+  sheet.getRange('E5').setFormula('=COUNTIFS(Daily_Attendance!A:A,TEXT(TODAY(),"yyyy-mm-dd"),Daily_Attendance!G:G,"Late")');
+
+  sheet.getRange('D6').setValue('Attendance Records Today');
+  sheet.getRange('E6').setFormula('=COUNTIF(Daily_Attendance!A:A,TEXT(TODAY(),"yyyy-mm-dd"))');
+
+  sheet.getRange('A11').setValue('Top Balances');
+  sheet.getRange('A12:C12').setValues([['Student', 'Balance', 'Job']]);
+  sheet.getRange('A13').setFormula('=IFNA(QUERY(SORT(FILTER({Students!B2:B,Students!E2:E,Students!F2:F},Students!A2:A<>""),2,FALSE),"limit 10",0),"No students yet")');
+
+  sheet.getRange('E11').setValue('Lowest Balances');
+  sheet.getRange('E12:G12').setValues([['Student', 'Balance', 'Job']]);
+  sheet.getRange('E13').setFormula('=IFNA(QUERY(SORT(FILTER({Students!B2:B,Students!E2:E,Students!F2:F},Students!A2:A<>""),2,TRUE),"limit 10",0),"No students yet")');
+
+  sheet.getRange('A25').setValue('Most Purchased Items');
+  sheet.getRange('A26:D26').setValues([['Item', 'Category', 'Quantity Purchased', 'Total Spent']]);
+  sheet.getRange('A27').setFormula('=IFNA(QUERY(Student_Inventory!D2:G,"select D,E,sum(F),sum(G) where D is not null group by D,E order by sum(F) desc limit 10 label sum(F) \'Quantity Purchased\', sum(G) \'Total Spent\'",0),"No purchases yet")');
+
+  sheet.getRange('A1:G1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+  sheet.getRange('A3:A8').setFontWeight('bold');
+  sheet.getRange('D3:D6').setFontWeight('bold');
+  sheet.getRange('A11:C12').setFontWeight('bold');
+  sheet.getRange('E11:G12').setFontWeight('bold');
+  sheet.getRange('A25:D26').setFontWeight('bold');
+
+  sheet.setColumnWidths(1, 7, 155);
+  sheet.setFrozenRows(1);
+}
+
+
+/*******************************************************
+ ON EDIT
+*******************************************************/
+
+function onEdit(e) {
+  if (!e || !e.range) return;
+
+  const sheet = e.range.getSheet();
+  const sheetName = sheet.getName();
+  const cell = e.range.getA1Notation();
+  const row = e.range.getRow();
+
+  // Ignore header-row edits and only run exact scan-cell routes below.
+  if (row === 1) return;
+
+  try {
+    if (sheetName === CFG.SHEETS.SCAN && cell === CFG.CELLS.MAIN_SCAN) {
+      clearStatus_(sheet);
+      setStatus_(sheet, 'Processing scan...');
+      processMainScannerEdit_(e);
+      return;
+    }
+
+    if (sheetName === CFG.SHEETS.STUDENT_PROFILE && cell === CFG.CELLS.PROFILE_SCAN) {
+      clearStatus_(sheet);
+      setStatus_(sheet, 'Loading student profile...');
+      processStudentProfileScan_(e);
+      return;
+    }
+  } catch (err) {
+    setStatus_(sheet, 'Script error: ' + err.message);
+    console.error(err);
+  }
+}
+
+
+/*******************************************************
+ MAIN SCANNER LOGIC
+*******************************************************/
+
+function processMainScannerEdit_(e) {
+  const lock = LockService.getScriptLock();
+
+  if (!lock.tryLock(250)) {
+    writeMainResult_('Scanner is busy. Try again.');
+    return;
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const scanSheet = ss.getSheetByName(CFG.SHEETS.SCAN);
+
+    const rawCardId = e.value;
+    const cardId = cleanString_(rawCardId);
+
+    if (!cardId) {
+      finishMainScan_('No Card ID detected. Make sure the scanner is typing into Scan!B3.', scanSheet);
+      return;
+    }
+
+    // One read for all scan controls instead of several getRange calls.
+    const controls = scanSheet.getRange('B4:B8').getValues();
+    const scanContext = {
+      mode: cleanString_(controls[0][0]).toUpperCase(),
+      amount: Number(controls[1][0]) || 0,
+      classPeriod: cleanString_(controls[2][0]),
+      itemId: cleanString_(controls[3][0]),
+      note: cleanString_(controls[4][0])
+    };
+
+    if (CFG.MODES.indexOf(scanContext.mode) === -1) {
+      finishMainScan_('Error: Choose a valid mode in B4.', scanSheet);
+      return;
+    }
+
+    const student = findStudentByCard_(cardId);
+
+    if (!student) {
+      logUnknownCard_(cardId, scanContext.mode, scanContext.note);
+      finishMainScan_('Unknown card: ' + cardId + '. Add this Card_ID to the Students tab.', scanSheet);
+      return;
+    }
+
+    // Blank Active cells are treated as active. Only explicit inactive/no values block the scan.
+    const activeValue = cleanString_(student.active);
+    if (activeValue && !isTruthy_(activeValue)) {
+      finishMainScan_('Denied: ' + student.name + ' is marked inactive.', scanSheet);
+      return;
+    }
+
+    if (scanContext.mode === 'ATTENDANCE') {
+      processAttendance_(student, scanContext, scanSheet);
+      return;
+    }
+
+    if (scanContext.mode === 'STORE_PURCHASE') {
+      processStorePurchase_(student, scanContext, scanSheet);
+      return;
+    }
+
+    processMoneyMode_(student, scanContext.mode, scanContext, scanSheet);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+
+
+function processMoneyMode_(student, mode, scanContext, scanSheet) {
+  const amount = Number(scanContext && scanContext.amount) || 0;
+  const note = scanContext ? cleanString_(scanContext.note) : '';
+
+  if (!amount || amount <= 0) {
+    finishMainScan_('Error: Enter a valid amount in B5.', scanSheet);
+    return;
+  }
+
+  const result = applyBalanceChange_(student, mode, amount, note, '', '');
+
+  if (!result.success) {
+    finishMainScan_(result.message, scanSheet);
+    return;
+  }
+
+  finishMainScan_(student.name + ' ' + result.symbol + amount + '. New balance: ' + result.endingBalance, scanSheet);
+}
+
+
+
+
+function processStorePurchase_(student, scanContext, scanSheet) {
+  const itemId = scanContext ? cleanString_(scanContext.itemId) : '';
+
+  if (!itemId) {
+    finishMainScan_('Error: Enter a Store Item ID in B7 before scanning.', scanSheet);
+    return;
+  }
+
+  const item = findStoreItemById_(itemId);
+
+  if (!item) {
+    finishMainScan_('Error: Store item not found: ' + itemId, scanSheet);
+    return;
+  }
+
+  if (!isTruthy_(item.active)) {
+    finishMainScan_('Denied: ' + item.name + ' is not currently active.', scanSheet);
+    return;
+  }
+
+  if (item.inventory !== '' && !isNaN(Number(item.inventory)) && Number(item.inventory) <= 0) {
+    finishMainScan_('Denied: ' + item.name + ' is out of inventory.', scanSheet);
+    return;
+  }
+
+  const result = applyBalanceChange_(
+    student,
+    'STORE_PURCHASE',
+    Number(item.price),
+    'Store purchase: ' + item.name,
+    item.id,
+    item.name
+  );
+
+  if (!result.success) {
+    finishMainScan_(result.message, scanSheet);
+    return;
+  }
+
+  reduceStoreInventory_(item);
+  updateStudentInventory_(student, item, 1);
+
+  finishMainScan_(
+    student.name + ' bought ' + item.name + ' for ' + item.price + '. New balance: ' + result.endingBalance,
+    scanSheet
+  );
+}
+
+
+
+
+function processAttendance_(student, scanContext, scanSheet) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const attendanceLogSheet = ss.getSheetByName(CFG.SHEETS.ATTENDANCE_LOG);
+  const dailySheet = ss.getSheetByName(CFG.SHEETS.DAILY_ATTENDANCE);
+
+  const now = new Date();
+  const timestampKST = formatDate_(now, 'yyyy-MM-dd HH:mm:ss');
+  const dateKey = formatDate_(now, 'yyyy-MM-dd');
+  const timeKey = formatDate_(now, 'HH:mm:ss');
+
+  // Keeps Daily_Attendance as TODAY ONLY.
+  purgeOldDailyAttendanceRows_(dateKey);
+
+  let classPeriod = scanContext ? cleanString_(scanContext.classPeriod) : '';
+  if (!classPeriod) classPeriod = getSettingWithAliases_(['Default_Class_Period', 'Default_Class'], 'Homeroom');
+
+  // Fast duplicate check: no full Daily_Attendance read during every scan.
+  if (attendanceAlreadyRecorded_(student.cardId, dateKey, classPeriod)) {
+    appendRowsToSheet_(attendanceLogSheet, [[
+      timestampKST,
+      dateKey,
+      student.cardId,
+      student.name,
+      student.grade,
+      student.homeroom,
+      classPeriod,
+      'Duplicate',
+      timeKey,
+      '',
+      0,
+      'Duplicate scan',
+      'Denied - duplicate attendance'
+    ]]);
+
+    finishMainScan_(student.name + ' is already marked for ' + classPeriod + ' today.', scanSheet);
+    return;
+  }
+
+  const status = getAttendanceStatus_(now);
+
+  if (status === 'Too Early') {
+    appendRowsToSheet_(attendanceLogSheet, [[
+      timestampKST,
+      dateKey,
+      student.cardId,
+      student.name,
+      student.grade,
+      student.homeroom,
+      classPeriod,
+      'Too Early',
+      timeKey,
+      '',
+      0,
+      'Attempted check-in before 07:40',
+      'Denied - before attendance window'
+    ]]);
+
+    finishMainScan_(
+      student.name + ' cannot check in before 07:40. Attendance opens at 07:40.',
+      scanSheet
+    );
+
+    return;
+  }
+
+  // Attendance streaks count on-time attendance only.
+  // Present = continue/increase streak. Late = reset streak to 0.
+  const newStreak = status === 'Present'
+    ? updateAttendanceStreak_(student, dateKey)
+    : resetAttendanceStreak_(student, dateKey);
+
+  const onTimeReward = Number(getSettingWithAliases_(['On_Time_Attendance_Reward', 'On_Time_Bonus'], 0)) || 0;
+  const latePenaltySetting = Number(getSettingWithAliases_(['Late_Penalty', 'Late_Bonus'], 0)) || 0;
+  const latePenalty = Math.abs(latePenaltySetting);
+
+  let bonusApplied = 0;
+  let note = '';
+
+  if (status === 'Present' && onTimeReward > 0) {
+    const rewardResult = applyBalanceChange_(
+      student,
+      'REWARD',
+      onTimeReward,
+      'On-time attendance reward',
+      '',
+      ''
+    );
+
+    if (rewardResult.success) {
+      bonusApplied += onTimeReward;
+      note = 'On-time reward applied';
+      student.balance = rewardResult.endingBalance;
+    }
+  }
+
+  if (status === 'Late' && latePenalty > 0) {
+    const penaltyResult = applyBalanceChange_(
+      student,
+      'FINE',
+      latePenalty,
+      'Late attendance penalty',
+      '',
+      ''
+    );
+
+    if (penaltyResult.success) {
+      note = 'Late penalty applied';
+      student.balance = penaltyResult.endingBalance;
+    } else {
+      note = 'Late penalty not applied: insufficient balance';
+    }
+  }
+
+  // Streak bonus only applies to on-time attendance.
+  const streakBonus = status === 'Present'
+    ? maybeApplyStreakBonus_(student.cardId)
+    : { amount: 0, message: '' };
+
+  if (streakBonus.amount > 0) {
+    bonusApplied += streakBonus.amount;
+    note = note ? note + '; ' + streakBonus.message : streakBonus.message;
+  }
+
+  const attendanceLogRow = [
+    timestampKST,
+    dateKey,
+    student.cardId,
+    student.name,
+    student.grade,
+    student.homeroom,
+    classPeriod,
+    status,
+    timeKey,
+    newStreak,
+    bonusApplied,
+    note,
+    'Success'
+  ];
+
+  const dailyAttendanceRow = [
+    dateKey,
+    student.cardId,
+    student.name,
+    student.grade,
+    student.homeroom,
+    classPeriod,
+    status,
+    timeKey,
+    newStreak,
+    bonusApplied,
+    note
+  ];
+
+  appendRowsToSheet_(attendanceLogSheet, [attendanceLogRow]);
+  appendRowsToSheet_(dailySheet, [dailyAttendanceRow]);
+  markAttendanceRecorded_(student.cardId, dateKey, classPeriod);
+
+  let resultMessage = student.name + ' marked ' + status + ' at ' + timeKey + ' KST.';
+
+  if (bonusApplied > 0) {
+    resultMessage += ' Bonus: +' + bonusApplied + '.';
+  }
+
+  finishMainScan_(resultMessage, scanSheet);
+}
+
+
+
+
+function attendanceAlreadyRecorded_(cardId, dateKey, classPeriod) {
+  const key = buildAttendanceIndexKey_(cardId, dateKey, classPeriod);
+  const cache = CacheService.getDocumentCache();
+
+  if (cache && cache.get(key) === '1') return true;
+
+  const props = PropertiesService.getDocumentProperties();
+  const value = props.getProperty(key);
+
+  if (value === '1') {
+    if (cache) cache.put(key, '1', 21600);
+    return true;
+  }
+
+  return false;
+}
+
+
+
+
+/*******************************************************
+ STUDENT PROFILE SCAN
+*******************************************************/
+
+function processStudentProfileScan_(e) {
+  const lock = LockService.getScriptLock();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENT_PROFILE);
+
+  if (!lock.tryLock(500)) {
+    setStatus_(sheet, 'Profile scanner is busy. Try again.');
+    return;
+  }
+
+  try {
+    const scanCell = sheet.getRange(CFG.CELLS.PROFILE_SCAN);
+    const rawInput = cleanString_(e.value);
+    const now = new Date();
+    const nowMs = now.getTime();
+
+    const lockUntilMs = Number(getProfileSecurityProperty_('lockUntilMs', 0)) || 0;
+
+    if (lockUntilMs && nowMs < lockUntilMs) {
+      const remainingSeconds = Math.ceil((lockUntilMs - nowMs) / 1000);
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+
+      scanCell.clearContent();
+      setStatus_(
+        sheet,
+        'Locked. Too many attempts. Try again in about ' + remainingMinutes + ' minute(s).'
+      );
+
+      return;
+    }
+
+    if (!rawInput) {
+      setStatus_(sheet, 'Scan a card in B4 to load a student profile.');
+      return;
+    }
+
+    if (rawInput.length > PROFILE_SECURITY.MAX_CARD_LENGTH) {
+      registerProfileScanAttempt_();
+      scanCell.clearContent();
+      setStatus_(
+        sheet,
+        'Invalid Card ID. Maximum ' + PROFILE_SECURITY.MAX_CARD_LENGTH + ' characters allowed.'
+      );
+      checkAndApplyProfileLock_(sheet);
+      return;
+    }
+
+    registerProfileScanAttempt_();
+
+    if (checkAndApplyProfileLock_(sheet)) {
+      scanCell.clearContent();
+      return;
+    }
+
+    const student = findStudentByCard_(rawInput);
+    const time = formatDate_(new Date(), 'HH:mm:ss');
+
+    if (!student) {
+      setStatus_(sheet, 'Unknown card: ' + rawInput);
+      return;
+    }
+
+    setStatus_(sheet, 'Loaded ' + student.name + ' at ' + time + ' KST');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/*******************************************************
+ BALANCE / TRANSACTION HELPERS
+*******************************************************/
+
+function applyBalanceChange_(student, mode, amount, note, itemId, itemName) {
+  amount = Number(amount);
+
+  if (!student) {
+    return {
+      success: false,
+      message: 'Error: Student not found.'
+    };
+  }
+
+  if (!amount || amount <= 0) {
+    return {
+      success: false,
+      message: 'Error: Invalid amount.'
+    };
+  }
+
+  const creditModes = ['DEPOSIT', 'REWARD', 'PAYROLL'];
+  const debitModes = ['WITHDRAW', 'FINE', 'STORE_PURCHASE'];
+
+  const isCredit = creditModes.indexOf(mode) !== -1;
+  const isDebit = debitModes.indexOf(mode) !== -1;
+
+  if (!isCredit && !isDebit) {
+    return {
+      success: false,
+      message: 'Error: Unknown money mode: ' + mode
+    };
+  }
+
+  const startingBalance = Number(student.balance) || 0;
+  const endingBalance = isCredit ? startingBalance + amount : startingBalance - amount;
+  const allowNegative = isTruthy_(getSettingWithAliases_(['Allow_Negative_Balance', 'Allow_Negative_Balances'], 'No'));
+
+  if (!allowNegative && isDebit && endingBalance < 0) {
+    logTransaction_(
+      student.cardId,
+      student.name,
+      mode,
+      amount,
+      startingBalance,
+      startingBalance,
+      itemId,
+      itemName,
+      note,
+      'Denied - insufficient balance'
+    );
+
+    return {
+      success: false,
+      message: 'Denied: ' + student.name + ' does not have enough balance.'
+    };
+  }
+
+  updateStudentBalance_(student.row, endingBalance);
+
+  logTransaction_(
+    student.cardId,
+    student.name,
+    mode,
+    amount,
+    startingBalance,
+    endingBalance,
+    itemId,
+    itemName,
+    note,
+    'Success'
+  );
+
+  return {
+    success: true,
+    startingBalance: startingBalance,
+    endingBalance: endingBalance,
+    symbol: isCredit ? '+' : '-'
+  };
+}
+
+
+function logTransaction_(cardId, studentName, mode, amount, startingBalance, endingBalance, itemId, itemName, note, status) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.TRANSACTIONS);
+  const now = new Date();
+
+  const timestampKST = formatDate_(now, 'yyyy-MM-dd HH:mm:ss');
+  const dateKey = formatDate_(now, 'yyyy-MM-dd');
+
+  appendRowsToSheet_(sheet, [[
+    timestampKST,
+    dateKey,
+    cardId,
+    studentName,
+    mode,
+    Number(amount) || 0,
+    startingBalance,
+    endingBalance,
+    itemId || '',
+    itemName || '',
+    note || '',
+    status || 'Success'
+  ]]);
+}
+
+
+function logUnknownCard_(cardId, mode, note) {
+  const now = new Date();
+
+  const timestampKST = formatDate_(now, 'yyyy-MM-dd HH:mm:ss');
+  const dateKey = formatDate_(now, 'yyyy-MM-dd');
+  const timeKey = formatDate_(now, 'HH:mm:ss');
+
+  if (mode === 'ATTENDANCE') {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.ATTENDANCE_LOG);
+
+    appendRowsToSheet_(sheet, [[
+      timestampKST,
+      dateKey,
+      cardId,
+      'UNKNOWN',
+      '',
+      '',
+      getSettingWithAliases_(['Default_Class_Period', 'Default_Class'], 'Homeroom'),
+      'Unknown Card',
+      timeKey,
+      '',
+      0,
+      note || '',
+      'Denied - card not registered'
+    ]]);
+
+    return;
+  }
+
+  logTransaction_(
+    cardId,
+    'UNKNOWN',
+    mode,
+    0,
+    '',
+    '',
+    '',
+    '',
+    note || '',
+    'Denied - card not registered'
+  );
+}
+
+
+function updateStudentBalance_(studentRow, newBalance) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENTS);
+  const map = getFlexibleStudentMap_(sheet);
+
+  if (map.balance === -1) {
+    throw new Error('Students sheet is missing Balance column.');
+  }
+
+  const timestamp = formatDate_(new Date(), 'yyyy-MM-dd HH:mm:ss');
+  const rowValues = sheet.getRange(studentRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  rowValues[map.balance] = Number(newBalance) || 0;
+
+  if (map.lastUpdated !== -1) {
+    rowValues[map.lastUpdated] = timestamp;
+  }
+
+  sheet.getRange(studentRow, 1, 1, rowValues.length).setValues([rowValues]);
+}
+
+
+
+
+
+/*******************************************************
+ ATTENDANCE STREAKS
+*******************************************************/
+
+function updateAttendanceStreak_(student, todayKey) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENTS);
+  const map = getFlexibleStudentMap_(sheet);
+
+  if (map.attendanceStreak === -1) {
+    throw new Error('Students sheet is missing Attendance_Streak column.');
+  }
+
+  const lastDateKey = valueToDateKey_(student.lastAttendanceDate);
+  const yesterdayKey = formatDate_(new Date(new Date().getTime() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+
+  let newStreak = 1;
+
+  if (lastDateKey === todayKey) {
+    newStreak = Number(student.attendanceStreak) || 1;
+  } else if (lastDateKey === yesterdayKey) {
+    newStreak = (Number(student.attendanceStreak) || 0) + 1;
+  } else {
+    newStreak = 1;
+  }
+
+  const rowValues = sheet.getRange(student.row, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // IMPORTANT: Uses header mapping. In your sheet this should write to column I, not G.
+  rowValues[map.attendanceStreak] = newStreak;
+
+  if (map.lastAttendanceDate !== -1) {
+    rowValues[map.lastAttendanceDate] = todayKey;
+  }
+
+  if (map.lastUpdated !== -1) {
+    rowValues[map.lastUpdated] = formatDate_(new Date(), 'yyyy-MM-dd HH:mm:ss');
+  }
+
+  sheet.getRange(student.row, 1, 1, rowValues.length).setValues([rowValues]);
+
+  student.attendanceStreak = newStreak;
+  student.lastAttendanceDate = todayKey;
+
+  return newStreak;
+}
+
+
+function resetAttendanceStreak_(student, todayKey) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENTS);
+  const map = getFlexibleStudentMap_(sheet);
+
+  if (map.attendanceStreak === -1) {
+    throw new Error('Students sheet is missing Attendance_Streak column.');
+  }
+
+  const resetValue = 0;
+  const rowValues = sheet.getRange(student.row, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // IMPORTANT: Uses header mapping. In your sheet this should write to column I, not G.
+  rowValues[map.attendanceStreak] = resetValue;
+
+  if (map.lastAttendanceDate !== -1) {
+    rowValues[map.lastAttendanceDate] = todayKey;
+  }
+
+  if (map.lastUpdated !== -1) {
+    rowValues[map.lastUpdated] = formatDate_(new Date(), 'yyyy-MM-dd HH:mm:ss');
+  }
+
+  sheet.getRange(student.row, 1, 1, rowValues.length).setValues([rowValues]);
+
+  student.attendanceStreak = resetValue;
+  student.lastAttendanceDate = todayKey;
+
+  return resetValue;
+}
+
+
+
+function maybeApplyStreakBonus_(cardId) {
+  const updatedStudent = findStudentByCard_(cardId);
+
+  if (!updatedStudent) {
+    return {
+      amount: 0,
+      message: ''
+    };
+  }
+
+  const bonusDays = Number(getSetting_('Streak_Bonus_Days', 5));
+  const bonusAmount = Number(getSetting_('Streak_Bonus_Amount', 0));
+
+  if (!bonusDays || !bonusAmount) {
+    return {
+      amount: 0,
+      message: ''
+    };
+  }
+
+  const streak = Number(updatedStudent.attendanceStreak) || 0;
+
+  if (streak > 0 && streak % bonusDays === 0) {
+    const result = applyBalanceChange_(
+      updatedStudent,
+      'REWARD',
+      bonusAmount,
+      streak + '-day attendance streak bonus',
+      '',
+      ''
+    );
+
+    if (result.success) {
+      return {
+        amount: bonusAmount,
+        message: streak + '-day streak bonus applied'
+      };
+    }
+  }
+
+  return {
+    amount: 0,
+    message: ''
+  };
+}
+
+
+function isLate_(dateObj) {
+  const cutoff = getLateCutoffTime_();
+  const currentHHMM = formatDate_(dateObj, 'HH:mm');
+
+  return timeToMinutes_(currentHHMM) > timeToMinutes_(cutoff);
+}
+
+
+
+function getAttendanceStatus_(dateObj) {
+  const currentHHMM = formatDate_(dateObj, 'HH:mm');
+
+  const startTime = normalizeTimeValue_(
+    getSettingWithAliases_(
+      ['Attendance_Start_Time'],
+      '07:40'
+    )
+  ) || '07:40';
+
+  const cutoffTime = getLateCutoffTime_();
+
+  const currentMinutes = timeToMinutes_(currentHHMM);
+  const startMinutes = timeToMinutes_(startTime);
+  const cutoffMinutes = timeToMinutes_(cutoffTime);
+
+  if (currentMinutes < startMinutes) {
+    return 'Too Early';
+  }
+
+  if (currentMinutes <= cutoffMinutes) {
+    return 'Present';
+  }
+
+  return 'Late';
+}
+
+
+function getLateCutoffTime_() {
+  // IMPORTANT:
+  // Do not read a hardcoded cell like Settings!B5 here.
+  // If B5 contains a number like 0, Sheets can convert it to 00:00,
+  // which makes every scan after midnight count as late.
+  const cutoff = getSettingWithAliases_(
+    ['Late_Cutoff_Time'],
+    '08:35'
+  );
+
+  return normalizeTimeValue_(cutoff) || '08:35';
+}
+
+
+function normalizeTimeValue_(value) {
+  if (value === null || typeof value === 'undefined' || value === '') return '';
+
+  // If Google returns a Date object for a time cell, format it directly.
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) {
+    return Utilities.formatDate(value, CFG.KOREA_TZ, 'HH:mm');
+  }
+
+  // If Sheets/Excel serial time is returned as a number, convert fraction of day to HH:mm.
+  if (typeof value === 'number' && !isNaN(value)) {
+    const fraction = value - Math.floor(value);
+    const totalMinutes = Math.round(fraction * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return pad2_(hours) + ':' + pad2_(minutes);
+  }
+
+  const text = cleanString_(value);
+  if (!text) return '';
+
+  // Serial time stored as text, e.g. "0.3576388888888889".
+  if (/^\d*\.?\d+$/.test(text)) {
+    const num = Number(text);
+    if (!isNaN(num)) {
+      const fraction = num - Math.floor(num);
+      const totalMinutes = Math.round(fraction * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60) % 24;
+      const minutes = totalMinutes % 60;
+      return pad2_(hours) + ':' + pad2_(minutes);
+    }
+  }
+
+  // 24-hour text, e.g. "08:35" or "08:35:00".
+  let match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (match) {
+    const h = Math.max(0, Math.min(23, Number(match[1]) || 0));
+    const m = Math.max(0, Math.min(59, Number(match[2]) || 0));
+    return pad2_(h) + ':' + pad2_(m);
+  }
+
+  // 12-hour text, e.g. "8:35 AM".
+  match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if (match) {
+    let h = Number(match[1]) || 0;
+    const m = Math.max(0, Math.min(59, Number(match[2]) || 0));
+    const ampm = match[3].toUpperCase();
+
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+
+    return pad2_(h) + ':' + pad2_(m);
+  }
+
+  return '';
+}
+
+
+function pad2_(num) {
+  return String(num).padStart(2, '0');
+}
+
+
+function timeToMinutes_(hhmm) {
+  const normalized = normalizeTimeValue_(hhmm);
+  const parts = cleanString_(normalized || hhmm).split(':');
+  const h = Number(parts[0]) || 0;
+  const m = Number(parts[1]) || 0;
+
+  return h * 60 + m;
+}
+
+
+/*******************************************************
+ STORE / INVENTORY HELPERS
+*******************************************************/
+
+function findStoreItemById_(itemId) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STORE);
+
+  if (!sheet) {
+    throw new Error('Store sheet not found. Make sure the tab is named exactly "Store".');
+  }
+
+  const values = getUsedValues_(sheet);
+
+  if (values.length < 2) {
+    throw new Error('Store sheet has no items.');
+  }
+
+  const headerInfo = findStoreHeaderRow_(values);
+
+  if (!headerInfo) {
+    throw new Error('Could not find Store headers. Store must include Item_ID, Item_Name, and Price.');
+  }
+
+  const headerRowIndex = headerInfo.headerRowIndex;
+  const headers = headerInfo.headers;
+
+  const itemIdCol = findHeaderIndex_(headers, ['Item_ID', 'Item ID', 'ItemID']);
+  const itemNameCol = findHeaderIndex_(headers, ['Item_Name', 'Item Name', 'Name']);
+  const priceCol = findHeaderIndex_(headers, ['Price', 'Cost']);
+  const activeCol = findHeaderIndex_(headers, ['Active', 'Available']);
+  const inventoryCol = findHeaderIndex_(headers, ['Inventory', 'Stock']);
+  const categoryCol = findHeaderIndex_(headers, ['Category']);
+
+  if (itemIdCol === -1) throw new Error('Store sheet is missing Item_ID.');
+  if (itemNameCol === -1) throw new Error('Store sheet is missing Item_Name.');
+  if (priceCol === -1) throw new Error('Store sheet is missing Price.');
+
+  const target = normalizeItemSearch_(itemId);
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowItemId = normalizeItemSearch_(values[i][itemIdCol]);
+    const rowItemName = normalizeItemSearch_(values[i][itemNameCol]);
+
+    if (!rowItemId && !rowItemName) continue;
+
+    if (rowItemId === target || rowItemName === target) {
+      return {
+        row: i + 1,
+        id: cleanString_(values[i][itemIdCol]),
+        name: cleanString_(values[i][itemNameCol]),
+        price: Number(values[i][priceCol]) || 0,
+        active: activeCol !== -1 ? values[i][activeCol] : 'Yes',
+        inventory: inventoryCol !== -1 ? values[i][inventoryCol] : '',
+        inventoryColumn: inventoryCol !== -1 ? inventoryCol + 1 : null,
+        category: categoryCol !== -1 ? cleanString_(values[i][categoryCol]) : ''
+      };
+    }
+  }
+
+  return null;
+}
+
+
+function reduceStoreInventory_(item) {
+  if (item.inventory === '' || isNaN(Number(item.inventory))) return;
+  if (!item.inventoryColumn) return;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STORE);
+  const newInventory = Math.max(0, Number(item.inventory) - 1);
+
+  sheet.getRange(item.row, item.inventoryColumn).setValue(newInventory);
+}
+
+
+function reduceStoreInventoryByQuantity_(item, quantity) {
+  if (item.inventory === '' || isNaN(Number(item.inventory))) return;
+  if (!item.inventoryColumn) return;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STORE);
+  const newInventory = Math.max(0, Number(item.inventory) - Number(quantity));
+
+  sheet.getRange(item.row, item.inventoryColumn).setValue(newInventory);
+}
+
+
+function updateStudentInventory_(student, item, quantity) {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.STUDENT_INVENTORY);
+
+  ensureHeaderRow_(sheet, CFG.HEADERS.STUDENT_INVENTORY, ['Card_ID', 'Item_ID']);
+
+  const values = getUsedValues_(sheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Item_ID']);
+
+  if (headerRowIndex === -1) {
+    throw new Error('Student_Inventory headers not found.');
+  }
+
+  const headers = values[headerRowIndex];
+
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const studentNameCol = findHeaderIndex_(headers, ['Student_Name', 'Student Name']);
+  const itemIdCol = findHeaderIndex_(headers, ['Item_ID', 'Item ID']);
+  const itemNameCol = findHeaderIndex_(headers, ['Item_Name', 'Item Name']);
+  const categoryCol = findHeaderIndex_(headers, ['Category']);
+  const quantityCol = findHeaderIndex_(headers, ['Quantity_Purchased', 'Quantity Purchased', 'Quantity']);
+  const totalSpentCol = findHeaderIndex_(headers, ['Total_Spent', 'Total Spent']);
+  const lastPurchasedCol = findHeaderIndex_(headers, ['Last_Purchased', 'Last Purchased']);
+  const lastUpdatedCol = findHeaderIndex_(headers, ['Last_Updated', 'Last Updated']);
+
+  const requiredCols = [cardCol, studentNameCol, itemIdCol, itemNameCol, categoryCol, quantityCol, totalSpentCol, lastPurchasedCol, lastUpdatedCol];
+
+  if (requiredCols.some(function (col) { return col === -1; })) {
+    throw new Error('Student_Inventory is missing one or more required headers.');
+  }
+
+  const now = formatDate_(new Date(), 'yyyy-MM-dd HH:mm:ss');
+  const targetCard = normalizeCardId_(student.cardId);
+  const targetItem = normalizeItemSearch_(item.id);
+  const itemTotal = (Number(item.price) || 0) * quantity;
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowCard = normalizeCardId_(values[i][cardCol]);
+    const rowItem = normalizeItemSearch_(values[i][itemIdCol]);
+
+    if (rowCard === targetCard && rowItem === targetItem) {
+      const row = values[i].slice(0, CFG.HEADERS.STUDENT_INVENTORY.length);
+
+      row[cardCol] = student.cardId;
+      row[studentNameCol] = student.name;
+      row[itemIdCol] = item.id;
+      row[itemNameCol] = item.name;
+      row[categoryCol] = item.category || '';
+      row[quantityCol] = (Number(row[quantityCol]) || 0) + quantity;
+      row[totalSpentCol] = (Number(row[totalSpentCol]) || 0) + itemTotal;
+      row[lastPurchasedCol] = now;
+      row[lastUpdatedCol] = now;
+
+      // One batched row update instead of many individual setValue calls.
+      sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+      return;
+    }
+  }
+
+  appendRowsToSheet_(sheet, [[
+    student.cardId,
+    student.name,
+    item.id,
+    item.name,
+    item.category || '',
+    quantity,
+    itemTotal,
+    now,
+    now
+  ]]);
+}
+
+
+function findStoreHeaderRow_(values) {
+  for (let r = 0; r < Math.min(values.length, 10); r++) {
+    const normalizedHeaders = values[r].map(function (header) {
+      return normalizeHeader_(header);
+    });
+
+    const hasItemId = normalizedHeaders.indexOf('item_id') !== -1;
+    const hasItemName = normalizedHeaders.indexOf('item_name') !== -1;
+    const hasPrice = normalizedHeaders.indexOf('price') !== -1;
+
+    if (hasItemId && hasItemName && hasPrice) {
+      return {
+        headerRowIndex: r,
+        headers: values[r]
+      };
+    }
+  }
+
+  return null;
+}
+
+
+function normalizeItemSearch_(value) {
+  return cleanString_(value)
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/-/g, '')
+    .replace(/_/g, '');
+}
+
+
+/*******************************************************
+ PAYROLL
+*******************************************************/
+
+function runJobPayroll() {
+  const result = processPayroll_(false);
+
+  SpreadsheetApp.getUi().alert(
+    'Payroll complete.\n\n' +
+    'Pay period: ' + result.periodStart + ' to ' + result.periodEnd + '\n' +
+    'Students paid: ' + result.paidCount + '\n' +
+    'Total paid: ' + result.totalPaid + '\n' +
+    'Skipped rows: ' + result.skippedCount + '\n' +
+    'Duplicates blocked: ' + result.duplicateCount
+  );
+
+  writeMainResult_(
+    'Payroll complete. Paid ' + result.paidCount +
+    ' students. Duplicates blocked: ' + result.duplicateCount
+  );
+}
+
+
+function setupAutomaticFridayPayrollTrigger() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    ss.setSpreadsheetTimeZone(CFG.KOREA_TZ);
+  } catch (err) {
+    console.log('Could not set spreadsheet timezone: ' + err.message);
+  }
+
+  ensurePayrollSettings_();
+  ensurePayrollLogSheet_();
+  removeAutomaticPayrollTrigger_(false);
+
+  ScriptApp.newTrigger('automaticFridayPayroll')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.FRIDAY)
+    .atHour(8)
+    .nearMinute(0)
+    .inTimezone(CFG.KOREA_TZ)
+    .create();
+
+  SpreadsheetApp.getUi().alert(
+    'Automatic payroll is set.\n\n' +
+    'Schedule: Every Friday around 8:00 AM KST\n' +
+    'Pay period: Monday to Friday\n' +
+    'Duplicate protection: Payroll_Log overlap check'
+  );
+}
+
+
+function removeAutomaticPayrollTriggerFromMenu() {
+  removeAutomaticPayrollTrigger_(true);
+}
+
+
+function removeAutomaticPayrollTrigger_(showAlert) {
+  const triggers = ScriptApp.getProjectTriggers();
+
+  triggers.forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === 'automaticFridayPayroll') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  if (showAlert) {
+    SpreadsheetApp.getUi().alert('Automatic payroll trigger removed.');
+  }
+}
+
+
+function automaticFridayPayroll() {
+  const result = processPayroll_(true);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const scanSheet = ss.getSheetByName(CFG.SHEETS.SCAN);
+
+  if (scanSheet) {
+    setStatus_(
+      scanSheet,
+      'Automatic Friday payroll ran. Paid ' +
+      result.paidCount +
+      ' students. Duplicates blocked: ' +
+      result.duplicateCount
+    );
+  }
+}
+
+
+function processPayroll_(isAutomatic) {
+  ensurePayrollSettings_();
+  ensurePayrollLogSheet_();
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const jobsSheet = ss.getSheetByName(CFG.SHEETS.JOBS);
+
+  if (!jobsSheet) {
+    throw new Error('Jobs sheet not found.');
+  }
+
+  const values = getUsedValues_(jobsSheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Salary']);
+
+  if (headerRowIndex === -1) {
+    throw new Error('Jobs sheet headers not found. Required: Card_ID and Salary.');
+  }
+
+  const headers = values[headerRowIndex];
+
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const nameCol = findHeaderIndex_(headers, ['Student_Name', 'Student Name']);
+  const jobTitleCol = findHeaderIndex_(headers, ['Job_Title', 'Job Title', 'Job']);
+  const salaryCol = findHeaderIndex_(headers, ['Salary']);
+  const payFrequencyCol = findHeaderIndex_(headers, ['Pay_Frequency', 'Pay Frequency']);
+  const activeCol = findHeaderIndex_(headers, ['Active']);
+
+  const period = getPayrollPeriod_();
+
+  let paidCount = 0;
+  let skippedCount = 0;
+  let duplicateCount = 0;
+  let totalPaid = 0;
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const cardId = cleanString_(values[i][cardCol]);
+    const salary = Number(values[i][salaryCol]) || 0;
+    const active = activeCol !== -1 ? values[i][activeCol] : 'Yes';
+
+    if (!cardId || !salary || !isTruthy_(active)) {
+      skippedCount++;
+      continue;
+    }
+
+    const student = findStudentByCard_(cardId);
+
+    if (!student) {
+      logPayrollResult_({
+        runAt: period.runAt,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        durationDays: period.durationDays,
+        cardId: cardId,
+        studentName: nameCol !== -1 ? cleanString_(values[i][nameCol]) : '',
+        jobTitle: jobTitleCol !== -1 ? cleanString_(values[i][jobTitleCol]) : '',
+        salary: salary,
+        payFrequency: payFrequencyCol !== -1 ? cleanString_(values[i][payFrequencyCol]) : '',
+        automatic: isAutomatic,
+        status: 'Skipped - student not found'
+      });
+
+      skippedCount++;
+      continue;
+    }
+
+    const jobTitle = jobTitleCol !== -1
+      ? cleanString_(values[i][jobTitleCol])
+      : student.jobTitle || 'Class Job';
+
+    const payFrequency = payFrequencyCol !== -1
+      ? cleanString_(values[i][payFrequencyCol])
+      : 'Weekly';
+
+    if (wasPayrollAlreadyPaidWithinPeriod_(student.cardId, period.periodStart, period.periodEnd)) {
+      logPayrollResult_({
+        runAt: period.runAt,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        durationDays: period.durationDays,
+        cardId: student.cardId,
+        studentName: student.name,
+        jobTitle: jobTitle,
+        salary: salary,
+        payFrequency: payFrequency,
+        automatic: isAutomatic,
+        status: 'Duplicate blocked'
+      });
+
+      duplicateCount++;
+      continue;
+    }
+
+    const result = applyBalanceChange_(
+      student,
+      'PAYROLL',
+      salary,
+      'Job payroll: ' + jobTitle + ' | Pay period: ' + period.periodStart + ' to ' + period.periodEnd,
+      '',
+      ''
+    );
+
+    if (result.success) {
+      logPayrollResult_({
+        runAt: period.runAt,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        durationDays: period.durationDays,
+        cardId: student.cardId,
+        studentName: student.name,
+        jobTitle: jobTitle,
+        salary: salary,
+        payFrequency: payFrequency,
+        automatic: isAutomatic,
+        status: 'Paid'
+      });
+
+      paidCount++;
+      totalPaid += salary;
+    } else {
+      logPayrollResult_({
+        runAt: period.runAt,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        durationDays: period.durationDays,
+        cardId: student.cardId,
+        studentName: student.name,
+        jobTitle: jobTitle,
+        salary: salary,
+        payFrequency: payFrequency,
+        automatic: isAutomatic,
+        status: 'Skipped - ' + result.message
+      });
+
+      skippedCount++;
+    }
+  }
+
+  return {
+    runAt: period.runAt,
+    periodStart: period.periodStart,
+    periodEnd: period.periodEnd,
+    durationDays: period.durationDays,
+    paidCount: paidCount,
+    skippedCount: skippedCount,
+    duplicateCount: duplicateCount,
+    totalPaid: totalPaid
+  };
+}
+
+
+function ensurePayrollSettings_() {
+  const settingsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SETTINGS);
+
+  if (!settingsSheet) {
+    throw new Error('Settings sheet not found.');
+  }
+
+  const values = getUsedValues_(settingsSheet);
+  const existing = {};
+
+  for (let i = 1; i < values.length; i++) {
+    existing[cleanString_(values[i][0])] = true;
+  }
+
+  const defaults = [
+    ['Payroll_Duration_Days', 5],
+    ['Payroll_Automatic_Day', 'Friday'],
+    ['Payroll_Automatic_Time', '08:00'],
+    ['Timezone', CFG.KOREA_TZ]
+  ];
+
+  defaults.forEach(function (row) {
+    if (!existing[row[0]]) {
+      appendRowsToSheet_(settingsSheet, [row]);
+    }
+  });
+}
+
+
+function ensurePayrollLogSheet_() {
+  const sheet = getOrCreateSheet_(CFG.SHEETS.PAYROLL_LOG);
+
+  ensureHeaderRow_(sheet, CFG.HEADERS.PAYROLL_LOG, ['Payroll_Run_At', 'Card_ID', 'Status']);
+  sheet.getRange('E:E').setNumberFormat('@');
+}
+
+
+function getPayrollPeriod_() {
+  const now = new Date();
+  const runAt = formatDate_(now, 'yyyy-MM-dd HH:mm:ss');
+  const todayKey = formatDate_(now, 'yyyy-MM-dd');
+
+  // Apps Script formatDate pattern "u": Monday = 1, Tuesday = 2, ..., Sunday = 7.
+  const dayOfWeek = Number(formatDate_(now, 'u'));
+  const daysSinceMonday = dayOfWeek - 1;
+  const mondayDate = addDaysToDateKey_(todayKey, -daysSinceMonday);
+  const fridayDate = addDaysToDateKey_(mondayDate, 4);
+
+  return {
+    runAt: runAt,
+    periodStart: mondayDate,
+    periodEnd: fridayDate,
+    durationDays: 5
+  };
+}
+
+
+function addDaysToDateKey_(dateKey, daysToAdd) {
+  const parts = String(dateKey).split('-');
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]) - 1;
+  const day = Number(parts[2]);
+
+  const date = new Date(year, month, day);
+  date.setDate(date.getDate() + daysToAdd);
+
+  return formatDate_(date, 'yyyy-MM-dd');
+}
+
+
+function wasPayrollAlreadyPaidWithinPeriod_(cardId, periodStart, periodEnd) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.PAYROLL_LOG);
+
+  if (!sheet || sheet.getLastRow() < 2) return false;
+
+  const values = getUsedValues_(sheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Pay_Period_Start', 'Pay_Period_End', 'Card_ID']);
+
+  if (headerRowIndex === -1) return false;
+
+  const headers = values[headerRowIndex];
+  const startCol = findHeaderIndex_(headers, ['Pay_Period_Start']);
+  const endCol = findHeaderIndex_(headers, ['Pay_Period_End']);
+  const cardCol = findHeaderIndex_(headers, ['Card_ID']);
+  const statusCol = findHeaderIndex_(headers, ['Status']);
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowPeriodStart = valueToDateKey_(values[i][startCol]);
+    const rowPeriodEnd = valueToDateKey_(values[i][endCol]);
+    const rowCardId = cleanString_(values[i][cardCol]);
+    const rowStatus = cleanString_(values[i][statusCol]);
+
+    if (
+      normalizeCardId_(rowCardId) === normalizeCardId_(cardId) &&
+      rowStatus === 'Paid' &&
+      dateRangesOverlap_(periodStart, periodEnd, rowPeriodStart, rowPeriodEnd)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+function logPayrollResult_(entry) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.PAYROLL_LOG);
+
+  appendRowsToSheet_(sheet, [[
+    entry.runAt,
+    entry.periodStart,
+    entry.periodEnd,
+    entry.durationDays,
+    entry.cardId,
+    entry.studentName,
+    entry.jobTitle,
+    entry.salary,
+    entry.payFrequency,
+    entry.automatic ? 'Yes' : 'No',
+    entry.status
+  ]]);
+}
+
+
+/*******************************************************
+ GOOGLE DOC ATTENDANCE REPORT
+*******************************************************/
+
+function generateAttendanceGoogleDocReport() {
+  const ui = SpreadsheetApp.getUi();
+
+  const datePrompt = ui.prompt(
+    'Attendance Report Date',
+    'Enter date as yyyy-mm-dd. Leave blank for today.',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (datePrompt.getSelectedButton() !== ui.Button.OK) return;
+
+  let reportDate = cleanString_(datePrompt.getResponseText());
+  if (!reportDate) reportDate = formatDate_(new Date(), 'yyyy-MM-dd');
+
+  const classPrompt = ui.prompt(
+    'Class / Period',
+    'Enter class/period exactly, or leave blank for all classes.',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (classPrompt.getSelectedButton() !== ui.Button.OK) return;
+
+  const classPeriod = cleanString_(classPrompt.getResponseText());
+
+  const doc = DocumentApp.create('Attendance Report - ' + reportDate + (classPeriod ? ' - ' + classPeriod : ''));
+  const body = doc.getBody();
+
+  body.appendParagraph('Attendance Report').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  body.appendParagraph('Date: ' + reportDate);
+  body.appendParagraph('Class / Period: ' + (classPeriod || 'All classes'));
+  body.appendParagraph('Timezone: Asia/Seoul');
+  body.appendParagraph('');
+
+  const students = getAllStudents_();
+  const attendance = getDailyAttendanceRecords_(reportDate, classPeriod);
+
+  const present = [];
+  const late = [];
+  const absent = [];
+
+  const attendanceByCard = {};
+
+  attendance.forEach(function (record) {
+    attendanceByCard[normalizeCardId_(record.cardId)] = record;
+  });
+
+  students.forEach(function (student) {
+    const record = attendanceByCard[normalizeCardId_(student.cardId)];
+
+    if (!record) {
+      absent.push(student.name);
+    } else if (record.status === 'Late') {
+      late.push(student.name + ' - ' + record.time);
+    } else if (record.status === 'Present') {
+      present.push(student.name + ' - ' + record.time);
+    } else {
+      absent.push(student.name + ' - ' + record.status);
+    }
+  });
+
+  body.appendParagraph('Summary').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendParagraph('Present: ' + present.length);
+  body.appendParagraph('Late: ' + late.length);
+  body.appendParagraph('Absent / No Scan: ' + absent.length);
+  body.appendParagraph('');
+
+  appendListSection_(body, 'Present', present);
+  appendListSection_(body, 'Late', late);
+  appendListSection_(body, 'Absent / No Scan', absent);
+
+  doc.saveAndClose();
+
+  const url = doc.getUrl();
+  writeMainResult_('Attendance report created: ' + url);
+  ui.alert('Attendance report created:\n\n' + url);
+}
+
+
+function getDailyAttendanceRecords_(dateKey, classPeriod) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.DAILY_ATTENDANCE);
+  const values = getUsedValues_(sheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Date', 'Card_ID', 'Status']);
+
+  if (headerRowIndex === -1) return [];
+
+  const headers = values[headerRowIndex];
+  const dateCol = findHeaderIndex_(headers, ['Date']);
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const nameCol = findHeaderIndex_(headers, ['Student_Name', 'Student Name']);
+  const classCol = findHeaderIndex_(headers, ['Class_Period', 'Class Period']);
+  const statusCol = findHeaderIndex_(headers, ['Status']);
+  const timeCol = findHeaderIndex_(headers, ['Check_In_Time', 'Check In Time']);
+
+  const records = [];
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowDate = valueToDateKey_(values[i][dateCol]);
+    const rowClass = cleanString_(values[i][classCol]);
+
+    if (rowDate !== dateKey) continue;
+    if (classPeriod && rowClass !== classPeriod) continue;
+
+    records.push({
+      date: rowDate,
+      cardId: cleanString_(values[i][cardCol]),
+      name: cleanString_(values[i][nameCol]),
+      classPeriod: rowClass,
+      status: cleanString_(values[i][statusCol]),
+      time: cleanString_(values[i][timeCol])
+    });
+  }
+
+  return records;
+}
+
+
+function appendListSection_(body, title, items) {
+  body.appendParagraph(title).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+
+  if (!items.length) {
+    body.appendParagraph('None');
+    body.appendParagraph('');
+    return;
+  }
+
+  items.forEach(function (item) {
+    body.appendListItem(item);
+  });
+
+  body.appendParagraph('');
+}
+
+
+/*******************************************************
+ STUDENT LOOKUPS
+*******************************************************/
+
+function findStudentByCard_(cardId) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENTS);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return null;
+
+  const map = getFlexibleStudentMap_(sheet);
+
+  if (map.cardId === -1 || map.studentName === -1) {
+    throw new Error('Students sheet must include Card_ID and Student_Name headers.');
+  }
+
+  const cleanCard = cleanString_(cardId);
+  const targetCard = normalizeCardId_(cleanCard);
+  const lastCol = sheet.getLastColumn();
+
+  // Fast path: search only the mapped Card_ID column.
+  const cardRange = sheet.getRange(map.headerRowIndex + 2, map.cardId + 1, lastRow - map.headerRowIndex - 1, 1);
+  let foundCell = null;
+
+  try {
+    foundCell = cardRange
+      .createTextFinder(cleanCard)
+      .matchEntireCell(true)
+      .matchCase(false)
+      .findNext();
+  } catch (err) {
+    foundCell = null;
+  }
+
+  if (foundCell) {
+    const row = foundCell.getRow();
+    const values = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
+    return buildStudentFromRow_(row, values, map);
+  }
+
+  // Fallback: normalized matching for scanners/cards with hidden characters or formatting issues.
+  const values = sheet.getRange(map.headerRowIndex + 2, 1, lastRow - map.headerRowIndex - 1, lastCol).getValues();
+
+  for (let i = 0; i < values.length; i++) {
+    const rowCard = normalizeCardId_(values[i][map.cardId]);
+
+    if (rowCard === targetCard) {
+      return buildStudentFromRow_(map.headerRowIndex + 2 + i, values[i], map);
+    }
+  }
+
+  return null;
+}
+
+
+function buildStudentFromRow_(row, values, map) {
+  return {
+    row: row,
+    cardId: map.cardId !== -1 ? cleanString_(values[map.cardId]) : '',
+    name: map.studentName !== -1 ? cleanString_(values[map.studentName]) : '',
+    grade: map.grade !== -1 ? values[map.grade] : '',
+    homeroom: map.homeroom !== -1 ? values[map.homeroom] : '',
+    balance: map.balance !== -1 ? Number(values[map.balance]) || 0 : 0,
+    jobTitle: map.jobTitle !== -1 ? cleanString_(values[map.jobTitle]) : '',
+    active: map.active !== -1 ? values[map.active] : 'Yes',
+    lastUpdated: map.lastUpdated !== -1 ? values[map.lastUpdated] : '',
+    attendanceStreak: map.attendanceStreak !== -1 ? Number(values[map.attendanceStreak]) || 0 : 0,
+    lastAttendanceDate: map.lastAttendanceDate !== -1 ? values[map.lastAttendanceDate] : '',
+    notes: map.notes !== -1 ? values[map.notes] : ''
+  };
+}
+
+
+
+
+
+function getAllStudents_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENTS);
+  const values = getUsedValues_(sheet);
+
+  if (values.length < 2) return [];
+
+  const map = getFlexibleStudentMap_(sheet);
+  const students = [];
+
+  for (let i = map.headerRowIndex + 1; i < values.length; i++) {
+    const cardId = cleanString_(values[i][map.cardId]);
+    if (!cardId) continue;
+
+    students.push({
+      row: i + 1,
+      cardId: cardId,
+      name: cleanString_(values[i][map.studentName]),
+      grade: map.grade !== -1 ? values[i][map.grade] : '',
+      homeroom: map.homeroom !== -1 ? values[i][map.homeroom] : '',
+      balance: map.balance !== -1 ? Number(values[i][map.balance]) || 0 : 0,
+      jobTitle: map.jobTitle !== -1 ? cleanString_(values[i][map.jobTitle]) : '',
+      attendanceStreak: map.attendanceStreak !== -1 ? Number(values[i][map.attendanceStreak]) || 0 : 0
+    });
+  }
+
+  return students;
+}
+
+
+function getFlexibleStudentMap_(sheet) {
+  const values = getUsedValues_(sheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Student_Name']);
+
+  const rowIndex = headerRowIndex === -1 ? 0 : headerRowIndex;
+  const headers = values[rowIndex];
+
+  return {
+    headerRowIndex: rowIndex,
+    cardId: findHeaderIndex_(headers, ['Card_ID', 'Card ID', 'CardID', 'Card']),
+    studentName: findHeaderIndex_(headers, ['Student_Name', 'Student Name', 'Name']),
+    grade: findHeaderIndex_(headers, ['Grade']),
+    homeroom: findHeaderIndex_(headers, ['Homeroom', 'Class', 'Section']),
+    balance: findHeaderIndex_(headers, ['Balance', 'Current Balance']),
+    jobTitle: findHeaderIndex_(headers, ['Job_Title', 'Job Title', 'Job']),
+    active: findHeaderIndex_(headers, ['Active']),
+    lastUpdated: findHeaderIndex_(headers, ['Last_Updated', 'Last Updated']),
+    attendanceStreak: findHeaderIndex_(headers, ['Attendance_Streak', 'Attendance Streak', 'Streak']),
+    lastAttendanceDate: findHeaderIndex_(headers, ['Last_Attendance_Date', 'Last Attendance Date']),
+    notes: findHeaderIndex_(headers, ['Notes', 'Note'])
+  };
+}
+
+
+
+/*******************************************************
+ SETTINGS
+*******************************************************/
+
+function seedSettings_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SETTINGS);
+  ensureHeaderRow_(sheet, CFG.HEADERS.SETTINGS, ['Setting', 'Value']);
+
+  const defaults = [
+    ['Allow_Negative_Balance', 'No'],
+    ['Late_Cutoff_Time', '08:35'],
+    ['Attendance_Start_Time', '07:40'],
+    ['On_Time_Attendance_Reward', 0],
+    ['Late_Penalty', 0],
+    ['Streak_Bonus_Days', 5],
+    ['Streak_Bonus_Amount', 100],
+    ['Default_Class_Period', 'Homeroom'],
+    ['Timezone', CFG.KOREA_TZ],
+    ['Payroll_Duration_Days', 5],
+    ['Payroll_Automatic_Day', 'Friday'],
+    ['Payroll_Automatic_Time', '08:00']
+  ];
+
+  const values = getUsedValues_(sheet);
+  const existing = {};
+
+  for (let i = 1; i < values.length; i++) {
+    existing[cleanString_(values[i][0])] = true;
+  }
+
+  defaults.forEach(function (row) {
+    if (!existing[row[0]]) {
+      appendRowsToSheet_(sheet, [row]);
+    }
+  });
+}
+
+
+function forceAttendanceWindowSettings_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SETTINGS);
+  if (!sheet) return;
+
+  ensureSettingValue_(sheet, 'Attendance_Start_Time', '07:40');
+  ensureSettingValue_(sheet, 'Late_Cutoff_Time', '08:35');
+
+  clearSettingsCache_();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Attendance window set: 07:40 to 08:35.',
+    'Attendance Settings',
+    5
+  );
+}
+
+
+function ensureSettingValue_(sheet, key, value) {
+  const values = getUsedValues_(sheet);
+  const targetKey = cleanString_(key);
+
+  for (let i = 1; i < values.length; i++) {
+    if (cleanString_(values[i][0]) === targetKey) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      return;
+    }
+  }
+
+  appendRowsToSheet_(sheet, [[key, value]]);
+}
+
+
+function getSetting_(key, defaultValue) {
+  const cache = CacheService.getDocumentCache();
+  const cacheKey = 'SETTINGS_MAP_V1';
+  let settingsMap = null;
+
+  if (cache) {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      try {
+        settingsMap = JSON.parse(cached);
+      } catch (err) {
+        settingsMap = null;
+      }
+    }
+  }
+
+  if (!settingsMap) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SETTINGS);
+    if (!sheet) return defaultValue;
+
+    const values = getUsedValues_(sheet);
+    settingsMap = {};
+
+    for (let i = 1; i < values.length; i++) {
+      const settingKey = cleanString_(values[i][0]);
+      if (settingKey) settingsMap[settingKey] = values[i][1];
+    }
+
+    if (cache) {
+      cache.put(cacheKey, JSON.stringify(settingsMap), 300);
+    }
+  }
+
+  const value = settingsMap[key];
+
+  if (value === '' || value === null || typeof value === 'undefined') {
+    return defaultValue;
+  }
+
+  return value;
+}
+
+
+function getSettingWithAliases_(keys, defaultValue) {
+  const missing = '__SETTING_MISSING__';
+
+  for (let i = 0; i < keys.length; i++) {
+    const value = getSetting_(keys[i], missing);
+
+    if (value !== missing) {
+      return value;
+    }
+  }
+
+  return defaultValue;
+}
+
+
+
+
+/*******************************************************
+ STUDENT PROFILE SECURITY HELPERS
+*******************************************************/
+
+function registerProfileScanAttempt_() {
+  const nowMs = new Date().getTime();
+  let attempts = getProfileSecurityProperty_('attempts', '');
+
+  if (!attempts) {
+    attempts = [];
+  } else {
+    try {
+      attempts = JSON.parse(attempts);
+    } catch (err) {
+      attempts = [];
+    }
+  }
+
+  const oneMinuteAgo = nowMs - 60 * 1000;
+
+  attempts = attempts.filter(function (timestamp) {
+    return Number(timestamp) >= oneMinuteAgo;
+  });
+
+  attempts.push(nowMs);
+  setProfileSecurityProperty_('attempts', JSON.stringify(attempts));
+}
+
+
+function checkAndApplyProfileLock_(sheet) {
+  let attempts = getProfileSecurityProperty_('attempts', '');
+
+  if (!attempts) {
+    attempts = [];
+  } else {
+    try {
+      attempts = JSON.parse(attempts);
+    } catch (err) {
+      attempts = [];
+    }
+  }
+
+  const nowMs = new Date().getTime();
+  const oneMinuteAgo = nowMs - 60 * 1000;
+
+  attempts = attempts.filter(function (timestamp) {
+    return Number(timestamp) >= oneMinuteAgo;
+  });
+
+  if (attempts.length > PROFILE_SECURITY.MAX_ATTEMPTS_PER_MINUTE) {
+    const lockUntilMs = nowMs + PROFILE_SECURITY.LOCK_MINUTES * 60 * 1000;
+
+    setProfileSecurityProperty_('lockUntilMs', String(lockUntilMs));
+    setProfileSecurityProperty_('attempts', JSON.stringify([]));
+
+    setStatus_(
+      sheet,
+      'Locked. More than ' +
+      PROFILE_SECURITY.MAX_ATTEMPTS_PER_MINUTE +
+      ' attempts in 1 minute. Try again in ' +
+      PROFILE_SECURITY.LOCK_MINUTES +
+      ' minutes.'
+    );
+
+    return true;
+  }
+
+  setProfileSecurityProperty_('attempts', JSON.stringify(attempts));
+  return false;
+}
+
+
+function getProfileSecurityProperty_(key, defaultValue) {
+  const props = PropertiesService.getScriptProperties();
+  const value = props.getProperty(PROFILE_SECURITY.PROPERTY_PREFIX + key);
+
+  if (value === null || typeof value === 'undefined') {
+    return defaultValue;
+  }
+
+  return value;
+}
+
+
+function setProfileSecurityProperty_(key, value) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(PROFILE_SECURITY.PROPERTY_PREFIX + key, String(value));
+}
+
+
+function clearStudentProfileLock() {
+  const props = PropertiesService.getScriptProperties();
+
+  props.deleteProperty(PROFILE_SECURITY.PROPERTY_PREFIX + 'lockUntilMs');
+  props.deleteProperty(PROFILE_SECURITY.PROPERTY_PREFIX + 'attempts');
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENT_PROFILE);
+
+  if (sheet) {
+    setStatus_(sheet, 'Student profile lock cleared.');
+    sheet.getRange(CFG.CELLS.PROFILE_SCAN).clearContent();
+    sheet.getRange(CFG.CELLS.PROFILE_SCAN).activate();
+  }
+}
+
+
+/*******************************************************
+ UI HELPERS
+*******************************************************/
+
+function focusMainScanCell() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SCAN);
+  SpreadsheetApp.setActiveSheet(sheet);
+  sheet.getRange(CFG.CELLS.MAIN_SCAN).activate();
+}
+
+
+function clearMainScan() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SCAN);
+  sheet.getRange(CFG.CELLS.MAIN_SCAN).clearContent();
+  sheet.getRange(CFG.CELLS.MAIN_SCAN).activate();
+}
+
+
+function clearStudentProfileScan() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.STUDENT_PROFILE);
+  SpreadsheetApp.setActiveSheet(sheet);
+  sheet.getRange(CFG.CELLS.PROFILE_SCAN).clearContent();
+  setStatus_(sheet, 'Scan a card in B4 to load a student profile.');
+  sheet.getRange(CFG.CELLS.PROFILE_SCAN).activate();
+}
+
+
+function finishMainScan_(message, scanSheet) {
+  const sheet = scanSheet || SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SCAN);
+
+  // V2.19 SAFE PATCH:
+  // Use the central status manager so the newest result overwrites the old one.
+  // Avoid activate() here. It is slow and usually unnecessary because the active cell stays B3.
+  setStatus_(sheet, message);
+  sheet.getRange(CFG.CELLS.MAIN_SCAN).clearContent();
+}
+
+
+
+
+function writeMainResult_(message) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CFG.SHEETS.SCAN);
+
+  if (sheet) {
+    setStatus_(sheet, message);
+  }
+}
+
+
+
+/*******************************************************
+ STATUS MESSAGE HELPERS
+*******************************************************/
+
+function clearStatus_(sheet) {
+  if (!sheet) return;
+
+  const statusA1 = STATUS_CONFIG[sheet.getName()];
+  if (!statusA1) return;
+
+  sheet.getRange(statusA1).clearContent();
+}
+
+
+function setStatus_(sheet, message) {
+  if (!sheet) return;
+
+  const statusA1 = STATUS_CONFIG[sheet.getName()];
+  if (!statusA1) return;
+
+  const statusCell = sheet.getRange(statusA1);
+
+  // V2.19 SAFE PATCH:
+  // Always overwrite old status with the newest script message.
+  statusCell.clearContent();
+  statusCell.setValue(message || '');
+
+  SpreadsheetApp.flush();
+}
+
+
+function clearAllStatuses_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  Object.keys(STATUS_CONFIG).forEach(function (sheetName) {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return;
+
+    sheet.getRange(STATUS_CONFIG[sheetName]).clearContent();
+  });
+}
+
+
+/*******************************************************
+ PERFORMANCE HELPERS
+*******************************************************/
+
+function getUsedValues_(sheet) {
+  if (!sheet) return [];
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+
+  if (lastRow < 1 || lastCol < 1) return [];
+
+  // V2.19 SAFE PATCH:
+  // Replacement for getDataRange().getValues().
+  // This avoids reading thousands of empty/formatted rows.
+  return sheet.getRange(1, 1, lastRow, lastCol).getValues();
+}
+
+
+function ensureRows_(sheet, rowsNeeded) {
+  if (!sheet || !rowsNeeded) return;
+
+  const maxRows = sheet.getMaxRows();
+  const lastRow = Math.max(sheet.getLastRow(), 1);
+  const availableBlankRows = maxRows - lastRow;
+
+  if (availableBlankRows < rowsNeeded) {
+    sheet.insertRowsAfter(maxRows, rowsNeeded - availableBlankRows);
+  }
+}
+
+
+function getColumnByHeader_(sheet, headerName) {
+  if (!sheet) throw new Error('Missing sheet for header lookup.');
+
+  const headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0];
+
+  const index = headers.indexOf(headerName);
+
+  if (index === -1) {
+    throw new Error('Missing header: ' + headerName + ' on sheet ' + sheet.getName());
+  }
+
+  return index + 1;
+}
+
+
+/*******************************************************
+ SHEET / HEADER HELPERS
+*******************************************************/
+
+function getOrCreateSheet_(name) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(name);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+
+  return sheet;
+}
+
+
+function ensureHeaderRow_(sheet, headers, requiredNames) {
+  const values = getUsedValues_(sheet);
+  let headerRowIndex = findHeaderRowByNames_(values, requiredNames || headers);
+
+  if (headerRowIndex === -1) {
+    headerRowIndex = 0;
+  }
+
+  sheet.getRange(headerRowIndex + 1, 1, 1, headers.length).setValues([headers]);
+}
+
+
+function findHeaderRowByNames_(values, requiredNames) {
+  if (!values || !values.length) return -1;
+
+  for (let r = 0; r < Math.min(values.length, 10); r++) {
+    const normalizedHeaders = values[r].map(function (header) {
+      return normalizeHeader_(header);
+    });
+
+    let foundCount = 0;
+
+    requiredNames.forEach(function (name) {
+      const target = normalizeHeader_(name);
+
+      if (normalizedHeaders.indexOf(target) !== -1) {
+        foundCount++;
+      }
+    });
+
+    if (foundCount >= Math.min(requiredNames.length, 2)) {
+      return r;
+    }
+  }
+
+  return -1;
+}
+
+
+function findHeaderIndex_(headers, possibleNames) {
+  const normalizedHeaders = headers.map(function (header) {
+    return normalizeHeader_(header);
+  });
+
+  for (let i = 0; i < possibleNames.length; i++) {
+    const target = normalizeHeader_(possibleNames[i]);
+    const index = normalizedHeaders.indexOf(target);
+
+    if (index !== -1) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+
+function removeStudentIdColumns_() {
+  const sheetNames = [
+    CFG.SHEETS.STUDENTS,
+    CFG.SHEETS.ATTENDANCE_LOG,
+    CFG.SHEETS.DAILY_ATTENDANCE
+  ];
+
+  sheetNames.forEach(function (sheetName) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) return;
+
+    const values = getUsedValues_(sheet);
+    const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID']);
+
+    if (headerRowIndex === -1) return;
+
+    const headers = values[headerRowIndex];
+    const colsToDelete = [];
+
+    headers.forEach(function (header, index) {
+      const normalized = normalizeHeader_(header);
+
+      if (
+        normalized === 'student_id' ||
+        normalized === 'studentid' ||
+        normalized === 'student_code' ||
+        normalized === 'studentcode'
+      ) {
+        colsToDelete.push(index + 1);
+      }
+    });
+
+    colsToDelete.reverse().forEach(function (col) {
+      sheet.deleteColumn(col);
+    });
+  });
+}
+
+
+function formatHeaderRows_() {
+  const sheetNames = [
+    CFG.SHEETS.STUDENTS,
+    CFG.SHEETS.TRANSACTIONS,
+    CFG.SHEETS.ATTENDANCE_LOG,
+    CFG.SHEETS.DAILY_ATTENDANCE,
+    CFG.SHEETS.STORE,
+    CFG.SHEETS.JOBS,
+    CFG.SHEETS.SETTINGS,
+    CFG.SHEETS.PAYROLL_LOG,
+    CFG.SHEETS.STUDENT_INVENTORY
+  ];
+
+  sheetNames.forEach(function (name) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+    if (!sheet) return;
+
+    const values = getUsedValues_(sheet);
+    let headerRowIndex;
+
+    if (name === CFG.SHEETS.STORE) {
+      const storeHeader = findStoreHeaderRow_(values);
+      headerRowIndex = storeHeader ? storeHeader.headerRowIndex : 0;
+    } else {
+      headerRowIndex = findHeaderRowByNames_(values, ['Card_ID']);
+      if (headerRowIndex === -1) headerRowIndex = findHeaderRowByNames_(values, ['Timestamp']);
+      if (headerRowIndex === -1) headerRowIndex = findHeaderRowByNames_(values, ['Setting']);
+      if (headerRowIndex === -1) headerRowIndex = findHeaderRowByNames_(values, ['Payroll_Run_At']);
+      if (headerRowIndex === -1) headerRowIndex = 0;
+    }
+
+    sheet.getRange(headerRowIndex + 1, 1, 1, Math.max(sheet.getLastColumn(), 1))
+      .setFontWeight('bold')
+      .setBackground('#e8f0fe');
+
+    sheet.setFrozenRows(headerRowIndex + 1);
+  });
+}
+
+
+function applyPlainTextFormats_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const students = ss.getSheetByName(CFG.SHEETS.STUDENTS);
+  if (students) students.getRange('A:A').setNumberFormat('@');
+
+  const transactions = ss.getSheetByName(CFG.SHEETS.TRANSACTIONS);
+  if (transactions) transactions.getRange('C:C').setNumberFormat('@');
+
+  const attendanceLog = ss.getSheetByName(CFG.SHEETS.ATTENDANCE_LOG);
+  if (attendanceLog) attendanceLog.getRange('C:C').setNumberFormat('@');
+
+  const daily = ss.getSheetByName(CFG.SHEETS.DAILY_ATTENDANCE);
+  if (daily) daily.getRange('B:B').setNumberFormat('@');
+
+  const store = ss.getSheetByName(CFG.SHEETS.STORE);
+  if (store) store.getRange('A:A').setNumberFormat('@');
+
+  const jobs = ss.getSheetByName(CFG.SHEETS.JOBS);
+  if (jobs) jobs.getRange('A:A').setNumberFormat('@');
+
+  const payrollLog = ss.getSheetByName(CFG.SHEETS.PAYROLL_LOG);
+  if (payrollLog) payrollLog.getRange('E:E').setNumberFormat('@');
+
+  const inventory = ss.getSheetByName(CFG.SHEETS.STUDENT_INVENTORY);
+  if (inventory) {
+    inventory.getRange('A:A').setNumberFormat('@');
+    inventory.getRange('C:C').setNumberFormat('@');
+  }
+}
+
+
+
+
+function appendRowsToSheet_(sheet, rows) {
+  if (!sheet || !rows || !rows.length) return;
+
+  const cleanedRows = rows.filter(function (row) {
+    return row && row.length;
+  });
+
+  if (!cleanedRows.length) return;
+
+  const startRow = sheet.getLastRow() + 1;
+  const numRows = cleanedRows.length;
+  const numCols = cleanedRows[0].length;
+
+  // V2.19 SAFE PATCH:
+  // If unused rows were deleted, create enough new rows before writing.
+  ensureRows_(sheet, numRows + 10);
+
+  // Fast batched write. Do not use appendRow() for transaction/log rows.
+  sheet.getRange(startRow, 1, numRows, numCols).setValues(cleanedRows);
+}
+
+
+
+
+/*******************************************************
+ FAST ATTENDANCE INDEX HELPERS
+ Avoids reading the entire Daily_Attendance sheet on every scan.
+*******************************************************/
+
+function buildAttendanceIndexKey_(cardId, dateKey, classPeriod) {
+  const cleanDate = valueToDateKey_(dateKey);
+  const cleanCard = normalizeCardId_(cardId);
+  const cleanClass = cleanString_(classPeriod).toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+  return 'ATT_IDX_' + cleanDate + '_' + cleanCard + '_' + cleanClass;
+}
+
+
+function markAttendanceRecorded_(cardId, dateKey, classPeriod) {
+  const key = buildAttendanceIndexKey_(cardId, dateKey, classPeriod);
+  const cache = CacheService.getDocumentCache();
+  const props = PropertiesService.getDocumentProperties();
+
+  props.setProperty(key, '1');
+  if (cache) cache.put(key, '1', 21600);
+}
+
+
+function rebuildTodayAttendanceIndex_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CFG.SHEETS.DAILY_ATTENDANCE);
+
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  const todayKey = formatDate_(new Date(), 'yyyy-MM-dd');
+  const values = getUsedValues_(sheet);
+  const headerRowIndex = findHeaderRowByNames_(values, ['Date', 'Card_ID', 'Class_Period']);
+
+  if (headerRowIndex === -1) return;
+
+  const headers = values[headerRowIndex];
+  const dateCol = findHeaderIndex_(headers, ['Date']);
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const classCol = findHeaderIndex_(headers, ['Class_Period', 'Class Period']);
+
+  if (dateCol === -1 || cardCol === -1 || classCol === -1) return;
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowDate = valueToDateKey_(values[i][dateCol]);
+    const rowCard = cleanString_(values[i][cardCol]);
+    const rowClass = cleanString_(values[i][classCol]);
+
+    if (rowDate === todayKey && rowCard && rowClass) {
+      markAttendanceRecorded_(rowCard, rowDate, rowClass);
+    }
+  }
+}
+
+
+function clearSettingsCache_() {
+  const cache = CacheService.getDocumentCache();
+  if (cache) cache.remove('SETTINGS_MAP_V1');
+}
+
+
+/*******************************************************
+ GENERIC HELPERS
+*******************************************************/
+
+function cleanString_(value) {
+  if (value === null || typeof value === 'undefined') return '';
+  return String(value).trim();
+}
+
+
+function normalizeHeader_(value) {
+  return cleanString_(value)
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+}
+
+
+function normalizeCardId_(value) {
+  return cleanString_(value)
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // invisible chars
+    .replace(/\s+/g, '')                  // spaces/tabs/newlines
+    .replace(/[^a-z0-9]/g, '');           // only letters/numbers
+}
+
+
+function isTruthy_(value) {
+  const text = cleanString_(value).toLowerCase();
+
+  return ['yes', 'y', 'true', '1', 'active', 'available'].indexOf(text) !== -1;
+}
+
+
+function getTimeZone_() {
+  return CFG.KOREA_TZ;
+}
+
+
+function formatDate_(dateObj, pattern) {
+  return Utilities.formatDate(dateObj, getTimeZone_(), pattern);
+}
+
+
+function valueToDateKey_(value) {
+  if (!value) return '';
+
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) {
+    return formatDate_(value, 'yyyy-MM-dd');
+  }
+
+  const text = cleanString_(value);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+  const parsed = new Date(text);
+
+  if (!isNaN(parsed)) {
+    return formatDate_(parsed, 'yyyy-MM-dd');
+  }
+
+  return text;
+}
+
+
+function dateKeyToNumber_(dateKey) {
+  const clean = valueToDateKey_(dateKey);
+  const parts = clean.split('-');
+
+  if (parts.length !== 3) return 0;
+
+  return Number(parts[0]) * 10000 + Number(parts[1]) * 100 + Number(parts[2]);
+}
+
+
+function dateRangesOverlap_(startA, endA, startB, endB) {
+  const aStart = dateKeyToNumber_(startA);
+  const aEnd = dateKeyToNumber_(endA);
+  const bStart = dateKeyToNumber_(startB);
+  const bEnd = dateKeyToNumber_(endB);
+
+  if (!aStart || !aEnd || !bStart || !bEnd) return false;
+
+  return aStart <= bEnd && bStart <= aEnd;
+}

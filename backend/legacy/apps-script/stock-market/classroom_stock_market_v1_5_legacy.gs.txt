@@ -1,0 +1,3172 @@
+
+/*******************************************************
+ CLASSROOM STOCK MARKET V1.5
+ Master-linked balances + stock prices + buy/sell
+ Market hours + daily financial/news + weekly random shock
+ Bonds with stable volatility
+*******************************************************/
+
+const MASTER_SPREADSHEET_ID = '1xmGsP2eOXdfhJ9DjzCOVFJKoZ2DuuwRb_dbNg1M77M8';
+
+const STOCK_CFG = {
+  TIMEZONE: 'Asia/Seoul',
+  MARKET_OPEN_HOUR: 8,
+  MARKET_CLOSE_HOUR: 17,
+  ANALYST_SUBMISSION_CLOSE_HOUR: 16,
+  INTRADAY_VOL_DIVISOR: 10,
+  SHOCK_WEEKLY_PERCENT: 0.60,
+  SHOCK_MAX_DROP_PERCENT: 0.08,
+  MAX_PRICE_HISTORY_ROWS: 30000,
+  MARKET_STATUS_TOASTS: false,
+
+  ANALYST_REWARD_TIER_1_PERCENT: 0.10,   // ±10%
+  ANALYST_REWARD_TIER_1_AMOUNT: 10,
+  ANALYST_REWARD_TIER_2_PERCENT: 0.05,   // ±5%
+  ANALYST_REWARD_TIER_2_AMOUNT: 50,
+  ANALYST_REWARD_TIER_3_PERCENT: 0.01,   // ±1%
+  ANALYST_REWARD_TIER_3_AMOUNT: 100,
+
+  SHEETS: {
+    MARKET: 'Stock_Market',
+    TRADE: 'Stock_Trade',
+    PORTFOLIO: 'Stock_Portfolio',
+    TRADE_LOG: 'Stock_Trade_Log',
+    STUDENTS: 'Students',
+    FINANCIALS: 'Stock_Financials',
+    NEWS: 'Stock_News',
+    RATINGS: 'Stock_Ratings',
+    PRICE_HISTORY: 'Stock_Price_History',
+    PROFILE: 'Stock_Profile',
+    RATINGS_SUBMIT: 'Stock_Rating_Submit',
+    FUNDAMENTALS: 'Stock_Fundamentals',
+    SECTOR: 'Stock_Sector_Momentum',
+    MACRO: 'Stock_Macro_Outlook',
+    EARNINGS: 'Stock_Earnings_Reports',
+    FORECAST_HELPER: 'Stock_Forecast_Helper'
+  },
+
+  HEADERS: {
+    MARKET: ['Ticker','Company_Name','Sector','Current_Price','Previous_Price','Change_%','Change_Amount','Volatility','Trend','Active','Last_Updated','Asset_Type','Stable_Volatility','Shock_Protected','Coupon_Rate'],
+    PORTFOLIO: ['Card_ID','Student_Name','Ticker','Shares_Owned','Avg_Buy_Price','Total_Cost','Current Price','Market Value','Unrealized Gain/Loss','Last_Updated'],
+    TRADE_LOG: ['Timestamp','Date','Card_ID','Student_Name','Action','Ticker','Shares','Price','Total_Value','Status','Note'],
+    FINANCIALS: ['Ticker','Revenue','Profit','Debt','Cash','Growth_Rate','Risk_Rating','Notes'],
+    NEWS: ['Timestamp','Ticker','Headline','Body','Impact_Type','Price_Impact_%','Volatility_Impact','Status'],
+    RATINGS: ['Timestamp','Date','Card_ID','Student_Name','Ticker','Rating','Target_Price','Reason','Check_Date','End_Of_Day_Price','Accuracy_%','Reward_Status','Reward_Amount'],
+    PRICE_HISTORY: ['Timestamp','Date','Ticker','Company_Name','Price','Change_%'],
+    FUNDAMENTALS: ['Ticker','Company_Name','Sector','Fundamental_Strength','Market_Sentiment','News_Sentiment','Shock_Resistance','Speculation_Level','Momentum','Sector_Momentum','Last_Updated','Notes'],
+    SECTOR: ['Sector','Sector_Momentum','Macro_Sensitivity','Last_Updated','Notes'],
+    MACRO: ['Date','GDP_Outlook','Inflation_Pressure','Interest_Rate_Pressure','Consumer_Demand','Macro_Sentiment','Notes'],
+    EARNINGS: ['Timestamp','Date','Ticker','Company_Name','Revenue_Result','Profit_Result','Debt_Result','Guidance','Surprise_Score','Price_Impact_%','Status']
+  }
+};
+
+
+/*******************************************************
+ MENU
+*******************************************************/
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Stock Market')
+    .addItem('Setup Full Stock Market', 'setupFullStockMarket')
+    .addItem('Process Stock Trade', 'processStockTrade')
+    .addItem('Update Portfolio Market Values', 'updateAllPortfolioMarketValues')
+    .addItem('Debug Stock Trade Setup', 'debugStockTradeSetup')
+    .addItem('Debug Analyst Submission Window', 'debugAnalystSubmissionWindow')
+    .addSeparator()
+    .addItem('Update Prices Now', 'updateStockMarketPrices')
+    .addItem('Update Daily Volatility Now', 'updateDailyStockVolatility')
+    .addItem('Update Daily Financials + News', 'updateDailyCompanyFinancialsAndNews')
+    .addItem('Choose Weekly Shock Day', 'chooseWeeklyShockDay')
+    .addItem('Check/Trigger Weekly Shock', 'checkAndTriggerWeeklyMarketShock')
+    .addSeparator()
+    .addItem('Setup Stock Research Center', 'setupStockResearchCenter')
+    .addItem('Setup Stock Rating Submit Sheet', 'setupStockRatingSubmitSheet')
+    .addItem('Setup Fundamental Engine', 'setupFundamentalEngineSheets')
+    .addItem('Generate Earnings Reports', 'generateDailyEarningsReports')
+    .addItem('Process Stock Rating', 'processStockRating')
+    .addItem('Check Analyst Predictions', 'checkAnalystPredictions')
+    .addItem('Generate Random Stock News', 'generateRandomStockNews')
+    .addSeparator()
+    .addItem('Setup All Stock Triggers', 'setupAllStockMarketTriggers')
+    .addItem('Remove All Stock Triggers', 'removeAllStockMarketTriggers')
+    .addToUi();
+}
+
+
+/*******************************************************
+ SETUP
+*******************************************************/
+
+function setupFullStockMarket() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    ss.setSpreadsheetTimeZone(STOCK_CFG.TIMEZONE);
+  } catch (err) {
+    console.log('Could not set timezone: ' + err.message);
+  }
+
+  setupMarketSheet_();
+  setupTradeSheet_();
+  setupPortfolioSheet_();
+  setupTradeLogSheet_();
+
+  // IMPORTANT: Add market instruments before creating financials/research sheets.
+  // Otherwise Stock_Financials may be generated empty because no tickers exist yet.
+  add60StockMarketCompanies();
+  addBondMarketInstruments();
+  setupStockResearchCenter();
+  setupStockRatingSubmitSheet();
+  setupFundamentalEngineSheets();
+
+  ss.toast('Full stock market setup complete.', 'Stock Market', 5);
+}
+
+
+function setupMarketSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.MARKET);
+  sheet.clear();
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.MARKET.length)
+    .setValues([STOCK_CFG.HEADERS.MARKET])
+    .setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.MARKET.length, 140);
+}
+
+
+function setupTradeSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.TRADE);
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Stock Trade');
+  sheet.getRange('A3').setValue('Card ID');
+  sheet.getRange('A4').setValue('Action');
+  sheet.getRange('A5').setValue('Ticker');
+  sheet.getRange('A6').setValue('Shares');
+  sheet.getRange('A8').setValue('Result');
+
+  sheet.getRange('B3:B6').clearContent();
+  sheet.getRange('B8').setValue('Enter Card ID, BUY/SELL, ticker, and shares. Then press Process Stock Trade.');
+
+  const actionRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['BUY', 'SELL'], true)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange('B4').setDataValidation(actionRule);
+
+  sheet.getRange('A1:B1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+  sheet.getRange('A3:A8').setFontWeight('bold');
+  sheet.getRange('B3:B6').setBackground('#fff2cc');
+  sheet.getRange('B8').setBackground('#e8f0fe');
+  sheet.setColumnWidths(1, 2, 200);
+}
+
+
+function setupPortfolioSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PORTFOLIO);
+  sheet.clear();
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PORTFOLIO.length)
+    .setValues([STOCK_CFG.HEADERS.PORTFOLIO])
+    .setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.PORTFOLIO.length, 150);
+}
+
+
+function setupTradeLogSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.TRADE_LOG);
+  sheet.clear();
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.TRADE_LOG.length)
+    .setValues([STOCK_CFG.HEADERS.TRADE_LOG])
+    .setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.TRADE_LOG.length, 150);
+}
+
+
+/*******************************************************
+ STOCK COMPANIES + BONDS
+*******************************************************/
+
+function add60StockMarketCompanies() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.MARKET);
+  ensureMarketHeaders_();
+
+  const companies = [
+    ['SNAX','MICA Snacks','Consumer Goods',100,100,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['RAMN','Ramen Republic','Food',80,80,0,0,7,'Growth','Yes','','STOCK','','No',''],
+    ['COLA','K-Pop Cola','Beverage',95,95,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['CHIP','Chip Empire','Consumer Goods',70,70,0,0,8,'Volatile','Yes','','STOCK','','No',''],
+    ['CAND','Candy Capital','Consumer Goods',55,55,0,0,9,'Growth','Yes','','STOCK','','No',''],
+    ['TECH','Dragon Tech','Technology',150,150,0,0,9,'Growth','Yes','','STOCK','','No',''],
+    ['AIBO','Homework AI','Technology',180,180,0,0,11,'Hot','Yes','','STOCK','','No',''],
+    ['GAME','GameBox Media','Entertainment',60,60,0,0,10,'Volatile','Yes','','STOCK','','No',''],
+    ['VRSE','VerseVR','Technology',130,130,0,0,12,'Growth','Yes','','STOCK','','No',''],
+    ['BYTE','ByteWorks','Technology',110,110,0,0,8,'Stable','Yes','','STOCK','','No',''],
+    ['BANK','Tiger Bank','Finance',120,120,0,0,4,'Stable','Yes','','STOCK','','No',''],
+    ['CRED','Credit Castle','Finance',90,90,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['BOND','BondBridge','Finance',75,75,0,0,3,'Stable','Yes','','STOCK','','No',''],
+    ['INSR','Shield Insurance','Finance',105,105,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['LOAN','LoanLab','Finance',65,65,0,0,7,'Decline','Yes','','STOCK','','No',''],
+    ['LUXE','Luxury Locker','Luxury Goods',200,200,0,0,8,'Decline','Yes','','STOCK','','No',''],
+    ['DRIP','Drip Streetwear','Fashion',115,115,0,0,9,'Growth','Yes','','STOCK','','No',''],
+    ['KICK','KickDrop Sneakers','Fashion',140,140,0,0,10,'Hot','Yes','','STOCK','','No',''],
+    ['GLAM','Glow Cosmetics','Fashion',85,85,0,0,7,'Stable','Yes','','STOCK','','No',''],
+    ['BAGG','BagVault','Fashion',160,160,0,0,8,'Growth','Yes','','STOCK','','No',''],
+    ['FAST','Flash Logistics','Logistics',100,100,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['SHIP','Seoul Shipping','Logistics',90,90,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['DRON','DroneDrop','Logistics',135,135,0,0,11,'Growth','Yes','','STOCK','','No',''],
+    ['RIDE','QuickRide','Transportation',75,75,0,0,9,'Volatile','Yes','','STOCK','','No',''],
+    ['RAIL','MetroRail Corp','Transportation',125,125,0,0,4,'Stable','Yes','','STOCK','','No',''],
+    ['MEDX','MediCore','Healthcare',145,145,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['GYMX','GymX Fitness','Healthcare',95,95,0,0,8,'Growth','Yes','','STOCK','','No',''],
+    ['VITA','VitaPlus','Healthcare',110,110,0,0,7,'Stable','Yes','','STOCK','','No',''],
+    ['CARE','CareCloud','Healthcare',125,125,0,0,8,'Growth','Yes','','STOCK','','No',''],
+    ['DENT','SmileWorks','Healthcare',85,85,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['EDUX','EduMax Learning','Education',115,115,0,0,6,'Growth','Yes','','STOCK','','No',''],
+    ['BOOK','BookBridge','Education',70,70,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['TUTR','TutorTown','Education',100,100,0,0,7,'Growth','Yes','','STOCK','','No',''],
+    ['LANG','LinguaLab','Education',90,90,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['TEST','TestPrep Pro','Education',130,130,0,0,8,'Hot','Yes','','STOCK','','No',''],
+    ['MOVI','MovieBox','Entertainment',105,105,0,0,9,'Volatile','Yes','','STOCK','','No',''],
+    ['MUSC','MusicWave','Entertainment',95,95,0,0,8,'Growth','Yes','','STOCK','','No',''],
+    ['IDOL','Idol Agency','Entertainment',170,170,0,0,12,'Hot','Yes','','STOCK','','No',''],
+    ['MEME','Meme Media','Entertainment',50,50,0,0,13,'Volatile','Yes','','STOCK','','No',''],
+    ['STRM','Streamly','Entertainment',140,140,0,0,9,'Growth','Yes','','STOCK','','No',''],
+    ['FARM','Future Farms','Agriculture',80,80,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['MEAT','MeatWorks','Food',115,115,0,0,7,'Stable','Yes','','STOCK','','No',''],
+    ['VEGI','Green Basket','Food',75,75,0,0,6,'Growth','Yes','','STOCK','','No',''],
+    ['CAFE','Cafe Cloud','Food',100,100,0,0,8,'Stable','Yes','','STOCK','','No',''],
+    ['BAKE','BakeHouse','Food',90,90,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['OILX','OilMax Energy','Energy',130,130,0,0,10,'Volatile','Yes','','STOCK','','No',''],
+    ['SOLR','SolarSpark','Energy',120,120,0,0,9,'Growth','Yes','','STOCK','','No',''],
+    ['BATT','BatteryBox','Energy',150,150,0,0,11,'Growth','Yes','','STOCK','','No',''],
+    ['WIND','WindWorks','Energy',100,100,0,0,8,'Stable','Yes','','STOCK','','No',''],
+    ['GRID','GridPower','Energy',110,110,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['HOME','HomeHub','Real Estate',160,160,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['RENT','RentRight','Real Estate',90,90,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['MALL','MegaMall','Real Estate',125,125,0,0,7,'Decline','Yes','','STOCK','','No',''],
+    ['HOTL','HotelHive','Real Estate',115,115,0,0,8,'Growth','Yes','','STOCK','','No',''],
+    ['LAND','LandLink','Real Estate',140,140,0,0,6,'Stable','Yes','','STOCK','','No',''],
+    ['CARS','AutoArena','Automotive',100,100,0,0,8,'Stable','Yes','','STOCK','','No',''],
+    ['EVGO','EVGo Motors','Automotive',175,175,0,0,12,'Growth','Yes','','STOCK','','No',''],
+    ['TIRE','TireTown','Automotive',70,70,0,0,5,'Stable','Yes','','STOCK','','No',''],
+    ['BIKE','BikeBox','Automotive',60,60,0,0,7,'Growth','Yes','','STOCK','','No',''],
+    ['WASH','CarWash Co','Automotive',85,85,0,0,6,'Stable','Yes','','STOCK','','No','']
+  ];
+
+  sheet.getRange(2, 1, companies.length, STOCK_CFG.HEADERS.MARKET.length).setValues(companies);
+}
+
+
+function addBondMarketInstruments() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.MARKET);
+  ensureMarketHeaders_();
+
+  const existing = getExistingTickers_(sheet);
+
+  const bonds = [
+    ['GBND','Classroom Government Bond','Bond',100,100,0,0,0.5,'Stable','Yes','','BOND',0.5,'Yes',0.02],
+    ['SBND','School Savings Bond','Bond',100,100,0,0,0.4,'Stable','Yes','','BOND',0.4,'Yes',0.015],
+    ['CBND','Corporate Classroom Bond','Bond',100,100,0,0,0.8,'Stable','Yes','','BOND',0.8,'Yes',0.03],
+    ['TBIL','Treasury Bill','Bond',100,100,0,0,0.25,'Stable','Yes','','BOND',0.25,'Yes',0.01],
+    ['IBND','Inflation Protected Bond','Bond',100,100,0,0,0.35,'Stable','Yes','','BOND',0.35,'Yes',0.018]
+  ].filter(function(row) {
+    return !existing[row[0]];
+  });
+
+  if (bonds.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, bonds.length, bonds[0].length).setValues(bonds);
+  }
+}
+
+
+function ensureMarketHeaders_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.MARKET);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.MARKET.length)
+      .setValues([STOCK_CFG.HEADERS.MARKET])
+      .setFontWeight('bold');
+  }
+}
+
+
+function getExistingTickers_(sheet) {
+  const map = {};
+  if (sheet.getLastRow() < 2) return map;
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  values.forEach(function(row) {
+    const ticker = cleanString_(row[0]).toUpperCase();
+    if (ticker) map[ticker] = true;
+  });
+
+  return map;
+}
+
+
+/*******************************************************
+ BUY / SELL
+*******************************************************/
+
+function processStockTrade() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const tradeSheet = ss.getSheetByName(STOCK_CFG.SHEETS.TRADE);
+
+    if (!tradeSheet) {
+      SpreadsheetApp.getUi().alert('Stock_Trade sheet not found.');
+      return;
+    }
+
+    if (!isMarketOpen_()) {
+      writeStockTradeResult_('Trade denied: market is closed. Trading hours are 8:00 AM–5:00 PM KST.');
+      return;
+    }
+
+    SpreadsheetApp.flush();
+    tradeSheet.getRange('B8').activate();
+    SpreadsheetApp.flush();
+    Utilities.sleep(150);
+
+    writeStockTradeResult_('Processing trade...');
+
+    const inputs = tradeSheet.getRange('B3:B6').getDisplayValues();
+
+    const cardId = normalizeCardId_(inputs[0][0]);
+    const action = cleanString_(inputs[1][0]).toUpperCase();
+    const ticker = cleanString_(inputs[2][0]).toUpperCase();
+    const shares = Number(cleanString_(inputs[3][0])) || 0;
+
+    if (!cardId || !action || !ticker || shares <= 0 || !Number.isInteger(shares)) {
+      writeStockTradeResult_('Trade failed: Card ID, BUY/SELL, ticker, and whole-number shares are required.');
+      return;
+    }
+
+    if (action !== 'BUY' && action !== 'SELL') {
+      writeStockTradeResult_('Trade failed: Action must be BUY or SELL.');
+      return;
+    }
+
+    const student = findStudentByCard_(cardId);
+
+    if (!student) {
+      writeStockTradeResult_('Trade failed: Card ID not found in master Students sheet: ' + cardId);
+      return;
+    }
+
+    const stock = findStockByTicker_(ticker);
+
+    if (!stock || !stock.active) {
+      writeStockTradeResult_('Trade failed: ticker not found or inactive: ' + ticker);
+      return;
+    }
+
+    if (action === 'BUY') {
+      buyStockShares_(student, stock, shares, tradeSheet);
+    } else {
+      sellStockShares_(student, stock, shares, tradeSheet);
+    }
+
+  } catch (err) {
+    console.error(err);
+    writeStockTradeResult_('Trade error: ' + err.message);
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+function buyStockShares_(student, stock, shares, tradeSheet) {
+  const totalCost = round2_(stock.price * shares);
+
+  if (student.balance < totalCost) {
+    logStockTrade_(student, 'BUY', stock, shares, stock.price, totalCost, 'Denied', 'Insufficient balance');
+    writeStockTradeResult_('Buy denied: ' + student.name + ' needs ' + totalCost + ' but only has ' + student.balance + '.');
+    return;
+  }
+
+  const newBalance = round2_(student.balance - totalCost);
+
+  updateStudentBalance_(student.row, student.balanceCol, newBalance);
+  updatePortfolioBuy_(student, stock, shares, totalCost);
+  logStockTrade_(student, 'BUY', stock, shares, stock.price, totalCost, 'Success', '');
+
+  writeStockTradeResult_(student.name + ' bought ' + shares + ' shares of ' + stock.ticker + '. Total: ' + totalCost + '. New balance: ' + newBalance);
+
+  tradeSheet.getRange('B3:B6').clearContent();
+}
+
+
+function sellStockShares_(student, stock, shares, tradeSheet) {
+  const holding = findPortfolioHolding_(student.cardId, stock.ticker);
+
+  if (!holding || holding.sharesOwned < shares) {
+    logStockTrade_(student, 'SELL', stock, shares, stock.price, 0, 'Denied', 'Not enough shares');
+    writeStockTradeResult_('Sell denied: not enough shares of ' + stock.ticker + '.');
+    return;
+  }
+
+  const saleValue = round2_(stock.price * shares);
+  const newBalance = round2_(student.balance + saleValue);
+
+  updateStudentBalance_(student.row, student.balanceCol, newBalance);
+  updatePortfolioSell_(holding, shares, stock);
+  logStockTrade_(student, 'SELL', stock, shares, stock.price, saleValue, 'Success', '');
+
+  writeStockTradeResult_(student.name + ' sold ' + shares + ' shares of ' + stock.ticker + '. Received: ' + saleValue + '. New balance: ' + newBalance);
+
+  tradeSheet.getRange('B3:B6').clearContent();
+}
+
+
+/*******************************************************
+ PORTFOLIO
+*******************************************************/
+
+function updatePortfolioBuy_(student, stock, shares, totalCost) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PORTFOLIO);
+  ensurePortfolioHeaders_();
+
+  const values = sheet.getDataRange().getValues();
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Ticker']);
+  const headers = values[headerRowIndex];
+
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const nameCol = findHeaderIndex_(headers, ['Student_Name', 'Student Name']);
+  const tickerCol = findHeaderIndex_(headers, ['Ticker']);
+  const sharesCol = findHeaderIndex_(headers, ['Shares_Owned', 'Shares Owned', 'Shares']);
+  const avgCol = findHeaderIndex_(headers, ['Avg_Buy_Price', 'Avg Buy Price']);
+  const costCol = findHeaderIndex_(headers, ['Total_Cost', 'Total Cost']);
+  const currentPriceCol = findHeaderIndex_(headers, ['Current Price', 'Current_Price']);
+  const marketValueCol = findHeaderIndex_(headers, ['Market Value', 'Market_Value']);
+  const unrealizedCol = findHeaderIndex_(headers, ['Unrealized Gain/Loss', 'Unrealized_Gain_Loss', 'Unrealized Gain Loss']);
+  const updatedCol = findHeaderIndex_(headers, ['Last_Updated', 'Last Updated']);
+
+  const now = nowString_();
+  const targetCard = normalizeCardId_(student.cardId);
+  const targetTicker = cleanString_(stock.ticker).toUpperCase();
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowCard = normalizeCardId_(values[i][cardCol]);
+    const rowTicker = cleanString_(values[i][tickerCol]).toUpperCase();
+
+    if (rowCard === targetCard && rowTicker === targetTicker) {
+      const rowValues = values[i].slice();
+      const oldShares = Number(rowValues[sharesCol]) || 0;
+      const oldCost = Number(rowValues[costCol]) || 0;
+
+      const newShares = oldShares + shares;
+      const newCost = round2_(oldCost + totalCost);
+      const avgPrice = round2_(newCost / newShares);
+      const currentPrice = Number(stock.price) || 0;
+      const marketValue = round2_(newShares * currentPrice);
+      const unrealizedGainLoss = round2_((currentPrice - avgPrice) * newShares);
+
+      rowValues[cardCol] = student.cardId;
+      rowValues[nameCol] = student.name;
+      rowValues[tickerCol] = stock.ticker;
+      rowValues[sharesCol] = newShares;
+      rowValues[avgCol] = avgPrice;
+      rowValues[costCol] = newCost;
+      if (currentPriceCol !== -1) rowValues[currentPriceCol] = currentPrice;
+      if (marketValueCol !== -1) rowValues[marketValueCol] = marketValue;
+      if (unrealizedCol !== -1) rowValues[unrealizedCol] = unrealizedGainLoss;
+      if (updatedCol !== -1) rowValues[updatedCol] = now;
+
+      sheet.getRange(i + 1, 1, 1, rowValues.length).setValues([rowValues]);
+      return;
+    }
+  }
+
+  const currentPrice = Number(stock.price) || 0;
+  const marketValue = round2_(shares * currentPrice);
+  const unrealizedGainLoss = round2_((currentPrice - currentPrice) * shares);
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.PORTFOLIO.length)
+    .setValues([[student.cardId, student.name, stock.ticker, shares, stock.price, totalCost, currentPrice, marketValue, unrealizedGainLoss, now]]);
+}
+
+
+function updatePortfolioSell_(holding, sharesToSell, stock) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.PORTFOLIO);
+  const now = nowString_();
+  const remainingShares = holding.sharesOwned - sharesToSell;
+
+  if (remainingShares <= 0) {
+    sheet.deleteRow(holding.row);
+    return;
+  }
+
+  const currentPrice = stock && stock.price ? Number(stock.price) : holding.avgBuyPrice;
+  const remainingCost = round2_(holding.avgBuyPrice * remainingShares);
+  const marketValue = round2_(remainingShares * currentPrice);
+  const unrealizedGainLoss = round2_((currentPrice - holding.avgBuyPrice) * remainingShares);
+
+  const rowValues = sheet.getRange(holding.row, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  rowValues[holding.map.shares] = remainingShares;
+  rowValues[holding.map.totalCost] = remainingCost;
+  if (holding.map.currentPrice !== -1) rowValues[holding.map.currentPrice] = currentPrice;
+  if (holding.map.marketValue !== -1) rowValues[holding.map.marketValue] = marketValue;
+  if (holding.map.unrealizedGainLoss !== -1) rowValues[holding.map.unrealizedGainLoss] = unrealizedGainLoss;
+  if (holding.map.lastUpdated !== -1) rowValues[holding.map.lastUpdated] = now;
+
+  sheet.getRange(holding.row, 1, 1, rowValues.length).setValues([rowValues]);
+}
+
+
+function findPortfolioHolding_(cardId, ticker) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.PORTFOLIO);
+
+  if (!sheet || sheet.getLastRow() < 2) return null;
+
+  ensurePortfolioHeaders_();
+
+  const values = sheet.getDataRange().getValues();
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Ticker']);
+  const headers = values[headerRowIndex];
+
+  const cardCol = findHeaderIndex_(headers, ['Card_ID', 'Card ID']);
+  const nameCol = findHeaderIndex_(headers, ['Student_Name', 'Student Name']);
+  const tickerCol = findHeaderIndex_(headers, ['Ticker']);
+  const sharesCol = findHeaderIndex_(headers, ['Shares_Owned', 'Shares Owned', 'Shares']);
+  const avgCol = findHeaderIndex_(headers, ['Avg_Buy_Price', 'Avg Buy Price']);
+  const costCol = findHeaderIndex_(headers, ['Total_Cost', 'Total Cost']);
+  const currentPriceCol = findHeaderIndex_(headers, ['Current Price', 'Current_Price']);
+  const marketValueCol = findHeaderIndex_(headers, ['Market Value', 'Market_Value']);
+  const unrealizedCol = findHeaderIndex_(headers, ['Unrealized Gain/Loss', 'Unrealized_Gain_Loss', 'Unrealized Gain Loss']);
+  const updatedCol = findHeaderIndex_(headers, ['Last_Updated', 'Last Updated']);
+
+  const targetCard = normalizeCardId_(cardId);
+  const targetTicker = cleanString_(ticker).toUpperCase();
+
+  for (let i = headerRowIndex + 1; i < values.length; i++) {
+    const rowCard = normalizeCardId_(values[i][cardCol]);
+    const rowTicker = cleanString_(values[i][tickerCol]).toUpperCase();
+
+    if (rowCard === targetCard && rowTicker === targetTicker) {
+      return {
+        row: i + 1,
+        map: {
+          cardId: cardCol,
+          studentName: nameCol,
+          ticker: tickerCol,
+          shares: sharesCol,
+          avgBuyPrice: avgCol,
+          totalCost: costCol,
+          currentPrice: currentPriceCol,
+          marketValue: marketValueCol,
+          unrealizedGainLoss: unrealizedCol,
+          lastUpdated: updatedCol
+        },
+        cardId: rowCard,
+        studentName: nameCol !== -1 ? cleanString_(values[i][nameCol]) : '',
+        ticker: rowTicker,
+        sharesOwned: Number(values[i][sharesCol]) || 0,
+        avgBuyPrice: Number(values[i][avgCol]) || 0,
+        totalCost: costCol !== -1 ? Number(values[i][costCol]) || 0 : 0
+      };
+    }
+  }
+
+  return null;
+}
+
+
+function ensurePortfolioHeaders_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PORTFOLIO);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PORTFOLIO.length)
+      .setValues([STOCK_CFG.HEADERS.PORTFOLIO])
+      .setFontWeight('bold');
+    return;
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headerRowIndex = findHeaderRowByNames_(values, ['Card_ID', 'Ticker']);
+
+  if (headerRowIndex === -1) {
+    sheet.clear();
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PORTFOLIO.length)
+      .setValues([STOCK_CFG.HEADERS.PORTFOLIO])
+      .setFontWeight('bold');
+    return;
+  }
+
+  const headers = values[headerRowIndex];
+  const currentPriceCol = findHeaderIndex_(headers, ['Current Price', 'Current_Price']);
+  const marketValueCol = findHeaderIndex_(headers, ['Market Value', 'Market_Value']);
+  const lastUpdatedCol = findHeaderIndex_(headers, ['Last_Updated', 'Last Updated']);
+
+  // If Current Price is missing but Market Value exists, insert Current Price before Market Value.
+  if (currentPriceCol === -1 && marketValueCol !== -1) {
+    sheet.insertColumnBefore(marketValueCol + 1);
+    sheet.getRange(headerRowIndex + 1, marketValueCol + 1).setValue('Current Price');
+  }
+
+  // If old 7-column format exists, rewrite/migrate headers by appending the new valuation columns.
+  const refreshedHeaders = sheet.getRange(headerRowIndex + 1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const refreshedCurrentPriceCol = findHeaderIndex_(refreshedHeaders, ['Current Price', 'Current_Price']);
+  const refreshedMarketValueCol = findHeaderIndex_(refreshedHeaders, ['Market Value', 'Market_Value']);
+  const refreshedUnrealizedCol = findHeaderIndex_(refreshedHeaders, ['Unrealized Gain/Loss', 'Unrealized_Gain_Loss', 'Unrealized Gain Loss']);
+
+  if (refreshedCurrentPriceCol === -1 || refreshedMarketValueCol === -1 || refreshedUnrealizedCol === -1) {
+    sheet.getRange(headerRowIndex + 1, 1, 1, STOCK_CFG.HEADERS.PORTFOLIO.length)
+      .setValues([STOCK_CFG.HEADERS.PORTFOLIO])
+      .setFontWeight('bold');
+  } else {
+    sheet.getRange(headerRowIndex + 1, 1, 1, sheet.getLastColumn()).setFontWeight('bold');
+  }
+}
+
+function getPortfolioHeaderMap_(headers) {
+  const map = {
+    cardId: findHeaderIndex_(headers, ['Card_ID', 'Card ID', 'Card']),
+    studentName: findHeaderIndex_(headers, ['Student_Name', 'Student Name', 'Name']),
+    ticker: findHeaderIndex_(headers, ['Ticker']),
+    sharesOwned: findHeaderIndex_(headers, ['Shares_Owned', 'Shares Owned', 'Shares']),
+    avgBuyPrice: findHeaderIndex_(headers, ['Avg_Buy_Price', 'Avg Buy Price', 'Average Buy Price']),
+    totalCost: findHeaderIndex_(headers, ['Total_Cost', 'Total Cost']),
+    marketValue: findHeaderIndex_(headers, ['Market Value', 'Market_Value']),
+    unrealizedGainLoss: findHeaderIndex_(headers, ['Unrealized Gain/Loss', 'Unrealized_Gain_Loss', 'Unrealized Gain Loss']),
+    lastUpdated: findHeaderIndex_(headers, ['Last_Updated', 'Last Updated'])
+  };
+
+  Object.keys(map).forEach(function(key) {
+    if (map[key] === -1) {
+      throw new Error('Stock_Portfolio missing required column: ' + key);
+    }
+  });
+
+  return map;
+}
+
+
+function normalizePortfolioRowLength_(rowValues) {
+  const row = rowValues.slice();
+
+  while (row.length < STOCK_CFG.HEADERS.PORTFOLIO.length) {
+    row.push('');
+  }
+
+  return row.slice(0, STOCK_CFG.HEADERS.PORTFOLIO.length);
+}
+
+
+function updateAllPortfolioMarketValues() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const portfolioSheet = ss.getSheetByName(STOCK_CFG.SHEETS.PORTFOLIO);
+  const marketSheet = ss.getSheetByName(STOCK_CFG.SHEETS.MARKET);
+
+  if (!portfolioSheet || portfolioSheet.getLastRow() < 2) return;
+  if (!marketSheet || marketSheet.getLastRow() < 2) return;
+
+  ensurePortfolioHeaders_();
+
+  const portfolioValues = portfolioSheet.getDataRange().getValues();
+  const portfolioHeaderRowIndex = findHeaderRowByNames_(portfolioValues, ['Card_ID', 'Ticker']);
+  const portfolioHeaders = portfolioValues[portfolioHeaderRowIndex];
+
+  const tickerCol = findHeaderIndex_(portfolioHeaders, ['Ticker']);
+  const sharesCol = findHeaderIndex_(portfolioHeaders, ['Shares_Owned', 'Shares Owned', 'Shares']);
+  const avgCol = findHeaderIndex_(portfolioHeaders, ['Avg_Buy_Price', 'Avg Buy Price']);
+  const currentPriceCol = findHeaderIndex_(portfolioHeaders, ['Current Price', 'Current_Price']);
+  const marketValueCol = findHeaderIndex_(portfolioHeaders, ['Market Value', 'Market_Value']);
+  const unrealizedCol = findHeaderIndex_(portfolioHeaders, ['Unrealized Gain/Loss', 'Unrealized_Gain_Loss', 'Unrealized Gain Loss']);
+  const updatedCol = findHeaderIndex_(portfolioHeaders, ['Last_Updated', 'Last Updated']);
+
+  const priceMap = getCurrentStockPriceMap_();
+  const now = nowString_();
+
+  for (let i = portfolioHeaderRowIndex + 1; i < portfolioValues.length; i++) {
+    const ticker = cleanString_(portfolioValues[i][tickerCol]).toUpperCase();
+    if (!ticker || !priceMap[ticker]) continue;
+
+    const shares = Number(portfolioValues[i][sharesCol]) || 0;
+    const avgBuyPrice = Number(portfolioValues[i][avgCol]) || 0;
+    const currentPrice = Number(priceMap[ticker].price) || 0;
+    const marketValue = round2_(shares * currentPrice);
+    const unrealizedGainLoss = round2_((currentPrice - avgBuyPrice) * shares);
+
+    if (currentPriceCol !== -1) portfolioValues[i][currentPriceCol] = currentPrice;
+    if (marketValueCol !== -1) portfolioValues[i][marketValueCol] = marketValue;
+    if (unrealizedCol !== -1) portfolioValues[i][unrealizedCol] = unrealizedGainLoss;
+    if (updatedCol !== -1) portfolioValues[i][updatedCol] = now;
+  }
+
+  portfolioSheet
+    .getRange(1, 1, portfolioValues.length, portfolioValues[0].length)
+    .setValues(portfolioValues);
+}
+
+
+function updateAllPortfolioMarketValues_() {
+  const portfolioSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.PORTFOLIO);
+  const marketSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+
+  if (!portfolioSheet || portfolioSheet.getLastRow() < 2) return;
+  if (!marketSheet || marketSheet.getLastRow() < 2) return;
+
+  ensurePortfolioHeaders_();
+
+  const portfolioValues = portfolioSheet.getDataRange().getValues();
+  const portfolioHeaders = portfolioValues[0];
+  const pMap = getPortfolioHeaderMap_(portfolioHeaders);
+
+  const stockPriceMap = getCurrentStockPriceMap_();
+  const now = nowString_();
+
+  for (let i = 1; i < portfolioValues.length; i++) {
+    const ticker = cleanString_(portfolioValues[i][pMap.ticker]).toUpperCase();
+    const sharesOwned = Number(portfolioValues[i][pMap.sharesOwned]) || 0;
+    const avgBuyPrice = Number(portfolioValues[i][pMap.avgBuyPrice]) || 0;
+
+    if (!ticker || sharesOwned <= 0) continue;
+
+    const stock = stockPriceMap[ticker];
+    if (!stock) continue;
+
+    const currentPrice = Number(stock.price) || 0;
+    const marketValue = round2_(sharesOwned * currentPrice);
+    const unrealizedGainLoss = round2_((currentPrice - avgBuyPrice) * sharesOwned);
+
+    portfolioValues[i][pMap.marketValue] = marketValue;
+    portfolioValues[i][pMap.unrealizedGainLoss] = unrealizedGainLoss;
+    portfolioValues[i][pMap.lastUpdated] = now;
+  }
+
+  portfolioSheet
+    .getRange(1, 1, portfolioValues.length, STOCK_CFG.HEADERS.PORTFOLIO.length)
+    .setValues(portfolioValues.map(normalizePortfolioRowLength_));
+}
+
+
+
+/*******************************************************
+ PRICE / VOLATILITY / MARKET HOURS
+*******************************************************/
+
+function updateStockMarketPrices() {
+  if (!isMarketOpen_()) {
+    if (STOCK_CFG.MARKET_STATUS_TOASTS) {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'Market closed. Price movements halted until next market open.',
+        'Stock Market',
+        5
+      );
+    }
+    return;
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+    if (!sheet) throw new Error('Stock_Market sheet not found.');
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+
+    ensureFundamentalRowsForAllMarketInstruments_();
+    updateFundamentalScoresFromFinancials_();
+
+    const fundamentalMap = getFundamentalMap_();
+    const sectorMap = getSectorMomentumMap_();
+
+    const range = sheet.getRange(2, 1, lastRow - 1, STOCK_CFG.HEADERS.MARKET.length);
+    const values = range.getValues();
+    const timestamp = nowString_();
+    const dateKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+    const historyRows = [];
+    const momentumUpdates = [];
+
+    values.forEach(function(row) {
+      const ticker = cleanString_(row[0]).toUpperCase();
+      const companyName = cleanString_(row[1]);
+      const sector = cleanString_(row[2]);
+      const price = Number(row[3]) || 0;
+      const assetType = cleanString_(row[11] || 'STOCK').toUpperCase();
+      const stableVolatility = Number(row[12]) || 0.5;
+      let volatility = Number(row[7]) || 5;
+      let trend = cleanString_(row[8]) || 'Stable';
+      const active = cleanString_(row[9]).toLowerCase();
+
+      if (!ticker || active !== 'yes' || price <= 0) return;
+
+      if (assetType === 'BOND') {
+        volatility = stableVolatility;
+        trend = 'Stable';
+      }
+
+      const previous = price;
+      let move;
+
+      if (assetType === 'BOND') {
+        move = randomBetween_(-0.05, 0.05);
+      } else {
+        const fundamentalBias = getFundamentalPriceBiasPercent_(ticker, sector, trend, fundamentalMap, sectorMap);
+        const randomNoise = randomBetween_(
+          -(volatility / STOCK_CFG.INTRADAY_VOL_DIVISOR),
+          volatility / STOCK_CFG.INTRADAY_VOL_DIVISOR
+        );
+
+        move = getIntradayTrendBias_(trend) + fundamentalBias + randomNoise;
+      }
+
+      const newPrice = Math.max(1, round2_(previous * (1 + move / 100)));
+      const changeAmount = round2_(newPrice - previous);
+      const changePercent = round4_((newPrice - previous) / previous);
+
+      row[3] = newPrice;
+      row[4] = previous;
+      row[5] = changePercent;
+      row[6] = changeAmount;
+      row[7] = volatility;
+      row[8] = trend;
+      row[10] = timestamp;
+
+      historyRows.push([timestamp, dateKey, ticker, companyName, newPrice, changePercent]);
+
+      if (assetType !== 'BOND') {
+        momentumUpdates.push({ ticker: ticker, momentumDelta: Math.max(-5, Math.min(5, changePercent * 1000)) });
+      }
+    });
+
+    range.setValues(values);
+    appendStockPriceHistoryRows_(historyRows);
+    updateAllPortfolioMarketValues();
+    updateAllPortfolioMarketValues();
+    updateAllPortfolioMarketValues_();
+    updateAllPortfolioMarketValues_();
+    applyMomentumUpdates_(momentumUpdates);
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Price update error: ' + err.message, 'Stock Market', 5);
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+function updateDailyStockVolatility() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+    if (!sheet) throw new Error('Stock_Market sheet not found.');
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+
+    const range = sheet.getRange(2, 1, lastRow - 1, STOCK_CFG.HEADERS.MARKET.length);
+    const values = range.getValues();
+    const timestamp = nowString_();
+
+    values.forEach(function(row) {
+      const ticker = cleanString_(row[0]);
+      const assetType = cleanString_(row[11] || 'STOCK').toUpperCase();
+      const stableVolatility = Number(row[12]) || 0.5;
+      const active = cleanString_(row[9]).toLowerCase();
+
+      if (!ticker || active !== 'yes') return;
+
+      if (assetType === 'BOND') {
+        row[7] = stableVolatility;
+        row[8] = 'Stable';
+      } else {
+        row[7] = updateDailyVolatility_(Number(row[7]) || 5, cleanString_(row[8]));
+        row[8] = updateDailyTrend_();
+      }
+
+      row[10] = timestamp;
+    });
+
+    range.setValues(values);
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Daily volatility update error: ' + err.message, 'Stock Market', 5);
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+function isMarketOpen_() {
+  const now = new Date();
+  const hour = Number(Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'H'));
+  return hour >= STOCK_CFG.MARKET_OPEN_HOUR && hour < STOCK_CFG.MARKET_CLOSE_HOUR;
+}
+
+
+function isAnalystSubmissionOpen_() {
+  const now = new Date();
+  const hour = Number(Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'H'));
+
+  return hour >= STOCK_CFG.MARKET_OPEN_HOUR &&
+         hour < STOCK_CFG.ANALYST_SUBMISSION_CLOSE_HOUR;
+}
+
+
+/*******************************************************
+ DAILY FINANCIALS + NEWS
+*******************************************************/
+
+function updateDailyCompanyFinancialsAndNews() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    setupFundamentalEngineSheets(false);
+    updateMacroAndSectorOutlook_();
+    updateCompanyFinancialsFromTrend_();
+    updateFundamentalScoresFromFinancials_();
+    generateMorningNewsFromTrend_();
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('Daily company financials, fundamentals, and news updated.', 'Stock Market', 5);
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Daily company update error: ' + err.message, 'Stock Market', 5);
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+function updateCompanyFinancialsFromTrend_() {
+  const marketSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+  const financialsSheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FINANCIALS);
+
+  if (!marketSheet) throw new Error('Stock_Market sheet not found.');
+
+  if (financialsSheet.getLastRow() < 1 || cleanString_(financialsSheet.getRange(1, 1).getValue()) === '') {
+    setupStockFinancialsSheet_();
+  }
+
+  // Make sure newly added instruments, including bonds, have financial rows.
+  ensureFinancialRowsForAllMarketInstruments_();
+
+  const marketValues = marketSheet.getRange(2, 1, marketSheet.getLastRow() - 1, STOCK_CFG.HEADERS.MARKET.length).getValues();
+  const financialValues = financialsSheet.getRange(1, 1, financialsSheet.getLastRow(), STOCK_CFG.HEADERS.FINANCIALS.length).getValues();
+
+  const headers = financialValues[0];
+  const tickerCol = headers.indexOf('Ticker');
+  const revenueCol = headers.indexOf('Revenue');
+  const profitCol = headers.indexOf('Profit');
+  const debtCol = headers.indexOf('Debt');
+  const cashCol = headers.indexOf('Cash');
+  const growthCol = headers.indexOf('Growth_Rate');
+  const riskCol = headers.indexOf('Risk_Rating');
+  const notesCol = headers.indexOf('Notes');
+
+  const financialMap = {};
+
+  for (let i = 1; i < financialValues.length; i++) {
+    const ticker = cleanString_(financialValues[i][tickerCol]).toUpperCase();
+    if (ticker) financialMap[ticker] = i;
+  }
+
+  marketValues.forEach(function(row) {
+    const ticker = cleanString_(row[0]).toUpperCase();
+    const companyName = cleanString_(row[1]);
+    const trend = cleanString_(row[8]);
+    const assetType = cleanString_(row[11] || 'STOCK').toUpperCase();
+    const active = cleanString_(row[9]).toLowerCase();
+
+    if (!ticker || active !== 'yes') return;
+
+    const financialRowIndex = financialMap[ticker];
+    if (!financialRowIndex) return;
+
+    const financialRow = financialValues[financialRowIndex];
+
+    let revenue = Number(financialRow[revenueCol]) || randomInt_(5000, 50000);
+    let profit = Number(financialRow[profitCol]) || randomInt_(-1000, 10000);
+    let debt = Number(financialRow[debtCol]) || randomInt_(0, 25000);
+    let cash = Number(financialRow[cashCol]) || randomInt_(500, 15000);
+    let growth = Number(financialRow[growthCol]) || 0;
+
+    const modifier = assetType === 'BOND' ? getTrendFinancialModifier_('Stable') : getTrendFinancialModifier_(trend);
+
+    revenue = Math.max(100, Math.round(revenue * (1 + modifier.revenue)));
+    profit = Math.round(profit * (1 + modifier.profit));
+    debt = Math.max(0, Math.round(debt * (1 + modifier.debt)));
+    cash = Math.max(0, Math.round(cash * (1 + modifier.cash)));
+    growth = round4_(growth + modifier.growth);
+
+    financialRow[revenueCol] = revenue;
+    financialRow[profitCol] = profit;
+    financialRow[debtCol] = debt;
+    financialRow[cashCol] = cash;
+    financialRow[growthCol] = growth;
+    financialRow[riskCol] = assignRiskRating_(profit, debt, cash);
+    financialRow[notesCol] = companyName + ' updated based on ' + (assetType === 'BOND' ? 'stable bond' : trend) + ' trend.';
+  });
+
+  financialsSheet.getRange(1, 1, financialValues.length, financialValues[0].length).setValues(financialValues);
+}
+
+
+function generateMorningNewsFromTrend_() {
+  const marketSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+  if (!marketSheet) throw new Error('Stock_Market sheet not found.');
+
+  const values = marketSheet.getRange(2, 1, marketSheet.getLastRow() - 1, STOCK_CFG.HEADERS.MARKET.length).getValues();
+
+  values.forEach(function(row) {
+    const ticker = cleanString_(row[0]).toUpperCase();
+    const companyName = cleanString_(row[1]);
+    const sector = cleanString_(row[2]);
+    const trend = cleanString_(row[8]);
+    const assetType = cleanString_(row[11] || 'STOCK').toUpperCase();
+    const active = cleanString_(row[9]).toLowerCase();
+
+    if (!ticker || active !== 'yes') return;
+
+    const news = assetType === 'BOND'
+      ? buildBondNewsEvent_(companyName, sector)
+      : buildTrendNewsEvent_(companyName, sector, trend);
+
+    appendMarketNews_(ticker, news.headline, news.body, news.impactType, news.priceImpact, news.volatilityImpact, 'Active');
+  });
+}
+
+
+function getTrendFinancialModifier_(trend) {
+  trend = cleanString_(trend).toLowerCase();
+
+  if (trend === 'hot') return { revenue: randomBetween_(0.03, 0.08), profit: randomBetween_(0.04, 0.10), debt: randomBetween_(-0.03, 0.02), cash: randomBetween_(0.02, 0.08), growth: randomBetween_(0.01, 0.03) };
+  if (trend === 'growth') return { revenue: randomBetween_(0.01, 0.04), profit: randomBetween_(0.01, 0.05), debt: randomBetween_(-0.01, 0.03), cash: randomBetween_(0.00, 0.04), growth: randomBetween_(0.005, 0.02) };
+  if (trend === 'decline') return { revenue: randomBetween_(-0.04, -0.01), profit: randomBetween_(-0.07, -0.02), debt: randomBetween_(0.01, 0.05), cash: randomBetween_(-0.05, -0.01), growth: randomBetween_(-0.02, -0.005) };
+  if (trend === 'crash') return { revenue: randomBetween_(-0.10, -0.04), profit: randomBetween_(-0.15, -0.05), debt: randomBetween_(0.03, 0.10), cash: randomBetween_(-0.10, -0.03), growth: randomBetween_(-0.05, -0.02) };
+  if (trend === 'volatile') return { revenue: randomBetween_(-0.04, 0.05), profit: randomBetween_(-0.08, 0.08), debt: randomBetween_(-0.02, 0.06), cash: randomBetween_(-0.06, 0.05), growth: randomBetween_(-0.025, 0.025) };
+
+  return { revenue: randomBetween_(-0.01, 0.015), profit: randomBetween_(-0.02, 0.025), debt: randomBetween_(-0.01, 0.015), cash: randomBetween_(-0.01, 0.02), growth: randomBetween_(-0.005, 0.008) };
+}
+
+
+function buildTrendNewsEvent_(companyName, sector, trend) {
+  trend = cleanString_(trend).toLowerCase();
+
+  if (trend === 'hot') return { headline: companyName + ' surges as demand rises across the ' + sector + ' sector.', body: companyName + ' is seeing strong demand, which may increase investor confidence.', impactType: 'Positive', priceImpact: 0.03, volatilityImpact: 1 };
+  if (trend === 'growth') return { headline: companyName + ' reports steady growth and improved market confidence.', body: companyName + ' continues to show positive momentum with moderate risk.', impactType: 'Positive', priceImpact: 0.015, volatilityImpact: 0.5 };
+  if (trend === 'decline') return { headline: companyName + ' faces weaker demand and cautious investor sentiment.', body: 'Investors are watching ' + companyName + ' closely as demand weakens.', impactType: 'Negative', priceImpact: -0.015, volatilityImpact: 0.75 };
+  if (trend === 'crash') return { headline: companyName + ' drops sharply after major concerns hit the market.', body: companyName + ' is under pressure as investors react to worsening conditions.', impactType: 'Negative', priceImpact: -0.04, volatilityImpact: 2 };
+  if (trend === 'volatile') return { headline: companyName + ' sees uncertain trading as investors react to mixed signals.', body: companyName + ' may experience larger price swings as investors disagree on direction.', impactType: 'Mixed', priceImpact: randomBetween_(-0.02, 0.02), volatilityImpact: 1.5 };
+
+  return { headline: companyName + ' remains stable as the ' + sector + ' market shows normal activity.', body: companyName + ' appears steady with no major changes reported.', impactType: 'Neutral', priceImpact: 0, volatilityImpact: 0 };
+}
+
+
+function buildBondNewsEvent_(companyName, sector) {
+  return {
+    headline: companyName + ' remains steady as investors seek stability.',
+    body: companyName + ' is a bond instrument and is less sensitive to market shocks than regular stocks.',
+    impactType: 'Neutral',
+    priceImpact: 0,
+    volatilityImpact: 0
+  };
+}
+
+
+/*******************************************************
+ WEEKLY RANDOM MARKET SHOCK
+*******************************************************/
+
+function chooseWeeklyShockDay() {
+  const props = PropertiesService.getScriptProperties();
+
+  const now = new Date();
+  const weekKey = Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'yyyy-ww');
+  const shockDays = getEligibleShockDaysForCurrentWeek_();
+  const selectedDay = shockDays[Math.floor(Math.random() * shockDays.length)];
+
+  props.setProperty('MARKET_SHOCK_WEEK', weekKey);
+  props.setProperty('MARKET_SHOCK_DAY', selectedDay);
+  props.setProperty('MARKET_SHOCK_TRIGGERED', 'NO');
+
+  appendMarketNews_('MARKET', 'Weekly Market Outlook', 'The market opens the week with uncertainty. Analysts warn that a possible economic shock may occur later this week, but the exact timing is unknown.', 'Neutral', 0, 0, 'Active');
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Weekly shock day selected internally.', 'Market Shock', 5);
+}
+
+
+function checkAndTriggerWeeklyMarketShock() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const now = new Date();
+    const weekKey = Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'yyyy-ww');
+    const todayName = Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'EEEE');
+
+    let selectedWeek = props.getProperty('MARKET_SHOCK_WEEK');
+    let selectedDay = props.getProperty('MARKET_SHOCK_DAY');
+    let alreadyTriggered = props.getProperty('MARKET_SHOCK_TRIGGERED');
+
+    if (selectedWeek !== weekKey || !selectedDay) {
+      chooseWeeklyShockDay();
+      selectedWeek = props.getProperty('MARKET_SHOCK_WEEK');
+      selectedDay = props.getProperty('MARKET_SHOCK_DAY');
+      alreadyTriggered = props.getProperty('MARKET_SHOCK_TRIGGERED');
+    }
+
+    if (alreadyTriggered === 'YES') return;
+
+    if (todayName !== selectedDay) {
+      appendMarketNews_('MARKET', 'Market Stability Report', 'Markets opened without a major economic shock today. Investors remain cautious as uncertainty continues through the week.', 'Neutral', 0, 0, 'Active');
+      return;
+    }
+
+    const triggered = triggerWeeklyMarketEconomicShock_();
+
+    if (triggered) {
+      props.setProperty('MARKET_SHOCK_TRIGGERED', 'YES');
+    }
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Weekly shock check error: ' + err.message, 'Market Shock', 5);
+  }
+}
+
+
+function triggerWeeklyMarketEconomicShock_() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+    if (!sheet) throw new Error('Stock_Market sheet not found.');
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return false;
+
+    const range = sheet.getRange(2, 1, lastRow - 1, STOCK_CFG.HEADERS.MARKET.length);
+    const values = range.getValues();
+
+    const activeIndexes = [];
+
+    values.forEach(function(row, index) {
+      const ticker = cleanString_(row[0]);
+      const active = cleanString_(row[9]).toLowerCase();
+      const assetType = cleanString_(row[11] || 'STOCK').toUpperCase();
+      const shockProtected = cleanString_(row[13]).toLowerCase();
+
+      if (ticker && active === 'yes' && assetType !== 'BOND' && shockProtected !== 'yes') {
+        activeIndexes.push(index);
+      }
+    });
+
+    shuffleArray_(activeIndexes);
+
+    const affectedCount = Math.ceil(activeIndexes.length * STOCK_CFG.SHOCK_WEEKLY_PERCENT);
+    const affectedIndexes = activeIndexes.slice(0, affectedCount);
+    const timestamp = nowString_();
+    const dateKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+    const historyRows = [];
+
+    affectedIndexes.forEach(function(index) {
+      const row = values[index];
+
+      const oldPrice = Number(row[3]) || 1;
+      const dropPercent = randomBetween_(0.02, STOCK_CFG.SHOCK_MAX_DROP_PERCENT);
+      const newPrice = Math.max(1, round2_(oldPrice * (1 - dropPercent)));
+      const changePercent = round4_((newPrice - oldPrice) / oldPrice);
+
+      row[3] = newPrice;
+      row[4] = oldPrice;
+      row[5] = changePercent;
+      row[6] = round2_(newPrice - oldPrice);
+      row[7] = Math.min(15, round2_((Number(row[7]) || 5) + randomBetween_(1, 3)));
+      row[8] = Math.random() < 0.55 ? 'Decline' : 'Crash';
+      row[10] = timestamp;
+
+      historyRows.push([timestamp, dateKey, cleanString_(row[0]), cleanString_(row[1]), newPrice, changePercent]);
+    });
+
+    range.setValues(values);
+    appendStockPriceHistoryRows_(historyRows);
+
+    appendMarketNews_(
+      'MARKET',
+      'Economic Shock Hits the Market',
+      'A sudden economic shock hit the classroom market today. Around 60% of non-bond companies were affected, causing sharp price declines and increased volatility across multiple sectors. Bond instruments remained comparatively stable.',
+      'Negative',
+      -STOCK_CFG.SHOCK_MAX_DROP_PERCENT,
+      2,
+      'Active'
+    );
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('Weekly market shock triggered. ' + affectedCount + ' companies affected.', 'Market Shock', 5);
+    return true;
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Weekly market shock error: ' + err.message, 'Market Shock', 5);
+    return false;
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+/*******************************************************
+ STOCK RESEARCH CENTER V1–V5
+*******************************************************/
+
+function setupStockResearchCenter() {
+  setupStockProfilePage_();
+  setupStockFinancialsSheet_();
+  setupStockNewsSheet_();
+  setupStockRatingsSheet_();
+  setupStockPriceHistorySheet();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Stock Research Center setup complete.', 'Stock Market', 5);
+}
+
+
+function setupStockProfilePage_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PROFILE);
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Stock Profile');
+  sheet.getRange('A3').setValue('Enter Ticker');
+  sheet.getRange('B3').setValue('');
+
+  const labels = [
+    ['Company Name'], ['Sector'], ['Current Price'], ['Previous Price'], ['Change %'], ['Change Amount'],
+    ['Volatility'], ['Trend'], ['Active'], ['Last Updated'], ['Asset Type'], ['Coupon Rate']
+  ];
+
+  sheet.getRange('A5:A16').setValues(labels);
+
+  sheet.getRange('B5').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$B:$B),"Ticker not found"))');
+  sheet.getRange('B6').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$C:$C),""))');
+  sheet.getRange('B7').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$D:$D),""))');
+  sheet.getRange('B8').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$E:$E),""))');
+  sheet.getRange('B9').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$F:$F),""))');
+  sheet.getRange('B10').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$G:$G),""))');
+  sheet.getRange('B11').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$H:$H),""))');
+  sheet.getRange('B12').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$I:$I),""))');
+  sheet.getRange('B13').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$J:$J),""))');
+  sheet.getRange('B14').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$K:$K),""))');
+  sheet.getRange('B15').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$L:$L),""))');
+  sheet.getRange('B16').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$O:$O),""))');
+
+  sheet.getRange('A19').setValue('Latest News');
+  sheet.getRange('A20').setFormula('=IF($B$3="","",IFNA(QUERY(SORT(FILTER(Stock_News!A:H,Stock_News!B:B=$B$3),1,FALSE),"limit 5",0),"No news found"))');
+
+  sheet.getRange('A30').setValue('Financials');
+  sheet.getRange('A31').setFormula('=IF($B$3="","",IFNA(FILTER(Stock_Financials!A:H,Stock_Financials!A:A=$B$3),"No financials found"))');
+
+  sheet.getRange('A40').setValue('Student Analyst Ratings');
+  sheet.getRange('A41').setFormula('=IF($B$3="","",IFNA(QUERY(SORT(FILTER({Stock_Ratings!A:A,Stock_Ratings!D:D,Stock_Ratings!F:F,Stock_Ratings!G:G,Stock_Ratings!K:K,Stock_Ratings!L:L,Stock_Ratings!M:M},Stock_Ratings!E:E=$B$3),1,FALSE),"limit 5",0),"No ratings found"))');
+
+  sheet.getRange('A1:B1').merge();
+  sheet.getRange('A1').setFontSize(20).setFontWeight('bold');
+  sheet.getRange('A3:A16').setFontWeight('bold');
+  sheet.getRange('B3').setBackground('#fff2cc');
+  sheet.setColumnWidths(1, 8, 160);
+}
+
+
+function setupStockFinancialsSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FINANCIALS);
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.FINANCIALS.length)
+    .setValues([STOCK_CFG.HEADERS.FINANCIALS])
+    .setFontWeight('bold');
+
+  const tickers = getStockTickers_();
+  const rows = tickers.map(function(stock) {
+    const assetType = cleanString_(stock.assetType || 'STOCK').toUpperCase();
+
+    if (assetType === 'BOND') {
+      return [stock.ticker, randomInt_(1000, 5000), randomInt_(100, 1000), randomInt_(0, 2000), randomInt_(1000, 6000), round4_(randomBetween_(0.005, 0.025)), 'Low', 'Stable bond instrument with lower volatility.'];
+    }
+
+    const revenue = randomInt_(5000, 50000);
+    const profit = randomInt_(-1000, 10000);
+    const debt = randomInt_(0, 25000);
+    const cash = randomInt_(500, 15000);
+    const growth = randomBetween_(-0.1, 0.25);
+
+    return [stock.ticker, revenue, profit, debt, cash, round4_(growth), assignRiskRating_(profit, debt, cash), 'Generated financial profile for classroom simulation.'];
+  });
+
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, STOCK_CFG.HEADERS.FINANCIALS.length).setValues(rows);
+  }
+
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.FINANCIALS.length, 160);
+}
+
+
+function setupStockNewsSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.NEWS);
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.NEWS.length)
+    .setValues([STOCK_CFG.HEADERS.NEWS])
+    .setFontWeight('bold');
+
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.NEWS.length, 180);
+}
+
+
+function setupStockRatingsSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.RATINGS);
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.RATINGS.length)
+    .setValues([STOCK_CFG.HEADERS.RATINGS])
+    .setFontWeight('bold');
+
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.RATINGS.length, 160);
+}
+
+
+function setupStockPriceHistorySheet() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PRICE_HISTORY);
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PRICE_HISTORY.length)
+    .setValues([STOCK_CFG.HEADERS.PRICE_HISTORY])
+    .setFontWeight('bold');
+
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.PRICE_HISTORY.length, 160);
+}
+
+
+function appendStockPriceHistoryRows_(historyRows) {
+  if (!historyRows || !historyRows.length) return;
+
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PRICE_HISTORY);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PRICE_HISTORY.length)
+      .setValues([STOCK_CFG.HEADERS.PRICE_HISTORY])
+      .setFontWeight('bold');
+  }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, historyRows.length, STOCK_CFG.HEADERS.PRICE_HISTORY.length)
+    .setValues(historyRows);
+
+  enforcePriceHistoryLimit_();
+}
+
+
+function logStockPriceHistory_(ticker, companyName, price, changePercent) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.PRICE_HISTORY);
+  const now = new Date();
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.PRICE_HISTORY.length)
+      .setValues([STOCK_CFG.HEADERS.PRICE_HISTORY])
+      .setFontWeight('bold');
+  }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.PRICE_HISTORY.length)
+    .setValues([[nowString_(), Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'), ticker, companyName, price, changePercent]]);
+}
+
+
+function generateRandomStockNews() {
+  const stocks = getStockTickers_().filter(function(stock) {
+    return stock.assetType !== 'BOND';
+  });
+
+  if (!stocks.length) {
+    SpreadsheetApp.getUi().alert('No stocks found.');
+    return;
+  }
+
+  const stock = stocks[Math.floor(Math.random() * stocks.length)];
+
+  const events = [
+    ['reports strong student demand', 'Positive', 0.03, 1],
+    ['faces supply chain problems', 'Negative', -0.03, 1.5],
+    ['launches new product line', 'Positive', 0.04, 1],
+    ['is hit by bad publicity', 'Negative', -0.04, 2],
+    ['announces expansion plans', 'Positive', 0.025, 1],
+    ['misses profit expectations', 'Negative', -0.025, 1.25],
+    ['receives investor attention', 'Positive', 0.035, 1.5],
+    ['faces rising costs', 'Negative', -0.02, 1]
+  ];
+
+  const event = events[Math.floor(Math.random() * events.length)];
+  const headline = stock.name + ' ' + event[0] + '.';
+
+  appendMarketNews_(stock.ticker, headline, headline, event[1], event[2], event[3], 'Active');
+  applyNewsImpactToStock_(stock.ticker, event[2], event[3]);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Generated news for ' + stock.ticker, 'Stock News', 5);
+}
+
+
+function applyNewsImpactToStock_(ticker, priceImpact, volatilityImpact) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+
+  const headers = values[0];
+
+  const tickerCol = headers.indexOf('Ticker');
+  const priceCol = headers.indexOf('Current_Price');
+  const prevCol = headers.indexOf('Previous_Price');
+  const changeCol = headers.indexOf('Change_%');
+  const amountCol = headers.indexOf('Change_Amount');
+  const volCol = headers.indexOf('Volatility');
+  const assetCol = headers.indexOf('Asset_Type');
+  const protectedCol = headers.indexOf('Shock_Protected');
+  const updatedCol = headers.indexOf('Last_Updated');
+
+  for (let i = 1; i < values.length; i++) {
+    if (cleanString_(values[i][tickerCol]).toUpperCase() === ticker) {
+      const assetType = assetCol !== -1 ? cleanString_(values[i][assetCol]).toUpperCase() : 'STOCK';
+      const shockProtected = protectedCol !== -1 ? cleanString_(values[i][protectedCol]).toLowerCase() : '';
+
+      if (assetType === 'BOND' || shockProtected === 'yes') return;
+
+      const oldPrice = Number(values[i][priceCol]) || 1;
+      const newPrice = round2_(oldPrice * (1 + priceImpact));
+      const changeAmount = round2_(newPrice - oldPrice);
+
+      sheet.getRange(i + 1, prevCol + 1).setValue(oldPrice);
+      sheet.getRange(i + 1, priceCol + 1).setValue(newPrice);
+      sheet.getRange(i + 1, changeCol + 1).setValue(priceImpact);
+      sheet.getRange(i + 1, amountCol + 1).setValue(changeAmount);
+      sheet.getRange(i + 1, volCol + 1).setValue(round2_((Number(values[i][volCol]) || 5) + volatilityImpact));
+      sheet.getRange(i + 1, updatedCol + 1).setValue(nowString_());
+      logStockPriceHistory_(ticker, cleanString_(values[i][headers.indexOf('Company_Name')]), newPrice, priceImpact);
+      updateAllPortfolioMarketValues();
+      updateAllPortfolioMarketValues_();
+      return;
+    }
+  }
+}
+
+
+function addStockRating(cardId, studentName, ticker, rating, targetPrice, reason) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.RATINGS);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    setupStockRatingsSheet_();
+  }
+
+  const now = new Date();
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.RATINGS.length)
+    .setValues([[
+      nowString_(),
+      Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'),
+      normalizeCardId_(cardId),
+      cleanString_(studentName),
+      cleanString_(ticker).toUpperCase(),
+      cleanString_(rating).toUpperCase(),
+      Number(targetPrice) || '',
+      cleanString_(reason),
+      '',
+      '',
+      '',
+      'Pending',
+      0
+    ]]);
+}
+
+
+function appendMarketNews_(ticker, headline, body, impactType, priceImpact, volatilityImpact, status) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.NEWS);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.NEWS.length)
+      .setValues([STOCK_CFG.HEADERS.NEWS])
+      .setFontWeight('bold');
+  }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.NEWS.length)
+    .setValues([[nowString_(), ticker, headline, body, impactType, priceImpact, volatilityImpact, status]]);
+}
+
+
+
+function ensureFinancialRowsForAllMarketInstruments_() {
+  const financialsSheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FINANCIALS);
+
+  if (financialsSheet.getLastRow() < 1 || cleanString_(financialsSheet.getRange(1, 1).getValue()) === '') {
+    financialsSheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.FINANCIALS.length)
+      .setValues([STOCK_CFG.HEADERS.FINANCIALS])
+      .setFontWeight('bold');
+  }
+
+  const existing = {};
+
+  if (financialsSheet.getLastRow() >= 2) {
+    const existingValues = financialsSheet.getRange(2, 1, financialsSheet.getLastRow() - 1, 1).getValues();
+    existingValues.forEach(function(row) {
+      const ticker = cleanString_(row[0]).toUpperCase();
+      if (ticker) existing[ticker] = true;
+    });
+  }
+
+  const rowsToAdd = getStockTickers_()
+    .filter(function(stock) {
+      return !existing[stock.ticker];
+    })
+    .map(function(stock) {
+      if (stock.assetType === 'BOND') {
+        return [
+          stock.ticker,
+          randomInt_(1000, 5000),
+          randomInt_(100, 1000),
+          randomInt_(0, 2000),
+          randomInt_(1000, 6000),
+          round4_(randomBetween_(0.005, 0.025)),
+          'Low',
+          'Stable bond instrument with lower volatility.'
+        ];
+      }
+
+      const revenue = randomInt_(5000, 50000);
+      const profit = randomInt_(-1000, 10000);
+      const debt = randomInt_(0, 25000);
+      const cash = randomInt_(500, 15000);
+      const growth = randomBetween_(-0.1, 0.25);
+
+      return [
+        stock.ticker,
+        revenue,
+        profit,
+        debt,
+        cash,
+        round4_(growth),
+        assignRiskRating_(profit, debt, cash),
+        'Generated financial profile for classroom simulation.'
+      ];
+    });
+
+  if (rowsToAdd.length) {
+    financialsSheet.getRange(financialsSheet.getLastRow() + 1, 1, rowsToAdd.length, STOCK_CFG.HEADERS.FINANCIALS.length)
+      .setValues(rowsToAdd);
+  }
+}
+
+
+
+
+/*******************************************************
+ STOCK RATING SUBMISSION SHEET
+ Student-facing analyst rating form.
+ Button/script name:
+   processStockRating
+*******************************************************/
+
+function setupStockRatingSubmitSheet() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.RATINGS_SUBMIT || 'Stock_Rating_Submit');
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Stock Analyst Rating Submission');
+
+  sheet.getRange('A3').setValue('Student Card ID');
+  sheet.getRange('A4').setValue('Ticker');
+  sheet.getRange('A5').setValue('Rating');
+  sheet.getRange('A6').setValue('Target Price');
+  sheet.getRange('A7').setValue('Reason');
+  sheet.getRange('A9').setValue('Result');
+
+  sheet.getRange('B3:B7').clearContent();
+  sheet.getRange('B9').setValue('Enter rating details, then press Submit Rating.');
+
+  const ratingRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['BUY', 'HOLD', 'SELL'], true)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange('B5').setDataValidation(ratingRule);
+
+  const tickerRule = buildTickerValidationRule_();
+  if (tickerRule) {
+    sheet.getRange('B4').setDataValidation(tickerRule);
+  }
+
+  sheet.getRange('B3').clearDataValidations().setNumberFormat('@');
+  sheet.getRange('B4').setNumberFormat('@');
+  sheet.getRange('B6').setNumberFormat('0.00');
+
+  sheet.getRange('A1:B1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+
+  sheet.getRange('A3:A9').setFontWeight('bold');
+  sheet.getRange('B3:B7').setBackground('#fff2cc');
+  sheet.getRange('B9').setBackground('#e8f0fe');
+
+  sheet.setColumnWidths(1, 2, 220);
+  sheet.setFrozenRows(1);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Stock rating submission sheet created.',
+    'Stock Ratings',
+    5
+  );
+}
+
+
+function processStockRating() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(STOCK_CFG.SHEETS.RATINGS_SUBMIT || 'Stock_Rating_Submit');
+
+    if (!sheet) {
+      SpreadsheetApp.getUi().alert('Stock_Rating_Submit sheet not found. Run setupStockRatingSubmitSheet first.');
+      return;
+    }
+
+
+    if (!isAnalystSubmissionOpen_()) {
+      writeStockRatingSubmitResult_('Rating denied: analyst submissions close at 4:00 PM KST. Submit between 8:00 AM and 4:00 PM KST.');
+      return;
+    }
+
+
+    SpreadsheetApp.flush();
+    sheet.getRange('B9').activate();
+    SpreadsheetApp.flush();
+    Utilities.sleep(150);
+
+    writeStockRatingSubmitResult_('Processing rating...');
+
+    const inputs = sheet.getRange('B3:B7').getDisplayValues();
+
+    const cardId = normalizeCardId_(inputs[0][0]);
+    const ticker = cleanString_(inputs[1][0]).toUpperCase();
+    const rating = cleanString_(inputs[2][0]).toUpperCase();
+    const targetPrice = Number(cleanString_(inputs[3][0])) || 0;
+    const reason = cleanString_(inputs[4][0]);
+    const todayKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+
+    if (!cardId || !ticker || !rating || !targetPrice || !reason) {
+      writeStockRatingSubmitResult_('Rating failed: Card ID, ticker, rating, target price, and reason are required.');
+      return;
+    }
+
+    if (!['BUY', 'HOLD', 'SELL'].includes(rating)) {
+      writeStockRatingSubmitResult_('Rating failed: Rating must be BUY, HOLD, or SELL.');
+      return;
+    }
+
+    if (targetPrice <= 0) {
+      writeStockRatingSubmitResult_('Rating failed: Target price must be greater than 0.');
+      return;
+    }
+
+    if (reason.length < 10) {
+      writeStockRatingSubmitResult_('Rating failed: Reason must be at least 10 characters.');
+      return;
+    }
+
+    const student = findStudentByCard_(cardId);
+
+    if (!student) {
+      writeStockRatingSubmitResult_('Rating failed: Card ID not found in master Students sheet: ' + cardId);
+      return;
+    }
+
+    const stock = findStockByTicker_(ticker);
+
+    if (!stock || !stock.active) {
+      writeStockRatingSubmitResult_('Rating failed: ticker not found or inactive: ' + ticker);
+      return;
+    }
+
+    if (analystPredictionAlreadySubmitted_(student.cardId, ticker, todayKey)) {
+      writeStockRatingSubmitResult_('Rating denied: ' + student.name + ' already submitted a prediction for ' + ticker + ' today.');
+      return;
+    }
+
+    addStockRating(student.cardId, student.name, ticker, rating, targetPrice, reason);
+
+    writeStockRatingSubmitResult_(
+      student.name + ' submitted a ' + rating + ' rating for ' + ticker +
+      ' with target price ' + targetPrice + '. It will be checked after market close.'
+    );
+
+    sheet.getRange('B3:B7').clearContent();
+
+  } catch (err) {
+    console.error(err);
+    writeStockRatingSubmitResult_('Rating error: ' + err.message);
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (err) {}
+  }
+}
+
+
+function writeStockRatingSubmitResult_(message) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(STOCK_CFG.SHEETS.RATINGS_SUBMIT || 'Stock_Rating_Submit');
+
+  if (sheet) {
+    sheet.getRange('B9').setValue(message);
+  }
+}
+
+
+function buildTickerValidationRule_() {
+  const tickers = getStockTickers_()
+    .map(function(stock) {
+      return stock.ticker;
+    })
+    .filter(function(ticker) {
+      return ticker;
+    });
+
+  if (!tickers.length) return null;
+
+  return SpreadsheetApp.newDataValidation()
+    .requireValueInList(tickers, true)
+    .setAllowInvalid(false)
+    .build();
+}
+
+
+
+
+/*******************************************************
+ ANALYST PREDICTION REWARD SYSTEM
+ Checks end-of-day target price accuracy after market close.
+
+ Reward tiers:
+   ±1% = $100
+   ±5% = $50
+   ±10% = $10
+
+ A prediction can only be rewarded once.
+*******************************************************/
+
+function checkAnalystPredictions() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ratingsSheet = ss.getSheetByName(STOCK_CFG.SHEETS.RATINGS);
+
+    if (!ratingsSheet || ratingsSheet.getLastRow() < 2) {
+      ss.toast('No analyst predictions to check.', 'Stock Ratings', 5);
+      return;
+    }
+
+    ensureStockRatingsRewardColumns_();
+
+    const values = ratingsSheet.getRange(1, 1, ratingsSheet.getLastRow(), STOCK_CFG.HEADERS.RATINGS.length).getValues();
+    const headers = values[0];
+
+    const dateCol = headers.indexOf('Date');
+    const cardCol = headers.indexOf('Card_ID');
+    const nameCol = headers.indexOf('Student_Name');
+    const tickerCol = headers.indexOf('Ticker');
+    const targetCol = headers.indexOf('Target_Price');
+    const checkDateCol = headers.indexOf('Check_Date');
+    const eodPriceCol = headers.indexOf('End_Of_Day_Price');
+    const accuracyCol = headers.indexOf('Accuracy_%');
+    const statusCol = headers.indexOf('Reward_Status');
+    const amountCol = headers.indexOf('Reward_Amount');
+
+    const todayKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+
+    const stockMap = getCurrentStockPriceMap_();
+
+    let checkedCount = 0;
+    let rewardedCount = 0;
+    let totalRewarded = 0;
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+
+      const predictionDate = valueToDateKeyForStock_(row[dateCol]);
+      const rewardStatus = cleanString_(row[statusCol]);
+      const ticker = cleanString_(row[tickerCol]).toUpperCase();
+      const cardId = normalizeCardId_(row[cardCol]);
+      const targetPrice = Number(row[targetCol]) || 0;
+
+      if (!ticker || !targetPrice) continue;
+
+      if (!cardId) {
+        row[checkDateCol] = todayKey;
+        row[statusCol] = 'Needs Card ID';
+        row[amountCol] = 0;
+        checkedCount++;
+        continue;
+      }
+
+      // Only same-day predictions are checked at end of day.
+      if (predictionDate !== todayKey) continue;
+
+      // Prevent double rewards.
+      if (rewardStatus && rewardStatus !== 'Pending') continue;
+
+      const stock = stockMap[ticker];
+
+      if (!stock) {
+        row[checkDateCol] = todayKey;
+        row[eodPriceCol] = '';
+        row[accuracyCol] = '';
+        row[statusCol] = 'No Price Found';
+        row[amountCol] = 0;
+        checkedCount++;
+        continue;
+      }
+
+      const eodPrice = stock.price;
+      const accuracy = Math.abs(eodPrice - targetPrice) / targetPrice;
+      const rewardAmount = getAnalystRewardAmount_(accuracy);
+
+      row[checkDateCol] = todayKey;
+      row[eodPriceCol] = eodPrice;
+      row[accuracyCol] = round4_(accuracy);
+      row[amountCol] = rewardAmount;
+
+      if (rewardAmount > 0) {
+        const student = findStudentByCard_(cardId);
+
+        if (student) {
+          updateStudentBalance_(student.row, student.balanceCol, Number(student.balance || 0) + rewardAmount);
+          row[statusCol] = 'Rewarded';
+          rewardedCount++;
+          totalRewarded += rewardAmount;
+        } else {
+          row[statusCol] = 'Student Not Found';
+        }
+      } else {
+        row[statusCol] = 'Missed';
+      }
+
+      checkedCount++;
+    }
+
+    ratingsSheet
+      .getRange(1, 1, values.length, STOCK_CFG.HEADERS.RATINGS.length)
+      .setValues(values);
+
+    ss.toast(
+      'Checked ' + checkedCount + ' predictions. Rewarded ' + rewardedCount +
+      ' students. Total paid: $' + totalRewarded + '.',
+      'Stock Ratings',
+      8
+    );
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Analyst reward check error: ' + err.message,
+      'Stock Ratings',
+      8
+    );
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (err) {}
+  }
+}
+
+
+function getAnalystRewardAmount_(accuracyDecimal) {
+  // Best reward first:
+  // ±1% = $100
+  // ±5% = $50
+  // ±10% = $10
+
+  if (accuracyDecimal <= STOCK_CFG.ANALYST_REWARD_TIER_3_PERCENT) {
+    return STOCK_CFG.ANALYST_REWARD_TIER_3_AMOUNT;
+  }
+
+  if (accuracyDecimal <= STOCK_CFG.ANALYST_REWARD_TIER_2_PERCENT) {
+    return STOCK_CFG.ANALYST_REWARD_TIER_2_AMOUNT;
+  }
+
+  if (accuracyDecimal <= STOCK_CFG.ANALYST_REWARD_TIER_1_PERCENT) {
+    return STOCK_CFG.ANALYST_REWARD_TIER_1_AMOUNT;
+  }
+
+  return 0;
+}
+
+
+function ensureStockRatingsRewardColumns_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.RATINGS);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    setupStockRatingsSheet_();
+    return;
+  }
+
+  const oldValues = sheet.getRange(1, 1, sheet.getLastRow(), Math.max(sheet.getLastColumn(), STOCK_CFG.HEADERS.RATINGS.length)).getValues();
+  const oldHeaders = oldValues[0].map(function(header) {
+    return cleanString_(header);
+  });
+
+  const alreadyNewFormat = oldHeaders[0] === 'Timestamp' &&
+    oldHeaders[1] === 'Date' &&
+    oldHeaders[2] === 'Card_ID' &&
+    oldHeaders[4] === 'Ticker';
+
+  if (!alreadyNewFormat) {
+    migrateOldStockRatingsToRewardFormat_(oldValues, oldHeaders);
+    return;
+  }
+
+  let changed = false;
+
+  STOCK_CFG.HEADERS.RATINGS.forEach(function(requiredHeader, index) {
+    if (oldHeaders[index] !== requiredHeader) {
+      sheet.getRange(1, index + 1).setValue(requiredHeader);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.RATINGS.length).setFontWeight('bold');
+  }
+}
+
+
+
+
+function migrateOldStockRatingsToRewardFormat_(oldValues, oldHeaders) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.RATINGS);
+
+  const timestampCol = oldHeaders.indexOf('Timestamp');
+  const oldTickerCol = oldHeaders.indexOf('Ticker');
+  const oldStudentNameCol = oldHeaders.indexOf('Student_Name');
+  const oldRatingCol = oldHeaders.indexOf('Rating');
+  const oldTargetCol = oldHeaders.indexOf('Target_Price');
+  const oldReasonCol = oldHeaders.indexOf('Reason');
+
+  const rows = [STOCK_CFG.HEADERS.RATINGS];
+
+  for (let i = 1; i < oldValues.length; i++) {
+    const oldRow = oldValues[i];
+    const timestamp = timestampCol !== -1 ? oldRow[timestampCol] : '';
+    const ticker = oldTickerCol !== -1 ? cleanString_(oldRow[oldTickerCol]).toUpperCase() : '';
+    const studentName = oldStudentNameCol !== -1 ? cleanString_(oldRow[oldStudentNameCol]) : '';
+    const rating = oldRatingCol !== -1 ? cleanString_(oldRow[oldRatingCol]).toUpperCase() : '';
+    const targetPrice = oldTargetCol !== -1 ? Number(oldRow[oldTargetCol]) || '' : '';
+    const reason = oldReasonCol !== -1 ? cleanString_(oldRow[oldReasonCol]) : '';
+
+    if (!ticker && !studentName && !rating && !targetPrice && !reason) continue;
+
+    rows.push([
+      timestamp || nowString_(),
+      valueToDateKeyForStock_(timestamp) || Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'),
+      '',
+      studentName,
+      ticker,
+      rating,
+      targetPrice,
+      reason,
+      '',
+      '',
+      '',
+      'Needs Card ID',
+      0
+    ]);
+  }
+
+  sheet.clear();
+  sheet.getRange(1, 1, rows.length, STOCK_CFG.HEADERS.RATINGS.length).setValues(rows);
+  sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.RATINGS.length).setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, STOCK_CFG.HEADERS.RATINGS.length, 160);
+}
+
+
+function analystPredictionAlreadySubmitted_(cardId, ticker, dateKey) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.RATINGS);
+
+  if (!sheet || sheet.getLastRow() < 2) return false;
+
+  ensureStockRatingsRewardColumns_();
+
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), STOCK_CFG.HEADERS.RATINGS.length).getValues();
+  const headers = values[0];
+
+  const dateCol = headers.indexOf('Date');
+  const cardCol = headers.indexOf('Card_ID');
+  const tickerCol = headers.indexOf('Ticker');
+
+  if (dateCol === -1 || cardCol === -1 || tickerCol === -1) return false;
+
+  const targetCard = normalizeCardId_(cardId);
+  const targetTicker = cleanString_(ticker).toUpperCase();
+
+  for (let i = 1; i < values.length; i++) {
+    const rowDate = valueToDateKeyForStock_(values[i][dateCol]);
+    const rowCard = normalizeCardId_(values[i][cardCol]);
+    const rowTicker = cleanString_(values[i][tickerCol]).toUpperCase();
+
+    if (rowDate === dateKey && rowCard === targetCard && rowTicker === targetTicker) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+function getCurrentStockPriceMap_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+
+  if (!sheet || sheet.getLastRow() < 2) return {};
+
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+  const headers = values[0];
+
+  const tickerCol = headers.indexOf('Ticker');
+  const nameCol = headers.indexOf('Company_Name');
+  const priceCol = headers.indexOf('Current_Price');
+  const activeCol = headers.indexOf('Active');
+
+  const map = {};
+
+  for (let i = 1; i < values.length; i++) {
+    const ticker = cleanString_(values[i][tickerCol]).toUpperCase();
+    const active = activeCol !== -1 ? cleanString_(values[i][activeCol]).toLowerCase() : 'yes';
+
+    if (!ticker || active !== 'yes') continue;
+
+    map[ticker] = {
+      ticker: ticker,
+      name: nameCol !== -1 ? cleanString_(values[i][nameCol]) : ticker,
+      price: Number(values[i][priceCol]) || 0
+    };
+  }
+
+  return map;
+}
+
+
+function valueToDateKeyForStock_(value) {
+  if (!value) return '';
+
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) {
+    return Utilities.formatDate(value, STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+  }
+
+  const text = cleanString_(value);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text;
+  }
+
+  const parsed = new Date(text);
+
+  if (!isNaN(parsed)) {
+    return Utilities.formatDate(parsed, STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+  }
+
+  return text;
+}
+
+
+
+
+/*******************************************************
+ FUNDAMENTALS-DRIVEN MARKET ENGINE V2
+ Makes student forecasts skill-based instead of pure random.
+
+ Core logic:
+   Financials + news + sector + macro + momentum
+   → hidden score/bias
+   → price movement probability
+*******************************************************/
+
+function setupFundamentalEngineSheets(showToast) {
+  setupFundamentalsSheet_();
+  setupSectorMomentumSheet_();
+  setupMacroOutlookSheet_();
+  setupEarningsReportsSheet_();
+  setupStockForecastHelperSheet_();
+  ensureFundamentalRowsForAllMarketInstruments_();
+
+  if (showToast !== false) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Fundamental engine setup complete.',
+      'Stock Market',
+      5
+    );
+  }
+}
+
+
+function setupFundamentalsSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FUNDAMENTALS || 'Stock_Fundamentals');
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.FUNDAMENTALS.length)
+      .setValues([STOCK_CFG.HEADERS.FUNDAMENTALS])
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, STOCK_CFG.HEADERS.FUNDAMENTALS.length, 150);
+  }
+}
+
+
+function setupSectorMomentumSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.SECTOR || 'Stock_Sector_Momentum');
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.SECTOR.length)
+      .setValues([STOCK_CFG.HEADERS.SECTOR])
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, STOCK_CFG.HEADERS.SECTOR.length, 170);
+  }
+
+  const existing = {};
+  if (sheet.getLastRow() >= 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().forEach(function(row) {
+      const sector = cleanString_(row[0]);
+      if (sector) existing[sector] = true;
+    });
+  }
+
+  const sectors = {};
+  getStockTickers_().forEach(function(stock) {
+    if (stock.sector) sectors[stock.sector] = true;
+  });
+
+  const rows = Object.keys(sectors).filter(function(sector) {
+    return !existing[sector];
+  }).map(function(sector) {
+    return [sector, randomInt_(-10, 10), randomBetween_(0.5, 1.5), nowString_(), 'Sector momentum created for simulation.'];
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, STOCK_CFG.HEADERS.SECTOR.length)
+      .setValues(rows);
+  }
+}
+
+
+function setupMacroOutlookSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.MACRO || 'Stock_Macro_Outlook');
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.MACRO.length)
+      .setValues([STOCK_CFG.HEADERS.MACRO])
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, STOCK_CFG.HEADERS.MACRO.length, 170);
+  }
+
+  if (sheet.getLastRow() < 2) {
+    sheet.getRange(2, 1, 1, STOCK_CFG.HEADERS.MACRO.length).setValues([[
+      Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'),
+      0,
+      0,
+      0,
+      0,
+      0,
+      'Neutral macro starting point.'
+    ]]);
+  }
+}
+
+
+function setupEarningsReportsSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.EARNINGS || 'Stock_Earnings_Reports');
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.EARNINGS.length)
+      .setValues([STOCK_CFG.HEADERS.EARNINGS])
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, STOCK_CFG.HEADERS.EARNINGS.length, 170);
+  }
+}
+
+
+function setupStockForecastHelperSheet_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FORECAST_HELPER || 'Stock_Forecast_Helper');
+  sheet.clear();
+
+  sheet.getRange('A1').setValue('Stock Forecast Helper');
+  sheet.getRange('A3').setValue('Enter Ticker');
+  sheet.getRange('B3').setValue('');
+
+  const labels = [
+    ['Current Price'],
+    ['Revenue'],
+    ['Profit'],
+    ['Debt'],
+    ['Cash'],
+    ['Growth Rate'],
+    ['Risk Rating'],
+    ['Trend'],
+    ['Latest News Tone'],
+    ['Suggested Direction'],
+    ['Conservative Target'],
+    ['Aggressive Target']
+  ];
+
+  sheet.getRange('A5:A16').setValues(labels);
+  sheet.getRange('B5').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$D:$D),""))');
+  sheet.getRange('B6').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$B:$B),""))');
+  sheet.getRange('B7').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$C:$C),""))');
+  sheet.getRange('B8').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$D:$D),""))');
+  sheet.getRange('B9').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$E:$E),""))');
+  sheet.getRange('B10').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$F:$F),""))');
+  sheet.getRange('B11').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Financials!$A:$A,Stock_Financials!$G:$G),""))');
+  sheet.getRange('B12').setFormula('=IF($B$3="","",IFNA(XLOOKUP($B$3,Stock_Market!$A:$A,Stock_Market!$I:$I),""))');
+  sheet.getRange('B13').setFormula('=IF($B$3="","",IFNA(INDEX(SORT(FILTER(Stock_News!E:E,Stock_News!B:B=$B$3),ROW(FILTER(Stock_News!E:E,Stock_News!B:B=$B$3)),FALSE),1),"Neutral"))');
+  sheet.getRange('B14').setFormula('=IF($B$3="","",IF(OR(B10>0.08,B11="Low",B12="Growth",B12="Hot"),"Bullish",IF(OR(B10<0,B11="High",B12="Crash",B12="Decline"),"Bearish","Neutral")))');
+  sheet.getRange('B15').setFormula('=IF($B$3="","",IF(B14="Bullish",B5*1.01,IF(B14="Bearish",B5*0.99,B5)))');
+  sheet.getRange('B16').setFormula('=IF($B$3="","",IF(B14="Bullish",B5*1.05,IF(B14="Bearish",B5*0.95,B5)))');
+
+  sheet.getRange('A19').setValue('Student Note');
+  sheet.getRange('A20').setValue('Use this as a guide, not an answer key. Strong financials improve odds, but prices can still move randomly.');
+
+  sheet.getRange('A1:B1').merge();
+  sheet.getRange('A1').setFontSize(18).setFontWeight('bold');
+  sheet.getRange('A3:A16').setFontWeight('bold');
+  sheet.getRange('B3').setBackground('#fff2cc');
+  sheet.setColumnWidths(1, 2, 230);
+}
+
+
+function ensureFundamentalRowsForAllMarketInstruments_() {
+  setupFundamentalsSheet_();
+
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FUNDAMENTALS || 'Stock_Fundamentals');
+  const existing = {};
+
+  if (sheet.getLastRow() >= 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().forEach(function(row) {
+      const ticker = cleanString_(row[0]).toUpperCase();
+      if (ticker) existing[ticker] = true;
+    });
+  }
+
+  const rows = getStockTickers_().filter(function(stock) {
+    return !existing[stock.ticker];
+  }).map(function(stock) {
+    const isBond = stock.assetType === 'BOND';
+    return [
+      stock.ticker,
+      stock.name,
+      stock.sector,
+      isBond ? 10 : randomInt_(-20, 20),
+      isBond ? 5 : randomInt_(-15, 15),
+      0,
+      isBond ? 95 : randomInt_(20, 80),
+      isBond ? 5 : randomInt_(20, 80),
+      0,
+      0,
+      nowString_(),
+      isBond ? 'Bond: high shock resistance and low speculation.' : 'Generated hidden fundamentals row.'
+    ];
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, STOCK_CFG.HEADERS.FUNDAMENTALS.length)
+      .setValues(rows);
+  }
+
+  setupSectorMomentumSheet_();
+}
+
+
+function updateFundamentalScoresFromFinancials_() {
+  ensureFinancialRowsForAllMarketInstruments_();
+  ensureFundamentalRowsForAllMarketInstruments_();
+
+  const finSheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FINANCIALS);
+  const fundSheet = getOrCreateSheet_(STOCK_CFG.SHEETS.FUNDAMENTALS || 'Stock_Fundamentals');
+
+  if (finSheet.getLastRow() < 2 || fundSheet.getLastRow() < 2) return;
+
+  const financials = finSheet.getRange(1, 1, finSheet.getLastRow(), STOCK_CFG.HEADERS.FINANCIALS.length).getValues();
+  const fundamentals = fundSheet.getRange(1, 1, fundSheet.getLastRow(), STOCK_CFG.HEADERS.FUNDAMENTALS.length).getValues();
+  const sectorMap = getSectorMomentumMap_();
+  const newsMap = getTodayNewsSentimentMap_();
+
+  const finHeaders = financials[0];
+  const finTickerCol = finHeaders.indexOf('Ticker');
+  const revenueCol = finHeaders.indexOf('Revenue');
+  const profitCol = finHeaders.indexOf('Profit');
+  const debtCol = finHeaders.indexOf('Debt');
+  const cashCol = finHeaders.indexOf('Cash');
+  const growthCol = finHeaders.indexOf('Growth_Rate');
+
+  const finMap = {};
+  for (let i = 1; i < financials.length; i++) {
+    const ticker = cleanString_(financials[i][finTickerCol]).toUpperCase();
+    if (ticker) finMap[ticker] = financials[i];
+  }
+
+  for (let i = 1; i < fundamentals.length; i++) {
+    const row = fundamentals[i];
+    const ticker = cleanString_(row[0]).toUpperCase();
+    const sector = cleanString_(row[2]);
+    const fin = finMap[ticker];
+    if (!ticker || !fin) continue;
+
+    const revenue = Number(fin[revenueCol]) || 1;
+    const profit = Number(fin[profitCol]) || 0;
+    const debt = Number(fin[debtCol]) || 0;
+    const cash = Number(fin[cashCol]) || 0;
+    const growth = Number(fin[growthCol]) || 0;
+
+    const profitMargin = profit / revenue;
+    const debtPressure = debt / Math.max(1, debt + cash + revenue);
+    const cashStrength = cash / Math.max(1, revenue);
+
+    let fundamentalStrength = 0;
+    fundamentalStrength += clamp_(growth * 250, -40, 40);
+    fundamentalStrength += clamp_(profitMargin * 180, -35, 35);
+    fundamentalStrength -= clamp_(debtPressure * 120, 0, 35);
+    fundamentalStrength += clamp_(cashStrength * 40, 0, 20);
+
+    const newsSentiment = newsMap[ticker] || 0;
+    const sectorMomentum = sectorMap[sector] ? Number(sectorMap[sector].momentum) || 0 : 0;
+    const oldMomentum = Number(row[8]) || 0;
+
+    const marketSentiment = clamp_(
+      fundamentalStrength * 0.45 +
+      newsSentiment * 0.25 +
+      sectorMomentum * 0.20 +
+      oldMomentum * 0.10,
+      -100,
+      100
+    );
+
+    const shockResistance = clamp_(100 - (debtPressure * 120) + (cashStrength * 30), 5, 100);
+    const speculationLevel = clamp_(Math.abs(sectorMomentum) + Math.abs(newsSentiment) + randomBetween_(5, 25), 0, 100);
+
+    row[3] = round2_(clamp_(fundamentalStrength, -100, 100));
+    row[4] = round2_(marketSentiment);
+    row[5] = round2_(newsSentiment);
+    row[6] = round2_(shockResistance);
+    row[7] = round2_(speculationLevel);
+    row[9] = round2_(sectorMomentum);
+    row[10] = nowString_();
+    row[11] = 'Updated from financials: growth, profit margin, debt pressure, news, sector, and momentum.';
+  }
+
+  fundSheet.getRange(1, 1, fundamentals.length, STOCK_CFG.HEADERS.FUNDAMENTALS.length).setValues(fundamentals);
+}
+
+
+function getFundamentalPriceBiasPercent_(ticker, sector, trend, fundamentalMap, sectorMap) {
+  const fund = fundamentalMap[ticker] || {};
+  const sectorInfo = sectorMap[sector] || { momentum: 0, sensitivity: 1 };
+
+  const fundamentalStrength = Number(fund.fundamentalStrength) || 0;
+  const marketSentiment = Number(fund.marketSentiment) || 0;
+  const newsSentiment = Number(fund.newsSentiment) || 0;
+  const momentum = Number(fund.momentum) || 0;
+  const sectorMomentum = Number(sectorInfo.momentum) || 0;
+  const macroSentiment = getLatestMacroSentiment_();
+
+  const combinedScore = clamp_(
+    fundamentalStrength * 0.30 +
+    marketSentiment * 0.25 +
+    newsSentiment * 0.15 +
+    momentum * 0.10 +
+    sectorMomentum * 0.10 +
+    macroSentiment * 0.10,
+    -100,
+    100
+  );
+
+  // Convert score to a small per-tick percentage bias.
+  // Example: strong +80 score adds about +0.12% per 5-minute tick before randomness.
+  return round4_(combinedScore * 0.0015);
+}
+
+
+function updateMacroAndSectorOutlook_() {
+  setupMacroOutlookSheet_();
+  setupSectorMomentumSheet_();
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const macroSheet = ss.getSheetByName(STOCK_CFG.SHEETS.MACRO || 'Stock_Macro_Outlook');
+  const sectorSheet = ss.getSheetByName(STOCK_CFG.SHEETS.SECTOR || 'Stock_Sector_Momentum');
+
+  const gdp = randomInt_(-30, 30);
+  const inflation = randomInt_(-30, 30);
+  const rates = randomInt_(-30, 30);
+  const demand = randomInt_(-30, 30);
+  const macroSentiment = clamp_(gdp * 0.30 - inflation * 0.20 - rates * 0.25 + demand * 0.25, -100, 100);
+  const todayKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+
+  macroSheet.getRange(macroSheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.MACRO.length).setValues([[
+    todayKey,
+    gdp,
+    inflation,
+    rates,
+    demand,
+    round2_(macroSentiment),
+    'Daily macro outlook generated for classroom simulation.'
+  ]]);
+
+  if (sectorSheet.getLastRow() >= 2) {
+    const values = sectorSheet.getRange(2, 1, sectorSheet.getLastRow() - 1, STOCK_CFG.HEADERS.SECTOR.length).getValues();
+
+    values.forEach(function(row) {
+      const sensitivity = Number(row[2]) || 1;
+      const oldMomentum = Number(row[1]) || 0;
+      const newMomentum = clamp_(oldMomentum * 0.65 + macroSentiment * 0.20 * sensitivity + randomBetween_(-15, 15), -100, 100);
+      row[1] = round2_(newMomentum);
+      row[3] = nowString_();
+      row[4] = 'Updated from macro outlook and random sector rotation.';
+    });
+
+    sectorSheet.getRange(2, 1, values.length, STOCK_CFG.HEADERS.SECTOR.length).setValues(values);
+  }
+}
+
+
+function generateDailyEarningsReports() {
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(1000);
+
+    setupEarningsReportsSheet_();
+    ensureFinancialRowsForAllMarketInstruments_();
+    updateFundamentalScoresFromFinancials_();
+
+    const stocks = getStockTickers_().filter(function(stock) {
+      return stock.assetType !== 'BOND';
+    });
+
+    if (!stocks.length) return;
+
+    const earningsSheet = getOrCreateSheet_(STOCK_CFG.SHEETS.EARNINGS || 'Stock_Earnings_Reports');
+    const count = Math.max(3, Math.ceil(stocks.length * 0.15));
+    shuffleArray_(stocks);
+    const selected = stocks.slice(0, count);
+
+    const rows = [];
+
+    selected.forEach(function(stock) {
+      const surprise = randomBetween_(-1, 1);
+      const revenueResult = surprise > 0.25 ? 'Beat' : surprise < -0.25 ? 'Miss' : 'Inline';
+      const profitResult = surprise > 0.15 ? 'Beat' : surprise < -0.15 ? 'Miss' : 'Inline';
+      const debtResult = surprise > 0.35 ? 'Improved' : surprise < -0.35 ? 'Worse' : 'Stable';
+      const guidance = surprise > 0.30 ? 'Raised' : surprise < -0.30 ? 'Lowered' : 'Maintained';
+      const priceImpact = clamp_(surprise * 0.06, -0.08, 0.08);
+
+      rows.push([
+        nowString_(),
+        Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'),
+        stock.ticker,
+        stock.name,
+        revenueResult,
+        profitResult,
+        debtResult,
+        guidance,
+        round2_(surprise * 100),
+        round4_(priceImpact),
+        'Published'
+      ]);
+
+      appendMarketNews_(
+        stock.ticker,
+        stock.name + ' releases earnings report: ' + profitResult + ' profit, guidance ' + guidance + '.',
+        'Earnings report: revenue ' + revenueResult + ', profit ' + profitResult + ', debt ' + debtResult + ', guidance ' + guidance + '.',
+        priceImpact > 0.01 ? 'Positive' : priceImpact < -0.01 ? 'Negative' : 'Neutral',
+        priceImpact,
+        Math.abs(priceImpact) * 25,
+        'Active'
+      );
+
+      applyNewsImpactToStock_(stock.ticker, priceImpact, Math.abs(priceImpact) * 25);
+    });
+
+    if (rows.length) {
+      earningsSheet.getRange(earningsSheet.getLastRow() + 1, 1, rows.length, STOCK_CFG.HEADERS.EARNINGS.length)
+        .setValues(rows);
+    }
+
+    updateFundamentalScoresFromFinancials_();
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('Generated ' + rows.length + ' earnings reports.', 'Earnings', 5);
+
+  } catch (err) {
+    console.error(err);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Earnings report error: ' + err.message, 'Earnings', 5);
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+
+function getFundamentalMap_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.FUNDAMENTALS || 'Stock_Fundamentals');
+  const map = {};
+
+  if (!sheet || sheet.getLastRow() < 2) return map;
+
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), STOCK_CFG.HEADERS.FUNDAMENTALS.length).getValues();
+
+  for (let i = 1; i < values.length; i++) {
+    const ticker = cleanString_(values[i][0]).toUpperCase();
+    if (!ticker) continue;
+
+    map[ticker] = {
+      ticker: ticker,
+      fundamentalStrength: Number(values[i][3]) || 0,
+      marketSentiment: Number(values[i][4]) || 0,
+      newsSentiment: Number(values[i][5]) || 0,
+      shockResistance: Number(values[i][6]) || 0,
+      speculationLevel: Number(values[i][7]) || 0,
+      momentum: Number(values[i][8]) || 0,
+      sectorMomentum: Number(values[i][9]) || 0
+    };
+  }
+
+  return map;
+}
+
+
+function getSectorMomentumMap_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.SECTOR || 'Stock_Sector_Momentum');
+  const map = {};
+
+  if (!sheet || sheet.getLastRow() < 2) return map;
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, STOCK_CFG.HEADERS.SECTOR.length).getValues();
+
+  values.forEach(function(row) {
+    const sector = cleanString_(row[0]);
+    if (!sector) return;
+
+    map[sector] = {
+      momentum: Number(row[1]) || 0,
+      sensitivity: Number(row[2]) || 1
+    };
+  });
+
+  return map;
+}
+
+
+function getLatestMacroSentiment_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MACRO || 'Stock_Macro_Outlook');
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+
+  const lastRow = sheet.getLastRow();
+  return Number(sheet.getRange(lastRow, 6).getValue()) || 0;
+}
+
+
+function getTodayNewsSentimentMap_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.NEWS);
+  const map = {};
+
+  if (!sheet || sheet.getLastRow() < 2) return map;
+
+  const todayKey = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd');
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), STOCK_CFG.HEADERS.NEWS.length).getValues();
+  const headers = values[0];
+  const tsCol = headers.indexOf('Timestamp');
+  const tickerCol = headers.indexOf('Ticker');
+  const impactCol = headers.indexOf('Impact_Type');
+  const priceCol = headers.indexOf('Price_Impact_%');
+
+  for (let i = 1; i < values.length; i++) {
+    const ticker = cleanString_(values[i][tickerCol]).toUpperCase();
+    if (!ticker || ticker === 'MARKET') continue;
+
+    const dateKey = valueToDateKeyForStock_(values[i][tsCol]);
+    if (dateKey !== todayKey) continue;
+
+    const impact = cleanString_(values[i][impactCol]).toLowerCase();
+    const priceImpact = Number(values[i][priceCol]) || 0;
+
+    let score = priceImpact * 1000;
+    if (impact === 'positive') score += 15;
+    if (impact === 'negative') score -= 15;
+    if (impact === 'mixed') score += randomBetween_(-10, 10);
+
+    map[ticker] = (map[ticker] || 0) + score;
+  }
+
+  Object.keys(map).forEach(function(ticker) {
+    map[ticker] = clamp_(map[ticker], -100, 100);
+  });
+
+  return map;
+}
+
+
+function applyMomentumUpdates_(updates) {
+  if (!updates || !updates.length) return;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.FUNDAMENTALS || 'Stock_Fundamentals');
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), STOCK_CFG.HEADERS.FUNDAMENTALS.length).getValues();
+  const updateMap = {};
+
+  updates.forEach(function(update) {
+    updateMap[update.ticker] = (updateMap[update.ticker] || 0) + update.momentumDelta;
+  });
+
+  for (let i = 1; i < values.length; i++) {
+    const ticker = cleanString_(values[i][0]).toUpperCase();
+    if (!updateMap[ticker]) continue;
+
+    const oldMomentum = Number(values[i][8]) || 0;
+    values[i][8] = round2_(clamp_(oldMomentum * 0.92 + updateMap[ticker], -100, 100));
+    values[i][10] = nowString_();
+  }
+
+  sheet.getRange(1, 1, values.length, STOCK_CFG.HEADERS.FUNDAMENTALS.length).setValues(values);
+}
+
+
+function clamp_(value, min, max) {
+  value = Number(value) || 0;
+  return Math.max(min, Math.min(max, value));
+}
+
+
+/*******************************************************
+ MASTER STUDENT LOOKUP / BALANCE UPDATE
+*******************************************************/
+
+function findStudentByCard_(cardId) {
+  const masterSS = SpreadsheetApp.openById(MASTER_SPREADSHEET_ID);
+  const sheet = masterSS.getSheetByName(STOCK_CFG.SHEETS.STUDENTS);
+
+  if (!sheet) throw new Error('Master Students sheet not found.');
+
+  const HEADER_ROW = 3;
+
+  const values = sheet.getRange(HEADER_ROW, 1, sheet.getLastRow() - HEADER_ROW + 1, sheet.getLastColumn()).getValues();
+
+  const headers = values[0].map(function(header) {
+    return normalizeHeader_(header);
+  });
+
+  const cardCol = findHeaderIndexFlexible_(headers, ['card_id', 'card id', 'cardid', 'card']);
+  const nameCol = findHeaderIndexFlexible_(headers, ['student_name', 'student name', 'name']);
+  const balanceCol = findHeaderIndexFlexible_(headers, ['balance', 'current_balance', 'current balance']);
+  const activeCol = findHeaderIndexFlexible_(headers, ['active', 'status']);
+
+  if (cardCol === -1) throw new Error('Students sheet missing Card_ID on row 3.');
+  if (nameCol === -1) throw new Error('Students sheet missing Student_Name on row 3.');
+  if (balanceCol === -1) throw new Error('Students sheet missing Balance on row 3.');
+
+  const targetCard = normalizeCardId_(cardId);
+
+  for (let i = 1; i < values.length; i++) {
+    const rowCard = normalizeCardId_(values[i][cardCol]);
+
+    if (rowCard === targetCard) {
+      const active = activeCol !== -1 ? cleanString_(values[i][activeCol]).toLowerCase() : 'yes';
+
+      if (active && !['yes', 'y', 'true', 'active', '1'].includes(active)) return null;
+
+      return {
+        row: HEADER_ROW + i,
+        cardId: rowCard,
+        name: cleanString_(values[i][nameCol]),
+        balance: Number(values[i][balanceCol]) || 0,
+        balanceCol: balanceCol + 1
+      };
+    }
+  }
+
+  return null;
+}
+
+
+function updateStudentBalance_(row, balanceCol, newBalance) {
+  const masterSS = SpreadsheetApp.openById(MASTER_SPREADSHEET_ID);
+  const sheet = masterSS.getSheetByName(STOCK_CFG.SHEETS.STUDENTS);
+
+  if (!sheet) throw new Error('Master Students sheet not found.');
+
+  sheet.getRange(row, balanceCol).setValue(round2_(newBalance));
+}
+
+
+/*******************************************************
+ STOCK LOOKUP
+*******************************************************/
+
+function findStockByTicker_(ticker) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+
+  if (!sheet) throw new Error('Stock_Market sheet not found.');
+
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+  const headers = values[0];
+
+  const tickerCol = headers.indexOf('Ticker');
+  const nameCol = headers.indexOf('Company_Name');
+  const priceCol = headers.indexOf('Current_Price');
+  const activeCol = headers.indexOf('Active');
+  const assetCol = headers.indexOf('Asset_Type');
+
+  for (let i = 1; i < values.length; i++) {
+    const rowTicker = cleanString_(values[i][tickerCol]).toUpperCase();
+
+    if (rowTicker === ticker) {
+      return {
+        row: i + 1,
+        ticker: rowTicker,
+        name: cleanString_(values[i][nameCol]),
+        price: Number(values[i][priceCol]) || 0,
+        active: cleanString_(values[i][activeCol]).toLowerCase() === 'yes',
+        assetType: assetCol !== -1 ? cleanString_(values[i][assetCol]).toUpperCase() : 'STOCK'
+      };
+    }
+  }
+
+  return null;
+}
+
+
+/*******************************************************
+ LOGGING
+*******************************************************/
+
+function logStockTrade_(student, action, stock, shares, price, total, status, note) {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.TRADE_LOG);
+  ensureTradeLogHeaders_();
+
+  const now = new Date();
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, STOCK_CFG.HEADERS.TRADE_LOG.length)
+    .setValues([[nowString_(), Utilities.formatDate(now, STOCK_CFG.TIMEZONE, 'yyyy-MM-dd'), student.cardId, student.name, action, stock.ticker, shares, price, total, status, note]]);
+}
+
+
+function ensureTradeLogHeaders_() {
+  const sheet = getOrCreateSheet_(STOCK_CFG.SHEETS.TRADE_LOG);
+
+  if (sheet.getLastRow() < 1 || cleanString_(sheet.getRange(1, 1).getValue()) === '') {
+    sheet.getRange(1, 1, 1, STOCK_CFG.HEADERS.TRADE_LOG.length)
+      .setValues([STOCK_CFG.HEADERS.TRADE_LOG])
+      .setFontWeight('bold');
+  }
+}
+
+
+function writeStockTradeResult_(message) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.TRADE);
+
+  if (sheet) sheet.getRange('B8').setValue(message);
+}
+
+
+/*******************************************************
+ DEBUG
+*******************************************************/
+
+function debugStockTradeSetup() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tradeSheet = ss.getSheetByName(STOCK_CFG.SHEETS.TRADE);
+
+  if (!tradeSheet) throw new Error('Stock_Trade sheet missing.');
+
+  SpreadsheetApp.flush();
+  tradeSheet.getRange('B8').activate();
+  SpreadsheetApp.flush();
+  Utilities.sleep(150);
+
+  const inputs = tradeSheet.getRange('B3:B6').getDisplayValues();
+
+  const cardId = normalizeCardId_(inputs[0][0]);
+  const action = cleanString_(inputs[1][0]).toUpperCase();
+  const ticker = cleanString_(inputs[2][0]).toUpperCase();
+  const shares = Number(cleanString_(inputs[3][0])) || 0;
+
+  Logger.log('Card ID: ' + cardId);
+  Logger.log('Action: ' + action);
+  Logger.log('Ticker: ' + ticker);
+  Logger.log('Shares: ' + shares);
+
+  const student = findStudentByCard_(cardId);
+  Logger.log('Student: ' + JSON.stringify(student));
+
+  const stock = findStockByTicker_(ticker);
+  Logger.log('Stock: ' + JSON.stringify(stock));
+
+  writeStockTradeResult_('Debug complete. Market open: ' + isMarketOpen_() + ', Student found: ' + Boolean(student) + ', Stock found: ' + Boolean(stock));
+}
+
+
+
+function debugAnalystSubmissionWindow() {
+  const nowString = nowString_();
+  const marketOpen = isMarketOpen_();
+  const analystOpen = isAnalystSubmissionOpen_();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Now: ' + nowString + ' | Market open: ' + marketOpen + ' | Analyst submissions open: ' + analystOpen,
+    'Analyst Window Debug',
+    8
+  );
+}
+
+
+/*******************************************************
+ TRIGGERS
+*******************************************************/
+
+function setupAllStockMarketTriggers() {
+  removeAllStockMarketTriggers();
+
+  ScriptApp.newTrigger('updateDailyCompanyFinancialsAndNews')
+    .timeBased()
+    .everyDays(1)
+    .atHour(7)
+    .nearMinute(55)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+  ScriptApp.newTrigger('chooseWeeklyShockDay')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(7)
+    .nearMinute(0)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+  ScriptApp.newTrigger('checkAndTriggerWeeklyMarketShock')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .nearMinute(0)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+  // 7:00 AM KST — volatility/trend update before financials/news.
+  // This lets the financial/news report reflect the newest daily market condition.
+  ScriptApp.newTrigger('updateDailyStockVolatility')
+    .timeBased()
+    .everyDays(1)
+    .atHour(7)
+    .nearMinute(0)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+
+  ScriptApp.newTrigger('generateDailyEarningsReports')
+    .timeBased()
+    .everyDays(1)
+    .atHour(7)
+    .nearMinute(30)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+  ScriptApp.newTrigger('updateStockMarketPrices')
+    .timeBased()
+    .everyMinutes(1)
+    .create();
+
+
+  ScriptApp.newTrigger('checkAnalystPredictions')
+    .timeBased()
+    .everyDays(1)
+    .atHour(17)
+    .nearMinute(5)
+    .inTimezone(STOCK_CFG.TIMEZONE)
+    .create();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Stock triggers enabled.', 'Stock Market', 5);
+}
+
+
+function removeAllStockMarketTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    const fn = trigger.getHandlerFunction();
+
+    if (
+      fn === 'updateStockMarketPrices' ||
+      fn === 'updateDailyStockVolatility' ||
+      fn === 'updateDailyCompanyFinancialsAndNews' ||
+      fn === 'chooseWeeklyShockDay' ||
+      fn === 'checkAndTriggerWeeklyMarketShock' ||
+      fn === 'triggerMarketEconomicShock' ||
+      fn === 'checkAnalystPredictions' ||
+      fn === 'generateDailyEarningsReports'
+    ) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Stock triggers removed.', 'Stock Market', 5);
+}
+
+
+/*******************************************************
+ MARKET LOGIC
+*******************************************************/
+
+function getIntradayTrendBias_(trend) {
+  trend = cleanString_(trend).toLowerCase();
+
+  if (trend === 'hot') return 0.18;
+  if (trend === 'growth') return 0.08;
+  if (trend === 'decline') return -0.08;
+  if (trend === 'crash') return -0.18;
+
+  return 0;
+}
+
+
+function updateDailyVolatility_(volatility, trend) {
+  trend = cleanString_(trend).toLowerCase();
+
+  let change = randomBetween_(-1, 1);
+
+  if (trend === 'hot' || trend === 'crash' || trend === 'volatile') {
+    change += randomBetween_(0, 1.25);
+  }
+
+  if (trend === 'stable') {
+    change -= randomBetween_(0, 0.75);
+  }
+
+  return round2_(Math.max(2, Math.min(15, volatility + change)));
+}
+
+
+function updateDailyTrend_() {
+  const roll = Math.random();
+
+  if (roll < 0.08) return 'Hot';
+  if (roll < 0.28) return 'Growth';
+  if (roll < 0.68) return 'Stable';
+  if (roll < 0.90) return 'Decline';
+  if (roll < 0.97) return 'Volatile';
+
+  return 'Crash';
+}
+
+
+function assignRiskRating_(profit, debt, cash) {
+  if (profit < 0 && debt > cash) return 'High';
+  if (debt > cash * 2) return 'Medium-High';
+  if (profit > 5000 && cash > debt) return 'Low';
+  return 'Medium';
+}
+
+
+
+function getEligibleShockDaysForCurrentWeek_() {
+  const todayName = Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'EEEE');
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const shockDays = ['Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const todayIndex = weekdays.indexOf(todayName);
+
+  // Normal Monday selection keeps the event unpredictable later in the week.
+  if (todayName === 'Monday') return shockDays;
+
+  // If the script is installed midweek or the Monday selector was missed,
+  // choose from today or later so the shock cannot be assigned to a past day.
+  if (todayIndex >= 1 && todayIndex <= 4) {
+    return weekdays.slice(todayIndex, 5);
+  }
+
+  // Weekend fallback: select from the next trading week.
+  return shockDays;
+}
+
+
+function enforcePriceHistoryLimit_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.PRICE_HISTORY);
+  if (!sheet) return;
+
+  const maxRows = Number(STOCK_CFG.MAX_PRICE_HISTORY_ROWS) || 50000;
+  const headerRows = 1;
+  const lastRow = sheet.getLastRow();
+  const excessRows = lastRow - headerRows - maxRows;
+
+  if (excessRows > 0) {
+    sheet.deleteRows(headerRows + 1, excessRows);
+  }
+}
+
+
+
+
+function findHeaderRowByNames_(values, requiredHeaders) {
+  for (let r = 0; r < Math.min(values.length, 10); r++) {
+    const headers = values[r].map(function(header) {
+      return normalizeHeader_(header);
+    });
+
+    const foundAll = requiredHeaders.every(function(requiredHeader) {
+      return headers.indexOf(normalizeHeader_(requiredHeader)) !== -1;
+    });
+
+    if (foundAll) return r;
+  }
+
+  return -1;
+}
+
+
+function findHeaderIndex_(headers, possibleNames) {
+  const normalizedHeaders = headers.map(function(header) {
+    return normalizeHeader_(header);
+  });
+
+  for (let i = 0; i < possibleNames.length; i++) {
+    const target = normalizeHeader_(possibleNames[i]);
+    const index = normalizedHeaders.indexOf(target);
+    if (index !== -1) return index;
+  }
+
+  return -1;
+}
+
+
+/*******************************************************
+ BASIC HELPERS
+*******************************************************/
+
+function getOrCreateSheet_(sheetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  return sheet;
+}
+
+
+function getStockTickers_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_CFG.SHEETS.MARKET);
+
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, STOCK_CFG.HEADERS.MARKET.length).getValues();
+
+  return values
+    .filter(function(row) {
+      return cleanString_(row[0]);
+    })
+    .map(function(row) {
+      return {
+        ticker: cleanString_(row[0]).toUpperCase(),
+        name: cleanString_(row[1]),
+        sector: cleanString_(row[2]),
+        assetType: cleanString_(row[11] || 'STOCK').toUpperCase()
+      };
+    });
+}
+
+
+function nowString_() {
+  return Utilities.formatDate(new Date(), STOCK_CFG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+}
+
+
+function randomBetween_(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+
+function randomInt_(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+function round2_(num) {
+  return Math.round(Number(num) * 100) / 100;
+}
+
+
+function round4_(num) {
+  return Math.round(Number(num) * 10000) / 10000;
+}
+
+
+function normalizeCardId_(value) {
+  return cleanString_(value)
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+
+function normalizeHeader_(value) {
+  return cleanString_(value)
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_');
+}
+
+
+function findHeaderIndexFlexible_(normalizedHeaders, possibleNames) {
+  const normalizedPossible = possibleNames.map(function(name) {
+    return normalizeHeader_(name);
+  });
+
+  for (let i = 0; i < normalizedPossible.length; i++) {
+    const index = normalizedHeaders.indexOf(normalizedPossible[i]);
+
+    if (index !== -1) return index;
+  }
+
+  return -1;
+}
+
+
+function shuffleArray_(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+}
+
+
+function cleanString_(value) {
+  if (value === null || typeof value === 'undefined') return '';
+
+  return String(value)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+}
