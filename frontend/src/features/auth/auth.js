@@ -2,6 +2,9 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.auth = window.Econovaria.features.auth || {};
 
+const ADMIN_DEMO_CODE = "1234";
+let loginMode = "student";
+
 function init() {
   document.getElementById("loginForm").addEventListener("submit", handleLogin);
   document.getElementById("logoutButton").addEventListener("click", logout);
@@ -11,7 +14,54 @@ function init() {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
 
+  bindLoginModeToggle();
+  setLoginMode("student");
   showLogin({ focus: false });
+}
+
+function bindLoginModeToggle() {
+  const button = document.getElementById("loginModeToggle");
+  if (!button) return;
+
+  button.addEventListener("click", () => {
+    setLoginMode(loginMode === "admin" ? "student" : "admin");
+  });
+}
+
+function setLoginMode(mode) {
+  loginMode = mode === "admin" ? "admin" : "student";
+
+  const isAdmin = loginMode === "admin";
+  const loginScreen = document.getElementById("loginScreen");
+  const toggle = document.getElementById("loginModeToggle");
+  const eyebrow = document.getElementById("loginAccessEyebrow");
+  const title = document.getElementById("loginTitle");
+  const copy = document.getElementById("loginCopy");
+  const label = document.getElementById("loginFieldLabel");
+  const input = document.getElementById("loginCardId");
+  const submit = document.getElementById("loginSubmitButton");
+
+  if (loginScreen) loginScreen.dataset.loginMode = loginMode;
+  if (toggle) {
+    toggle.textContent = isAdmin ? "Student sign in" : "Admin sign in";
+    toggle.setAttribute("aria-pressed", String(isAdmin));
+  }
+  if (eyebrow) eyebrow.textContent = isAdmin ? "Teacher access" : "Secure access";
+  if (title) title.textContent = isAdmin ? "Open admin console" : "Open your account";
+  if (copy) {
+    copy.textContent = isAdmin
+      ? "Enter the temporary teacher code to preview the admin console. Backend admin permissions are not wired yet."
+      : "Enter or scan your student code to open your market simulation account.";
+  }
+  if (label) label.textContent = isAdmin ? "Teacher Code" : "Student Code";
+  if (input) {
+    input.value = "";
+    input.placeholder = isAdmin ? "Enter teacher code" : "Enter or scan student code";
+    input.autocomplete = isAdmin ? "off" : "one-time-code";
+  }
+  if (submit) submit.textContent = isAdmin ? "Open Admin Console" : "Open Account";
+
+  clearLoginError();
 }
 
 async function handleLogin(event) {
@@ -27,13 +77,17 @@ async function handleLogin(event) {
   if (isButtonLoading(button)) return;
 
   if (!accessCode) {
-    return showLoginError("Enter your student code first.");
+    return showLoginError(loginMode === "admin" ? "Enter your teacher code first." : "Enter your student code first.");
   }
 
-  setButtonLoading(button, true, "Opening dashboard...");
+  setButtonLoading(button, true, loginMode === "admin" ? "Opening admin console..." : "Opening dashboard...");
   setControlsDisabled(form, true, [button]);
 
   try {
+    if (loginMode === "admin") {
+      return openAdminPrototype(accessCode, input);
+    }
+
     const result = await callApi({
       action: "LOGIN",
       accessCode,
@@ -48,9 +102,9 @@ async function handleLogin(event) {
     }
 
     currentSession = {
-      role: "STUDENT",
+      role: result.role || "STUDENT",
       token: result.token || result.sessionToken || "",
-      permissions: result.permissions || PERMISSION_SETS.STUDENT.actions
+      permissions: result.permissions || PERMISSION_SETS[result.role || "STUDENT"]?.actions || PERMISSION_SETS.STUDENT.actions
     };
 
     mergeSnapshot(result.snapshot || {});
@@ -70,11 +124,48 @@ async function handleLogin(event) {
   }
 }
 
-function showApp() {
+function openAdminPrototype(accessCode, input) {
+  if (accessCode !== ADMIN_DEMO_CODE) {
+    return showLoginError("Admin prototype code is incorrect.");
+  }
+
+  if (input) input.value = "";
+
+  currentSession = {
+    role: "ADMIN",
+    token: "frontend-admin-demo",
+    permissions: PERMISSION_SETS.ADMIN.actions
+  };
+
+  state = Object.assign(emptyState(), {
+    profile: {
+      name: "Teacher Console",
+      grade: "Admin",
+      homeroom: "Prototype"
+    }
+  });
+
+  showApp("admin");
+  showGlobalStatus("ok", "Admin prototype opened. Backend admin actions are not wired yet.");
+}
+
+function showApp(defaultView = "profile") {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("appShell").classList.remove("hidden");
+  updateNavigationForRole();
   updateIdentity();
-  switchView("profile");
+  switchView(defaultView);
+}
+
+function updateNavigationForRole() {
+  const role = currentSession?.role || "STUDENT";
+  const allowedViews = PERMISSION_SETS[role]?.views || [];
+
+  document.querySelectorAll(".nav-item").forEach((btn) => {
+    const view = btn.dataset.view;
+    btn.classList.toggle("hidden", !allowedViews.includes(view));
+    btn.classList.toggle("active", false);
+  });
 }
 
 async function logout() {
@@ -85,7 +176,7 @@ async function logout() {
   setButtonLoading(button, true, "Logging out...");
 
   try {
-    if (currentSession && currentSession.token) {
+    if (currentSession && currentSession.token && currentSession.token !== "frontend-admin-demo") {
       await callApi({
         action: "LOGOUT",
         token: currentSession.token
@@ -95,6 +186,7 @@ async function logout() {
     currentSession = null;
     state = emptyState();
     hideGlobalStatus();
+    setLoginMode("student");
     showLogin();
 
   } finally {
@@ -116,6 +208,13 @@ async function refreshDashboard() {
   showGlobalStatus("loading", "Refreshing your latest dashboard data...");
 
   try {
+    if (currentSession.role === "ADMIN") {
+      renderCurrentView();
+      updateIdentity();
+      showGlobalStatus("ok", "Admin prototype refreshed locally.");
+      return;
+    }
+
     const result = await callApi({
       action: "GET_SNAPSHOT",
       token: currentSession.token
@@ -171,8 +270,12 @@ function clearLoginError() {
 
 Object.assign(window.Econovaria.features.auth, {
   init,
+  bindLoginModeToggle,
+  setLoginMode,
   handleLogin,
+  openAdminPrototype,
   showApp,
+  updateNavigationForRole,
   logout,
   refreshDashboard,
   showLogin,
