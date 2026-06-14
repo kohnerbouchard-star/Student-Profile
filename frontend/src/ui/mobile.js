@@ -1,4 +1,4 @@
-/* Mobile UX fix retained from existing frontend patch. */
+// Mobile/tablet responsive behavior for the student dashboard.
 (function initMobileUxFix() {
   const styleId = 'mobileUxFixStyles';
 
