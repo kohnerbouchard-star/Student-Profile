@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="login-cleanup.css" />
   <link rel="stylesheet" href="brand-logo.css" />
   <link rel="stylesheet" href="market-data-polish.css?v=20260611-layout1" />
+  <link rel="stylesheet" href="frontend/src/features/admin/admin.css?v=20260614-admin1" />
 
   <style id="app-preload-style">
     html.preload,
@@ -86,7 +87,8 @@
 
 </head>
 <body>
-  <section id="loginScreen" class="login-screen login-screen--econovaria">
+  <section id="loginScreen" class="login-screen login-screen--econovaria" data-login-mode="student">
+    <button id="loginModeToggle" class="admin-login-toggle" type="button" aria-pressed="false">Admin sign in</button>
     <div class="login-shell">
       <aside class="login-briefing" aria-label="Market simulation briefing">
         <div class="brand login-brand login-brand--terminal">
@@ -126,17 +128,17 @@
 
       <div class="login-card login-access-card">
         <div class="access-header">
-          <div class="access-eyebrow">Secure access</div>
-          <h2>Open your account</h2>
-          <p class="login-copy">Enter or scan your student code to open your market simulation account.</p>
+          <div id="loginAccessEyebrow" class="access-eyebrow">Secure access</div>
+          <h2 id="loginTitle">Open your account</h2>
+          <p id="loginCopy" class="login-copy">Enter or scan your student code to open your market simulation account.</p>
         </div>
 
         <form id="loginForm" class="login-form">
           <label>
-            <span class="field-label">Student Code</span>
+            <span id="loginFieldLabel" class="field-label">Student Code</span>
             <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Enter or scan student code" />
           </label>
-          <button class="primary-btn" type="submit">Open Account</button>
+          <button id="loginSubmitButton" class="primary-btn" type="submit">Open Account</button>
         </form>
 
         <div id="loginError" class="status-box bad hidden"></div>
@@ -167,6 +169,7 @@
         <button class="nav-item" data-view="trade">Trading</button>
         <button class="nav-item" data-view="stockProfile">Market Data</button>
         <button class="nav-item" data-view="rating">Forecasts</button>
+        <button class="nav-item admin-nav-item hidden" data-view="admin">Admin</button>
       </nav>
 
       <div class="sidebar-card">
@@ -203,6 +206,7 @@
       <section id="trade" class="view"></section>
       <section id="stockProfile" class="view"></section>
       <section id="rating" class="view"></section>
+      <section id="admin" class="view"></section>
     </main>
   </div>
 
@@ -220,6 +224,7 @@
   <script src="frontend/src/features/trading/trading.js"></script>
   <script src="frontend/src/features/market/market.js"></script>
   <script src="frontend/src/features/forecasts/forecasts.js"></script>
+  <script src="frontend/src/features/admin/admin.js?v=20260614-admin1"></script>
   <script src="frontend/src/core/router.js"></script>
   <script src="frontend/src/core/bootstrap.js"></script>
   <script src="frontend/src/ui/student-ui.js"></script>
