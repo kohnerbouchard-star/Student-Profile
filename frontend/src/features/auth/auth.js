@@ -11,7 +11,7 @@ function init() {
     btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
 
-  showLogin();
+  showLogin({ focus: false });
 }
 
 async function handleLogin(event) {
@@ -137,10 +137,24 @@ async function refreshDashboard() {
   }
 }
 
-function showLogin() {
+function showLogin(options = {}) {
+  const shouldFocus = options.focus !== false;
+
   document.getElementById("appShell").classList.add("hidden");
   document.getElementById("loginScreen").classList.remove("hidden");
-  setTimeout(() => document.getElementById("loginCardId").focus(), 0);
+
+  if (!shouldFocus) return;
+
+  window.requestAnimationFrame(() => {
+    const input = document.getElementById("loginCardId");
+    if (!input || document.activeElement === input) return;
+
+    try {
+      input.focus({ preventScroll: true });
+    } catch (_) {
+      input.focus();
+    }
+  });
 }
 
 function showLoginError(message) {

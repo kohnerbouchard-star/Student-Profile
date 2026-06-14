@@ -2,6 +2,15 @@
 // Load this last so quantity fields never get mistaken for dates.
 
 (function () {
+  const root = window.Econovaria = window.Econovaria || {};
+  const utils = root.utils = root.utils || {};
+
+  function escapeDisplay(value) {
+    if (typeof utils.sanitize === 'function') return utils.sanitize(value);
+    if (typeof window.sanitize === 'function') return window.sanitize(value);
+    return String(value ?? '');
+  }
+
   function cleanNumber(value) {
     if (value === undefined || value === null || value === '') return null;
 
@@ -14,13 +23,15 @@
     return Number.isFinite(n) ? n : null;
   }
 
-  const oldFormatValue = typeof formatValue === 'function'
-    ? formatValue
+  const oldFormatValue = typeof utils.formatValue === 'function'
+    ? utils.formatValue
+    : typeof window.formatValue === 'function'
+      ? window.formatValue
     : function (_key, value) {
-        return typeof sanitize === 'function' ? sanitize(value) : String(value ?? '');
+        return escapeDisplay(value);
       };
 
-  formatValue = function patchedFormatValue(key, value) {
+  function patchedFormatValue(key, value) {
     const k = String(key || '');
 
     // IMPORTANT: quantityPurchased contains "Purchased", so this must come before date checks.
@@ -28,35 +39,43 @@
       const n = cleanNumber(value);
 
       if (n === null) {
-        return typeof sanitize === 'function' ? sanitize(value ?? '—') : String(value ?? '—');
+        return escapeDisplay(value ?? '—');
       }
 
-      return typeof sanitize === 'function'
-        ? sanitize(n.toLocaleString())
-        : n.toLocaleString();
+      return escapeDisplay(n.toLocaleString());
     }
 
     return oldFormatValue(key, value);
-  };
+  }
+
+  utils.formatValue = patchedFormatValue;
+  window.formatValue = patchedFormatValue;
 
   // Also protect mini value formatting if another card uses it later.
-  if (typeof formatMiniValue === 'function') {
-    const oldFormatMiniValue = formatMiniValue;
+  const oldFormatMiniValue = typeof utils.formatMiniValue === 'function'
+    ? utils.formatMiniValue
+    : typeof window.formatMiniValue === 'function'
+      ? window.formatMiniValue
+      : null;
 
-    formatMiniValue = function patchedFormatMiniValue(label, value) {
+  if (oldFormatMiniValue) {
+    function patchedFormatMiniValue(label, value) {
       const k = String(label || '');
 
       if (/quantity|qty|shares/i.test(k)) {
         const n = cleanNumber(value);
 
         if (n === null) {
-          return value ?? '—';
+          return escapeDisplay(value ?? '—');
         }
 
-        return n.toLocaleString();
+        return escapeDisplay(n.toLocaleString());
       }
 
       return oldFormatMiniValue(label, value);
-    };
+    }
+
+    utils.formatMiniValue = patchedFormatMiniValue;
+    window.formatMiniValue = patchedFormatMiniValue;
   }
 })();

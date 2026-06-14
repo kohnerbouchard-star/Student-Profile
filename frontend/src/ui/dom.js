@@ -41,7 +41,7 @@ function metric(label, value, note, helpText) {
 }
 
 function mini(label, value) {
-  return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${sanitize(formatMiniValue(label, value))}</strong></div>`;
+  return `<div class="mini-row"><span>${sanitize(label)}</span><strong>${formatMiniValue(label, value)}</strong></div>`;
 }
 
 function help(text) {
