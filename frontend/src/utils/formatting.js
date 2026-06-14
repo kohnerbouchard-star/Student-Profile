@@ -17,6 +17,30 @@ function isFiniteDisplayNumber(value) {
   return Number.isFinite(Number(cleaned));
 }
 
+function cleanDisplayNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  if (value instanceof Date) return null;
+
+  const cleaned = String(value).replace(/[$,%]/g, "").trim();
+  const number = Number(cleaned);
+
+  return Number.isFinite(number) ? number : null;
+}
+
+function isCountDisplayKey(key) {
+  return /quantity|qty|sharesOwned|shares/i.test(String(key || ""));
+}
+
+function formatCountDisplayValue(value) {
+  const number = cleanDisplayNumber(value);
+
+  if (number === null) {
+    return sanitize(value ?? "—");
+  }
+
+  return sanitize(number.toLocaleString());
+}
+
 function toNumber(value) {
   if (value === "" || value === null || value === undefined) return 0;
   const cleaned = String(value).replace(/[$,]/g, "").trim();
@@ -98,10 +122,8 @@ function formatValue(key, value) {
     return `<span class="badge ${cls}">${sanitize(text)}</span>`;
   }
 
-  if (/quantity/i.test(key)) {
-    if (!isFiniteDisplayNumber(value)) return "—";
-    const n = Number(String(value).replace(/[$,]/g, "").trim());
-    return sanitize(n.toLocaleString());
+  if (isCountDisplayKey(key)) {
+    return formatCountDisplayValue(value);
   }
 
   if (/timestamp|date|updated|purchased/i.test(key)) {
@@ -146,9 +168,14 @@ function formatValue(key, value) {
 }
 
 function formatMiniValue(label, value) {
+  if (isCountDisplayKey(label)) {
+    return formatCountDisplayValue(value);
+  }
+
   if (/updated|date|last\s*bought|last\s*purchased|lastBought|lastPurchased/i.test(label)) {
     return sanitize(formatDateTime(value));
   }
+
   return sanitize(value ?? "");
 }
 
@@ -232,6 +259,9 @@ Object.assign(window.Econovaria.utils, {
   normalizeCardId,
   isBlankDisplayValue,
   isFiniteDisplayNumber,
+  cleanDisplayNumber,
+  isCountDisplayKey,
+  formatCountDisplayValue,
   toNumber,
   money,
   sanitize,
