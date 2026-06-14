@@ -1,0 +1,123 @@
+.admin-login-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  border: 1px solid rgba(255, 255, 255, .24);
+  background: rgba(15, 23, 42, .68);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .18);
+}
+
+.admin-login-toggle:hover,
+.admin-login-toggle[aria-pressed="true"] {
+  background: linear-gradient(135deg, rgba(249, 115, 22, .92), rgba(37, 99, 235, .82));
+  border-color: rgba(255, 255, 255, .34);
+}
+
+.login-screen[data-login-mode="admin"] .login-access-card {
+  box-shadow: 0 30px 90px rgba(37, 99, 235, .18);
+}
+
+.login-screen[data-login-mode="admin"] .access-eyebrow {
+  color: #2563eb;
+}
+
+.admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, .14), transparent 34%),
+    rgba(255, 255, 255, .94);
+}
+
+.admin-hero h2 {
+  margin: 4px 0 8px;
+  font-size: clamp(26px, 3vw, 36px);
+  letter-spacing: -.04em;
+}
+
+.admin-hero p,
+.admin-panel p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-metrics .metric::after {
+  background: rgba(37, 99, 235, .10);
+}
+
+.admin-grid {
+  align-items: stretch;
+}
+
+.admin-panel {
+  min-height: 100%;
+}
+
+.admin-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-status-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 13px;
+  background: #fffaf0;
+}
+
+.admin-status-row span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-status-row strong {
+  text-align: right;
+}
+
+.admin-status-row strong.good { color: var(--good); }
+.admin-status-row strong.warn { color: var(--warn); }
+.admin-status-row strong.bad { color: var(--bad); }
+
+@media (max-width: 900px) {
+  .admin-login-toggle {
+    top: 12px;
+    right: 12px;
+  }
+
+  .admin-hero,
+  .admin-status-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
