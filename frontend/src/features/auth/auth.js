@@ -3,6 +3,8 @@ window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.auth = window.Econovaria.features.auth || {};
 
 const ADMIN_DEMO_CODE = "1234";
+// Temporarily disabled while licensed teacher/admin auth is redesigned.
+const ADMIN_LOGIN_ENABLED = false;
 let loginMode = "student";
 
 function init() {
@@ -23,13 +25,22 @@ function bindLoginModeToggle() {
   const button = document.getElementById("loginModeToggle");
   if (!button) return;
 
+  if (!ADMIN_LOGIN_ENABLED) {
+    button.classList.add("hidden");
+    button.hidden = true;
+    button.disabled = true;
+    button.setAttribute("aria-hidden", "true");
+    button.setAttribute("tabindex", "-1");
+    return;
+  }
+
   button.addEventListener("click", () => {
     setLoginMode(loginMode === "admin" ? "student" : "admin");
   });
 }
 
 function setLoginMode(mode) {
-  loginMode = mode === "admin" ? "admin" : "student";
+  loginMode = ADMIN_LOGIN_ENABLED && mode === "admin" ? "admin" : "student";
 
   const isAdmin = loginMode === "admin";
   const loginScreen = document.getElementById("loginScreen");
@@ -45,6 +56,10 @@ function setLoginMode(mode) {
   if (toggle) {
     toggle.textContent = isAdmin ? "Student sign in" : "Admin sign in";
     toggle.setAttribute("aria-pressed", String(isAdmin));
+    toggle.classList.toggle("hidden", !ADMIN_LOGIN_ENABLED);
+    toggle.hidden = !ADMIN_LOGIN_ENABLED;
+    toggle.disabled = !ADMIN_LOGIN_ENABLED;
+    toggle.setAttribute("aria-hidden", String(!ADMIN_LOGIN_ENABLED));
   }
   if (eyebrow) eyebrow.textContent = isAdmin ? "Teacher access" : "Secure access";
   if (title) title.textContent = isAdmin ? "Open admin console" : "Open your account";
@@ -78,6 +93,11 @@ async function handleLogin(event) {
 
   if (!accessCode) {
     return showLoginError(loginMode === "admin" ? "Enter your teacher code first." : "Enter your student code first.");
+  }
+
+  if (!ADMIN_LOGIN_ENABLED && loginMode === "admin") {
+    setLoginMode("student");
+    return showLoginError("Admin sign-in is temporarily disabled.");
   }
 
   setButtonLoading(button, true, loginMode === "admin" ? "Opening admin console..." : "Opening dashboard...");
@@ -125,6 +145,11 @@ async function handleLogin(event) {
 }
 
 function openAdminPrototype(accessCode, input) {
+  if (!ADMIN_LOGIN_ENABLED) {
+    setLoginMode("student");
+    return showLoginError("Admin sign-in is temporarily disabled.");
+  }
+
   if (accessCode !== ADMIN_DEMO_CODE) {
     return showLoginError("Admin prototype code is incorrect.");
   }
