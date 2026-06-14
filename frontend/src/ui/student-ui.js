@@ -1,4 +1,4 @@
-// Student-facing UI helpers loaded after split feature modules.
+// Student-facing UI helpers.
 
 function tip(text) {
   return `<button type="button" class="tooltip" aria-label="More information" data-tip="${sanitize(text)}">?</button>`;
@@ -117,21 +117,8 @@ function initReliableTooltips() {
   });
 }
 
-function enableUseItemAction() {
-  if (typeof PERMISSION_SETS === 'undefined' || !PERMISSION_SETS.STUDENT) return;
-
-  if (!Array.isArray(PERMISSION_SETS.STUDENT.actions)) {
-    PERMISSION_SETS.STUDENT.actions = [];
-  }
-
-  if (!PERMISSION_SETS.STUDENT.actions.includes('USE_ITEM')) {
-    PERMISSION_SETS.STUDENT.actions.push('USE_ITEM');
-  }
-}
-
 initReliableTooltips();
-enableUseItemAction();
 
 window.Econovaria = window.Econovaria || {};
 window.Econovaria.ui = window.Econovaria.ui || {};
-Object.assign(window.Econovaria.ui, { tip, initReliableTooltips, enableUseItemAction });
+Object.assign(window.Econovaria.ui, { tip, initReliableTooltips });
