@@ -62,15 +62,23 @@
   margin: 0;
 }
 
+.admin-console-shell {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
 .admin-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #ffffff;
   box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  position: sticky;
+  top: 18px;
 }
 
 .admin-tab {
@@ -80,8 +88,10 @@
   color: #475569;
   cursor: pointer;
   font-weight: 850;
-  min-height: 40px;
-  padding: 9px 13px;
+  min-height: 42px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
 }
 
 .admin-tab:hover {
@@ -98,6 +108,7 @@
 .admin-section {
   display: grid;
   gap: 18px;
+  min-width: 0;
 }
 
 .admin-grid {
@@ -223,6 +234,108 @@
   text-align: right;
 }
 
+.admin-player-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+.admin-player-table {
+  min-width: 680px;
+}
+
+.admin-store-table {
+  min-width: 860px;
+}
+
+.admin-player-table th {
+  background: #f8fafc;
+}
+
+.admin-store-table th {
+  background: #f8fafc;
+}
+
+.admin-player-table td,
+.admin-store-table td {
+  vertical-align: middle;
+}
+
+.admin-table-field input {
+  min-width: 180px;
+}
+
+.admin-table-field textarea {
+  min-width: 280px;
+  resize: vertical;
+}
+
+.admin-table-field--small input {
+  min-width: 96px;
+}
+
+.admin-player-settings-col {
+  text-align: center;
+  width: 86px;
+}
+
+.admin-icon-btn {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: #1f2937;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 18px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 38px;
+  padding: 0 10px;
+}
+
+.admin-icon-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+}
+
+.admin-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-scanner-summary {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.admin-scanner-summary span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.admin-scanner-summary strong {
+  display: block;
+  margin-top: 4px;
+}
+
 .admin-access-grid {
   display: grid;
   gap: 12px;
@@ -296,6 +409,63 @@
   background: #fffafa;
 }
 
+.admin-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, .48);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 40;
+}
+
+.admin-modal {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .22);
+  display: grid;
+  gap: 16px;
+  max-width: 640px;
+  padding: 18px;
+  width: min(100%, 640px);
+}
+
+.admin-scanner-modal {
+  max-width: 520px;
+}
+
+.admin-scanner-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-scanner-input {
+  border-color: #0f172a;
+  font-size: 24px;
+  font-weight: 900;
+  min-height: 58px;
+  text-align: center;
+}
+
+.admin-scanner-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, .14);
+}
+
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .admin-status-list {
   display: grid;
   gap: 10px;
@@ -326,6 +496,10 @@
 .admin-status-row strong.bad { color: var(--bad); }
 
 @media (max-width: 1050px) {
+  .admin-console-shell {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+
   .admin-access-grid,
   .admin-advanced-grid {
     grid-template-columns: 1fr;
@@ -347,17 +521,37 @@
     flex-direction: column;
   }
 
-  .admin-tabs {
+  .admin-console-shell {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: static;
   }
 
   .admin-tab {
+    text-align: center;
     width: 100%;
   }
 
   .admin-action-grid,
   .admin-preset-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-modal-backdrop {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .admin-table-actions {
+    display: grid;
+  }
+
+  .admin-scanner-summary {
+    align-items: stretch;
+    display: grid;
   }
 }
