@@ -1,0 +1,2 @@
+-- Seed data will start here after schema work begins.
+-- This structure checkpoint intentionally adds no seed statements.
