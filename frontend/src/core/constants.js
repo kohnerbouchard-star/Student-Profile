@@ -13,6 +13,11 @@ const PERMISSION_SETS = {
     label: "View only",
     views: ["profile", "store", "portfolio", "trade", "stockProfile", "rating"],
     actions: []
+  },
+  ADMIN: {
+    label: "Teacher admin",
+    views: ["admin"],
+    actions: []
   }
 };
 
@@ -40,6 +45,10 @@ const VIEW_COPY = {
   rating: {
     title: "Forecasts",
     subtitle: "Submit a target price and explain your market reasoning."
+  },
+  admin: {
+    title: "Admin Console",
+    subtitle: "Prototype teacher controls for monitoring the classroom economy."
   }
 };
 
