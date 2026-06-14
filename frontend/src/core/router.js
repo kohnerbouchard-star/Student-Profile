@@ -50,6 +50,7 @@ function renderCurrentView() {
   if (view === "trade") renderTrade();
   if (view === "stockProfile") renderStockProfile();
   if (view === "rating") renderRating();
+  if (view === "admin") renderAdminDashboard();
 }
 
 Object.assign(window.Econovaria.core, { switchView, currentView, renderCurrentView });
