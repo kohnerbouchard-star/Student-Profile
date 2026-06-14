@@ -44,9 +44,8 @@
         label: "UI support extracted",
         description: "Loads behavior-preserving UI support scripts only.",
         scripts: [
-          "frontend/src/ui/student-ui-fixes.js",
-          "frontend/src/ui/mobile-ux-fix.js",
-          "frontend/src/ui/display-format-final-fix.js"
+          "frontend/src/ui/student-ui.js",
+          "frontend/src/ui/mobile.js"
         ],
         requiredGlobals: []
       },
