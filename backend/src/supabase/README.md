@@ -8,7 +8,8 @@ package setup exists.
 ## Adapters
 
 - `staffRepository.ts` implements `StaffAccessRepository` with lookups for
-  `staff_users.supabase_auth_user_id` and `game_sessions.id`.
+  `staff_users.supabase_auth_user_id` and `game_sessions.id`, plus backend-only
+  staff creation support for the staff bootstrap flow.
 - `playerSessionRepository.ts` implements `PlayerSessionRepository` with lookup
   by `player_sessions.session_token_hash`.
 - `auditRepository.ts` provides a small `writeAuditLogEntry` adapter for future

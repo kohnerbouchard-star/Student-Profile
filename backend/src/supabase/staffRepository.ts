@@ -2,12 +2,14 @@ import type { StaffAccessRepository } from "../auth/staffAccess";
 import type { GameSessionRecord, StaffUserRecord, UUID } from "../auth/types";
 import {
   normalizeMaybeQueryRow,
+  normalizeRequiredQueryRow,
   type SupabaseRepositoryClient,
 } from "./queryResult";
 import {
   mapGameSessionRow,
   mapStaffUserRow,
   type CoreSupabaseTables,
+  type StaffUserInsert,
 } from "./tableTypes";
 
 type StaffRepositoryTables = Pick<
@@ -18,6 +20,10 @@ type StaffRepositoryTables = Pick<
 export type SupabaseStaffRepositoryClient =
   SupabaseRepositoryClient<StaffRepositoryTables>;
 
+export interface SupabaseStaffRepository extends StaffAccessRepository {
+  createStaffUser(input: StaffUserInsert): Promise<StaffUserRecord>;
+}
+
 export const STAFF_USERS_ACCESS_COLUMNS =
   "id,supabase_auth_user_id,email,display_name,created_at,updated_at";
 
@@ -26,12 +32,13 @@ export const GAME_SESSIONS_ACCESS_COLUMNS =
 
 export function createSupabaseStaffRepository(
   client: SupabaseStaffRepositoryClient,
-): StaffAccessRepository {
+): SupabaseStaffRepository {
   return {
     findStaffUserBySupabaseAuthUserId: (supabaseAuthUserId) =>
       findStaffUserBySupabaseAuthUserId(client, supabaseAuthUserId),
     findGameSessionById: (gameSessionId) =>
       findGameSessionById(client, gameSessionId),
+    createStaffUser: (input) => createStaffUser(client, input),
   };
 }
 
@@ -67,4 +74,21 @@ export async function findGameSessionById(
   });
 
   return row ? mapGameSessionRow(row) : null;
+}
+
+export async function createStaffUser(
+  client: SupabaseStaffRepositoryClient,
+  input: StaffUserInsert,
+): Promise<StaffUserRecord> {
+  const response = await client
+    .from("staff_users")
+    .insert(input)
+    .select(STAFF_USERS_ACCESS_COLUMNS)
+    .single();
+  const row = normalizeRequiredQueryRow(response, {
+    tableName: "staff_users",
+    operation: "create staff user",
+  });
+
+  return mapStaffUserRow(row);
 }
