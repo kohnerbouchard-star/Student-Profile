@@ -14,8 +14,10 @@ package setup exists.
   by `player_sessions.session_token_hash`.
 - `auditRepository.ts` provides a small `writeAuditLogEntry` adapter for future
   audit writes.
+- `gameRepository.ts` creates `game_sessions` and `game_settings` rows for
+  backend-only game creation services.
 - `tableTypes.ts` defines narrow row types for `staff_users`, `game_sessions`,
-  `player_sessions`, and `audit_log`.
+  `game_settings`, `player_sessions`, and `audit_log`.
 - `queryResult.ts` normalizes Supabase query responses without importing
   Supabase package types.
 

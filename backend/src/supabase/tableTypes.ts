@@ -32,6 +32,38 @@ export interface GameSessionsRow extends GameSessionRecord {
   readonly updated_at: ISODateTimeString;
 }
 
+export interface GameSessionInsert {
+  readonly owner_staff_user_id: UUID;
+  readonly name: string;
+  readonly status?: "active" | "archived" | "disabled" | string;
+  readonly game_join_code_hash?: string | null;
+  readonly game_join_code_status?: "pending" | "active" | "revoked" | string;
+}
+
+export interface GameSettingsRecord {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly difficulty_preset: string;
+  readonly attendance_window: JsonObject;
+  readonly business_market_window: JsonObject;
+  readonly stock_market_window: JsonObject;
+  readonly news_schedule: JsonObject;
+}
+
+export interface GameSettingsRow extends GameSettingsRecord {
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface GameSettingsInsert {
+  readonly game_session_id: UUID;
+  readonly difficulty_preset?: string;
+  readonly attendance_window?: JsonObject;
+  readonly business_market_window?: JsonObject;
+  readonly stock_market_window?: JsonObject;
+  readonly news_schedule?: JsonObject;
+}
+
 export interface PlayerSessionsRow extends PlayerSessionRecord {
   readonly created_at: ISODateTimeString;
   readonly updated_at: ISODateTimeString;
@@ -62,6 +94,7 @@ export interface AuditLogInsert {
 export interface CoreSupabaseTables {
   readonly staff_users: StaffUsersRow;
   readonly game_sessions: GameSessionsRow;
+  readonly game_settings: GameSettingsRow;
   readonly player_sessions: PlayerSessionsRow;
   readonly audit_log: AuditLogRow;
 }
@@ -80,6 +113,18 @@ export function mapGameSessionRow(row: GameSessionsRow): GameSessionRecord {
     id: row.id,
     owner_staff_user_id: row.owner_staff_user_id,
     status: row.status,
+  };
+}
+
+export function mapGameSettingsRow(row: GameSettingsRow): GameSettingsRecord {
+  return {
+    id: row.id,
+    game_session_id: row.game_session_id,
+    difficulty_preset: row.difficulty_preset,
+    attendance_window: row.attendance_window,
+    business_market_window: row.business_market_window,
+    stock_market_window: row.stock_market_window,
+    news_schedule: row.news_schedule,
   };
 }
 
