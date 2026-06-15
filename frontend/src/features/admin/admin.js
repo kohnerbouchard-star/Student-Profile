@@ -3,13 +3,13 @@ window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.admin = window.Econovaria.features.admin || {};
 
 const ADMIN_SECTIONS = [
-  "Dashboard",
-  "Players",
-  "Attendance",
-  "Store",
-  "Market",
-  "Reports",
-  "Settings"
+  { id: "Overview", label: "Overview", description: "Game status and core admin tasks" },
+  { id: "Players", label: "Players", description: "Roster, codes, and access" },
+  { id: "Attendance", label: "Attendance", description: "Clock-in and scan tools" },
+  { id: "Store", label: "Store", description: "Items, stock, and pricing" },
+  { id: "Market", label: "Market", description: "Market windows and signals" },
+  { id: "Settings", label: "Settings", description: "Difficulty and simulation rules" },
+  { id: "Reports", label: "Reports", description: "Exports and teacher review" }
 ];
 
 const DIFFICULTY_PRESETS = [
@@ -26,15 +26,12 @@ const ADVANCED_SETTING_GROUPS = [
   "Attendance",
   "Store",
   "Stock Market",
-  "Assets",
-  "Stock History",
   "News & Events",
-  "Analyst Center",
   "Reports",
   "Security"
 ];
 
-let activeAdminSection = "Dashboard";
+let activeAdminSection = "Overview";
 let activePlayerSettingsIndex = null;
 let isAttendanceScannerOpen = false;
 let lastAttendanceScan = "";
@@ -55,8 +52,8 @@ function renderAdminDashboard() {
   const el = document.getElementById("admin");
   if (!el) return;
 
-  if (!ADMIN_SECTIONS.includes(activeAdminSection)) {
-    activeAdminSection = "Dashboard";
+  if (!ADMIN_SECTIONS.some((section) => section.id === activeAdminSection)) {
+    activeAdminSection = "Overview";
   }
 
   const storeCount = (state.store || []).length;
@@ -64,25 +61,43 @@ function renderAdminDashboard() {
   const portfolioCount = (state.portfolio || []).length;
   const forecastCount = (state.ratings || []).length;
   const newsCount = (state.news || []).length;
+  const activePlayerCount = adminPlayerRows.filter((player) => player.status === "Active" && player.name).length;
+  const sectionMeta = adminSectionMeta(activeAdminSection);
 
   el.innerHTML = `
     <div class="admin-page">
-      <section class="admin-hero card">
-        <div>
-          <div class="eyebrow">Teacher console</div>
-          <h2>Admin Console</h2>
-          <p>Frontend-only controls for monitoring the classroom economy. Backend admin actions are intentionally stubbed until permissions exist.</p>
-        </div>
-        <span class="badge warn">Prototype access</span>
-      </section>
+      <div class="admin-console-shell" aria-label="Teacher admin workspace">
+        <aside class="admin-workspace-menu" aria-label="Admin console sections">
+          <div class="admin-menu-header">
+            <div class="eyebrow">Teacher console</div>
+            <h2>Admin</h2>
+            <p>Manage the classroom economy from the same shell students use.</p>
+          </div>
 
-      <div class="admin-console-shell">
-        <nav class="admin-tabs" aria-label="Admin console sections">
-          ${ADMIN_SECTIONS.map(adminTab).join("")}
-        </nav>
+          <nav class="admin-tabs" aria-label="Admin menu">
+            ${ADMIN_SECTIONS.map(adminTab).join("")}
+          </nav>
 
-        <div class="admin-section" data-current-admin-section="${sanitize(activeAdminSection)}">
-          ${renderAdminSection(activeAdminSection, { storeCount, marketCount, portfolioCount, forecastCount, newsCount })}
+          <div class="admin-menu-note">
+            <span>Core loop</span>
+            <strong>Players → attendance → store → settings</strong>
+            <p>Backend actions stay disabled until the admin permission layer is wired.</p>
+          </div>
+        </aside>
+
+        <div class="admin-main-panel">
+          <section class="admin-section-intro card">
+            <div>
+              <div class="eyebrow">${sanitize(sectionMeta.label)}</div>
+              <h2>${sanitize(sectionMeta.label)}</h2>
+              <p>${sanitize(sectionMeta.description)}</p>
+            </div>
+            <span class="badge warn">Prototype</span>
+          </section>
+
+          <div class="admin-section" data-current-admin-section="${sanitize(activeAdminSection)}">
+            ${renderAdminSection(activeAdminSection, { storeCount, marketCount, portfolioCount, forecastCount, newsCount, activePlayerCount })}
+          </div>
         </div>
       </div>
     </div>`;
@@ -93,19 +108,24 @@ function renderAdminDashboard() {
   bindAdminStoreControls(el);
 }
 
+function adminSectionMeta(sectionId) {
+  return ADMIN_SECTIONS.find((section) => section.id === sectionId) || ADMIN_SECTIONS[0];
+}
+
 function adminTab(section) {
-  const isActive = section === activeAdminSection;
+  const isActive = section.id === activeAdminSection;
 
   return `
-    <button class="admin-tab${isActive ? " active" : ""}" type="button" data-admin-section="${sanitize(section)}" aria-pressed="${String(isActive)}">
-      ${sanitize(section)}
+    <button class="admin-tab${isActive ? " active" : ""}" type="button" data-admin-section="${sanitize(section.id)}" aria-pressed="${String(isActive)}">
+      <span>${sanitize(section.label)}</span>
+      <small>${sanitize(section.description)}</small>
     </button>`;
 }
 
 function bindAdminTabs(root) {
   root.querySelectorAll("[data-admin-section]").forEach((button) => {
     button.addEventListener("click", () => {
-      activeAdminSection = button.dataset.adminSection || "Dashboard";
+      activeAdminSection = button.dataset.adminSection || "Overview";
       renderAdminDashboard();
     });
   });
@@ -115,47 +135,43 @@ function renderAdminSection(section, counts) {
   if (section === "Players") return renderPlayersSection();
   if (section === "Attendance") return renderAttendanceSection();
   if (section === "Store") return renderStoreSection();
-  if (section === "Market") return renderPlaceholderSection("Market", "Configure market status, assets, stock history, news, and event timing.", ["Market status", "Asset controls", "News & events"]);
-  if (section === "Reports") return renderPlaceholderSection("Reports", "Export classroom summaries and review balances, trades, attendance, and forecasts.", ["Balance report", "Trading report", "Forecast report"]);
+  if (section === "Market") return renderPlaceholderSection("Market", "Review market visibility, asset controls, news timing, and trading-window status.", ["Market status", "Asset controls", "News and events"]);
+  if (section === "Reports") return renderPlaceholderSection("Reports", "Prepare classroom exports for balances, trades, attendance, and forecasts.", ["Balance report", "Trading report", "Forecast report"]);
   if (section === "Settings") return renderSettingsSection();
   return renderDashboardSection(counts);
 }
 
-function renderDashboardSection({ storeCount, marketCount, portfolioCount, forecastCount, newsCount }) {
+function renderDashboardSection({ storeCount, marketCount, forecastCount, newsCount, activePlayerCount }) {
   return `
     <div class="grid cols-4 admin-metrics">
+      ${metric("Active Players", activePlayerCount, "Local roster draft")}
       ${metric("Store Items", storeCount, "Loaded from snapshot")}
       ${metric("Market Assets", marketCount, "Visible to students")}
-      ${metric("Portfolio Rows", portfolioCount, "Current session data")}
       ${metric("Forecasts", forecastCount, "Submitted ratings")}
-    </div>
-
-    <div class="grid cols-2 admin-grid">
-      ${adminPanel("Player Operations", "Players now contains roster tools, balance adjustments, access codes, and lock controls.", [
-        adminButton("Open Players", "primary", false, "Players"),
-        adminButton("Review access status", "secondary", true),
-        adminButton("Balance audit", "secondary", true),
-        adminButton("Bulk import/export", "secondary", true)
-      ])}
-      ${adminPanel("Simulation Controls", "Advanced configuration is grouped under Settings so the main console stays readable.", [
-        adminButton("Difficulty preset", "primary", false, "Settings"),
-        adminButton("Market controls", "secondary", true),
-        adminButton("Store manager", "secondary", true),
-        adminButton("Export reports", "secondary", true)
-      ])}
     </div>
 
     <section class="card admin-panel">
       <div class="card-title-row">
-        <h2 class="card-title">Backend Wiring Status</h2>
-        <span class="badge bad">Not connected</span>
+        <h2 class="card-title">Core Admin Responsibilities</h2>
+        <span class="badge">Focused</span>
+      </div>
+      <div class="admin-responsibility-grid">
+        ${adminResponsibilityCard("Players", "Roster, student codes, locks, and access status live together.", "Players")}
+        ${adminResponsibilityCard("Attendance", "Use the scanner and review clock-in flow from one place.", "Attendance")}
+        ${adminResponsibilityCard("Store", "Maintain item names, stock levels, prices, and visibility.", "Store")}
+        ${adminResponsibilityCard("Settings", "Keep difficulty, windows, and advanced controls grouped.", "Settings")}
+      </div>
+    </section>
+
+    <section class="card admin-panel admin-compact-status">
+      <div class="card-title-row">
+        <h2 class="card-title">Prototype Status</h2>
+        <span class="badge warn">Frontend only</span>
       </div>
       <div class="admin-status-list">
-        ${adminStatus("Admin login", "Frontend prototype only", "warn")}
-        ${adminStatus("Teacher code", "Temporary code: 1234", "warn")}
-        ${adminStatus("Backend role check", "Not wired yet", "bad")}
-        ${adminStatus("Admin actions", "Disabled until backend permissions exist", "bad")}
+        ${adminStatus("Admin actions", "Disabled until backend permissions exist", "warn")}
         ${adminStatus("News rows", String(newsCount), "good")}
+        ${adminStatus("Student data", "Read-only snapshot in this prototype", "warn")}
       </div>
     </section>`;
 }
@@ -164,16 +180,16 @@ function renderPlayersSection() {
   return `
     <section class="card admin-panel">
       <div class="card-title-row">
-        <h2 class="card-title">Player List</h2>
+        <h2 class="card-title">Players</h2>
         <span class="badge warn">Local draft</span>
       </div>
-      <p class="help-text">Type student names and draft access codes in the table. These rows are frontend-only until backend roster management exists.</p>
+      <p class="help-text">Manage the roster and student access codes in one place. These rows stay frontend-only until backend roster APIs exist.</p>
       <div class="admin-player-table-wrap">
         <table class="admin-player-table">
           <thead>
             <tr>
               <th>Student Name</th>
-              <th>Access Code</th>
+              <th>Student Code</th>
               <th>Status</th>
               <th class="admin-player-settings-col">Settings</th>
             </tr>
@@ -185,23 +201,19 @@ function renderPlayersSection() {
       </div>
       <div class="admin-table-actions">
         <button class="admin-btn admin-btn--primary" type="button" data-admin-add-player-row>Add Player Row</button>
-        ${adminButton("Bulk Import / Export", "secondary", true)}
       </div>
     </section>
 
     <section class="card admin-panel">
       <div class="card-title-row">
-        <h2 class="card-title">Access Code Management</h2>
-        <span class="badge bad">Sensitive values hidden</span>
+        <h2 class="card-title">Access Code Responsibilities</h2>
+        <span class="badge bad">Sensitive</span>
       </div>
-      <p class="help-text">Generate, reset, lock, and unlock player access from the Players tab. Raw passwords and hidden access-code values are never exposed in this UI.</p>
-      <div class="admin-access-grid">
-        ${adminAccessItem("Generate access code", "Create a new player login code without revealing raw secrets.", "primary")}
-        ${adminAccessItem("Reset access code", "Invalidate the previous code and prepare a replacement.", "warning")}
-        ${adminAccessItem("Lock player access", "Prevent sign-in for a selected player.", "danger")}
-        ${adminAccessItem("Unlock player access", "Restore sign-in for a selected player.", "success")}
-        ${adminAccessItem("View last login", "Not available in the current frontend snapshot.", "secondary")}
-        ${adminAccessItem("Bulk generate codes", "Stubbed until backend support and permissions are available.", "secondary")}
+      <p class="help-text">Access-code management belongs inside Players. Raw secrets stay hidden and backend duplicate checks will become the source of truth.</p>
+      <div class="admin-access-grid admin-access-grid--compact">
+        ${adminActionSummary("Generate or reset codes", "Prepare one active student code per player.", "Planned")}
+        ${adminActionSummary("Lock or unlock access", "Control whether a selected player can sign in.", "Planned")}
+        ${adminActionSummary("Prevent duplicates", "No active duplicate student codes inside the same game session.", "Core rule")}
       </div>
     </section>
 
@@ -219,8 +231,8 @@ function adminPlayerRow(player, index) {
       </td>
       <td>
         <label class="admin-table-field">
-          <span class="sr-only">Access code ${index + 1}</span>
-          <input value="${sanitize(player.accessCode)}" placeholder="Access code" data-admin-player-field="accessCode" data-admin-player-index="${index}" autocomplete="off" />
+          <span class="sr-only">Student code ${index + 1}</span>
+          <input value="${sanitize(player.accessCode)}" placeholder="Student code" data-admin-player-field="accessCode" data-admin-player-index="${index}" autocomplete="off" />
         </label>
       </td>
       <td><span class="badge ${player.status === "Draft" ? "warn" : "good"}">${sanitize(player.status)}</span></td>
@@ -252,7 +264,7 @@ function renderPlayerSettingsPopup() {
             <input value="${sanitize(player.name)}" data-admin-player-field="name" data-admin-player-index="${activePlayerSettingsIndex}" autocomplete="off" />
           </label>
           <label>
-            <span class="field-label">Draft Access Code</span>
+            <span class="field-label">Student Code</span>
             <input value="${sanitize(player.accessCode)}" data-admin-player-field="accessCode" data-admin-player-index="${activePlayerSettingsIndex}" autocomplete="off" />
           </label>
           <label>
@@ -261,18 +273,13 @@ function renderPlayerSettingsPopup() {
               <option>${sanitize(player.status || "Draft")}</option>
             </select>
           </label>
-          <label>
-            <span class="field-label">Last Login</span>
-            <input value="Not available in frontend snapshot" disabled />
-          </label>
         </div>
-        <div class="admin-action-grid">
-          ${adminButton("Balance Adjustment", "warning", true)}
-          ${adminButton("Lock Player", "danger", true)}
-          ${adminButton("Unlock Player", "success", true)}
-          ${adminButton("Reset Access Code", "warning", true)}
+        <div class="admin-action-grid admin-action-grid--three">
+          ${adminButton("Reset Code", "warning", true)}
+          ${adminButton("Lock Access", "danger", true)}
+          ${adminButton("Unlock Access", "success", true)}
         </div>
-        <p class="help-text">TODO: Save player settings when backend admin roster APIs exist.</p>
+        <p class="help-text">Player actions are intentionally disabled until backend admin permissions exist.</p>
       </section>
     </div>`;
 }
@@ -318,7 +325,7 @@ function renderAttendanceSection() {
         <h2 class="card-title">Attendance Scanner</h2>
         <span class="badge warn">Frontend scanner stub</span>
       </div>
-      <p class="help-text">Open a focused scanner popup for quick attendance scans. Submissions are captured locally until backend attendance APIs exist.</p>
+      <p class="help-text">Open a focused scanner for quick attendance scans. Submissions are captured locally until backend attendance APIs exist.</p>
       <div class="admin-scanner-summary">
         <div>
           <span>Last local scan</span>
@@ -330,15 +337,13 @@ function renderAttendanceSection() {
 
     <section class="card admin-panel">
       <div class="card-title-row">
-        <h2 class="card-title">Attendance Tools</h2>
-        <span class="badge">Planned</span>
+        <h2 class="card-title">Attendance Workflow</h2>
+        <span class="badge">Core</span>
       </div>
-      <p class="help-text">Manual attendance review, streak audit, and participation notes remain disabled until backend support exists.</p>
-      <div class="admin-action-grid">
-        ${adminButton("Attendance review", "secondary", true)}
-        ${adminButton("Streak audit", "secondary", true)}
-        ${adminButton("Participation notes", "secondary", true)}
-        ${adminButton("Export attendance", "secondary", true)}
+      <div class="admin-access-grid admin-access-grid--compact">
+        ${adminActionSummary("Clock-in scan", "Capture one scan per student attendance event.", "Now")}
+        ${adminActionSummary("Review exceptions", "Late, duplicate, and missing scans will be reviewed here.", "Planned")}
+        ${adminActionSummary("Export attendance", "Teacher reports will connect after backend support.", "Planned")}
       </div>
     </section>
 
@@ -420,14 +425,14 @@ function renderStoreSection() {
         <h2 class="card-title">Store Inventory</h2>
         <span class="badge warn">Local draft</span>
       </div>
-      <p class="help-text">Edit item names, descriptions, and stock counts in a table view. Changes stay frontend-only until backend store admin support exists.</p>
+      <p class="help-text">Edit item names, descriptions, stock counts, and prices. Publishing stays disabled until backend store admin support exists.</p>
       <div class="admin-player-table-wrap">
         <table class="admin-store-table">
           <thead>
             <tr>
               <th>Item Name</th>
               <th>Description</th>
-              <th>Qty in Stock</th>
+              <th>Qty</th>
               <th>Price</th>
               <th>Status</th>
             </tr>
@@ -439,22 +444,18 @@ function renderStoreSection() {
       </div>
       <div class="admin-table-actions">
         <button class="admin-btn admin-btn--primary" type="button" data-admin-add-store-row>Add Store Item Row</button>
-        ${adminButton("Save Store Changes", "primary", true)}
-        ${adminButton("Import / Export Store", "secondary", true)}
       </div>
     </section>
 
     <section class="card admin-panel">
       <div class="card-title-row">
-        <h2 class="card-title">Store Controls</h2>
-        <span class="badge">Planned</span>
+        <h2 class="card-title">Store Responsibilities</h2>
+        <span class="badge">Core</span>
       </div>
-      <p class="help-text">Visibility, purchase windows, and destructive inventory actions need backend admin permissions before they can change live data.</p>
-      <div class="admin-action-grid">
-        ${adminButton("Open Purchase Window", "success", true)}
-        ${adminButton("Close Purchase Window", "warning", true)}
-        ${adminButton("Hide Sold Out Items", "secondary", true)}
-        ${adminButton("Reset Store Purchases", "danger", true)}
+      <div class="admin-access-grid admin-access-grid--compact">
+        ${adminActionSummary("Items and prices", "Maintain the student-facing store list.", "Now")}
+        ${adminActionSummary("Purchase windows", "Open or close purchase access after backend support.", "Planned")}
+        ${adminActionSummary("Inventory reset", "Destructive store actions stay isolated in Settings.", "Protected")}
       </div>
     </section>`;
 }
@@ -529,7 +530,7 @@ function renderSettingsSection() {
 
       <section class="card admin-panel">
         <div class="card-title-row">
-          <h2 class="card-title">Basic Game Info</h2>
+          <h2 class="card-title">Game Info</h2>
           <span class="badge warn">Stubbed</span>
         </div>
         <div class="form-grid">
@@ -556,7 +557,7 @@ function renderSettingsSection() {
         <h2 class="card-title">Advanced Settings</h2>
         <span class="badge">Grouped</span>
       </div>
-      <p class="help-text">Detailed configuration lives here so the primary admin page remains focused.</p>
+      <p class="help-text">Advanced settings stay grouped so the primary admin page remains focused on the daily teacher loop.</p>
       <div class="admin-advanced-grid">
         ${ADVANCED_SETTING_GROUPS.map(adminAdvancedGroup).join("")}
       </div>
@@ -565,14 +566,13 @@ function renderSettingsSection() {
     <section class="card admin-panel admin-danger-zone">
       <div class="card-title-row">
         <h2 class="card-title">Danger Zone</h2>
-        <span class="badge bad">Destructive actions</span>
+        <span class="badge bad">Protected</span>
       </div>
       <p class="help-text">Reset and destructive actions are isolated here and disabled in the frontend prototype.</p>
-      <div class="admin-action-grid">
+      <div class="admin-action-grid admin-action-grid--three">
         ${adminButton("Reset Simulation", "danger", true)}
-        ${adminButton("Clear Market History", "danger", true)}
-        ${adminButton("Reset Store Purchases", "danger", true)}
-        ${adminButton("Deactivate All Players", "danger", true)}
+        ${adminButton("Reset Store", "danger", true)}
+        ${adminButton("Deactivate Players", "danger", true)}
       </div>
     </section>`;
 }
@@ -584,33 +584,30 @@ function renderPlaceholderSection(title, description, actions) {
         <h2 class="card-title">${sanitize(title)}</h2>
         <span class="badge warn">Frontend stub</span>
       </div>
-      <p class="help-text">${sanitize(description)} Backend support is required before these controls can change data.</p>
-      <div class="admin-action-grid">
-        ${actions.map((action) => adminButton(action, "secondary", true)).join("")}
+      <p class="help-text">${sanitize(description)} Backend support is required before these controls can change live data.</p>
+      <div class="admin-access-grid admin-access-grid--compact">
+        ${actions.map((action) => adminActionSummary(action, "Will be wired after backend permissions exist.", "Planned")).join("")}
       </div>
     </section>`;
 }
 
-function adminPanel(title, description, buttons) {
+function adminResponsibilityCard(title, description, targetSection) {
   return `
-    <section class="card admin-panel">
-      <div class="card-title-row">
-        <h2 class="card-title">${sanitize(title)}</h2>
-        <span class="badge">Planned</span>
-      </div>
-      <p class="help-text">${sanitize(description)}</p>
-      <div class="admin-action-grid">${buttons.join("")}</div>
-    </section>`;
-}
-
-function adminAccessItem(title, description, tone) {
-  return `
-    <div class="admin-access-item">
+    <div class="admin-responsibility-card">
       <div>
         <strong>${sanitize(title)}</strong>
         <p>${sanitize(description)}</p>
       </div>
-      ${adminButton(title, tone, true)}
+      ${adminButton("Open", "secondary", false, targetSection)}
+    </div>`;
+}
+
+function adminActionSummary(title, description, tag) {
+  return `
+    <div class="admin-action-summary">
+      <span>${sanitize(tag || "Planned")}</span>
+      <strong>${sanitize(title)}</strong>
+      <p>${sanitize(description)}</p>
     </div>`;
 }
 
@@ -618,11 +615,7 @@ function adminAdvancedGroup(group) {
   return `
     <details class="admin-advanced-group">
       <summary>${sanitize(group)}</summary>
-      <p>TODO: Wire ${sanitize(group.toLowerCase())} settings when backend admin settings support exists.</p>
-      <div class="admin-action-grid">
-        ${adminButton("Review", "secondary", true)}
-        ${adminButton("Save Changes", "primary", true)}
-      </div>
+      <p>${sanitize(group)} settings will be wired when backend admin settings support exists.</p>
     </details>`;
 }
 
