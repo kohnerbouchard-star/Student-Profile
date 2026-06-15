@@ -1,3 +1,4 @@
 .security-backup-*/
 *.bak
 *.backup
+.vscode/mcp.json
