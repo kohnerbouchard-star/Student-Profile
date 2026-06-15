@@ -420,7 +420,7 @@ This section documents intended SQL structure in design form only. It does not c
 - `game_settings` owns configurable simulation windows.
 - It includes attendance window, business/customer traffic window, stock market/trading window, news schedule, and difficulty preset settings.
 - Defaults can be documented later, but are not implemented here:
-  - business/customer traffic default target: `7:00 AM-5:00 PM`
+  - business/customer traffic default target: `7:00 AM-8:00 PM`
   - stock market/trading default target: `9:00 AM-4:00 PM`
   - attendance window configurable
   - news schedule configurable
