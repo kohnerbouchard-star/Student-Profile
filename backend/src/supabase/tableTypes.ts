@@ -18,6 +18,12 @@ export interface StaffUsersRow extends StaffUserRecord {
   readonly updated_at: ISODateTimeString;
 }
 
+export interface StaffUserInsert {
+  readonly supabase_auth_user_id: UUID;
+  readonly email: string;
+  readonly display_name: string;
+}
+
 export interface GameSessionsRow extends GameSessionRecord {
   readonly name: string;
   readonly game_join_code_hash?: string | null;
