@@ -2,3 +2,6 @@
 *.bak
 *.backup
 .vscode/mcp.json
+.env
+.env.local
+.env.*.local
