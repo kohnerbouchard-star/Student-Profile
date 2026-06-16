@@ -1,5 +1,7 @@
 import type { RedeemPurchaseCodeResult } from "../application/redeemPurchaseCode";
 import type { LicensingActivationSafeError } from "../application/licensingActivationErrors";
+import { normalizePurchaseCode } from "../domain/purchaseCodeNormalization";
+import type { PurchaseCodeHasher } from "../domain/purchaseCodeHashing";
 import type { JsonObject } from "../../../supabase/tableTypes";
 
 export interface LicensingActivationRequestBody {
@@ -31,6 +33,10 @@ export interface LicensingActivationServiceInput {
   readonly source?: string | null;
 }
 
+export interface LicensingActivationContractDependencies {
+  readonly purchaseCodeHasher: PurchaseCodeHasher;
+}
+
 export interface LicensingActivationSuccessResponse {
   readonly ok: true;
   readonly activation: {
@@ -56,6 +62,23 @@ export interface LicensingActivationErrorResponse {
 export type LicensingActivationResponse =
   | LicensingActivationSuccessResponse
   | LicensingActivationErrorResponse;
+
+export async function prepareLicensingActivationServiceInput(
+  body: LicensingActivationRequestBody,
+  context: LicensingActivationRouteContext,
+  dependencies: LicensingActivationContractDependencies,
+): Promise<LicensingActivationServiceInput> {
+  const normalizedPurchaseCode = normalizePurchaseCode(body.purchaseCode);
+  const purchaseCodeHash = await dependencies.purchaseCodeHasher.hashPurchaseCode({
+    normalizedPurchaseCode,
+  });
+
+  return buildLicensingActivationServiceInput(
+    body,
+    context,
+    purchaseCodeHash.codeHash,
+  );
+}
 
 export function buildLicensingActivationServiceInput(
   body: LicensingActivationRequestBody,
