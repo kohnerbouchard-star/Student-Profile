@@ -32,7 +32,7 @@ export interface RedeemPurchaseCodeInput {
 export interface RedeemPurchaseCodeDependencies {
   readonly licensingRepository: Pick<
     LicensingRepository,
-    "findPurchaseCodeByHash" | "createEntitlement"
+    "findPurchaseCodeByHash" | "markPurchaseCodeRedeemed" | "createEntitlement"
   >;
   readonly gameRepository: GameCreationRepository;
   readonly auditRepository: Pick<AuditRepository, "writeAuditLogEntry">;
@@ -43,11 +43,12 @@ export interface RedeemPurchaseCodeResult {
   readonly purchaseCode: PurchaseCodeRecord;
   readonly entitlement: EntitlementRecord;
   readonly game: CreateGameResult;
-  readonly redeemedCountUpdateDeferred: true;
+  readonly redeemedCountUpdated: true;
 }
 
 export type RedeemPurchaseCodeErrorCode =
   | "purchase_code_not_found"
+  | "purchase_code_redemption_conflict"
   | "invalid_redemption_input"
   | PurchaseCodeRedemptionDenialCode;
 
@@ -96,6 +97,22 @@ export async function redeemPurchaseCode(
     );
   }
 
+  const nextRedeemedCount = purchaseCode.redeemed_count + 1;
+  const markedPurchaseCode =
+    await dependencies.licensingRepository.markPurchaseCodeRedeemed({
+      purchaseCodeId: purchaseCode.id,
+      expectedRedeemedCount: purchaseCode.redeemed_count,
+      nextRedeemedCount,
+      nextStatus: getNextPurchaseCodeStatus(purchaseCode, nextRedeemedCount),
+    });
+
+  if (!markedPurchaseCode) {
+    throw new RedeemPurchaseCodeError(
+      "purchase_code_redemption_conflict",
+      "Purchase code redemption state changed before it could be marked redeemed.",
+    );
+  }
+
   const game = await createGame(
     {
       ownerStaffUserId: normalizedInput.staffUserId,
@@ -109,8 +126,9 @@ export async function redeemPurchaseCode(
         source: normalizedInput.source ?? "purchase_code_redemption",
         requestId: normalizedInput.requestId,
         metadata: {
-          purchase_code_id: purchaseCode.id,
-          redemption_count_update_deferred: true,
+          purchase_code_id: markedPurchaseCode.id,
+          purchase_code_redeemed_count: markedPurchaseCode.redeemed_count,
+          purchase_code_status: markedPurchaseCode.status,
         },
       },
     },
@@ -121,18 +139,27 @@ export async function redeemPurchaseCode(
   );
 
   const entitlement = await dependencies.licensingRepository.createEntitlement({
-    purchase_code_id: purchaseCode.id,
+    purchase_code_id: markedPurchaseCode.id,
     staff_user_id: normalizedInput.staffUserId,
     game_session_id: game.gameSession.id,
     status: "active",
   });
 
   return {
-    purchaseCode,
+    purchaseCode: markedPurchaseCode,
     entitlement,
     game,
-    redeemedCountUpdateDeferred: true,
+    redeemedCountUpdated: true,
   };
+}
+
+function getNextPurchaseCodeStatus(
+  purchaseCode: PurchaseCodeRecord,
+  nextRedeemedCount: number,
+): "active" | "exhausted" {
+  return nextRedeemedCount >= purchaseCode.max_redemptions
+    ? "exhausted"
+    : "active";
 }
 
 interface NormalizedRedeemPurchaseCodeInput {
