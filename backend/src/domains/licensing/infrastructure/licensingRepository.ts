@@ -20,8 +20,20 @@ type LicensingRepositoryTables = Pick<
 export type SupabaseLicensingRepositoryClient =
   SupabaseRepositoryClient<LicensingRepositoryTables>;
 
+export type MarkPurchaseCodeRedeemedStatus = "active" | "exhausted";
+
+export interface MarkPurchaseCodeRedeemedInput {
+  readonly purchaseCodeId: string;
+  readonly expectedRedeemedCount: number;
+  readonly nextRedeemedCount: number;
+  readonly nextStatus: MarkPurchaseCodeRedeemedStatus;
+}
+
 export interface LicensingRepository {
   findPurchaseCodeByHash(codeHash: string): Promise<PurchaseCodeRecord | null>;
+  markPurchaseCodeRedeemed(
+    input: MarkPurchaseCodeRedeemedInput,
+  ): Promise<PurchaseCodeRecord | null>;
   createEntitlement(input: EntitlementInsert): Promise<EntitlementRecord>;
 }
 
@@ -36,6 +48,8 @@ export function createSupabaseLicensingRepository(
 ): LicensingRepository {
   return {
     findPurchaseCodeByHash: (codeHash) => findPurchaseCodeByHash(client, codeHash),
+    markPurchaseCodeRedeemed: (input) =>
+      markPurchaseCodeRedeemed(client, input),
     createEntitlement: (input) => createEntitlement(client, input),
   };
 }
@@ -60,6 +74,30 @@ export async function findPurchaseCodeByHash(
   const row = normalizeMaybeQueryRow(response, {
     tableName: "purchase_codes",
     operation: "find purchase code by hash",
+  });
+
+  return row ? mapPurchaseCodeRow(row) : null;
+}
+
+export async function markPurchaseCodeRedeemed(
+  client: SupabaseLicensingRepositoryClient,
+  input: MarkPurchaseCodeRedeemedInput,
+): Promise<PurchaseCodeRecord | null> {
+  const response = await client
+    .from("purchase_codes")
+    .update({
+      redeemed_count: input.nextRedeemedCount,
+      status: input.nextStatus,
+    })
+    .eq("id", input.purchaseCodeId)
+    .eq("status", "active")
+    .eq("redeemed_count", input.expectedRedeemedCount)
+    .select(PURCHASE_CODE_REDEMPTION_COLUMNS)
+    .maybeSingle();
+
+  const row = normalizeMaybeQueryRow(response, {
+    tableName: "purchase_codes",
+    operation: "mark purchase code redeemed",
   });
 
   return row ? mapPurchaseCodeRow(row) : null;

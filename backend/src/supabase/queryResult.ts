@@ -21,6 +21,7 @@ export interface SupabaseQueryContext {
 export interface SupabaseTableQuery<Row> {
   select(columns: string): SupabaseFilterQuery<Row>;
   insert(values: unknown): SupabaseInsertQuery<Row>;
+  update(values: unknown): SupabaseUpdateQuery<Row>;
 }
 
 export interface SupabaseFilterQuery<Row>
@@ -36,6 +37,16 @@ export interface SupabaseInsertQuery<Row> {
 }
 
 export interface SupabaseInsertSelectQuery<Row> {
+  single(): PromiseLike<SupabaseQueryResponse<Row>>;
+}
+
+export interface SupabaseUpdateQuery<Row> {
+  eq(column: string, value: unknown): SupabaseUpdateQuery<Row>;
+  select(columns: string): SupabaseUpdateSelectQuery<Row>;
+}
+
+export interface SupabaseUpdateSelectQuery<Row> {
+  maybeSingle(): PromiseLike<SupabaseQueryResponse<Row | null>>;
   single(): PromiseLike<SupabaseQueryResponse<Row>>;
 }
 
