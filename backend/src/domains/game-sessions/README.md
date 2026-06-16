@@ -5,9 +5,10 @@ Teacher-owned simulation lifecycle code lives here.
 ## Structure
 
 - `application/createGame.ts` creates a teacher-owned game session, default game settings, and audit log entry.
+- `api/createGameHandler.ts` is a framework-agnostic handler for future route/runtime wiring.
+- `contracts/createGameRouteContracts.ts` defines request/response DTOs for game creation.
+- `contracts/normalizeCreateGameRouteBody.ts` validates and normalizes the create-game request body.
 - `infrastructure/gameRepository.ts` contains the Supabase persistence adapter for `game_sessions` and `game_settings`.
-- `api/` is reserved for future thin request handlers.
-- `contracts/` is reserved for future request/response DTOs and validation contracts.
 - `domain/` is reserved for pure game-session lifecycle rules.
 - `tests/` is reserved for domain-specific tests.
 
