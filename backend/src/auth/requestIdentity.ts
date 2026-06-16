@@ -67,7 +67,11 @@ export function readHeader(headers: HeaderSource, name: string): string | null {
     return value[0]?.trim() || null;
   }
 
-  return value?.trim() || null;
+  if (typeof value === "string") {
+    return value.trim() || null;
+  }
+
+  return null;
 }
 
 export function readBearerToken(headers: HeaderSource): string | null {
