@@ -36,4 +36,4 @@ Plaintext purchase codes must never be stored. Backend code should validate agai
 
 `application/redeemPurchaseCode.ts` is an application service boundary, not a public route.
 
-Do not wire it to a runtime endpoint until the full purchase-code update, game creation, and entitlement creation flow is handled by a transaction-safe coordinator. The current service can mark a purchase code redeemed with optimistic locking, but the multi-write activation flow is still not exposed through a route.
+Do not wire it to a runtime endpoint until redeemed-count increment/update behavior is added with a transaction-safe persistence path. The current repository boundary can find purchase codes and create entitlements, but redeemed-count update is intentionally deferred.
