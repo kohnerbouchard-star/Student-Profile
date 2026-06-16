@@ -1,15 +1,21 @@
 import {
   normalizeMaybeQueryRow,
+  normalizeQueryRows,
   normalizeRequiredQueryRow,
+  SupabaseRepositoryError,
   type SupabaseRepositoryClient,
+  type SupabaseRpcClient,
 } from "../../../supabase/queryResult";
 import {
   mapEntitlementRow,
   mapPurchaseCodeRow,
+  type CoreSupabaseFunctions,
   type CoreSupabaseTables,
   type EntitlementInsert,
   type EntitlementRecord,
+  type JsonObject,
   type PurchaseCodeRecord,
+  type RedeemPurchaseCodeForGameRpcRow,
 } from "../../../supabase/tableTypes";
 
 type LicensingRepositoryTables = Pick<
@@ -20,6 +26,15 @@ type LicensingRepositoryTables = Pick<
 export type SupabaseLicensingRepositoryClient =
   SupabaseRepositoryClient<LicensingRepositoryTables>;
 
+type LicensingActivationFunctions = Pick<
+  CoreSupabaseFunctions,
+  "redeem_purchase_code_for_game"
+>;
+
+export type SupabaseLicensingActivationRepositoryClient =
+  SupabaseLicensingRepositoryClient &
+    SupabaseRpcClient<LicensingActivationFunctions>;
+
 export type MarkPurchaseCodeRedeemedStatus = "active" | "exhausted";
 
 export interface MarkPurchaseCodeRedeemedInput {
@@ -27,6 +42,20 @@ export interface MarkPurchaseCodeRedeemedInput {
   readonly expectedRedeemedCount: number;
   readonly nextRedeemedCount: number;
   readonly nextStatus: MarkPurchaseCodeRedeemedStatus;
+}
+
+export interface RedeemPurchaseCodeForGameRpcInput {
+  readonly staffUserId: string;
+  readonly purchaseCodeHash: string;
+  readonly gameName: string;
+  readonly gameSettings?: JsonObject;
+  readonly requestMetadata?: JsonObject;
+}
+
+export interface LicensingActivationRepository {
+  redeemPurchaseCodeForGame(
+    input: RedeemPurchaseCodeForGameRpcInput,
+  ): Promise<RedeemPurchaseCodeForGameRpcRow>;
 }
 
 export interface LicensingRepository {
@@ -43,6 +72,9 @@ export const PURCHASE_CODE_REDEMPTION_COLUMNS =
 export const ENTITLEMENT_CREATION_COLUMNS =
   "id,purchase_code_id,staff_user_id,game_session_id,status,created_at,updated_at";
 
+export const LICENSING_ACTIVATION_RPC_NAME =
+  "redeem_purchase_code_for_game";
+
 export function createSupabaseLicensingRepository(
   client: SupabaseLicensingRepositoryClient,
 ): LicensingRepository {
@@ -51,6 +83,15 @@ export function createSupabaseLicensingRepository(
     markPurchaseCodeRedeemed: (input) =>
       markPurchaseCodeRedeemed(client, input),
     createEntitlement: (input) => createEntitlement(client, input),
+  };
+}
+
+export function createSupabaseLicensingActivationRepository(
+  client: SupabaseLicensingActivationRepositoryClient,
+): LicensingActivationRepository {
+  return {
+    redeemPurchaseCodeForGame: (input) =>
+      redeemPurchaseCodeForGame(client, input),
   };
 }
 
@@ -124,4 +165,38 @@ export async function createEntitlement(
   });
 
   return mapEntitlementRow(row);
+}
+
+export async function redeemPurchaseCodeForGame(
+  client: SupabaseLicensingActivationRepositoryClient,
+  input: RedeemPurchaseCodeForGameRpcInput,
+): Promise<RedeemPurchaseCodeForGameRpcRow> {
+  const response = await client.rpc(LICENSING_ACTIVATION_RPC_NAME, {
+    p_staff_user_id: input.staffUserId,
+    p_purchase_code_hash: input.purchaseCodeHash,
+    p_game_name: input.gameName,
+    p_game_settings: input.gameSettings ?? {},
+    p_request_metadata: input.requestMetadata ?? {},
+  });
+
+  const rows = normalizeQueryRows(response, {
+    tableName: LICENSING_ACTIVATION_RPC_NAME,
+    operation: "redeem purchase code for game",
+  });
+
+  const activationResult = rows[0];
+
+  if (!activationResult) {
+    throw new SupabaseRepositoryError(
+      {
+        tableName: LICENSING_ACTIVATION_RPC_NAME,
+        operation: "redeem purchase code for game",
+      },
+      {
+        message: "Expected activation result row, but Supabase returned no data.",
+      },
+    );
+  }
+
+  return activationResult;
 }

@@ -56,6 +56,13 @@ export interface SupabaseRepositoryClient<Tables> {
   ): SupabaseTableQuery<Tables[TableName]>;
 }
 
+export interface SupabaseRpcClient<Functions> {
+  rpc<FunctionName extends Extract<keyof Functions, string>>(
+    functionName: FunctionName,
+    args: unknown,
+  ): PromiseLike<SupabaseQueryResponse<Functions[FunctionName]>>;
+}
+
 export class SupabaseRepositoryError extends Error {
   readonly tableName: string;
   readonly operation: string;

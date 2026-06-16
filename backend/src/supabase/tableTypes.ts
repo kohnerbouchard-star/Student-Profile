@@ -98,6 +98,24 @@ export interface EntitlementInsert {
   readonly status?: "active" | "expired" | "revoked" | string;
 }
 
+export interface RedeemPurchaseCodeForGameRpcArgs {
+  readonly p_staff_user_id: UUID;
+  readonly p_purchase_code_hash: string;
+  readonly p_game_name: string;
+  readonly p_game_settings?: JsonObject;
+  readonly p_request_metadata?: JsonObject;
+}
+
+export interface RedeemPurchaseCodeForGameRpcRow {
+  readonly game_session_id: UUID;
+  readonly entitlement_id: UUID;
+  readonly purchase_code_id: UUID;
+  readonly purchase_code_status: "active" | "exhausted" | "expired" | "revoked" | string;
+  readonly redeemed_count: number;
+  readonly max_redemptions: number;
+  readonly activated_at: ISODateTimeString;
+}
+
 export interface PlayerSessionsRow extends PlayerSessionRecord {
   readonly created_at: ISODateTimeString;
   readonly updated_at: ISODateTimeString;
@@ -133,6 +151,10 @@ export interface CoreSupabaseTables {
   readonly game_settings: GameSettingsRow;
   readonly player_sessions: PlayerSessionsRow;
   readonly audit_log: AuditLogRow;
+}
+
+export interface CoreSupabaseFunctions {
+  readonly redeem_purchase_code_for_game: ReadonlyArray<RedeemPurchaseCodeForGameRpcRow>;
 }
 
 export function mapStaffUserRow(row: StaffUsersRow): StaffUserRecord {
