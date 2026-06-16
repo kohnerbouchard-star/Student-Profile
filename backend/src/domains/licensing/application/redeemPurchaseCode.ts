@@ -91,7 +91,7 @@ function normalizeRedeemPurchaseCodeInput(
       "purchaseCodeHash",
     ),
     gameName: normalizeRequiredText(input.gameName, "gameName"),
-    difficultyPreset: normalizeOptionalText(input.difficultyPreset, "standard"),
+    difficultyPreset: normalizeOptionalText(input.difficultyPreset) ?? "standard",
     attendanceWindow: normalizeOptionalJsonObject(input.attendanceWindow),
     businessMarketWindow: normalizeOptionalJsonObject(input.businessMarketWindow),
     stockMarketWindow: normalizeOptionalJsonObject(input.stockMarketWindow),
