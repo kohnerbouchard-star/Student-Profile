@@ -1,12 +1,12 @@
-import type { GameSessionRecord, UUID } from "../auth/types";
-import type { AuditRepository } from "../supabase/auditRepository";
-import type { GameCreationRepository } from "../supabase/gameRepository";
+import type { GameSessionRecord, UUID } from "../../../auth/types";
+import type { AuditRepository } from "../../../supabase/auditRepository";
+import type { GameCreationRepository } from "../infrastructure/gameRepository";
 import type {
   AuditLogInsert,
   GameSettingsRecord,
   JsonObject,
   JsonValue,
-} from "../supabase/tableTypes";
+} from "../../../supabase/tableTypes";
 
 export interface CreateGameInput {
   readonly ownerStaffUserId: UUID;

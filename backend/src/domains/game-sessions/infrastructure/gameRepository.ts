@@ -1,8 +1,8 @@
-import type { GameSessionRecord } from "../auth/types";
+import type { GameSessionRecord } from "../../../auth/types";
 import {
   normalizeRequiredQueryRow,
   type SupabaseRepositoryClient,
-} from "./queryResult";
+} from "../../../supabase/queryResult";
 import {
   mapGameSessionRow,
   mapGameSettingsRow,
@@ -10,7 +10,7 @@ import {
   type GameSessionInsert,
   type GameSettingsInsert,
   type GameSettingsRecord,
-} from "./tableTypes";
+} from "../../../supabase/tableTypes";
 
 type GameRepositoryTables = Pick<
   CoreSupabaseTables,
