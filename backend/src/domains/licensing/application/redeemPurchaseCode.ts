@@ -1,20 +1,9 @@
 import type { UUID } from "../../../auth/types";
-import type { AuditRepository } from "../../../supabase/auditRepository";
-import type { JsonObject } from "../../../supabase/tableTypes";
-import {
-  createGame,
-  type CreateGameResult,
-} from "../../game-sessions/application/createGame";
-import type { GameCreationRepository } from "../../game-sessions/infrastructure/gameRepository";
-import {
-  evaluatePurchaseCodeRedemption,
-  type PurchaseCodeRedemptionDenialCode,
-} from "../domain/purchaseCodeRules";
-import type { LicensingRepository } from "../infrastructure/licensingRepository";
 import type {
-  EntitlementRecord,
-  PurchaseCodeRecord,
+  JsonObject,
+  RedeemPurchaseCodeForGameRpcRow,
 } from "../../../supabase/tableTypes";
+import type { LicensingActivationRepository } from "../infrastructure/licensingRepository";
 
 export interface RedeemPurchaseCodeInput {
   readonly staffUserId: UUID;
@@ -30,26 +19,15 @@ export interface RedeemPurchaseCodeInput {
 }
 
 export interface RedeemPurchaseCodeDependencies {
-  readonly licensingRepository: Pick<
-    LicensingRepository,
-    "findPurchaseCodeByHash" | "createEntitlement"
-  >;
-  readonly gameRepository: GameCreationRepository;
-  readonly auditRepository: Pick<AuditRepository, "writeAuditLogEntry">;
-  readonly now?: () => Date;
+  readonly activationRepository: LicensingActivationRepository;
 }
 
 export interface RedeemPurchaseCodeResult {
-  readonly purchaseCode: PurchaseCodeRecord;
-  readonly entitlement: EntitlementRecord;
-  readonly game: CreateGameResult;
-  readonly redeemedCountUpdateDeferred: true;
+  readonly activation: RedeemPurchaseCodeForGameRpcRow;
+  readonly activationWriteAtomic: true;
 }
 
-export type RedeemPurchaseCodeErrorCode =
-  | "purchase_code_not_found"
-  | "invalid_redemption_input"
-  | PurchaseCodeRedemptionDenialCode;
+export type RedeemPurchaseCodeErrorCode = "invalid_redemption_input";
 
 export class RedeemPurchaseCodeError extends Error {
   readonly code: RedeemPurchaseCodeErrorCode;
@@ -66,72 +44,27 @@ export async function redeemPurchaseCode(
   dependencies: RedeemPurchaseCodeDependencies,
 ): Promise<RedeemPurchaseCodeResult> {
   const normalizedInput = normalizeRedeemPurchaseCodeInput(input);
-  const now = dependencies.now?.() ?? new Date();
 
-  const purchaseCode = await dependencies.licensingRepository.findPurchaseCodeByHash(
-    normalizedInput.purchaseCodeHash,
-  );
-
-  if (!purchaseCode) {
-    throw new RedeemPurchaseCodeError(
-      "purchase_code_not_found",
-      "Purchase code was not found.",
-    );
-  }
-
-  const redemptionDecision = evaluatePurchaseCodeRedemption(
-    {
-      status: purchaseCode.status,
-      maxRedemptions: purchaseCode.max_redemptions,
-      redeemedCount: purchaseCode.redeemed_count,
-      expiresAt: purchaseCode.expires_at,
+  const activation = await dependencies.activationRepository.redeemPurchaseCodeForGame({
+    staffUserId: normalizedInput.staffUserId,
+    purchaseCodeHash: normalizedInput.purchaseCodeHash,
+    gameName: normalizedInput.gameName,
+    gameSettings: {
+      difficulty_preset: normalizedInput.difficultyPreset,
+      attendance_window: normalizedInput.attendanceWindow,
+      business_market_window: normalizedInput.businessMarketWindow,
+      stock_market_window: normalizedInput.stockMarketWindow,
+      news_schedule: normalizedInput.newsSchedule,
     },
-    now,
-  );
-
-  if (!redemptionDecision.ok) {
-    throw new RedeemPurchaseCodeError(
-      redemptionDecision.code,
-      redemptionDecision.message,
-    );
-  }
-
-  const game = await createGame(
-    {
-      ownerStaffUserId: normalizedInput.staffUserId,
-      name: normalizedInput.gameName,
-      difficultyPreset: normalizedInput.difficultyPreset,
-      attendanceWindow: normalizedInput.attendanceWindow,
-      businessMarketWindow: normalizedInput.businessMarketWindow,
-      stockMarketWindow: normalizedInput.stockMarketWindow,
-      newsSchedule: normalizedInput.newsSchedule,
-      audit: {
-        source: normalizedInput.source ?? "purchase_code_redemption",
-        requestId: normalizedInput.requestId,
-        metadata: {
-          purchase_code_id: purchaseCode.id,
-          redemption_count_update_deferred: true,
-        },
-      },
-    },
-    {
-      gameRepository: dependencies.gameRepository,
-      auditRepository: dependencies.auditRepository,
-    },
-  );
-
-  const entitlement = await dependencies.licensingRepository.createEntitlement({
-    purchase_code_id: purchaseCode.id,
-    staff_user_id: normalizedInput.staffUserId,
-    game_session_id: game.gameSession.id,
-    status: "active",
+    requestMetadata: compactJsonObject({
+      request_id: normalizedInput.requestId,
+      source: normalizedInput.source ?? "purchase_code_redemption",
+    }),
   });
 
   return {
-    purchaseCode,
-    entitlement,
-    game,
-    redeemedCountUpdateDeferred: true,
+    activation,
+    activationWriteAtomic: true,
   };
 }
 
@@ -139,11 +72,11 @@ interface NormalizedRedeemPurchaseCodeInput {
   readonly staffUserId: UUID;
   readonly purchaseCodeHash: string;
   readonly gameName: string;
-  readonly difficultyPreset?: string;
-  readonly attendanceWindow?: JsonObject;
-  readonly businessMarketWindow?: JsonObject;
-  readonly stockMarketWindow?: JsonObject;
-  readonly newsSchedule?: JsonObject;
+  readonly difficultyPreset: string;
+  readonly attendanceWindow: JsonObject;
+  readonly businessMarketWindow: JsonObject;
+  readonly stockMarketWindow: JsonObject;
+  readonly newsSchedule: JsonObject;
   readonly requestId?: string;
   readonly source?: string;
 }
@@ -158,7 +91,7 @@ function normalizeRedeemPurchaseCodeInput(
       "purchaseCodeHash",
     ),
     gameName: normalizeRequiredText(input.gameName, "gameName"),
-    difficultyPreset: normalizeOptionalText(input.difficultyPreset),
+    difficultyPreset: normalizeOptionalText(input.difficultyPreset, "standard"),
     attendanceWindow: normalizeOptionalJsonObject(input.attendanceWindow),
     businessMarketWindow: normalizeOptionalJsonObject(input.businessMarketWindow),
     stockMarketWindow: normalizeOptionalJsonObject(input.stockMarketWindow),
@@ -200,15 +133,29 @@ function normalizeRequiredText(
   return normalizedValue;
 }
 
-function normalizeOptionalText(value: string | null | undefined): string | undefined {
+function normalizeOptionalText(
+  value: string | null | undefined,
+  fallback?: string,
+): string | undefined {
   const normalizedValue = value?.trim();
-  return normalizedValue || undefined;
+
+  if (!normalizedValue) {
+    return fallback;
+  }
+
+  return normalizedValue;
 }
 
-function normalizeOptionalJsonObject(
-  value: JsonObject | null | undefined,
-): JsonObject | undefined {
-  return value ?? undefined;
+function normalizeOptionalJsonObject(value: JsonObject | null | undefined): JsonObject {
+  return value ?? {};
+}
+
+function compactJsonObject(
+  value: Record<string, string | number | boolean | null | undefined>,
+): JsonObject {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
+  ) as JsonObject;
 }
 
 function isUuid(value: string): boolean {
