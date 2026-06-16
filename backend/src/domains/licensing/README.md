@@ -5,8 +5,8 @@ Purchase-code redemption and entitlement activation code lives here.
 ## Structure
 
 - `domain/purchaseCodeRules.ts` contains pure purchase-code redemption validation rules.
+- `infrastructure/licensingRepository.ts` contains the Supabase persistence adapter boundary for `purchase_codes` and `entitlements`.
 - `application/` is reserved for future redemption use cases that coordinate purchase-code validation, entitlement creation, and game creation.
-- `infrastructure/` is reserved for future Supabase adapters for `purchase_codes` and `entitlements`.
 - `contracts/` is reserved for future request/response DTOs.
 - `tests/` is reserved for licensing-specific tests.
 

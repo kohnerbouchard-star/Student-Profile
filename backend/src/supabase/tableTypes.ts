@@ -64,6 +64,40 @@ export interface GameSettingsInsert {
   readonly news_schedule?: JsonObject;
 }
 
+export interface PurchaseCodeRecord {
+  readonly id: UUID;
+  readonly code_hash: string;
+  readonly status: "active" | "exhausted" | "expired" | "revoked" | string;
+  readonly max_redemptions: number;
+  readonly redeemed_count: number;
+  readonly expires_at?: ISODateTimeString | null;
+}
+
+export interface PurchaseCodesRow extends PurchaseCodeRecord {
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface EntitlementRecord {
+  readonly id: UUID;
+  readonly purchase_code_id: UUID;
+  readonly staff_user_id: UUID;
+  readonly game_session_id: UUID;
+  readonly status: "active" | "expired" | "revoked" | string;
+}
+
+export interface EntitlementsRow extends EntitlementRecord {
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface EntitlementInsert {
+  readonly purchase_code_id: UUID;
+  readonly staff_user_id: UUID;
+  readonly game_session_id: UUID;
+  readonly status?: "active" | "expired" | "revoked" | string;
+}
+
 export interface PlayerSessionsRow extends PlayerSessionRecord {
   readonly created_at: ISODateTimeString;
   readonly updated_at: ISODateTimeString;
@@ -93,6 +127,8 @@ export interface AuditLogInsert {
 
 export interface CoreSupabaseTables {
   readonly staff_users: StaffUsersRow;
+  readonly purchase_codes: PurchaseCodesRow;
+  readonly entitlements: EntitlementsRow;
   readonly game_sessions: GameSessionsRow;
   readonly game_settings: GameSettingsRow;
   readonly player_sessions: PlayerSessionsRow;
@@ -125,6 +161,27 @@ export function mapGameSettingsRow(row: GameSettingsRow): GameSettingsRecord {
     business_market_window: row.business_market_window,
     stock_market_window: row.stock_market_window,
     news_schedule: row.news_schedule,
+  };
+}
+
+export function mapPurchaseCodeRow(row: PurchaseCodesRow): PurchaseCodeRecord {
+  return {
+    id: row.id,
+    code_hash: row.code_hash,
+    status: row.status,
+    max_redemptions: row.max_redemptions,
+    redeemed_count: row.redeemed_count,
+    expires_at: row.expires_at,
+  };
+}
+
+export function mapEntitlementRow(row: EntitlementsRow): EntitlementRecord {
+  return {
+    id: row.id,
+    purchase_code_id: row.purchase_code_id,
+    staff_user_id: row.staff_user_id,
+    game_session_id: row.game_session_id,
+    status: row.status,
   };
 }
 
