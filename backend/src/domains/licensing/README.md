@@ -6,7 +6,7 @@ Purchase-code redemption and entitlement activation code lives here.
 
 - `domain/purchaseCodeRules.ts` contains pure purchase-code redemption validation rules.
 - `infrastructure/licensingRepository.ts` contains the Supabase persistence adapter boundary for `purchase_codes` and `entitlements`.
-- `application/` is reserved for future redemption use cases that coordinate purchase-code validation, entitlement creation, and game creation.
+- `application/redeemPurchaseCode.ts` coordinates purchase-code validation, game creation, and entitlement creation.
 - `contracts/` is reserved for future request/response DTOs.
 - `tests/` is reserved for licensing-specific tests.
 
@@ -30,3 +30,10 @@ It does not own:
 - ledger/economy
 
 Plaintext purchase codes must never be stored. Backend code should validate against hashes or trusted server-side normalized values only.
+
+
+## Runtime Safety Notes
+
+`application/redeemPurchaseCode.ts` is an application service boundary, not a public route.
+
+Do not wire it to a runtime endpoint until redeemed-count increment/update behavior is added with a transaction-safe persistence path. The current repository boundary can find purchase codes and create entitlements, but redeemed-count update is intentionally deferred.
