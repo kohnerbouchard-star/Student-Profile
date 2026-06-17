@@ -163,6 +163,10 @@ Deno.serve(async (request) => {
   });
 });
 
+// The Edge function does not use generated Supabase DB types yet.
+// Keep the service-role client untyped in this Deno shim and validate rows manually.
+type EdgeSupabaseClient = any;
+
 interface StaffRequestResolution {
   readonly ok: true;
   readonly staff: {
@@ -171,7 +175,7 @@ interface StaffRequestResolution {
     readonly email: string;
     readonly display_name: string;
   };
-  readonly serviceClient: ReturnType<typeof createClient>;
+  readonly serviceClient: EdgeSupabaseClient;
 }
 
 async function resolveStaffForRequest(
