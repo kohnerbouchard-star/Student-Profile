@@ -108,6 +108,43 @@ interface PlayerAttendanceClockInSuccessBody {
   };
 }
 
+interface StaffAttendanceScanRequestBody {
+  readonly playerId: string;
+  readonly deviceTimezone: string | null;
+}
+
+interface StaffAttendanceScanSuccessBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly player: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+  };
+  readonly attendance: {
+    readonly id: string;
+    readonly status: string;
+    readonly attendanceDate: string;
+    readonly clockedInAt: string;
+    readonly wasCreated: boolean;
+    readonly timezone: string;
+  };
+  readonly reward: {
+    readonly amount: number;
+    readonly currencyCode: string;
+    readonly ledgerEntryId: string | null;
+  };
+}
+
+interface StaffAttendanceScanRoute {
+  readonly gameSessionId: string;
+}
+
 interface PlayerAttendanceWindowConfig {
   readonly timezone: string;
   readonly lateCutoffMinutes: number | null;
@@ -413,10 +450,6 @@ Deno.serve(async (request) => {
     });
   }
 
-  if (url.pathname.endsWith("/players/attendance/clock-in")) {
-    return handlePlayerAttendanceClockInRequest(request);
-  }
-
   if (url.pathname.endsWith("/players/me")) {
     return handlePlayerSessionBootstrapRequest(request);
   }
@@ -448,6 +481,15 @@ Deno.serve(async (request) => {
       request,
       playerRosterRoute.gameSessionId,
       playerRosterRoute.playerId,
+    );
+  }
+
+  const staffAttendanceScanRoute = readStaffAttendanceScanRoutePath(url.pathname);
+
+  if (staffAttendanceScanRoute) {
+    return handleStaffAttendanceScanRequest(
+      request,
+      staffAttendanceScanRoute.gameSessionId,
     );
   }
 
@@ -587,6 +629,221 @@ async function resolveStaffForRequest(
     staff,
     serviceClient,
   };
+}
+
+async function handleStaffAttendanceScanRequest(
+  request: Request,
+  gameSessionId: string,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to scan attendance.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const staffResult = await resolveStaffForRequest(request, envResult.value, {
+      missingMessage: "A verified Supabase Auth user is required to scan attendance.",
+    });
+
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
+    }
+
+    const ownershipResult = await readOwnedGameSession(
+      staffResult.serviceClient,
+      gameSessionId,
+      staffResult.staff.id,
+    );
+
+    if (!ownershipResult.ok) {
+      return jsonError(ownershipResult.status, ownershipResult.error);
+    }
+
+    const body = await readStaffAttendanceScanRequestBody(request);
+    const playerIdHash = await sha256Hex(normalizeStudentCode(body.playerId));
+
+    const credentialResponse = await staffResult.serviceClient
+      .from("player_access_credentials")
+      .select("player_id,status")
+      .eq("game_session_id", gameSessionId)
+      .eq("normalized_student_code_hash", playerIdHash)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (credentialResponse.error) {
+      return jsonError(500, {
+        code: "attendance_scan_failed",
+        message: "Attendance scan failed.",
+        retryable: false,
+      });
+    }
+
+    const credential = credentialResponse.data as {
+      readonly player_id: string;
+      readonly status: string;
+    } | null;
+
+    if (!credential?.player_id) {
+      return jsonError(404, {
+        code: "player_not_found",
+        message: "Player ID was not found for this game.",
+        retryable: false,
+      });
+    }
+
+    const playerResponse = await staffResult.serviceClient
+      .from("players")
+      .select("id,display_name,roster_label,status")
+      .eq("game_session_id", gameSessionId)
+      .eq("id", credential.player_id)
+      .maybeSingle();
+
+    if (playerResponse.error) {
+      return jsonError(500, {
+        code: "attendance_scan_failed",
+        message: "Attendance scan failed.",
+        retryable: false,
+      });
+    }
+
+    const player = playerResponse.data as {
+      readonly id: string;
+      readonly display_name: string;
+      readonly roster_label: string | null;
+      readonly status: string;
+    } | null;
+
+    if (!player?.id || player.status !== "active") {
+      return jsonError(404, {
+        code: "player_not_found",
+        message: "Player ID was not found for this game.",
+        retryable: false,
+      });
+    }
+
+    const settingsResponse = await staffResult.serviceClient
+      .from("game_settings")
+      .select("attendance_window")
+      .eq("game_session_id", gameSessionId)
+      .maybeSingle();
+
+    if (settingsResponse.error) {
+      return jsonError(500, {
+        code: "attendance_scan_failed",
+        message: "Attendance scan failed.",
+        retryable: false,
+      });
+    }
+
+    const attendanceWindow = (settingsResponse.data as {
+      readonly attendance_window?: unknown;
+    } | null)?.attendance_window;
+
+    const attendanceConfig = readPlayerAttendanceWindowConfig(attendanceWindow);
+    const timezone = readValidTimeZone(
+      body.deviceTimezone,
+      attendanceConfig.timezone,
+    );
+    const attendanceDate = readLocalDateForTimeZone(timezone);
+    const currentMinutes = readLocalMinutesForTimeZone(timezone);
+    const attendanceStatus =
+      attendanceConfig.lateCutoffMinutes !== null &&
+        currentMinutes > attendanceConfig.lateCutoffMinutes
+        ? "late"
+        : "present";
+    const rewardAmount = attendanceStatus === "late"
+      ? attendanceConfig.lateRewardAmount
+      : attendanceConfig.presentRewardAmount;
+    const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+
+    const attendanceResponse = await staffResult.serviceClient.rpc(
+      "record_player_attendance_clock_in",
+      {
+        p_game_session_id: gameSessionId,
+        p_player_id: player.id,
+        p_attendance_date: attendanceDate,
+        p_status: attendanceStatus,
+        p_reward_amount: rewardAmount,
+        p_currency_code: attendanceConfig.currencyCode,
+        p_request_id: requestId,
+      },
+    );
+
+    if (attendanceResponse.error) {
+      const safeError = mapAttendanceClockInRpcError(attendanceResponse.error.message);
+
+      return jsonError(safeError.status, {
+        code: safeError.code,
+        message: safeError.message,
+        retryable: safeError.retryable,
+      });
+    }
+
+    const attendanceRow = readPlayerAttendanceClockInRpcRow(attendanceResponse.data);
+
+    if (!attendanceRow) {
+      return jsonError(500, {
+        code: "attendance_scan_failed",
+        message: "Attendance scan failed.",
+        retryable: false,
+      });
+    }
+
+    return jsonResponse<StaffAttendanceScanSuccessBody>(200, {
+      ok: true,
+      gameSession: {
+        id: ownershipResult.gameSession.id,
+        name: ownershipResult.gameSession.name,
+        status: ownershipResult.gameSession.status,
+      },
+      player: {
+        id: player.id,
+        displayName: player.display_name,
+        rosterLabel: player.roster_label ?? null,
+        status: player.status,
+      },
+      attendance: {
+        id: attendanceRow.attendance_id,
+        status: attendanceRow.attendance_status,
+        attendanceDate: attendanceRow.attendance_date,
+        clockedInAt: attendanceRow.clocked_in_at,
+        wasCreated: attendanceRow.was_created,
+        timezone,
+      },
+      reward: {
+        amount: readBalanceNumber(attendanceRow.reward_amount),
+        currencyCode: attendanceRow.currency_code,
+        ledgerEntryId: attendanceRow.ledger_entry_id,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "attendance_scan_failed",
+      message: "Attendance scan failed.",
+      retryable: false,
+    });
+  }
 }
 
 async function handlePlayerAttendanceClockInRequest(
@@ -2486,6 +2743,62 @@ function mapAttendanceClockInRpcError(message: string): {
         retryable: false,
       };
   }
+}
+
+function readStaffAttendanceScanRoutePath(
+  pathname: string,
+): StaffAttendanceScanRoute | null {
+  const segments = pathname.split("/").filter(Boolean);
+  const gamesIndex = segments.lastIndexOf("games");
+
+  if (gamesIndex < 0) {
+    return null;
+  }
+
+  const gameSessionId = segments[gamesIndex + 1];
+  const attendanceSegment = segments[gamesIndex + 2];
+  const scanSegment = segments[gamesIndex + 3];
+
+  if (
+    gameSessionId &&
+    isUuid(gameSessionId) &&
+    attendanceSegment === "attendance" &&
+    scanSegment === "scan" &&
+    gamesIndex + 4 === segments.length
+  ) {
+    return { gameSessionId };
+  }
+
+  return null;
+}
+
+async function readStaffAttendanceScanRequestBody(
+  request: Request,
+): Promise<StaffAttendanceScanRequestBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  return {
+    playerId: parseRequiredText(value.playerId, "playerId", "Player ID is required."),
+    deviceTimezone: parseOptionalText(value.deviceTimezone),
+  };
 }
 
 function readInitialBalanceSeedRoutePath(
