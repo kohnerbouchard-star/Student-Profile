@@ -45,6 +45,35 @@ interface StaffBootstrapBody {
   }[];
 }
 
+interface GameSettingsBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly settings: {
+    readonly difficultyPreset: string;
+    readonly attendanceWindow: Record<string, unknown>;
+    readonly businessMarketWindow: Record<string, unknown>;
+    readonly stockMarketWindow: Record<string, unknown>;
+    readonly newsSchedule: Record<string, unknown>;
+    readonly updatedAt: string;
+  };
+}
+
+interface GameSettingsPatchBody {
+  readonly difficultyPreset?: string | null;
+  readonly attendanceWindow?: Record<string, unknown> | null;
+  readonly businessMarketWindow?: Record<string, unknown> | null;
+  readonly stockMarketWindow?: Record<string, unknown> | null;
+  readonly newsSchedule?: Record<string, unknown> | null;
+}
+
+interface GameSettingsRoute {
+  readonly gameSessionId: string;
+}
+
 interface ActivationRequestBody {
   readonly purchaseCode: string;
   readonly gameName: string;
@@ -113,6 +142,12 @@ Deno.serve(async (request) => {
     });
   }
 
+  const gameSettingsRoute = readGameSettingsRoutePath(url.pathname);
+
+  if (gameSettingsRoute) {
+    return handleGameSettingsRequest(request, gameSettingsRoute.gameSessionId);
+  }
+
   if (url.pathname.endsWith("/staff/bootstrap")) {
     return handleStaffBootstrapRequest(request);
   }
@@ -127,6 +162,247 @@ Deno.serve(async (request) => {
     retryable: false,
   });
 });
+
+interface StaffRequestResolution {
+  readonly ok: true;
+  readonly staff: {
+    readonly id: string;
+    readonly supabase_auth_user_id: string;
+    readonly email: string;
+    readonly display_name: string;
+  };
+  readonly serviceClient: ReturnType<typeof createClient>;
+}
+
+async function resolveStaffForRequest(
+  request: Request,
+  env: SupabaseEnv,
+  options: { readonly missingMessage: string },
+): Promise<
+  | StaffRequestResolution
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  const authHeader = request.headers.get("authorization");
+  const accessToken = extractBearerToken(authHeader);
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_staff_auth_user",
+        message: options.missingMessage,
+        retryable: false,
+      },
+    };
+  }
+
+  const authClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+  const authUserResult = await authClient.auth.getUser(accessToken);
+  const authUser = authUserResult.data.user;
+
+  if (authUserResult.error || !authUser?.id) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_staff_auth_user",
+        message: options.missingMessage,
+        retryable: false,
+      },
+    };
+  }
+
+  const serviceClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  const staffResponse = await serviceClient
+    .from("staff_users")
+    .select("id,supabase_auth_user_id,email,display_name")
+    .eq("supabase_auth_user_id", authUser.id)
+    .maybeSingle();
+
+  if (staffResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "staff_lookup_failed",
+        message: "Staff lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const staff = staffResponse.data;
+
+  if (!staff?.id) {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "staff_not_found",
+        message: "No staff user is linked to the Supabase Auth user.",
+        retryable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    staff,
+    serviceClient,
+  };
+}
+
+async function handleGameSettingsRequest(
+  request: Request,
+  gameSessionId: string,
+): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "PATCH") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use GET or PATCH for game settings.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const staffResult = await resolveStaffForRequest(request, envResult.value, {
+      missingMessage: "A verified Supabase Auth user is required to load game settings.",
+    });
+
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
+    }
+
+    const serviceClient = staffResult.serviceClient;
+
+    const gameResponse = await serviceClient
+      .from("game_sessions")
+      .select("id,name,status,owner_staff_user_id")
+      .eq("id", gameSessionId)
+      .eq("owner_staff_user_id", staffResult.staff.id)
+      .maybeSingle();
+
+    if (gameResponse.error) {
+      return jsonError(500, {
+        code: "game_settings_failed",
+        message: "Game settings request failed.",
+        retryable: false,
+      });
+    }
+
+    const gameSession = gameResponse.data;
+
+    if (!gameSession?.id) {
+      return jsonError(404, {
+        code: "game_session_not_found",
+        message: "Game session was not found for this staff user.",
+        retryable: false,
+      });
+    }
+
+    if (request.method === "PATCH") {
+      const patchBody = await readGameSettingsPatchBody(request);
+      const updatePayload = buildGameSettingsUpdatePayload(patchBody);
+
+      if (Object.keys(updatePayload).length === 0) {
+        return jsonError(400, {
+          code: "settings_update_empty",
+          message: "At least one game setting must be provided.",
+          retryable: false,
+        });
+      }
+
+      const updateResponse = await serviceClient
+        .from("game_settings")
+        .update(updatePayload)
+        .eq("game_session_id", gameSession.id);
+
+      if (updateResponse.error) {
+        return jsonError(500, {
+          code: "game_settings_failed",
+          message: "Game settings request failed.",
+          retryable: false,
+        });
+      }
+    }
+
+    const settingsResponse = await serviceClient
+      .from("game_settings")
+      .select("difficulty_preset,attendance_window,business_market_window,stock_market_window,news_schedule,updated_at")
+      .eq("game_session_id", gameSession.id)
+      .maybeSingle();
+
+    if (settingsResponse.error) {
+      return jsonError(500, {
+        code: "game_settings_failed",
+        message: "Game settings request failed.",
+        retryable: false,
+      });
+    }
+
+    const settings = settingsResponse.data;
+
+    if (!settings) {
+      return jsonError(404, {
+        code: "game_settings_not_found",
+        message: "Game settings were not found.",
+        retryable: false,
+      });
+    }
+
+    return jsonResponse<GameSettingsBody>(200, {
+      ok: true,
+      gameSession: {
+        id: gameSession.id,
+        name: gameSession.name,
+        status: gameSession.status,
+      },
+      settings: {
+        difficultyPreset: settings.difficulty_preset,
+        attendanceWindow: readJsonObjectSetting(settings.attendance_window),
+        businessMarketWindow: readJsonObjectSetting(settings.business_market_window),
+        stockMarketWindow: readJsonObjectSetting(settings.stock_market_window),
+        newsSchedule: readJsonObjectSetting(settings.news_schedule),
+        updatedAt: settings.updated_at,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "game_settings_failed",
+      message: "Game settings request failed.",
+      retryable: false,
+    });
+  }
+}
 
 async function handleStaffBootstrapRequest(
   request: Request,
@@ -401,6 +677,105 @@ async function handleLicensingActivationRequest(
       retryable: false,
     });
   }
+}
+
+function readGameSettingsRoutePath(pathname: string): GameSettingsRoute | null {
+  const segments = pathname.split("/").filter(Boolean);
+  const gamesIndex = segments.lastIndexOf("games");
+
+  if (gamesIndex < 0) {
+    return null;
+  }
+
+  const gameSessionId = segments[gamesIndex + 1];
+  const settingsSegment = segments[gamesIndex + 2];
+
+  if (!gameSessionId || settingsSegment !== "settings") {
+    return null;
+  }
+
+  if (gamesIndex + 3 !== segments.length) {
+    return null;
+  }
+
+  if (!isUuid(gameSessionId)) {
+    return null;
+  }
+
+  return { gameSessionId };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+async function readGameSettingsPatchBody(
+  request: Request,
+): Promise<GameSettingsPatchBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  return {
+    difficultyPreset: parseOptionalText(value.difficultyPreset),
+    attendanceWindow: parseOptionalJsonObject(value.attendanceWindow),
+    businessMarketWindow: parseOptionalJsonObject(value.businessMarketWindow),
+    stockMarketWindow: parseOptionalJsonObject(value.stockMarketWindow),
+    newsSchedule: parseOptionalJsonObject(value.newsSchedule),
+  };
+}
+
+function buildGameSettingsUpdatePayload(
+  body: GameSettingsPatchBody,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (body.difficultyPreset !== undefined && body.difficultyPreset !== null) {
+    payload.difficulty_preset = body.difficultyPreset;
+  }
+
+  if (body.attendanceWindow !== undefined && body.attendanceWindow !== null) {
+    payload.attendance_window = body.attendanceWindow;
+  }
+
+  if (
+    body.businessMarketWindow !== undefined &&
+    body.businessMarketWindow !== null
+  ) {
+    payload.business_market_window = body.businessMarketWindow;
+  }
+
+  if (body.stockMarketWindow !== undefined && body.stockMarketWindow !== null) {
+    payload.stock_market_window = body.stockMarketWindow;
+  }
+
+  if (body.newsSchedule !== undefined && body.newsSchedule !== null) {
+    payload.news_schedule = body.newsSchedule;
+  }
+
+  return payload;
+}
+
+function readJsonObjectSetting(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
 }
 
 async function readActivationRequestBody(
