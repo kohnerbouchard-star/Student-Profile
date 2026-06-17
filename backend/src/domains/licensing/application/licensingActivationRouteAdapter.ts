@@ -10,10 +10,12 @@ import {
   buildLicensingActivationSuccessResponse,
   prepareLicensingActivationServiceInput,
   type LicensingActivationContractDependencies,
-  type LicensingActivationRequestBody,
   type LicensingActivationResponse,
   type LicensingActivationRouteContext,
 } from "../contracts/activationContract";
+import {
+  parseLicensingActivationRequestBody,
+} from "../contracts/activationRequestParser";
 
 export interface LicensingActivationRouteAdapterDependencies
   extends LicensingActivationContractDependencies {
@@ -26,13 +28,14 @@ export interface LicensingActivationRouteAdapterResult {
 }
 
 export async function handleLicensingActivationRequest(
-  body: LicensingActivationRequestBody,
+  body: unknown,
   context: LicensingActivationRouteContext,
   dependencies: LicensingActivationRouteAdapterDependencies,
 ): Promise<LicensingActivationRouteAdapterResult> {
   try {
+    const parsedBody = parseLicensingActivationRequestBody(body);
     const serviceInput = await prepareLicensingActivationServiceInput(
-      body,
+      parsedBody,
       context,
       dependencies,
     );
