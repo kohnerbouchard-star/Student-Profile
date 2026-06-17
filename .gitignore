@@ -8,3 +8,6 @@
 
 node_modules/
 backend/node_modules/
+
+# Supabase CLI local state
+backend/supabase/.temp/
