@@ -13,14 +13,18 @@ export interface LicensingActivationSmokeTestResult {
 }
 
 export async function runLicensingActivationHandlerSmokeTest(): Promise<LicensingActivationSmokeTestResult> {
-  let capturedInput: RedeemPurchaseCodeForGameRpcInput | null = null;
+  const capturedInput: {
+    value: RedeemPurchaseCodeForGameRpcInput | null;
+  } = {
+    value: null,
+  };
 
   const result = await handleStaffLicensingActivation(
     createSmokeTestInput(),
     {
       activationRepository: {
         redeemPurchaseCodeForGame: async (input) => {
-          capturedInput = input;
+          capturedInput.value = input;
 
           return {
             game_session_id: "00000000-0000-4000-8000-000000000001",
@@ -40,7 +44,7 @@ export async function runLicensingActivationHandlerSmokeTest(): Promise<Licensin
   return {
     ok: result.body.ok,
     httpStatus: result.httpStatus,
-    purchaseCodeHash: capturedInput?.purchaseCodeHash ?? null,
+    purchaseCodeHash: capturedInput.value?.purchaseCodeHash ?? null,
     gameSessionId: result.body.ok ? result.body.activation.gameSessionId : null,
   };
 }
