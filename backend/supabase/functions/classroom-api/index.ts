@@ -130,8 +130,9 @@ async function handleLicensingActivationRequest(
     }
 
     const authHeader = request.headers.get("authorization");
+    const accessToken = extractBearerToken(authHeader);
 
-    if (!authHeader) {
+    if (!accessToken) {
       return jsonError(401, {
         code: "missing_staff_auth_user",
         message: "A verified Supabase Auth user is required to activate licensing.",
@@ -142,16 +143,9 @@ async function handleLicensingActivationRequest(
     const authClient = createClient(
       envResult.value.supabaseUrl,
       envResult.value.supabaseAnonKey,
-      {
-        global: {
-          headers: {
-            authorization: authHeader,
-          },
-        },
-      },
     );
 
-    const authUserResult = await authClient.auth.getUser();
+    const authUserResult = await authClient.auth.getUser(accessToken);
     const authUser = authUserResult.data.user;
 
     if (authUserResult.error || !authUser?.id) {
@@ -511,6 +505,16 @@ function mapActivationRpcError(message: string): {
         retryable: false,
       };
   }
+}
+
+function extractBearerToken(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/^Bearer\s+(.+)$/i);
+
+  return match?.[1]?.trim() || null;
 }
 
 function readSupabaseEnv():
