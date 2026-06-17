@@ -74,6 +74,12 @@ interface GameSettingsRoute {
   readonly gameSessionId: string;
 }
 
+interface AccountBalanceRow {
+  readonly account_type: string;
+  readonly balance: number | string;
+  readonly currency_code: string;
+}
+
 interface PlayerSessionBootstrapBody {
   readonly ok: true;
   readonly gameSession: {
@@ -561,6 +567,23 @@ async function handlePlayerSessionBootstrapRequest(
       return invalidPlayerSessionResponse();
     }
 
+    const balancesResponse = await serviceClient
+      .from("account_balances")
+      .select("account_type,balance,currency_code")
+      .eq("game_session_id", session.game_session_id)
+      .eq("player_id", session.player_id)
+      .order("account_type", { ascending: true });
+
+    if (balancesResponse.error) {
+      return jsonError(500, {
+        code: "player_session_bootstrap_failed",
+        message: "Player session bootstrap failed.",
+        retryable: false,
+      });
+    }
+
+    const balances = (balancesResponse.data ?? []) as AccountBalanceRow[];
+
     return jsonResponse<PlayerSessionBootstrapBody>(200, {
       ok: true,
       gameSession: {
@@ -579,7 +602,11 @@ async function handlePlayerSessionBootstrapRequest(
         status: "active",
         expiresAt: session.expires_at,
       },
-      balances: [],
+      balances: balances.map((balanceRow) => ({
+        accountType: balanceRow.account_type,
+        balance: readBalanceNumber(balanceRow.balance),
+        currencyCode: balanceRow.currency_code,
+      })),
       attendance: {
         status: "not_configured",
       },
@@ -1593,6 +1620,16 @@ async function readPlayerLoginRequestBody(
       "studentCode is required.",
     ),
   };
+}
+
+function readBalanceNumber(value: number | string): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
 function invalidPlayerSessionResponse(): Response {
