@@ -74,6 +74,76 @@ interface GameSettingsRoute {
   readonly gameSessionId: string;
 }
 
+interface PlayerRosterBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly players: readonly {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+    readonly hasActiveAccessCode: boolean;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+  }[];
+}
+
+interface PlayerRosterRow {
+  readonly id: string;
+  readonly display_name: string;
+  readonly roster_label: string | null;
+  readonly status: string;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+interface CreatePlayerRequestBody {
+  readonly displayName: string;
+  readonly rosterLabel: string | null;
+}
+
+interface CreatePlayerSuccessBody {
+  readonly ok: true;
+  readonly player: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+  };
+}
+
+interface ResetPlayerAccessCodeSuccessBody {
+  readonly ok: true;
+  readonly player: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+  };
+  readonly accessCode: {
+    readonly studentCode: string;
+    readonly status: "active";
+    readonly createdAt: string;
+  };
+}
+
+type PlayerRosterRoute =
+  | {
+      readonly kind: "players";
+      readonly gameSessionId: string;
+    }
+  | {
+      readonly kind: "resetAccessCode";
+      readonly gameSessionId: string;
+      readonly playerId: string;
+    };
+
 interface ActivationRequestBody {
   readonly purchaseCode: string;
   readonly gameName: string;
@@ -146,6 +216,20 @@ Deno.serve(async (request) => {
 
   if (gameSettingsRoute) {
     return handleGameSettingsRequest(request, gameSettingsRoute.gameSessionId);
+  }
+
+  const playerRosterRoute = readPlayerRosterRoutePath(url.pathname);
+
+  if (playerRosterRoute?.kind === "players") {
+    return handlePlayerRosterRequest(request, playerRosterRoute.gameSessionId);
+  }
+
+  if (playerRosterRoute?.kind === "resetAccessCode") {
+    return handleResetPlayerAccessCodeRequest(
+      request,
+      playerRosterRoute.gameSessionId,
+      playerRosterRoute.playerId,
+    );
   }
 
   if (url.pathname.endsWith("/staff/bootstrap")) {
@@ -265,6 +349,293 @@ async function resolveStaffForRequest(
     staff,
     serviceClient,
   };
+}
+
+async function handlePlayerRosterRequest(
+  request: Request,
+  gameSessionId: string,
+): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use GET or POST for player roster.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const staffResult = await resolveStaffForRequest(request, envResult.value, {
+      missingMessage: "A verified Supabase Auth user is required to manage players.",
+    });
+
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
+    }
+
+    const ownershipResult = await readOwnedGameSession(
+      staffResult.serviceClient,
+      gameSessionId,
+      staffResult.staff.id,
+    );
+
+    if (!ownershipResult.ok) {
+      return jsonError(ownershipResult.status, ownershipResult.error);
+    }
+
+    if (request.method === "POST") {
+      const body = await readCreatePlayerRequestBody(request);
+
+      const createResponse = await staffResult.serviceClient
+        .from("players")
+        .insert({
+          game_session_id: gameSessionId,
+          display_name: body.displayName,
+          roster_label: body.rosterLabel,
+          status: "active",
+        })
+        .select("id,display_name,roster_label,status,created_at,updated_at")
+        .single();
+
+      if (createResponse.error || !createResponse.data?.id) {
+        return jsonError(500, {
+          code: "player_create_failed",
+          message: "Player could not be created.",
+          retryable: false,
+        });
+      }
+
+      const player = createResponse.data;
+
+      return jsonResponse<CreatePlayerSuccessBody>(201, {
+        ok: true,
+        player: {
+          id: player.id,
+          displayName: player.display_name,
+          rosterLabel: player.roster_label ?? null,
+          status: player.status,
+          createdAt: player.created_at,
+          updatedAt: player.updated_at,
+        },
+      });
+    }
+
+    const playersResponse = await staffResult.serviceClient
+      .from("players")
+      .select("id,display_name,roster_label,status,created_at,updated_at")
+      .eq("game_session_id", gameSessionId)
+      .order("created_at", { ascending: true });
+
+    if (playersResponse.error) {
+      return jsonError(500, {
+        code: "player_roster_failed",
+        message: "Player roster could not be loaded.",
+        retryable: false,
+      });
+    }
+
+    const players = (playersResponse.data ?? []) as PlayerRosterRow[];
+    const playerIds = players.map((player) => player.id);
+    const activeCredentialPlayerIds = new Set<string>();
+
+    if (playerIds.length > 0) {
+      const credentialResponse = await staffResult.serviceClient
+        .from("player_access_credentials")
+        .select("player_id")
+        .eq("game_session_id", gameSessionId)
+        .eq("status", "active")
+        .in("player_id", playerIds);
+
+      if (credentialResponse.error) {
+        return jsonError(500, {
+          code: "player_roster_failed",
+          message: "Player roster could not be loaded.",
+          retryable: false,
+        });
+      }
+
+      for (const credential of credentialResponse.data ?? []) {
+        if (typeof credential.player_id === "string") {
+          activeCredentialPlayerIds.add(credential.player_id);
+        }
+      }
+    }
+
+    return jsonResponse<PlayerRosterBody>(200, {
+      ok: true,
+      gameSession: {
+        id: ownershipResult.gameSession.id,
+        name: ownershipResult.gameSession.name,
+        status: ownershipResult.gameSession.status,
+      },
+      players: players.map((player) => ({
+        id: player.id,
+        displayName: player.display_name,
+        rosterLabel: player.roster_label ?? null,
+        status: player.status,
+        hasActiveAccessCode: activeCredentialPlayerIds.has(player.id),
+        createdAt: player.created_at,
+        updatedAt: player.updated_at,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "player_roster_failed",
+      message: "Player roster request failed.",
+      retryable: false,
+    });
+  }
+}
+
+async function handleResetPlayerAccessCodeRequest(
+  request: Request,
+  gameSessionId: string,
+  playerId: string,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to reset a player access code.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const staffResult = await resolveStaffForRequest(request, envResult.value, {
+      missingMessage: "A verified Supabase Auth user is required to manage player access codes.",
+    });
+
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
+    }
+
+    const ownershipResult = await readOwnedGameSession(
+      staffResult.serviceClient,
+      gameSessionId,
+      staffResult.staff.id,
+    );
+
+    if (!ownershipResult.ok) {
+      return jsonError(ownershipResult.status, ownershipResult.error);
+    }
+
+    const playerResponse = await staffResult.serviceClient
+      .from("players")
+      .select("id,display_name,roster_label,status")
+      .eq("game_session_id", gameSessionId)
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (playerResponse.error) {
+      return jsonError(500, {
+        code: "access_code_reset_failed",
+        message: "Player access code could not be reset.",
+        retryable: false,
+      });
+    }
+
+    const player = playerResponse.data;
+
+    if (!player?.id) {
+      return jsonError(404, {
+        code: "player_not_found",
+        message: "Player was not found for this game session.",
+        retryable: false,
+      });
+    }
+
+    if (player.status !== "active") {
+      return jsonError(409, {
+        code: "player_not_active",
+        message: "Only active players can receive an access code.",
+        retryable: false,
+      });
+    }
+
+    const revokeResponse = await staffResult.serviceClient
+      .from("player_access_credentials")
+      .update({
+        status: "revoked",
+        revoked_at: new Date().toISOString(),
+      })
+      .eq("game_session_id", gameSessionId)
+      .eq("player_id", playerId)
+      .eq("status", "active");
+
+    if (revokeResponse.error) {
+      return jsonError(500, {
+        code: "access_code_reset_failed",
+        message: "Player access code could not be reset.",
+        retryable: false,
+      });
+    }
+
+    const credentialResult = await createPlayerAccessCredential(
+      staffResult.serviceClient,
+      gameSessionId,
+      playerId,
+    );
+
+    if (!credentialResult.ok) {
+      return jsonError(credentialResult.status, credentialResult.error);
+    }
+
+    return jsonResponse<ResetPlayerAccessCodeSuccessBody>(200, {
+      ok: true,
+      player: {
+        id: player.id,
+        displayName: player.display_name,
+        rosterLabel: player.roster_label ?? null,
+        status: player.status,
+      },
+      accessCode: {
+        studentCode: credentialResult.studentCode,
+        status: "active",
+        createdAt: credentialResult.createdAt,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "access_code_reset_failed",
+      message: "Player access code could not be reset.",
+      retryable: false,
+    });
+  }
 }
 
 async function handleGameSettingsRequest(
@@ -681,6 +1052,247 @@ async function handleLicensingActivationRequest(
       retryable: false,
     });
   }
+}
+
+function readPlayerRosterRoutePath(pathname: string): PlayerRosterRoute | null {
+  const segments = pathname.split("/").filter(Boolean);
+  const gamesIndex = segments.lastIndexOf("games");
+
+  if (gamesIndex < 0) {
+    return null;
+  }
+
+  const gameSessionId = segments[gamesIndex + 1];
+  const playersSegment = segments[gamesIndex + 2];
+
+  if (!gameSessionId || playersSegment !== "players") {
+    return null;
+  }
+
+  if (!isUuid(gameSessionId)) {
+    return null;
+  }
+
+  if (gamesIndex + 3 === segments.length) {
+    return {
+      kind: "players",
+      gameSessionId,
+    };
+  }
+
+  const playerId = segments[gamesIndex + 3];
+  const accessCodeSegment = segments[gamesIndex + 4];
+  const resetSegment = segments[gamesIndex + 5];
+
+  if (
+    playerId &&
+    isUuid(playerId) &&
+    accessCodeSegment === "access-code" &&
+    resetSegment === "reset" &&
+    gamesIndex + 6 === segments.length
+  ) {
+    return {
+      kind: "resetAccessCode",
+      gameSessionId,
+      playerId,
+    };
+  }
+
+  return null;
+}
+
+async function readOwnedGameSession(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  staffUserId: string,
+): Promise<
+  | {
+      readonly ok: true;
+      readonly gameSession: {
+        readonly id: string;
+        readonly name: string;
+        readonly status: string;
+      };
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  const gameResponse = await serviceClient
+    .from("game_sessions")
+    .select("id,name,status,owner_staff_user_id")
+    .eq("id", gameSessionId)
+    .eq("owner_staff_user_id", staffUserId)
+    .maybeSingle();
+
+  if (gameResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "game_session_lookup_failed",
+        message: "Game session lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const gameSession = gameResponse.data;
+
+  if (!gameSession?.id) {
+    return {
+      ok: false,
+      status: 404,
+      error: {
+        code: "game_session_not_found",
+        message: "Game session was not found for this staff user.",
+        retryable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    gameSession: {
+      id: gameSession.id,
+      name: gameSession.name,
+      status: gameSession.status,
+    },
+  };
+}
+
+async function readCreatePlayerRequestBody(
+  request: Request,
+): Promise<CreatePlayerRequestBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  return {
+    displayName: parseRequiredText(
+      value.displayName,
+      "player_display_name_required",
+      "displayName is required.",
+    ),
+    rosterLabel: parseOptionalText(value.rosterLabel),
+  };
+}
+
+function generateStudentCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+
+  return [...bytes]
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join("");
+}
+
+async function createPlayerAccessCredential(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  playerId: string,
+): Promise<
+  | {
+      readonly ok: true;
+      readonly studentCode: string;
+      readonly createdAt: string;
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const studentCode = generateStudentCode();
+    const credentialHash = await sha256Hex(normalizeStudentCode(studentCode));
+
+    const credentialResponse = await serviceClient
+      .from("player_access_credentials")
+      .insert({
+        game_session_id: gameSessionId,
+        player_id: playerId,
+        normalized_student_code_hash: credentialHash,
+        status: "active",
+      })
+      .select("created_at")
+      .single();
+
+    if (!credentialResponse.error && credentialResponse.data?.created_at) {
+      return {
+        ok: true,
+        studentCode,
+        createdAt: credentialResponse.data.created_at,
+      };
+    }
+
+    const message = credentialResponse.error?.message?.toLowerCase() ?? "";
+
+    if (!message.includes("duplicate") && !message.includes("unique")) {
+      return {
+        ok: false,
+        status: 500,
+        error: {
+          code: "access_code_reset_failed",
+          message: "Player access code could not be reset.",
+          retryable: false,
+        },
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status: 409,
+    error: {
+      code: "access_code_generation_conflict",
+      message: "A unique player access code could not be generated.",
+      retryable: true,
+    },
+  };
+}
+
+function normalizeStudentCode(value: string): string {
+  const normalizedValue = value
+    .trim()
+    .replace(/\s+/g, "")
+    .toUpperCase();
+
+  if (!normalizedValue) {
+    throw new EdgeActivationError(
+      "student_code_required",
+      "studentCode is required.",
+      400,
+    );
+  }
+
+  if (!/^[A-Z0-9-]+$/.test(normalizedValue)) {
+    throw new EdgeActivationError(
+      "invalid_student_code",
+      "studentCode may only contain letters, numbers, and hyphens.",
+      400,
+    );
+  }
+
+  return normalizedValue;
 }
 
 function readGameSettingsRoutePath(pathname: string): GameSettingsRoute | null {
