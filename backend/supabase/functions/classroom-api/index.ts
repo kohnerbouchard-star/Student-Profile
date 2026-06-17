@@ -74,6 +74,49 @@ interface GameSettingsRoute {
   readonly gameSessionId: string;
 }
 
+interface ResetGameJoinCodeSuccessBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly joinCode: {
+    readonly gameJoinCode: string;
+    readonly status: "active";
+    readonly updatedAt: string;
+  };
+}
+
+interface PlayerLoginRequestBody {
+  readonly gameJoinCode: string;
+  readonly studentCode: string;
+}
+
+interface PlayerLoginSuccessBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly player: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+  };
+  readonly session: {
+    readonly token: string;
+    readonly status: "active";
+    readonly expiresAt: string;
+  };
+}
+
+interface GameJoinCodeRoute {
+  readonly gameSessionId: string;
+}
+
 interface PlayerRosterBody {
   readonly ok: true;
   readonly gameSession: {
@@ -210,6 +253,16 @@ Deno.serve(async (request) => {
       service: "classroom-api",
       status: "ready",
     });
+  }
+
+  if (url.pathname.endsWith("/players/login")) {
+    return handlePlayerLoginRequest(request);
+  }
+
+  const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
+
+  if (gameJoinCodeRoute) {
+    return handleResetGameJoinCodeRequest(request, gameJoinCodeRoute.gameSessionId);
   }
 
   const gameSettingsRoute = readGameSettingsRoutePath(url.pathname);
@@ -349,6 +402,239 @@ async function resolveStaffForRequest(
     staff,
     serviceClient,
   };
+}
+
+async function handleResetGameJoinCodeRequest(
+  request: Request,
+  gameSessionId: string,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to reset a game join code.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const staffResult = await resolveStaffForRequest(request, envResult.value, {
+      missingMessage: "A verified Supabase Auth user is required to reset a game join code.",
+    });
+
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
+    }
+
+    const ownershipResult = await readOwnedGameSession(
+      staffResult.serviceClient,
+      gameSessionId,
+      staffResult.staff.id,
+    );
+
+    if (!ownershipResult.ok) {
+      return jsonError(ownershipResult.status, ownershipResult.error);
+    }
+
+    const joinCodeResult = await resetGameJoinCode(
+      staffResult.serviceClient,
+      gameSessionId,
+      staffResult.staff.id,
+    );
+
+    if (!joinCodeResult.ok) {
+      return jsonError(joinCodeResult.status, joinCodeResult.error);
+    }
+
+    return jsonResponse<ResetGameJoinCodeSuccessBody>(200, {
+      ok: true,
+      gameSession: {
+        id: ownershipResult.gameSession.id,
+        name: ownershipResult.gameSession.name,
+        status: ownershipResult.gameSession.status,
+      },
+      joinCode: {
+        gameJoinCode: joinCodeResult.gameJoinCode,
+        status: "active",
+        updatedAt: joinCodeResult.updatedAt,
+      },
+    });
+  } catch {
+    return jsonError(500, {
+      code: "join_code_reset_failed",
+      message: "Game join code could not be reset.",
+      retryable: false,
+    });
+  }
+}
+
+async function handlePlayerLoginRequest(request: Request): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST for player login.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const body = await readPlayerLoginRequestBody(request);
+    const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(body.gameJoinCode));
+    const studentCodeHash = await sha256Hex(normalizeStudentCode(body.studentCode));
+
+    const serviceClient = createClient(
+      envResult.value.supabaseUrl,
+      envResult.value.supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    const gameResponse = await serviceClient
+      .from("game_sessions")
+      .select("id,name,status,game_join_code_status")
+      .eq("game_join_code_hash", gameJoinCodeHash)
+      .eq("game_join_code_status", "active")
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (gameResponse.error) {
+      return jsonError(500, {
+        code: "player_login_failed",
+        message: "Player login failed.",
+        retryable: false,
+      });
+    }
+
+    const gameSession = gameResponse.data as {
+      readonly id: string;
+      readonly name: string;
+      readonly status: string;
+      readonly game_join_code_status: string;
+    } | null;
+
+    if (!gameSession?.id) {
+      return invalidPlayerLoginResponse();
+    }
+
+    const credentialResponse = await serviceClient
+      .from("player_access_credentials")
+      .select("id,player_id,status")
+      .eq("game_session_id", gameSession.id)
+      .eq("normalized_student_code_hash", studentCodeHash)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (credentialResponse.error) {
+      return jsonError(500, {
+        code: "player_login_failed",
+        message: "Player login failed.",
+        retryable: false,
+      });
+    }
+
+    const credential = credentialResponse.data as {
+      readonly id: string;
+      readonly player_id: string;
+      readonly status: string;
+    } | null;
+
+    if (!credential?.player_id) {
+      return invalidPlayerLoginResponse();
+    }
+
+    const playerResponse = await serviceClient
+      .from("players")
+      .select("id,display_name,roster_label,status")
+      .eq("game_session_id", gameSession.id)
+      .eq("id", credential.player_id)
+      .maybeSingle();
+
+    if (playerResponse.error) {
+      return jsonError(500, {
+        code: "player_login_failed",
+        message: "Player login failed.",
+        retryable: false,
+      });
+    }
+
+    const player = playerResponse.data as {
+      readonly id: string;
+      readonly display_name: string;
+      readonly roster_label: string | null;
+      readonly status: string;
+    } | null;
+
+    if (!player?.id || player.status !== "active") {
+      return invalidPlayerLoginResponse();
+    }
+
+    const sessionResult = await createPlayerSession(
+      serviceClient,
+      gameSession.id,
+      player.id,
+    );
+
+    if (!sessionResult.ok) {
+      return jsonError(sessionResult.status, sessionResult.error);
+    }
+
+    return jsonResponse<PlayerLoginSuccessBody>(200, {
+      ok: true,
+      gameSession: {
+        id: gameSession.id,
+        name: gameSession.name,
+        status: gameSession.status,
+      },
+      player: {
+        id: player.id,
+        displayName: player.display_name,
+        rosterLabel: player.roster_label ?? null,
+        status: player.status,
+      },
+      session: {
+        token: sessionResult.sessionToken,
+        status: "active",
+        expiresAt: sessionResult.expiresAt,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "player_login_failed",
+      message: "Player login failed.",
+      retryable: false,
+    });
+  }
 }
 
 async function handlePlayerRosterRequest(
@@ -1052,6 +1338,250 @@ async function handleLicensingActivationRequest(
       retryable: false,
     });
   }
+}
+
+function readGameJoinCodeRoutePath(pathname: string): GameJoinCodeRoute | null {
+  const segments = pathname.split("/").filter(Boolean);
+  const gamesIndex = segments.lastIndexOf("games");
+
+  if (gamesIndex < 0) {
+    return null;
+  }
+
+  const gameSessionId = segments[gamesIndex + 1];
+  const joinCodeSegment = segments[gamesIndex + 2];
+  const resetSegment = segments[gamesIndex + 3];
+
+  if (
+    gameSessionId &&
+    isUuid(gameSessionId) &&
+    joinCodeSegment === "join-code" &&
+    resetSegment === "reset" &&
+    gamesIndex + 4 === segments.length
+  ) {
+    return { gameSessionId };
+  }
+
+  return null;
+}
+
+async function readPlayerLoginRequestBody(
+  request: Request,
+): Promise<PlayerLoginRequestBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  return {
+    gameJoinCode: parseRequiredText(
+      value.gameJoinCode,
+      "game_join_code_required",
+      "gameJoinCode is required.",
+    ),
+    studentCode: parseRequiredText(
+      value.studentCode,
+      "student_code_required",
+      "studentCode is required.",
+    ),
+  };
+}
+
+function invalidPlayerLoginResponse(): Response {
+  return jsonError(401, {
+    code: "invalid_player_login",
+    message: "Game join code or student code is invalid.",
+    retryable: false,
+  });
+}
+
+function generateGameJoinCode(): string {
+  return `ECO-${generateCompactCode(6)}`;
+}
+
+function generateSessionToken(): string {
+  return `ps_${generateCompactCode(32).toLowerCase()}`;
+}
+
+function generateCompactCode(length: number): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+
+  return [...bytes]
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join("");
+}
+
+async function resetGameJoinCode(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  staffUserId: string,
+): Promise<
+  | {
+      readonly ok: true;
+      readonly gameJoinCode: string;
+      readonly updatedAt: string;
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const gameJoinCode = generateGameJoinCode();
+    const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(gameJoinCode));
+
+    const updateResponse = await serviceClient
+      .from("game_sessions")
+      .update({
+        game_join_code_hash: gameJoinCodeHash,
+        game_join_code_status: "active",
+      })
+      .eq("id", gameSessionId)
+      .eq("owner_staff_user_id", staffUserId)
+      .select("updated_at")
+      .single();
+
+    if (!updateResponse.error && updateResponse.data?.updated_at) {
+      return {
+        ok: true,
+        gameJoinCode,
+        updatedAt: updateResponse.data.updated_at,
+      };
+    }
+
+    const message = updateResponse.error?.message?.toLowerCase() ?? "";
+
+    if (!message.includes("duplicate") && !message.includes("unique")) {
+      return {
+        ok: false,
+        status: 500,
+        error: {
+          code: "join_code_reset_failed",
+          message: "Game join code could not be reset.",
+          retryable: false,
+        },
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status: 409,
+    error: {
+      code: "join_code_generation_conflict",
+      message: "A unique game join code could not be generated.",
+      retryable: true,
+    },
+  };
+}
+
+async function createPlayerSession(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  playerId: string,
+): Promise<
+  | {
+      readonly ok: true;
+      readonly sessionToken: string;
+      readonly expiresAt: string;
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const sessionToken = generateSessionToken();
+    const sessionTokenHash = await sha256Hex(sessionToken);
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+
+    const sessionResponse = await serviceClient
+      .from("player_sessions")
+      .insert({
+        game_session_id: gameSessionId,
+        player_id: playerId,
+        session_token_hash: sessionTokenHash,
+        status: "active",
+        expires_at: expiresAt,
+      })
+      .select("expires_at")
+      .single();
+
+    if (!sessionResponse.error && sessionResponse.data?.expires_at) {
+      return {
+        ok: true,
+        sessionToken,
+        expiresAt: sessionResponse.data.expires_at,
+      };
+    }
+
+    const message = sessionResponse.error?.message?.toLowerCase() ?? "";
+
+    if (!message.includes("duplicate") && !message.includes("unique")) {
+      return {
+        ok: false,
+        status: 500,
+        error: {
+          code: "player_login_failed",
+          message: "Player login failed.",
+          retryable: false,
+        },
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status: 409,
+    error: {
+      code: "player_session_generation_conflict",
+      message: "A unique player session could not be generated.",
+      retryable: true,
+    },
+  };
+}
+
+function normalizeJoinCode(value: string): string {
+  const normalizedValue = value
+    .trim()
+    .replace(/\s+/g, "")
+    .toUpperCase();
+
+  if (!normalizedValue) {
+    throw new EdgeActivationError(
+      "game_join_code_required",
+      "gameJoinCode is required.",
+      400,
+    );
+  }
+
+  if (!/^[A-Z0-9-]+$/.test(normalizedValue)) {
+    throw new EdgeActivationError(
+      "invalid_game_join_code",
+      "gameJoinCode may only contain letters, numbers, and hyphens.",
+      400,
+    );
+  }
+
+  return normalizedValue;
 }
 
 function readPlayerRosterRoutePath(pathname: string): PlayerRosterRoute | null {
