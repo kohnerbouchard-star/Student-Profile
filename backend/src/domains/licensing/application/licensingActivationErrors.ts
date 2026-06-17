@@ -1,7 +1,12 @@
 import { SupabaseRepositoryError } from "../../../supabase/queryResult";
+import { LicensingActivationRequestParseError } from "../contracts/activationRequestParser";
 import { RedeemPurchaseCodeError } from "./redeemPurchaseCode";
 
 export type LicensingActivationSafeErrorCode =
+  | "invalid_request_body"
+  | "purchase_code_required"
+  | "game_name_required"
+  | "invalid_activation_settings"
   | "invalid_redemption_input"
   | "purchase_code_not_found"
   | "purchase_code_exhausted"
@@ -22,6 +27,15 @@ export function mapLicensingActivationError(
   error: unknown,
 ): LicensingActivationSafeError {
   if (error instanceof RedeemPurchaseCodeError) {
+    return {
+      code: error.code,
+      message: error.message,
+      httpStatus: 400,
+      retryable: false,
+    };
+  }
+
+  if (error instanceof LicensingActivationRequestParseError) {
     return {
       code: error.code,
       message: error.message,
