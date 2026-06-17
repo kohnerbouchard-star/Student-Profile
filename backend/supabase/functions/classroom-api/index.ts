@@ -80,6 +80,53 @@ interface AccountBalanceRow {
   readonly currency_code: string;
 }
 
+interface PlayerAttendanceClockInSuccessBody {
+  readonly ok: true;
+  readonly gameSession: {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  };
+  readonly player: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly rosterLabel: string | null;
+    readonly status: string;
+  };
+  readonly attendance: {
+    readonly id: string;
+    readonly status: string;
+    readonly attendanceDate: string;
+    readonly clockedInAt: string;
+    readonly wasCreated: boolean;
+    readonly timezone: string;
+  };
+  readonly reward: {
+    readonly amount: number;
+    readonly currencyCode: string;
+    readonly ledgerEntryId: string | null;
+  };
+}
+
+interface PlayerAttendanceWindowConfig {
+  readonly timezone: string;
+  readonly lateCutoffMinutes: number | null;
+  readonly presentRewardAmount: number;
+  readonly lateRewardAmount: number;
+  readonly currencyCode: string;
+}
+
+interface PlayerAttendanceClockInRpcRow {
+  readonly attendance_id: string;
+  readonly attendance_status: string;
+  readonly attendance_date: string;
+  readonly clocked_in_at: string;
+  readonly was_created: boolean;
+  readonly ledger_entry_id: string | null;
+  readonly reward_amount: number | string;
+  readonly currency_code: string;
+}
+
 interface InitialBalanceSeedRequestBody {
   readonly amount: number;
   readonly reason: string;
@@ -366,6 +413,10 @@ Deno.serve(async (request) => {
     });
   }
 
+  if (url.pathname.endsWith("/players/attendance/clock-in")) {
+    return handlePlayerAttendanceClockInRequest(request);
+  }
+
   if (url.pathname.endsWith("/players/me")) {
     return handlePlayerSessionBootstrapRequest(request);
   }
@@ -536,6 +587,156 @@ async function resolveStaffForRequest(
     staff,
     serviceClient,
   };
+}
+
+async function handlePlayerAttendanceClockInRequest(
+  request: Request,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to clock in attendance.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = readSupabaseEnv();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Classroom API runtime configuration is incomplete.",
+        retryable: false,
+      });
+    }
+
+    const sessionToken = extractBearerToken(request.headers.get("authorization"));
+
+    if (!sessionToken) {
+      return invalidPlayerSessionResponse();
+    }
+
+    const sessionTokenHash = await sha256Hex(sessionToken);
+
+    const serviceClient = createClient(
+      envResult.value.supabaseUrl,
+      envResult.value.supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    const sessionResolution = await resolveActivePlayerSession(
+      serviceClient,
+      sessionTokenHash,
+    );
+
+    if (!sessionResolution.ok) {
+      return jsonError(sessionResolution.status, sessionResolution.error);
+    }
+
+    const settingsResponse = await serviceClient
+      .from("game_settings")
+      .select("attendance_window")
+      .eq("game_session_id", sessionResolution.session.game_session_id)
+      .maybeSingle();
+
+    if (settingsResponse.error) {
+      return jsonError(500, {
+        code: "attendance_clock_in_failed",
+        message: "Attendance clock-in failed.",
+        retryable: false,
+      });
+    }
+
+    const attendanceConfig = readPlayerAttendanceWindowConfig(
+      (settingsResponse.data as { readonly attendance_window?: unknown } | null)
+        ?.attendance_window,
+    );
+
+    const attendanceDate = readLocalDateForTimeZone(attendanceConfig.timezone);
+    const currentMinutes = readLocalMinutesForTimeZone(attendanceConfig.timezone);
+    const attendanceStatus =
+      attendanceConfig.lateCutoffMinutes !== null &&
+        currentMinutes > attendanceConfig.lateCutoffMinutes
+        ? "late"
+        : "present";
+    const rewardAmount = attendanceStatus === "late"
+      ? attendanceConfig.lateRewardAmount
+      : attendanceConfig.presentRewardAmount;
+    const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+
+    const attendanceResponse = await serviceClient.rpc(
+      "record_player_attendance_clock_in",
+      {
+        p_game_session_id: sessionResolution.session.game_session_id,
+        p_player_id: sessionResolution.session.player_id,
+        p_attendance_date: attendanceDate,
+        p_status: attendanceStatus,
+        p_reward_amount: rewardAmount,
+        p_currency_code: attendanceConfig.currencyCode,
+        p_request_id: requestId,
+      },
+    );
+
+    if (attendanceResponse.error) {
+      const safeError = mapAttendanceClockInRpcError(attendanceResponse.error.message);
+
+      return jsonError(safeError.status, {
+        code: safeError.code,
+        message: safeError.message,
+        retryable: safeError.retryable,
+      });
+    }
+
+    const attendanceRow = readPlayerAttendanceClockInRpcRow(attendanceResponse.data);
+
+    if (!attendanceRow) {
+      return jsonError(500, {
+        code: "attendance_clock_in_failed",
+        message: "Attendance clock-in failed.",
+        retryable: false,
+      });
+    }
+
+    return jsonResponse<PlayerAttendanceClockInSuccessBody>(200, {
+      ok: true,
+      gameSession: {
+        id: sessionResolution.gameSession.id,
+        name: sessionResolution.gameSession.name,
+        status: sessionResolution.gameSession.status,
+      },
+      player: {
+        id: sessionResolution.player.id,
+        displayName: sessionResolution.player.display_name,
+        rosterLabel: sessionResolution.player.roster_label ?? null,
+        status: sessionResolution.player.status,
+      },
+      attendance: {
+        id: attendanceRow.attendance_id,
+        status: attendanceRow.attendance_status,
+        attendanceDate: attendanceRow.attendance_date,
+        clockedInAt: attendanceRow.clocked_in_at,
+        wasCreated: attendanceRow.was_created,
+        timezone: attendanceConfig.timezone,
+      },
+      reward: {
+        amount: readBalanceNumber(attendanceRow.reward_amount),
+        currencyCode: attendanceRow.currency_code,
+        ledgerEntryId: attendanceRow.ledger_entry_id,
+      },
+    });
+  } catch {
+    return jsonError(500, {
+      code: "attendance_clock_in_failed",
+      message: "Attendance clock-in failed.",
+      retryable: false,
+    });
+  }
 }
 
 async function handleInitialBalanceSeedRequest(
@@ -1922,6 +2123,368 @@ async function handleLicensingActivationRequest(
       message: "Purchase-code activation failed.",
       retryable: false,
     });
+  }
+}
+
+async function resolveActivePlayerSession(
+  serviceClient: EdgeSupabaseClient,
+  sessionTokenHash: string,
+): Promise<
+  | {
+      readonly ok: true;
+      readonly session: {
+        readonly id: string;
+        readonly game_session_id: string;
+        readonly player_id: string;
+        readonly status: string;
+        readonly expires_at: string;
+        readonly revoked_at: string | null;
+      };
+      readonly gameSession: {
+        readonly id: string;
+        readonly name: string;
+        readonly status: string;
+      };
+      readonly player: {
+        readonly id: string;
+        readonly display_name: string;
+        readonly roster_label: string | null;
+        readonly status: string;
+      };
+    }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  const sessionResponse = await serviceClient
+    .from("player_sessions")
+    .select("id,game_session_id,player_id,status,expires_at,revoked_at")
+    .eq("session_token_hash", sessionTokenHash)
+    .maybeSingle();
+
+  if (sessionResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "player_session_lookup_failed",
+        message: "Player session lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const session = sessionResponse.data as {
+    readonly id: string;
+    readonly game_session_id: string;
+    readonly player_id: string;
+    readonly status: string;
+    readonly expires_at: string;
+    readonly revoked_at: string | null;
+  } | null;
+
+  if (
+    !session?.id ||
+    session.status !== "active" ||
+    session.revoked_at !== null ||
+    Date.parse(session.expires_at) <= Date.now()
+  ) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_player_session",
+        message: "Player session is invalid or expired.",
+        retryable: false,
+      },
+    };
+  }
+
+  const gameResponse = await serviceClient
+    .from("game_sessions")
+    .select("id,name,status")
+    .eq("id", session.game_session_id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (gameResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "player_session_lookup_failed",
+        message: "Player session lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const gameSession = gameResponse.data as {
+    readonly id: string;
+    readonly name: string;
+    readonly status: string;
+  } | null;
+
+  if (!gameSession?.id) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_player_session",
+        message: "Player session is invalid or expired.",
+        retryable: false,
+      },
+    };
+  }
+
+  const playerResponse = await serviceClient
+    .from("players")
+    .select("id,display_name,roster_label,status")
+    .eq("game_session_id", session.game_session_id)
+    .eq("id", session.player_id)
+    .maybeSingle();
+
+  if (playerResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "player_session_lookup_failed",
+        message: "Player session lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const player = playerResponse.data as {
+    readonly id: string;
+    readonly display_name: string;
+    readonly roster_label: string | null;
+    readonly status: string;
+  } | null;
+
+  if (!player?.id || player.status !== "active") {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_player_session",
+        message: "Player session is invalid or expired.",
+        retryable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    session,
+    gameSession,
+    player,
+  };
+}
+
+function readPlayerAttendanceWindowConfig(
+  value: unknown,
+): PlayerAttendanceWindowConfig {
+  const attendanceWindow = isRecord(value) ? value : {};
+  const timezone = readValidTimeZone(attendanceWindow.timezone, "Asia/Seoul");
+  const lateCutoffMinutes = readOptionalTimeMinutes(attendanceWindow.lateCutoff);
+  const presentRewardAmount = readOptionalNonNegativeAmount(
+    attendanceWindow.presentRewardAmount,
+  );
+  const lateRewardAmount = readOptionalNonNegativeAmount(
+    attendanceWindow.lateRewardAmount,
+  );
+  const currencyCode = normalizeCurrencyCode(
+    parseOptionalText(attendanceWindow.currencyCode) ?? "ECO",
+  );
+
+  return {
+    timezone,
+    lateCutoffMinutes,
+    presentRewardAmount,
+    lateRewardAmount,
+    currencyCode,
+  };
+}
+
+function readValidTimeZone(value: unknown, fallbackTimeZone: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    return fallbackTimeZone;
+  }
+
+  const timezone = value.trim();
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    return fallbackTimeZone;
+  }
+}
+
+function readLocalDateForTimeZone(timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    throw new Error("Could not compute local attendance date.");
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function readLocalMinutesForTimeZone(timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const hour = parts.find((part) => part.type === "hour")?.value;
+  const minute = parts.find((part) => part.type === "minute")?.value;
+
+  if (!hour || !minute) {
+    throw new Error("Could not compute local attendance time.");
+  }
+
+  return Number(hour) * 60 + Number(minute);
+}
+
+function readOptionalTimeMinutes(value: unknown): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  return hour * 60 + minute;
+}
+
+function readOptionalNonNegativeAmount(value: unknown): number {
+  const amount = typeof value === "number" ? value : Number(value);
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    return 0;
+  }
+
+  return Math.round(amount * 100) / 100;
+}
+
+function readPlayerAttendanceClockInRpcRow(
+  value: unknown,
+): PlayerAttendanceClockInRpcRow | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const row = value[0];
+
+  if (!isRecord(row)) {
+    return null;
+  }
+
+  if (
+    typeof row.attendance_id !== "string" ||
+    typeof row.attendance_status !== "string" ||
+    typeof row.attendance_date !== "string" ||
+    typeof row.clocked_in_at !== "string" ||
+    typeof row.was_created !== "boolean" ||
+    typeof row.currency_code !== "string"
+  ) {
+    return null;
+  }
+
+  if (
+    row.ledger_entry_id !== null &&
+    typeof row.ledger_entry_id !== "string"
+  ) {
+    return null;
+  }
+
+  if (
+    typeof row.reward_amount !== "number" &&
+    typeof row.reward_amount !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    attendance_id: row.attendance_id,
+    attendance_status: row.attendance_status,
+    attendance_date: row.attendance_date,
+    clocked_in_at: row.clocked_in_at,
+    was_created: row.was_created,
+    ledger_entry_id: row.ledger_entry_id,
+    reward_amount: row.reward_amount,
+    currency_code: row.currency_code,
+  };
+}
+
+function mapAttendanceClockInRpcError(message: string): {
+  readonly code: string;
+  readonly message: string;
+  readonly status: number;
+  readonly retryable: boolean;
+} {
+  switch (message.trim().toUpperCase()) {
+    case "GAME_SESSION_REQUIRED":
+    case "PLAYER_REQUIRED":
+    case "ATTENDANCE_DATE_REQUIRED":
+    case "INVALID_ATTENDANCE_STATUS":
+    case "INVALID_REWARD_AMOUNT":
+    case "INVALID_CURRENCY_CODE":
+      return {
+        code: "invalid_attendance_clock_in",
+        message: "Attendance clock-in request is invalid.",
+        status: 400,
+        retryable: false,
+      };
+
+    case "PLAYER_NOT_FOUND":
+      return {
+        code: "player_not_found",
+        message: "Player was not found for this game session.",
+        status: 404,
+        retryable: false,
+      };
+
+    default:
+      return {
+        code: "attendance_clock_in_failed",
+        message: "Attendance clock-in failed.",
+        status: 500,
+        retryable: false,
+      };
   }
 }
 
