@@ -61,6 +61,10 @@ import {
   type PlayerRosterRoute,
   readPlayerRosterRoutePath,
 } from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
+import {
+  invalidPlayerSessionResponse,
+  resolveActivePlayerSession,
+} from "../../../src/domains/players/api/playerSessionHttpHelpers.ts";
 import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
@@ -2621,189 +2625,6 @@ async function handleLicensingActivationRequest(
   }
 }
 
-async function resolveActivePlayerSession(
-  serviceClient: EdgeSupabaseClient,
-  sessionTokenHash: string,
-): Promise<
-  | {
-      readonly ok: true;
-      readonly session: {
-        readonly id: string;
-        readonly game_session_id: string;
-        readonly player_id: string;
-        readonly status: string;
-        readonly expires_at: string;
-        readonly revoked_at: string | null;
-      };
-      readonly gameSession: {
-        readonly id: string;
-        readonly name: string;
-        readonly status: string;
-      };
-      readonly player: {
-        readonly id: string;
-        readonly display_name: string;
-        readonly roster_label: string | null;
-        readonly status: string;
-      };
-    }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  const sessionResponse = await serviceClient
-    .from("player_sessions")
-    .select("id,game_session_id,player_id,status,expires_at,revoked_at")
-    .eq("session_token_hash", sessionTokenHash)
-    .maybeSingle();
-
-  if (sessionResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "player_session_lookup_failed",
-        message: "Player session lookup failed.",
-        retryable: false,
-      },
-    };
-  }
-
-  const session = sessionResponse.data as {
-    readonly id: string;
-    readonly game_session_id: string;
-    readonly player_id: string;
-    readonly status: string;
-    readonly expires_at: string;
-    readonly revoked_at: string | null;
-  } | null;
-
-  if (
-    !session?.id ||
-    session.status !== "active" ||
-    session.revoked_at !== null ||
-    Date.parse(session.expires_at) <= Date.now()
-  ) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_player_session",
-        message: "Player session is invalid or expired.",
-        retryable: false,
-      },
-    };
-  }
-
-  const gameResponse = await serviceClient
-    .from("game_sessions")
-    .select("id,name,status")
-    .eq("id", session.game_session_id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (gameResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "player_session_lookup_failed",
-        message: "Player session lookup failed.",
-        retryable: false,
-      },
-    };
-  }
-
-  const gameSession = gameResponse.data as {
-    readonly id: string;
-    readonly name: string;
-    readonly status: string;
-  } | null;
-
-  if (!gameSession?.id) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_player_session",
-        message: "Player session is invalid or expired.",
-        retryable: false,
-      },
-    };
-  }
-
-  const playerResponse = await serviceClient
-    .from("players")
-    .select("id,display_name,roster_label,status")
-    .eq("game_session_id", session.game_session_id)
-    .eq("id", session.player_id)
-    .maybeSingle();
-
-  if (playerResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "player_session_lookup_failed",
-        message: "Player session lookup failed.",
-        retryable: false,
-      },
-    };
-  }
-
-  const player = playerResponse.data as {
-    readonly id: string;
-    readonly display_name: string;
-    readonly roster_label: string | null;
-    readonly status: string;
-  } | null;
-
-  if (!player?.id || player.status !== "active") {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_player_session",
-        message: "Player session is invalid or expired.",
-        retryable: false,
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    session,
-    gameSession,
-    player,
-  };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function readLedgerHistoryLimitQuery(value: string | null): number {
   const rawLimit = value?.trim();
 
@@ -3145,14 +2966,6 @@ async function readPlayerLoginRequestBody(
 
 
 
-
-function invalidPlayerSessionResponse(): Response {
-  return jsonError(401, {
-    code: "invalid_player_session",
-    message: "Player session is invalid or expired.",
-    retryable: false,
-  });
-}
 
 function invalidPlayerLoginResponse(): Response {
   return jsonError(401, {
