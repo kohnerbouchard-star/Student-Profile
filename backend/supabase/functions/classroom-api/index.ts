@@ -10,6 +10,10 @@ import type {
 import {
   SupabaseStoreCatalogRepository,
 } from "../../../src/domains/store/infrastructure/supabaseStoreCatalogRepository.ts";
+import {
+  type StaffStoreCatalogRoute,
+  readStaffStoreCatalogRoutePath,
+} from "../../../src/domains/store/api/storeCatalogRoutePaths.ts";
 
 interface EdgeErrorBody {
   readonly ok: false;
@@ -156,11 +160,6 @@ interface StaffAttendanceDailyBody {
   }[];
 }
 
-interface StaffStoreCatalogRoute {
-  readonly kind: "items" | "item";
-  readonly gameSessionId: string;
-  readonly itemId?: string;
-}
 
 interface StaffAttendanceDailyRoute {
   readonly gameSessionId: string;
@@ -959,31 +958,6 @@ function storeCatalogRouteResultToResponse(
     message: result.body.error.message,
     retryable: false,
   });
-}
-
-function readStaffStoreCatalogRoutePath(
-  pathname: string,
-): StaffStoreCatalogRoute | null {
-  const itemsMatch = pathname.match(/\/games\/([^/]+)\/store\/items\/?$/);
-
-  if (itemsMatch?.[1]) {
-    return {
-      kind: "items",
-      gameSessionId: decodeURIComponent(itemsMatch[1]),
-    };
-  }
-
-  const itemMatch = pathname.match(/\/games\/([^/]+)\/store\/items\/([^/]+)\/?$/);
-
-  if (itemMatch?.[1] && itemMatch[2]) {
-    return {
-      kind: "item",
-      gameSessionId: decodeURIComponent(itemMatch[1]),
-      itemId: decodeURIComponent(itemMatch[2]),
-    };
-  }
-
-  return null;
 }
 
 async function handleStaffAttendanceDailyRequest(
