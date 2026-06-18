@@ -42,6 +42,11 @@ import {
   readStaffAttendanceScanRoutePath,
 } from "../../../src/domains/attendance/api/attendanceRoutePaths.ts";
 import {
+  mapAttendanceClockInRpcError,
+  readAttendanceDateQuery,
+  readPlayerAttendanceClockInRpcRow,
+} from "../../../src/domains/attendance/api/attendanceHttpHelpers.ts";
+import {
   type PlayerRosterRoute,
   readPlayerRosterRoutePath,
 } from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
@@ -242,17 +247,6 @@ interface PlayerAttendanceWindowConfig {
   readonly presentRewardAmount: number;
   readonly lateRewardAmount: number;
   readonly currencyCode: string;
-}
-
-interface PlayerAttendanceClockInRpcRow {
-  readonly attendance_id: string;
-  readonly attendance_status: string;
-  readonly attendance_date: string;
-  readonly clocked_in_at: string;
-  readonly was_created: boolean;
-  readonly ledger_entry_id: string | null;
-  readonly reward_amount: number | string;
-  readonly currency_code: string;
 }
 
 interface InitialBalanceSeedRequestBody {
@@ -3283,93 +3277,11 @@ function readPlayerAttendanceWindowConfig(
 
 
 
-function readPlayerAttendanceClockInRpcRow(
-  value: unknown,
-): PlayerAttendanceClockInRpcRow | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
 
-  const row = value[0];
 
-  if (!isRecord(row)) {
-    return null;
-  }
 
-  if (
-    typeof row.attendance_id !== "string" ||
-    typeof row.attendance_status !== "string" ||
-    typeof row.attendance_date !== "string" ||
-    typeof row.clocked_in_at !== "string" ||
-    typeof row.was_created !== "boolean" ||
-    typeof row.currency_code !== "string"
-  ) {
-    return null;
-  }
 
-  if (
-    row.ledger_entry_id !== null &&
-    typeof row.ledger_entry_id !== "string"
-  ) {
-    return null;
-  }
 
-  if (
-    typeof row.reward_amount !== "number" &&
-    typeof row.reward_amount !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    attendance_id: row.attendance_id,
-    attendance_status: row.attendance_status,
-    attendance_date: row.attendance_date,
-    clocked_in_at: row.clocked_in_at,
-    was_created: row.was_created,
-    ledger_entry_id: row.ledger_entry_id,
-    reward_amount: row.reward_amount,
-    currency_code: row.currency_code,
-  };
-}
-
-function mapAttendanceClockInRpcError(message: string): {
-  readonly code: string;
-  readonly message: string;
-  readonly status: number;
-  readonly retryable: boolean;
-} {
-  switch (message.trim().toUpperCase()) {
-    case "GAME_SESSION_REQUIRED":
-    case "PLAYER_REQUIRED":
-    case "ATTENDANCE_DATE_REQUIRED":
-    case "INVALID_ATTENDANCE_STATUS":
-    case "INVALID_REWARD_AMOUNT":
-    case "INVALID_CURRENCY_CODE":
-      return {
-        code: "invalid_attendance_clock_in",
-        message: "Attendance clock-in request is invalid.",
-        status: 400,
-        retryable: false,
-      };
-
-    case "PLAYER_NOT_FOUND":
-      return {
-        code: "player_not_found",
-        message: "Player was not found for this game session.",
-        status: 404,
-        retryable: false,
-      };
-
-    default:
-      return {
-        code: "attendance_clock_in_failed",
-        message: "Attendance clock-in failed.",
-        status: 500,
-        retryable: false,
-      };
-  }
-}
 
 function readLedgerHistoryLimitQuery(value: string | null): number {
   const rawLimit = value?.trim();
@@ -3399,39 +3311,8 @@ function readLedgerHistoryLimitQuery(value: string | null): number {
   return limit;
 }
 
-function readAttendanceDateQuery(
-  value: string | null,
-  timeZone: string,
-): string {
-  const rawDate = value?.trim();
 
-  if (!rawDate) {
-    return readLocalDateForTimeZone(timeZone);
-  }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
-    throw new EdgeActivationError(
-      "invalid_attendance_date",
-      "date must use YYYY-MM-DD format.",
-      400,
-    );
-  }
-
-  const parsedDate = new Date(`${rawDate}T00:00:00.000Z`);
-
-  if (
-    Number.isNaN(parsedDate.getTime()) ||
-    parsedDate.toISOString().slice(0, 10) !== rawDate
-  ) {
-    throw new EdgeActivationError(
-      "invalid_attendance_date",
-      "date must be a real calendar date.",
-      400,
-    );
-  }
-
-  return rawDate;
-}
 
 async function readStaffAttendanceScanRequestBody(
   request: Request,
