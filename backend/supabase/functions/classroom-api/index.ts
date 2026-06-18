@@ -12,6 +12,11 @@ import {
   readSupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
+  isRecord,
+  parseRequiredText,
+  readBalanceNumber,
+} from "../../../src/platform/supabase/edgeParsing.ts";
+import {
   type GameJoinCodeRoute,
   readGameJoinCodeRoutePath,
 } from "../../../src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts";
@@ -3841,15 +3846,8 @@ async function readPlayerLoginRequestBody(
   };
 }
 
-function readBalanceNumber(value: number | string): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
 
-  const parsedValue = Number(value);
 
-  return Number.isFinite(parsedValue) ? parsedValue : 0;
-}
 
 function invalidPlayerSessionResponse(): Response {
   return jsonError(401, {
@@ -4287,19 +4285,8 @@ async function readActivationRequestBody(
   };
 }
 
-function parseRequiredText(
-  value: unknown,
-  code: string,
-  message: string,
-): string {
-  const normalizedValue = typeof value === "string" ? value.trim() : "";
 
-  if (!normalizedValue) {
-    throw new EdgeActivationError(code, message, 400);
-  }
 
-  return normalizedValue;
-}
 
 function parseOptionalText(value: unknown): string | null {
   if (value === undefined || value === null) {
@@ -4500,11 +4487,4 @@ function extractBearerToken(value: string | null): string | null {
   const match = value.match(/^Bearer\s+(.+)$/i);
 
   return match?.[1]?.trim() || null;
-}
-
-
-
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
