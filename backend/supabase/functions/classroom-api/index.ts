@@ -1,5 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  type InitialBalanceSeedRoute,
+  type StaffLedgerAdjustmentRoute,
+  type StaffPlayerLedgerHistoryRoute,
+  readInitialBalanceSeedRoutePath,
+  readStaffLedgerAdjustmentRoutePath,
+  readStaffPlayerLedgerHistoryRoutePath,
+} from "../../../src/domains/economy/api/economyRoutePaths.ts";
+import {
   type StaffAttendanceDailyRoute,
   type StaffAttendanceScanRoute,
   readStaffAttendanceDailyRoutePath,
@@ -260,10 +268,6 @@ interface InitialBalanceSeedSuccessBody {
   };
 }
 
-interface InitialBalanceSeedRoute {
-  readonly gameSessionId: string;
-}
-
 interface InitialBalanceSeedRpcRow {
   readonly created_count: number;
   readonly skipped_count: number;
@@ -296,11 +300,6 @@ interface StaffLedgerAdjustmentSuccessBody {
     readonly currencyCode: string;
     readonly createdAt: string;
   };
-}
-
-interface StaffLedgerAdjustmentRoute {
-  readonly gameSessionId: string;
-  readonly playerId: string;
 }
 
 interface StaffLedgerAdjustmentRpcRow {
@@ -389,11 +388,6 @@ interface StaffPlayerLedgerHistoryBody {
     readonly createdByType: string;
     readonly createdAt: string;
   }[];
-}
-
-interface StaffPlayerLedgerHistoryRoute {
-  readonly gameSessionId: string;
-  readonly playerId: string;
 }
 
 interface PlayerSessionBootstrapBody {
@@ -3701,33 +3695,6 @@ async function readStaffAttendanceScanRequestBody(
   };
 }
 
-function readInitialBalanceSeedRoutePath(
-  pathname: string,
-): InitialBalanceSeedRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const playersSegment = segments[gamesIndex + 2];
-  const seedBalancesSegment = segments[gamesIndex + 3];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    playersSegment === "players" &&
-    seedBalancesSegment === "seed-balances" &&
-    gamesIndex + 4 === segments.length
-  ) {
-    return { gameSessionId };
-  }
-
-  return null;
-}
-
 async function readInitialBalanceSeedRequestBody(
   request: Request,
 ): Promise<InitialBalanceSeedRequestBody> {
@@ -3861,69 +3828,6 @@ function mapInitialBalanceSeedRpcError(message: string): {
         retryable: false,
       };
   }
-}
-
-function readStaffPlayerLedgerHistoryRoutePath(
-  pathname: string,
-): StaffPlayerLedgerHistoryRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const playersSegment = segments[gamesIndex + 2];
-  const playerId = segments[gamesIndex + 3];
-  const ledgerSegment = segments[gamesIndex + 4];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    playersSegment === "players" &&
-    playerId &&
-    isUuid(playerId) &&
-    ledgerSegment === "ledger" &&
-    gamesIndex + 5 === segments.length
-  ) {
-    return { gameSessionId, playerId };
-  }
-
-  return null;
-}
-
-function readStaffLedgerAdjustmentRoutePath(
-  pathname: string,
-): StaffLedgerAdjustmentRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const playersSegment = segments[gamesIndex + 2];
-  const playerId = segments[gamesIndex + 3];
-  const ledgerAdjustmentsSegment = segments[gamesIndex + 4];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    playersSegment === "players" &&
-    playerId &&
-    isUuid(playerId) &&
-    ledgerAdjustmentsSegment === "ledger-adjustments" &&
-    gamesIndex + 5 === segments.length
-  ) {
-    return {
-      gameSessionId,
-      playerId,
-    };
-  }
-
-  return null;
 }
 
 async function readStaffLedgerAdjustmentRequestBody(
