@@ -11,6 +11,7 @@ import {
   readOwnedGameSession,
   readSupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
+import { sha256Hex } from "../../../src/platform/supabase/edgeCrypto.ts";
 import {
   isRecord,
   normalizeCurrencyCode,
@@ -58,6 +59,7 @@ import {
   type PlayerRosterRoute,
   readPlayerRosterRoutePath,
 } from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
+import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
 import {
@@ -3679,30 +3681,8 @@ async function createPlayerAccessCredential(
   };
 }
 
-function normalizeStudentCode(value: string): string {
-  const normalizedValue = value
-    .trim()
-    .replace(/\s+/g, "")
-    .toUpperCase();
 
-  if (!normalizedValue) {
-    throw new EdgeActivationError(
-      "student_code_required",
-      "studentCode is required.",
-      400,
-    );
-  }
 
-  if (!/^[A-Z0-9-]+$/.test(normalizedValue)) {
-    throw new EdgeActivationError(
-      "invalid_student_code",
-      "studentCode may only contain letters, numbers, and hyphens.",
-      400,
-    );
-  }
-
-  return normalizedValue;
-}
 
 async function readGameSettingsPatchBody(
   request: Request,
@@ -3852,16 +3832,8 @@ function normalizePurchaseCode(value: string): string {
   return normalizedValue;
 }
 
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
 
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
+
 
 function buildGameSettings(
   body: ActivationRequestBody,
