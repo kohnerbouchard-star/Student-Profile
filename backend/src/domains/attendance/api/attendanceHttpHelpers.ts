@@ -6,11 +6,11 @@ import {
   parseRequiredText,
 } from "../../../platform/supabase/edgeParsing.ts";
 import {
+  readLocalDateForTimeZone,
   readOptionalNonNegativeAmount,
   readOptionalTimeMinutes,
   readValidTimeZone,
 } from "../../../platform/supabase/edgeTime.ts";
-import { readLocalDateForTimeZone } from "../../../platform/supabase/edgeTime.ts";
 
 export interface PlayerAttendanceClockInRpcRow {
   readonly attendance_id: string;
