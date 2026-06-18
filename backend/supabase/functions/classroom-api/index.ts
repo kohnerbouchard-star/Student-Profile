@@ -13,6 +13,7 @@ import {
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   isRecord,
+  normalizeCurrencyCode,
   parseOptionalJsonObject,
   parseOptionalText,
   parseRequiredText,
@@ -3529,19 +3530,8 @@ function parseLedgerAmount(value: unknown): number {
   return Math.round(amount * 100) / 100;
 }
 
-function normalizeCurrencyCode(value: string): string {
-  const normalizedValue = value.trim().toUpperCase();
 
-  if (!/^[A-Z0-9]{3,16}$/.test(normalizedValue)) {
-    throw new EdgeActivationError(
-      "invalid_currency_code",
-      "currencyCode must be 3 to 16 uppercase letters or numbers.",
-      400,
-    );
-  }
 
-  return normalizedValue;
-}
 
 function readLedgerAdjustmentRpcRow(
   value: unknown,

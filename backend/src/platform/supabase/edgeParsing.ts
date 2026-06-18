@@ -61,3 +61,17 @@ function invalidActivationSettingsError(): EdgeActivationError {
     400,
   );
 }
+
+export function normalizeCurrencyCode(value: string): string {
+  const normalizedValue = value.trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{3,16}$/.test(normalizedValue)) {
+    throw new EdgeActivationError(
+      "invalid_currency_code",
+      "currencyCode must be 3 to 16 uppercase letters or numbers.",
+      400,
+    );
+  }
+
+  return normalizedValue;
+}
