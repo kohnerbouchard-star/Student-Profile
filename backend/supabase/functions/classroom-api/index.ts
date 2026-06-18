@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isUuid } from "../../../src/platform/supabase/uuid.ts";
+import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
 import {
   handleCreateStoreCatalogItemRoute,
   handleListStoreCatalogRoute,
@@ -83,10 +85,6 @@ interface GameSettingsPatchBody {
   readonly businessMarketWindow?: Record<string, unknown> | null;
   readonly stockMarketWindow?: Record<string, unknown> | null;
   readonly newsSchedule?: Record<string, unknown> | null;
-}
-
-interface GameSettingsRoute {
-  readonly gameSessionId: string;
 }
 
 interface AccountBalanceRow {
@@ -4626,38 +4624,6 @@ function normalizeStudentCode(value: string): string {
   }
 
   return normalizedValue;
-}
-
-function readGameSettingsRoutePath(pathname: string): GameSettingsRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const settingsSegment = segments[gamesIndex + 2];
-
-  if (!gameSessionId || settingsSegment !== "settings") {
-    return null;
-  }
-
-  if (gamesIndex + 3 !== segments.length) {
-    return null;
-  }
-
-  if (!isUuid(gameSessionId)) {
-    return null;
-  }
-
-  return { gameSessionId };
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
 }
 
 async function readGameSettingsPatchBody(
