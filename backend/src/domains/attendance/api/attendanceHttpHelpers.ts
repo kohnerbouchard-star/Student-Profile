@@ -1,5 +1,15 @@
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
-import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
+import {
+  isRecord,
+  normalizeCurrencyCode,
+  parseOptionalText,
+  parseRequiredText,
+} from "../../../platform/supabase/edgeParsing.ts";
+import {
+  readOptionalNonNegativeAmount,
+  readOptionalTimeMinutes,
+  readValidTimeZone,
+} from "../../../platform/supabase/edgeTime.ts";
 import { readLocalDateForTimeZone } from "../../../platform/supabase/edgeTime.ts";
 
 export interface PlayerAttendanceClockInRpcRow {
@@ -133,4 +143,71 @@ export function readAttendanceDateQuery(
   }
 
   return rawDate;
+}
+
+export interface StaffAttendanceScanRequestBody {
+  readonly playerId: string;
+  readonly deviceTimezone: string | null;
+}
+
+export interface PlayerAttendanceWindowConfig {
+  readonly timezone: string;
+  readonly lateCutoffMinutes: number | null;
+  readonly presentRewardAmount: number;
+  readonly lateRewardAmount: number;
+  readonly currencyCode: string;
+}
+
+export function readPlayerAttendanceWindowConfig(
+  value: unknown,
+): PlayerAttendanceWindowConfig {
+  const attendanceWindow = isRecord(value) ? value : {};
+  const timezone = readValidTimeZone(attendanceWindow.timezone, "Asia/Seoul");
+  const lateCutoffMinutes = readOptionalTimeMinutes(attendanceWindow.lateCutoff);
+  const presentRewardAmount = readOptionalNonNegativeAmount(
+    attendanceWindow.presentRewardAmount,
+  );
+  const lateRewardAmount = readOptionalNonNegativeAmount(
+    attendanceWindow.lateRewardAmount,
+  );
+  const currencyCode = normalizeCurrencyCode(
+    parseOptionalText(attendanceWindow.currencyCode) ?? "ECO",
+  );
+
+  return {
+    timezone,
+    lateCutoffMinutes,
+    presentRewardAmount,
+    lateRewardAmount,
+    currencyCode,
+  };
+}
+
+export async function readStaffAttendanceScanRequestBody(
+  request: Request,
+): Promise<StaffAttendanceScanRequestBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  return {
+    playerId: parseRequiredText(value.playerId, "playerId", "Player ID is required."),
+    deviceTimezone: parseOptionalText(value.deviceTimezone),
+  };
 }

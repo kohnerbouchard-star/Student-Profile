@@ -48,6 +48,8 @@ import {
   mapAttendanceClockInRpcError,
   readAttendanceDateQuery,
   readPlayerAttendanceClockInRpcRow,
+  readPlayerAttendanceWindowConfig,
+  readStaffAttendanceScanRequestBody,
 } from "../../../src/domains/attendance/api/attendanceHttpHelpers.ts";
 import {
   type PlayerRosterRoute,
@@ -211,11 +213,6 @@ interface AttendancePlayerRow {
   readonly status: string;
 }
 
-interface StaffAttendanceScanRequestBody {
-  readonly playerId: string;
-  readonly deviceTimezone: string | null;
-}
-
 interface StaffAttendanceScanSuccessBody {
   readonly ok: true;
   readonly gameSession: {
@@ -242,14 +239,6 @@ interface StaffAttendanceScanSuccessBody {
     readonly currencyCode: string;
     readonly ledgerEntryId: string | null;
   };
-}
-
-interface PlayerAttendanceWindowConfig {
-  readonly timezone: string;
-  readonly lateCutoffMinutes: number | null;
-  readonly presentRewardAmount: number;
-  readonly lateRewardAmount: number;
-  readonly currencyCode: string;
 }
 
 interface InitialBalanceSeedRequestBody {
@@ -3240,30 +3229,8 @@ async function resolveActivePlayerSession(
   };
 }
 
-function readPlayerAttendanceWindowConfig(
-  value: unknown,
-): PlayerAttendanceWindowConfig {
-  const attendanceWindow = isRecord(value) ? value : {};
-  const timezone = readValidTimeZone(attendanceWindow.timezone, "Asia/Seoul");
-  const lateCutoffMinutes = readOptionalTimeMinutes(attendanceWindow.lateCutoff);
-  const presentRewardAmount = readOptionalNonNegativeAmount(
-    attendanceWindow.presentRewardAmount,
-  );
-  const lateRewardAmount = readOptionalNonNegativeAmount(
-    attendanceWindow.lateRewardAmount,
-  );
-  const currencyCode = normalizeCurrencyCode(
-    parseOptionalText(attendanceWindow.currencyCode) ?? "ECO",
-  );
 
-  return {
-    timezone,
-    lateCutoffMinutes,
-    presentRewardAmount,
-    lateRewardAmount,
-    currencyCode,
-  };
-}
+
 
 
 
@@ -3317,34 +3284,8 @@ function readLedgerHistoryLimitQuery(value: string | null): number {
 
 
 
-async function readStaffAttendanceScanRequestBody(
-  request: Request,
-): Promise<StaffAttendanceScanRequestBody> {
-  let value: unknown;
 
-  try {
-    value = await request.json();
-  } catch {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
 
-  if (!isRecord(value)) {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  return {
-    playerId: parseRequiredText(value.playerId, "playerId", "Player ID is required."),
-    deviceTimezone: parseOptionalText(value.deviceTimezone),
-  };
-}
 
 async function readInitialBalanceSeedRequestBody(
   request: Request,
