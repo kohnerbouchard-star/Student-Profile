@@ -4,7 +4,7 @@ import type {
   NormalizedUpdateStoreItemInput,
   StoreItemDto,
   StoreItemRecord,
-} from "../contracts/storeCatalogContracts";
+} from "../contracts/storeCatalogContracts.ts";
 
 export interface StoreCatalogRepository {
   readonly listStoreItems: (

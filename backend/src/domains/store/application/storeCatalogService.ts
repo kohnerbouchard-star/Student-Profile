@@ -3,15 +3,15 @@ import type {
   ListStoreCatalogInput,
   StoreItemDto,
   UpdateStoreItemInput,
-} from "../contracts/storeCatalogContracts";
+} from "../contracts/storeCatalogContracts.ts";
 import {
   normalizeCreateStoreItemInput,
   normalizeUpdateStoreItemInput,
-} from "../domain/storeCatalogRules";
+} from "../domain/storeCatalogRules.ts";
 import {
   toStoreItemDto,
   type StoreCatalogRepository,
-} from "../infrastructure/storeCatalogRepository";
+} from "../infrastructure/storeCatalogRepository.ts";
 
 export interface StoreCatalogDependencies {
   readonly storeCatalogRepository: StoreCatalogRepository;
