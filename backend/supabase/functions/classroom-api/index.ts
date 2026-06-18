@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  EdgeActivationError,
+  jsonError,
+  jsonResponse,
+} from "../../../src/platform/supabase/edgeResponse.ts";
+import {
   type GameJoinCodeRoute,
   readGameJoinCodeRoutePath,
 } from "../../../src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts";
@@ -38,15 +43,6 @@ import {
   type StaffStoreCatalogRoute,
   readStaffStoreCatalogRoutePath,
 } from "../../../src/domains/store/api/storeCatalogRoutePaths.ts";
-
-interface EdgeErrorBody {
-  readonly ok: false;
-  readonly error: {
-    readonly code: string;
-    readonly message: string;
-    readonly retryable: boolean;
-  };
-}
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -558,29 +554,6 @@ interface SupabaseEnv {
 interface ParsedRequestBodyResult {
   readonly body: ActivationRequestBody;
 }
-
-class EdgeActivationError extends Error {
-  readonly code: string;
-  readonly status: number;
-  readonly retryable: boolean;
-
-  constructor(
-    code: string,
-    message: string,
-    status: number,
-    retryable = false,
-  ) {
-    super(message);
-    this.name = "EdgeActivationError";
-    this.code = code;
-    this.status = status;
-    this.retryable = retryable;
-  }
-}
-
-const JSON_HEADERS = {
-  "content-type": "application/json; charset=utf-8",
-};
 
 Deno.serve(async (request) => {
   const url = new URL(request.url);
@@ -4750,26 +4723,6 @@ function readSupabaseEnv():
       supabaseServiceRoleKey,
     },
   };
-}
-
-function jsonError(
-  status: number,
-  error: EdgeErrorBody["error"],
-): Response {
-  return jsonResponse<EdgeErrorBody>(status, {
-    ok: false,
-    error,
-  });
-}
-
-function jsonResponse<TBody>(
-  status: number,
-  body: TBody,
-): Response {
-  return new Response(status === 204 ? null : JSON.stringify(body), {
-    status,
-    headers: JSON_HEADERS,
-  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
