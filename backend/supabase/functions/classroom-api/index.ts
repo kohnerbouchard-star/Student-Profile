@@ -1,9 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   EdgeActivationError,
+  type EdgeErrorBody,
   jsonError,
   jsonResponse,
 } from "../../../src/platform/supabase/edgeResponse.ts";
+import {
+  type EdgeSupabaseClient,
+  type SupabaseEnv,
+  readOwnedGameSession,
+  readSupabaseEnv,
+} from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   type GameJoinCodeRoute,
   readGameJoinCodeRoutePath,
@@ -545,12 +552,6 @@ interface ActivationRpcRow {
   readonly activated_at: string;
 }
 
-interface SupabaseEnv {
-  readonly supabaseUrl: string;
-  readonly supabaseAnonKey: string;
-  readonly supabaseServiceRoleKey: string;
-}
-
 interface ParsedRequestBodyResult {
   readonly body: ActivationRequestBody;
 }
@@ -676,9 +677,6 @@ Deno.serve(async (request) => {
   });
 });
 
-// The Edge function does not use generated Supabase DB types yet.
-// Keep the service-role client untyped in this Deno shim and validate rows manually.
-type EdgeSupabaseClient = any;
 
 interface StaffRequestResolution {
   readonly ok: true;
@@ -4184,67 +4182,8 @@ function normalizeJoinCode(value: string): string {
   return normalizedValue;
 }
 
-async function readOwnedGameSession(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  staffUserId: string,
-): Promise<
-  | {
-      readonly ok: true;
-      readonly gameSession: {
-        readonly id: string;
-        readonly name: string;
-        readonly status: string;
-      };
-    }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  const gameResponse = await serviceClient
-    .from("game_sessions")
-    .select("id,name,status,owner_staff_user_id")
-    .eq("id", gameSessionId)
-    .eq("owner_staff_user_id", staffUserId)
-    .maybeSingle();
 
-  if (gameResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "game_session_lookup_failed",
-        message: "Game session lookup failed.",
-        retryable: false,
-      },
-    };
-  }
 
-  const gameSession = gameResponse.data;
-
-  if (!gameSession?.id) {
-    return {
-      ok: false,
-      status: 404,
-      error: {
-        code: "game_session_not_found",
-        message: "Game session was not found for this staff user.",
-        retryable: false,
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    gameSession: {
-      id: gameSession.id,
-      name: gameSession.name,
-      status: gameSession.status,
-    },
-  };
-}
 
 async function readCreatePlayerRequestBody(
   request: Request,
@@ -4704,26 +4643,8 @@ function extractBearerToken(value: string | null): string | null {
   return match?.[1]?.trim() || null;
 }
 
-function readSupabaseEnv():
-  | { readonly ok: true; readonly value: SupabaseEnv }
-  | { readonly ok: false } {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-    return { ok: false };
-  }
 
-  return {
-    ok: true,
-    value: {
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseServiceRoleKey,
-    },
-  };
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
