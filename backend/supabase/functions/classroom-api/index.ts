@@ -71,6 +71,7 @@ import {
 import {
   handleStaffStoreCatalogRequest,
 } from "../../../src/domains/store/api/storeCatalogHttpHandler.ts";
+
 interface EdgeHealthBody {
   readonly ok: true;
   readonly service: "classroom-api";
@@ -3719,4 +3720,3 @@ function mapActivationRpcError(message: string): {
       };
   }
 }
-

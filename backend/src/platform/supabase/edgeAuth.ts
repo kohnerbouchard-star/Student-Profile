@@ -7,4 +7,3 @@ export function extractBearerToken(value: string | null): string | null {
 
   return match?.[1]?.trim() || null;
 }
-
