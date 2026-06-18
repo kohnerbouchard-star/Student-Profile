@@ -5,7 +5,7 @@ import type {
   StoreItemStatus,
   StoreItemVisibility,
   UpdateStoreItemInput,
-} from "../contracts/storeCatalogContracts";
+} from "../contracts/storeCatalogContracts.ts";
 
 export class StoreCatalogValidationError extends Error {
   readonly code: string;

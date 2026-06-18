@@ -3,7 +3,7 @@ import {
   listStoreCatalogItems,
   type StoreCatalogDependencies,
   updateStoreCatalogItem,
-} from "../application/storeCatalogService";
+} from "../application/storeCatalogService.ts";
 import type {
   CreateStoreItemInput,
   StoreCatalogRouteErrorResult,
@@ -11,10 +11,10 @@ import type {
   StoreCatalogRouteResult,
   StoreCatalogRouteSuccessResult,
   UpdateStoreItemInput,
-} from "../contracts/storeCatalogContracts";
+} from "../contracts/storeCatalogContracts.ts";
 import {
   StoreCatalogValidationError,
-} from "../domain/storeCatalogRules";
+} from "../domain/storeCatalogRules.ts";
 
 export async function handleListStoreCatalogRoute(
   request: StoreCatalogRouteRequest,
