@@ -1,5 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  type StaffAttendanceDailyRoute,
+  type StaffAttendanceScanRoute,
+  readStaffAttendanceDailyRoutePath,
+  readStaffAttendanceScanRoutePath,
+} from "../../../src/domains/attendance/api/attendanceRoutePaths.ts";
+import {
   type PlayerRosterRoute,
   readPlayerRosterRoutePath,
 } from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
@@ -163,10 +169,6 @@ interface StaffAttendanceDailyBody {
 }
 
 
-interface StaffAttendanceDailyRoute {
-  readonly gameSessionId: string;
-}
-
 interface AttendanceRecordRow {
   readonly id: string;
   readonly player_id: string;
@@ -213,10 +215,6 @@ interface StaffAttendanceScanSuccessBody {
     readonly currencyCode: string;
     readonly ledgerEntryId: string | null;
   };
-}
-
-interface StaffAttendanceScanRoute {
-  readonly gameSessionId: string;
 }
 
 interface PlayerAttendanceWindowConfig {
@@ -3640,31 +3638,6 @@ function readLedgerHistoryLimitQuery(value: string | null): number {
   return limit;
 }
 
-function readStaffAttendanceDailyRoutePath(
-  pathname: string,
-): StaffAttendanceDailyRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const attendanceSegment = segments[gamesIndex + 2];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    attendanceSegment === "attendance" &&
-    gamesIndex + 3 === segments.length
-  ) {
-    return { gameSessionId };
-  }
-
-  return null;
-}
-
 function readAttendanceDateQuery(
   value: string | null,
   timeZone: string,
@@ -3697,33 +3670,6 @@ function readAttendanceDateQuery(
   }
 
   return rawDate;
-}
-
-function readStaffAttendanceScanRoutePath(
-  pathname: string,
-): StaffAttendanceScanRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const attendanceSegment = segments[gamesIndex + 2];
-  const scanSegment = segments[gamesIndex + 3];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    attendanceSegment === "attendance" &&
-    scanSegment === "scan" &&
-    gamesIndex + 4 === segments.length
-  ) {
-    return { gameSessionId };
-  }
-
-  return null;
 }
 
 async function readStaffAttendanceScanRequestBody(
