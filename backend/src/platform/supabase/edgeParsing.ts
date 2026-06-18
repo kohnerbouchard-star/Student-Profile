@@ -27,3 +27,37 @@ export function readBalanceNumber(value: number | string): number {
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+export function parseOptionalText(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw invalidActivationSettingsError();
+  }
+
+  const normalizedValue = value.trim();
+
+  return normalizedValue || null;
+}
+
+export function parseOptionalJsonObject(value: unknown): Record<string, unknown> | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (!isRecord(value)) {
+    throw invalidActivationSettingsError();
+  }
+
+  return value;
+}
+
+function invalidActivationSettingsError(): EdgeActivationError {
+  return new EdgeActivationError(
+    "invalid_activation_settings",
+    "Activation settings must use valid JSON object values.",
+    400,
+  );
+}
