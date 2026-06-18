@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  type GameJoinCodeRoute,
+  readGameJoinCodeRoutePath,
+} from "../../../src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts";
+import {
   type InitialBalanceSeedRoute,
   type StaffLedgerAdjustmentRoute,
   type StaffPlayerLedgerHistoryRoute,
@@ -456,10 +460,6 @@ interface PlayerLoginSuccessBody {
     readonly status: "active";
     readonly expiresAt: string;
   };
-}
-
-interface GameJoinCodeRoute {
-  readonly gameSessionId: string;
 }
 
 interface PlayerRosterBody {
@@ -3972,31 +3972,6 @@ function mapLedgerRpcError(message: string): {
         retryable: false,
       };
   }
-}
-
-function readGameJoinCodeRoutePath(pathname: string): GameJoinCodeRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const joinCodeSegment = segments[gamesIndex + 2];
-  const resetSegment = segments[gamesIndex + 3];
-
-  if (
-    gameSessionId &&
-    isUuid(gameSessionId) &&
-    joinCodeSegment === "join-code" &&
-    resetSegment === "reset" &&
-    gamesIndex + 4 === segments.length
-  ) {
-    return { gameSessionId };
-  }
-
-  return null;
 }
 
 async function readPlayerLoginRequestBody(
