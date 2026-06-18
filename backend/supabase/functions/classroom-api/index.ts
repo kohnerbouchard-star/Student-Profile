@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  type PlayerRosterRoute,
+  readPlayerRosterRoutePath,
+} from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
 import {
@@ -525,9 +529,6 @@ interface ResetPlayerAccessCodeSuccessBody {
   };
 }
 
-type PlayerRosterRoute =
-  | {
-      readonly kind: "players";
       readonly gameSessionId: string;
     }
   | {
@@ -4383,53 +4384,6 @@ function normalizeJoinCode(value: string): string {
   }
 
   return normalizedValue;
-}
-
-function readPlayerRosterRoutePath(pathname: string): PlayerRosterRoute | null {
-  const segments = pathname.split("/").filter(Boolean);
-  const gamesIndex = segments.lastIndexOf("games");
-
-  if (gamesIndex < 0) {
-    return null;
-  }
-
-  const gameSessionId = segments[gamesIndex + 1];
-  const playersSegment = segments[gamesIndex + 2];
-
-  if (!gameSessionId || playersSegment !== "players") {
-    return null;
-  }
-
-  if (!isUuid(gameSessionId)) {
-    return null;
-  }
-
-  if (gamesIndex + 3 === segments.length) {
-    return {
-      kind: "players",
-      gameSessionId,
-    };
-  }
-
-  const playerId = segments[gamesIndex + 3];
-  const accessCodeSegment = segments[gamesIndex + 4];
-  const resetSegment = segments[gamesIndex + 5];
-
-  if (
-    playerId &&
-    isUuid(playerId) &&
-    accessCodeSegment === "access-code" &&
-    resetSegment === "reset" &&
-    gamesIndex + 6 === segments.length
-  ) {
-    return {
-      kind: "resetAccessCode",
-      gameSessionId,
-      playerId,
-    };
-  }
-
-  return null;
 }
 
 async function readOwnedGameSession(
