@@ -80,6 +80,9 @@ import {
 import {
   handlePlayerLoginRequest,
 } from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
+import {
+  handlePlayerRosterRequest,
+} from "../../../src/domains/players/api/playerRosterHttpHandler.ts";
 import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
@@ -170,49 +173,9 @@ interface ResetGameJoinCodeSuccessBody {
 
 
 
-interface PlayerRosterBody {
-  readonly ok: true;
-  readonly gameSession: {
-    readonly id: string;
-    readonly name: string;
-    readonly status: string;
-  };
-  readonly players: readonly {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly status: string;
-    readonly hasActiveAccessCode: boolean;
-    readonly createdAt: string;
-    readonly updatedAt: string;
-  }[];
-}
 
-interface PlayerRosterRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label: string | null;
-  readonly status: string;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
 
-interface CreatePlayerRequestBody {
-  readonly displayName: string;
-  readonly rosterLabel: string | null;
-}
 
-interface CreatePlayerSuccessBody {
-  readonly ok: true;
-  readonly player: {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly status: string;
-    readonly createdAt: string;
-    readonly updatedAt: string;
-  };
-}
 
 interface ResetPlayerAccessCodeSuccessBody {
   readonly ok: true;
@@ -317,7 +280,9 @@ Deno.serve(async (request) => {
   const playerRosterRoute = readPlayerRosterRoutePath(url.pathname);
 
   if (playerRosterRoute?.kind === "players") {
-    return handlePlayerRosterRequest(request, playerRosterRoute.gameSessionId);
+    return handlePlayerRosterRequest(request, playerRosterRoute.gameSessionId, {
+      resolveStaffForRequest,
+    });
   }
 
   if (playerRosterRoute?.kind === "resetAccessCode") {
@@ -600,158 +565,6 @@ async function handleResetGameJoinCodeRequest(
 }
 
 
-async function handlePlayerRosterRequest(
-  request: Request,
-  gameSessionId: string,
-): Promise<Response> {
-  if (request.method !== "GET" && request.method !== "POST") {
-    return jsonError(405, {
-      code: "method_not_allowed",
-      message: "Use GET or POST for player roster.",
-      retryable: false,
-    });
-  }
-
-  try {
-    const envResult = readSupabaseEnv();
-
-    if (!envResult.ok) {
-      return jsonError(500, {
-        code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
-        retryable: false,
-      });
-    }
-
-    const staffResult = await resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to manage players.",
-    });
-
-    if (!staffResult.ok) {
-      return jsonError(staffResult.status, staffResult.error);
-    }
-
-    const ownershipResult = await readOwnedGameSession(
-      staffResult.serviceClient,
-      gameSessionId,
-      staffResult.staff.id,
-    );
-
-    if (!ownershipResult.ok) {
-      return jsonError(ownershipResult.status, ownershipResult.error);
-    }
-
-    if (request.method === "POST") {
-      const body = await readCreatePlayerRequestBody(request);
-
-      const createResponse = await staffResult.serviceClient
-        .from("players")
-        .insert({
-          game_session_id: gameSessionId,
-          display_name: body.displayName,
-          roster_label: body.rosterLabel,
-          status: "active",
-        })
-        .select("id,display_name,roster_label,status,created_at,updated_at")
-        .single();
-
-      if (createResponse.error || !createResponse.data?.id) {
-        return jsonError(500, {
-          code: "player_create_failed",
-          message: "Player could not be created.",
-          retryable: false,
-        });
-      }
-
-      const player = createResponse.data;
-
-      return jsonResponse<CreatePlayerSuccessBody>(201, {
-        ok: true,
-        player: {
-          id: player.id,
-          displayName: player.display_name,
-          rosterLabel: player.roster_label ?? null,
-          status: player.status,
-          createdAt: player.created_at,
-          updatedAt: player.updated_at,
-        },
-      });
-    }
-
-    const playersResponse = await staffResult.serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status,created_at,updated_at")
-      .eq("game_session_id", gameSessionId)
-      .order("created_at", { ascending: true });
-
-    if (playersResponse.error) {
-      return jsonError(500, {
-        code: "player_roster_failed",
-        message: "Player roster could not be loaded.",
-        retryable: false,
-      });
-    }
-
-    const players = (playersResponse.data ?? []) as PlayerRosterRow[];
-    const playerIds = players.map((player) => player.id);
-    const activeCredentialPlayerIds = new Set<string>();
-
-    if (playerIds.length > 0) {
-      const credentialResponse = await staffResult.serviceClient
-        .from("player_access_credentials")
-        .select("player_id")
-        .eq("game_session_id", gameSessionId)
-        .eq("status", "active")
-        .in("player_id", playerIds);
-
-      if (credentialResponse.error) {
-        return jsonError(500, {
-          code: "player_roster_failed",
-          message: "Player roster could not be loaded.",
-          retryable: false,
-        });
-      }
-
-      for (const credential of credentialResponse.data ?? []) {
-        if (typeof credential.player_id === "string") {
-          activeCredentialPlayerIds.add(credential.player_id);
-        }
-      }
-    }
-
-    return jsonResponse<PlayerRosterBody>(200, {
-      ok: true,
-      gameSession: {
-        id: ownershipResult.gameSession.id,
-        name: ownershipResult.gameSession.name,
-        status: ownershipResult.gameSession.status,
-      },
-      players: players.map((player) => ({
-        id: player.id,
-        displayName: player.display_name,
-        rosterLabel: player.roster_label ?? null,
-        status: player.status,
-        hasActiveAccessCode: activeCredentialPlayerIds.has(player.id),
-        createdAt: player.created_at,
-        updatedAt: player.updated_at,
-      })),
-    });
-  } catch (error) {
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
-    }
-
-    return jsonError(500, {
-      code: "player_roster_failed",
-      message: "Player roster request failed.",
-      retryable: false,
-    });
-  }
-}
 
 async function handleResetPlayerAccessCodeRequest(
   request: Request,
@@ -1456,38 +1269,6 @@ async function resetGameJoinCode(
 
 
 
-async function readCreatePlayerRequestBody(
-  request: Request,
-): Promise<CreatePlayerRequestBody> {
-  let value: unknown;
-
-  try {
-    value = await request.json();
-  } catch {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  if (!isRecord(value)) {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  return {
-    displayName: parseRequiredText(
-      value.displayName,
-      "player_display_name_required",
-      "displayName is required.",
-    ),
-    rosterLabel: parseOptionalText(value.rosterLabel),
-  };
-}
 
 function generateStudentCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
