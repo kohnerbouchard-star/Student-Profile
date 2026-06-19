@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  EdgeActivationError,
   type EdgeErrorBody,
   jsonError,
   jsonResponse,
@@ -10,11 +9,13 @@ import {
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
-import { sha256Hex } from "../../../src/platform/supabase/edgeCrypto.ts";
 import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import {
   handleStaffBootstrapRequest,
 } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
+import {
+  handleLicensingActivationRequest,
+} from "../../../src/domains/licensing/api/licensingActivationHttpHandler.ts";
 import {
   isRecord,
   normalizeCurrencyCode,
@@ -109,18 +110,6 @@ interface EdgeHealthBody {
   readonly status: "ready";
 }
 
-interface ActivationSuccessBody {
-  readonly ok: true;
-  readonly activation: {
-    readonly gameSessionId: string;
-    readonly entitlementId: string;
-    readonly purchaseCodeId: string;
-    readonly purchaseCodeStatus: string;
-    readonly redeemedCount: number;
-    readonly maxRedemptions: number;
-    readonly activatedAt: string;
-  };
-}
 
 
 
@@ -143,29 +132,8 @@ interface ActivationSuccessBody {
       readonly playerId: string;
     };
 
-interface ActivationRequestBody {
-  readonly purchaseCode: string;
-  readonly gameName: string;
-  readonly difficultyPreset?: string | null;
-  readonly attendanceWindow?: Record<string, unknown> | null;
-  readonly businessMarketWindow?: Record<string, unknown> | null;
-  readonly stockMarketWindow?: Record<string, unknown> | null;
-  readonly newsSchedule?: Record<string, unknown> | null;
-}
 
-interface ActivationRpcRow {
-  readonly game_session_id: string;
-  readonly entitlement_id: string;
-  readonly purchase_code_id: string;
-  readonly purchase_code_status: string;
-  readonly redeemed_count: number;
-  readonly max_redemptions: number;
-  readonly activated_at: string;
-}
 
-interface ParsedRequestBodyResult {
-  readonly body: ActivationRequestBody;
-}
 
 Deno.serve(async (request) => {
   const url = new URL(request.url);
@@ -307,7 +275,10 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/licensing/activate")) {
-    return handleLicensingActivationRequest(request);
+    return handleLicensingActivationRequest(request, {
+      createAuthClient,
+      createServiceClient,
+    });
   }
 
   return jsonError(404, {
@@ -454,156 +425,14 @@ async function resolveStaffForRequest(
 
 
 
-async function handleLicensingActivationRequest(
-  request: Request,
-): Promise<Response> {
-  if (request.method !== "POST") {
-    return jsonError(405, {
-      code: "method_not_allowed",
-      message: "Use POST to activate licensing.",
-      retryable: false,
-    });
-  }
-
-  try {
-    const envResult = readSupabaseEnv();
-
-    if (!envResult.ok) {
-      return jsonError(500, {
-        code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
-        retryable: false,
-      });
-    }
-
-    const authHeader = request.headers.get("authorization");
-    const accessToken = extractBearerToken(authHeader);
-
-    if (!accessToken) {
-      return jsonError(401, {
-        code: "missing_staff_auth_user",
-        message: "A verified Supabase Auth user is required to activate licensing.",
-        retryable: false,
-      });
-    }
-
-    const authClient = createClient(
-      envResult.value.supabaseUrl,
-      envResult.value.supabaseAnonKey,
-    );
-
-    const authUserResult = await authClient.auth.getUser(accessToken);
-    const authUser = authUserResult.data.user;
-
-    if (authUserResult.error || !authUser?.id) {
-      return jsonError(401, {
-        code: "missing_staff_auth_user",
-        message: "A verified Supabase Auth user is required to activate licensing.",
-        retryable: false,
-      });
-    }
-
-    const serviceClient = createClient(
-      envResult.value.supabaseUrl,
-      envResult.value.supabaseServiceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    );
-
-    const parsedBody = await readActivationRequestBody(request);
-    const normalizedPurchaseCode = normalizePurchaseCode(parsedBody.body.purchaseCode);
-    const purchaseCodeHash = await sha256Hex(normalizedPurchaseCode);
-    const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
-
-    const staffResponse = await serviceClient
-      .from("staff_users")
-      .select("id,supabase_auth_user_id,email,display_name")
-      .eq("supabase_auth_user_id", authUser.id)
-      .maybeSingle();
-
-    if (staffResponse.error) {
-      return jsonError(500, {
-        code: "licensing_activation_failed",
-        message: "Purchase-code activation failed.",
-        retryable: false,
-      });
-    }
 
-    if (!staffResponse.data?.id) {
-      return jsonError(403, {
-        code: "staff_not_found",
-        message: "No staff user is linked to the Supabase Auth user.",
-        retryable: false,
-      });
-    }
 
-    const activationResponse = await serviceClient.rpc(
-      "redeem_purchase_code_for_game",
-      {
-        p_staff_user_id: staffResponse.data.id,
-        p_purchase_code_hash: purchaseCodeHash,
-        p_game_name: parsedBody.body.gameName,
-        p_game_settings: buildGameSettings(parsedBody.body),
-        p_request_metadata: {
-          requestId,
-          source: "classroom_api_edge_licensing_activation",
-          supabaseAuthUserId: authUser.id,
-        },
-      },
-    );
 
-    if (activationResponse.error) {
-      const safeError = mapActivationRpcError(activationResponse.error.message);
 
-      return jsonError(safeError.status, {
-        code: safeError.code,
-        message: safeError.message,
-        retryable: safeError.retryable,
-      });
-    }
 
-    const activationRow = readActivationRpcRow(activationResponse.data);
 
-    if (!activationRow) {
-      return jsonError(500, {
-        code: "licensing_activation_failed",
-        message: "Purchase-code activation failed.",
-        retryable: false,
-      });
-    }
 
-    return jsonResponse<ActivationSuccessBody>(200, {
-      ok: true,
-      activation: {
-        gameSessionId: activationRow.game_session_id,
-        entitlementId: activationRow.entitlement_id,
-        purchaseCodeId: activationRow.purchase_code_id,
-        purchaseCodeStatus: activationRow.purchase_code_status,
-        redeemedCount: activationRow.redeemed_count,
-        maxRedemptions: activationRow.max_redemptions,
-        activatedAt: activationRow.activated_at,
-      },
-    });
-  } catch (error) {
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
-    }
 
-    return jsonError(500, {
-      code: "licensing_activation_failed",
-      message: "Purchase-code activation failed.",
-      retryable: false,
-    });
-  }
-}
 
 
 
@@ -636,49 +465,9 @@ async function handleLicensingActivationRequest(
 
 
 
-async function readActivationRequestBody(
-  request: Request,
-): Promise<ParsedRequestBodyResult> {
-  let value: unknown;
 
-  try {
-    value = await request.json();
-  } catch {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
 
-  if (!isRecord(value)) {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
 
-  return {
-    body: {
-      purchaseCode: parseRequiredText(
-        value.purchaseCode,
-        "purchase_code_required",
-        "purchaseCode is required.",
-      ),
-      gameName: parseRequiredText(
-        value.gameName,
-        "game_name_required",
-        "gameName is required.",
-      ),
-      difficultyPreset: parseOptionalText(value.difficultyPreset),
-      attendanceWindow: parseOptionalJsonObject(value.attendanceWindow),
-      businessMarketWindow: parseOptionalJsonObject(value.businessMarketWindow),
-      stockMarketWindow: parseOptionalJsonObject(value.stockMarketWindow),
-      newsSchedule: parseOptionalJsonObject(value.newsSchedule),
-    },
-  };
-}
 
 
 
@@ -686,92 +475,7 @@ async function readActivationRequestBody(
 
 
 
-
-
-
-
-
-
-function normalizePurchaseCode(value: string): string {
-  const normalizedValue = value
-    .trim()
-    .replace(/\s+/g, "")
-    .toUpperCase();
-
-  if (!normalizedValue) {
-    throw new EdgeActivationError(
-      "purchase_code_required",
-      "purchaseCode is required.",
-      400,
-    );
-  }
-
-  if (!/^[A-Z0-9-]+$/.test(normalizedValue)) {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "purchaseCode may only contain letters, numbers, and hyphens.",
-      400,
-    );
-  }
-
-  return normalizedValue;
-}
-
-
-
-
-function buildGameSettings(
-  body: ActivationRequestBody,
-): Record<string, unknown> {
-  return {
-    difficultyPreset: body.difficultyPreset ?? "standard",
-    attendanceWindow: body.attendanceWindow ?? {},
-    businessMarketWindow: body.businessMarketWindow ?? {},
-    stockMarketWindow: body.stockMarketWindow ?? {},
-    newsSchedule: body.newsSchedule ?? {},
-  };
-}
-
-function readActivationRpcRow(value: unknown): ActivationRpcRow | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const row = value[0];
-
-  if (!isRecord(row)) {
-    return null;
-  }
-
-  if (
-    typeof row.game_session_id !== "string" ||
-    typeof row.entitlement_id !== "string" ||
-    typeof row.purchase_code_id !== "string" ||
-    typeof row.purchase_code_status !== "string" ||
-    typeof row.redeemed_count !== "number" ||
-    typeof row.max_redemptions !== "number" ||
-    typeof row.activated_at !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    game_session_id: row.game_session_id,
-    entitlement_id: row.entitlement_id,
-    purchase_code_id: row.purchase_code_id,
-    purchase_code_status: row.purchase_code_status,
-    redeemed_count: row.redeemed_count,
-    max_redemptions: row.max_redemptions,
-    activated_at: row.activated_at,
-  };
-}
-
-function mapActivationRpcError(message: string): {
-  readonly code: string;
-  readonly message: string;
-  readonly status: number;
-  readonly retryable: boolean;
-} {
+ {
   switch (message.trim().toUpperCase()) {
     case "STAFF_USER_REQUIRED":
     case "PURCHASE_CODE_HASH_REQUIRED":
