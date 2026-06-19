@@ -12,9 +12,80 @@ export interface SupabaseEnv {
   readonly supabaseServiceRoleKey: string;
 }
 
-// The Edge function does not use generated Supabase DB types yet.
-// Keep the service-role client untyped in this Deno shim and validate rows manually.
-export type EdgeSupabaseClient = any;
+interface EdgeSupabaseQueryError {
+  readonly message: string;
+  readonly code?: string;
+  readonly details?: string | null;
+  readonly hint?: string | null;
+}
+
+interface EdgeSupabaseQueryResponse<T = unknown> {
+  readonly data: T | null;
+  readonly error: EdgeSupabaseQueryError | null;
+  readonly count?: number | null;
+  readonly status?: number;
+  readonly statusText?: string;
+}
+
+interface EdgeSupabaseAuthUser {
+  readonly id: string;
+  readonly email?: string | null;
+}
+
+interface EdgeSupabaseAuthResponse {
+  readonly data: {
+    readonly user: EdgeSupabaseAuthUser | null;
+  };
+  readonly error: EdgeSupabaseQueryError | null;
+}
+
+interface EdgeSupabaseAuthClient {
+  getUser(accessToken: string): PromiseLike<EdgeSupabaseAuthResponse>;
+}
+
+type EdgeSupabaseRow = Record<string, string>;
+
+interface EdgeSupabaseSelectBuilder<Row = EdgeSupabaseRow> {
+  maybeSingle(): PromiseLike<EdgeSupabaseQueryResponse<Row | null>>;
+  single(): PromiseLike<EdgeSupabaseQueryResponse<Row>>;
+}
+
+interface EdgeSupabaseFilterBuilder<Row = EdgeSupabaseRow>
+  extends EdgeSupabaseSelectBuilder<Row>,
+    PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
+  eq(column: string, value: unknown): EdgeSupabaseFilterBuilder<Row>;
+  in(column: string, values: readonly unknown[]): EdgeSupabaseFilterBuilder<Row>;
+  limit(count: number): EdgeSupabaseFilterBuilder<Row>;
+  order(
+    column: string,
+    options?: { readonly ascending?: boolean },
+  ): EdgeSupabaseFilterBuilder<Row>;
+}
+
+interface EdgeSupabaseInsertBuilder<Row = EdgeSupabaseRow> {
+  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
+}
+
+interface EdgeSupabaseUpdateBuilder<Row = EdgeSupabaseRow>
+  extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
+  eq(column: string, value: unknown): EdgeSupabaseUpdateBuilder<Row>;
+  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
+}
+
+interface EdgeSupabaseQueryBuilder<Row = EdgeSupabaseRow> {
+  select(columns: string): EdgeSupabaseFilterBuilder<Row>;
+  insert(values: unknown): EdgeSupabaseInsertBuilder<Row>;
+  update(values: unknown): EdgeSupabaseUpdateBuilder<Row>;
+}
+
+export interface EdgeSupabaseClient {
+  readonly auth: EdgeSupabaseAuthClient;
+  from(tableName: string): EdgeSupabaseQueryBuilder;
+  rpc<Data = unknown>(
+    functionName: string,
+    args?: unknown,
+  ): PromiseLike<EdgeSupabaseQueryResponse<Data>>;
+}
 
 export function readSupabaseEnv():
   | { readonly ok: true; readonly value: SupabaseEnv }

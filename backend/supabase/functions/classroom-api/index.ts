@@ -240,7 +240,10 @@ Deno.serve(async (request) => {
 
 
 function createAuthClient(env: SupabaseEnv): EdgeSupabaseClient {
-  return createClient(env.supabaseUrl, env.supabaseAnonKey);
+  return createClient(
+    env.supabaseUrl,
+    env.supabaseAnonKey,
+  ) as unknown as EdgeSupabaseClient;
 }
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
@@ -249,7 +252,7 @@ function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
       autoRefreshToken: false,
       persistSession: false,
     },
-  });
+  }) as unknown as EdgeSupabaseClient;
 }
 
 interface StaffRequestResolution {
@@ -290,7 +293,7 @@ async function resolveStaffForRequest(
     };
   }
 
-  const authClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+  const authClient = createAuthClient(env);
   const authUserResult = await authClient.auth.getUser(accessToken);
   const authUser = authUserResult.data.user;
 
@@ -306,12 +309,7 @@ async function resolveStaffForRequest(
     };
   }
 
-  const serviceClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  const serviceClient = createServiceClient(env);
 
   const staffResponse = await serviceClient
     .from("staff_users")
@@ -331,7 +329,7 @@ async function resolveStaffForRequest(
     };
   }
 
-  const staff = staffResponse.data;
+  const staff = staffResponse.data as StaffRequestResolution["staff"] | null;
 
   if (!staff?.id) {
     return {

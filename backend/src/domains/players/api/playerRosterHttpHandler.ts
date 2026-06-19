@@ -68,6 +68,10 @@ interface PlayerRosterRow {
   readonly updated_at: string;
 }
 
+interface ActivePlayerCredentialRow {
+  readonly player_id?: unknown;
+}
+
 interface CreatePlayerRequestBody {
   readonly displayName: string;
   readonly rosterLabel: string | null;
@@ -198,7 +202,9 @@ export async function handlePlayerRosterRequest(
         });
       }
 
-      for (const credential of credentialResponse.data ?? []) {
+      const credentials = (credentialResponse.data ?? []) as ActivePlayerCredentialRow[];
+
+      for (const credential of credentials) {
         if (typeof credential.player_id === "string") {
           activeCredentialPlayerIds.add(credential.player_id);
         }
