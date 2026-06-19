@@ -63,6 +63,7 @@ function renderAdminDashboard() {
   const newsCount = (state.news || []).length;
   const activePlayerCount = adminPlayerRows.filter((player) => player.status === "Active" && player.name).length;
   const sectionMeta = adminSectionMeta(activeAdminSection);
+  const staffSession = getAdminStaffSession();
 
   el.innerHTML = `
     <div class="admin-page">
@@ -92,11 +93,11 @@ function renderAdminDashboard() {
               <h2>${sanitize(sectionMeta.label)}</h2>
               <p>${sanitize(sectionMeta.description)}</p>
             </div>
-            <span class="badge warn">Prototype</span>
+            <span class="badge ${staffSession ? "good" : "warn"}">${staffSession ? "Staff loaded" : "Prototype"}</span>
           </section>
 
           <div class="admin-section" data-current-admin-section="${sanitize(activeAdminSection)}">
-            ${renderAdminSection(activeAdminSection, { storeCount, marketCount, portfolioCount, forecastCount, newsCount, activePlayerCount })}
+            ${renderAdminSection(activeAdminSection, { storeCount, marketCount, portfolioCount, forecastCount, newsCount, activePlayerCount, staffSession })}
           </div>
         </div>
       </div>
@@ -141,7 +142,7 @@ function renderAdminSection(section, counts) {
   return renderDashboardSection(counts);
 }
 
-function renderDashboardSection({ storeCount, marketCount, forecastCount, newsCount, activePlayerCount }) {
+function renderDashboardSection({ storeCount, marketCount, forecastCount, newsCount, activePlayerCount, staffSession }) {
   return `
     <div class="grid cols-4 admin-metrics">
       ${metric("Active Players", activePlayerCount, "Local roster draft")}
@@ -169,11 +170,40 @@ function renderDashboardSection({ storeCount, marketCount, forecastCount, newsCo
         <span class="badge warn">Frontend only</span>
       </div>
       <div class="admin-status-list">
+        ${renderStaffSessionStatus(staffSession)}
         ${adminStatus("Admin actions", "Disabled until backend permissions exist", "warn")}
         ${adminStatus("News rows", String(newsCount), "good")}
         ${adminStatus("Student data", "Read-only snapshot in this prototype", "warn")}
       </div>
     </section>`;
+}
+
+function getAdminStaffSession() {
+  return state.staffSession || currentSession?.staffSession || null;
+}
+
+function renderStaffSessionStatus(staffSession) {
+  if (!staffSession) return "";
+
+  const selectedSession = getSelectedAdminGameSession(staffSession);
+
+  return `
+        ${adminStatus("Staff", formatStaffSessionLabel(staffSession), "good")}
+        ${adminStatus("Active game sessions", String((staffSession.activeGameSessions || []).length), "good")}
+        ${adminStatus("Selected session", selectedSession?.name || selectedSession?.id || "No active session selected", selectedSession ? "good" : "warn")}`;
+}
+
+function formatStaffSessionLabel(staffSession) {
+  const name = staffSession.staffDisplayName || "Staff user";
+  const email = staffSession.staffEmail || "";
+
+  return email ? `${name} (${email})` : name;
+}
+
+function getSelectedAdminGameSession(staffSession) {
+  if (!staffSession?.selectedGameSessionId) return null;
+
+  return (staffSession.activeGameSessions || []).find((session) => session.id === staffSession.selectedGameSessionId) || null;
 }
 
 function renderPlayersSection() {
@@ -419,13 +449,14 @@ function bindAttendanceScannerControls(root) {
 }
 
 function renderStoreSection() {
+  // Store CRUD should wait for real staff bootstrap and game-session selection.
   return `
     <section class="card admin-panel">
       <div class="card-title-row">
         <h2 class="card-title">Store Inventory</h2>
         <span class="badge warn">Local draft</span>
       </div>
-      <p class="help-text">Edit item names, descriptions, stock counts, and prices. Publishing stays disabled until backend store admin support exists.</p>
+      <p class="help-text">Edit item names, descriptions, stock counts, and prices. Publishing stays disabled until staff bootstrap and game-session selection are wired.</p>
       <div class="admin-player-table-wrap">
         <table class="admin-store-table">
           <thead>

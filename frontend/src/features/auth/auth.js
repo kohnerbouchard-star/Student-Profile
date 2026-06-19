@@ -3,7 +3,7 @@ window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.auth = window.Econovaria.features.auth || {};
 
 const ADMIN_DEMO_CODE = "1234";
-// Temporarily disabled while licensed teacher/admin auth is redesigned.
+// Staff bootstrap is available; token acquisition is still pending.
 const ADMIN_LOGIN_ENABLED = false;
 let loginMode = "student";
 
@@ -174,6 +174,82 @@ function openAdminPrototype(accessCode, input) {
   showGlobalStatus("ok", "Admin prototype opened. Backend admin actions are not wired yet.");
 }
 
+async function bootstrapStaffAdminSession(bearerToken) {
+  const result = await callStaffBootstrapApi(bearerToken);
+
+  if (!result || result.ok !== true) {
+    return result || {
+      ok: false,
+      status: 0,
+      code: "staff_bootstrap_failed",
+      message: "Staff bootstrap failed."
+    };
+  }
+
+  const staffSession = createStaffSessionFromBootstrap(result);
+
+  currentSession = {
+    role: "ADMIN",
+    token: String(bearerToken || "").replace(/^Bearer\s+/i, "").trim(),
+    permissions: PERMISSION_SETS.ADMIN.actions,
+    staffSession
+  };
+
+  state = Object.assign(emptyState(), {
+    staffSession,
+    profile: createAdminProfileFromStaffSession(staffSession)
+  });
+
+  return {
+    ok: true,
+    staffSession,
+    staff: result.staff,
+    activeGameSessions: result.activeGameSessions || []
+  };
+}
+
+function createStaffSessionFromBootstrap(result) {
+  const staff = result.staff || {};
+  const activeGameSessions = Array.isArray(result.activeGameSessions)
+    ? result.activeGameSessions.map(normalizeStaffGameSession).filter((session) => session.id)
+    : [];
+  const selectedGameSessionId = activeGameSessions[0]?.id || null;
+
+  return {
+    staffId: String(staff.id || ""),
+    staffEmail: staff.email || "",
+    staffDisplayName: staff.displayName || staff.email || "Teacher Console",
+    activeGameSessions,
+    selectedGameSessionId
+  };
+}
+
+function normalizeStaffGameSession(session) {
+  return {
+    id: String(session?.id || ""),
+    name: session?.name || "Active game session",
+    status: session?.status || "active",
+    createdAt: session?.createdAt || "",
+    updatedAt: session?.updatedAt || ""
+  };
+}
+
+function createAdminProfileFromStaffSession(staffSession) {
+  const selectedSession = getSelectedStaffGameSession(staffSession);
+
+  return {
+    name: staffSession.staffDisplayName || "Teacher Console",
+    grade: "Admin",
+    homeroom: selectedSession?.name || "No active session"
+  };
+}
+
+function getSelectedStaffGameSession(staffSession) {
+  if (!staffSession?.selectedGameSessionId) return null;
+
+  return (staffSession.activeGameSessions || []).find((session) => session.id === staffSession.selectedGameSessionId) || null;
+}
+
 function showApp(defaultView = "profile") {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("appShell").classList.remove("hidden");
@@ -303,6 +379,7 @@ Object.assign(window.Econovaria.features.auth, {
   updateNavigationForRole,
   logout,
   refreshDashboard,
+  bootstrapStaffAdminSession,
   showLogin,
   showLoginError,
   clearLoginError
