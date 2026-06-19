@@ -41,3 +41,6 @@ jobs:
 
       - name: Run backend typecheck
         run: npm run typecheck:all
+
+      - name: Run backend smoke tests
+        run: npm run smoke
