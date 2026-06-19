@@ -86,7 +86,6 @@ import {
 import {
   handleResetPlayerAccessCodeRequest,
 } from "../../../src/domains/players/api/playerAccessCodeResetHttpHandler.ts";
-import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
 import {
@@ -1067,62 +1066,6 @@ async function resetGameJoinCode(
   };
 }
 
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const sessionToken = generateSessionToken();
-    const sessionTokenHash = await sha256Hex(sessionToken);
-    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
-
-    const sessionResponse = await serviceClient
-      .from("player_sessions")
-      .insert({
-        game_session_id: gameSessionId,
-        player_id: playerId,
-        session_token_hash: sessionTokenHash,
-        status: "active",
-        expires_at: expiresAt,
-      })
-      .select("expires_at")
-      .single();
-
-    if (!sessionResponse.error && sessionResponse.data?.expires_at) {
-      return {
-        ok: true,
-        sessionToken,
-        expiresAt: sessionResponse.data.expires_at,
-      };
-    }
-
-    const message = sessionResponse.error?.message?.toLowerCase() ?? "";
-
-    if (!message.includes("duplicate") && !message.includes("unique")) {
-      return {
-        ok: false,
-        status: 500,
-        error: {
-          code: "player_login_failed",
-          message: "Player login failed.",
-          retryable: false,
-        },
-      };
-    }
-  }
-
-  return {
-    ok: false,
-    status: 409,
-    error: {
-      code: "player_session_generation_conflict",
-      message: "A unique player session could not be generated.",
-      retryable: true,
-    },
-  };
-}
 
 
 
@@ -1130,60 +1073,6 @@ async function resetGameJoinCode(
 
 
 
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const studentCode = generateStudentCode();
-    const credentialHash = await sha256Hex(normalizeStudentCode(studentCode));
-
-    const credentialResponse = await serviceClient
-      .from("player_access_credentials")
-      .insert({
-        game_session_id: gameSessionId,
-        player_id: playerId,
-        normalized_student_code_hash: credentialHash,
-        status: "active",
-      })
-      .select("created_at")
-      .single();
-
-    if (!credentialResponse.error && credentialResponse.data?.created_at) {
-      return {
-        ok: true,
-        studentCode,
-        createdAt: credentialResponse.data.created_at,
-      };
-    }
-
-    const message = credentialResponse.error?.message?.toLowerCase() ?? "";
-
-    if (!message.includes("duplicate") && !message.includes("unique")) {
-      return {
-        ok: false,
-        status: 500,
-        error: {
-          code: "access_code_reset_failed",
-          message: "Player access code could not be reset.",
-          retryable: false,
-        },
-      };
-    }
-  }
-
-  return {
-    ok: false,
-    status: 409,
-    error: {
-      code: "access_code_generation_conflict",
-      message: "A unique player access code could not be generated.",
-      retryable: true,
-    },
-  };
-}
 
 
 
