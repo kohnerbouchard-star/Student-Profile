@@ -31,6 +31,7 @@ import {
   type GameJoinCodeRoute,
   readGameJoinCodeRoutePath,
 } from "../../../src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts";
+import { normalizeJoinCode } from "../../../src/domains/game-sessions/api/gameJoinCodeHttpHelpers.ts";
 import {
   type InitialBalanceSeedRoute,
   type StaffLedgerAdjustmentRoute,
@@ -76,6 +77,9 @@ import {
 import {
   handlePlayerSessionBootstrapRequest,
 } from "../../../src/domains/players/api/playerSessionBootstrapHttpHandler.ts";
+import {
+  handlePlayerLoginRequest,
+} from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
 import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
@@ -164,30 +168,7 @@ interface ResetGameJoinCodeSuccessBody {
   };
 }
 
-interface PlayerLoginRequestBody {
-  readonly gameJoinCode: string;
-  readonly studentCode: string;
-}
 
-interface PlayerLoginSuccessBody {
-  readonly ok: true;
-  readonly gameSession: {
-    readonly id: string;
-    readonly name: string;
-    readonly status: string;
-  };
-  readonly player: {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly status: string;
-  };
-  readonly session: {
-    readonly token: string;
-    readonly status: "active";
-    readonly expiresAt: string;
-  };
-}
 
 interface PlayerRosterBody {
   readonly ok: true;
@@ -308,7 +289,9 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/login")) {
-    return handlePlayerLoginRequest(request);
+    return handlePlayerLoginRequest(request, {
+      createServiceClient,
+    });
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
@@ -616,165 +599,6 @@ async function handleResetGameJoinCodeRequest(
   }
 }
 
-async function handlePlayerLoginRequest(request: Request): Promise<Response> {
-  if (request.method !== "POST") {
-    return jsonError(405, {
-      code: "method_not_allowed",
-      message: "Use POST for player login.",
-      retryable: false,
-    });
-  }
-
-  try {
-    const envResult = readSupabaseEnv();
-
-    if (!envResult.ok) {
-      return jsonError(500, {
-        code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
-        retryable: false,
-      });
-    }
-
-    const body = await readPlayerLoginRequestBody(request);
-    const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(body.gameJoinCode));
-    const studentCodeHash = await sha256Hex(normalizeStudentCode(body.studentCode));
-
-    const serviceClient = createClient(
-      envResult.value.supabaseUrl,
-      envResult.value.supabaseServiceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    );
-
-    const gameResponse = await serviceClient
-      .from("game_sessions")
-      .select("id,name,status,game_join_code_status")
-      .eq("game_join_code_hash", gameJoinCodeHash)
-      .eq("game_join_code_status", "active")
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (gameResponse.error) {
-      return jsonError(500, {
-        code: "player_login_failed",
-        message: "Player login failed.",
-        retryable: false,
-      });
-    }
-
-    const gameSession = gameResponse.data as {
-      readonly id: string;
-      readonly name: string;
-      readonly status: string;
-      readonly game_join_code_status: string;
-    } | null;
-
-    if (!gameSession?.id) {
-      return invalidPlayerLoginResponse();
-    }
-
-    const credentialResponse = await serviceClient
-      .from("player_access_credentials")
-      .select("id,player_id,status")
-      .eq("game_session_id", gameSession.id)
-      .eq("normalized_student_code_hash", studentCodeHash)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (credentialResponse.error) {
-      return jsonError(500, {
-        code: "player_login_failed",
-        message: "Player login failed.",
-        retryable: false,
-      });
-    }
-
-    const credential = credentialResponse.data as {
-      readonly id: string;
-      readonly player_id: string;
-      readonly status: string;
-    } | null;
-
-    if (!credential?.player_id) {
-      return invalidPlayerLoginResponse();
-    }
-
-    const playerResponse = await serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status")
-      .eq("game_session_id", gameSession.id)
-      .eq("id", credential.player_id)
-      .maybeSingle();
-
-    if (playerResponse.error) {
-      return jsonError(500, {
-        code: "player_login_failed",
-        message: "Player login failed.",
-        retryable: false,
-      });
-    }
-
-    const player = playerResponse.data as {
-      readonly id: string;
-      readonly display_name: string;
-      readonly roster_label: string | null;
-      readonly status: string;
-    } | null;
-
-    if (!player?.id || player.status !== "active") {
-      return invalidPlayerLoginResponse();
-    }
-
-    const sessionResult = await createPlayerSession(
-      serviceClient,
-      gameSession.id,
-      player.id,
-    );
-
-    if (!sessionResult.ok) {
-      return jsonError(sessionResult.status, sessionResult.error);
-    }
-
-    return jsonResponse<PlayerLoginSuccessBody>(200, {
-      ok: true,
-      gameSession: {
-        id: gameSession.id,
-        name: gameSession.name,
-        status: gameSession.status,
-      },
-      player: {
-        id: player.id,
-        displayName: player.display_name,
-        rosterLabel: player.roster_label ?? null,
-        status: player.status,
-      },
-      session: {
-        token: sessionResult.sessionToken,
-        status: "active",
-        expiresAt: sessionResult.expiresAt,
-      },
-    });
-  } catch (error) {
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
-    }
-
-    return jsonError(500, {
-      code: "player_login_failed",
-      message: "Player login failed.",
-      retryable: false,
-    });
-  }
-}
 
 async function handlePlayerRosterRequest(
   request: Request,
@@ -1487,61 +1311,15 @@ async function handleLicensingActivationRequest(
 
 
 
-async function readPlayerLoginRequestBody(
-  request: Request,
-): Promise<PlayerLoginRequestBody> {
-  let value: unknown;
-
-  try {
-    value = await request.json();
-  } catch {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  if (!isRecord(value)) {
-    throw new EdgeActivationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  return {
-    gameJoinCode: parseRequiredText(
-      value.gameJoinCode,
-      "game_join_code_required",
-      "gameJoinCode is required.",
-    ),
-    studentCode: parseRequiredText(
-      value.studentCode,
-      "student_code_required",
-      "studentCode is required.",
-    ),
-  };
-}
 
 
 
 
-function invalidPlayerLoginResponse(): Response {
-  return jsonError(401, {
-    code: "invalid_player_login",
-    message: "Game join code or student code is invalid.",
-    retryable: false,
-  });
-}
 
 function generateGameJoinCode(): string {
   return `ECO-${generateCompactCode(6)}`;
 }
 
-function generateSessionToken(): string {
-  return `ps_${generateCompactCode(32).toLowerCase()}`;
-}
 
 function generateCompactCode(length: number): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -1617,16 +1395,6 @@ async function resetGameJoinCode(
   };
 }
 
-async function createPlayerSession(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  playerId: string,
-): Promise<
-  | {
-      readonly ok: true;
-      readonly sessionToken: string;
-      readonly expiresAt: string;
-    }
   | {
       readonly ok: false;
       readonly status: number;
@@ -1684,30 +1452,6 @@ async function createPlayerSession(
   };
 }
 
-function normalizeJoinCode(value: string): string {
-  const normalizedValue = value
-    .trim()
-    .replace(/\s+/g, "")
-    .toUpperCase();
-
-  if (!normalizedValue) {
-    throw new EdgeActivationError(
-      "game_join_code_required",
-      "gameJoinCode is required.",
-      400,
-    );
-  }
-
-  if (!/^[A-Z0-9-]+$/.test(normalizedValue)) {
-    throw new EdgeActivationError(
-      "invalid_game_join_code",
-      "gameJoinCode may only contain letters, numbers, and hyphens.",
-      400,
-    );
-  }
-
-  return normalizedValue;
-}
 
 
 
