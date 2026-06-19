@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:edge": "deno check --no-lock supabase/functions/classroom-api/index.ts",
+    "typecheck:all": "npm run typecheck && npm run typecheck:edge"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
