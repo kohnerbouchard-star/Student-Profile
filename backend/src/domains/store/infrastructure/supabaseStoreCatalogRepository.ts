@@ -8,7 +8,53 @@ import type {
   StoreCatalogRepository,
 } from "./storeCatalogRepository.ts";
 
-type SupabaseStoreCatalogClient = any;
+interface SupabaseStoreCatalogQueryError {
+  readonly message: string;
+  readonly code?: string;
+  readonly details?: string | null;
+  readonly hint?: string | null;
+}
+
+interface SupabaseStoreCatalogQueryResponse<T = unknown> {
+  readonly data: T | null;
+  readonly error: SupabaseStoreCatalogQueryError | null;
+  readonly count?: number | null;
+  readonly status?: number;
+  readonly statusText?: string;
+}
+
+interface SupabaseStoreCatalogClient {
+  from(tableName: "store_items"): SupabaseStoreCatalogQueryBuilder;
+}
+
+interface SupabaseStoreCatalogQueryBuilder {
+  select(columns: string): SupabaseStoreCatalogFilterBuilder;
+  insert(values: unknown): SupabaseStoreCatalogInsertBuilder;
+  update(values: unknown): SupabaseStoreCatalogUpdateBuilder;
+}
+
+interface SupabaseStoreCatalogFilterBuilder
+  extends PromiseLike<SupabaseStoreCatalogQueryResponse<unknown[]>> {
+  eq(column: string, value: unknown): SupabaseStoreCatalogFilterBuilder;
+  order(
+    column: string,
+    options?: { readonly ascending?: boolean },
+  ): SupabaseStoreCatalogFilterBuilder;
+}
+
+interface SupabaseStoreCatalogInsertBuilder {
+  select(columns: string): SupabaseStoreCatalogSelectBuilder;
+}
+
+interface SupabaseStoreCatalogUpdateBuilder {
+  eq(column: string, value: unknown): SupabaseStoreCatalogUpdateBuilder;
+  select(columns: string): SupabaseStoreCatalogSelectBuilder;
+}
+
+interface SupabaseStoreCatalogSelectBuilder {
+  maybeSingle(): PromiseLike<SupabaseStoreCatalogQueryResponse<unknown>>;
+  single(): PromiseLike<SupabaseStoreCatalogQueryResponse<unknown>>;
+}
 
 const STORE_ITEM_SELECT =
   "id,game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order,created_at,updated_at";
