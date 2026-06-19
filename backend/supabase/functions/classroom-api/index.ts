@@ -266,4 +266,88 @@ interface StaffRequestResolution {
 async function resolveStaffForRequest(
   request: Request,
   env: SupabaseEnv,
-  options: { readonly missingMessage: string }
+  options: { readonly missingMessage: string },
+): Promise<
+  | StaffRequestResolution
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly error: EdgeErrorBody["error"];
+    }
+> {
+  const authHeader = request.headers.get("authorization");
+  const accessToken = extractBearerToken(authHeader);
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_staff_auth_user",
+        message: options.missingMessage,
+        retryable: false,
+      },
+    };
+  }
+
+  const authClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+  const authUserResult = await authClient.auth.getUser(accessToken);
+  const authUser = authUserResult.data.user;
+
+  if (authUserResult.error || !authUser?.id) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_staff_auth_user",
+        message: options.missingMessage,
+        retryable: false,
+      },
+    };
+  }
+
+  const serviceClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  const staffResponse = await serviceClient
+    .from("staff_users")
+    .select("id,supabase_auth_user_id,email,display_name")
+    .eq("supabase_auth_user_id", authUser.id)
+    .maybeSingle();
+
+  if (staffResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "staff_lookup_failed",
+        message: "Staff lookup failed.",
+        retryable: false,
+      },
+    };
+  }
+
+  const staff = staffResponse.data;
+
+  if (!staff?.id) {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "staff_not_found",
+        message: "No staff user is linked to the Supabase Auth user.",
+        retryable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    staff,
+    serviceClient,
+  };
+}

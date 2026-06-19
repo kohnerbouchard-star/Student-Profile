@@ -31,8 +31,13 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Install backend dependencies
         run: npm ci
 
       - name: Run backend typecheck
-        run: npm run typecheck
+        run: npm run typecheck:all
