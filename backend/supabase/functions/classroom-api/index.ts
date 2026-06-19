@@ -17,30 +17,12 @@ import {
   handleLicensingActivationRequest,
 } from "../../../src/domains/licensing/api/licensingActivationHttpHandler.ts";
 import {
-  isRecord,
-  normalizeCurrencyCode,
-  parseOptionalJsonObject,
-  parseOptionalText,
-  parseRequiredText,
-  readBalanceNumber,
-} from "../../../src/platform/supabase/edgeParsing.ts";
-import {
-  readLocalDateForTimeZone,
-  readLocalMinutesForTimeZone,
-  readOptionalNonNegativeAmount,
-  readOptionalTimeMinutes,
-} from "../../../src/platform/supabase/edgeTime.ts";
-import {
-  type GameJoinCodeRoute,
   readGameJoinCodeRoutePath,
 } from "../../../src/domains/game-sessions/api/gameJoinCodeRoutePaths.ts";
 import {
   handleResetGameJoinCodeRequest,
 } from "../../../src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts";
 import {
-  type InitialBalanceSeedRoute,
-  type StaffLedgerAdjustmentRoute,
-  type StaffPlayerLedgerHistoryRoute,
   readInitialBalanceSeedRoutePath,
   readStaffLedgerAdjustmentRoutePath,
   readStaffPlayerLedgerHistoryRoutePath,
@@ -58,14 +40,9 @@ import {
   handleInitialBalanceSeedRequest,
 } from "../../../src/domains/economy/api/initialBalanceSeedHttpHandler.ts";
 import {
-  type StaffAttendanceDailyRoute,
-  type StaffAttendanceScanRoute,
   readStaffAttendanceDailyRoutePath,
   readStaffAttendanceScanRoutePath,
 } from "../../../src/domains/attendance/api/attendanceRoutePaths.ts";
-import {
-  readAttendanceDateQuery,
-} from "../../../src/domains/attendance/api/attendanceHttpHelpers.ts";
 import {
   handleStaffAttendanceDailyRequest,
 } from "../../../src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts";
@@ -76,7 +53,6 @@ import {
   handlePlayerAttendanceClockInRequest,
 } from "../../../src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts";
 import {
-  type PlayerRosterRoute,
   readPlayerRosterRoutePath,
 } from "../../../src/domains/players/api/playerRosterRoutePaths.ts";
 import {
@@ -91,13 +67,11 @@ import {
 import {
   handleResetPlayerAccessCodeRequest,
 } from "../../../src/domains/players/api/playerAccessCodeResetHttpHandler.ts";
-import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
 import {
   handleGameSettingsRequest,
 } from "../../../src/domains/game-sessions/api/gameSettingsHttpHandler.ts";
 import {
-  type StaffStoreCatalogRoute,
   readStaffStoreCatalogRoutePath,
 } from "../../../src/domains/store/api/storeCatalogRoutePaths.ts";
 import {
@@ -109,30 +83,6 @@ interface EdgeHealthBody {
   readonly service: "classroom-api";
   readonly status: "ready";
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      readonly gameSessionId: string;
-    }
-  | {
-      readonly kind: "resetAccessCode";
-      readonly gameSessionId: string;
-      readonly playerId: string;
-    };
-
-
 
 
 Deno.serve(async (request) => {
@@ -316,231 +266,4 @@ interface StaffRequestResolution {
 async function resolveStaffForRequest(
   request: Request,
   env: SupabaseEnv,
-  options: { readonly missingMessage: string },
-): Promise<
-  | StaffRequestResolution
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  const authHeader = request.headers.get("authorization");
-  const accessToken = extractBearerToken(authHeader);
-
-  if (!accessToken) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "missing_staff_auth_user",
-        message: options.missingMessage,
-        retryable: false,
-      },
-    };
-  }
-
-  const authClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
-  const authUserResult = await authClient.auth.getUser(accessToken);
-  const authUser = authUserResult.data.user;
-
-  if (authUserResult.error || !authUser?.id) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "missing_staff_auth_user",
-        message: options.missingMessage,
-        retryable: false,
-      },
-    };
-  }
-
-  const serviceClient = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
-  const staffResponse = await serviceClient
-    .from("staff_users")
-    .select("id,supabase_auth_user_id,email,display_name")
-    .eq("supabase_auth_user_id", authUser.id)
-    .maybeSingle();
-
-  if (staffResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "staff_lookup_failed",
-        message: "Staff lookup failed.",
-        retryable: false,
-      },
-    };
-  }
-
-  const staff = staffResponse.data;
-
-  if (!staff?.id) {
-    return {
-      ok: false,
-      status: 403,
-      error: {
-        code: "staff_not_found",
-        message: "No staff user is linked to the Supabase Auth user.",
-        retryable: false,
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    staff,
-    serviceClient,
-  };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- {
-  switch (message.trim().toUpperCase()) {
-    case "STAFF_USER_REQUIRED":
-    case "PURCHASE_CODE_HASH_REQUIRED":
-    case "GAME_NAME_REQUIRED":
-      return {
-        code: "invalid_redemption_input",
-        message: "Activation request is missing required information.",
-        status: 400,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_NOT_FOUND":
-      return {
-        code: "purchase_code_not_found",
-        message: "Purchase code was not found.",
-        status: 404,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_EXHAUSTED":
-      return {
-        code: "purchase_code_exhausted",
-        message: "Purchase code has already been fully redeemed.",
-        status: 409,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_EXPIRED":
-      return {
-        code: "purchase_code_expired",
-        message: "Purchase code has expired.",
-        status: 410,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_REVOKED":
-      return {
-        code: "purchase_code_revoked",
-        message: "Purchase code has been revoked.",
-        status: 403,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_NOT_ACTIVE":
-      return {
-        code: "purchase_code_not_active",
-        message: "Purchase code is not active.",
-        status: 409,
-        retryable: false,
-      };
-
-    case "PURCHASE_CODE_REDEMPTION_CONFLICT":
-      return {
-        code: "purchase_code_redemption_conflict",
-        message: "Purchase code redemption conflicted with another activation attempt.",
-        status: 409,
-        retryable: true,
-      };
-
-    default:
-      return {
-        code: "licensing_activation_failed",
-        message: "Purchase-code activation failed.",
-        status: 500,
-        retryable: false,
-      };
-  }
-}
+  options: { readonly missingMessage: string }
