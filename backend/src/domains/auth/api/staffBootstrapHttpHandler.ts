@@ -6,8 +6,8 @@ import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
   readSupabaseEnv,
+  resolveStaffSessionForRequest,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 
 interface StaffBootstrapDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -62,55 +62,25 @@ export async function handleStaffBootstrapRequest(
       });
     }
 
-    const authHeader = request.headers.get("authorization");
-    const accessToken = extractBearerToken(authHeader);
+    const staffResult = await resolveStaffSessionForRequest(
+      request,
+      envResult.value,
+      dependencies,
+      {
+        missingMessage: "A verified Supabase Auth user is required to load staff data.",
+        lookupFailureError: {
+          code: "staff_bootstrap_failed",
+          message: "Staff bootstrap failed.",
+          retryable: false,
+        },
+      },
+    );
 
-    if (!accessToken) {
-      return jsonError(401, {
-        code: "missing_staff_auth_user",
-        message: "A verified Supabase Auth user is required to load staff data.",
-        retryable: false,
-      });
+    if (!staffResult.ok) {
+      return jsonError(staffResult.status, staffResult.error);
     }
 
-    const authClient = dependencies.createAuthClient(envResult.value);
-
-    const authUserResult = await authClient.auth.getUser(accessToken);
-    const authUser = authUserResult.data.user;
-
-    if (authUserResult.error || !authUser?.id) {
-      return jsonError(401, {
-        code: "missing_staff_auth_user",
-        message: "A verified Supabase Auth user is required to load staff data.",
-        retryable: false,
-      });
-    }
-
-    const serviceClient = dependencies.createServiceClient(envResult.value);
-
-    const staffResponse = await serviceClient
-      .from("staff_users")
-      .select("id,supabase_auth_user_id,email,display_name")
-      .eq("supabase_auth_user_id", authUser.id)
-      .maybeSingle();
-
-    if (staffResponse.error) {
-      return jsonError(500, {
-        code: "staff_bootstrap_failed",
-        message: "Staff bootstrap failed.",
-        retryable: false,
-      });
-    }
-
-    const staff = staffResponse.data;
-
-    if (!staff?.id) {
-      return jsonError(403, {
-        code: "staff_not_found",
-        message: "No staff user is linked to the Supabase Auth user.",
-        retryable: false,
-      });
-    }
+    const { serviceClient, staff } = staffResult;
 
     const sessionsResponse = await serviceClient
       .from("game_sessions")

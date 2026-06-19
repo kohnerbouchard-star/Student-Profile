@@ -1,4 +1,5 @@
 import type { EdgeErrorBody } from "./edgeResponse.ts";
+import { extractBearerToken } from "./edgeAuth.ts";
 
 declare const Deno: {
   readonly env: {
@@ -85,6 +86,127 @@ export interface EdgeSupabaseClient {
     functionName: string,
     args?: unknown,
   ): PromiseLike<EdgeSupabaseQueryResponse<Data>>;
+}
+
+interface EdgeStaffSessionStaff {
+  readonly id: string;
+  readonly supabase_auth_user_id: string;
+  readonly email: string;
+  readonly display_name: string;
+}
+
+interface EdgeStaffSessionDependencies {
+  readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+}
+
+type EdgeStaffSessionFailure = {
+  readonly ok: false;
+  readonly status: number;
+  readonly error: EdgeErrorBody["error"];
+};
+
+type EdgeStaffSessionResolution =
+  | {
+      readonly ok: true;
+      readonly authUser: EdgeSupabaseAuthUser;
+      readonly staff: EdgeStaffSessionStaff;
+      readonly serviceClient: EdgeSupabaseClient;
+    }
+  | EdgeStaffSessionFailure;
+
+interface ResolveStaffSessionOptions {
+  readonly missingMessage: string;
+  readonly lookupFailureError?: EdgeErrorBody["error"];
+  readonly beforeStaffLookup?: () =>
+    | { readonly ok: true }
+    | EdgeStaffSessionFailure
+    | Promise<{ readonly ok: true } | EdgeStaffSessionFailure>;
+}
+
+const DEFAULT_STAFF_LOOKUP_ERROR: EdgeErrorBody["error"] = {
+  code: "staff_lookup_failed",
+  message: "Staff lookup failed.",
+  retryable: false,
+};
+
+export async function resolveStaffSessionForRequest(
+  request: Request,
+  env: SupabaseEnv,
+  dependencies: EdgeStaffSessionDependencies,
+  options: ResolveStaffSessionOptions,
+): Promise<EdgeStaffSessionResolution> {
+  const authHeader = request.headers.get("authorization");
+  const accessToken = extractBearerToken(authHeader);
+
+  if (!accessToken) {
+    return missingStaffAuthUser(options.missingMessage);
+  }
+
+  const authClient = dependencies.createAuthClient(env);
+  const authUserResult = await authClient.auth.getUser(accessToken);
+  const authUser = authUserResult.data.user;
+
+  if (authUserResult.error || !authUser?.id) {
+    return missingStaffAuthUser(options.missingMessage);
+  }
+
+  if (options.beforeStaffLookup) {
+    const prerequisiteResult = await options.beforeStaffLookup();
+
+    if (!prerequisiteResult.ok) {
+      return prerequisiteResult;
+    }
+  }
+
+  const serviceClient = dependencies.createServiceClient(env);
+
+  const staffResponse = await serviceClient
+    .from("staff_users")
+    .select("id,supabase_auth_user_id,email,display_name")
+    .eq("supabase_auth_user_id", authUser.id)
+    .maybeSingle();
+
+  if (staffResponse.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: options.lookupFailureError ?? DEFAULT_STAFF_LOOKUP_ERROR,
+    };
+  }
+
+  const staff = staffResponse.data as EdgeStaffSessionStaff | null;
+
+  if (!staff?.id) {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "staff_not_found",
+        message: "No staff user is linked to the Supabase Auth user.",
+        retryable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    authUser,
+    staff,
+    serviceClient,
+  };
+}
+
+function missingStaffAuthUser(message: string): EdgeStaffSessionFailure {
+  return {
+    ok: false,
+    status: 401,
+    error: {
+      code: "missing_staff_auth_user",
+      message,
+      retryable: false,
+    },
+  };
 }
 
 export function readSupabaseEnv():

@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  type EdgeErrorBody,
   jsonError,
   jsonResponse,
 } from "../../../src/platform/supabase/edgeResponse.ts";
@@ -8,8 +7,8 @@ import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
   readSupabaseEnv,
+  resolveStaffSessionForRequest,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
-import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import {
   handleStaffBootstrapRequest,
 } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
@@ -255,97 +254,15 @@ function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
   }) as unknown as EdgeSupabaseClient;
 }
 
-interface StaffRequestResolution {
-  readonly ok: true;
-  readonly staff: {
-    readonly id: string;
-    readonly supabase_auth_user_id: string;
-    readonly email: string;
-    readonly display_name: string;
-  };
-  readonly serviceClient: EdgeSupabaseClient;
-}
-
-async function resolveStaffForRequest(
+function resolveStaffForRequest(
   request: Request,
   env: SupabaseEnv,
   options: { readonly missingMessage: string },
-): Promise<
-  | StaffRequestResolution
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
-> {
-  const authHeader = request.headers.get("authorization");
-  const accessToken = extractBearerToken(authHeader);
-
-  if (!accessToken) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "missing_staff_auth_user",
-        message: options.missingMessage,
-        retryable: false,
-      },
-    };
-  }
-
-  const authClient = createAuthClient(env);
-  const authUserResult = await authClient.auth.getUser(accessToken);
-  const authUser = authUserResult.data.user;
-
-  if (authUserResult.error || !authUser?.id) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "missing_staff_auth_user",
-        message: options.missingMessage,
-        retryable: false,
-      },
-    };
-  }
-
-  const serviceClient = createServiceClient(env);
-
-  const staffResponse = await serviceClient
-    .from("staff_users")
-    .select("id,supabase_auth_user_id,email,display_name")
-    .eq("supabase_auth_user_id", authUser.id)
-    .maybeSingle();
-
-  if (staffResponse.error) {
-    return {
-      ok: false,
-      status: 500,
-      error: {
-        code: "staff_lookup_failed",
-        message: "Staff lookup failed.",
-        retryable: false,
-      },
-    };
-  }
-
-  const staff = staffResponse.data as StaffRequestResolution["staff"] | null;
-
-  if (!staff?.id) {
-    return {
-      ok: false,
-      status: 403,
-      error: {
-        code: "staff_not_found",
-        message: "No staff user is linked to the Supabase Auth user.",
-        retryable: false,
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    staff,
-    serviceClient,
-  };
+) {
+  return resolveStaffSessionForRequest(
+    request,
+    env,
+    { createAuthClient, createServiceClient },
+    options,
+  );
 }
