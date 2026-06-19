@@ -83,6 +83,9 @@ import {
 import {
   handlePlayerRosterRequest,
 } from "../../../src/domains/players/api/playerRosterHttpHandler.ts";
+import {
+  handleResetPlayerAccessCodeRequest,
+} from "../../../src/domains/players/api/playerAccessCodeResetHttpHandler.ts";
 import { normalizeStudentCode } from "../../../src/domains/players/domain/playerAccessCodes.ts";
 import { isUuid } from "../../../src/platform/supabase/uuid.ts";
 import { readGameSettingsRoutePath } from "../../../src/domains/game-sessions/api/gameSettingsRoutePaths.ts";
@@ -177,20 +180,6 @@ interface ResetGameJoinCodeSuccessBody {
 
 
 
-interface ResetPlayerAccessCodeSuccessBody {
-  readonly ok: true;
-  readonly player: {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly status: string;
-  };
-  readonly accessCode: {
-    readonly studentCode: string;
-    readonly status: "active";
-    readonly createdAt: string;
-  };
-}
 
       readonly gameSessionId: string;
     }
@@ -290,6 +279,9 @@ Deno.serve(async (request) => {
       request,
       playerRosterRoute.gameSessionId,
       playerRosterRoute.playerId,
+      {
+        resolveStaffForRequest,
+      },
     );
   }
 
@@ -566,139 +558,6 @@ async function handleResetGameJoinCodeRequest(
 
 
 
-async function handleResetPlayerAccessCodeRequest(
-  request: Request,
-  gameSessionId: string,
-  playerId: string,
-): Promise<Response> {
-  if (request.method !== "POST") {
-    return jsonError(405, {
-      code: "method_not_allowed",
-      message: "Use POST to reset a player access code.",
-      retryable: false,
-    });
-  }
-
-  try {
-    const envResult = readSupabaseEnv();
-
-    if (!envResult.ok) {
-      return jsonError(500, {
-        code: "missing_edge_runtime_config",
-        message: "Classroom API runtime configuration is incomplete.",
-        retryable: false,
-      });
-    }
-
-    const staffResult = await resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to manage player access codes.",
-    });
-
-    if (!staffResult.ok) {
-      return jsonError(staffResult.status, staffResult.error);
-    }
-
-    const ownershipResult = await readOwnedGameSession(
-      staffResult.serviceClient,
-      gameSessionId,
-      staffResult.staff.id,
-    );
-
-    if (!ownershipResult.ok) {
-      return jsonError(ownershipResult.status, ownershipResult.error);
-    }
-
-    const playerResponse = await staffResult.serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status")
-      .eq("game_session_id", gameSessionId)
-      .eq("id", playerId)
-      .maybeSingle();
-
-    if (playerResponse.error) {
-      return jsonError(500, {
-        code: "access_code_reset_failed",
-        message: "Player access code could not be reset.",
-        retryable: false,
-      });
-    }
-
-    const player = playerResponse.data;
-
-    if (!player?.id) {
-      return jsonError(404, {
-        code: "player_not_found",
-        message: "Player was not found for this game session.",
-        retryable: false,
-      });
-    }
-
-    if (player.status !== "active") {
-      return jsonError(409, {
-        code: "player_not_active",
-        message: "Only active players can receive an access code.",
-        retryable: false,
-      });
-    }
-
-    const revokeResponse = await staffResult.serviceClient
-      .from("player_access_credentials")
-      .update({
-        status: "revoked",
-        revoked_at: new Date().toISOString(),
-      })
-      .eq("game_session_id", gameSessionId)
-      .eq("player_id", playerId)
-      .eq("status", "active");
-
-    if (revokeResponse.error) {
-      return jsonError(500, {
-        code: "access_code_reset_failed",
-        message: "Player access code could not be reset.",
-        retryable: false,
-      });
-    }
-
-    const credentialResult = await createPlayerAccessCredential(
-      staffResult.serviceClient,
-      gameSessionId,
-      playerId,
-    );
-
-    if (!credentialResult.ok) {
-      return jsonError(credentialResult.status, credentialResult.error);
-    }
-
-    return jsonResponse<ResetPlayerAccessCodeSuccessBody>(200, {
-      ok: true,
-      player: {
-        id: player.id,
-        displayName: player.display_name,
-        rosterLabel: player.roster_label ?? null,
-        status: player.status,
-      },
-      accessCode: {
-        studentCode: credentialResult.studentCode,
-        status: "active",
-        createdAt: credentialResult.createdAt,
-      },
-    });
-  } catch (error) {
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
-    }
-
-    return jsonError(500, {
-      code: "access_code_reset_failed",
-      message: "Player access code could not be reset.",
-      retryable: false,
-    });
-  }
-}
 
 async function handleGameSettingsRequest(
   request: Request,
@@ -1270,25 +1129,7 @@ async function resetGameJoinCode(
 
 
 
-function generateStudentCode(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
 
-  return [...bytes]
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join("");
-}
-
-async function createPlayerAccessCredential(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  playerId: string,
-): Promise<
-  | {
-      readonly ok: true;
-      readonly studentCode: string;
-      readonly createdAt: string;
-    }
   | {
       readonly ok: false;
       readonly status: number;
