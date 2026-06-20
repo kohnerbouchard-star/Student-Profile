@@ -2,182 +2,220 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.features = window.Econovaria.features || {};
 window.Econovaria.features.auth = window.Econovaria.features.auth || {};
 
-const ADMIN_DEMO_CODE = "1234";
-// Staff bootstrap is available; token acquisition is still pending.
-const ADMIN_LOGIN_ENABLED = false;
-let loginMode = "student";
+const LOGIN_MODES = new Set(["player", "admin", "create"]);
+const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
+let loginMode = "player";
+let loginClockTimer = null;
 
 function init() {
-  document.getElementById("loginForm").addEventListener("submit", handleLogin);
-  document.getElementById("logoutButton").addEventListener("click", logout);
-  document.getElementById("refreshButton").addEventListener("click", refreshDashboard);
+  document.getElementById("playerForm")?.addEventListener("submit", handlePlayerLogin);
+  document.getElementById("adminForm")?.addEventListener("submit", handleAdminLogin);
+  document.getElementById("createForm")?.addEventListener("submit", handleCreateGame);
+  document.getElementById("backToAdminLogin")?.addEventListener("click", resetAdminLoginStep);
+  document.getElementById("logoutButton")?.addEventListener("click", logout);
+  document.getElementById("refreshButton")?.addEventListener("click", refreshDashboard);
 
-  document.querySelectorAll(".nav-item").forEach((btn) => {
-    btn.addEventListener("click", () => switchView(btn.dataset.view));
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    button.addEventListener("click", () => switchView(button.dataset.view));
   });
 
   bindLoginModeToggle();
-  setLoginMode("student");
+  initLoginClock();
+  initLoginAudio();
+  setLoginMode("player");
   showLogin({ focus: false });
 }
 
 function bindLoginModeToggle() {
-  const button = document.getElementById("loginModeToggle");
-  if (!button) return;
-
-  if (!ADMIN_LOGIN_ENABLED) {
-    button.classList.add("hidden");
-    button.hidden = true;
-    button.disabled = true;
-    button.setAttribute("aria-hidden", "true");
-    button.setAttribute("tabindex", "-1");
-    return;
-  }
-
-  button.addEventListener("click", () => {
-    setLoginMode(loginMode === "admin" ? "student" : "admin");
+  document.querySelectorAll(".mode-tab").forEach((tab) => {
+    tab.addEventListener("click", () => setLoginMode(tab.dataset.mode));
   });
 }
 
 function setLoginMode(mode) {
-  loginMode = ADMIN_LOGIN_ENABLED && mode === "admin" ? "admin" : "student";
+  loginMode = LOGIN_MODES.has(mode) ? mode : "player";
 
-  const isAdmin = loginMode === "admin";
   const loginScreen = document.getElementById("loginScreen");
-  const toggle = document.getElementById("loginModeToggle");
-  const eyebrow = document.getElementById("loginAccessEyebrow");
-  const title = document.getElementById("loginTitle");
-  const copy = document.getElementById("loginCopy");
-  const label = document.getElementById("loginFieldLabel");
-  const input = document.getElementById("loginCardId");
-  const submit = document.getElementById("loginSubmitButton");
+  if (loginScreen) loginScreen.dataset.mode = loginMode;
 
-  if (loginScreen) loginScreen.dataset.loginMode = loginMode;
-  if (toggle) {
-    toggle.textContent = isAdmin ? "Student sign in" : "Admin sign in";
-    toggle.setAttribute("aria-pressed", String(isAdmin));
-    toggle.classList.toggle("hidden", !ADMIN_LOGIN_ENABLED);
-    toggle.hidden = !ADMIN_LOGIN_ENABLED;
-    toggle.disabled = !ADMIN_LOGIN_ENABLED;
-    toggle.setAttribute("aria-hidden", String(!ADMIN_LOGIN_ENABLED));
-  }
-  if (eyebrow) eyebrow.textContent = isAdmin ? "Teacher access" : "Secure access";
-  if (title) title.textContent = isAdmin ? "Open admin console" : "Open your account";
-  if (copy) {
-    copy.textContent = isAdmin
-      ? "Enter the temporary teacher code to preview the admin console. Backend admin permissions are not wired yet."
-      : "Enter or scan your student code to open your market simulation account.";
-  }
-  if (label) label.textContent = isAdmin ? "Teacher Code" : "Student Code";
-  if (input) {
-    input.value = "";
-    input.placeholder = isAdmin ? "Enter teacher code" : "Enter or scan student code";
-    input.autocomplete = isAdmin ? "off" : "one-time-code";
-  }
-  if (submit) submit.textContent = isAdmin ? "Open Admin Console" : "Open Account";
+  document.querySelectorAll(".mode-tab").forEach((tab) => {
+    const isActive = tab.dataset.mode === loginMode;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
 
-  clearLoginError();
+  document.querySelectorAll(".mode-pane").forEach((pane) => {
+    pane.classList.toggle("active", pane.id === `${loginMode}Pane`);
+  });
+
+  clearAllLoginMessages();
 }
 
-async function handleLogin(event) {
+function handleLogin(event) {
+  return handlePlayerLogin(event);
+}
+
+async function handlePlayerLogin(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
   const button = form.querySelector("button[type='submit']");
-  const input = document.getElementById("loginCardId");
-  const accessCode = normalizeCardId(input.value);
+  const gameCode = document.getElementById("gameCode")?.value.trim() || "";
+  const playerId = document.getElementById("playerId")?.value.trim() || "";
+  const message = document.getElementById("playerMessage");
 
-  clearLoginError();
-
+  clearLoginMessage(message);
   if (isButtonLoading(button)) return;
 
-  if (!accessCode) {
-    return showLoginError(loginMode === "admin" ? "Enter your teacher code first." : "Enter your student code first.");
+  if (!gameCode || !playerId) {
+    return showLoginMessage(message, "Enter the Game / Session Code and Player ID.", "bad");
   }
 
-  if (!ADMIN_LOGIN_ENABLED && loginMode === "admin") {
-    setLoginMode("student");
-    return showLoginError("Admin sign-in is temporarily disabled.");
-  }
-
-  setButtonLoading(button, true, loginMode === "admin" ? "Opening admin console..." : "Opening dashboard...");
-  setControlsDisabled(form, true, [button]);
+  setLoginFormBusy(form, true, "Opening session...");
 
   try {
-    if (loginMode === "admin") {
-      return openAdminPrototype(accessCode, input);
+    const result = await callPlayerLoginApi(gameCode, playerId);
+
+    if (!result?.ok || !result.session?.token) {
+      return showLoginMessage(message, cleanLoginError(result, "Player login failed."), "bad");
     }
 
-    const result = await callApi({
-      action: "LOGIN",
-      accessCode,
-      code: accessCode,
-      cardId: accessCode
-    });
+    const bootstrap = await callPlayerBootstrapApi(result.session.token);
 
-    input.value = "";
-
-    if (!result || result.ok !== true) {
-      return showLoginError(cleanErrorMessage(result && result.message ? result.message : "Login failed. Try scanning your code again."));
+    if (!bootstrap?.ok) {
+      return showLoginMessage(message, cleanLoginError(bootstrap, "Your player session could not be loaded."), "bad");
     }
 
     currentSession = {
-      role: result.role || "STUDENT",
-      token: result.token || result.sessionToken || "",
-      permissions: result.permissions || PERMISSION_SETS[result.role || "STUDENT"]?.actions || PERMISSION_SETS.STUDENT.actions
+      role: "STUDENT",
+      token: result.session.token,
+      authSource: "supabase-player",
+      permissions: Array.isArray(bootstrap.availableActions) ? bootstrap.availableActions : []
     };
 
-    mergeSnapshot(result.snapshot || {});
+    state = Object.assign(emptyState(), {
+      profile: createPlayerProfileFromBootstrap(bootstrap)
+    });
 
-    if (result.profile) {
-      state.profile = normalizeProfile(result.profile);
-    }
-
-    showApp();
-    showGlobalStatus("ok", "Dashboard opened. Your latest account data is loaded.");
-
+    form.reset();
+    document.getElementById("playerAccessCode").disabled = true;
+    showLoginMessage(message, "Access granted.");
+    showApp("profile");
+    showGlobalStatus("ok", "Player session opened through Supabase.");
   } catch (err) {
-    showLoginError(cleanErrorMessage(err.message || String(err)));
+    showLoginMessage(message, cleanErrorMessage(err.message || String(err)), "bad");
   } finally {
-    setControlsDisabled(form, false, [button]);
-    setButtonLoading(button, false);
+    setLoginFormBusy(form, false);
+    document.getElementById("playerAccessCode").disabled = true;
   }
 }
 
-function openAdminPrototype(accessCode, input) {
-  if (!ADMIN_LOGIN_ENABLED) {
-    setLoginMode("student");
-    return showLoginError("Admin sign-in is temporarily disabled.");
+async function handleAdminLogin(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  const email = document.getElementById("adminEmail")?.value.trim() || "";
+  const accessCode = document.getElementById("adminAccessCode")?.value || "";
+  const message = document.getElementById("adminMessage");
+
+  clearLoginMessage(message);
+  if (isButtonLoading(button)) return;
+
+  if (!email || !accessCode) {
+    return showLoginMessage(message, "Enter the Admin Email and Access Code.", "bad");
   }
 
-  if (accessCode !== ADMIN_DEMO_CODE) {
-    return showLoginError("Admin prototype code is incorrect.");
-  }
+  setLoginFormBusy(form, true, "Verifying access...");
 
-  if (input) input.value = "";
+  try {
+    const signIn = await callSupabasePasswordSignIn(email, accessCode);
 
-  currentSession = {
-    role: "ADMIN",
-    token: "frontend-admin-demo",
-    permissions: PERMISSION_SETS.ADMIN.actions
-  };
-
-  state = Object.assign(emptyState(), {
-    profile: {
-      name: "Teacher Console",
-      grade: "Admin",
-      homeroom: "Prototype"
+    if (!signIn?.ok || !signIn.accessToken) {
+      return showLoginMessage(message, cleanLoginError(signIn, "Admin sign-in failed."), "bad");
     }
-  });
 
-  showApp("admin");
-  showGlobalStatus("ok", "Admin prototype opened. Backend admin actions are not wired yet.");
+    const bootstrap = await bootstrapStaffAdminSession(signIn.accessToken);
+
+    if (!bootstrap?.ok) {
+      return showLoginMessage(message, cleanLoginError(bootstrap, "Admin session could not be loaded."), "bad");
+    }
+
+    currentSession.authSource = "supabase-admin";
+    showAdminGameSelection(bootstrap.activeGameSessions || []);
+  } catch (err) {
+    showLoginMessage(message, cleanErrorMessage(err.message || String(err)), "bad");
+  } finally {
+    setLoginFormBusy(form, false);
+  }
+}
+
+async function handleCreateGame(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  const licenseCode = document.getElementById("licenseCode")?.value.trim() || "";
+  const adminEmail = document.getElementById("createEmail")?.value.trim() || "";
+  const sessionName = document.getElementById("sessionName")?.value.trim() || "";
+  const difficulty = document.getElementById("difficultyLevel")?.value || "";
+  const accessCode = document.getElementById("createAccessCode")?.value || "";
+  const message = document.getElementById("createMessage");
+
+  clearLoginMessage(message);
+  if (isButtonLoading(button)) return;
+
+  if (!licenseCode || !adminEmail || !sessionName || !accessCode || !VALID_DIFFICULTIES.has(difficulty)) {
+    return showLoginMessage(message, "Complete every field and select a valid difficulty.", "bad");
+  }
+
+  setLoginFormBusy(form, true, "Creating game...");
+
+  try {
+    const signIn = await callSupabasePasswordSignIn(adminEmail, accessCode);
+
+    if (!signIn?.ok || !signIn.accessToken) {
+      return showLoginMessage(message, cleanLoginError(signIn, "Admin verification failed."), "bad");
+    }
+
+    const activation = await callLicensingActivationApi(signIn.accessToken, {
+      licenseCode,
+      sessionName,
+      difficulty
+    });
+
+    if (!activation?.ok || !activation.activation?.gameSessionId) {
+      return showLoginMessage(message, cleanLoginError(activation, "The game could not be created."), "bad");
+    }
+
+    const bootstrap = await bootstrapStaffAdminSession(signIn.accessToken);
+
+    if (!bootstrap?.ok) {
+      return showLoginMessage(message, cleanLoginError(bootstrap, "The game was created, but the admin session could not be loaded."), "bad");
+    }
+
+    currentSession.authSource = "supabase-admin";
+    const createdGame = (currentSession.staffSession?.activeGameSessions || [])
+      .find((session) => session.id === activation.activation.gameSessionId);
+
+    if (!createdGame) {
+      return showLoginMessage(message, "The game was created, but it is not available as an active session yet.", "bad");
+    }
+
+    selectAdminGameSession(createdGame.id);
+    form.reset();
+    showGlobalStatus("ok", "Game created through the existing Supabase licensing flow.");
+  } catch (err) {
+    showLoginMessage(message, cleanErrorMessage(err.message || String(err)), "bad");
+  } finally {
+    setLoginFormBusy(form, false);
+  }
 }
 
 async function bootstrapStaffAdminSession(bearerToken) {
   const result = await callStaffBootstrapApi(bearerToken);
 
-  if (!result || result.ok !== true) {
+  if (!result?.ok) {
     return result || {
       ok: false,
       status: 0,
@@ -191,6 +229,7 @@ async function bootstrapStaffAdminSession(bearerToken) {
   currentSession = {
     role: "ADMIN",
     token: String(bearerToken || "").replace(/^Bearer\s+/i, "").trim(),
+    authSource: "supabase-admin",
     permissions: PERMISSION_SETS.ADMIN.actions,
     staffSession
   };
@@ -213,14 +252,13 @@ function createStaffSessionFromBootstrap(result) {
   const activeGameSessions = Array.isArray(result.activeGameSessions)
     ? result.activeGameSessions.map(normalizeStaffGameSession).filter((session) => session.id)
     : [];
-  const selectedGameSessionId = activeGameSessions[0]?.id || null;
 
   return {
     staffId: String(staff.id || ""),
     staffEmail: staff.email || "",
     staffDisplayName: staff.displayName || staff.email || "Teacher Console",
     activeGameSessions,
-    selectedGameSessionId
+    selectedGameSessionId: null
   };
 }
 
@@ -247,7 +285,81 @@ function createAdminProfileFromStaffSession(staffSession) {
 function getSelectedStaffGameSession(staffSession) {
   if (!staffSession?.selectedGameSessionId) return null;
 
-  return (staffSession.activeGameSessions || []).find((session) => session.id === staffSession.selectedGameSessionId) || null;
+  return (staffSession.activeGameSessions || [])
+    .find((session) => session.id === staffSession.selectedGameSessionId) || null;
+}
+
+function showAdminGameSelection(gameSessions) {
+  const loginStep = document.getElementById("adminLoginStep");
+  const gamesStep = document.getElementById("adminGamesStep");
+  const gameList = document.getElementById("adminGameList");
+  const selectedMessage = document.getElementById("selectedGameMessage");
+
+  if (!loginStep || !gamesStep || !gameList) return;
+
+  gameList.replaceChildren();
+  clearLoginMessage(selectedMessage);
+
+  if (!gameSessions.length) {
+    showLoginMessage(selectedMessage, "No active game sessions are available for this admin.", "bad");
+  } else {
+    gameSessions.forEach((session) => {
+      const button = document.createElement("button");
+      const name = document.createElement("strong");
+      const detail = document.createElement("span");
+
+      button.className = "game-row";
+      button.type = "button";
+      name.textContent = session.name;
+      detail.textContent = `${session.status || "active"} session`;
+      button.append(name, detail);
+      button.addEventListener("click", () => selectAdminGameSession(session.id));
+      gameList.appendChild(button);
+    });
+  }
+
+  loginStep.classList.add("hidden");
+  gamesStep.classList.remove("hidden");
+}
+
+function selectAdminGameSession(gameSessionId) {
+  const staffSession = currentSession?.staffSession;
+  if (!staffSession) return;
+
+  const selected = (staffSession.activeGameSessions || [])
+    .find((session) => session.id === gameSessionId);
+
+  if (!selected) {
+    return showLoginMessage(document.getElementById("selectedGameMessage"), "That session is no longer available.", "bad");
+  }
+
+  staffSession.selectedGameSessionId = selected.id;
+  state.staffSession = staffSession;
+  state.profile = createAdminProfileFromStaffSession(staffSession);
+  showApp("admin");
+  showGlobalStatus("ok", `${selected.name} opened.`);
+}
+
+function resetAdminLoginStep() {
+  document.getElementById("adminGamesStep")?.classList.add("hidden");
+  document.getElementById("adminLoginStep")?.classList.remove("hidden");
+  document.getElementById("adminForm")?.reset();
+  currentSession = null;
+  state = emptyState();
+  clearAllLoginMessages();
+}
+
+function createPlayerProfileFromBootstrap(bootstrap) {
+  const balances = Array.isArray(bootstrap.balances) ? bootstrap.balances : [];
+  const primaryBalance = balances.find((item) => String(item.accountType).toLowerCase() === "cash") || balances[0];
+
+  return normalizeProfile({
+    name: bootstrap.player?.displayName || "Player",
+    grade: bootstrap.player?.rosterLabel || "Player",
+    homeroom: bootstrap.gameSession?.name || "Active session",
+    balance: primaryBalance?.balance || 0,
+    status: bootstrap.player?.status || "active"
+  });
 }
 
 function showApp(defaultView = "profile") {
@@ -262,34 +374,29 @@ function updateNavigationForRole() {
   const role = currentSession?.role || "STUDENT";
   const allowedViews = PERMISSION_SETS[role]?.views || [];
 
-  document.querySelectorAll(".nav-item").forEach((btn) => {
-    const view = btn.dataset.view;
-    btn.classList.toggle("hidden", !allowedViews.includes(view));
-    btn.classList.toggle("active", false);
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    const view = button.dataset.view;
+    button.classList.toggle("hidden", !allowedViews.includes(view));
+    button.classList.remove("active");
   });
 }
 
 async function logout() {
   const button = document.getElementById("logoutButton");
-
   if (isButtonLoading(button)) return;
 
   setButtonLoading(button, true, "Logging out...");
 
   try {
-    if (currentSession && currentSession.token && currentSession.token !== "frontend-admin-demo") {
-      await callApi({
-        action: "LOGOUT",
-        token: currentSession.token
-      });
+    if (currentSession?.token && !String(currentSession.authSource || "").startsWith("supabase-")) {
+      await callApi({ action: "LOGOUT", token: currentSession.token });
     }
 
     currentSession = null;
     state = emptyState();
     hideGlobalStatus();
-    setLoginMode("student");
+    setLoginMode("player");
     showLogin();
-
   } finally {
     setButtonLoading(button, false);
   }
@@ -297,10 +404,9 @@ async function logout() {
 
 async function refreshDashboard() {
   const button = document.getElementById("refreshButton");
-
   if (isButtonLoading(button)) return;
 
-  if (!currentSession || !currentSession.token) {
+  if (!currentSession?.token) {
     showGlobalStatus("bad", "Sign in again to refresh your dashboard.");
     return showLogin();
   }
@@ -309,27 +415,26 @@ async function refreshDashboard() {
   showGlobalStatus("loading", "Refreshing your latest dashboard data...");
 
   try {
-    if (currentSession.role === "ADMIN") {
-      renderCurrentView();
-      updateIdentity();
-      showGlobalStatus("ok", "Admin prototype refreshed locally.");
-      return;
+    if (currentSession.authSource === "supabase-player") {
+      const result = await callPlayerBootstrapApi(currentSession.token);
+      if (!result?.ok) throw new Error(cleanLoginError(result, "Refresh failed."));
+      state.profile = createPlayerProfileFromBootstrap(result);
+    } else if (currentSession.authSource === "supabase-admin") {
+      const selectedGameSessionId = currentSession.staffSession?.selectedGameSessionId || null;
+      const result = await bootstrapStaffAdminSession(currentSession.token);
+      if (!result?.ok) throw new Error(cleanLoginError(result, "Refresh failed."));
+      currentSession.staffSession.selectedGameSessionId = selectedGameSessionId;
+      state.staffSession = currentSession.staffSession;
+      state.profile = createAdminProfileFromStaffSession(currentSession.staffSession);
+    } else {
+      const result = await callApi({ action: "GET_SNAPSHOT", token: currentSession.token });
+      if (!result?.ok) throw new Error(result?.message || "Refresh failed.");
+      if (result.snapshot) mergeSnapshot(result.snapshot);
     }
 
-    const result = await callApi({
-      action: "GET_SNAPSHOT",
-      token: currentSession.token
-    });
-
-    if (!result || result.ok !== true) {
-      throw new Error(result && result.message ? result.message : "Refresh failed.");
-    }
-
-    if (result.snapshot) mergeSnapshot(result.snapshot);
     renderCurrentView();
     updateIdentity();
     showGlobalStatus("ok", "Dashboard refreshed.");
-
   } catch (err) {
     showGlobalStatus("bad", cleanErrorMessage(err.message || String(err)));
   } finally {
@@ -339,34 +444,184 @@ async function refreshDashboard() {
 
 function showLogin(options = {}) {
   const shouldFocus = options.focus !== false;
-
   document.getElementById("appShell").classList.add("hidden");
   document.getElementById("loginScreen").classList.remove("hidden");
 
   if (!shouldFocus) return;
 
   window.requestAnimationFrame(() => {
-    const input = document.getElementById("loginCardId");
+    const input = document.getElementById("gameCode");
     if (!input || document.activeElement === input) return;
-
-    try {
-      input.focus({ preventScroll: true });
-    } catch (_) {
-      input.focus();
-    }
+    input.focus({ preventScroll: true });
   });
 }
 
+function setLoginFormBusy(form, isBusy, loadingText) {
+  const button = form?.querySelector("button[type='submit']");
+
+  form?.querySelectorAll("input, select, textarea").forEach((control) => {
+    if (isBusy) {
+      control.dataset.loginWasDisabled = String(control.disabled);
+      control.disabled = true;
+    } else {
+      control.disabled = control.dataset.loginWasDisabled === "true";
+      delete control.dataset.loginWasDisabled;
+    }
+  });
+
+  setButtonLoading(button, isBusy, loadingText);
+}
+
+function showLoginMessage(node, text, kind = "ok") {
+  if (!node) return;
+
+  node.textContent = text;
+  node.classList.remove("hidden", "bad");
+  node.classList.toggle("bad", kind === "bad");
+
+  const panel = document.querySelector(".login-panel");
+  panel?.classList.add("is-busy");
+  window.clearTimeout(window.__loginPanelBusyTimer);
+  window.__loginPanelBusyTimer = window.setTimeout(() => panel?.classList.remove("is-busy"), 1100);
+}
+
+function clearLoginMessage(node) {
+  if (!node) return;
+  node.textContent = "";
+  node.classList.add("hidden");
+  node.classList.remove("bad");
+}
+
+function clearAllLoginMessages() {
+  document.querySelectorAll(".login-message").forEach(clearLoginMessage);
+}
+
 function showLoginError(message) {
-  const el = document.getElementById("loginError");
-  el.textContent = message;
-  el.classList.remove("hidden");
+  showLoginMessage(document.getElementById(`${loginMode}Message`) || document.getElementById("playerMessage"), message, "bad");
 }
 
 function clearLoginError() {
-  const el = document.getElementById("loginError");
-  el.textContent = "";
-  el.classList.add("hidden");
+  clearAllLoginMessages();
+}
+
+function cleanLoginError(result, fallback) {
+  return cleanErrorMessage(result?.error?.message || result?.message || fallback);
+}
+
+function initLoginClock() {
+  const update = () => {
+    const now = new Date();
+    const time = document.getElementById("hudTime");
+    const date = document.getElementById("hudDate");
+    if (time) time.textContent = now.toLocaleTimeString("en-US", { hour12: false });
+    if (date) date.textContent = `YR-3 / ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`;
+  };
+
+  update();
+  window.clearInterval(loginClockTimer);
+  loginClockTimer = window.setInterval(update, 1000);
+}
+
+function initLoginAudio() {
+  const control = document.getElementById("audioControl");
+  const audio = document.getElementById("bgMusic");
+  const button = document.getElementById("musicToggle");
+  const slider = document.getElementById("musicVolume");
+  if (!control || !audio || !button || !slider) return;
+
+  let requestedOn = true;
+  let lastNonZeroVolume = Number(slider.value) > 0 ? Number(slider.value) : 28;
+  let previousSliderValue = Number(slider.value);
+  let hideTimer = null;
+
+  const setButtonOn = (isOn) => {
+    button.classList.toggle("is-on", isOn);
+    button.setAttribute("aria-pressed", String(isOn));
+    button.setAttribute("aria-label", isOn ? "Turn background music off" : "Turn background music on");
+  };
+
+  const applyVolume = () => {
+    const raw = Number(slider.value);
+    audio.volume = Math.max(0, Math.min(1, raw / 100));
+
+    if (raw <= 0) {
+      audio.muted = true;
+      requestedOn = false;
+      audio.pause();
+      setButtonOn(false);
+      return 0;
+    }
+
+    audio.muted = false;
+    lastNonZeroVolume = raw;
+    return audio.volume;
+  };
+
+  const playAudio = async () => {
+    if (Number(slider.value) <= 0) slider.value = String(lastNonZeroVolume || 28);
+    applyVolume();
+    requestedOn = true;
+
+    try {
+      await audio.play();
+      setButtonOn(true);
+      control.classList.remove("is-autoplay-blocked");
+    } catch (err) {
+      requestedOn = false;
+      setButtonOn(false);
+      control.classList.add("is-autoplay-blocked");
+    }
+  };
+
+  const stopAudio = () => {
+    requestedOn = false;
+    audio.pause();
+    audio.muted = true;
+    setButtonOn(false);
+  };
+
+  const showVolume = () => {
+    window.clearTimeout(hideTimer);
+    control.classList.add("is-volume-visible");
+  };
+
+  const hideVolumeSoon = () => {
+    window.clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(() => control.classList.remove("is-volume-visible"), 2200);
+  };
+
+  button.addEventListener("click", async () => {
+    showVolume();
+    if (requestedOn || !audio.paused) stopAudio();
+    else await playAudio();
+  });
+
+  slider.addEventListener("input", async () => {
+    showVolume();
+    const currentValue = Number(slider.value);
+    const movedFromZero = previousSliderValue <= 0 && currentValue > 0;
+    const volume = applyVolume();
+
+    if (volume <= 0) {
+      stopAudio();
+    } else if (movedFromZero || (requestedOn && audio.paused)) {
+      await playAudio();
+    }
+
+    previousSliderValue = currentValue;
+  });
+
+  control.addEventListener("mouseenter", showVolume);
+  control.addEventListener("mouseleave", hideVolumeSoon);
+  control.addEventListener("focusin", showVolume);
+  control.addEventListener("focusout", hideVolumeSoon);
+  window.addEventListener("pointerdown", () => {
+    if (audio.paused && Number(slider.value) > 0 && !requestedOn) playAudio();
+  }, { once: true });
+
+  applyVolume();
+  setButtonOn(true);
+  playAudio();
 }
 
 Object.assign(window.Econovaria.features.auth, {
@@ -374,7 +629,9 @@ Object.assign(window.Econovaria.features.auth, {
   bindLoginModeToggle,
   setLoginMode,
   handleLogin,
-  openAdminPrototype,
+  handlePlayerLogin,
+  handleAdminLogin,
+  handleCreateGame,
   showApp,
   updateNavigationForRole,
   logout,

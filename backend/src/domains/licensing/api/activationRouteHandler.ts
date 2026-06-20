@@ -1,24 +1,24 @@
 import {
   resolveStaffIdentity,
   type StaffAccessRepository,
-} from "../../../auth/staffAccess";
+} from "../../../auth/staffAccess.ts";
 import type {
   AccessBoundaryError,
   SupabaseAuthUser,
-} from "../../../auth/types";
+} from "../../../auth/types.ts";
 import type {
   LicensingActivationErrorResponse,
   LicensingActivationResponse,
-} from "../contracts/activationContract";
+} from "../contracts/activationContract.ts";
 import {
   handleStaffLicensingActivation,
-} from "../infrastructure/licensingActivationHandler";
+} from "../infrastructure/licensingActivationHandler.ts";
 import type {
   LicensingActivationRepository,
-} from "../infrastructure/licensingRepository";
+} from "../infrastructure/licensingRepository.ts";
 import type {
   WebCryptoRuntime,
-} from "../infrastructure/webCryptoSha256Digest";
+} from "../infrastructure/webCryptoSha256Digest.ts";
 
 export interface LicensingActivationRouteRequest {
   readonly supabaseAuthUser?: SupabaseAuthUser | null;

@@ -1,4 +1,4 @@
-import type { NormalizedPurchaseCode } from "./purchaseCodeNormalization";
+import type { NormalizedPurchaseCode } from "./purchaseCodeNormalization.ts";
 
 export interface PurchaseCodeHashInput {
   readonly normalizedPurchaseCode: NormalizedPurchaseCode;

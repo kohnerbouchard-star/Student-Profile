@@ -1,6 +1,6 @@
-import { SupabaseRepositoryError } from "../../../supabase/queryResult";
-import { LicensingActivationRequestParseError } from "../contracts/activationRequestParser";
-import { RedeemPurchaseCodeError } from "./redeemPurchaseCode";
+import { SupabaseRepositoryError } from "../../../supabase/queryResult.ts";
+import { LicensingActivationRequestParseError } from "../contracts/activationRequestParser.ts";
+import { RedeemPurchaseCodeError } from "./redeemPurchaseCode.ts";
 
 export type LicensingActivationSafeErrorCode =
   | "invalid_request_body"

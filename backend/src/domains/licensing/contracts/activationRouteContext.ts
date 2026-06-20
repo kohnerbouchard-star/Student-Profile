@@ -1,5 +1,5 @@
-import type { StaffIdentity } from "../../../auth/types";
-import type { LicensingActivationRouteContext } from "./activationContract";
+import type { StaffIdentity } from "../../../auth/types.ts";
+import type { LicensingActivationRouteContext } from "./activationContract.ts";
 
 export interface LicensingActivationRequestMetadata {
   readonly requestId?: string | null;

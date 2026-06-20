@@ -1,4 +1,4 @@
-import type { Sha256HexDigest } from "./purchaseCodeHasher";
+import type { Sha256HexDigest } from "./purchaseCodeHasher.ts";
 
 export interface Utf8BytesEncoder {
   encodeUtf8(value: string): Uint8Array;

@@ -1,17 +1,17 @@
-import type { StaffIdentity } from "../../../auth/types";
+import type { StaffIdentity } from "../../../auth/types.ts";
 import {
   handleLicensingActivationRequest,
   type LicensingActivationRouteAdapterResult,
-} from "../application/licensingActivationRouteAdapter";
+} from "../application/licensingActivationRouteAdapter.ts";
 import {
   buildLicensingActivationRouteContext,
   type LicensingActivationRequestMetadata,
-} from "../contracts/activationRouteContext";
+} from "../contracts/activationRouteContext.ts";
 import {
   createLicensingActivationRouteAdapterDependencies,
-} from "./licensingActivationFactory";
-import type { LicensingActivationRepository } from "./licensingRepository";
-import type { WebCryptoRuntime } from "./webCryptoSha256Digest";
+} from "./licensingActivationFactory.ts";
+import type { LicensingActivationRepository } from "./licensingRepository.ts";
+import type { WebCryptoRuntime } from "./webCryptoSha256Digest.ts";
 
 export interface LicensingActivationHandlerInput {
   readonly body: unknown;

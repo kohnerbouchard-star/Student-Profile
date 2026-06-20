@@ -18,131 +18,193 @@
         #0f172a;
     }
 
-    html.preload .login-shell,
+    html.preload .login-panel-frame,
     html.preload #appShell {
       opacity: 0;
     }
 
-    html:not(.preload) .login-shell,
+    html:not(.preload) .login-panel-frame,
     html:not(.preload) #appShell {
       opacity: 1;
       transition: opacity 120ms ease;
     }
 
     @media (prefers-reduced-motion: reduce) {
-      html:not(.preload) .login-shell,
+      html:not(.preload) .login-panel-frame,
       html:not(.preload) #appShell {
         transition: none;
       }
     }
   </style>
-
-  <style id="login-quote-slide-style">
-    .login-quote {
-      overflow: hidden;
-    }
-
-    #loginQuoteText.login-quote-slide {
-      display: block;
-      animation: quoteSlideLeftToRight 20s linear both;
-      will-change: transform, opacity;
-    }
-
-    @keyframes quoteSlideLeftToRight {
-      0% {
-        opacity: 0;
-        transform: translateX(-22px);
-      }
-
-      3.5% {
-        opacity: 1;
-        transform: translateX(0);
-      }
-
-      94% {
-        opacity: 1;
-        transform: translateX(0);
-      }
-
-      100% {
-        opacity: 0;
-        transform: translateX(0);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #loginQuoteText.login-quote-slide {
-        animation: none;
-        opacity: 1;
-        transform: none;
-      }
-    }
-  </style>
-
-
 </head>
 <body>
-  <section id="loginScreen" class="login-screen login-screen--econovaria" data-login-mode="student">
-    <button id="loginModeToggle" class="admin-login-toggle hidden" type="button" aria-pressed="false" aria-hidden="true" hidden disabled>Admin sign in</button>
-    <div class="login-shell">
-      <aside class="login-briefing" aria-label="Market simulation briefing">
-        <div class="brand login-brand login-brand--terminal">
-          <div class="brand-mark">CE</div>
-          <div>
-            <div class="brand-title">Classroom Economy</div>
-            <div class="brand-subtitle">Market simulation</div>
+  <section id="loginScreen" class="login-screen login-root" data-mode="player" aria-label="Eco Novaria login">
+    <img class="world-map" src="assets/Login_Screen_Background_image_balanced_vibrant.png" alt="" />
+    <img class="building-neon-outline" src="assets/novaria-building-blue-purple-outline-balanced.png" alt="" aria-hidden="true" />
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="scanline" aria-hidden="true"></div>
+    <div class="screen-edge-frame" aria-hidden="true"></div>
+
+    <audio id="bgMusic" autoplay preload="auto" loop playsinline>
+      <source src="assets/sci-fi-cinematic-background.mp3" type="audio/mpeg" />
+    </audio>
+
+    <div id="audioControl" class="audio-control" aria-label="Background music controls">
+      <button id="musicToggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Turn background music on">
+        <svg class="audio-icon audio-icon-off" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+          <path d="M17 9l4 6"></path>
+          <path d="M21 9l-4 6"></path>
+        </svg>
+        <svg class="audio-icon audio-icon-on" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+          <path d="M16.5 8.5a5 5 0 0 1 0 7"></path>
+          <path d="M19 6a8.5 8.5 0 0 1 0 12"></path>
+        </svg>
+      </button>
+      <div id="volumeControl" class="volume-control">
+        <label for="musicVolume">VOL</label>
+        <input id="musicVolume" type="range" min="0" max="100" value="28" aria-label="Background music volume" />
+      </div>
+    </div>
+
+    <header class="login-hud login-hud-top">
+      <div class="hud-group">
+        <span class="status-dot"></span>
+        <span>ECONOVARIA MARKET INTELLIGENCE SYSTEM</span>
+        <span class="version">v4.7.2</span>
+      </div>
+      <div class="hud-group hud-exchanges">
+        <span id="hudDate">YR-3</span>
+        <span id="hudTime">00:00:00</span>
+        <span class="exchange ok">NXE &#9679;</span>
+        <span class="exchange ok">VSE &#9679;</span>
+        <span class="exchange bad">ASCE &#9679;</span>
+      </div>
+    </header>
+
+    <footer class="login-hud login-hud-bottom">
+      <span>LAT 0.00&deg; / LON 0.00&deg; &middot; ZOOM 1.0x &middot; MERCATOR PROJECTION</span>
+      <span class="secure"><span class="status-dot green"></span> SECURE &middot; ENCRYPTED &middot; CLASSROOM MODE</span>
+    </footer>
+
+    <div class="login-panel-wrap" aria-live="polite">
+      <div class="login-panel-frame">
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+
+        <section class="login-panel">
+          <div class="panel-accent panel-accent-top"></div>
+          <div class="brand-block">
+            <div class="logo-mark" aria-hidden="true">
+              <svg viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="25"></circle>
+                <path d="M28 7 L45 17 L45 39 L28 49 L11 39 L11 17 Z"></path>
+                <ellipse cx="28" cy="28" rx="11" ry="17"></ellipse>
+                <line x1="28" y1="11" x2="28" y2="45"></line>
+                <path d="M18 23 Q28 19 38 23"></path>
+                <path d="M18 33 Q28 37 38 33"></path>
+                <path class="logo-e" d="M21 21 L21 35 L33 35 M21 28 L31 28 M21 21 L33 21"></path>
+                <circle class="orbit-dot" cx="45" cy="28" r="2.4"></circle>
+              </svg>
+            </div>
+            <h1>ECONOVARIA</h1>
+            <p>GLOBAL MARKET INTELLIGENCE</p>
           </div>
-        </div>
 
-        <h1>Enter the economy.</h1>
-        <p class="briefing-copy">Manage your balance, portfolio, store purchases, trades, and forecasts inside the classroom market.</p>
-
-        <div class="briefing-grid" aria-label="Simulation modules">
-          <div>
-            <span>01</span>
-            <strong>Account</strong>
-            <small>Balance and activity</small>
+          <div class="mode-tabs" role="tablist" aria-label="Login mode">
+            <button class="mode-tab active" data-mode="player" type="button" role="tab" aria-selected="true">Player</button>
+            <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin</button>
+            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">New Game</button>
           </div>
-          <div>
-            <span>02</span>
-            <strong>Portfolio</strong>
-            <small>Assets and positions</small>
+
+          <div id="playerPane" class="mode-pane active">
+            <form id="playerForm" class="form-stack">
+              <label>
+                <span>Game / Session Code</span>
+                <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" />
+              </label>
+              <label>
+                <span>Player ID</span>
+                <input id="playerId" autocomplete="off" placeholder="Enter Player ID" />
+              </label>
+              <label class="disabled-field">
+                <span>Access Code <em>Future feature</em></span>
+                <input id="playerAccessCode" type="password" placeholder="Disabled for this release" disabled aria-disabled="true" />
+              </label>
+              <div id="playerMessage" class="login-message status-message hidden"></div>
+              <button class="submit-btn cyan" type="submit">Enter Game</button>
+            </form>
           </div>
-          <div>
-            <span>03</span>
-            <strong>Market</strong>
-            <small>Prices and signals</small>
+
+          <div id="adminPane" class="mode-pane">
+            <div id="adminLoginStep">
+              <form id="adminForm" class="form-stack">
+                <label>
+                  <span>Admin Email</span>
+                  <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@school.edu" />
+                </label>
+                <label>
+                  <span>Access Code</span>
+                  <input id="adminAccessCode" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter Access Code" />
+                </label>
+                <div id="adminMessage" class="login-message status-message hidden"></div>
+                <button class="submit-btn amber" type="submit">Verify Access</button>
+              </form>
+            </div>
+            <div id="adminGamesStep" class="hidden">
+              <div class="step-header">
+                <span>Select Game Session</span>
+                <button id="backToAdminLogin" type="button">&larr; Back</button>
+              </div>
+              <div id="adminGameList" class="game-list"></div>
+              <div id="selectedGameMessage" class="login-message status-message hidden"></div>
+            </div>
           </div>
-          <div>
-            <span>04</span>
-            <strong>Forecasts</strong>
-            <small>Target price reasoning</small>
+
+          <div id="createPane" class="mode-pane">
+            <form id="createForm" class="form-stack form-stack-compact">
+              <label>
+                <span>License Code</span>
+                <input id="licenseCode" autocomplete="off" placeholder="License Code" />
+              </label>
+              <label>
+                <span>Admin Email</span>
+                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" />
+              </label>
+              <div class="two-col">
+                <label>
+                  <span>Session Name</span>
+                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" />
+                </label>
+                <label>
+                  <span>Difficulty</span>
+                  <select id="difficultyLevel" required>
+                    <option value="" disabled selected hidden>Select</option>
+                    <option value="easy">Easy</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="hard">Hard</option>
+                    <option value="insane">Insane</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Access Code</span>
+                <input id="createAccessCode" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter Access Code" />
+              </label>
+              <div id="createMessage" class="login-message status-message hidden"></div>
+              <button class="submit-btn purple" type="submit">Create Game</button>
+            </form>
           </div>
-        </div>
-      </aside>
 
-      <div class="login-card login-access-card">
-        <div class="access-header">
-          <div id="loginAccessEyebrow" class="access-eyebrow">Secure access</div>
-          <h2 id="loginTitle">Open your account</h2>
-          <p id="loginCopy" class="login-copy">Enter or scan your student code to open your market simulation account.</p>
-        </div>
-
-        <form id="loginForm" class="login-form">
-          <label>
-            <span id="loginFieldLabel" class="field-label">Student Code</span>
-            <input id="loginCardId" type="password" autocomplete="one-time-code" inputmode="text" enterkeyhint="go" placeholder="Enter or scan student code" />
-          </label>
-          <button id="loginSubmitButton" class="primary-btn" type="submit">Open Account</button>
-        </form>
-
-        <div id="loginError" class="status-box bad hidden"></div>
-
-        <div class="login-quote" aria-live="polite">
-          <div class="quote-label">Market note</div>
-          <p id="loginQuoteText">Every decision has a cost. Every cost teaches a lesson.</p>
-          <div id="loginQuoteCount" class="quote-count">01 / 20</div>
-        </div>
+          <footer class="panel-footer">
+            <span>ECONOVARIA &middot; BUILD 4.7.2</span>
+            <span><span class="status-dot green"></span> LIVE &middot; CLASSROOM MODE</span>
+          </footer>
+          <div class="panel-accent panel-accent-bottom"></div>
+        </section>
       </div>
     </div>
   </section>
@@ -226,7 +288,6 @@
   <script src="frontend/src/features/market/market-data-refresh.js?v=20260611-newsfix2"></script>
   <script src="frontend/src/ui/mobile.js"></script>
   <script src="frontend/src/ui/academic-market-copy.js"></script>
-  <script src="frontend/src/features/auth/login-quotes.js?v=20260613-auth-move1"></script>
   <script id="app-preload-release-script">
     (function releaseAppPreload() {
       var released = false;

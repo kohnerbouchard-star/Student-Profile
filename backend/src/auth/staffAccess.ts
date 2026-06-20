@@ -7,7 +7,7 @@ import {
   type StaffUserRecord,
   type SupabaseAuthUser,
   type UUID,
-} from "./types";
+} from "./types.ts";
 
 export interface StaffAccessRepository {
   findStaffUserBySupabaseAuthUserId(

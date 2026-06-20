@@ -1,16 +1,16 @@
 import type {
   LicensingActivationRouteAdapterDependencies,
-} from "../application/licensingActivationRouteAdapter";
+} from "../application/licensingActivationRouteAdapter.ts";
 import type {
   LicensingActivationRepository,
-} from "./licensingRepository";
+} from "./licensingRepository.ts";
 import {
   createPurchaseCodeSha256Hasher,
-} from "./purchaseCodeHasher";
+} from "./purchaseCodeHasher.ts";
 import {
   createWebCryptoSha256HexDigest,
   type WebCryptoRuntime,
-} from "./webCryptoSha256Digest";
+} from "./webCryptoSha256Digest.ts";
 
 export interface LicensingActivationFactoryInput {
   readonly activationRepository: LicensingActivationRepository;

@@ -1,9 +1,9 @@
-import type { Sha256HexDigest } from "./purchaseCodeHasher";
+import type { Sha256HexDigest } from "./purchaseCodeHasher.ts";
 import {
   createRuntimeAgnosticSha256HexDigest,
   type Sha256BytesDigest,
   type Utf8BytesEncoder,
-} from "./sha256HexDigest";
+} from "./sha256HexDigest.ts";
 
 export interface WebCryptoRuntime {
   readonly TextEncoder?: new () => {
