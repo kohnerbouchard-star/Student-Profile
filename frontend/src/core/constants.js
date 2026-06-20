@@ -2,6 +2,9 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.core = window.Econovaria.core || {};
 
 const API_URL = "https://silent-haze-ca17.kohner.workers.dev";
+const SUPABASE_URL = "https://cgiukdjwicykrmtkhudh.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
+const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`;
 
 const PERMISSION_SETS = {
   STUDENT: {
@@ -52,4 +55,11 @@ const VIEW_COPY = {
   }
 };
 
-window.Econovaria.core.constants = { API_URL, PERMISSION_SETS, VIEW_COPY };
+window.Econovaria.core.constants = {
+  API_URL,
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  CLASSROOM_API_URL,
+  PERMISSION_SETS,
+  VIEW_COPY
+};

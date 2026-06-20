@@ -27,10 +27,28 @@ function getApiUrl() {
 }
 
 function getApiRouteUrl(path) {
-  const baseUrl = getApiUrl().replace(/\/+$/, "");
+  const baseUrl = window.Econovaria?.core?.constants?.CLASSROOM_API_URL;
+
+  if (!baseUrl) {
+    throw new Error("[Econovaria API] Supabase classroom API URL is not configured.");
+  }
+
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
   const routePath = String(path || "").startsWith("/") ? String(path || "") : `/${path || ""}`;
 
-  return `${baseUrl}${routePath}`;
+  return `${normalizedBaseUrl}${routePath}`;
+}
+
+function getSupabaseConfig() {
+  const constants = window.Econovaria?.core?.constants || {};
+  const supabaseUrl = String(constants.SUPABASE_URL || "").replace(/\/+$/, "");
+  const publishableKey = String(constants.SUPABASE_PUBLISHABLE_KEY || "").trim();
+
+  if (!supabaseUrl || !publishableKey) {
+    throw new Error("[Econovaria API] Supabase frontend configuration is incomplete.");
+  }
+
+  return { supabaseUrl, publishableKey };
 }
 
 function getSnapshotMerger() {
@@ -154,6 +172,147 @@ async function callApiOnce(body) {
   }
 }
 
+async function callPlayerLoginApi(gameCode, playerId) {
+  const { publishableKey } = getSupabaseConfig();
+
+  return callSupabaseJsonRoute("/players/login", {
+    method: "POST",
+    token: publishableKey,
+    body: {
+      gameJoinCode: String(gameCode || "").trim(),
+      studentCode: String(playerId || "").trim()
+    },
+    fallbackCode: "player_login_failed",
+    fallbackMessage: "Player login failed. Check the session code and Player ID."
+  });
+}
+
+function callPlayerBootstrapApi(sessionToken) {
+  return callSupabaseJsonRoute("/players/me", {
+    method: "GET",
+    token: sessionToken,
+    fallbackCode: "player_session_bootstrap_failed",
+    fallbackMessage: "Your player session could not be loaded."
+  });
+}
+
+async function callSupabasePasswordSignIn(email, accessCode) {
+  const { supabaseUrl, publishableKey } = getSupabaseConfig();
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": publishableKey,
+        "Authorization": `Bearer ${publishableKey}`
+      },
+      body: JSON.stringify({
+        email: String(email || "").trim(),
+        password: String(accessCode || "")
+      })
+    });
+    const result = await readJsonResponse(response);
+
+    if (response.ok && result?.access_token) {
+      return {
+        ok: true,
+        status: response.status,
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token || "",
+        user: result.user || null
+      };
+    }
+
+    return {
+      ok: false,
+      status: response.status,
+      code: result?.error_code || result?.code || "admin_login_failed",
+      message: result?.msg || result?.message || result?.error_description || "Admin email or Access Code is invalid."
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      code: "admin_login_network_failed",
+      message: "Could not connect to admin sign-in. Check your connection and try again."
+    };
+  }
+}
+
+function callLicensingActivationApi(bearerToken, input) {
+  return callSupabaseJsonRoute("/licensing/activate", {
+    method: "POST",
+    token: bearerToken,
+    body: {
+      purchaseCode: String(input?.licenseCode || "").trim(),
+      gameName: String(input?.sessionName || "").trim(),
+      difficultyPreset: String(input?.difficulty || "").trim()
+    },
+    fallbackCode: "licensing_activation_failed",
+    fallbackMessage: "The game could not be created."
+  });
+}
+
+async function callSupabaseJsonRoute(path, options) {
+  const { publishableKey } = getSupabaseConfig();
+  const token = normalizeBearerToken(options?.token);
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      code: options?.fallbackCode || "missing_auth_token",
+      message: "A valid session token is required."
+    };
+  }
+
+  try {
+    const headers = {
+      "Authorization": `Bearer ${token}`,
+      "apikey": publishableKey
+    };
+    const requestOptions = {
+      method: options?.method || "GET",
+      headers
+    };
+
+    if (options?.body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      requestOptions.body = JSON.stringify(options.body);
+    }
+
+    const response = await fetch(getApiRouteUrl(path), requestOptions);
+    const result = await readJsonResponse(response);
+
+    if (response.ok && result?.ok === true) {
+      return { status: response.status, ...result };
+    }
+
+    return normalizeEdgeRouteError(
+      result,
+      response.status,
+      options?.fallbackCode,
+      options?.fallbackMessage
+    );
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      code: `${options?.fallbackCode || "supabase_request"}_network_failed`,
+      message: "Could not connect to Supabase. Check your connection and try again."
+    };
+  }
+}
+
+async function readJsonResponse(response) {
+  try {
+    return await response.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 async function callStaffBootstrapApi(bearerToken) {
   const token = normalizeBearerToken(bearerToken);
 
@@ -167,10 +326,12 @@ async function callStaffBootstrapApi(bearerToken) {
   }
 
   try {
+    const { publishableKey } = getSupabaseConfig();
     const response = await fetch(getApiRouteUrl("/staff/bootstrap"), {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${token}`
+        "Authorization": `Bearer ${token}`,
+        "apikey": publishableKey
       }
     });
 
@@ -242,8 +403,10 @@ async function callAdminStoreCatalogRoute(method, path, bearerToken, body) {
   }
 
   try {
+    const { publishableKey } = getSupabaseConfig();
     const headers = {
-      "Authorization": `Bearer ${token}`
+      "Authorization": `Bearer ${token}`,
+      "apikey": publishableKey
     };
     const options = {
       method,
@@ -364,6 +527,10 @@ function showApiRetryNotice(attemptNumber, maxRetries, message) {
 Object.assign(window.Econovaria.core.api, {
   submitAction,
   callApi,
+  callPlayerLoginApi,
+  callPlayerBootstrapApi,
+  callSupabasePasswordSignIn,
+  callLicensingActivationApi,
   callStaffBootstrapApi,
   listAdminStoreItems,
   createAdminStoreItem,
@@ -372,6 +539,10 @@ Object.assign(window.Econovaria.core.api, {
 Object.assign(window.Econovaria.core, {
   submitAction,
   callApi,
+  callPlayerLoginApi,
+  callPlayerBootstrapApi,
+  callSupabasePasswordSignIn,
+  callLicensingActivationApi,
   callStaffBootstrapApi,
   listAdminStoreItems,
   createAdminStoreItem,
