@@ -26,6 +26,13 @@ function getApiUrl() {
   return apiUrl;
 }
 
+function getApiRouteUrl(path) {
+  const baseUrl = getApiUrl().replace(/\/+$/, "");
+  const routePath = String(path || "").startsWith("/") ? String(path || "") : `/${path || ""}`;
+
+  return `${baseUrl}${routePath}`;
+}
+
 function getSnapshotMerger() {
   const mergeSnapshot = window.Econovaria?.core?.snapshot?.mergeSnapshot ||
     window.Econovaria?.core?.mergeSnapshot;
@@ -147,6 +154,73 @@ async function callApiOnce(body) {
   }
 }
 
+async function callStaffBootstrapApi(bearerToken) {
+  const token = normalizeBearerToken(bearerToken);
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      code: "missing_staff_auth_user",
+      message: "A staff sign-in token is required."
+    };
+  }
+
+  try {
+    const response = await fetch(getApiRouteUrl("/staff/bootstrap"), {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    let result;
+
+    try {
+      result = await response.json();
+    } catch (err) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "staff_bootstrap_unreadable_response",
+        message: "The admin console received an unreadable staff bootstrap response."
+      };
+    }
+
+    if (response.ok && result && result.ok === true) {
+      return result;
+    }
+
+    return normalizeStaffBootstrapError(result, response.status);
+
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      code: "staff_bootstrap_network_failed",
+      message: "Could not connect to staff bootstrap. Check your connection and try again."
+    };
+  }
+}
+
+function normalizeBearerToken(value) {
+  return String(value || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function normalizeStaffBootstrapError(result, status) {
+  const error = result && typeof result === "object" ? result.error : null;
+  const code = error?.code || result?.code || "staff_bootstrap_failed";
+  const message = error?.message || result?.message || "Staff bootstrap failed.";
+
+  return {
+    ok: false,
+    status,
+    code,
+    message,
+    error: error || null
+  };
+}
+
 function isRetryableApiResult(result) {
   if (!result || result.ok === true) {
     return false;
@@ -202,5 +276,5 @@ function showApiRetryNotice(attemptNumber, maxRetries, message) {
   console.warn(text, message || "");
 }
 
-Object.assign(window.Econovaria.core.api, { submitAction, callApi });
-Object.assign(window.Econovaria.core, { submitAction, callApi });
+Object.assign(window.Econovaria.core.api, { submitAction, callApi, callStaffBootstrapApi });
+Object.assign(window.Econovaria.core, { submitAction, callApi, callStaffBootstrapApi });
