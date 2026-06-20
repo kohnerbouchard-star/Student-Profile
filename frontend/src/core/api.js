@@ -191,7 +191,7 @@ async function callStaffBootstrapApi(bearerToken) {
       return result;
     }
 
-    return normalizeStaffBootstrapError(result, response.status);
+    return normalizeEdgeRouteError(result, response.status);
 
   } catch (err) {
     return {
@@ -203,14 +203,99 @@ async function callStaffBootstrapApi(bearerToken) {
   }
 }
 
+function listAdminStoreItems(gameSessionId, bearerToken) {
+  return callAdminStoreCatalogRoute(
+    "GET",
+    `/games/${encodeURIComponent(gameSessionId || "")}/store/items`,
+    bearerToken
+  );
+}
+
+function createAdminStoreItem(gameSessionId, bearerToken, body) {
+  return callAdminStoreCatalogRoute(
+    "POST",
+    `/games/${encodeURIComponent(gameSessionId || "")}/store/items`,
+    bearerToken,
+    body
+  );
+}
+
+function updateAdminStoreItem(gameSessionId, itemId, bearerToken, body) {
+  return callAdminStoreCatalogRoute(
+    "PATCH",
+    `/games/${encodeURIComponent(gameSessionId || "")}/store/items/${encodeURIComponent(itemId || "")}`,
+    bearerToken,
+    body
+  );
+}
+
+async function callAdminStoreCatalogRoute(method, path, bearerToken, body) {
+  const token = normalizeBearerToken(bearerToken);
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      code: "missing_staff_auth_user",
+      message: "A staff sign-in token is required to manage store items."
+    };
+  }
+
+  try {
+    const headers = {
+      "Authorization": `Bearer ${token}`
+    };
+    const options = {
+      method,
+      headers
+    };
+
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(getApiRouteUrl(path), options);
+    let result;
+
+    try {
+      result = await response.json();
+    } catch (err) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "store_catalog_unreadable_response",
+        message: "The admin console received an unreadable store catalog response."
+      };
+    }
+
+    if (response.ok && result && result.ok === true) {
+      return {
+        status: response.status,
+        ...result
+      };
+    }
+
+    return normalizeEdgeRouteError(result, response.status, "store_catalog_request_failed", "Store catalog request failed.");
+
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      code: "store_catalog_network_failed",
+      message: "Could not connect to store catalog. Check your connection and try again."
+    };
+  }
+}
+
 function normalizeBearerToken(value) {
   return String(value || "").replace(/^Bearer\s+/i, "").trim();
 }
 
-function normalizeStaffBootstrapError(result, status) {
+function normalizeEdgeRouteError(result, status, fallbackCode = "staff_bootstrap_failed", fallbackMessage = "Staff bootstrap failed.") {
   const error = result && typeof result === "object" ? result.error : null;
-  const code = error?.code || result?.code || "staff_bootstrap_failed";
-  const message = error?.message || result?.message || "Staff bootstrap failed.";
+  const code = error?.code || result?.code || fallbackCode;
+  const message = error?.message || result?.message || fallbackMessage;
 
   return {
     ok: false,
@@ -276,5 +361,19 @@ function showApiRetryNotice(attemptNumber, maxRetries, message) {
   console.warn(text, message || "");
 }
 
-Object.assign(window.Econovaria.core.api, { submitAction, callApi, callStaffBootstrapApi });
-Object.assign(window.Econovaria.core, { submitAction, callApi, callStaffBootstrapApi });
+Object.assign(window.Econovaria.core.api, {
+  submitAction,
+  callApi,
+  callStaffBootstrapApi,
+  listAdminStoreItems,
+  createAdminStoreItem,
+  updateAdminStoreItem
+});
+Object.assign(window.Econovaria.core, {
+  submitAction,
+  callApi,
+  callStaffBootstrapApi,
+  listAdminStoreItems,
+  createAdminStoreItem,
+  updateAdminStoreItem
+});

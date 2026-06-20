@@ -47,6 +47,11 @@ let adminStoreRows = [
   { itemName: "Market Hint", description: "Teacher-approved hint for the current market round.", quantity: "5", price: "40", status: "Visible" },
   { itemName: "", description: "", quantity: "", price: "", status: "Draft" }
 ];
+let adminStoreItems = [];
+let adminStoreLoadedGameSessionId = null;
+let adminStoreLoadingGameSessionId = null;
+let adminStoreStatus = { type: "idle", message: "" };
+let adminStoreNewItem = createDefaultAdminStoreItem();
 
 function renderAdminDashboard() {
   const el = document.getElementById("admin");
@@ -449,14 +454,50 @@ function bindAttendanceScannerControls(root) {
 }
 
 function renderStoreSection() {
-  // Store CRUD should wait for real staff bootstrap and game-session selection.
+  const staffSession = getAdminStaffSession();
+  const selectedSession = getSelectedAdminGameSession(staffSession);
+
+  if (!staffSession) {
+    return `
+      ${renderStorePrototypeSection(true)}
+      ${renderStoreResponsibilitiesSection()}`;
+  }
+
+  if (!selectedSession) {
+    return `
+      ${renderStoreUnavailableSection(
+        "No active game session selected",
+        "Store management needs an active game session from staff bootstrap before it can load catalog items."
+      )}
+      ${renderStoreResponsibilitiesSection()}`;
+  }
+
+  if (!getAdminStoreToken()) {
+    return `
+      ${renderStoreUnavailableSection(
+        "Staff token required",
+        "Sign in with a staff token before managing store items."
+      )}
+      ${renderStoreResponsibilitiesSection()}`;
+  }
+
+  scheduleAdminStoreItemsLoad(selectedSession.id);
+
+  return `
+    ${renderAdminStoreCatalogSection(selectedSession)}
+    ${renderStoreResponsibilitiesSection()}`;
+}
+
+function renderStorePrototypeSection(disabled) {
+  const disabledAttr = disabled ? " disabled" : "";
+
   return `
     <section class="card admin-panel">
       <div class="card-title-row">
         <h2 class="card-title">Store Inventory</h2>
         <span class="badge warn">Local draft</span>
       </div>
-      <p class="help-text">Edit item names, descriptions, stock counts, and prices. Publishing stays disabled until staff bootstrap and game-session selection are wired.</p>
+      <p class="help-text">Store management is disabled until a real staff session and selected game session are available.</p>
       <div class="admin-player-table-wrap">
         <table class="admin-store-table">
           <thead>
@@ -469,15 +510,169 @@ function renderStoreSection() {
             </tr>
           </thead>
           <tbody>
-            ${adminStoreRows.map(adminStoreRow).join("")}
+            ${adminStoreRows.map((item, index) => adminStoreRow(item, index, disabled)).join("")}
           </tbody>
         </table>
       </div>
       <div class="admin-table-actions">
-        <button class="admin-btn admin-btn--primary" type="button" data-admin-add-store-row>Add Store Item Row</button>
+        <button class="admin-btn admin-btn--primary" type="button" data-admin-add-store-row${disabledAttr}>Add Store Item Row</button>
       </div>
-    </section>
+    </section>`;
+}
 
+function renderStoreUnavailableSection(title, message) {
+  return `
+    <section class="card admin-panel">
+      <div class="card-title-row">
+        <h2 class="card-title">Store Inventory</h2>
+        <span class="badge warn">Not connected</span>
+      </div>
+      <div class="admin-status-list">
+        ${adminStatus(title, message, "warn")}
+      </div>
+    </section>`;
+}
+
+function renderAdminStoreCatalogSection(selectedSession) {
+  return `
+    <section class="card admin-panel">
+      <div class="card-title-row">
+        <div>
+          <h2 class="card-title">Store Inventory</h2>
+          <p class="help-text">Editing ${sanitize(selectedSession.name || selectedSession.id)}. Changes save only when you press Save or Add Item.</p>
+        </div>
+        <span class="badge good">Live catalog</span>
+      </div>
+      ${renderAdminStoreStatusBox()}
+      <div class="admin-player-table-wrap">
+        <table class="admin-store-table">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Visibility</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderAdminStoreItemRows()}
+            ${renderAdminStoreNewItemRow()}
+          </tbody>
+        </table>
+      </div>
+      <div class="admin-table-actions">
+        <button class="admin-btn admin-btn--secondary" type="button" data-admin-store-refresh${adminStoreLoadingGameSessionId ? " disabled" : ""}>Refresh Items</button>
+      </div>
+    </section>`;
+}
+
+function renderAdminStoreItemRows() {
+  if (adminStoreLoadingGameSessionId && !adminStoreItems.length) {
+    return `<tr><td colspan="7"><div class="empty">Loading store items...</div></td></tr>`;
+  }
+
+  if (!adminStoreItems.length) {
+    return `<tr><td colspan="7"><div class="empty">No store items have been created for this game session yet.</div></td></tr>`;
+  }
+
+  return adminStoreItems.map(renderAdminStoreItemRow).join("");
+}
+
+function renderAdminStoreItemRow(item, index) {
+  const disabledAttr = adminStoreLoadingGameSessionId ? " disabled" : "";
+
+  return `
+    <tr>
+      <td>
+        <label class="admin-table-field">
+          <span class="sr-only">Store item name ${index + 1}</span>
+          <input value="${sanitize(item.name)}" placeholder="Item name" data-admin-store-item-field="name" data-admin-store-item-index="${index}" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field">
+          <span class="sr-only">Store item description ${index + 1}</span>
+          <textarea rows="2" placeholder="Description" data-admin-store-item-field="description" data-admin-store-item-index="${index}"${disabledAttr}>${sanitize(item.description)}</textarea>
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field admin-table-field--small">
+          <span class="sr-only">Quantity in stock ${index + 1}</span>
+          <input value="${sanitize(item.stockQuantity)}" placeholder="0" inputmode="numeric" data-admin-store-item-field="stockQuantity" data-admin-store-item-index="${index}" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field admin-table-field--small">
+          <span class="sr-only">Store item price ${index + 1}</span>
+          <input value="${sanitize(item.price)}" placeholder="0" inputmode="decimal" data-admin-store-item-field="price" data-admin-store-item-index="${index}" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>${adminStoreSelect("status", item.status, ["active", "disabled", "archived"], "data-admin-store-item-field=\"status\" data-admin-store-item-index=\"" + index + "\"" + disabledAttr)}</td>
+      <td>${adminStoreSelect("visibility", item.visibility, ["visible", "hidden"], "data-admin-store-item-field=\"visibility\" data-admin-store-item-index=\"" + index + "\"" + disabledAttr)}</td>
+      <td>
+        <button class="admin-btn admin-btn--primary" type="button" data-admin-store-save="${index}"${disabledAttr}>Save</button>
+      </td>
+    </tr>`;
+}
+
+function renderAdminStoreNewItemRow() {
+  const disabledAttr = adminStoreLoadingGameSessionId ? " disabled" : "";
+
+  return `
+    <tr>
+      <td>
+        <label class="admin-table-field">
+          <span class="sr-only">New store item name</span>
+          <input value="${sanitize(adminStoreNewItem.name)}" placeholder="New item name" data-admin-store-new-field="name" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field">
+          <span class="sr-only">New store item description</span>
+          <textarea rows="2" placeholder="Description" data-admin-store-new-field="description"${disabledAttr}>${sanitize(adminStoreNewItem.description)}</textarea>
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field admin-table-field--small">
+          <span class="sr-only">New quantity in stock</span>
+          <input value="${sanitize(adminStoreNewItem.stockQuantity)}" placeholder="0" inputmode="numeric" data-admin-store-new-field="stockQuantity" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>
+        <label class="admin-table-field admin-table-field--small">
+          <span class="sr-only">New store item price</span>
+          <input value="${sanitize(adminStoreNewItem.price)}" placeholder="0" inputmode="decimal" data-admin-store-new-field="price" autocomplete="off"${disabledAttr} />
+        </label>
+      </td>
+      <td>${adminStoreSelect("status", adminStoreNewItem.status, ["active", "disabled", "archived"], "data-admin-store-new-field=\"status\"" + disabledAttr)}</td>
+      <td>${adminStoreSelect("visibility", adminStoreNewItem.visibility, ["visible", "hidden"], "data-admin-store-new-field=\"visibility\"" + disabledAttr)}</td>
+      <td>
+        <button class="admin-btn admin-btn--success" type="button" data-admin-store-create${disabledAttr}>Add Item</button>
+      </td>
+    </tr>`;
+}
+
+function adminStoreSelect(label, value, options, dataAttrs) {
+  return `
+    <label class="admin-table-field admin-table-field--small">
+      <span class="sr-only">${sanitize(label)}</span>
+      <select ${dataAttrs}>
+        ${options.map((option) => `<option value="${sanitize(option)}"${option === value ? " selected" : ""}>${sanitize(option)}</option>`).join("")}
+      </select>
+    </label>`;
+}
+
+function renderAdminStoreStatusBox() {
+  if (!adminStoreStatus.message) return "";
+
+  return `<div class="status-box ${sanitize(adminStoreStatus.type)}">${sanitize(adminStoreStatus.message)}</div>`;
+}
+
+function renderStoreResponsibilitiesSection() {
+  return `
     <section class="card admin-panel">
       <div class="card-title-row">
         <h2 class="card-title">Store Responsibilities</h2>
@@ -491,31 +686,33 @@ function renderStoreSection() {
     </section>`;
 }
 
-function adminStoreRow(item, index) {
+function adminStoreRow(item, index, disabled) {
+  const disabledAttr = disabled ? " disabled" : "";
+
   return `
     <tr>
       <td>
         <label class="admin-table-field">
           <span class="sr-only">Store item name ${index + 1}</span>
-          <input value="${sanitize(item.itemName)}" placeholder="Item name" data-admin-store-field="itemName" data-admin-store-index="${index}" autocomplete="off" />
+          <input value="${sanitize(item.itemName)}" placeholder="Item name" data-admin-store-field="itemName" data-admin-store-index="${index}" autocomplete="off"${disabledAttr} />
         </label>
       </td>
       <td>
         <label class="admin-table-field">
           <span class="sr-only">Store item description ${index + 1}</span>
-          <textarea rows="2" placeholder="Description" data-admin-store-field="description" data-admin-store-index="${index}">${sanitize(item.description)}</textarea>
+          <textarea rows="2" placeholder="Description" data-admin-store-field="description" data-admin-store-index="${index}"${disabledAttr}>${sanitize(item.description)}</textarea>
         </label>
       </td>
       <td>
         <label class="admin-table-field admin-table-field--small">
           <span class="sr-only">Quantity in stock ${index + 1}</span>
-          <input value="${sanitize(item.quantity)}" placeholder="0" inputmode="numeric" data-admin-store-field="quantity" data-admin-store-index="${index}" autocomplete="off" />
+          <input value="${sanitize(item.quantity)}" placeholder="0" inputmode="numeric" data-admin-store-field="quantity" data-admin-store-index="${index}" autocomplete="off"${disabledAttr} />
         </label>
       </td>
       <td>
         <label class="admin-table-field admin-table-field--small">
           <span class="sr-only">Store item price ${index + 1}</span>
-          <input value="${sanitize(item.price)}" placeholder="0" inputmode="decimal" data-admin-store-field="price" data-admin-store-index="${index}" autocomplete="off" />
+          <input value="${sanitize(item.price)}" placeholder="0" inputmode="decimal" data-admin-store-field="price" data-admin-store-index="${index}" autocomplete="off"${disabledAttr} />
         </label>
       </td>
       <td><span class="badge ${item.status === "Draft" ? "warn" : "good"}">${sanitize(item.status)}</span></td>
@@ -532,6 +729,49 @@ function bindAdminStoreControls(root) {
     });
   });
 
+  root.querySelectorAll("[data-admin-store-item-field]").forEach((field) => {
+    const updateField = () => {
+      const index = Number(field.dataset.adminStoreItemIndex);
+      const key = field.dataset.adminStoreItemField;
+      if (!adminStoreItems[index] || !key) return;
+      adminStoreItems[index][key] = field.value;
+    };
+
+    field.addEventListener("input", updateField);
+    field.addEventListener("change", updateField);
+  });
+
+  root.querySelectorAll("[data-admin-store-new-field]").forEach((field) => {
+    const updateField = () => {
+      const key = field.dataset.adminStoreNewField;
+      if (!key) return;
+      adminStoreNewItem[key] = field.value;
+    };
+
+    field.addEventListener("input", updateField);
+    field.addEventListener("change", updateField);
+  });
+
+  root.querySelectorAll("[data-admin-store-save]").forEach((button) => {
+    button.addEventListener("click", () => {
+      saveAdminStoreItem(Number(button.dataset.adminStoreSave));
+    });
+  });
+
+  const createButton = root.querySelector("[data-admin-store-create]");
+  if (createButton) {
+    createButton.addEventListener("click", () => {
+      createAdminStoreItemFromDraft();
+    });
+  }
+
+  const refreshButton = root.querySelector("[data-admin-store-refresh]");
+  if (refreshButton) {
+    refreshButton.addEventListener("click", () => {
+      refreshAdminStoreItems();
+    });
+  }
+
   const addButton = root.querySelector("[data-admin-add-store-row]");
   if (addButton) {
     addButton.addEventListener("click", () => {
@@ -539,6 +779,224 @@ function bindAdminStoreControls(root) {
       renderAdminDashboard();
     });
   }
+}
+
+function scheduleAdminStoreItemsLoad(gameSessionId) {
+  if (!gameSessionId) return;
+
+  if (adminStoreLoadedGameSessionId === gameSessionId || adminStoreLoadingGameSessionId === gameSessionId) {
+    return;
+  }
+
+  adminStoreItems = [];
+  adminStoreNewItem = createDefaultAdminStoreItem();
+  adminStoreLoadingGameSessionId = gameSessionId;
+  adminStoreStatus = {
+    type: "loading",
+    message: "Loading store items..."
+  };
+
+  window.setTimeout(() => {
+    loadAdminStoreItemsForSession(gameSessionId);
+  }, 0);
+}
+
+async function loadAdminStoreItemsForSession(gameSessionId) {
+  const result = await listAdminStoreItems(gameSessionId, getAdminStoreToken());
+
+  if (getSelectedAdminGameSession(getAdminStaffSession())?.id !== gameSessionId) {
+    if (adminStoreLoadingGameSessionId === gameSessionId) {
+      adminStoreLoadingGameSessionId = null;
+    }
+
+    return;
+  }
+
+  if (result && result.ok === true) {
+    adminStoreItems = (result.items || []).map(normalizeAdminStoreItem);
+    adminStoreLoadedGameSessionId = gameSessionId;
+    adminStoreStatus = {
+      type: "ok",
+      message: `${adminStoreItems.length} store item${adminStoreItems.length === 1 ? "" : "s"} loaded.`
+    };
+  } else {
+    adminStoreLoadedGameSessionId = null;
+    adminStoreStatus = {
+      type: "bad",
+      message: result?.message || "Store items could not be loaded."
+    };
+  }
+
+  adminStoreLoadingGameSessionId = null;
+  renderAdminDashboard();
+}
+
+async function saveAdminStoreItem(index) {
+  const item = adminStoreItems[index];
+  const context = getAdminStoreContext();
+
+  if (!item || !context.ok) return;
+
+  adminStoreStatus = {
+    type: "loading",
+    message: `Saving ${item.name || "store item"}...`
+  };
+  renderAdminDashboard();
+
+  const result = await updateAdminStoreItem(
+    context.gameSessionId,
+    item.id,
+    context.token,
+    adminStoreItemToPayload(item)
+  );
+
+  if (result && result.ok === true) {
+    adminStoreItems[index] = normalizeAdminStoreItem(result.item || item);
+    adminStoreStatus = {
+      type: "ok",
+      message: `${adminStoreItems[index].name || "Store item"} saved.`
+    };
+  } else {
+    adminStoreStatus = {
+      type: "bad",
+      message: result?.message || "Store item could not be saved."
+    };
+  }
+
+  renderAdminDashboard();
+}
+
+async function createAdminStoreItemFromDraft() {
+  const context = getAdminStoreContext();
+
+  if (!context.ok) return;
+
+  adminStoreStatus = {
+    type: "loading",
+    message: `Adding ${adminStoreNewItem.name || "store item"}...`
+  };
+  renderAdminDashboard();
+
+  const result = await createAdminStoreItem(
+    context.gameSessionId,
+    context.token,
+    adminStoreItemToPayload(adminStoreNewItem)
+  );
+
+  if (result && result.ok === true) {
+    adminStoreItems.push(normalizeAdminStoreItem(result.item));
+    adminStoreNewItem = createDefaultAdminStoreItem();
+    adminStoreLoadedGameSessionId = context.gameSessionId;
+    adminStoreStatus = {
+      type: "ok",
+      message: `${adminStoreItems[adminStoreItems.length - 1].name || "Store item"} added.`
+    };
+  } else {
+    adminStoreStatus = {
+      type: "bad",
+      message: result?.message || "Store item could not be added."
+    };
+  }
+
+  renderAdminDashboard();
+}
+
+function refreshAdminStoreItems() {
+  const context = getAdminStoreContext();
+
+  if (!context.ok) return;
+
+  adminStoreLoadedGameSessionId = null;
+  adminStoreLoadingGameSessionId = context.gameSessionId;
+  adminStoreStatus = {
+    type: "loading",
+    message: "Refreshing store items..."
+  };
+  renderAdminDashboard();
+  loadAdminStoreItemsForSession(context.gameSessionId);
+}
+
+function getAdminStoreContext() {
+  const selectedSession = getSelectedAdminGameSession(getAdminStaffSession());
+  const token = getAdminStoreToken();
+
+  if (!selectedSession || !token) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    gameSessionId: selectedSession.id,
+    token
+  };
+}
+
+function getAdminStoreToken() {
+  const token = currentSession?.token || "";
+
+  if (!token || token === "frontend-admin-demo") return "";
+
+  return token;
+}
+
+function normalizeAdminStoreItem(item) {
+  return {
+    id: String(item?.id || ""),
+    gameSessionId: String(item?.gameSessionId || ""),
+    itemKey: item?.itemKey || "",
+    name: item?.name || "",
+    description: item?.description || "",
+    category: item?.category || "general",
+    price: formatAdminStoreInputValue(item?.price, "0"),
+    currencyCode: item?.currencyCode || "ECO",
+    stockQuantity: formatAdminStoreInputValue(item?.stockQuantity, "0"),
+    status: item?.status || "active",
+    visibility: item?.visibility || "visible",
+    sortOrder: formatAdminStoreInputValue(item?.sortOrder, "0"),
+    createdAt: item?.createdAt || "",
+    updatedAt: item?.updatedAt || ""
+  };
+}
+
+function createDefaultAdminStoreItem() {
+  return {
+    name: "",
+    description: "",
+    category: "general",
+    price: "0",
+    currencyCode: "ECO",
+    stockQuantity: "0",
+    status: "active",
+    visibility: "visible",
+    sortOrder: "0"
+  };
+}
+
+function adminStoreItemToPayload(item) {
+  return {
+    name: item.name,
+    description: item.description || null,
+    category: item.category || "general",
+    price: parseAdminStoreNumber(item.price, 0),
+    currencyCode: item.currencyCode || "ECO",
+    stockQuantity: parseAdminStoreNumber(item.stockQuantity, 0),
+    status: item.status || "active",
+    visibility: item.visibility || "visible",
+    sortOrder: parseAdminStoreNumber(item.sortOrder, 0)
+  };
+}
+
+function parseAdminStoreNumber(value, fallback) {
+  const text = String(value ?? "").trim();
+  if (!text) return fallback;
+
+  const number = Number(text);
+  return Number.isFinite(number) ? number : text;
+}
+
+function formatAdminStoreInputValue(value, fallback) {
+  if (value === undefined || value === null || value === "") return fallback;
+  return String(value);
 }
 
 function renderSettingsSection() {
