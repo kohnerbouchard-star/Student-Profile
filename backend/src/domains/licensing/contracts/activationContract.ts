@@ -1,8 +1,8 @@
-import type { RedeemPurchaseCodeResult } from "../application/redeemPurchaseCode";
-import type { LicensingActivationSafeError } from "../application/licensingActivationErrors";
-import { normalizePurchaseCode } from "../domain/purchaseCodeNormalization";
-import type { PurchaseCodeHasher } from "../domain/purchaseCodeHashing";
-import type { JsonObject } from "../../../supabase/tableTypes";
+import type { RedeemPurchaseCodeResult } from "../application/redeemPurchaseCode.ts";
+import type { LicensingActivationSafeError } from "../application/licensingActivationErrors.ts";
+import { normalizePurchaseCode } from "../domain/purchaseCodeNormalization.ts";
+import type { PurchaseCodeHasher } from "../domain/purchaseCodeHashing.ts";
+import type { JsonObject } from "../../../supabase/tableTypes.ts";
 
 export interface LicensingActivationRequestBody {
   readonly purchaseCode: string;

@@ -1,10 +1,10 @@
 import {
   mapLicensingActivationError,
-} from "./licensingActivationErrors";
+} from "./licensingActivationErrors.ts";
 import {
   redeemPurchaseCode,
   type RedeemPurchaseCodeDependencies,
-} from "./redeemPurchaseCode";
+} from "./redeemPurchaseCode.ts";
 import {
   buildLicensingActivationErrorResponse,
   buildLicensingActivationSuccessResponse,
@@ -12,10 +12,10 @@ import {
   type LicensingActivationContractDependencies,
   type LicensingActivationResponse,
   type LicensingActivationRouteContext,
-} from "../contracts/activationContract";
+} from "../contracts/activationContract.ts";
 import {
   parseLicensingActivationRequestBody,
-} from "../contracts/activationRequestParser";
+} from "../contracts/activationRequestParser.ts";
 
 export interface LicensingActivationRouteAdapterDependencies
   extends LicensingActivationContractDependencies {

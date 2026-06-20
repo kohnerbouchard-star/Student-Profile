@@ -1,9 +1,9 @@
-import type { UUID } from "../../../auth/types";
+import type { UUID } from "../../../auth/types.ts";
 import type {
   JsonObject,
   RedeemPurchaseCodeForGameRpcRow,
-} from "../../../supabase/tableTypes";
-import type { LicensingActivationRepository } from "../infrastructure/licensingRepository";
+} from "../../../supabase/tableTypes.ts";
+import type { LicensingActivationRepository } from "../infrastructure/licensingRepository.ts";
 
 export interface RedeemPurchaseCodeInput {
   readonly staffUserId: UUID;

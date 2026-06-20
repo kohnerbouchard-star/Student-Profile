@@ -5,7 +5,7 @@ import {
   SupabaseRepositoryError,
   type SupabaseRepositoryClient,
   type SupabaseRpcClient,
-} from "../../../supabase/queryResult";
+} from "../../../supabase/queryResult.ts";
 import {
   mapEntitlementRow,
   mapPurchaseCodeRow,
@@ -16,7 +16,7 @@ import {
   type JsonObject,
   type PurchaseCodeRecord,
   type RedeemPurchaseCodeForGameRpcRow,
-} from "../../../supabase/tableTypes";
+} from "../../../supabase/tableTypes.ts";
 
 type LicensingRepositoryTables = Pick<
   CoreSupabaseTables,

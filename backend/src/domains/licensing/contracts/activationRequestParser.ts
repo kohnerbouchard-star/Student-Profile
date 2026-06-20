@@ -1,5 +1,5 @@
-import type { JsonObject } from "../../../supabase/tableTypes";
-import type { LicensingActivationRequestBody } from "./activationContract";
+import type { JsonObject } from "../../../supabase/tableTypes.ts";
+import type { LicensingActivationRequestBody } from "./activationContract.ts";
 
 export type LicensingActivationRequestParseErrorCode =
   | "invalid_request_body"

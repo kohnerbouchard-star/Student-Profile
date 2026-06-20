@@ -5,7 +5,7 @@ import type {
   PlayerSessionRecord,
   StaffUserRecord,
   UUID,
-} from "../auth/types";
+} from "../auth/types.ts";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];

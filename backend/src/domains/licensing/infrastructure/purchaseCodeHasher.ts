@@ -4,7 +4,7 @@ import {
   type PurchaseCodeHasher,
   type PurchaseCodeHashInput,
   type PurchaseCodeHashResult,
-} from "../domain/purchaseCodeHashing";
+} from "../domain/purchaseCodeHashing.ts";
 
 export interface Sha256HexDigest {
   digestUtf8ToHex(value: string): Promise<string>;
