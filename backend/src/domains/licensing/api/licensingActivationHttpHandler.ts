@@ -1,12 +1,13 @@
 import {
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
+import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
   readSupabaseEnv,
-  resolveStaffSessionForRequest,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import type { StaffUserRecord } from "../../../auth/types.ts";
 import {
   handleLicensingActivationRoute,
 } from "./activationRouteHandler.ts";
@@ -19,6 +20,28 @@ interface LicensingActivationEdgeDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
 }
+
+interface StaffUserUpsertClient {
+  from(tableName: "staff_users"): {
+    upsert(
+      values: {
+        readonly supabase_auth_user_id: string;
+        readonly email: string;
+        readonly display_name: string;
+      },
+      options: { readonly onConflict: string },
+    ): {
+      select(columns: string): {
+        single(): Promise<{
+          readonly data: StaffUserRecord | null;
+          readonly error: { readonly message?: string } | null;
+        }>;
+      };
+    };
+  };
+}
+
+const STAFF_USER_COLUMNS = "id,supabase_auth_user_id,email,display_name";
 
 export async function handleLicensingActivationRequest(
   request: Request,
@@ -49,52 +72,47 @@ export async function handleLicensingActivationRequest(
       });
     }
 
-    let body: unknown = undefined;
+    const body = await readJsonRequestBody(request);
+    const accessToken = extractBearerToken(request.headers.get("authorization"));
 
-    const staffResult = await resolveStaffSessionForRequest(
-      request,
-      envResult.value,
-      dependencies,
-      {
-        missingMessage: "A verified Supabase Auth user is required to activate licensing.",
-        lookupFailureError: {
-          code: "licensing_activation_failed",
-          message: "Purchase-code activation failed.",
+    if (!accessToken) {
+      return jsonResponse(401, {
+        ok: false,
+        error: {
+          code: "missing_staff_auth_user",
+          message: "A verified Supabase Auth user is required to activate licensing.",
           retryable: false,
         },
-        beforeStaffLookup: async () => {
-          try {
-            body = await request.json();
-
-            return { ok: true };
-          } catch {
-            return {
-              ok: false,
-              status: 400,
-              error: {
-                code: "invalid_request_body",
-                message: "Request body must be a JSON object.",
-                retryable: false,
-              },
-            };
-          }
-        },
-      },
-    );
-
-    if (!staffResult.ok) {
-      return jsonResponse(staffResult.status, {
-        ok: false,
-        error: staffResult.error,
       });
     }
+
+    const authClient = dependencies.createAuthClient(envResult.value);
+    const authUserResult = await authClient.auth.getUser(accessToken);
+    const authUser = authUserResult.data.user;
+
+    if (authUserResult.error || !authUser?.id) {
+      return jsonResponse(401, {
+        ok: false,
+        error: {
+          code: "missing_staff_auth_user",
+          message: "A verified Supabase Auth user is required to activate licensing.",
+          retryable: false,
+        },
+      });
+    }
+
+    const serviceClient = dependencies.createServiceClient(envResult.value);
+    const staff = await upsertStaffUser(serviceClient, {
+      supabaseAuthUserId: authUser.id,
+      email: authUser.email ?? "",
+    });
 
     const result = await handleLicensingActivationRoute(
       {
         body,
         supabaseAuthUser: {
-          id: staffResult.authUser.id,
-          email: staffResult.authUser.email ?? null,
+          id: authUser.id,
+          email: authUser.email ?? null,
         },
         requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
         source: "classroom_api_edge_licensing_activation",
@@ -102,12 +120,12 @@ export async function handleLicensingActivationRequest(
       {
         staffRepository: {
           findStaffUserBySupabaseAuthUserId: async (supabaseAuthUserId) =>
-            supabaseAuthUserId === staffResult.staff.supabase_auth_user_id
-              ? staffResult.staff
+            supabaseAuthUserId === staff.supabase_auth_user_id
+              ? staff
               : null,
         },
         activationRepository: createSupabaseLicensingActivationRepository(
-          staffResult.serviceClient as unknown as SupabaseLicensingActivationRepositoryClient,
+          serviceClient as unknown as SupabaseLicensingActivationRepositoryClient,
         ),
       },
     );
@@ -123,4 +141,46 @@ export async function handleLicensingActivationRequest(
       },
     });
   }
+}
+
+async function readJsonRequestBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw new Error("invalid_request_body");
+  }
+}
+
+async function upsertStaffUser(
+  serviceClient: EdgeSupabaseClient,
+  input: {
+    readonly supabaseAuthUserId: string;
+    readonly email: string;
+  },
+): Promise<StaffUserRecord> {
+  const email = input.email.trim().toLowerCase();
+
+  if (!email) {
+    throw new Error("missing_staff_email");
+  }
+
+  const client = serviceClient as unknown as StaffUserUpsertClient;
+  const response = await client
+    .from("staff_users")
+    .upsert(
+      {
+        supabase_auth_user_id: input.supabaseAuthUserId,
+        email,
+        display_name: email,
+      },
+      { onConflict: "supabase_auth_user_id" },
+    )
+    .select(STAFF_USER_COLUMNS)
+    .single();
+
+  if (response.error || !response.data?.id) {
+    throw new Error("staff_user_upsert_failed");
+  }
+
+  return response.data;
 }
