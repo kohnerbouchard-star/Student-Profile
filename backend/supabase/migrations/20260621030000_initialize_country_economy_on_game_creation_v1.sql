@@ -312,6 +312,5 @@ $$;
 comment on function public.redeem_purchase_code_for_game(uuid, text, text, jsonb, jsonb) is
   'Atomically redeems a purchase code, creates a game session, creates game settings, creates difficulty and country baseline settings, initializes country economic snapshots, creates an entitlement, and writes an audit log entry.';
 
-revoke all on function public.redeem_purchase_code_for_game(uuid, text, jsonb, jsonb) from public;
 revoke all on function public.redeem_purchase_code_for_game(uuid, text, text, jsonb, jsonb) from public;
 grant execute on function public.redeem_purchase_code_for_game(uuid, text, text, jsonb, jsonb) to service_role;
