@@ -28,7 +28,15 @@ export class EdgeActivationError extends Error {
   }
 }
 
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-request-id",
+  "access-control-allow-methods": "GET, POST, PATCH, OPTIONS",
+  "access-control-max-age": "86400",
+};
+
 const JSON_HEADERS = {
+  ...CORS_HEADERS,
   "content-type": "application/json; charset=utf-8",
 };
 
@@ -48,6 +56,6 @@ export function jsonResponse<TBody>(
 ): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
-    headers: JSON_HEADERS,
+    headers: status === 204 ? CORS_HEADERS : JSON_HEADERS,
   });
 }
