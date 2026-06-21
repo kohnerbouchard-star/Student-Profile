@@ -1,3 +1,0 @@
--- No-op.
--- Country economy reads are not player-specific.
--- Backend calculation code must scope reads by game_session_id.
