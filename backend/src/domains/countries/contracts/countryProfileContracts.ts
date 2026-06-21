@@ -128,7 +128,8 @@ export interface CountryEconomicSnapshotRecord {
   readonly id: string;
   readonly game_session_id: string;
   readonly country_profile_id: string;
-  readonly simulation_tick: number;
+  readonly snapshot_sequence: number;
+  readonly effective_at: string;
   readonly snapshot_label: string | null;
   readonly difficulty_policy_profile_id: string | null;
   readonly difficulty_preset: DifficultyPresetKey | string;
@@ -215,7 +216,8 @@ export interface CountryPricingInput {
   readonly countryProfileId: string;
   readonly countryCode: EcoNovariaCountryCode | string;
   readonly currencyCode: string;
-  readonly simulationTick: number;
+  readonly snapshotSequence: number;
+  readonly snapshotEffectiveAt: string;
   readonly difficultyPreset: DifficultyPresetKey | string;
   readonly priceDifficultyModifier: number;
   readonly scarcityDifficultyModifier: number;
@@ -313,6 +315,7 @@ export interface GetActivePlayerCountryInput {
 export interface GetLatestCountryEconomicSnapshotInput {
   readonly gameSessionId: string;
   readonly countryProfileId: string;
+  readonly atIso?: string | null;
 }
 
 export interface AssignPlayerCountryInput {
@@ -334,14 +337,14 @@ export interface ImmigratePlayerCountryInput {
 
 export interface InitializeCountryEconomicSnapshotsInput {
   readonly gameSessionId: string;
-  readonly simulationTick?: number | null;
+  readonly effectiveAtIso?: string | null;
   readonly snapshotLabel?: string | null;
   readonly requestMetadata?: Record<string, unknown> | null;
 }
 
 export interface InitializeCountryEconomicSnapshotsRpcArgs {
   readonly p_game_session_id: string;
-  readonly p_simulation_tick?: number;
+  readonly p_effective_at?: string | null;
   readonly p_snapshot_label?: string | null;
   readonly p_request_metadata?: Record<string, unknown>;
 }
@@ -349,7 +352,8 @@ export interface InitializeCountryEconomicSnapshotsRpcArgs {
 export interface InitializeCountryEconomicSnapshotsRpcRow {
   readonly country_profile_id: string;
   readonly snapshot_id: string;
-  readonly simulation_tick: number;
+  readonly snapshot_sequence: number;
+  readonly effective_at: string;
 }
 
 export interface CountryProfileRepository {
@@ -406,6 +410,8 @@ export const DIFFICULTY_SNAPSHOT_PRESET_KEYS: readonly DifficultyPresetKey[] = [
 
 export const DIFFICULTY_MODIFIER_MIN = 0.5;
 export const DIFFICULTY_MODIFIER_MAX = 2;
+
+export const ECONOMY_GRADUAL_ADJUSTMENT_RATE = 0.1;
 
 export const DIFFICULTY_MODIFIER_FIELDS = [
   "priceModifier",
@@ -466,7 +472,8 @@ export function toCountryPricingInput(
     countryProfileId: countryProfile.id,
     countryCode: countryProfile.country_code,
     currencyCode: countryProfile.currency_code,
-    simulationTick: economicSnapshot.simulation_tick,
+    snapshotSequence: economicSnapshot.snapshot_sequence,
+    snapshotEffectiveAt: economicSnapshot.effective_at,
     difficultyPreset: economicSnapshot.difficulty_preset,
     priceDifficultyModifier: Number(economicSnapshot.price_difficulty_modifier),
     scarcityDifficultyModifier: Number(economicSnapshot.scarcity_difficulty_modifier),
