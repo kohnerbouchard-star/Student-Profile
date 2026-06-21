@@ -13,6 +13,12 @@ export type EcoNovariaCountryCode =
   | "DRAVENLOK"
   | "SYNDALIS";
 
+export type PlayerCountryAssignmentReason =
+  | "initial_assignment"
+  | "immigration"
+  | "event_relocation"
+  | "admin_adjustment";
+
 export interface CountryProfileRecord {
   readonly id: string;
   readonly country_code: EcoNovariaCountryCode | string;
@@ -53,9 +59,25 @@ export interface PlayerCountryAssignmentRecord {
   readonly player_id: string;
   readonly country_profile_id: string;
   readonly status: PlayerCountryAssignmentStatus | string;
+  readonly assignment_reason: PlayerCountryAssignmentReason | string;
   readonly assigned_at: string;
+  readonly ended_at: string | null;
   readonly created_at: string;
   readonly updated_at: string;
+}
+
+export interface PlayerCountryMigrationEventRecord {
+  readonly id: string;
+  readonly game_session_id: string;
+  readonly player_id: string;
+  readonly from_country_profile_id: string | null;
+  readonly to_country_profile_id: string;
+  readonly from_assignment_id: string | null;
+  readonly to_assignment_id: string;
+  readonly migration_reason: PlayerCountryAssignmentReason | string;
+  readonly metadata: Record<string, unknown>;
+  readonly migrated_at: string;
+  readonly created_at: string;
 }
 
 export interface ActivePlayerCountryProfile {
@@ -88,6 +110,16 @@ export interface AssignPlayerCountryInput {
   readonly playerId: string;
   readonly countryProfileId: string;
   readonly assignedAtIso: string;
+  readonly assignmentReason?: PlayerCountryAssignmentReason | string | null;
+}
+
+export interface ImmigratePlayerCountryInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly toCountryProfileId: string;
+  readonly migratedAtIso: string;
+  readonly migrationReason: PlayerCountryAssignmentReason | string;
+  readonly metadata?: Record<string, unknown> | null;
 }
 
 export const ECO_NOVARIA_COUNTRY_CODES: readonly EcoNovariaCountryCode[] = [
