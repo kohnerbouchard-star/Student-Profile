@@ -1,9 +1,9 @@
 export const COUNTRY_ECONOMIC_BASELINE_LIMITS = {
   realGdpIndex: { min: 50, max: 200 },
   gdpGrowthRate: { min: -0.25, max: 0.5 },
-  inflationRate: { min: -0.1, max: 1 },
+  inflationRate: { min: -0.05, max: 0.5 },
   unemploymentRate: { min: 0, max: 0.5 },
-  interestRate: { min: -0.05, max: 0.5 },
+  interestRate: { min: 0, max: 0.5 },
   consumerConfidenceIndex: { min: 25, max: 200 },
   businessConfidenceIndex: { min: 25, max: 200 },
   costOfLivingIndex: { min: 0.5, max: 2 },
