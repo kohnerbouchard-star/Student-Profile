@@ -10,10 +10,7 @@ import {
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import {
-  invalidPlayerSessionResponse,
-  resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseResponseDto,
@@ -340,18 +337,18 @@ async function readStoreQuoteBody(request: Request): Promise<StorePurchaseQuoteB
 
   if (!itemId) {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "itemId is required.",
+      400,
       false,
     );
   }
 
   if (!Number.isInteger(quantity) || quantity <= 0) {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "quantity must be a positive integer.",
+      400,
       false,
     );
   }
@@ -371,18 +368,18 @@ async function readStorePurchaseBody(request: Request): Promise<StorePurchaseBod
 
   if (!quoteId) {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "quoteId is required.",
+      400,
       false,
     );
   }
 
   if (!idempotencyKey) {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "idempotencyKey is required.",
+      400,
       false,
     );
   }
@@ -397,18 +394,18 @@ async function readJsonObject(request: Request): Promise<Record<string, unknown>
     body = await request.json();
   } catch {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "Request body must be valid JSON.",
+      400,
       false,
     );
   }
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new EdgeActivationError(
-      400,
       "invalid_request",
       "Request body must be a JSON object.",
+      400,
       false,
     );
   }
