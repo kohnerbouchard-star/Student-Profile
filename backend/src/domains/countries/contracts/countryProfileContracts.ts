@@ -1,4 +1,6 @@
 export type CountryProfileStatus = "active" | "disabled" | "archived";
+export type DifficultyPolicyStatus = "active" | "disabled" | "archived";
+export type GameDifficultyPolicySource = "preset" | "custom";
 export type PlayerCountryAssignmentStatus = "active" | "inactive" | "archived";
 
 export type EcoNovariaCountryCode =
@@ -12,6 +14,14 @@ export type EcoNovariaCountryCode =
   | "XALVORIA"
   | "DRAVENLOK"
   | "SYNDALIS";
+
+export type DifficultyPresetKey =
+  | "easy"
+  | "standard"
+  | "moderate"
+  | "hard"
+  | "insane"
+  | "custom";
 
 export type PlayerCountryAssignmentReason =
   | "initial_assignment"
@@ -43,12 +53,56 @@ export interface CountryProfileDto {
   readonly updatedAt: string;
 }
 
+export interface DifficultyPolicyProfileRecord {
+  readonly id: string;
+  readonly preset_key: DifficultyPresetKey | string;
+  readonly label: string;
+  readonly description: string | null;
+  readonly price_modifier: number;
+  readonly event_volatility_modifier: number;
+  readonly scarcity_modifier: number;
+  readonly income_modifier: number;
+  readonly trade_modifier: number;
+  readonly credit_modifier: number;
+  readonly status: DifficultyPolicyStatus | string;
+  readonly metadata: Record<string, unknown>;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface GameDifficultyPolicySettingsRecord {
+  readonly id: string;
+  readonly game_session_id: string;
+  readonly difficulty_policy_profile_id: string | null;
+  readonly difficulty_preset: DifficultyPresetKey | string;
+  readonly custom_label: string | null;
+  readonly source: GameDifficultyPolicySource | string;
+  readonly price_modifier: number;
+  readonly event_volatility_modifier: number;
+  readonly scarcity_modifier: number;
+  readonly income_modifier: number;
+  readonly trade_modifier: number;
+  readonly credit_modifier: number;
+  readonly status: DifficultyPolicyStatus | string;
+  readonly metadata: Record<string, unknown>;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
 export interface CountryEconomicSnapshotRecord {
   readonly id: string;
   readonly game_session_id: string;
   readonly country_profile_id: string;
   readonly simulation_tick: number;
   readonly snapshot_label: string | null;
+  readonly difficulty_policy_profile_id: string | null;
+  readonly difficulty_preset: DifficultyPresetKey | string;
+  readonly price_difficulty_modifier: number;
+  readonly event_volatility_modifier: number;
+  readonly scarcity_difficulty_modifier: number;
+  readonly income_difficulty_modifier: number;
+  readonly trade_difficulty_modifier: number;
+  readonly credit_difficulty_modifier: number;
   readonly real_gdp_index: number;
   readonly gdp_growth_rate: number;
   readonly inflation_rate: number;
@@ -127,6 +181,9 @@ export interface CountryPricingInput {
   readonly countryCode: EcoNovariaCountryCode | string;
   readonly currencyCode: string;
   readonly simulationTick: number;
+  readonly difficultyPreset: DifficultyPresetKey | string;
+  readonly priceDifficultyModifier: number;
+  readonly scarcityDifficultyModifier: number;
   readonly inflationRate: number;
   readonly costOfLivingIndex: number;
   readonly regionalPriceMultiplier: number;
@@ -142,6 +199,29 @@ export interface CountryPricingInput {
 
 export interface ListCountryProfilesInput {
   readonly status?: CountryProfileStatus | null;
+}
+
+export interface ListDifficultyPolicyProfilesInput {
+  readonly status?: DifficultyPolicyStatus | null;
+}
+
+export interface GetGameDifficultyPolicySettingsInput {
+  readonly gameSessionId: string;
+}
+
+export interface SaveGameDifficultyPolicySettingsInput {
+  readonly gameSessionId: string;
+  readonly difficultyPolicyProfileId?: string | null;
+  readonly difficultyPreset: DifficultyPresetKey | string;
+  readonly customLabel?: string | null;
+  readonly source: GameDifficultyPolicySource | string;
+  readonly priceModifier: number;
+  readonly eventVolatilityModifier: number;
+  readonly scarcityModifier: number;
+  readonly incomeModifier: number;
+  readonly tradeModifier: number;
+  readonly creditModifier: number;
+  readonly metadata?: Record<string, unknown> | null;
 }
 
 export interface GetActivePlayerCountryInput {
@@ -193,6 +273,15 @@ export interface InitializeCountryEconomicSnapshotsRpcRow {
 
 export interface CountryProfileRepository {
   listCountryProfiles(input?: ListCountryProfilesInput): Promise<readonly CountryProfileRecord[]>;
+  listDifficultyPolicyProfiles(
+    input?: ListDifficultyPolicyProfilesInput,
+  ): Promise<readonly DifficultyPolicyProfileRecord[]>;
+  getGameDifficultyPolicySettings(
+    input: GetGameDifficultyPolicySettingsInput,
+  ): Promise<GameDifficultyPolicySettingsRecord | null>;
+  saveGameDifficultyPolicySettings(
+    input: SaveGameDifficultyPolicySettingsInput,
+  ): Promise<GameDifficultyPolicySettingsRecord>;
   getActivePlayerCountry(input: GetActivePlayerCountryInput): Promise<ActivePlayerCountryProfile | null>;
   getLatestEconomicSnapshot(
     input: GetLatestCountryEconomicSnapshotInput,
@@ -213,6 +302,15 @@ export const ECO_NOVARIA_COUNTRY_CODES: readonly EcoNovariaCountryCode[] = [
   "XALVORIA",
   "DRAVENLOK",
   "SYNDALIS",
+];
+
+export const DIFFICULTY_PRESET_KEYS: readonly DifficultyPresetKey[] = [
+  "easy",
+  "standard",
+  "moderate",
+  "hard",
+  "insane",
+  "custom",
 ];
 
 export function toCountryProfileDto(record: CountryProfileRecord): CountryProfileDto {
@@ -238,6 +336,9 @@ export function toCountryPricingInput(
     countryCode: countryProfile.country_code,
     currencyCode: countryProfile.currency_code,
     simulationTick: economicSnapshot.simulation_tick,
+    difficultyPreset: economicSnapshot.difficulty_preset,
+    priceDifficultyModifier: Number(economicSnapshot.price_difficulty_modifier),
+    scarcityDifficultyModifier: Number(economicSnapshot.scarcity_difficulty_modifier),
     inflationRate: Number(economicSnapshot.inflation_rate),
     costOfLivingIndex: Number(economicSnapshot.cost_of_living_index),
     regionalPriceMultiplier: Number(economicSnapshot.regional_price_multiplier),
