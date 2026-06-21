@@ -134,6 +134,9 @@ export interface CountryPricingInput {
   readonly importDependencyIndex: number;
   readonly taxRate: number;
   readonly subsidyRate: number;
+  readonly exchangeRateIndex: number;
+  readonly currencyStabilityIndex: number;
+  readonly energySecurityIndex: number;
   readonly marketRiskIndex: number;
 }
 
@@ -166,6 +169,37 @@ export interface ImmigratePlayerCountryInput {
   readonly migratedAtIso: string;
   readonly migrationReason: PlayerCountryAssignmentReason | string;
   readonly metadata?: Record<string, unknown> | null;
+}
+
+export interface InitializeCountryEconomicSnapshotsInput {
+  readonly gameSessionId: string;
+  readonly simulationTick?: number | null;
+  readonly snapshotLabel?: string | null;
+  readonly requestMetadata?: Record<string, unknown> | null;
+}
+
+export interface InitializeCountryEconomicSnapshotsRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_simulation_tick?: number;
+  readonly p_snapshot_label?: string | null;
+  readonly p_request_metadata?: Record<string, unknown>;
+}
+
+export interface InitializeCountryEconomicSnapshotsRpcRow {
+  readonly country_profile_id: string;
+  readonly snapshot_id: string;
+  readonly simulation_tick: number;
+}
+
+export interface CountryProfileRepository {
+  listCountryProfiles(input?: ListCountryProfilesInput): Promise<readonly CountryProfileRecord[]>;
+  getActivePlayerCountry(input: GetActivePlayerCountryInput): Promise<ActivePlayerCountryProfile | null>;
+  getLatestEconomicSnapshot(
+    input: GetLatestCountryEconomicSnapshotInput,
+  ): Promise<CountryEconomicSnapshotRecord | null>;
+  initializeEconomicSnapshotsForGame(
+    input: InitializeCountryEconomicSnapshotsInput,
+  ): Promise<readonly InitializeCountryEconomicSnapshotsRpcRow[]>;
 }
 
 export const ECO_NOVARIA_COUNTRY_CODES: readonly EcoNovariaCountryCode[] = [
@@ -211,6 +245,9 @@ export function toCountryPricingInput(
     importDependencyIndex: Number(economicSnapshot.import_dependency_index),
     taxRate: Number(economicSnapshot.tax_rate),
     subsidyRate: Number(economicSnapshot.subsidy_rate),
+    exchangeRateIndex: Number(economicSnapshot.exchange_rate_index),
+    currencyStabilityIndex: Number(economicSnapshot.currency_stability_index),
+    energySecurityIndex: Number(economicSnapshot.energy_security_index),
     marketRiskIndex: Number(economicSnapshot.market_risk_index),
   };
 }
