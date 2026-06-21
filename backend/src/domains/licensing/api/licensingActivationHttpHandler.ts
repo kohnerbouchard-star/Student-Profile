@@ -2,6 +2,7 @@ import {
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
 import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
+import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
@@ -13,7 +14,9 @@ import {
 } from "./activationRouteHandler.ts";
 import {
   createSupabaseLicensingActivationRepository,
+  createSupabaseLicensingRepository,
   type SupabaseLicensingActivationRepositoryClient,
+  type SupabaseLicensingRepositoryClient,
 } from "../infrastructure/licensingRepository.ts";
 
 interface LicensingActivationEdgeDependencies {
@@ -102,6 +105,15 @@ export async function handleLicensingActivationRequest(
     }
 
     const serviceClient = dependencies.createServiceClient(envResult.value);
+    const licenseCheck = await validateActivePurchaseCode(
+      serviceClient,
+      readPurchaseCodeFromBody(body),
+    );
+
+    if (licenseCheck) {
+      return licenseCheck;
+    }
+
     const staff = await upsertStaffUser(serviceClient, {
       supabaseAuthUserId: authUser.id,
       email: authUser.email ?? "",
@@ -149,6 +161,72 @@ async function readJsonRequestBody(request: Request): Promise<unknown> {
   } catch {
     throw new Error("invalid_request_body");
   }
+}
+
+function readPurchaseCodeFromBody(body: unknown): string {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return "";
+
+  const value = (body as { readonly purchaseCode?: unknown }).purchaseCode;
+
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function validateActivePurchaseCode(
+  serviceClient: EdgeSupabaseClient,
+  purchaseCode: string,
+): Promise<Response | null> {
+  if (!purchaseCode) {
+    return jsonResponse(400, {
+      ok: false,
+      error: {
+        code: "purchase_code_required",
+        message: "purchaseCode is required.",
+        retryable: false,
+      },
+    });
+  }
+
+  const repository = createSupabaseLicensingRepository(
+    serviceClient as unknown as SupabaseLicensingRepositoryClient,
+  );
+  const purchaseCodeRecord = await repository.findPurchaseCodeByHash(
+    await sha256Hex(purchaseCode),
+  );
+
+  if (!purchaseCodeRecord || purchaseCodeRecord.status !== "active") {
+    return jsonResponse(401, {
+      ok: false,
+      error: {
+        code: "invalid_purchase_code",
+        message: "License Code is invalid or inactive.",
+        retryable: false,
+      },
+    });
+  }
+
+  if (purchaseCodeRecord.expires_at && Date.parse(purchaseCodeRecord.expires_at) <= Date.now()) {
+    return jsonResponse(410, {
+      ok: false,
+      error: {
+        code: "purchase_code_expired",
+        message: "License Code has expired.",
+        retryable: false,
+      },
+    });
+  }
+
+  if (purchaseCodeRecord.redeemed_count >= purchaseCodeRecord.max_redemptions) {
+    return jsonResponse(409, {
+      ok: false,
+      error: {
+        code: "purchase_code_exhausted",
+        message: "License Code has already been fully redeemed.",
+        retryable: false,
+      },
+    });
+  }
+
+  return null;
 }
 
 async function upsertStaffUser(
