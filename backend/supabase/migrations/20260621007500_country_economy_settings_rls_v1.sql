@@ -1,3 +1,0 @@
--- No-op.
--- Country economy settings are handled by admin Game Settings backend workflows.
--- Runtime economy reads are session-scoped in backend calculation code.
