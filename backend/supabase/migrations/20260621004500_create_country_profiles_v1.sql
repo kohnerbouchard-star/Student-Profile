@@ -1,5 +1,6 @@
 -- Eco Novaria country profile pricing foundation V1.
 -- Defines the canonical map-country set and player country assignment source for future dynamic economy systems.
+-- Player location is intentionally modeled as mutable assignment history so players can immigrate between countries.
 
 create table public.country_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -58,14 +59,29 @@ create table public.player_country_assignments (
   player_id uuid not null,
   country_profile_id uuid not null references public.country_profiles (id),
   status text not null default 'active',
+  assignment_reason text not null default 'initial_assignment',
   assigned_at timestamptz not null default now(),
+  ended_at timestamptz null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
   constraint player_country_assignments_player_scope_fk
     foreign key (game_session_id, player_id)
     references public.players (game_session_id, id),
-  constraint player_country_assignments_status_check check (status in ('active', 'inactive', 'archived'))
+  constraint player_country_assignments_status_check check (status in ('active', 'inactive', 'archived')),
+  constraint player_country_assignments_reason_not_blank check (length(btrim(assignment_reason)) > 0),
+  constraint player_country_assignments_active_has_no_end check (
+    status <> 'active'
+    or ended_at is null
+  ),
+  constraint player_country_assignments_inactive_has_end check (
+    status = 'active'
+    or ended_at is not null
+  ),
+  constraint player_country_assignments_end_after_assign check (
+    ended_at is null
+    or ended_at >= assigned_at
+  )
 );
 
 create trigger set_player_country_assignments_updated_at
@@ -74,9 +90,13 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.player_country_assignments is
-  'Current and historical player location/country assignment. The active assignment determines which country profile affects store pricing.';
+  'Mutable player country/location assignment history. Players may immigrate to another country by ending the old active row and inserting a new active row.';
 comment on column public.player_country_assignments.country_profile_id is
   'Country profile used as the active economic input for store quote pricing.';
+comment on column public.player_country_assignments.assignment_reason is
+  'Reason for this location assignment, such as initial_assignment, immigration, event_relocation, or admin_adjustment.';
+comment on column public.player_country_assignments.ended_at is
+  'Timestamp when this country assignment stopped being active. Active rows must not have ended_at.';
 
 create unique index player_country_assignments_one_active_idx
 on public.player_country_assignments (game_session_id, player_id)
@@ -84,6 +104,49 @@ where status = 'active';
 
 create index player_country_assignments_country_profile_idx
 on public.player_country_assignments (country_profile_id);
+
+create index player_country_assignments_player_history_idx
+on public.player_country_assignments (game_session_id, player_id, assigned_at desc);
+
+create table public.player_country_migration_events (
+  id uuid primary key default gen_random_uuid(),
+  game_session_id uuid not null references public.game_sessions (id),
+  player_id uuid not null,
+  from_country_profile_id uuid null references public.country_profiles (id),
+  to_country_profile_id uuid not null references public.country_profiles (id),
+  from_assignment_id uuid null references public.player_country_assignments (id),
+  to_assignment_id uuid not null references public.player_country_assignments (id),
+  migration_reason text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  migrated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+
+  constraint player_country_migration_events_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players (game_session_id, id),
+  constraint player_country_migration_events_reason_not_blank check (length(btrim(migration_reason)) > 0),
+  constraint player_country_migration_events_country_changed check (
+    from_country_profile_id is null
+    or from_country_profile_id <> to_country_profile_id
+  ),
+  constraint player_country_migration_events_assignment_changed check (
+    from_assignment_id is null
+    or from_assignment_id <> to_assignment_id
+  )
+);
+
+comment on table public.player_country_migration_events is
+  'Append-only audit trail for player immigration/location changes between Eco Novaria countries.';
+comment on column public.player_country_migration_events.from_country_profile_id is
+  'Previous country profile, null only for first assignment if represented as a migration event.';
+comment on column public.player_country_migration_events.to_country_profile_id is
+  'New country profile after immigration.';
+
+create index player_country_migration_events_player_idx
+on public.player_country_migration_events (game_session_id, player_id, migrated_at desc);
+
+create index player_country_migration_events_to_country_idx
+on public.player_country_migration_events (to_country_profile_id);
 
 insert into public.country_profiles (
   country_code,
@@ -111,8 +174,11 @@ values
 
 alter table public.country_profiles enable row level security;
 alter table public.player_country_assignments enable row level security;
+alter table public.player_country_migration_events enable row level security;
 
 comment on table public.country_profiles is
   'Backend-owned country/economy source for Eco Novaria. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.player_country_assignments is
-  'Backend-owned active player country location source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+  'Backend-owned mutable active player country location source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+comment on table public.player_country_migration_events is
+  'Backend-owned immigration history. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
