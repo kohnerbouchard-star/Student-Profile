@@ -77,6 +77,20 @@ interface CreatePlayerRequestBody {
   readonly rosterLabel: string | null;
 }
 
+interface CreatePlayerWithCountryAssignmentRpcRow {
+  readonly player_id: string;
+  readonly display_name: string;
+  readonly roster_label: string | null;
+  readonly player_status: string;
+  readonly player_created_at: string;
+  readonly player_updated_at: string;
+  readonly country_assignment_id: string;
+  readonly country_profile_id: string;
+  readonly country_code: string;
+  readonly country_name: string;
+  readonly assigned_at: string;
+}
+
 interface CreatePlayerSuccessBody {
   readonly ok: true;
   readonly player: {
@@ -134,18 +148,22 @@ export async function handlePlayerRosterRequest(
     if (request.method === "POST") {
       const body = await readCreatePlayerRequestBody(request);
 
-      const createResponse = await staffResult.serviceClient
-        .from("players")
-        .insert({
-          game_session_id: gameSessionId,
-          display_name: body.displayName,
-          roster_label: body.rosterLabel,
-          status: "active",
-        })
-        .select("id,display_name,roster_label,status,created_at,updated_at")
-        .single();
+      const createResponse = await staffResult.serviceClient.rpc<
+        CreatePlayerWithCountryAssignmentRpcRow[]
+      >(
+        "create_player_with_balanced_country_assignment",
+        {
+          p_game_session_id: gameSessionId,
+          p_display_name: body.displayName,
+          p_roster_label: body.rosterLabel,
+          p_assignment_metadata: {
+            route: "staff.players.create",
+            requestedByStaffUserId: staffResult.staff.id,
+          },
+        },
+      );
 
-      if (createResponse.error || !createResponse.data?.id) {
+      if (createResponse.error || !createResponse.data?.[0]?.player_id) {
         return jsonError(500, {
           code: "player_create_failed",
           message: "Player could not be created.",
@@ -153,17 +171,17 @@ export async function handlePlayerRosterRequest(
         });
       }
 
-      const player = createResponse.data;
+      const player = createResponse.data[0];
 
       return jsonResponse<CreatePlayerSuccessBody>(201, {
         ok: true,
         player: {
-          id: player.id,
+          id: player.player_id,
           displayName: player.display_name,
           rosterLabel: player.roster_label ?? null,
-          status: player.status,
-          createdAt: player.created_at,
-          updatedAt: player.updated_at,
+          status: player.player_status,
+          createdAt: player.player_created_at,
+          updatedAt: player.player_updated_at,
         },
       });
     }
