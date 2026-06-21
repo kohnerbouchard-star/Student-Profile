@@ -17,7 +17,8 @@ create table public.country_profiles (
   constraint country_profiles_country_name_not_blank check (length(btrim(country_name)) > 0),
   constraint country_profiles_capital_name_not_blank check (length(btrim(capital_name)) > 0),
   constraint country_profiles_currency_code_format check (currency_code ~ '^[A-Z]{3,8}$'),
-  constraint country_profiles_status_check check (status in ('active', 'disabled', 'archived'))
+  constraint country_profiles_status_check check (status in ('active', 'disabled', 'archived')),
+  constraint country_profiles_metadata_object check (jsonb_typeof(metadata) = 'object')
 );
 
 create trigger set_country_profiles_updated_at
@@ -88,6 +89,7 @@ create table public.country_economic_snapshots (
   constraint country_economic_snapshots_political_stability_positive check (political_stability_index > 0),
   constraint country_economic_snapshots_infrastructure_positive check (infrastructure_index > 0),
   constraint country_economic_snapshots_energy_security_positive check (energy_security_index > 0),
+  constraint country_economic_snapshots_metadata_object check (jsonb_typeof(metadata) = 'object'),
   constraint country_economic_snapshots_unique_tick unique (game_session_id, country_profile_id, simulation_tick)
 );
 
@@ -130,6 +132,7 @@ create table public.country_event_impacts (
   constraint country_event_impacts_event_name_not_blank check (length(btrim(event_name)) > 0),
   constraint country_event_impacts_event_type_not_blank check (length(btrim(event_type)) > 0),
   constraint country_event_impacts_impact_summary_not_blank check (length(btrim(impact_summary)) > 0),
+  constraint country_event_impacts_stat_deltas_object check (jsonb_typeof(stat_deltas) = 'object'),
   constraint country_event_impacts_snapshot_changed check (
     source_snapshot_id is null
     or result_snapshot_id is null
@@ -220,6 +223,7 @@ create table public.player_country_migration_events (
     foreign key (game_session_id, player_id)
     references public.players (game_session_id, id),
   constraint player_country_migration_events_reason_not_blank check (length(btrim(migration_reason)) > 0),
+  constraint player_country_migration_events_metadata_object check (jsonb_typeof(metadata) = 'object'),
   constraint player_country_migration_events_country_changed check (
     from_country_profile_id is null
     or from_country_profile_id <> to_country_profile_id
@@ -261,6 +265,79 @@ values
   ('XALVORIA', 'Xalvoria', 'Emberhall', 'ECO', '{"mapRegion":"northeast","mapColor":"gold"}'::jsonb),
   ('DRAVENLOK', 'Dravenlok', 'Ironhold', 'ECO', '{"mapRegion":"east","mapColor":"red"}'::jsonb),
   ('SYNDALIS', 'Syndalis', 'Blacklight', 'ECO', '{"mapRegion":"southeast","mapColor":"violet"}'::jsonb);
+
+create or replace function public.initialize_country_economic_snapshots_for_game(
+  p_game_session_id uuid,
+  p_simulation_tick integer default 0,
+  p_snapshot_label text default 'Initial baseline',
+  p_request_metadata jsonb default '{}'::jsonb
+)
+returns table (
+  country_profile_id uuid,
+  snapshot_id uuid,
+  simulation_tick integer
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_game_session_id is null then
+    raise exception 'p_game_session_id is required'
+      using errcode = '22023';
+  end if;
+
+  if p_simulation_tick is null or p_simulation_tick < 0 then
+    raise exception 'p_simulation_tick must be non-negative'
+      using errcode = '22023';
+  end if;
+
+  if p_snapshot_label is not null and length(btrim(p_snapshot_label)) = 0 then
+    raise exception 'p_snapshot_label must not be blank'
+      using errcode = '22023';
+  end if;
+
+  if p_request_metadata is null or jsonb_typeof(p_request_metadata) <> 'object' then
+    raise exception 'p_request_metadata must be a JSON object'
+      using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1
+    from public.game_sessions gs
+    where gs.id = p_game_session_id
+  ) then
+    raise exception 'game session not found'
+      using errcode = 'P0002';
+  end if;
+
+  return query
+  insert into public.country_economic_snapshots (
+    game_session_id,
+    country_profile_id,
+    simulation_tick,
+    snapshot_label,
+    metadata
+  )
+  select
+    p_game_session_id,
+    cp.id,
+    p_simulation_tick,
+    p_snapshot_label,
+    p_request_metadata || jsonb_build_object('initializationSource', 'initialize_country_economic_snapshots_for_game')
+  from public.country_profiles cp
+  where cp.status = 'active'
+  on conflict (game_session_id, country_profile_id, simulation_tick) do update
+    set metadata = public.country_economic_snapshots.metadata || excluded.metadata
+  returning
+    public.country_economic_snapshots.country_profile_id,
+    public.country_economic_snapshots.id,
+    public.country_economic_snapshots.simulation_tick;
+end;
+$$;
+
+comment on function public.initialize_country_economic_snapshots_for_game(uuid, integer, text, jsonb) is
+  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. Safe to call repeatedly for the same game/tick; existing rows are preserved and metadata is merged.';
 
 alter table public.country_profiles enable row level security;
 alter table public.country_economic_snapshots enable row level security;
