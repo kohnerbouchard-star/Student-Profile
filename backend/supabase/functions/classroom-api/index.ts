@@ -77,6 +77,9 @@ import {
   handleStaffStoreCatalogRequest,
 } from "../../../src/domains/store/api/storeCatalogHttpHandler.ts";
 import {
+  handlePlayerStoreCatalogRequest,
+} from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
+import {
   handlePlayerStorePurchaseHistoryRequest,
   handlePlayerStorePurchaseRequest,
   handlePlayerStoreQuoteRequest,
@@ -101,6 +104,12 @@ Deno.serve(async (request) => {
       ok: true,
       service: "classroom-api",
       status: "ready",
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/store/items")) {
+    return handlePlayerStoreCatalogRequest(request, {
+      createServiceClient,
     });
   }
 
