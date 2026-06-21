@@ -76,6 +76,11 @@ import {
 import {
   handleStaffStoreCatalogRequest,
 } from "../../../src/domains/store/api/storeCatalogHttpHandler.ts";
+import {
+  handlePlayerStorePurchaseHistoryRequest,
+  handlePlayerStorePurchaseRequest,
+  handlePlayerStoreQuoteRequest,
+} from "../../../src/domains/store/api/playerStorePurchaseHttpHandler.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -96,6 +101,24 @@ Deno.serve(async (request) => {
       ok: true,
       service: "classroom-api",
       status: "ready",
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/store/quote")) {
+    return handlePlayerStoreQuoteRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/store/purchases")) {
+    if (request.method === "GET") {
+      return handlePlayerStorePurchaseHistoryRequest(request, {
+        createServiceClient,
+      });
+    }
+
+    return handlePlayerStorePurchaseRequest(request, {
+      createServiceClient,
     });
   }
 
