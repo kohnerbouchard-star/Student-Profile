@@ -15,13 +15,14 @@ export type EcoNovariaCountryCode =
   | "DRAVENLOK"
   | "SYNDALIS";
 
-export type DifficultyPresetKey =
+export type SelectableDifficultyPresetKey =
   | "easy"
   | "standard"
   | "moderate"
   | "hard"
-  | "insane"
-  | "custom";
+  | "insane";
+
+export type DifficultyPresetKey = SelectableDifficultyPresetKey | "custom";
 
 export type PlayerCountryAssignmentReason =
   | "initial_assignment"
@@ -55,7 +56,7 @@ export interface CountryProfileDto {
 
 export interface DifficultyPolicyProfileRecord {
   readonly id: string;
-  readonly preset_key: DifficultyPresetKey | string;
+  readonly preset_key: SelectableDifficultyPresetKey | string;
   readonly label: string;
   readonly description: string | null;
   readonly price_modifier: number;
@@ -209,12 +210,10 @@ export interface GetGameDifficultyPolicySettingsInput {
   readonly gameSessionId: string;
 }
 
-export interface SaveGameDifficultyPolicySettingsInput {
+export interface SaveGamePresetDifficultyPolicySettingsInput {
   readonly gameSessionId: string;
-  readonly difficultyPolicyProfileId?: string | null;
-  readonly difficultyPreset: DifficultyPresetKey | string;
-  readonly customLabel?: string | null;
-  readonly source: GameDifficultyPolicySource | string;
+  readonly difficultyPolicyProfileId: string;
+  readonly difficultyPreset: SelectableDifficultyPresetKey | string;
   readonly priceModifier: number;
   readonly eventVolatilityModifier: number;
   readonly scarcityModifier: number;
@@ -223,6 +222,22 @@ export interface SaveGameDifficultyPolicySettingsInput {
   readonly creditModifier: number;
   readonly metadata?: Record<string, unknown> | null;
 }
+
+export interface SaveGameCustomDifficultyPolicySettingsInput {
+  readonly gameSessionId: string;
+  readonly customLabel: string;
+  readonly priceModifier: number;
+  readonly eventVolatilityModifier: number;
+  readonly scarcityModifier: number;
+  readonly incomeModifier: number;
+  readonly tradeModifier: number;
+  readonly creditModifier: number;
+  readonly metadata?: Record<string, unknown> | null;
+}
+
+export type SaveGameDifficultyPolicySettingsInput =
+  | SaveGamePresetDifficultyPolicySettingsInput
+  | SaveGameCustomDifficultyPolicySettingsInput;
 
 export interface GetActivePlayerCountryInput {
   readonly gameSessionId: string;
@@ -304,12 +319,16 @@ export const ECO_NOVARIA_COUNTRY_CODES: readonly EcoNovariaCountryCode[] = [
   "SYNDALIS",
 ];
 
-export const DIFFICULTY_PRESET_KEYS: readonly DifficultyPresetKey[] = [
+export const SELECTABLE_DIFFICULTY_PRESET_KEYS: readonly SelectableDifficultyPresetKey[] = [
   "easy",
   "standard",
   "moderate",
   "hard",
   "insane",
+];
+
+export const DIFFICULTY_SNAPSHOT_PRESET_KEYS: readonly DifficultyPresetKey[] = [
+  ...SELECTABLE_DIFFICULTY_PRESET_KEYS,
   "custom",
 ];
 
