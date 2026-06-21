@@ -2,6 +2,7 @@
 -- Defines the canonical map-country set and player country assignment source for future dynamic economy systems.
 -- Player location is intentionally modeled as mutable assignment history so players can immigrate between countries.
 -- Difficulty is modeled as global preset policies plus per-game Advanced Settings overrides, then snapshotted into country economic history.
+-- Custom difficulty is not a selectable global preset; it is inferred when per-game Advanced Settings values diverge from a preset.
 
 create table public.country_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -52,6 +53,7 @@ create table public.difficulty_policy_profiles (
   updated_at timestamptz not null default now(),
 
   constraint difficulty_policy_profiles_preset_key_format check (preset_key ~ '^[a-z][a-z0-9_]{1,31}$'),
+  constraint difficulty_policy_profiles_no_custom_preset check (preset_key <> 'custom'),
   constraint difficulty_policy_profiles_label_not_blank check (length(btrim(label)) > 0),
   constraint difficulty_policy_profiles_description_not_blank check (
     description is null
@@ -73,7 +75,7 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.difficulty_policy_profiles is
-  'Global difficulty policy presets used as defaults for game setup. Runtime pricing should consume resolved modifiers from country_economic_snapshots, not this table directly.';
+  'Global selectable difficulty policy presets used as defaults for game setup. Custom is not stored here; it is inferred from per-game Advanced Settings overrides. Runtime pricing should consume resolved modifiers from country_economic_snapshots, not this table directly.';
 comment on column public.difficulty_policy_profiles.price_modifier is
   'Difficulty modifier for store prices and purchase quotes.';
 comment on column public.difficulty_policy_profiles.event_volatility_modifier is
@@ -118,7 +120,19 @@ create table public.game_difficulty_policy_settings (
     source <> 'preset'
     or difficulty_policy_profile_id is not null
   ),
-  constraint game_difficulty_policy_settings_custom_allows_label check (
+  constraint game_difficulty_policy_settings_preset_not_custom check (
+    source <> 'preset'
+    or difficulty_preset <> 'custom'
+  ),
+  constraint game_difficulty_policy_settings_custom_has_no_profile check (
+    source <> 'custom'
+    or difficulty_policy_profile_id is null
+  ),
+  constraint game_difficulty_policy_settings_custom_uses_custom_preset check (
+    source <> 'custom'
+    or difficulty_preset = 'custom'
+  ),
+  constraint game_difficulty_policy_settings_custom_has_label check (
     source <> 'custom'
     or custom_label is not null
   ),
@@ -138,9 +152,9 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.game_difficulty_policy_settings is
-  'Per-game selected or custom Advanced Settings difficulty policy. Country snapshots store resolved values for audit-safe runtime use.';
+  'Per-game selected or custom Advanced Settings difficulty policy. If a teacher changes a modifier, source becomes custom and these resolved values are saved for that game.';
 comment on column public.game_difficulty_policy_settings.source is
-  'preset means copied from a global difficulty_policy_profiles row. custom means teacher-defined Advanced Settings values.';
+  'preset means copied from a global difficulty_policy_profiles row. custom means teacher-defined Advanced Settings values inferred from edited modifiers.';
 
 create index game_difficulty_policy_settings_status_idx
 on public.game_difficulty_policy_settings (status);
@@ -216,7 +230,8 @@ create table public.country_economic_snapshots (
   constraint country_economic_snapshots_infrastructure_positive check (infrastructure_index > 0),
   constraint country_economic_snapshots_energy_security_positive check (energy_security_index > 0),
   constraint country_economic_snapshots_metadata_object check (jsonb_typeof(metadata) = 'object'),
-  constraint country_economic_snapshots_unique_tick unique (game_session_id, country_profile_id, simulation_tick)
+  constraint country_economic_snapshots_unique_tick unique (game_session_id, country_profile_id, simulation_tick),
+  constraint country_economic_snapshots_scope_unique unique (id, game_session_id, country_profile_id)
 );
 
 comment on table public.country_economic_snapshots is
@@ -263,11 +278,17 @@ create table public.country_event_impacts (
   event_type text not null,
   impact_summary text not null,
   stat_deltas jsonb not null default '{}'::jsonb,
-  source_snapshot_id uuid null references public.country_economic_snapshots (id),
-  result_snapshot_id uuid null references public.country_economic_snapshots (id),
+  source_snapshot_id uuid null,
+  result_snapshot_id uuid null,
   applied_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
 
+  constraint country_event_impacts_source_snapshot_scope_fk
+    foreign key (source_snapshot_id, game_session_id, country_profile_id)
+    references public.country_economic_snapshots (id, game_session_id, country_profile_id),
+  constraint country_event_impacts_result_snapshot_scope_fk
+    foreign key (result_snapshot_id, game_session_id, country_profile_id)
+    references public.country_economic_snapshots (id, game_session_id, country_profile_id),
   constraint country_event_impacts_event_key_not_blank check (length(btrim(event_key)) > 0),
   constraint country_event_impacts_event_name_not_blank check (length(btrim(event_name)) > 0),
   constraint country_event_impacts_event_type_not_blank check (length(btrim(event_type)) > 0),
@@ -281,7 +302,7 @@ create table public.country_event_impacts (
 );
 
 comment on table public.country_event_impacts is
-  'Append-only event-impact log explaining why a country macroeconomic profile changed during a game session.';
+  'Append-only event-impact log explaining why a country macroeconomic profile changed during a game session. Snapshot references are constrained to the same game session and country.';
 comment on column public.country_event_impacts.stat_deltas is
   'JSON object of macro fields changed by the event. Example: {"inflation_rate":0.02,"supply_constraint_index":0.15}.';
 
@@ -319,7 +340,8 @@ create table public.player_country_assignments (
   constraint player_country_assignments_end_after_assign check (
     ended_at is null
     or ended_at >= assigned_at
-  )
+  ),
+  constraint player_country_assignments_scope_unique unique (id, game_session_id, player_id, country_profile_id)
 );
 
 create trigger set_player_country_assignments_updated_at
@@ -352,8 +374,8 @@ create table public.player_country_migration_events (
   player_id uuid not null,
   from_country_profile_id uuid null references public.country_profiles (id),
   to_country_profile_id uuid not null references public.country_profiles (id),
-  from_assignment_id uuid null references public.player_country_assignments (id),
-  to_assignment_id uuid not null references public.player_country_assignments (id),
+  from_assignment_id uuid null,
+  to_assignment_id uuid not null,
   migration_reason text not null,
   metadata jsonb not null default '{}'::jsonb,
   migrated_at timestamptz not null default now(),
@@ -362,6 +384,12 @@ create table public.player_country_migration_events (
   constraint player_country_migration_events_player_scope_fk
     foreign key (game_session_id, player_id)
     references public.players (game_session_id, id),
+  constraint player_country_migration_events_from_assignment_scope_fk
+    foreign key (from_assignment_id, game_session_id, player_id, from_country_profile_id)
+    references public.player_country_assignments (id, game_session_id, player_id, country_profile_id),
+  constraint player_country_migration_events_to_assignment_scope_fk
+    foreign key (to_assignment_id, game_session_id, player_id, to_country_profile_id)
+    references public.player_country_assignments (id, game_session_id, player_id, country_profile_id),
   constraint player_country_migration_events_reason_not_blank check (length(btrim(migration_reason)) > 0),
   constraint player_country_migration_events_metadata_object check (jsonb_typeof(metadata) = 'object'),
   constraint player_country_migration_events_country_changed check (
@@ -375,7 +403,7 @@ create table public.player_country_migration_events (
 );
 
 comment on table public.player_country_migration_events is
-  'Append-only audit trail for player immigration/location changes between Eco Novaria countries.';
+  'Append-only audit trail for player immigration/location changes between Eco Novaria countries. Assignment references are constrained to the same game session and player.';
 comment on column public.player_country_migration_events.from_country_profile_id is
   'Previous country profile, null only for first assignment if represented as a migration event.';
 comment on column public.player_country_migration_events.to_country_profile_id is
@@ -423,8 +451,7 @@ values
   ('standard', 'Standard', 'Neutral baseline difficulty policy.', 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, '{"advancedSettingsEditable":false}'::jsonb),
   ('moderate', 'Moderate', 'Slightly higher prices, volatility, scarcity, trade pressure, and credit pressure.', 1.0800, 1.1000, 1.0800, 0.9500, 1.0800, 1.0800, '{"advancedSettingsEditable":false}'::jsonb),
   ('hard', 'Hard', 'Higher prices, stronger event shocks, stronger scarcity, and lower income scaling.', 1.1800, 1.2500, 1.2000, 0.9000, 1.1800, 1.1800, '{"advancedSettingsEditable":false}'::jsonb),
-  ('insane', 'Insane', 'Maximum intended challenge with sharp prices, volatile events, heavy scarcity, and reduced income scaling.', 1.3500, 1.5000, 1.4000, 0.8000, 1.3500, 1.3500, '{"advancedSettingsEditable":false}'::jsonb),
-  ('custom', 'Custom', 'Teacher-defined Advanced Settings policy copied into each game session before snapshot initialization.', 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, '{"advancedSettingsEditable":true}'::jsonb);
+  ('insane', 'Insane', 'Maximum intended challenge with sharp prices, volatile events, heavy scarcity, and reduced income scaling.', 1.3500, 1.5000, 1.4000, 0.8000, 1.3500, 1.3500, '{"advancedSettingsEditable":false}'::jsonb);
 
 create or replace function public.initialize_country_economic_snapshots_for_game(
   p_game_session_id uuid,
@@ -508,6 +535,11 @@ begin
     into v_game_difficulty_preset
     from public.game_settings gs
     where gs.game_session_id = p_game_session_id;
+
+    if lower(coalesce(v_game_difficulty_preset, 'standard')) = 'custom' then
+      raise exception 'custom difficulty settings must be configured before initializing country economic snapshots'
+        using errcode = '22023';
+    end if;
 
     select
       dpp.id,
@@ -606,7 +638,7 @@ end;
 $$;
 
 comment on function public.initialize_country_economic_snapshots_for_game(uuid, integer, text, jsonb) is
-  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty from game_difficulty_policy_settings first, then game_settings/difficulty_policy_profiles, snapshots those modifiers, and is safe to call repeatedly for the same game/tick.';
+  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty from game_difficulty_policy_settings first, then game_settings/difficulty_policy_profiles, snapshots those modifiers, rejects unconfigured custom difficulty, and is safe to call repeatedly for the same game/tick.';
 
 alter table public.country_profiles enable row level security;
 alter table public.difficulty_policy_profiles enable row level security;
@@ -619,7 +651,7 @@ alter table public.player_country_migration_events enable row level security;
 comment on table public.country_profiles is
   'Backend-owned country identity source for Eco Novaria. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.difficulty_policy_profiles is
-  'Backend-owned global difficulty preset source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+  'Backend-owned global selectable difficulty preset source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.game_difficulty_policy_settings is
   'Backend-owned per-game Advanced Settings difficulty policy. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.country_economic_snapshots is
