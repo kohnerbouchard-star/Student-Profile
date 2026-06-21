@@ -11,7 +11,6 @@ import {
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
-  invalidPlayerSessionResponse,
   resolveActivePlayerSession,
 } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
@@ -100,7 +99,15 @@ async function resolvePlayerRequest(
   const sessionToken = extractBearerToken(request.headers.get("authorization"));
 
   if (!sessionToken) {
-    return invalidPlayerSessionResponse();
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_player_session",
+        message: "Player session is invalid or expired.",
+        retryable: false,
+      },
+    };
   }
 
   const serviceClient = dependencies.createServiceClient(env);
