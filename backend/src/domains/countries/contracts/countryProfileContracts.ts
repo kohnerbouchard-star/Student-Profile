@@ -1,6 +1,8 @@
 export type CountryProfileStatus = "active" | "disabled" | "archived";
 export type DifficultyPolicyStatus = "active" | "disabled" | "archived";
+export type EconomicBaselineStatus = "active" | "disabled" | "archived";
 export type GameDifficultyPolicySource = "preset" | "custom";
+export type GameEconomicBaselineSource = "default" | "custom";
 export type PlayerCountryAssignmentStatus = "active" | "inactive" | "archived";
 
 export type EcoNovariaCountryCode =
@@ -85,6 +87,38 @@ export interface GameDifficultyPolicySettingsRecord {
   readonly trade_modifier: number;
   readonly credit_modifier: number;
   readonly status: DifficultyPolicyStatus | string;
+  readonly metadata: Record<string, unknown>;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface GameCountryEconomicBaselineSettingsRecord {
+  readonly id: string;
+  readonly game_session_id: string;
+  readonly source: GameEconomicBaselineSource | string;
+  readonly custom_label: string | null;
+  readonly real_gdp_index: number;
+  readonly gdp_growth_rate: number;
+  readonly inflation_rate: number;
+  readonly unemployment_rate: number;
+  readonly interest_rate: number;
+  readonly consumer_confidence_index: number;
+  readonly business_confidence_index: number;
+  readonly cost_of_living_index: number;
+  readonly regional_price_multiplier: number;
+  readonly supply_constraint_index: number;
+  readonly import_dependency_index: number;
+  readonly tax_rate: number;
+  readonly subsidy_rate: number;
+  readonly exchange_rate_index: number;
+  readonly currency_stability_index: number;
+  readonly trade_balance_index: number;
+  readonly export_strength_index: number;
+  readonly market_risk_index: number;
+  readonly political_stability_index: number;
+  readonly infrastructure_index: number;
+  readonly energy_security_index: number;
+  readonly status: EconomicBaselineStatus | string;
   readonly metadata: Record<string, unknown>;
   readonly created_at: string;
   readonly updated_at: string;
@@ -210,6 +244,10 @@ export interface GetGameDifficultyPolicySettingsInput {
   readonly gameSessionId: string;
 }
 
+export interface GetGameCountryEconomicBaselineSettingsInput {
+  readonly gameSessionId: string;
+}
+
 export interface SaveGamePresetDifficultyPolicySettingsInput {
   readonly gameSessionId: string;
   readonly difficultyPolicyProfileId: string;
@@ -238,6 +276,34 @@ export interface SaveGameCustomDifficultyPolicySettingsInput {
 export type SaveGameDifficultyPolicySettingsInput =
   | SaveGamePresetDifficultyPolicySettingsInput
   | SaveGameCustomDifficultyPolicySettingsInput;
+
+export interface SaveGameCountryEconomicBaselineSettingsInput {
+  readonly gameSessionId: string;
+  readonly source: GameEconomicBaselineSource | string;
+  readonly customLabel?: string | null;
+  readonly realGdpIndex: number;
+  readonly gdpGrowthRate: number;
+  readonly inflationRate: number;
+  readonly unemploymentRate: number;
+  readonly interestRate: number;
+  readonly consumerConfidenceIndex: number;
+  readonly businessConfidenceIndex: number;
+  readonly costOfLivingIndex: number;
+  readonly regionalPriceMultiplier: number;
+  readonly supplyConstraintIndex: number;
+  readonly importDependencyIndex: number;
+  readonly taxRate: number;
+  readonly subsidyRate: number;
+  readonly exchangeRateIndex: number;
+  readonly currencyStabilityIndex: number;
+  readonly tradeBalanceIndex: number;
+  readonly exportStrengthIndex: number;
+  readonly marketRiskIndex: number;
+  readonly politicalStabilityIndex: number;
+  readonly infrastructureIndex: number;
+  readonly energySecurityIndex: number;
+  readonly metadata?: Record<string, unknown> | null;
+}
 
 export interface GetActivePlayerCountryInput {
   readonly gameSessionId: string;
@@ -297,6 +363,12 @@ export interface CountryProfileRepository {
   saveGameDifficultyPolicySettings(
     input: SaveGameDifficultyPolicySettingsInput,
   ): Promise<GameDifficultyPolicySettingsRecord>;
+  getGameCountryEconomicBaselineSettings(
+    input: GetGameCountryEconomicBaselineSettingsInput,
+  ): Promise<GameCountryEconomicBaselineSettingsRecord | null>;
+  saveGameCountryEconomicBaselineSettings(
+    input: SaveGameCountryEconomicBaselineSettingsInput,
+  ): Promise<GameCountryEconomicBaselineSettingsRecord>;
   getActivePlayerCountry(input: GetActivePlayerCountryInput): Promise<ActivePlayerCountryProfile | null>;
   getLatestEconomicSnapshot(
     input: GetLatestCountryEconomicSnapshotInput,
@@ -345,6 +417,32 @@ export const DIFFICULTY_MODIFIER_FIELDS = [
 ] as const;
 
 export type DifficultyModifierField = (typeof DIFFICULTY_MODIFIER_FIELDS)[number];
+
+export const COUNTRY_ECONOMIC_BASELINE_LIMITS = {
+  realGdpIndex: { min: 50, max: 200 },
+  gdpGrowthRate: { min: -0.25, max: 0.5 },
+  inflationRate: { min: -0.05, max: 0.5 },
+  unemploymentRate: { min: 0, max: 0.5 },
+  interestRate: { min: 0, max: 0.5 },
+  consumerConfidenceIndex: { min: 25, max: 200 },
+  businessConfidenceIndex: { min: 25, max: 200 },
+  costOfLivingIndex: { min: 0.5, max: 2 },
+  regionalPriceMultiplier: { min: 0.5, max: 2 },
+  supplyConstraintIndex: { min: 0.5, max: 2 },
+  importDependencyIndex: { min: 0.5, max: 2 },
+  taxRate: { min: 0, max: 0.5 },
+  subsidyRate: { min: 0, max: 0.5 },
+  exchangeRateIndex: { min: 0.5, max: 2 },
+  currencyStabilityIndex: { min: 0.5, max: 2 },
+  tradeBalanceIndex: { min: -100, max: 100 },
+  exportStrengthIndex: { min: 0.5, max: 2 },
+  marketRiskIndex: { min: 0.5, max: 2 },
+  politicalStabilityIndex: { min: 0.5, max: 2 },
+  infrastructureIndex: { min: 0.5, max: 2 },
+  energySecurityIndex: { min: 0.5, max: 2 },
+} as const;
+
+export type CountryEconomicBaselineField = keyof typeof COUNTRY_ECONOMIC_BASELINE_LIMITS;
 
 export function toCountryProfileDto(record: CountryProfileRecord): CountryProfileDto {
   return {
