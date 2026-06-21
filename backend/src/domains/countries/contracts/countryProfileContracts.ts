@@ -332,6 +332,20 @@ export const DIFFICULTY_SNAPSHOT_PRESET_KEYS: readonly DifficultyPresetKey[] = [
   "custom",
 ];
 
+export const DIFFICULTY_MODIFIER_MIN = 0.5;
+export const DIFFICULTY_MODIFIER_MAX = 2;
+
+export const DIFFICULTY_MODIFIER_FIELDS = [
+  "priceModifier",
+  "eventVolatilityModifier",
+  "scarcityModifier",
+  "incomeModifier",
+  "tradeModifier",
+  "creditModifier",
+] as const;
+
+export type DifficultyModifierField = (typeof DIFFICULTY_MODIFIER_FIELDS)[number];
+
 export function toCountryProfileDto(record: CountryProfileRecord): CountryProfileDto {
   return {
     id: record.id,
