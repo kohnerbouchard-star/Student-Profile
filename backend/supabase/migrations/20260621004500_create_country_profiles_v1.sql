@@ -1,8 +1,7 @@
 -- Eco Novaria country profile pricing foundation V1.
--- Defines the canonical map-country set and player country assignment source for future dynamic economy systems.
--- Player location is intentionally modeled as mutable assignment history so players can immigrate between countries.
--- Difficulty is modeled as global preset policies plus per-game Advanced Settings overrides, then snapshotted into country economic history.
--- Custom difficulty is not a selectable global preset; it is inferred when per-game Advanced Settings values diverge from a preset.
+-- Defines stable map countries, per-game country assignment, difficulty policy settings,
+-- bounded macroeconomic baseline settings, and per-game country economic snapshots.
+-- Dynamic economy state is scoped by game_session_id and snapshotted for auditability.
 
 create table public.country_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -36,6 +35,8 @@ comment on column public.country_profiles.country_code is
 create index country_profiles_status_idx
 on public.country_profiles (status);
 
+alter table public.country_profiles enable row level security;
+
 create table public.difficulty_policy_profiles (
   id uuid primary key default gen_random_uuid(),
   preset_key text not null unique,
@@ -52,6 +53,7 @@ create table public.difficulty_policy_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
+  constraint difficulty_policy_profiles_id_preset_key_unique unique (id, preset_key),
   constraint difficulty_policy_profiles_preset_key_format check (preset_key ~ '^[a-z][a-z0-9_]{1,31}$'),
   constraint difficulty_policy_profiles_no_custom_preset check (preset_key <> 'custom'),
   constraint difficulty_policy_profiles_label_not_blank check (length(btrim(label)) > 0),
@@ -59,12 +61,12 @@ create table public.difficulty_policy_profiles (
     description is null
     or length(btrim(description)) > 0
   ),
-  constraint difficulty_policy_profiles_price_positive check (price_modifier > 0),
-  constraint difficulty_policy_profiles_event_volatility_positive check (event_volatility_modifier > 0),
-  constraint difficulty_policy_profiles_scarcity_positive check (scarcity_modifier > 0),
-  constraint difficulty_policy_profiles_income_positive check (income_modifier > 0),
-  constraint difficulty_policy_profiles_trade_positive check (trade_modifier > 0),
-  constraint difficulty_policy_profiles_credit_positive check (credit_modifier > 0),
+  constraint difficulty_policy_profiles_price_modifier_range check (price_modifier >= 0.5000 and price_modifier <= 2.0000),
+  constraint difficulty_policy_profiles_event_volatility_modifier_range check (event_volatility_modifier >= 0.5000 and event_volatility_modifier <= 2.0000),
+  constraint difficulty_policy_profiles_scarcity_modifier_range check (scarcity_modifier >= 0.5000 and scarcity_modifier <= 2.0000),
+  constraint difficulty_policy_profiles_income_modifier_range check (income_modifier >= 0.5000 and income_modifier <= 2.0000),
+  constraint difficulty_policy_profiles_trade_modifier_range check (trade_modifier >= 0.5000 and trade_modifier <= 2.0000),
+  constraint difficulty_policy_profiles_credit_modifier_range check (credit_modifier >= 0.5000 and credit_modifier <= 2.0000),
   constraint difficulty_policy_profiles_status_check check (status in ('active', 'disabled', 'archived')),
   constraint difficulty_policy_profiles_metadata_object check (jsonb_typeof(metadata) = 'object')
 );
@@ -75,7 +77,7 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.difficulty_policy_profiles is
-  'Global selectable difficulty policy presets used as defaults for game setup. Custom is not stored here; it is inferred from per-game Advanced Settings overrides. Runtime pricing should consume resolved modifiers from country_economic_snapshots, not this table directly.';
+  'Global selectable difficulty presets. Custom is not stored here; custom is inferred from per-game Advanced Settings overrides.';
 comment on column public.difficulty_policy_profiles.price_modifier is
   'Difficulty modifier for store prices and purchase quotes.';
 comment on column public.difficulty_policy_profiles.event_volatility_modifier is
@@ -92,10 +94,12 @@ comment on column public.difficulty_policy_profiles.credit_modifier is
 create index difficulty_policy_profiles_status_idx
 on public.difficulty_policy_profiles (status);
 
+alter table public.difficulty_policy_profiles enable row level security;
+
 create table public.game_difficulty_policy_settings (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null unique references public.game_sessions (id),
-  difficulty_policy_profile_id uuid null references public.difficulty_policy_profiles (id),
+  difficulty_policy_profile_id uuid null,
   difficulty_preset text not null default 'standard',
   custom_label text null,
   source text not null default 'preset',
@@ -110,6 +114,9 @@ create table public.game_difficulty_policy_settings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
+  constraint game_difficulty_policy_settings_profile_preset_fk
+    foreign key (difficulty_policy_profile_id, difficulty_preset)
+    references public.difficulty_policy_profiles (id, preset_key),
   constraint game_difficulty_policy_settings_preset_not_blank check (length(btrim(difficulty_preset)) > 0),
   constraint game_difficulty_policy_settings_custom_label_not_blank check (
     custom_label is null
@@ -136,12 +143,12 @@ create table public.game_difficulty_policy_settings (
     source <> 'custom'
     or custom_label is not null
   ),
-  constraint game_difficulty_policy_settings_price_positive check (price_modifier > 0),
-  constraint game_difficulty_policy_settings_event_volatility_positive check (event_volatility_modifier > 0),
-  constraint game_difficulty_policy_settings_scarcity_positive check (scarcity_modifier > 0),
-  constraint game_difficulty_policy_settings_income_positive check (income_modifier > 0),
-  constraint game_difficulty_policy_settings_trade_positive check (trade_modifier > 0),
-  constraint game_difficulty_policy_settings_credit_positive check (credit_modifier > 0),
+  constraint game_difficulty_policy_settings_price_modifier_range check (price_modifier >= 0.5000 and price_modifier <= 2.0000),
+  constraint game_difficulty_policy_settings_event_volatility_modifier_range check (event_volatility_modifier >= 0.5000 and event_volatility_modifier <= 2.0000),
+  constraint game_difficulty_policy_settings_scarcity_modifier_range check (scarcity_modifier >= 0.5000 and scarcity_modifier <= 2.0000),
+  constraint game_difficulty_policy_settings_income_modifier_range check (income_modifier >= 0.5000 and income_modifier <= 2.0000),
+  constraint game_difficulty_policy_settings_trade_modifier_range check (trade_modifier >= 0.5000 and trade_modifier <= 2.0000),
+  constraint game_difficulty_policy_settings_credit_modifier_range check (credit_modifier >= 0.5000 and credit_modifier <= 2.0000),
   constraint game_difficulty_policy_settings_status_check check (status in ('active', 'disabled', 'archived')),
   constraint game_difficulty_policy_settings_metadata_object check (jsonb_typeof(metadata) = 'object')
 );
@@ -152,12 +159,96 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.game_difficulty_policy_settings is
-  'Per-game selected or custom Advanced Settings difficulty policy. If a teacher changes a modifier, source becomes custom and these resolved values are saved for that game.';
+  'Backend-owned per-game Advanced Settings difficulty policy. Modifier values are bounded from 0.5000 to 2.0000 so custom games cannot destabilize pricing, events, income, trade, or credit systems.';
 comment on column public.game_difficulty_policy_settings.source is
   'preset means copied from a global difficulty_policy_profiles row. custom means teacher-defined Advanced Settings values inferred from edited modifiers.';
 
 create index game_difficulty_policy_settings_status_idx
 on public.game_difficulty_policy_settings (status);
+
+alter table public.game_difficulty_policy_settings enable row level security;
+
+create table public.game_country_economic_baseline_settings (
+  id uuid primary key default gen_random_uuid(),
+  game_session_id uuid not null unique references public.game_sessions (id),
+  source text not null default 'default',
+  custom_label text null,
+  real_gdp_index numeric(10, 4) not null default 100,
+  gdp_growth_rate numeric(9, 4) not null default 0,
+  inflation_rate numeric(9, 4) not null default 0,
+  unemployment_rate numeric(9, 4) not null default 0.05,
+  interest_rate numeric(9, 4) not null default 0.03,
+  consumer_confidence_index numeric(10, 4) not null default 100,
+  business_confidence_index numeric(10, 4) not null default 100,
+  cost_of_living_index numeric(9, 4) not null default 1,
+  regional_price_multiplier numeric(9, 4) not null default 1,
+  supply_constraint_index numeric(9, 4) not null default 1,
+  import_dependency_index numeric(9, 4) not null default 1,
+  tax_rate numeric(9, 4) not null default 0,
+  subsidy_rate numeric(9, 4) not null default 0,
+  exchange_rate_index numeric(9, 4) not null default 1,
+  currency_stability_index numeric(9, 4) not null default 1,
+  trade_balance_index numeric(10, 4) not null default 0,
+  export_strength_index numeric(9, 4) not null default 1,
+  market_risk_index numeric(9, 4) not null default 1,
+  political_stability_index numeric(9, 4) not null default 1,
+  infrastructure_index numeric(9, 4) not null default 1,
+  energy_security_index numeric(9, 4) not null default 1,
+  status text not null default 'active',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint game_country_economic_baseline_settings_source_check check (source in ('default', 'custom')),
+  constraint game_country_economic_baseline_settings_custom_label_not_blank check (
+    custom_label is null
+    or length(btrim(custom_label)) > 0
+  ),
+  constraint game_country_economic_baseline_settings_custom_has_label check (
+    source <> 'custom'
+    or custom_label is not null
+  ),
+  constraint game_country_economic_baseline_settings_real_gdp_range check (real_gdp_index >= 50 and real_gdp_index <= 200),
+  constraint game_country_economic_baseline_settings_gdp_growth_range check (gdp_growth_rate >= -0.2500 and gdp_growth_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_inflation_range check (inflation_rate >= -0.0500 and inflation_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_unemployment_range check (unemployment_rate >= 0 and unemployment_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_interest_range check (interest_rate >= 0 and interest_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_consumer_confidence_range check (consumer_confidence_index >= 25 and consumer_confidence_index <= 200),
+  constraint game_country_economic_baseline_settings_business_confidence_range check (business_confidence_index >= 25 and business_confidence_index <= 200),
+  constraint game_country_economic_baseline_settings_cost_of_living_range check (cost_of_living_index >= 0.5000 and cost_of_living_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_regional_price_range check (regional_price_multiplier >= 0.5000 and regional_price_multiplier <= 2.0000),
+  constraint game_country_economic_baseline_settings_supply_constraint_range check (supply_constraint_index >= 0.5000 and supply_constraint_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_import_dependency_range check (import_dependency_index >= 0.5000 and import_dependency_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_tax_rate_range check (tax_rate >= 0 and tax_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_subsidy_rate_range check (subsidy_rate >= 0 and subsidy_rate <= 0.5000),
+  constraint game_country_economic_baseline_settings_exchange_rate_range check (exchange_rate_index >= 0.5000 and exchange_rate_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_currency_stability_range check (currency_stability_index >= 0.5000 and currency_stability_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_trade_balance_range check (trade_balance_index >= -100 and trade_balance_index <= 100),
+  constraint game_country_economic_baseline_settings_export_strength_range check (export_strength_index >= 0.5000 and export_strength_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_market_risk_range check (market_risk_index >= 0.5000 and market_risk_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_political_stability_range check (political_stability_index >= 0.5000 and political_stability_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_infrastructure_range check (infrastructure_index >= 0.5000 and infrastructure_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_energy_security_range check (energy_security_index >= 0.5000 and energy_security_index <= 2.0000),
+  constraint game_country_economic_baseline_settings_status_check check (status in ('active', 'disabled', 'archived')),
+  constraint game_country_economic_baseline_settings_metadata_object check (jsonb_typeof(metadata) = 'object')
+);
+
+create trigger set_game_country_economic_baseline_settings_updated_at
+before update on public.game_country_economic_baseline_settings
+for each row
+execute function public.set_current_timestamp_updated_at();
+
+comment on table public.game_country_economic_baseline_settings is
+  'Backend-owned per-game Advanced Settings macroeconomic baseline. Bounded values are used when initializing country_economic_snapshots.';
+comment on column public.game_country_economic_baseline_settings.inflation_rate is
+  'Starting inflation rate for initialized snapshots. Example: 0.075 means 7.5%. Bounded from -5% to 50%; negative values represent deflation.';
+comment on column public.game_country_economic_baseline_settings.interest_rate is
+  'Starting interest rate for initialized snapshots. Example: 0.05 means 5%. Bounded from 0% to 50% for V1 custom game setup.';
+
+create index game_country_economic_baseline_settings_status_idx
+on public.game_country_economic_baseline_settings (status);
+
+alter table public.game_country_economic_baseline_settings enable row level security;
 
 create table public.country_economic_snapshots (
   id uuid primary key default gen_random_uuid(),
@@ -165,7 +256,7 @@ create table public.country_economic_snapshots (
   country_profile_id uuid not null references public.country_profiles (id),
   simulation_tick integer not null default 0,
   snapshot_label text null,
-  difficulty_policy_profile_id uuid null references public.difficulty_policy_profiles (id),
+  difficulty_policy_profile_id uuid null,
   difficulty_preset text not null default 'standard',
   price_difficulty_modifier numeric(9, 4) not null default 1,
   event_volatility_modifier numeric(9, 4) not null default 1,
@@ -197,77 +288,77 @@ create table public.country_economic_snapshots (
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
 
+  constraint country_economic_snapshots_profile_preset_fk
+    foreign key (difficulty_policy_profile_id, difficulty_preset)
+    references public.difficulty_policy_profiles (id, preset_key),
   constraint country_economic_snapshots_tick_nonnegative check (simulation_tick >= 0),
   constraint country_economic_snapshots_snapshot_label_not_blank check (
     snapshot_label is null
     or length(btrim(snapshot_label)) > 0
   ),
   constraint country_economic_snapshots_difficulty_preset_not_blank check (length(btrim(difficulty_preset)) > 0),
-  constraint country_economic_snapshots_price_difficulty_positive check (price_difficulty_modifier > 0),
-  constraint country_economic_snapshots_event_volatility_positive check (event_volatility_modifier > 0),
-  constraint country_economic_snapshots_scarcity_difficulty_positive check (scarcity_difficulty_modifier > 0),
-  constraint country_economic_snapshots_income_difficulty_positive check (income_difficulty_modifier > 0),
-  constraint country_economic_snapshots_trade_difficulty_positive check (trade_difficulty_modifier > 0),
-  constraint country_economic_snapshots_credit_difficulty_positive check (credit_difficulty_modifier > 0),
-  constraint country_economic_snapshots_real_gdp_positive check (real_gdp_index > 0),
-  constraint country_economic_snapshots_gdp_growth_reasonable check (gdp_growth_rate >= -1 and gdp_growth_rate <= 10),
-  constraint country_economic_snapshots_inflation_reasonable check (inflation_rate >= -1 and inflation_rate <= 10),
-  constraint country_economic_snapshots_unemployment_reasonable check (unemployment_rate >= 0 and unemployment_rate <= 1),
-  constraint country_economic_snapshots_interest_reasonable check (interest_rate >= -1 and interest_rate <= 10),
-  constraint country_economic_snapshots_consumer_confidence_positive check (consumer_confidence_index > 0),
-  constraint country_economic_snapshots_business_confidence_positive check (business_confidence_index > 0),
-  constraint country_economic_snapshots_cost_of_living_positive check (cost_of_living_index > 0),
-  constraint country_economic_snapshots_regional_price_positive check (regional_price_multiplier > 0),
-  constraint country_economic_snapshots_supply_constraint_positive check (supply_constraint_index > 0),
-  constraint country_economic_snapshots_import_dependency_positive check (import_dependency_index > 0),
-  constraint country_economic_snapshots_tax_rate_reasonable check (tax_rate >= 0 and tax_rate <= 1),
-  constraint country_economic_snapshots_subsidy_rate_reasonable check (subsidy_rate >= 0 and subsidy_rate <= 1),
-  constraint country_economic_snapshots_exchange_rate_positive check (exchange_rate_index > 0),
-  constraint country_economic_snapshots_currency_stability_positive check (currency_stability_index > 0),
-  constraint country_economic_snapshots_export_strength_positive check (export_strength_index > 0),
-  constraint country_economic_snapshots_market_risk_positive check (market_risk_index > 0),
-  constraint country_economic_snapshots_political_stability_positive check (political_stability_index > 0),
-  constraint country_economic_snapshots_infrastructure_positive check (infrastructure_index > 0),
-  constraint country_economic_snapshots_energy_security_positive check (energy_security_index > 0),
+  constraint country_economic_snapshots_difficulty_profile_consistency check (
+    (
+      difficulty_preset = 'custom'
+      and difficulty_policy_profile_id is null
+    )
+    or (
+      difficulty_preset <> 'custom'
+      and difficulty_policy_profile_id is not null
+    )
+  ),
+  constraint country_economic_snapshots_price_difficulty_modifier_range check (price_difficulty_modifier >= 0.5000 and price_difficulty_modifier <= 2.0000),
+  constraint country_economic_snapshots_event_volatility_modifier_range check (event_volatility_modifier >= 0.5000 and event_volatility_modifier <= 2.0000),
+  constraint country_economic_snapshots_scarcity_difficulty_modifier_range check (scarcity_difficulty_modifier >= 0.5000 and scarcity_difficulty_modifier <= 2.0000),
+  constraint country_economic_snapshots_income_difficulty_modifier_range check (income_difficulty_modifier >= 0.5000 and income_difficulty_modifier <= 2.0000),
+  constraint country_economic_snapshots_trade_difficulty_modifier_range check (trade_difficulty_modifier >= 0.5000 and trade_difficulty_modifier <= 2.0000),
+  constraint country_economic_snapshots_credit_difficulty_modifier_range check (credit_difficulty_modifier >= 0.5000 and credit_difficulty_modifier <= 2.0000),
+  constraint country_economic_snapshots_real_gdp_range check (real_gdp_index >= 50 and real_gdp_index <= 200),
+  constraint country_economic_snapshots_gdp_growth_range check (gdp_growth_rate >= -0.2500 and gdp_growth_rate <= 0.5000),
+  constraint country_economic_snapshots_inflation_range check (inflation_rate >= -0.0500 and inflation_rate <= 0.5000),
+  constraint country_economic_snapshots_unemployment_range check (unemployment_rate >= 0 and unemployment_rate <= 0.5000),
+  constraint country_economic_snapshots_interest_range check (interest_rate >= 0 and interest_rate <= 0.5000),
+  constraint country_economic_snapshots_consumer_confidence_range check (consumer_confidence_index >= 25 and consumer_confidence_index <= 200),
+  constraint country_economic_snapshots_business_confidence_range check (business_confidence_index >= 25 and business_confidence_index <= 200),
+  constraint country_economic_snapshots_cost_of_living_range check (cost_of_living_index >= 0.5000 and cost_of_living_index <= 2.0000),
+  constraint country_economic_snapshots_regional_price_range check (regional_price_multiplier >= 0.5000 and regional_price_multiplier <= 2.0000),
+  constraint country_economic_snapshots_supply_constraint_range check (supply_constraint_index >= 0.5000 and supply_constraint_index <= 2.0000),
+  constraint country_economic_snapshots_import_dependency_range check (import_dependency_index >= 0.5000 and import_dependency_index <= 2.0000),
+  constraint country_economic_snapshots_tax_rate_range check (tax_rate >= 0 and tax_rate <= 0.5000),
+  constraint country_economic_snapshots_subsidy_rate_range check (subsidy_rate >= 0 and subsidy_rate <= 0.5000),
+  constraint country_economic_snapshots_exchange_rate_range check (exchange_rate_index >= 0.5000 and exchange_rate_index <= 2.0000),
+  constraint country_economic_snapshots_currency_stability_range check (currency_stability_index >= 0.5000 and currency_stability_index <= 2.0000),
+  constraint country_economic_snapshots_trade_balance_range check (trade_balance_index >= -100 and trade_balance_index <= 100),
+  constraint country_economic_snapshots_export_strength_range check (export_strength_index >= 0.5000 and export_strength_index <= 2.0000),
+  constraint country_economic_snapshots_market_risk_range check (market_risk_index >= 0.5000 and market_risk_index <= 2.0000),
+  constraint country_economic_snapshots_political_stability_range check (political_stability_index >= 0.5000 and political_stability_index <= 2.0000),
+  constraint country_economic_snapshots_infrastructure_range check (infrastructure_index >= 0.5000 and infrastructure_index <= 2.0000),
+  constraint country_economic_snapshots_energy_security_range check (energy_security_index >= 0.5000 and energy_security_index <= 2.0000),
   constraint country_economic_snapshots_metadata_object check (jsonb_typeof(metadata) = 'object'),
   constraint country_economic_snapshots_unique_tick unique (game_session_id, country_profile_id, simulation_tick),
   constraint country_economic_snapshots_scope_unique unique (id, game_session_id, country_profile_id)
 );
 
 comment on table public.country_economic_snapshots is
-  'Per-game, per-country macroeconomic snapshot history. Store pricing should use the latest active snapshot for the player country rather than global hard-coded multipliers.';
-comment on column public.country_economic_snapshots.simulation_tick is
-  'Game round/tick for this economic state. One country can have one snapshot per tick per game session.';
-comment on column public.country_economic_snapshots.difficulty_policy_profile_id is
-  'Global preset used to resolve this snapshot, if any. Null is allowed for custom per-game Advanced Settings.';
+  'Per-game, per-country macroeconomic snapshot history. Store pricing should use the latest snapshot for the player country rather than global hard-coded multipliers.';
 comment on column public.country_economic_snapshots.price_difficulty_modifier is
-  'Resolved difficulty modifier for store prices and purchase quotes. Runtime pricing should read this snapshot value.';
+  'Resolved difficulty modifier for store prices and purchase quotes.';
 comment on column public.country_economic_snapshots.event_volatility_modifier is
   'Resolved difficulty modifier for country event/shock magnitude.';
 comment on column public.country_economic_snapshots.scarcity_difficulty_modifier is
   'Resolved difficulty modifier for scarcity, supply, and item availability pressure.';
-comment on column public.country_economic_snapshots.income_difficulty_modifier is
-  'Resolved difficulty modifier for future wages, rewards, stipends, and income-like payouts.';
-comment on column public.country_economic_snapshots.trade_difficulty_modifier is
-  'Resolved difficulty modifier reserved for future trade and import/export pressure.';
-comment on column public.country_economic_snapshots.credit_difficulty_modifier is
-  'Resolved difficulty modifier reserved for future borrowing, credit, and financing pressure.';
 comment on column public.country_economic_snapshots.inflation_rate is
-  'Current country inflation rate. Example: 0.075 means 7.5%.';
-comment on column public.country_economic_snapshots.cost_of_living_index is
-  'Country cost-of-living index. Neutral baseline is 1.';
+  'Current country inflation rate. Example: 0.075 means 7.5%; negative values represent deflation.';
 comment on column public.country_economic_snapshots.regional_price_multiplier is
   'Direct regional price multiplier for store quote pricing. Neutral baseline is 1.';
-comment on column public.country_economic_snapshots.supply_constraint_index is
-  'Supply/scarcity pressure used by store quote pricing. Neutral baseline is 1.';
-comment on column public.country_economic_snapshots.import_dependency_index is
-  'Import exposure used by store quote pricing. Neutral baseline is 1.';
 
 create index country_economic_snapshots_latest_idx
 on public.country_economic_snapshots (game_session_id, country_profile_id, simulation_tick desc);
 
 create index country_economic_snapshots_game_tick_idx
 on public.country_economic_snapshots (game_session_id, simulation_tick desc);
+
+alter table public.country_economic_snapshots enable row level security;
 
 create table public.country_event_impacts (
   id uuid primary key default gen_random_uuid(),
@@ -302,15 +393,15 @@ create table public.country_event_impacts (
 );
 
 comment on table public.country_event_impacts is
-  'Append-only event-impact log explaining why a country macroeconomic profile changed during a game session. Snapshot references are constrained to the same game session and country.';
-comment on column public.country_event_impacts.stat_deltas is
-  'JSON object of macro fields changed by the event. Example: {"inflation_rate":0.02,"supply_constraint_index":0.15}.';
+  'Append-only event-impact log explaining why a country macroeconomic profile changed during a game session.';
 
 create index country_event_impacts_country_time_idx
 on public.country_event_impacts (game_session_id, country_profile_id, applied_at desc);
 
 create index country_event_impacts_event_key_idx
 on public.country_event_impacts (game_session_id, event_key);
+
+alter table public.country_event_impacts enable row level security;
 
 create table public.player_country_assignments (
   id uuid primary key default gen_random_uuid(),
@@ -350,13 +441,9 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.player_country_assignments is
-  'Mutable player country/location assignment history. Players may immigrate to another country by ending the old active row and inserting a new active row.';
+  'Mutable player country/location assignment history. Players may immigrate by ending the old active row and inserting a new active row.';
 comment on column public.player_country_assignments.country_profile_id is
   'Country profile used as the active economic input for store quote pricing.';
-comment on column public.player_country_assignments.assignment_reason is
-  'Reason for this location assignment, such as initial_assignment, immigration, event_relocation, or admin_adjustment.';
-comment on column public.player_country_assignments.ended_at is
-  'Timestamp when this country assignment stopped being active. Active rows must not have ended_at.';
 
 create unique index player_country_assignments_one_active_idx
 on public.player_country_assignments (game_session_id, player_id)
@@ -367,6 +454,8 @@ on public.player_country_assignments (country_profile_id);
 
 create index player_country_assignments_player_history_idx
 on public.player_country_assignments (game_session_id, player_id, assigned_at desc);
+
+alter table public.player_country_assignments enable row level security;
 
 create table public.player_country_migration_events (
   id uuid primary key default gen_random_uuid(),
@@ -392,6 +481,16 @@ create table public.player_country_migration_events (
     references public.player_country_assignments (id, game_session_id, player_id, country_profile_id),
   constraint player_country_migration_events_reason_not_blank check (length(btrim(migration_reason)) > 0),
   constraint player_country_migration_events_metadata_object check (jsonb_typeof(metadata) = 'object'),
+  constraint player_country_migration_events_from_assignment_pair check (
+    (
+      from_assignment_id is null
+      and from_country_profile_id is null
+    )
+    or (
+      from_assignment_id is not null
+      and from_country_profile_id is not null
+    )
+  ),
   constraint player_country_migration_events_country_changed check (
     from_country_profile_id is null
     or from_country_profile_id <> to_country_profile_id
@@ -403,17 +502,15 @@ create table public.player_country_migration_events (
 );
 
 comment on table public.player_country_migration_events is
-  'Append-only audit trail for player immigration/location changes between Eco Novaria countries. Assignment references are constrained to the same game session and player.';
-comment on column public.player_country_migration_events.from_country_profile_id is
-  'Previous country profile, null only for first assignment if represented as a migration event.';
-comment on column public.player_country_migration_events.to_country_profile_id is
-  'New country profile after immigration.';
+  'Append-only audit trail for player immigration/location changes between Eco Novaria countries.';
 
 create index player_country_migration_events_player_idx
 on public.player_country_migration_events (game_session_id, player_id, migrated_at desc);
 
 create index player_country_migration_events_to_country_idx
 on public.player_country_migration_events (to_country_profile_id);
+
+alter table public.player_country_migration_events enable row level security;
 
 insert into public.country_profiles (
   country_code,
@@ -478,6 +575,28 @@ declare
   v_income_modifier numeric(9, 4);
   v_trade_modifier numeric(9, 4);
   v_credit_modifier numeric(9, 4);
+  v_real_gdp_index numeric(10, 4) := 100;
+  v_gdp_growth_rate numeric(9, 4) := 0;
+  v_inflation_rate numeric(9, 4) := 0;
+  v_unemployment_rate numeric(9, 4) := 0.05;
+  v_interest_rate numeric(9, 4) := 0.03;
+  v_consumer_confidence_index numeric(10, 4) := 100;
+  v_business_confidence_index numeric(10, 4) := 100;
+  v_cost_of_living_index numeric(9, 4) := 1;
+  v_regional_price_multiplier numeric(9, 4) := 1;
+  v_supply_constraint_index numeric(9, 4) := 1;
+  v_import_dependency_index numeric(9, 4) := 1;
+  v_tax_rate numeric(9, 4) := 0;
+  v_subsidy_rate numeric(9, 4) := 0;
+  v_exchange_rate_index numeric(9, 4) := 1;
+  v_currency_stability_index numeric(9, 4) := 1;
+  v_trade_balance_index numeric(10, 4) := 0;
+  v_export_strength_index numeric(9, 4) := 1;
+  v_market_risk_index numeric(9, 4) := 1;
+  v_political_stability_index numeric(9, 4) := 1;
+  v_infrastructure_index numeric(9, 4) := 1;
+  v_energy_security_index numeric(9, 4) := 1;
+  v_economic_baseline_source text := 'default';
 begin
   if p_game_session_id is null then
     raise exception 'p_game_session_id is required'
@@ -593,6 +712,56 @@ begin
       using errcode = 'P0002';
   end if;
 
+  select
+    gebs.real_gdp_index,
+    gebs.gdp_growth_rate,
+    gebs.inflation_rate,
+    gebs.unemployment_rate,
+    gebs.interest_rate,
+    gebs.consumer_confidence_index,
+    gebs.business_confidence_index,
+    gebs.cost_of_living_index,
+    gebs.regional_price_multiplier,
+    gebs.supply_constraint_index,
+    gebs.import_dependency_index,
+    gebs.tax_rate,
+    gebs.subsidy_rate,
+    gebs.exchange_rate_index,
+    gebs.currency_stability_index,
+    gebs.trade_balance_index,
+    gebs.export_strength_index,
+    gebs.market_risk_index,
+    gebs.political_stability_index,
+    gebs.infrastructure_index,
+    gebs.energy_security_index,
+    gebs.source
+  into
+    v_real_gdp_index,
+    v_gdp_growth_rate,
+    v_inflation_rate,
+    v_unemployment_rate,
+    v_interest_rate,
+    v_consumer_confidence_index,
+    v_business_confidence_index,
+    v_cost_of_living_index,
+    v_regional_price_multiplier,
+    v_supply_constraint_index,
+    v_import_dependency_index,
+    v_tax_rate,
+    v_subsidy_rate,
+    v_exchange_rate_index,
+    v_currency_stability_index,
+    v_trade_balance_index,
+    v_export_strength_index,
+    v_market_risk_index,
+    v_political_stability_index,
+    v_infrastructure_index,
+    v_energy_security_index,
+    v_economic_baseline_source
+  from public.game_country_economic_baseline_settings gebs
+  where gebs.game_session_id = p_game_session_id
+    and gebs.status = 'active';
+
   return query
   insert into public.country_economic_snapshots (
     game_session_id,
@@ -607,6 +776,27 @@ begin
     income_difficulty_modifier,
     trade_difficulty_modifier,
     credit_difficulty_modifier,
+    real_gdp_index,
+    gdp_growth_rate,
+    inflation_rate,
+    unemployment_rate,
+    interest_rate,
+    consumer_confidence_index,
+    business_confidence_index,
+    cost_of_living_index,
+    regional_price_multiplier,
+    supply_constraint_index,
+    import_dependency_index,
+    tax_rate,
+    subsidy_rate,
+    exchange_rate_index,
+    currency_stability_index,
+    trade_balance_index,
+    export_strength_index,
+    market_risk_index,
+    political_stability_index,
+    infrastructure_index,
+    energy_security_index,
     metadata
   )
   select
@@ -622,9 +812,31 @@ begin
     v_income_modifier,
     v_trade_modifier,
     v_credit_modifier,
+    v_real_gdp_index,
+    v_gdp_growth_rate,
+    v_inflation_rate,
+    v_unemployment_rate,
+    v_interest_rate,
+    v_consumer_confidence_index,
+    v_business_confidence_index,
+    v_cost_of_living_index,
+    v_regional_price_multiplier,
+    v_supply_constraint_index,
+    v_import_dependency_index,
+    v_tax_rate,
+    v_subsidy_rate,
+    v_exchange_rate_index,
+    v_currency_stability_index,
+    v_trade_balance_index,
+    v_export_strength_index,
+    v_market_risk_index,
+    v_political_stability_index,
+    v_infrastructure_index,
+    v_energy_security_index,
     p_request_metadata || jsonb_build_object(
       'initializationSource', 'initialize_country_economic_snapshots_for_game',
-      'difficultyPreset', v_difficulty_preset
+      'difficultyPreset', v_difficulty_preset,
+      'economicBaselineSource', v_economic_baseline_source
     )
   from public.country_profiles cp
   where cp.status = 'active'
@@ -638,27 +850,4 @@ end;
 $$;
 
 comment on function public.initialize_country_economic_snapshots_for_game(uuid, integer, text, jsonb) is
-  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty from game_difficulty_policy_settings first, then game_settings/difficulty_policy_profiles, snapshots those modifiers, rejects unconfigured custom difficulty, and is safe to call repeatedly for the same game/tick.';
-
-alter table public.country_profiles enable row level security;
-alter table public.difficulty_policy_profiles enable row level security;
-alter table public.game_difficulty_policy_settings enable row level security;
-alter table public.country_economic_snapshots enable row level security;
-alter table public.country_event_impacts enable row level security;
-alter table public.player_country_assignments enable row level security;
-alter table public.player_country_migration_events enable row level security;
-
-comment on table public.country_profiles is
-  'Backend-owned country identity source for Eco Novaria. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.difficulty_policy_profiles is
-  'Backend-owned global selectable difficulty preset source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.game_difficulty_policy_settings is
-  'Backend-owned per-game Advanced Settings difficulty policy. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.country_economic_snapshots is
-  'Backend-owned per-game macroeconomic country history. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.country_event_impacts is
-  'Backend-owned country economic event history. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.player_country_assignments is
-  'Backend-owned mutable active player country location source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
-comment on table public.player_country_migration_events is
-  'Backend-owned immigration history. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+  'Creates baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty, applies bounded per-game macroeconomic Advanced Settings when present, snapshots those values, rejects unconfigured custom difficulty, and is safe to call repeatedly for the same game/tick.';
