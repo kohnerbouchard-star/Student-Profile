@@ -1,6 +1,7 @@
 -- Eco Novaria country profile pricing foundation V1.
 -- Defines the canonical map-country set and player country assignment source for future dynamic economy systems.
 -- Player location is intentionally modeled as mutable assignment history so players can immigrate between countries.
+-- Difficulty is modeled as global preset policies plus per-game Advanced Settings overrides, then snapshotted into country economic history.
 
 create table public.country_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -34,12 +35,130 @@ comment on column public.country_profiles.country_code is
 create index country_profiles_status_idx
 on public.country_profiles (status);
 
+create table public.difficulty_policy_profiles (
+  id uuid primary key default gen_random_uuid(),
+  preset_key text not null unique,
+  label text not null,
+  description text null,
+  price_modifier numeric(9, 4) not null default 1,
+  event_volatility_modifier numeric(9, 4) not null default 1,
+  scarcity_modifier numeric(9, 4) not null default 1,
+  income_modifier numeric(9, 4) not null default 1,
+  trade_modifier numeric(9, 4) not null default 1,
+  credit_modifier numeric(9, 4) not null default 1,
+  status text not null default 'active',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint difficulty_policy_profiles_preset_key_format check (preset_key ~ '^[a-z][a-z0-9_]{1,31}$'),
+  constraint difficulty_policy_profiles_label_not_blank check (length(btrim(label)) > 0),
+  constraint difficulty_policy_profiles_description_not_blank check (
+    description is null
+    or length(btrim(description)) > 0
+  ),
+  constraint difficulty_policy_profiles_price_positive check (price_modifier > 0),
+  constraint difficulty_policy_profiles_event_volatility_positive check (event_volatility_modifier > 0),
+  constraint difficulty_policy_profiles_scarcity_positive check (scarcity_modifier > 0),
+  constraint difficulty_policy_profiles_income_positive check (income_modifier > 0),
+  constraint difficulty_policy_profiles_trade_positive check (trade_modifier > 0),
+  constraint difficulty_policy_profiles_credit_positive check (credit_modifier > 0),
+  constraint difficulty_policy_profiles_status_check check (status in ('active', 'disabled', 'archived')),
+  constraint difficulty_policy_profiles_metadata_object check (jsonb_typeof(metadata) = 'object')
+);
+
+create trigger set_difficulty_policy_profiles_updated_at
+before update on public.difficulty_policy_profiles
+for each row
+execute function public.set_current_timestamp_updated_at();
+
+comment on table public.difficulty_policy_profiles is
+  'Global difficulty policy presets used as defaults for game setup. Runtime pricing should consume resolved modifiers from country_economic_snapshots, not this table directly.';
+comment on column public.difficulty_policy_profiles.price_modifier is
+  'Difficulty modifier for store prices and purchase quotes.';
+comment on column public.difficulty_policy_profiles.event_volatility_modifier is
+  'Difficulty modifier for country event/shock magnitude.';
+comment on column public.difficulty_policy_profiles.scarcity_modifier is
+  'Difficulty modifier for scarcity, supply, and item availability pressure.';
+comment on column public.difficulty_policy_profiles.income_modifier is
+  'Difficulty modifier for future wages, rewards, stipends, and income-like payouts.';
+comment on column public.difficulty_policy_profiles.trade_modifier is
+  'Difficulty modifier reserved for future trade and import/export pressure.';
+comment on column public.difficulty_policy_profiles.credit_modifier is
+  'Difficulty modifier reserved for future borrowing, credit, and financing pressure.';
+
+create index difficulty_policy_profiles_status_idx
+on public.difficulty_policy_profiles (status);
+
+create table public.game_difficulty_policy_settings (
+  id uuid primary key default gen_random_uuid(),
+  game_session_id uuid not null unique references public.game_sessions (id),
+  difficulty_policy_profile_id uuid null references public.difficulty_policy_profiles (id),
+  difficulty_preset text not null default 'standard',
+  custom_label text null,
+  source text not null default 'preset',
+  price_modifier numeric(9, 4) not null default 1,
+  event_volatility_modifier numeric(9, 4) not null default 1,
+  scarcity_modifier numeric(9, 4) not null default 1,
+  income_modifier numeric(9, 4) not null default 1,
+  trade_modifier numeric(9, 4) not null default 1,
+  credit_modifier numeric(9, 4) not null default 1,
+  status text not null default 'active',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint game_difficulty_policy_settings_preset_not_blank check (length(btrim(difficulty_preset)) > 0),
+  constraint game_difficulty_policy_settings_custom_label_not_blank check (
+    custom_label is null
+    or length(btrim(custom_label)) > 0
+  ),
+  constraint game_difficulty_policy_settings_source_check check (source in ('preset', 'custom')),
+  constraint game_difficulty_policy_settings_preset_has_profile check (
+    source <> 'preset'
+    or difficulty_policy_profile_id is not null
+  ),
+  constraint game_difficulty_policy_settings_custom_allows_label check (
+    source <> 'custom'
+    or custom_label is not null
+  ),
+  constraint game_difficulty_policy_settings_price_positive check (price_modifier > 0),
+  constraint game_difficulty_policy_settings_event_volatility_positive check (event_volatility_modifier > 0),
+  constraint game_difficulty_policy_settings_scarcity_positive check (scarcity_modifier > 0),
+  constraint game_difficulty_policy_settings_income_positive check (income_modifier > 0),
+  constraint game_difficulty_policy_settings_trade_positive check (trade_modifier > 0),
+  constraint game_difficulty_policy_settings_credit_positive check (credit_modifier > 0),
+  constraint game_difficulty_policy_settings_status_check check (status in ('active', 'disabled', 'archived')),
+  constraint game_difficulty_policy_settings_metadata_object check (jsonb_typeof(metadata) = 'object')
+);
+
+create trigger set_game_difficulty_policy_settings_updated_at
+before update on public.game_difficulty_policy_settings
+for each row
+execute function public.set_current_timestamp_updated_at();
+
+comment on table public.game_difficulty_policy_settings is
+  'Per-game selected or custom Advanced Settings difficulty policy. Country snapshots store resolved values for audit-safe runtime use.';
+comment on column public.game_difficulty_policy_settings.source is
+  'preset means copied from a global difficulty_policy_profiles row. custom means teacher-defined Advanced Settings values.';
+
+create index game_difficulty_policy_settings_status_idx
+on public.game_difficulty_policy_settings (status);
+
 create table public.country_economic_snapshots (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null references public.game_sessions (id),
   country_profile_id uuid not null references public.country_profiles (id),
   simulation_tick integer not null default 0,
   snapshot_label text null,
+  difficulty_policy_profile_id uuid null references public.difficulty_policy_profiles (id),
+  difficulty_preset text not null default 'standard',
+  price_difficulty_modifier numeric(9, 4) not null default 1,
+  event_volatility_modifier numeric(9, 4) not null default 1,
+  scarcity_difficulty_modifier numeric(9, 4) not null default 1,
+  income_difficulty_modifier numeric(9, 4) not null default 1,
+  trade_difficulty_modifier numeric(9, 4) not null default 1,
+  credit_difficulty_modifier numeric(9, 4) not null default 1,
   real_gdp_index numeric(10, 4) not null default 100,
   gdp_growth_rate numeric(9, 4) not null default 0,
   inflation_rate numeric(9, 4) not null default 0,
@@ -69,6 +188,13 @@ create table public.country_economic_snapshots (
     snapshot_label is null
     or length(btrim(snapshot_label)) > 0
   ),
+  constraint country_economic_snapshots_difficulty_preset_not_blank check (length(btrim(difficulty_preset)) > 0),
+  constraint country_economic_snapshots_price_difficulty_positive check (price_difficulty_modifier > 0),
+  constraint country_economic_snapshots_event_volatility_positive check (event_volatility_modifier > 0),
+  constraint country_economic_snapshots_scarcity_difficulty_positive check (scarcity_difficulty_modifier > 0),
+  constraint country_economic_snapshots_income_difficulty_positive check (income_difficulty_modifier > 0),
+  constraint country_economic_snapshots_trade_difficulty_positive check (trade_difficulty_modifier > 0),
+  constraint country_economic_snapshots_credit_difficulty_positive check (credit_difficulty_modifier > 0),
   constraint country_economic_snapshots_real_gdp_positive check (real_gdp_index > 0),
   constraint country_economic_snapshots_gdp_growth_reasonable check (gdp_growth_rate >= -1 and gdp_growth_rate <= 10),
   constraint country_economic_snapshots_inflation_reasonable check (inflation_rate >= -1 and inflation_rate <= 10),
@@ -97,6 +223,20 @@ comment on table public.country_economic_snapshots is
   'Per-game, per-country macroeconomic snapshot history. Store pricing should use the latest active snapshot for the player country rather than global hard-coded multipliers.';
 comment on column public.country_economic_snapshots.simulation_tick is
   'Game round/tick for this economic state. One country can have one snapshot per tick per game session.';
+comment on column public.country_economic_snapshots.difficulty_policy_profile_id is
+  'Global preset used to resolve this snapshot, if any. Null is allowed for custom per-game Advanced Settings.';
+comment on column public.country_economic_snapshots.price_difficulty_modifier is
+  'Resolved difficulty modifier for store prices and purchase quotes. Runtime pricing should read this snapshot value.';
+comment on column public.country_economic_snapshots.event_volatility_modifier is
+  'Resolved difficulty modifier for country event/shock magnitude.';
+comment on column public.country_economic_snapshots.scarcity_difficulty_modifier is
+  'Resolved difficulty modifier for scarcity, supply, and item availability pressure.';
+comment on column public.country_economic_snapshots.income_difficulty_modifier is
+  'Resolved difficulty modifier for future wages, rewards, stipends, and income-like payouts.';
+comment on column public.country_economic_snapshots.trade_difficulty_modifier is
+  'Resolved difficulty modifier reserved for future trade and import/export pressure.';
+comment on column public.country_economic_snapshots.credit_difficulty_modifier is
+  'Resolved difficulty modifier reserved for future borrowing, credit, and financing pressure.';
 comment on column public.country_economic_snapshots.inflation_rate is
   'Current country inflation rate. Example: 0.075 means 7.5%.';
 comment on column public.country_economic_snapshots.cost_of_living_index is
@@ -266,6 +406,26 @@ values
   ('DRAVENLOK', 'Dravenlok', 'Ironhold', 'ECO', '{"mapRegion":"east","mapColor":"red"}'::jsonb),
   ('SYNDALIS', 'Syndalis', 'Blacklight', 'ECO', '{"mapRegion":"southeast","mapColor":"violet"}'::jsonb);
 
+insert into public.difficulty_policy_profiles (
+  preset_key,
+  label,
+  description,
+  price_modifier,
+  event_volatility_modifier,
+  scarcity_modifier,
+  income_modifier,
+  trade_modifier,
+  credit_modifier,
+  metadata
+)
+values
+  ('easy', 'Easy', 'Lower prices, gentler events, lower scarcity, and higher income scaling.', 0.9000, 0.7500, 0.8500, 1.1500, 0.9000, 0.9000, '{"advancedSettingsEditable":false}'::jsonb),
+  ('standard', 'Standard', 'Neutral baseline difficulty policy.', 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, '{"advancedSettingsEditable":false}'::jsonb),
+  ('moderate', 'Moderate', 'Slightly higher prices, volatility, scarcity, trade pressure, and credit pressure.', 1.0800, 1.1000, 1.0800, 0.9500, 1.0800, 1.0800, '{"advancedSettingsEditable":false}'::jsonb),
+  ('hard', 'Hard', 'Higher prices, stronger event shocks, stronger scarcity, and lower income scaling.', 1.1800, 1.2500, 1.2000, 0.9000, 1.1800, 1.1800, '{"advancedSettingsEditable":false}'::jsonb),
+  ('insane', 'Insane', 'Maximum intended challenge with sharp prices, volatile events, heavy scarcity, and reduced income scaling.', 1.3500, 1.5000, 1.4000, 0.8000, 1.3500, 1.3500, '{"advancedSettingsEditable":false}'::jsonb),
+  ('custom', 'Custom', 'Teacher-defined Advanced Settings policy copied into each game session before snapshot initialization.', 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, '{"advancedSettingsEditable":true}'::jsonb);
+
 create or replace function public.initialize_country_economic_snapshots_for_game(
   p_game_session_id uuid,
   p_simulation_tick integer default 0,
@@ -281,6 +441,16 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_game_difficulty_preset text;
+  v_policy_profile_id uuid;
+  v_difficulty_preset text;
+  v_price_modifier numeric(9, 4);
+  v_event_volatility_modifier numeric(9, 4);
+  v_scarcity_modifier numeric(9, 4);
+  v_income_modifier numeric(9, 4);
+  v_trade_modifier numeric(9, 4);
+  v_credit_modifier numeric(9, 4);
 begin
   if p_game_session_id is null then
     raise exception 'p_game_session_id is required'
@@ -311,12 +481,100 @@ begin
       using errcode = 'P0002';
   end if;
 
+  select
+    gdps.difficulty_policy_profile_id,
+    gdps.difficulty_preset,
+    gdps.price_modifier,
+    gdps.event_volatility_modifier,
+    gdps.scarcity_modifier,
+    gdps.income_modifier,
+    gdps.trade_modifier,
+    gdps.credit_modifier
+  into
+    v_policy_profile_id,
+    v_difficulty_preset,
+    v_price_modifier,
+    v_event_volatility_modifier,
+    v_scarcity_modifier,
+    v_income_modifier,
+    v_trade_modifier,
+    v_credit_modifier
+  from public.game_difficulty_policy_settings gdps
+  where gdps.game_session_id = p_game_session_id
+    and gdps.status = 'active';
+
+  if v_difficulty_preset is null then
+    select coalesce(gs.difficulty_preset, 'standard')
+    into v_game_difficulty_preset
+    from public.game_settings gs
+    where gs.game_session_id = p_game_session_id;
+
+    select
+      dpp.id,
+      dpp.preset_key,
+      dpp.price_modifier,
+      dpp.event_volatility_modifier,
+      dpp.scarcity_modifier,
+      dpp.income_modifier,
+      dpp.trade_modifier,
+      dpp.credit_modifier
+    into
+      v_policy_profile_id,
+      v_difficulty_preset,
+      v_price_modifier,
+      v_event_volatility_modifier,
+      v_scarcity_modifier,
+      v_income_modifier,
+      v_trade_modifier,
+      v_credit_modifier
+    from public.difficulty_policy_profiles dpp
+    where dpp.preset_key = lower(coalesce(v_game_difficulty_preset, 'standard'))
+      and dpp.status = 'active';
+  end if;
+
+  if v_difficulty_preset is null then
+    select
+      dpp.id,
+      dpp.preset_key,
+      dpp.price_modifier,
+      dpp.event_volatility_modifier,
+      dpp.scarcity_modifier,
+      dpp.income_modifier,
+      dpp.trade_modifier,
+      dpp.credit_modifier
+    into
+      v_policy_profile_id,
+      v_difficulty_preset,
+      v_price_modifier,
+      v_event_volatility_modifier,
+      v_scarcity_modifier,
+      v_income_modifier,
+      v_trade_modifier,
+      v_credit_modifier
+    from public.difficulty_policy_profiles dpp
+    where dpp.preset_key = 'standard'
+      and dpp.status = 'active';
+  end if;
+
+  if v_difficulty_preset is null then
+    raise exception 'active difficulty policy not found'
+      using errcode = 'P0002';
+  end if;
+
   return query
   insert into public.country_economic_snapshots (
     game_session_id,
     country_profile_id,
     simulation_tick,
     snapshot_label,
+    difficulty_policy_profile_id,
+    difficulty_preset,
+    price_difficulty_modifier,
+    event_volatility_modifier,
+    scarcity_difficulty_modifier,
+    income_difficulty_modifier,
+    trade_difficulty_modifier,
+    credit_difficulty_modifier,
     metadata
   )
   select
@@ -324,7 +582,18 @@ begin
     cp.id,
     p_simulation_tick,
     p_snapshot_label,
-    p_request_metadata || jsonb_build_object('initializationSource', 'initialize_country_economic_snapshots_for_game')
+    v_policy_profile_id,
+    v_difficulty_preset,
+    v_price_modifier,
+    v_event_volatility_modifier,
+    v_scarcity_modifier,
+    v_income_modifier,
+    v_trade_modifier,
+    v_credit_modifier,
+    p_request_metadata || jsonb_build_object(
+      'initializationSource', 'initialize_country_economic_snapshots_for_game',
+      'difficultyPreset', v_difficulty_preset
+    )
   from public.country_profiles cp
   where cp.status = 'active'
   on conflict (game_session_id, country_profile_id, simulation_tick) do update
@@ -337,9 +606,11 @@ end;
 $$;
 
 comment on function public.initialize_country_economic_snapshots_for_game(uuid, integer, text, jsonb) is
-  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. Safe to call repeatedly for the same game/tick; existing rows are preserved and metadata is merged.';
+  'Creates neutral baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty from game_difficulty_policy_settings first, then game_settings/difficulty_policy_profiles, snapshots those modifiers, and is safe to call repeatedly for the same game/tick.';
 
 alter table public.country_profiles enable row level security;
+alter table public.difficulty_policy_profiles enable row level security;
+alter table public.game_difficulty_policy_settings enable row level security;
 alter table public.country_economic_snapshots enable row level security;
 alter table public.country_event_impacts enable row level security;
 alter table public.player_country_assignments enable row level security;
@@ -347,6 +618,10 @@ alter table public.player_country_migration_events enable row level security;
 
 comment on table public.country_profiles is
   'Backend-owned country identity source for Eco Novaria. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+comment on table public.difficulty_policy_profiles is
+  'Backend-owned global difficulty preset source. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
+comment on table public.game_difficulty_policy_settings is
+  'Backend-owned per-game Advanced Settings difficulty policy. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.country_economic_snapshots is
   'Backend-owned per-game macroeconomic country history. RLS is enabled; trusted service-role routes own reads/writes until explicit player-safe policies are designed.';
 comment on table public.country_event_impacts is
