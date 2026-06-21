@@ -1,2 +1,0 @@
--- Superseded by 20260621004500_create_country_profiles_v1.sql.
--- Intentionally left as a no-op to preserve migration ordering in this feature branch.
