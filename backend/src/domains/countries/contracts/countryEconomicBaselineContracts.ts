@@ -7,6 +7,8 @@ export type {
 
 export type { SaveGameCountryEconomicBaselineSettingsInput } from "./countryEconomicBaselineSaveInput.ts";
 
+export type { CountryEconomicBaselineRepository } from "./countryEconomicBaselineRepositoryContracts.ts";
+
 export {
   COUNTRY_ECONOMIC_BASELINE_LIMITS,
 } from "./countryEconomicBaselineLimits.ts";
