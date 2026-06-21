@@ -1,7 +1,10 @@
 -- Eco Novaria country profile pricing foundation V1.
 -- Defines stable map countries, per-game country assignment, difficulty policy settings,
 -- bounded macroeconomic baseline settings, and per-game country economic snapshots.
--- Dynamic economy state is scoped by game_session_id and snapshotted for auditability.
+-- The game economy is real-time, not round-based. Snapshot rows are historical
+-- versions of effective economy state and must not rewrite prior history.
+-- Future runtime advancement must move current economy values 10% toward target
+-- values per update. This V1 smoothing rate is fixed and not admin-adjustable.
 
 create table public.country_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -239,11 +242,11 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.game_country_economic_baseline_settings is
-  'Backend-owned per-game Advanced Settings macroeconomic baseline. Bounded values are used when initializing country_economic_snapshots.';
+  'Backend-owned per-game Advanced Settings macroeconomic target/baseline. Runtime economy snapshots may gradually move 10% toward target values in future updates.';
 comment on column public.game_country_economic_baseline_settings.inflation_rate is
-  'Starting inflation rate for initialized snapshots. Example: 0.075 means 7.5%. Bounded from -5% to 50%; negative values represent deflation.';
+  'Target or initial inflation rate. Example: 0.075 means 7.5%. Bounded from -5% to 50%; negative values represent deflation.';
 comment on column public.game_country_economic_baseline_settings.interest_rate is
-  'Starting interest rate for initialized snapshots. Example: 0.05 means 5%. Bounded from 0% to 50% for V1 custom game setup.';
+  'Target or initial interest rate. Example: 0.05 means 5%. Bounded from 0% to 50% for V1 custom game setup.';
 
 create index game_country_economic_baseline_settings_status_idx
 on public.game_country_economic_baseline_settings (status);
@@ -254,7 +257,8 @@ create table public.country_economic_snapshots (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null references public.game_sessions (id),
   country_profile_id uuid not null references public.country_profiles (id),
-  simulation_tick integer not null default 0,
+  snapshot_sequence integer not null default 0,
+  effective_at timestamptz not null default now(),
   snapshot_label text null,
   difficulty_policy_profile_id uuid null,
   difficulty_preset text not null default 'standard',
@@ -291,7 +295,7 @@ create table public.country_economic_snapshots (
   constraint country_economic_snapshots_profile_preset_fk
     foreign key (difficulty_policy_profile_id, difficulty_preset)
     references public.difficulty_policy_profiles (id, preset_key),
-  constraint country_economic_snapshots_tick_nonnegative check (simulation_tick >= 0),
+  constraint country_economic_snapshots_sequence_nonnegative check (snapshot_sequence >= 0),
   constraint country_economic_snapshots_snapshot_label_not_blank check (
     snapshot_label is null
     or length(btrim(snapshot_label)) > 0
@@ -335,28 +339,28 @@ create table public.country_economic_snapshots (
   constraint country_economic_snapshots_infrastructure_range check (infrastructure_index >= 0.5000 and infrastructure_index <= 2.0000),
   constraint country_economic_snapshots_energy_security_range check (energy_security_index >= 0.5000 and energy_security_index <= 2.0000),
   constraint country_economic_snapshots_metadata_object check (jsonb_typeof(metadata) = 'object'),
-  constraint country_economic_snapshots_unique_tick unique (game_session_id, country_profile_id, simulation_tick),
+  constraint country_economic_snapshots_unique_sequence unique (game_session_id, country_profile_id, snapshot_sequence),
   constraint country_economic_snapshots_scope_unique unique (id, game_session_id, country_profile_id)
 );
 
 comment on table public.country_economic_snapshots is
-  'Per-game, per-country macroeconomic snapshot history. Store pricing should use the latest snapshot for the player country rather than global hard-coded multipliers.';
+  'Per-game, per-country real-time macroeconomic snapshot history. Store pricing should use the latest effective snapshot for the player country rather than global hard-coded multipliers.';
+comment on column public.country_economic_snapshots.snapshot_sequence is
+  'Internal monotonic economy snapshot version. This is not a gameplay round or turn.';
+comment on column public.country_economic_snapshots.effective_at is
+  'Real-time timestamp when this economy snapshot becomes effective for future calculations.';
 comment on column public.country_economic_snapshots.price_difficulty_modifier is
   'Resolved difficulty modifier for store prices and purchase quotes.';
 comment on column public.country_economic_snapshots.event_volatility_modifier is
   'Resolved difficulty modifier for country event/shock magnitude.';
-comment on column public.country_economic_snapshots.scarcity_difficulty_modifier is
-  'Resolved difficulty modifier for scarcity, supply, and item availability pressure.';
 comment on column public.country_economic_snapshots.inflation_rate is
   'Current country inflation rate. Example: 0.075 means 7.5%; negative values represent deflation.';
-comment on column public.country_economic_snapshots.regional_price_multiplier is
-  'Direct regional price multiplier for store quote pricing. Neutral baseline is 1.';
 
 create index country_economic_snapshots_latest_idx
-on public.country_economic_snapshots (game_session_id, country_profile_id, simulation_tick desc);
+on public.country_economic_snapshots (game_session_id, country_profile_id, snapshot_sequence desc);
 
-create index country_economic_snapshots_game_tick_idx
-on public.country_economic_snapshots (game_session_id, simulation_tick desc);
+create index country_economic_snapshots_effective_at_idx
+on public.country_economic_snapshots (game_session_id, country_profile_id, effective_at desc);
 
 alter table public.country_economic_snapshots enable row level security;
 
@@ -398,9 +402,6 @@ comment on table public.country_event_impacts is
 create index country_event_impacts_country_time_idx
 on public.country_event_impacts (game_session_id, country_profile_id, applied_at desc);
 
-create index country_event_impacts_event_key_idx
-on public.country_event_impacts (game_session_id, event_key);
-
 alter table public.country_event_impacts enable row level security;
 
 create table public.player_country_assignments (
@@ -420,18 +421,9 @@ create table public.player_country_assignments (
     references public.players (game_session_id, id),
   constraint player_country_assignments_status_check check (status in ('active', 'inactive', 'archived')),
   constraint player_country_assignments_reason_not_blank check (length(btrim(assignment_reason)) > 0),
-  constraint player_country_assignments_active_has_no_end check (
-    status <> 'active'
-    or ended_at is null
-  ),
-  constraint player_country_assignments_inactive_has_end check (
-    status = 'active'
-    or ended_at is not null
-  ),
-  constraint player_country_assignments_end_after_assign check (
-    ended_at is null
-    or ended_at >= assigned_at
-  ),
+  constraint player_country_assignments_active_has_no_end check (status <> 'active' or ended_at is null),
+  constraint player_country_assignments_inactive_has_end check (status = 'active' or ended_at is not null),
+  constraint player_country_assignments_end_after_assign check (ended_at is null or ended_at >= assigned_at),
   constraint player_country_assignments_scope_unique unique (id, game_session_id, player_id, country_profile_id)
 );
 
@@ -441,16 +433,11 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.player_country_assignments is
-  'Mutable player country/location assignment history. Players may immigrate by ending the old active row and inserting a new active row.';
-comment on column public.player_country_assignments.country_profile_id is
-  'Country profile used as the active economic input for store quote pricing.';
+  'Mutable player country/location assignment history. Economy reads are game-session scoped, while player pricing can resolve player to country to latest country snapshot.';
 
 create unique index player_country_assignments_one_active_idx
 on public.player_country_assignments (game_session_id, player_id)
 where status = 'active';
-
-create index player_country_assignments_country_profile_idx
-on public.player_country_assignments (country_profile_id);
 
 create index player_country_assignments_player_history_idx
 on public.player_country_assignments (game_session_id, player_id, assigned_at desc);
@@ -482,14 +469,8 @@ create table public.player_country_migration_events (
   constraint player_country_migration_events_reason_not_blank check (length(btrim(migration_reason)) > 0),
   constraint player_country_migration_events_metadata_object check (jsonb_typeof(metadata) = 'object'),
   constraint player_country_migration_events_from_assignment_pair check (
-    (
-      from_assignment_id is null
-      and from_country_profile_id is null
-    )
-    or (
-      from_assignment_id is not null
-      and from_country_profile_id is not null
-    )
+    (from_assignment_id is null and from_country_profile_id is null)
+    or (from_assignment_id is not null and from_country_profile_id is not null)
   ),
   constraint player_country_migration_events_country_changed check (
     from_country_profile_id is null
@@ -502,23 +483,14 @@ create table public.player_country_migration_events (
 );
 
 comment on table public.player_country_migration_events is
-  'Append-only audit trail for player immigration/location changes between Eco Novaria countries.';
+  'Append-only audit trail for player immigration/location changes between Eco Novaria countries. Policy details and routes are intentionally deferred.';
 
 create index player_country_migration_events_player_idx
 on public.player_country_migration_events (game_session_id, player_id, migrated_at desc);
 
-create index player_country_migration_events_to_country_idx
-on public.player_country_migration_events (to_country_profile_id);
-
 alter table public.player_country_migration_events enable row level security;
 
-insert into public.country_profiles (
-  country_code,
-  country_name,
-  capital_name,
-  currency_code,
-  metadata
-)
+insert into public.country_profiles (country_code, country_name, capital_name, currency_code, metadata)
 values
   ('NORTHREACH', 'Northreach', 'Frostgate', 'ECO', '{"mapRegion":"northwest","mapColor":"purple"}'::jsonb),
   ('YRETHIA', 'Yrethia', 'Sableport', 'ECO', '{"mapRegion":"west","mapColor":"blue"}'::jsonb),
@@ -550,16 +522,31 @@ values
   ('hard', 'Hard', 'Higher prices, stronger event shocks, stronger scarcity, and lower income scaling.', 1.1800, 1.2500, 1.2000, 0.9000, 1.1800, 1.1800, '{"advancedSettingsEditable":false}'::jsonb),
   ('insane', 'Insane', 'Maximum intended challenge with sharp prices, volatile events, heavy scarcity, and reduced income scaling.', 1.3500, 1.5000, 1.4000, 0.8000, 1.3500, 1.3500, '{"advancedSettingsEditable":false}'::jsonb);
 
+create or replace function public.apply_economy_gradual_adjustment(
+  p_current numeric,
+  p_target numeric
+)
+returns numeric
+language sql
+immutable
+as $$
+  select p_current + ((p_target - p_current) * 0.1000)
+$$;
+
+comment on function public.apply_economy_gradual_adjustment(numeric, numeric) is
+  'Moves a current economy value 10% toward its target. This fixed V1 smoothing rate is not admin-adjustable and should only affect future snapshots.';
+
 create or replace function public.initialize_country_economic_snapshots_for_game(
   p_game_session_id uuid,
-  p_simulation_tick integer default 0,
+  p_effective_at timestamptz default now(),
   p_snapshot_label text default 'Initial baseline',
   p_request_metadata jsonb default '{}'::jsonb
 )
 returns table (
   country_profile_id uuid,
   snapshot_id uuid,
-  simulation_tick integer
+  snapshot_sequence integer,
+  effective_at timestamptz
 )
 language plpgsql
 security definer
@@ -603,8 +590,8 @@ begin
       using errcode = '22023';
   end if;
 
-  if p_simulation_tick is null or p_simulation_tick < 0 then
-    raise exception 'p_simulation_tick must be non-negative'
+  if p_effective_at is null then
+    raise exception 'p_effective_at is required'
       using errcode = '22023';
   end if;
 
@@ -766,7 +753,8 @@ begin
   insert into public.country_economic_snapshots (
     game_session_id,
     country_profile_id,
-    simulation_tick,
+    snapshot_sequence,
+    effective_at,
     snapshot_label,
     difficulty_policy_profile_id,
     difficulty_preset,
@@ -802,7 +790,8 @@ begin
   select
     p_game_session_id,
     cp.id,
-    p_simulation_tick,
+    0,
+    p_effective_at,
     p_snapshot_label,
     v_policy_profile_id,
     v_difficulty_preset,
@@ -836,18 +825,21 @@ begin
     p_request_metadata || jsonb_build_object(
       'initializationSource', 'initialize_country_economic_snapshots_for_game',
       'difficultyPreset', v_difficulty_preset,
-      'economicBaselineSource', v_economic_baseline_source
+      'economicBaselineSource', v_economic_baseline_source,
+      'economyMode', 'real_time',
+      'gradualAdjustmentRate', 0.1
     )
   from public.country_profiles cp
   where cp.status = 'active'
-  on conflict (game_session_id, country_profile_id, simulation_tick) do update
+  on conflict (game_session_id, country_profile_id, snapshot_sequence) do update
     set metadata = public.country_economic_snapshots.metadata || excluded.metadata
   returning
     public.country_economic_snapshots.country_profile_id,
     public.country_economic_snapshots.id,
-    public.country_economic_snapshots.simulation_tick;
+    public.country_economic_snapshots.snapshot_sequence,
+    public.country_economic_snapshots.effective_at;
 end;
 $$;
 
-comment on function public.initialize_country_economic_snapshots_for_game(uuid, integer, text, jsonb) is
-  'Creates baseline country_economic_snapshots for every active map country in one game session. It resolves difficulty, applies bounded per-game macroeconomic Advanced Settings when present, snapshots those values, rejects unconfigured custom difficulty, and is safe to call repeatedly for the same game/tick.';
+comment on function public.initialize_country_economic_snapshots_for_game(uuid, timestamptz, text, jsonb) is
+  'Creates initial real-time country_economic_snapshots for every active map country in one game session. It resolves difficulty, applies bounded per-game macroeconomic Advanced Settings when present, snapshots those values, rejects unconfigured custom difficulty, and never rewrites prior economic history.';
