@@ -143,6 +143,169 @@ export interface AuditLogInsert {
   readonly metadata?: JsonObject;
 }
 
+export type MutationIdempotencyStatus = "STARTED" | "COMPLETED" | "FAILED";
+
+export interface MutationIdempotencyKeysRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly route_key: string;
+  readonly idempotency_key: string;
+  readonly request_hash: string;
+  readonly status: MutationIdempotencyStatus | string;
+  readonly result_type?: string | null;
+  readonly result_id?: UUID | null;
+  readonly response_body?: JsonObject | null;
+  readonly created_at: ISODateTimeString;
+  readonly completed_at?: ISODateTimeString | null;
+  readonly expires_at: ISODateTimeString;
+}
+
+export interface MutationIdempotencyKeyInsert {
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly route_key: string;
+  readonly idempotency_key: string;
+  readonly request_hash: string;
+  readonly status?: MutationIdempotencyStatus | string;
+  readonly result_type?: string | null;
+  readonly result_id?: UUID | null;
+  readonly response_body?: JsonObject | null;
+  readonly completed_at?: ISODateTimeString | null;
+  readonly expires_at: ISODateTimeString;
+}
+
+export type StorePurchaseQuoteStatus = "CREATED" | "USED" | "EXPIRED" | "CANCELLED";
+
+export interface StorePurchaseQuotesRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity: number;
+  readonly currency_code: string;
+  readonly base_unit_price: number;
+  readonly inflation_multiplier: number;
+  readonly location_multiplier: number;
+  readonly scarcity_multiplier: number;
+  readonly discount_amount: number;
+  readonly final_unit_price: number;
+  readonly final_total_price: number;
+  readonly pricing_version: string;
+  readonly status: StorePurchaseQuoteStatus | string;
+  readonly created_at: ISODateTimeString;
+  readonly expires_at: ISODateTimeString;
+  readonly used_at?: ISODateTimeString | null;
+  readonly cancelled_at?: ISODateTimeString | null;
+}
+
+export interface StorePurchaseQuoteInsert {
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity: number;
+  readonly currency_code?: string;
+  readonly base_unit_price: number;
+  readonly inflation_multiplier?: number;
+  readonly location_multiplier?: number;
+  readonly scarcity_multiplier?: number;
+  readonly discount_amount?: number;
+  readonly final_unit_price: number;
+  readonly final_total_price: number;
+  readonly pricing_version?: string;
+  readonly status?: StorePurchaseQuoteStatus | string;
+  readonly expires_at: ISODateTimeString;
+  readonly used_at?: ISODateTimeString | null;
+  readonly cancelled_at?: ISODateTimeString | null;
+}
+
+export type StorePurchaseStatus = "COMPLETED" | "FAILED" | "REVERSED";
+
+export interface StorePurchasesRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quote_id?: UUID | null;
+  readonly quantity: number;
+  readonly currency_code: string;
+  readonly final_unit_price: number;
+  readonly final_total_price: number;
+  readonly ledger_entry_id?: UUID | null;
+  readonly idempotency_key: string;
+  readonly status: StorePurchaseStatus | string;
+  readonly client_submitted_at?: ISODateTimeString | null;
+  readonly created_at: ISODateTimeString;
+}
+
+export interface StorePurchaseInsert {
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quote_id?: UUID | null;
+  readonly quantity: number;
+  readonly currency_code?: string;
+  readonly final_unit_price: number;
+  readonly final_total_price: number;
+  readonly ledger_entry_id?: UUID | null;
+  readonly idempotency_key: string;
+  readonly status?: StorePurchaseStatus | string;
+  readonly client_submitted_at?: ISODateTimeString | null;
+}
+
+export interface InventoryHoldingsRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity_owned: number;
+  readonly quantity_reserved: number;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface InventoryHoldingInsert {
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity_owned?: number;
+  readonly quantity_reserved?: number;
+}
+
+export type InventoryEventType =
+  | "PURCHASED"
+  | "USED"
+  | "RESERVED"
+  | "RELEASED"
+  | "ADJUSTED"
+  | "REVERSED";
+
+export interface InventoryEventsRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity_delta: number;
+  readonly event_type: InventoryEventType | string;
+  readonly source_domain: string;
+  readonly source_action: string;
+  readonly source_id?: UUID | null;
+  readonly metadata: JsonObject;
+  readonly created_at: ISODateTimeString;
+}
+
+export interface InventoryEventInsert {
+  readonly game_session_id: UUID;
+  readonly player_id: UUID;
+  readonly store_item_id: UUID;
+  readonly quantity_delta: number;
+  readonly event_type: InventoryEventType | string;
+  readonly source_domain: string;
+  readonly source_action: string;
+  readonly source_id?: UUID | null;
+  readonly metadata?: JsonObject;
+}
+
 export interface CoreSupabaseTables {
   readonly staff_users: StaffUsersRow;
   readonly purchase_codes: PurchaseCodesRow;
@@ -151,6 +314,11 @@ export interface CoreSupabaseTables {
   readonly game_settings: GameSettingsRow;
   readonly player_sessions: PlayerSessionsRow;
   readonly audit_log: AuditLogRow;
+  readonly mutation_idempotency_keys: MutationIdempotencyKeysRow;
+  readonly store_purchase_quotes: StorePurchaseQuotesRow;
+  readonly store_purchases: StorePurchasesRow;
+  readonly inventory_holdings: InventoryHoldingsRow;
+  readonly inventory_events: InventoryEventsRow;
 }
 
 export interface CoreSupabaseFunctions {
