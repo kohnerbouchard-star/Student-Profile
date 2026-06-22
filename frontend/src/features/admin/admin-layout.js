@@ -8,6 +8,8 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
   let defaultsCaptured = false;
   let layoutApplied = false;
   let observerStarted = false;
+  let pollTimer = null;
+  let lastSidebarMenuSignature = "";
 
   function captureDefaults() {
     if (defaultsCaptured) return;
@@ -25,9 +27,12 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
     return String(session?.role || "").toUpperCase();
   }
 
+  function isAdminViewActive() {
+    return document.getElementById("admin")?.classList.contains("active") === true;
+  }
+
   function shouldUseAdminLayout() {
-    const adminView = document.getElementById("admin");
-    return currentSessionRole() === "ADMIN" && adminView?.classList.contains("active");
+    return currentSessionRole() === "ADMIN" && isAdminViewActive();
   }
 
   function updateSidebarCardForAdmin() {
@@ -36,8 +41,8 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
 
     sidebarCard.innerHTML = `
       <div class="eyebrow">Today</div>
-      <strong id="connectionMode">Synced account</strong>
-      <p id="connectionCopy">Your dashboard updates after confirmed actions.</p>`;
+      <strong id="connectionMode">Admin console</strong>
+      <p id="connectionCopy">Use the left menu to manage the selected game session.</p>`;
   }
 
   function restoreSidebar() {
@@ -53,9 +58,10 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
     if (sidebarCard) sidebarCard.innerHTML = defaultSidebarCardHtml;
 
     layoutApplied = false;
+    lastSidebarMenuSignature = "";
   }
 
-  function prepareMovedMenu(menu) {
+  function prepareMenu(menu) {
     menu.classList.add("admin-sidebar-workspace-menu");
 
     const note = menu.querySelector(".admin-menu-note p");
@@ -69,6 +75,65 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
     }
   }
 
+  function readAdminMenuTemplate() {
+    const adminMenu = document.querySelector("#admin .admin-workspace-menu");
+
+    if (adminMenu) {
+      return adminMenu.outerHTML;
+    }
+
+    const existingSidebarMenu = document.querySelector(".sidebar .admin-workspace-menu");
+    return existingSidebarMenu?.outerHTML || "";
+  }
+
+  function bindSidebarAdminTabs(nav) {
+    nav.querySelectorAll("[data-admin-section]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const section = button.dataset.adminSection || "Overview";
+        const originalButton = document.querySelector(`#admin [data-admin-section=\"${CSS.escape(section)}\"]`);
+
+        if (originalButton) {
+          originalButton.click();
+          return;
+        }
+
+        try {
+          if (typeof activeAdminSection !== "undefined") {
+            activeAdminSection = section;
+          }
+
+          if (typeof window.renderAdminDashboard === "function") {
+            window.renderAdminDashboard();
+          }
+        } catch (_) {}
+      });
+    });
+  }
+
+  function renderSidebarAdminMenu() {
+    const shell = document.getElementById("appShell");
+    const nav = document.querySelector(".sidebar .nav");
+    const template = readAdminMenuTemplate();
+
+    if (!shell || !nav || !template) return false;
+
+    shell.classList.add("admin-layout-active");
+
+    if (template !== lastSidebarMenuSignature || !nav.querySelector(".admin-workspace-menu")) {
+      nav.innerHTML = template;
+      const sidebarMenu = nav.querySelector(".admin-workspace-menu");
+      if (sidebarMenu) {
+        prepareMenu(sidebarMenu);
+      }
+      bindSidebarAdminTabs(nav);
+      lastSidebarMenuSignature = template;
+    }
+
+    updateSidebarCardForAdmin();
+    layoutApplied = true;
+    return true;
+  }
+
   function applyAdminLayout() {
     captureDefaults();
 
@@ -77,22 +142,7 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
       return;
     }
 
-    const shell = document.getElementById("appShell");
-    const adminView = document.getElementById("admin");
-    const nav = document.querySelector(".sidebar .nav");
-    const menu = adminView?.querySelector(".admin-workspace-menu") || document.querySelector(".sidebar .admin-workspace-menu");
-
-    if (!shell || !nav || !menu) return;
-
-    shell.classList.add("admin-layout-active");
-    prepareMovedMenu(menu);
-
-    if (menu.parentElement !== nav) {
-      nav.replaceChildren(menu);
-    }
-
-    updateSidebarCardForAdmin();
-    layoutApplied = true;
+    renderSidebarAdminMenu();
   }
 
   function injectAdminLayoutStyles() {
@@ -166,7 +216,11 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
         background: rgba(255, 255, 255, .06);
       }
 
-      .app-shell.admin-layout-active #admin .admin-workspace-menu {
+      .app-shell.admin-layout-active #admin > .admin-page > .admin-console-shell {
+        display: block;
+      }
+
+      .app-shell.admin-layout-active #admin .admin-console-shell > .admin-workspace-menu {
         display: none;
       }
 
@@ -203,10 +257,17 @@ window.Econovaria.features.adminLayout = window.Econovaria.features.adminLayout 
     });
   }
 
+  function startPoller() {
+    if (pollTimer) return;
+
+    pollTimer = window.setInterval(applyAdminLayout, 250);
+  }
+
   function init() {
     injectAdminLayoutStyles();
     captureDefaults();
     startObserver();
+    startPoller();
     applyAdminLayout();
   }
 
