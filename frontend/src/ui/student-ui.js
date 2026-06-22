@@ -117,8 +117,20 @@ function initReliableTooltips() {
   });
 }
 
+function initUiSoundEffectLoader() {
+  if (window.Econovaria?.ui?.playLoginActionSound) return;
+  if (document.getElementById('uiSoundEffectsScript')) return;
+
+  const script = document.createElement('script');
+  script.id = 'uiSoundEffectsScript';
+  script.src = 'frontend/src/ui/ui-sound-effects.js?v=20260622-loginsfx1';
+  script.async = false;
+  document.head.appendChild(script);
+}
+
 initReliableTooltips();
+initUiSoundEffectLoader();
 
 window.Econovaria = window.Econovaria || {};
 window.Econovaria.ui = window.Econovaria.ui || {};
-Object.assign(window.Econovaria.ui, { tip, initReliableTooltips });
+Object.assign(window.Econovaria.ui, { tip, initReliableTooltips, initUiSoundEffectLoader });
