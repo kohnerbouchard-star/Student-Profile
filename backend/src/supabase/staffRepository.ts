@@ -1,16 +1,16 @@
-import type { StaffAccessRepository } from "../auth/staffAccess";
-import type { GameSessionRecord, StaffUserRecord, UUID } from "../auth/types";
+import type { StaffAccessRepository } from "../auth/staffAccess.ts";
+import type { GameSessionRecord, StaffUserRecord, UUID } from "../auth/types.ts";
 import {
   normalizeMaybeQueryRow,
   normalizeRequiredQueryRow,
   type SupabaseRepositoryClient,
-} from "./queryResult";
+} from "./queryResult.ts";
 import {
   mapGameSessionRow,
   mapStaffUserRow,
   type CoreSupabaseTables,
   type StaffUserInsert,
-} from "./tableTypes";
+} from "./tableTypes.ts";
 
 type StaffRepositoryTables = Pick<
   CoreSupabaseTables,
