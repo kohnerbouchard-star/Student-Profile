@@ -196,7 +196,7 @@ function callPlayerBootstrapApi(sessionToken) {
   });
 }
 
-async function callSupabasePasswordSignIn(email, accessCode) {
+async function callSupabasePasswordSignIn(email, password) {
   const { supabaseUrl, publishableKey } = getSupabaseConfig();
 
   try {
@@ -209,7 +209,7 @@ async function callSupabasePasswordSignIn(email, accessCode) {
       },
       body: JSON.stringify({
         email: String(email || "").trim(),
-        password: String(accessCode || "")
+        password: String(password || "")
       })
     });
     const result = await readJsonResponse(response);
@@ -251,6 +251,25 @@ function callLicensingActivationApi(bearerToken, input) {
     },
     fallbackCode: "licensing_activation_failed",
     fallbackMessage: "The game could not be created."
+  });
+}
+
+function callStaffSignupApi(input) {
+  const { publishableKey } = getSupabaseConfig();
+
+  return callSupabaseJsonRoute("/staff/signup", {
+    method: "POST",
+    token: publishableKey,
+    body: {
+      email: String(input?.email || "").trim(),
+      password: String(input?.password || ""),
+      displayName: String(input?.displayName || "").trim(),
+      purchaseCode: String(input?.purchaseCode || "").trim(),
+      gameName: String(input?.gameName || "").trim(),
+      difficultyPreset: String(input?.difficultyPreset || "").trim()
+    },
+    fallbackCode: "staff_signup_failed",
+    fallbackMessage: "Staff account signup failed."
   });
 }
 
@@ -530,6 +549,7 @@ Object.assign(window.Econovaria.core.api, {
   callPlayerLoginApi,
   callPlayerBootstrapApi,
   callSupabasePasswordSignIn,
+  callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
   listAdminStoreItems,
@@ -542,6 +562,7 @@ Object.assign(window.Econovaria.core, {
   callPlayerLoginApi,
   callPlayerBootstrapApi,
   callSupabasePasswordSignIn,
+  callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
   listAdminStoreItems,

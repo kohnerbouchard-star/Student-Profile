@@ -40,7 +40,31 @@ interface EdgeSupabaseAuthResponse {
   readonly error: EdgeSupabaseQueryError | null;
 }
 
+interface EdgeSupabaseAuthAdminResponse {
+  readonly data: {
+    readonly user: EdgeSupabaseAuthUser | null;
+  };
+  readonly error: EdgeSupabaseQueryError | null;
+}
+
+interface EdgeSupabaseAuthAdminClient {
+  createUser(input: {
+    readonly email: string;
+    readonly password: string;
+    readonly email_confirm: boolean;
+  }): PromiseLike<EdgeSupabaseAuthAdminResponse>;
+  deleteUser(userId: string): PromiseLike<{
+    readonly data: unknown;
+    readonly error: EdgeSupabaseQueryError | null;
+  }>;
+  updateUserById(
+    userId: string,
+    input: { readonly ban_duration: string },
+  ): PromiseLike<EdgeSupabaseAuthAdminResponse>;
+}
+
 interface EdgeSupabaseAuthClient {
+  readonly admin: EdgeSupabaseAuthAdminClient;
   getUser(accessToken: string): PromiseLike<EdgeSupabaseAuthResponse>;
 }
 
@@ -73,10 +97,16 @@ interface EdgeSupabaseUpdateBuilder<Row = EdgeSupabaseRow>
   select(columns: string): EdgeSupabaseSelectBuilder<Row>;
 }
 
+interface EdgeSupabaseDeleteBuilder<Row = EdgeSupabaseRow>
+  extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
+  eq(column: string, value: unknown): EdgeSupabaseDeleteBuilder<Row>;
+}
+
 interface EdgeSupabaseQueryBuilder<Row = EdgeSupabaseRow> {
   select(columns: string): EdgeSupabaseFilterBuilder<Row>;
   insert(values: unknown): EdgeSupabaseInsertBuilder<Row>;
   update(values: unknown): EdgeSupabaseUpdateBuilder<Row>;
+  delete(): EdgeSupabaseDeleteBuilder<Row>;
 }
 
 export interface EdgeSupabaseClient {

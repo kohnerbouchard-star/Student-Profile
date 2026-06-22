@@ -10,7 +10,7 @@ let loginClockTimer = null;
 function init() {
   document.getElementById("playerForm")?.addEventListener("submit", handlePlayerLogin);
   document.getElementById("adminForm")?.addEventListener("submit", handleAdminLogin);
-  document.getElementById("createForm")?.addEventListener("submit", handleCreateGame);
+  document.getElementById("createForm")?.addEventListener("submit", handleStaffSignup);
   document.getElementById("backToAdminLogin")?.addEventListener("click", resetAdminLoginStep);
   document.getElementById("logoutButton")?.addEventListener("click", logout);
   document.getElementById("refreshButton")?.addEventListener("click", refreshDashboard);
@@ -150,61 +150,78 @@ async function handleAdminLogin(event) {
   }
 }
 
-async function handleCreateGame(event) {
+async function handleStaffSignup(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
   const button = form.querySelector("button[type='submit']");
   const licenseCode = document.getElementById("licenseCode")?.value.trim() || "";
-  const adminEmail = document.getElementById("createEmail")?.value.trim() || "";
-  const sessionName = document.getElementById("sessionName")?.value.trim() || "";
+  const email = document.getElementById("createEmail")?.value.trim() || "";
+  const displayName = document.getElementById("createDisplayName")?.value.trim() || "";
+  const gameName = document.getElementById("sessionName")?.value.trim() || "";
   const difficulty = document.getElementById("difficultyLevel")?.value || "";
-  const accessCode = document.getElementById("createAccessCode")?.value || "";
+  const password = document.getElementById("createAccessCode")?.value || "";
+  const confirmPassword = document.getElementById("confirmAccessCode")?.value || "";
   const message = document.getElementById("createMessage");
 
   clearLoginMessage(message);
   if (isButtonLoading(button)) return;
 
-  if (!licenseCode || !adminEmail || !sessionName || !accessCode || !VALID_DIFFICULTIES.has(difficulty)) {
+  if (!licenseCode || !email || !displayName || !gameName || !password || !confirmPassword || !VALID_DIFFICULTIES.has(difficulty)) {
     return showLoginMessage(message, "Complete every field and select a valid difficulty.", "bad");
   }
 
-  setLoginFormBusy(form, true, "Creating game...");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return showLoginMessage(message, "Enter a valid Teacher/Admin Email.", "bad");
+  }
+
+  if (password.length < 8) {
+    return showLoginMessage(message, "Access Code must be at least 8 characters.", "bad");
+  }
+
+  if (password !== confirmPassword) {
+    return showLoginMessage(message, "Access Code confirmation does not match.", "bad");
+  }
+
+  setLoginFormBusy(form, true, "Creating account...");
 
   try {
-    const signIn = await callSupabasePasswordSignIn(adminEmail, accessCode);
-
-    if (!signIn?.ok || !signIn.accessToken) {
-      return showLoginMessage(message, cleanLoginError(signIn, "Admin verification failed."), "bad");
-    }
-
-    const activation = await callLicensingActivationApi(signIn.accessToken, {
-      licenseCode,
-      sessionName,
-      difficulty
+    const signup = await callStaffSignupApi({
+      email,
+      password,
+      displayName,
+      purchaseCode: licenseCode,
+      gameName,
+      difficultyPreset: difficulty
     });
 
-    if (!activation?.ok || !activation.activation?.gameSessionId) {
-      return showLoginMessage(message, cleanLoginError(activation, "The game could not be created."), "bad");
+    if (!signup?.ok || !signup.activation?.gameSessionId) {
+      return showLoginMessage(message, cleanLoginError(signup, "Staff account signup failed."), "bad");
+    }
+
+    const signIn = await callSupabasePasswordSignIn(email, password);
+
+    if (!signIn?.ok || !signIn.accessToken) {
+      return showLoginMessage(message, cleanLoginError(signIn, "Account created, but sign-in failed."), "bad");
     }
 
     const bootstrap = await bootstrapStaffAdminSession(signIn.accessToken);
 
     if (!bootstrap?.ok) {
-      return showLoginMessage(message, cleanLoginError(bootstrap, "The game was created, but the admin session could not be loaded."), "bad");
+      return showLoginMessage(message, cleanLoginError(bootstrap, "Account created, but the admin session could not be loaded."), "bad");
     }
 
     currentSession.authSource = "supabase-admin";
     const createdGame = (currentSession.staffSession?.activeGameSessions || [])
-      .find((session) => session.id === activation.activation.gameSessionId);
+      .find((session) => session.id === signup.activation.gameSessionId);
 
     if (!createdGame) {
-      return showLoginMessage(message, "The game was created, but it is not available as an active session yet.", "bad");
+      return showLoginMessage(message, "Account created, but the first game is not available yet.", "bad");
     }
 
     selectAdminGameSession(createdGame.id);
     form.reset();
-    showGlobalStatus("ok", "Game created through the existing Supabase licensing flow.");
+    showGlobalStatus("ok", "Staff account and first game created.");
   } catch (err) {
     showLoginMessage(message, cleanErrorMessage(err.message || String(err)), "bad");
   } finally {

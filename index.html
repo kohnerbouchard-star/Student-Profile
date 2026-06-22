@@ -116,8 +116,8 @@
 
           <div class="mode-tabs" role="tablist" aria-label="Login mode">
             <button class="mode-tab active" data-mode="player" type="button" role="tab" aria-selected="true">Player</button>
-            <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin</button>
-            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">New Game</button>
+            <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin Login</button>
+            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">Create Account</button>
           </div>
 
           <div id="playerPane" class="mode-pane active">
@@ -168,16 +168,20 @@
             <form id="createForm" class="form-stack form-stack-compact">
               <label>
                 <span>License Code</span>
-                <input id="licenseCode" autocomplete="off" placeholder="License Code" />
+                <input id="licenseCode" autocomplete="off" placeholder="License Code" required />
               </label>
               <label>
-                <span>Admin Email</span>
-                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" />
+                <span>Teacher/Admin Email</span>
+                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" required />
+              </label>
+              <label>
+                <span>Display Name</span>
+                <input id="createDisplayName" autocomplete="name" placeholder="Teacher Name" required />
               </label>
               <div class="two-col">
                 <label>
-                  <span>Session Name</span>
-                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" />
+                  <span>First Game Session Name</span>
+                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" required />
                 </label>
                 <label>
                   <span>Difficulty</span>
@@ -192,10 +196,14 @@
               </div>
               <label>
                 <span>Access Code</span>
-                <input id="createAccessCode" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter Access Code" />
+                <input id="createAccessCode" type="password" autocomplete="new-password" minlength="8" spellcheck="false" placeholder="Enter Access Code" required />
+              </label>
+              <label>
+                <span>Confirm Access Code</span>
+                <input id="confirmAccessCode" type="password" autocomplete="new-password" minlength="8" spellcheck="false" placeholder="Confirm Access Code" required />
               </label>
               <div id="createMessage" class="login-message status-message hidden"></div>
-              <button class="submit-btn purple" type="submit">Create Game</button>
+              <button class="submit-btn purple" type="submit">Create Account</button>
             </form>
           </div>
 

@@ -30,6 +30,10 @@ export class EdgeActivationError extends Error {
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "access-control-allow-headers":
+    "authorization, apikey, content-type, x-client-info, x-request-id",
 };
 
 export function jsonError(
