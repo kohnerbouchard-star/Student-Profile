@@ -168,16 +168,17 @@
             <form id="createForm" class="form-stack form-stack-compact">
               <label>
                 <span>License Code</span>
-                <input id="licenseCode" autocomplete="off" placeholder="License Code" />
+                <input id="licenseCode" autocomplete="off" placeholder="License Code" required />
               </label>
               <label>
                 <span>Admin Email</span>
-                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" />
+                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" required />
               </label>
+              <input id="createDisplayName" type="hidden" autocomplete="name" />
               <div class="two-col">
                 <label>
                   <span>Session Name</span>
-                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" />
+                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" required />
                 </label>
                 <label>
                   <span>Difficulty</span>
@@ -192,8 +193,9 @@
               </div>
               <label>
                 <span>Access Code</span>
-                <input id="createAccessCode" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter Access Code" />
+                <input id="createAccessCode" type="password" autocomplete="new-password" minlength="8" spellcheck="false" placeholder="Enter Access Code" required />
               </label>
+              <input id="confirmAccessCode" type="hidden" />
               <div id="createMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn purple" type="submit">Create Game</button>
             </form>
@@ -273,6 +275,33 @@
   <script src="frontend/src/ui/dom.js"></script>
   <script src="frontend/src/core/api.js"></script>
   <script src="frontend/src/core/snapshot.js"></script>
+  <script>
+    function syncCreateGameCompatibilityFields() {
+      var email = document.getElementById("createEmail")?.value.trim() || "";
+      var password = document.getElementById("createAccessCode")?.value || "";
+      var displayName = document.getElementById("createDisplayName");
+      var confirmAccessCode = document.getElementById("confirmAccessCode");
+
+      if (displayName && !displayName.value.trim()) {
+        displayName.value = email.split("@")[0] || "Teacher Console";
+      }
+
+      if (confirmAccessCode) {
+        confirmAccessCode.value = password;
+      }
+    }
+
+    function handleCreateGame(event) {
+      syncCreateGameCompatibilityFields();
+      return handleStaffSignup(event);
+    }
+
+    document.addEventListener("submit", function (event) {
+      if (event.target && event.target.id === "createForm") {
+        syncCreateGameCompatibilityFields();
+      }
+    }, true);
+  </script>
   <script src="frontend/src/features/auth/auth.js"></script>
   <script src="frontend/src/features/dashboard/dashboard.js"></script>
   <script src="frontend/src/features/store/store.js"></script>

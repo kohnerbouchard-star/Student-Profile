@@ -13,6 +13,9 @@ import {
   handleStaffBootstrapRequest,
 } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
 import {
+  handleStaffSignupRequest,
+} from "../../../src/domains/auth/api/staffSignupHttpHandler.ts";
+import {
   handleLicensingActivationRequest,
 } from "../../../src/domains/licensing/api/licensingActivationHttpHandler.ts";
 import {
@@ -242,6 +245,12 @@ Deno.serve(async (request) => {
   if (url.pathname.endsWith("/staff/bootstrap")) {
     return handleStaffBootstrapRequest(request, {
       createAuthClient,
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/staff/signup")) {
+    return handleStaffSignupRequest(request, {
       createServiceClient,
     });
   }
