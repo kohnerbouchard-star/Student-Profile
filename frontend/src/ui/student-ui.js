@@ -123,7 +123,7 @@ function initUiSoundEffectLoader() {
 
   const script = document.createElement('script');
   script.id = 'uiSoundEffectsScript';
-  script.src = 'frontend/src/ui/ui-sound-effects.js?v=20260622-loginsfx1';
+  script.src = 'frontend/src/ui/ui-sound-effects.js?v=20260622-loginsfx2';
   script.async = false;
   document.head.appendChild(script);
 }
