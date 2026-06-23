@@ -65,6 +65,7 @@ export interface StockMarketReadRepository {
 
 export type StockMarketReadErrorCode =
   | "invalid_stock_market_read_request"
+  | "game_session_not_found"
   | "stock_market_schema_not_applied"
   | "stock_market_read_failed";
 
