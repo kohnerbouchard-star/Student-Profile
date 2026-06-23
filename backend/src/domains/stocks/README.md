@@ -82,16 +82,60 @@ should read market rows/ticks from backend-owned runtime data. Future trading
 execution must settle through ledger-safe transaction boundaries for cash,
 shares, idempotency, fills, reservations, and audit records.
 
+## V3 Backend Runner
+
+V3 adds a backend-only Supabase Edge Function at
+`supabase/functions/stock-market-runner`. It accepts only `POST`, requires
+`STOCK_MARKET_RUNNER_SECRET`, and validates the matching
+`x-stock-market-runner-secret` request header before doing any work.
+
+Each request processes exactly one `gameSessionId`. The runner loads the
+current per-game stock state, derives a tick index from
+`stock_price_ticks` when one is not supplied, calls the pure
+`calculateNextStockMarketTick` engine once, and persists the result through
+the atomic `apply_stock_market_runner_tick` RPC. The default seed is
+`stock-market-runner-v1:${gameSessionId}`.
+
+The runner reads:
+
+- `game_sessions`
+- active `game_session_stock_assets`
+- existing `stock_price_ticks` for duplicate and next-tick checks
+- active `stock_market_events`
+- active `stock_market_regimes`
+- `country_profiles`
+- latest represented-country `country_economic_snapshots`
+
+The runner writes:
+
+- updated runtime state on matching `game_session_stock_assets`
+- append-only rows in `stock_price_ticks`
+
+The RPC rejects duplicate `(game_session_id, stock_asset_id, tick_index)` rows
+and validates that all asset updates and tick rows belong to the requested game
+session before updating or inserting anything.
+
+For V3 macro input, the runner does not default to neutral macro when country
+snapshots exist. It loads the latest `country_economic_snapshots` for countries
+represented by active stock assets, maps each latest snapshot into a
+`StockMarketCountryInput`, and builds `StockMarketMacroInput` by equal-weight
+averaging those snapshots. `globalDemandIndex` uses the V3 proxy average of
+consumer confidence, business confidence, and export strength. If no country
+snapshots exist for active stock countries, V3 falls back to neutral macro
+`{ gameSessionId }` and passes `countries: []`.
+
+V3 intentionally keeps `sectors: []` because there is no canonical runtime
+stock-sector table yet. It does not seed stock assets, update templates, touch
+`classroom-api`, expose student-facing writes, call real market APIs, or add
+trading, portfolio, order, fill, reservation, ledger, analyst, or admin-control
+behavior.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
-- V2 schema work should persist game-session-scoped stock templates, copied
-  session assets, price ticks, market events, and regimes without adding
-  trading behavior yet.
-- V3 runner work should load exactly one game session, call
-  `calculateNextStockMarketTick` with explicit inputs, and persist the returned
-  game-session-scoped rows/ticks in an orchestration layer outside this module.
+- V4 read-only market data should expose backend-owned market snapshots and
+  tick history for classroom display without adding student stock writes.
 - V5 trading execution should settle market BUY/SELL activity only after the
   read path is stable, and it must use ledger-safe transaction boundaries for
   cash, shares, idempotency, and audit records.

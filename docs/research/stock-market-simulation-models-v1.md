@@ -371,6 +371,11 @@ Momentum and mean reversion: momentum allows recent trends to persist slightly; 
 
 ## Econovaria Country and Sector Mapping
 
+`docs/worldbuilding/econovaria-country-lore-v1.md` is the country exposure
+source of truth for stock-market country lore. The runtime engine may encode
+stable default exposure profiles from that document, while live macro values
+should come from per-game `country_economic_snapshots`.
+
 ### Countries
 
 Use these ten Eco Novaria countries and capitals:
@@ -383,12 +388,13 @@ Use these ten Eco Novaria countries and capitals:
 | `SOLVEND` | Solvend | Aurora Spire | Research and high-altitude technology state; AI, aerospace, universities, technical expertise, precision engineering. |
 | `ELDORAN` | Eldoran | Crescent Bay | Central stability zone; agriculture, logistics, commodity pricing, food security, internal transport, market stability. |
 | `VALERION` | Valerion | Glassfall | Wealthy clean-tech and advanced manufacturing economy; clean energy, finance, high-value industry, capital flows. |
-| `LUMENOR` | Lumenor | Starfall | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `SYNDALIS` | Syndalis | Blacklight | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `XALVORIA` | Xalvoria | Emberhall | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `DRAVENLOK` | Dravenlok | Ironhold | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
+| `LUMENOR` | Lumenor | Starfall | Civic knowledge economy; education, media, diplomacy, public services, civic legitimacy, healthcare, and stability-sensitive services. |
+| `SYNDALIS` | Syndalis | Blacklight | Cyber-financial pressure economy; cybersecurity, fintech, data centers, technology, covert market influence, and energy-intensive infrastructure. |
+| `XALVORIA` | Xalvoria | Emberhall | Capital influence economy; banking, finance, infrastructure finance, luxury and premium services, and politically sensitive capital flows. |
+| `DRAVENLOK` | Dravenlok | Ironhold | Heavy industrial pressure state; steel, machinery, defense manufacturing, heavy logistics, and infrastructure-dependent industrial output. |
 
-The V1 engine should support all ten country codes. The six countries with supplied economy context can receive opinionated default exposure templates now. Lumenor, Syndalis, Xalvoria, and Dravenlok should remain neutral or teacher/admin configured until their economy roles are documented.
+The V1 engine should support all ten country codes and may use opinionated
+default exposure templates for all ten from the worldbuilding lore file.
 
 ### Sectors
 
