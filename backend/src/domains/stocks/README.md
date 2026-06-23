@@ -168,15 +168,60 @@ If no stocks exist for the requested game session, the read endpoint returns
 `ok: true`, an empty `stocks` array, and an `emptyState` with reason
 `stock_market_not_initialized` and recommended action `run_stock_market_seed_copy`.
 
+## V5 Trading Foundation
+
+V5 adds backend-only stock trading infrastructure at
+`supabase/functions/stock-market-trading`. It accepts only `POST`, uses
+`STOCK_MARKET_RUNNER_SECRET` plus `x-stock-market-runner-secret`, and processes
+one `gameSessionId` and one `playerSessionId` per request.
+
+V5 adds isolated stock-market cash and share accounting:
+
+- `stock_portfolios` stores stock-only cash for one player session in one game
+  session. This is intentionally separate from store, inventory, and ledger
+  balances.
+- `stock_holdings` stores per-player, per-runtime-stock share quantity,
+  reserved quantity, average cost, and realized P&L.
+- `stock_orders` records market orders, filled or rejected outcomes, and the
+  idempotency key used to prevent duplicate execution on retries.
+- `stock_trades` records one immediate fill per filled order.
+
+The `initialize_stock_portfolio_for_player` RPC validates the game session and
+player session, inserts a portfolio with default starting cash when missing, and
+returns an existing portfolio without overwriting cash.
+
+The `execute_stock_market_order` RPC validates the game session, player session,
+active runtime stock asset, side, quantity, and idempotency key. It supports
+market orders only. Buys fill at
+`game_session_stock_assets.current_price`, require enough isolated stock cash,
+deduct cash, increase holdings, and update weighted average cost. Sells require
+owned shares, prevent short selling, increase isolated stock cash, reduce
+holdings, and update realized P&L.
+
+Idempotency is scoped by `(game_session_id, player_session_id, idempotency_key)`.
+If a request is retried with the same key, the RPC returns the stored order
+result without executing another cash, holding, order, or trade write. Filled
+orders create exactly one `stock_trades` row.
+
+The trading RPCs are `SECURITY DEFINER`, use fixed `search_path`, revoke public
+execution, and grant execute only to `service_role`. Cross-game leakage is
+guarded by explicit `game_session_id` filters, runtime-stock composite foreign
+keys, and player-session membership validation.
+
+V5 intentionally does not add limit orders, partial fills, short selling,
+fees, reservations, order books, trading reads, UI, scheduler/cron behavior,
+real-world financial APIs, store purchase writes, inventory writes, or ledger
+writes. Future read endpoints can expose portfolios, holdings, orders, and
+trades after the backend trading boundary is stable.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
 - Frontend/admin wiring should let trusted staff initialize one game session and
   display the read-only market board without adding student stock writes.
-- V5 trading execution should settle market BUY/SELL activity only after the
-  read path is stable, and it must use ledger-safe transaction boundaries for
-  cash, shares, idempotency, and audit records.
+- V6 read endpoints should expose player stock portfolios, holdings, orders, and
+  fills without widening write access.
 
 Future API handlers, persistence, scheduled tick orchestration, trading,
 portfolios, analyst features, admin controls, and audit logs should call the

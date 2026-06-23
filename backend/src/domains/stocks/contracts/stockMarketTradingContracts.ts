@@ -1,0 +1,174 @@
+export type StockMarketTradingAction = "initialize_portfolio" | "execute_order";
+export type StockMarketOrderSide = "buy" | "sell";
+export type StockMarketOrderStatus = "filled" | "rejected";
+
+export interface StockMarketTradingInitializePortfolioRequestBody {
+  readonly action: "initialize_portfolio";
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly startingCash?: number;
+}
+
+export interface StockMarketTradingExecuteOrderRequestBody {
+  readonly action: "execute_order";
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly stockAssetId: string;
+  readonly side: StockMarketOrderSide;
+  readonly quantity: number;
+  readonly idempotencyKey: string;
+}
+
+export type StockMarketTradingRequestBody =
+  | StockMarketTradingInitializePortfolioRequestBody
+  | StockMarketTradingExecuteOrderRequestBody;
+
+export interface StockMarketPortfolioDto {
+  readonly cashBalance: number;
+  readonly reservedCash: number;
+}
+
+export interface StockMarketInitializedPortfolioDto
+  extends StockMarketPortfolioDto {
+  readonly portfolioId: string;
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly realizedPnl: number;
+}
+
+export interface StockMarketOrderDto {
+  readonly orderId: string;
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly stockAssetId: string;
+  readonly ticker: string;
+  readonly side: StockMarketOrderSide;
+  readonly quantity: number;
+  readonly executionPrice: number;
+  readonly grossValue: number;
+  readonly status: StockMarketOrderStatus;
+  readonly rejectionReason: string | null;
+}
+
+export interface StockMarketHoldingDto {
+  readonly quantity: number;
+  readonly averageCost: number;
+}
+
+export interface StockMarketTradingInitializeSuccessBody {
+  readonly ok: true;
+  readonly action: "initialize_portfolio";
+  readonly portfolio: StockMarketInitializedPortfolioDto;
+}
+
+export interface StockMarketTradingExecuteSuccessBody {
+  readonly ok: true;
+  readonly action: "execute_order";
+  readonly order: StockMarketOrderDto;
+  readonly portfolio: StockMarketPortfolioDto;
+  readonly holding: StockMarketHoldingDto;
+}
+
+export type StockMarketTradingSuccessBody =
+  | StockMarketTradingInitializeSuccessBody
+  | StockMarketTradingExecuteSuccessBody;
+
+export interface StockMarketPortfolioInitializeInput {
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly startingCash: number;
+}
+
+export interface StockMarketOrderExecuteInput {
+  readonly gameSessionId: string;
+  readonly playerSessionId: string;
+  readonly stockAssetId: string;
+  readonly side: StockMarketOrderSide;
+  readonly quantity: number;
+  readonly idempotencyKey: string;
+}
+
+export interface StockMarketTradingRepository {
+  initializePortfolio(
+    input: StockMarketPortfolioInitializeInput,
+  ): Promise<StockMarketInitializedPortfolioDto>;
+  executeOrder(
+    input: StockMarketOrderExecuteInput,
+  ): Promise<StockMarketTradingExecuteResult>;
+}
+
+export interface StockMarketTradingExecuteResult {
+  readonly order: StockMarketOrderDto;
+  readonly portfolio: StockMarketPortfolioDto;
+  readonly holding: StockMarketHoldingDto;
+}
+
+export interface InitializeStockPortfolioForPlayerRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_player_session_id: string;
+  readonly p_starting_cash: number;
+}
+
+export interface InitializeStockPortfolioForPlayerRpcRow {
+  readonly portfolio_id: string;
+  readonly game_session_id: string;
+  readonly player_session_id: string;
+  readonly cash_balance: number | string;
+  readonly reserved_cash: number | string;
+  readonly realized_pnl: number | string;
+}
+
+export interface ExecuteStockMarketOrderRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_player_session_id: string;
+  readonly p_stock_asset_id: string;
+  readonly p_side: StockMarketOrderSide;
+  readonly p_quantity: number;
+  readonly p_idempotency_key: string;
+}
+
+export interface ExecuteStockMarketOrderRpcRow {
+  readonly order_id: string;
+  readonly game_session_id: string;
+  readonly player_session_id: string;
+  readonly stock_asset_id: string;
+  readonly ticker: string;
+  readonly side: StockMarketOrderSide | string;
+  readonly quantity: number | string;
+  readonly execution_price: number | string | null;
+  readonly gross_value: number | string;
+  readonly status: StockMarketOrderStatus | string;
+  readonly rejection_reason: string | null;
+  readonly cash_balance: number | string;
+  readonly reserved_cash: number | string;
+  readonly holding_quantity: number | string;
+  readonly average_cost: number | string;
+}
+
+export type StockMarketTradingErrorCode =
+  | "invalid_stock_market_trading_request"
+  | "game_session_not_found"
+  | "player_session_not_found"
+  | "stock_asset_not_found"
+  | "stock_portfolio_not_initialized"
+  | "insufficient_cash"
+  | "insufficient_shares"
+  | "invalid_stock_market_trading_state"
+  | "stock_market_trading_schema_not_applied"
+  | "stock_market_trading_failed";
+
+export class StockMarketTradingError extends Error {
+  readonly code: StockMarketTradingErrorCode;
+  readonly status: number;
+
+  constructor(
+    code: StockMarketTradingErrorCode,
+    message: string,
+    status = 500,
+  ) {
+    super(message);
+    this.name = "StockMarketTradingError";
+    this.code = code;
+    this.status = status;
+  }
+}
