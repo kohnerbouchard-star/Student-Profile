@@ -85,21 +85,6 @@ export async function handleStockMarketTradingRequest(
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabaseStockMarketTradingRepository(serviceClient as any);
-
-    if (body.action === "initialize_portfolio") {
-      const portfolio = await repository.initializePortfolio({
-        gameSessionId: body.gameSessionId,
-        playerSessionId: body.playerSessionId,
-        startingCash: body.startingCash ?? 10000,
-      });
-
-      return jsonResponse<StockMarketTradingSuccessBody>(200, {
-        ok: true,
-        action: "initialize_portfolio",
-        portfolio,
-      });
-    }
-
     const result = await repository.executeOrder({
       gameSessionId: body.gameSessionId,
       playerSessionId: body.playerSessionId,
@@ -113,7 +98,7 @@ export async function handleStockMarketTradingRequest(
       ok: true,
       action: "execute_order",
       order: result.order,
-      portfolio: result.portfolio,
+      cash: result.cash,
       holding: result.holding,
     });
   } catch (error) {
@@ -168,15 +153,6 @@ async function readStockMarketTradingRequestBody(
     "playerSessionId",
   );
 
-  if (action === "initialize_portfolio") {
-    return {
-      action,
-      gameSessionId,
-      playerSessionId,
-      startingCash: readOptionalStartingCash(value.startingCash),
-    };
-  }
-
   if (action === "execute_order") {
     return {
       action,
@@ -192,7 +168,7 @@ async function readStockMarketTradingRequestBody(
     };
   }
 
-  throw invalidRequest("action must be initialize_portfolio or execute_order.");
+  throw invalidRequest("action must be execute_order.");
 }
 
 function rejectMultipleSessionShape(value: Record<string, unknown>): void {
@@ -233,20 +209,6 @@ function readOrderSide(value: unknown): StockMarketOrderSide {
 function readPositiveNumber(value: unknown, fieldName: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw invalidRequest(`${fieldName} must be a positive number.`);
-  }
-
-  return value;
-}
-
-function readOptionalStartingCash(value: unknown): number | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    throw invalidRequest(
-      "startingCash must be a non-negative number when provided.",
-    );
   }
 
   return value;

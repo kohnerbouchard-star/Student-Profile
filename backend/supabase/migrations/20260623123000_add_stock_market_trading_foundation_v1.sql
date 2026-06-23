@@ -1,46 +1,18 @@
 -- Stock market trading foundation V1.
--- Adds backend-only stock portfolios, holdings, orders, immediate fills, and
--- trusted RPCs. This migration intentionally does not add frontend routes,
--- classroom-api changes, store purchase writes, ledger writes, schedulers,
--- real-world market APIs, or function deployment behavior.
+-- Adds backend-only stock holdings, market orders, immediate fills, and a
+-- trusted execution RPC. Cash movement uses the existing player ledger and
+-- account balance system; this migration intentionally does not add isolated
+-- stock cash, frontend routes, classroom-api changes, store purchase writes,
+-- schedulers, real-world market APIs, or function deployment behavior.
 
 alter table public.player_sessions
   add constraint player_sessions_game_session_id_id_unique unique (game_session_id, id);
-
-create table public.stock_portfolios (
-  id uuid primary key default gen_random_uuid(),
-  game_session_id uuid not null references public.game_sessions (id) on delete cascade,
-  player_session_id uuid not null,
-  cash_balance numeric(20, 4) not null default 0,
-  reserved_cash numeric(20, 4) not null default 0,
-  realized_pnl numeric(20, 4) not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-
-  constraint stock_portfolios_scope_unique unique (game_session_id, player_session_id),
-  constraint stock_portfolios_player_session_scope_fk
-    foreign key (game_session_id, player_session_id)
-    references public.player_sessions (game_session_id, id)
-    on delete cascade,
-  constraint stock_portfolios_cash_non_negative check (cash_balance >= 0),
-  constraint stock_portfolios_reserved_cash_non_negative check (reserved_cash >= 0)
-);
-
-create trigger set_stock_portfolios_updated_at
-before update on public.stock_portfolios
-for each row
-execute function public.set_current_timestamp_updated_at();
-
-comment on table public.stock_portfolios is
-  'Isolated stock-market cash portfolio for one player session inside one game session. V5 does not touch store, inventory, or ledger balances.';
-
-create index stock_portfolios_player_session_idx
-on public.stock_portfolios (player_session_id);
 
 create table public.stock_holdings (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null,
   player_session_id uuid not null,
+  player_id uuid not null,
   stock_asset_id uuid not null,
   ticker text not null,
   quantity numeric(20, 4) not null default 0,
@@ -50,10 +22,14 @@ create table public.stock_holdings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  constraint stock_holdings_scope_unique unique (game_session_id, player_session_id, stock_asset_id),
-  constraint stock_holdings_portfolio_scope_fk
+  constraint stock_holdings_scope_unique unique (game_session_id, player_id, stock_asset_id),
+  constraint stock_holdings_player_session_scope_fk
     foreign key (game_session_id, player_session_id)
-    references public.stock_portfolios (game_session_id, player_session_id)
+    references public.player_sessions (game_session_id, id)
+    on delete cascade,
+  constraint stock_holdings_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players (game_session_id, id)
     on delete cascade,
   constraint stock_holdings_asset_scope_fk
     foreign key (game_session_id, stock_asset_id)
@@ -72,7 +48,10 @@ for each row
 execute function public.set_current_timestamp_updated_at();
 
 comment on table public.stock_holdings is
-  'Per-player-session stock holdings scoped by game_session_id and runtime stock asset.';
+  'Per-player stock holdings scoped by game_session_id and runtime stock asset. Cash remains in ledger_entries and account_balances.';
+
+create index stock_holdings_player_idx
+on public.stock_holdings (game_session_id, player_id);
 
 create index stock_holdings_player_session_idx
 on public.stock_holdings (game_session_id, player_session_id);
@@ -84,6 +63,7 @@ create table public.stock_orders (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null,
   player_session_id uuid not null,
+  player_id uuid not null,
   stock_asset_id uuid not null,
   ticker text not null,
   side text not null,
@@ -96,17 +76,21 @@ create table public.stock_orders (
   rejection_reason text null,
   idempotency_key text not null,
   cash_balance_after numeric(20, 4) not null default 0,
-  reserved_cash_after numeric(20, 4) not null default 0,
+  cash_currency_code text not null default 'ECO',
   holding_quantity_after numeric(20, 4) not null default 0,
   average_cost_after numeric(18, 4) not null default 0,
   created_at timestamptz not null default now(),
   filled_at timestamptz null,
 
   constraint stock_orders_scope_unique unique (game_session_id, player_session_id, idempotency_key),
-  constraint stock_orders_player_order_unique unique (game_session_id, player_session_id, id),
-  constraint stock_orders_portfolio_scope_fk
+  constraint stock_orders_player_session_order_unique unique (game_session_id, player_session_id, id),
+  constraint stock_orders_player_session_scope_fk
     foreign key (game_session_id, player_session_id)
-    references public.stock_portfolios (game_session_id, player_session_id)
+    references public.player_sessions (game_session_id, id)
+    on delete cascade,
+  constraint stock_orders_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players (game_session_id, id)
     on delete cascade,
   constraint stock_orders_asset_scope_fk
     foreign key (game_session_id, stock_asset_id)
@@ -132,15 +116,21 @@ create table public.stock_orders (
   ),
   constraint stock_orders_idempotency_key_not_blank check (length(btrim(idempotency_key)) > 0),
   constraint stock_orders_cash_balance_after_non_negative check (cash_balance_after >= 0),
-  constraint stock_orders_reserved_cash_after_non_negative check (reserved_cash_after >= 0),
+  constraint stock_orders_cash_currency_code_check check (
+    cash_currency_code = upper(cash_currency_code)
+    and length(cash_currency_code) between 3 and 16
+  ),
   constraint stock_orders_holding_quantity_after_non_negative check (holding_quantity_after >= 0),
   constraint stock_orders_average_cost_after_non_negative check (average_cost_after >= 0)
 );
 
 comment on table public.stock_orders is
-  'Immediate market stock order records scoped to one game session and one player session. Unique idempotency keys prevent duplicate execution on retries.';
+  'Immediate market stock order records scoped to one game session and player session. Cash movement is recorded through ledger_entries and account_balances.';
 
 create index stock_orders_player_created_idx
+on public.stock_orders (game_session_id, player_id, created_at desc);
+
+create index stock_orders_player_session_created_idx
 on public.stock_orders (game_session_id, player_session_id, created_at desc);
 
 create index stock_orders_asset_created_idx
@@ -151,6 +141,7 @@ create table public.stock_trades (
   order_id uuid not null references public.stock_orders (id) on delete cascade,
   game_session_id uuid not null,
   player_session_id uuid not null,
+  player_id uuid not null,
   stock_asset_id uuid not null,
   ticker text not null,
   side text not null,
@@ -163,6 +154,14 @@ create table public.stock_trades (
   constraint stock_trades_order_scope_fk
     foreign key (game_session_id, player_session_id, order_id)
     references public.stock_orders (game_session_id, player_session_id, id)
+    on delete cascade,
+  constraint stock_trades_player_session_scope_fk
+    foreign key (game_session_id, player_session_id)
+    references public.player_sessions (game_session_id, id)
+    on delete cascade,
+  constraint stock_trades_player_scope_fk
+    foreign key (game_session_id, player_id)
+    references public.players (game_session_id, id)
     on delete cascade,
   constraint stock_trades_asset_scope_fk
     foreign key (game_session_id, stock_asset_id)
@@ -179,96 +178,10 @@ comment on table public.stock_trades is
   'One immediate fill per filled market stock order. The order_id unique constraint prevents duplicate fills from idempotent retries.';
 
 create index stock_trades_player_created_idx
-on public.stock_trades (game_session_id, player_session_id, created_at desc);
+on public.stock_trades (game_session_id, player_id, created_at desc);
 
 create index stock_trades_asset_created_idx
 on public.stock_trades (game_session_id, stock_asset_id, created_at desc);
-
-create or replace function public.initialize_stock_portfolio_for_player(
-  p_game_session_id uuid,
-  p_player_session_id uuid,
-  p_starting_cash numeric default 10000
-)
-returns table (
-  portfolio_id uuid,
-  game_session_id uuid,
-  player_session_id uuid,
-  cash_balance numeric,
-  reserved_cash numeric,
-  realized_pnl numeric
-)
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_starting_cash numeric := coalesce(p_starting_cash, 10000);
-  v_portfolio public.stock_portfolios%rowtype;
-begin
-  if p_game_session_id is null then
-    raise exception 'STOCK_TRADING_GAME_SESSION_REQUIRED';
-  end if;
-
-  if p_player_session_id is null then
-    raise exception 'STOCK_TRADING_PLAYER_SESSION_REQUIRED';
-  end if;
-
-  if v_starting_cash is null or v_starting_cash < 0 then
-    raise exception 'STOCK_TRADING_INVALID_STARTING_CASH';
-  end if;
-
-  if not exists (
-    select 1
-    from public.game_sessions session
-    where session.id = p_game_session_id
-  ) then
-    raise exception 'STOCK_TRADING_GAME_SESSION_NOT_FOUND';
-  end if;
-
-  if not exists (
-    select 1
-    from public.player_sessions player_session
-    where player_session.id = p_player_session_id
-      and player_session.game_session_id = p_game_session_id
-  ) then
-    raise exception 'STOCK_TRADING_PLAYER_SESSION_NOT_FOUND';
-  end if;
-
-  insert into public.stock_portfolios (
-    game_session_id,
-    player_session_id,
-    cash_balance,
-    reserved_cash,
-    realized_pnl
-  )
-  values (
-    p_game_session_id,
-    p_player_session_id,
-    v_starting_cash,
-    0,
-    0
-  )
-  on conflict (game_session_id, player_session_id) do nothing;
-
-  select portfolio.*
-  into v_portfolio
-  from public.stock_portfolios portfolio
-  where portfolio.game_session_id = p_game_session_id
-    and portfolio.player_session_id = p_player_session_id;
-
-  portfolio_id := v_portfolio.id;
-  game_session_id := v_portfolio.game_session_id;
-  player_session_id := v_portfolio.player_session_id;
-  cash_balance := v_portfolio.cash_balance;
-  reserved_cash := v_portfolio.reserved_cash;
-  realized_pnl := v_portfolio.realized_pnl;
-
-  return next;
-end;
-$$;
-
-comment on function public.initialize_stock_portfolio_for_player(uuid, uuid, numeric) is
-  'Initializes isolated stock-market cash for one player session in one game session. Existing portfolios are returned without overwriting cash.';
 
 create or replace function public.execute_stock_market_order(
   p_game_session_id uuid,
@@ -282,6 +195,7 @@ returns table (
   order_id uuid,
   game_session_id uuid,
   player_session_id uuid,
+  player_id uuid,
   stock_asset_id uuid,
   ticker text,
   side text,
@@ -291,7 +205,7 @@ returns table (
   status text,
   rejection_reason text,
   cash_balance numeric,
-  reserved_cash numeric,
+  cash_currency_code text,
   holding_quantity numeric,
   average_cost numeric
 )
@@ -302,10 +216,13 @@ as $$
 declare
   v_side text := lower(btrim(coalesce(p_side, '')));
   v_idempotency_key text := btrim(coalesce(p_idempotency_key, ''));
+  v_player_session public.player_sessions%rowtype;
   v_asset record;
-  v_portfolio public.stock_portfolios%rowtype;
+  v_cash_balance public.account_balances%rowtype;
   v_holding public.stock_holdings%rowtype;
   v_order public.stock_orders%rowtype;
+  v_ledger record;
+  v_existing_cash_balance numeric := 0;
   v_existing_holding_quantity numeric := 0;
   v_existing_average_cost numeric := 0;
   v_gross_value numeric;
@@ -355,6 +272,7 @@ begin
     order_id := v_order.id;
     game_session_id := v_order.game_session_id;
     player_session_id := v_order.player_session_id;
+    player_id := v_order.player_id;
     stock_asset_id := v_order.stock_asset_id;
     ticker := v_order.ticker;
     side := v_order.side;
@@ -364,7 +282,7 @@ begin
     status := v_order.status;
     rejection_reason := v_order.rejection_reason;
     cash_balance := v_order.cash_balance_after;
-    reserved_cash := v_order.reserved_cash_after;
+    cash_currency_code := v_order.cash_currency_code;
     holding_quantity := v_order.holding_quantity_after;
     average_cost := v_order.average_cost_after;
     return next;
@@ -379,12 +297,13 @@ begin
     raise exception 'STOCK_TRADING_GAME_SESSION_NOT_FOUND';
   end if;
 
-  if not exists (
-    select 1
-    from public.player_sessions player_session
-    where player_session.id = p_player_session_id
-      and player_session.game_session_id = p_game_session_id
-  ) then
+  select player_session.*
+  into v_player_session
+  from public.player_sessions player_session
+  where player_session.id = p_player_session_id
+    and player_session.game_session_id = p_game_session_id;
+
+  if not found then
     raise exception 'STOCK_TRADING_PLAYER_SESSION_NOT_FOUND';
   end if;
 
@@ -399,15 +318,17 @@ begin
     raise exception 'STOCK_TRADING_STOCK_ASSET_NOT_FOUND';
   end if;
 
-  select portfolio.*
-  into v_portfolio
-  from public.stock_portfolios portfolio
-  where portfolio.game_session_id = p_game_session_id
-    and portfolio.player_session_id = p_player_session_id
+  select balance.*
+  into v_cash_balance
+  from public.account_balances balance
+  where balance.game_session_id = p_game_session_id
+    and balance.player_id = v_player_session.player_id
+    and balance.account_type = 'cash'
+    and balance.currency_code = 'ECO'
   for update;
 
-  if not found then
-    raise exception 'STOCK_TRADING_PORTFOLIO_NOT_INITIALIZED';
+  if found then
+    v_existing_cash_balance := v_cash_balance.balance;
   end if;
 
   v_gross_value := v_asset.current_price * p_quantity;
@@ -416,7 +337,7 @@ begin
   into v_holding
   from public.stock_holdings holding
   where holding.game_session_id = p_game_session_id
-    and holding.player_session_id = p_player_session_id
+    and holding.player_id = v_player_session.player_id
     and holding.stock_asset_id = p_stock_asset_id
   for update;
 
@@ -426,10 +347,11 @@ begin
   end if;
 
   if v_side = 'buy' then
-    if v_portfolio.cash_balance < v_gross_value then
+    if v_existing_cash_balance < v_gross_value then
       insert into public.stock_orders (
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -442,13 +364,14 @@ begin
         rejection_reason,
         idempotency_key,
         cash_balance_after,
-        reserved_cash_after,
+        cash_currency_code,
         holding_quantity_after,
         average_cost_after
       )
       values (
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -460,8 +383,8 @@ begin
         'rejected',
         'insufficient_cash',
         v_idempotency_key,
-        v_portfolio.cash_balance,
-        v_portfolio.reserved_cash,
+        v_existing_cash_balance,
+        'ECO',
         v_existing_holding_quantity,
         v_existing_average_cost
       )
@@ -470,6 +393,7 @@ begin
       insert into public.stock_holdings (
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         quantity,
@@ -480,6 +404,7 @@ begin
       values (
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         0,
@@ -487,13 +412,13 @@ begin
         0,
         0
       )
-      on conflict (game_session_id, player_session_id, stock_asset_id) do nothing;
+      on conflict on constraint stock_holdings_scope_unique do nothing;
 
       select holding.*
       into v_holding
       from public.stock_holdings holding
       where holding.game_session_id = p_game_session_id
-        and holding.player_session_id = p_player_session_id
+        and holding.player_id = v_player_session.player_id
         and holding.stock_asset_id = p_stock_asset_id
       for update;
 
@@ -502,22 +427,10 @@ begin
         (v_holding.quantity * v_holding.average_cost) + v_gross_value
       ) / v_new_holding_quantity;
 
-      update public.stock_portfolios portfolio
-      set cash_balance = portfolio.cash_balance - v_gross_value
-      where portfolio.id = v_portfolio.id
-      returning * into v_portfolio;
-
-      update public.stock_holdings holding
-      set
-        ticker = v_asset.ticker,
-        quantity = v_new_holding_quantity,
-        average_cost = v_new_average_cost
-      where holding.id = v_holding.id
-      returning * into v_holding;
-
       insert into public.stock_orders (
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -530,7 +443,7 @@ begin
         rejection_reason,
         idempotency_key,
         cash_balance_after,
-        reserved_cash_after,
+        cash_currency_code,
         holding_quantity_after,
         average_cost_after,
         filled_at
@@ -538,6 +451,7 @@ begin
       values (
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -549,18 +463,65 @@ begin
         'filled',
         null,
         v_idempotency_key,
-        v_portfolio.cash_balance,
-        v_portfolio.reserved_cash,
-        v_holding.quantity,
-        v_holding.average_cost,
+        v_existing_cash_balance - v_gross_value,
+        'ECO',
+        v_new_holding_quantity,
+        v_new_average_cost,
         now()
       )
+      returning * into v_order;
+
+      select *
+      into v_ledger
+      from public.record_player_ledger_entry(
+        p_game_session_id,
+        v_player_session.player_id,
+        'cash',
+        -v_gross_value,
+        'ECO',
+        'debit',
+        'stocks',
+        'stock_buy',
+        v_order.id,
+        'player',
+        v_player_session.player_id,
+        jsonb_build_object(
+          'stock_asset_id', p_stock_asset_id,
+          'ticker', v_asset.ticker,
+          'quantity', p_quantity,
+          'execution_price', v_asset.current_price,
+          'gross_value', v_gross_value,
+          'player_session_id', p_player_session_id
+        )
+      );
+
+      if v_ledger.balance < 0 then
+        raise exception 'STOCK_TRADING_NEGATIVE_CASH_BALANCE';
+      end if;
+
+      update public.stock_holdings holding
+      set
+        player_session_id = p_player_session_id,
+        ticker = v_asset.ticker,
+        quantity = v_new_holding_quantity,
+        average_cost = v_new_average_cost
+      where holding.id = v_holding.id
+      returning * into v_holding;
+
+      update public.stock_orders stock_order
+      set
+        cash_balance_after = v_ledger.balance,
+        cash_currency_code = v_ledger.currency_code,
+        holding_quantity_after = v_holding.quantity,
+        average_cost_after = v_holding.average_cost
+      where stock_order.id = v_order.id
       returning * into v_order;
 
       insert into public.stock_trades (
         order_id,
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -572,6 +533,7 @@ begin
         v_order.id,
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -585,6 +547,7 @@ begin
       insert into public.stock_orders (
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -597,13 +560,14 @@ begin
         rejection_reason,
         idempotency_key,
         cash_balance_after,
-        reserved_cash_after,
+        cash_currency_code,
         holding_quantity_after,
         average_cost_after
       )
       values (
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -615,8 +579,8 @@ begin
         'rejected',
         'insufficient_shares',
         v_idempotency_key,
-        v_portfolio.cash_balance,
-        v_portfolio.reserved_cash,
+        v_existing_cash_balance,
+        'ECO',
         v_existing_holding_quantity,
         v_existing_average_cost
       )
@@ -629,25 +593,10 @@ begin
       end;
       v_realized_pnl := (v_asset.current_price - v_holding.average_cost) * p_quantity;
 
-      update public.stock_portfolios portfolio
-      set
-        cash_balance = portfolio.cash_balance + v_gross_value,
-        realized_pnl = portfolio.realized_pnl + v_realized_pnl
-      where portfolio.id = v_portfolio.id
-      returning * into v_portfolio;
-
-      update public.stock_holdings holding
-      set
-        ticker = v_asset.ticker,
-        quantity = v_new_holding_quantity,
-        average_cost = v_new_average_cost,
-        realized_pnl = holding.realized_pnl + v_realized_pnl
-      where holding.id = v_holding.id
-      returning * into v_holding;
-
       insert into public.stock_orders (
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -660,7 +609,7 @@ begin
         rejection_reason,
         idempotency_key,
         cash_balance_after,
-        reserved_cash_after,
+        cash_currency_code,
         holding_quantity_after,
         average_cost_after,
         filled_at
@@ -668,6 +617,7 @@ begin
       values (
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -679,18 +629,63 @@ begin
         'filled',
         null,
         v_idempotency_key,
-        v_portfolio.cash_balance,
-        v_portfolio.reserved_cash,
-        v_holding.quantity,
-        v_holding.average_cost,
+        v_existing_cash_balance + v_gross_value,
+        'ECO',
+        v_new_holding_quantity,
+        v_new_average_cost,
         now()
       )
+      returning * into v_order;
+
+      select *
+      into v_ledger
+      from public.record_player_ledger_entry(
+        p_game_session_id,
+        v_player_session.player_id,
+        'cash',
+        v_gross_value,
+        'ECO',
+        'credit',
+        'stocks',
+        'stock_sell',
+        v_order.id,
+        'player',
+        v_player_session.player_id,
+        jsonb_build_object(
+          'stock_asset_id', p_stock_asset_id,
+          'ticker', v_asset.ticker,
+          'quantity', p_quantity,
+          'execution_price', v_asset.current_price,
+          'gross_value', v_gross_value,
+          'realized_pnl', v_realized_pnl,
+          'player_session_id', p_player_session_id
+        )
+      );
+
+      update public.stock_holdings holding
+      set
+        player_session_id = p_player_session_id,
+        ticker = v_asset.ticker,
+        quantity = v_new_holding_quantity,
+        average_cost = v_new_average_cost,
+        realized_pnl = holding.realized_pnl + v_realized_pnl
+      where holding.id = v_holding.id
+      returning * into v_holding;
+
+      update public.stock_orders stock_order
+      set
+        cash_balance_after = v_ledger.balance,
+        cash_currency_code = v_ledger.currency_code,
+        holding_quantity_after = v_holding.quantity,
+        average_cost_after = v_holding.average_cost
+      where stock_order.id = v_order.id
       returning * into v_order;
 
       insert into public.stock_trades (
         order_id,
         game_session_id,
         player_session_id,
+        player_id,
         stock_asset_id,
         ticker,
         side,
@@ -702,6 +697,7 @@ begin
         v_order.id,
         p_game_session_id,
         p_player_session_id,
+        v_player_session.player_id,
         p_stock_asset_id,
         v_asset.ticker,
         v_side,
@@ -715,6 +711,7 @@ begin
   order_id := v_order.id;
   game_session_id := v_order.game_session_id;
   player_session_id := v_order.player_session_id;
+  player_id := v_order.player_id;
   stock_asset_id := v_order.stock_asset_id;
   ticker := v_order.ticker;
   side := v_order.side;
@@ -724,7 +721,7 @@ begin
   status := v_order.status;
   rejection_reason := v_order.rejection_reason;
   cash_balance := v_order.cash_balance_after;
-  reserved_cash := v_order.reserved_cash_after;
+  cash_currency_code := v_order.cash_currency_code;
   holding_quantity := v_order.holding_quantity_after;
   average_cost := v_order.average_cost_after;
 
@@ -733,18 +730,14 @@ end;
 $$;
 
 comment on function public.execute_stock_market_order(uuid, uuid, uuid, text, numeric, text) is
-  'Executes one immediate market stock order for one player session inside one game session. Idempotency returns the existing order result without executing again.';
+  'Executes one immediate market stock order for one player session inside one game session. Cash movement flows through record_player_ledger_entry and idempotency returns the existing order result without executing again.';
 
-alter table public.stock_portfolios enable row level security;
 alter table public.stock_holdings enable row level security;
 alter table public.stock_orders enable row level security;
 alter table public.stock_trades enable row level security;
 
 -- No direct authenticated policies are added. V5 trading writes are intended
 -- only for trusted service-role Edge Function RPC calls.
-
-revoke all on function public.initialize_stock_portfolio_for_player(uuid, uuid, numeric) from public;
-grant execute on function public.initialize_stock_portfolio_for_player(uuid, uuid, numeric) to service_role;
 
 revoke all on function public.execute_stock_market_order(uuid, uuid, uuid, text, numeric, text) from public;
 grant execute on function public.execute_stock_market_order(uuid, uuid, uuid, text, numeric, text) to service_role;

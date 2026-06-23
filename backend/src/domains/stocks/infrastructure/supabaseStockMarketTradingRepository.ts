@@ -1,11 +1,7 @@
 import {
   type ExecuteStockMarketOrderRpcArgs,
   type ExecuteStockMarketOrderRpcRow,
-  type InitializeStockPortfolioForPlayerRpcArgs,
-  type InitializeStockPortfolioForPlayerRpcRow,
-  type StockMarketInitializedPortfolioDto,
   type StockMarketOrderExecuteInput,
-  type StockMarketPortfolioInitializeInput,
   StockMarketTradingError,
   type StockMarketTradingExecuteResult,
   type StockMarketTradingRepository,
@@ -33,42 +29,6 @@ interface SupabaseStockMarketTradingClient {
 export class SupabaseStockMarketTradingRepository
   implements StockMarketTradingRepository {
   constructor(private readonly client: SupabaseStockMarketTradingClient) {}
-
-  async initializePortfolio(
-    input: StockMarketPortfolioInitializeInput,
-  ): Promise<StockMarketInitializedPortfolioDto> {
-    const args: InitializeStockPortfolioForPlayerRpcArgs = {
-      p_game_session_id: input.gameSessionId,
-      p_player_session_id: input.playerSessionId,
-      p_starting_cash: input.startingCash,
-    };
-    const response = await this.client.rpc<
-      readonly InitializeStockPortfolioForPlayerRpcRow[]
-    >("initialize_stock_portfolio_for_player", args);
-
-    if (response.error) {
-      throw mapTradingError(response.error);
-    }
-
-    const row = response.data?.[0];
-
-    if (!row) {
-      throw new StockMarketTradingError(
-        "stock_market_trading_failed",
-        "Stock portfolio initialization returned no result.",
-        500,
-      );
-    }
-
-    return {
-      portfolioId: row.portfolio_id,
-      gameSessionId: row.game_session_id,
-      playerSessionId: row.player_session_id,
-      cashBalance: toNumber(row.cash_balance),
-      reservedCash: toNumber(row.reserved_cash),
-      realizedPnl: toNumber(row.realized_pnl),
-    };
-  }
 
   async executeOrder(
     input: StockMarketOrderExecuteInput,
@@ -117,9 +77,10 @@ export class SupabaseStockMarketTradingRepository
         status: "filled",
         rejectionReason: null,
       },
-      portfolio: {
-        cashBalance: toNumber(row.cash_balance),
-        reservedCash: toNumber(row.reserved_cash),
+      cash: {
+        accountType: "cash",
+        currencyCode: row.cash_currency_code,
+        balance: toNumber(row.cash_balance),
       },
       holding: {
         quantity: toNumber(row.holding_quantity),
@@ -135,7 +96,7 @@ function mapRejectedOrder(
   if (rejectionReason === "insufficient_cash") {
     return new StockMarketTradingError(
       "insufficient_cash",
-      "Insufficient stock portfolio cash for this order.",
+      "Insufficient player cash for this stock order.",
       409,
     );
   }
@@ -189,14 +150,6 @@ function mapTradingError(
       "stock_asset_not_found",
       "Stock asset could not be found in this game session.",
       404,
-    );
-  }
-
-  if (upperMessage.includes("STOCK_TRADING_PORTFOLIO_NOT_INITIALIZED")) {
-    return new StockMarketTradingError(
-      "stock_portfolio_not_initialized",
-      "Stock portfolio has not been initialized for this player session.",
-      409,
     );
   }
 

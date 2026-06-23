@@ -3,7 +3,6 @@ import {
 } from "./stockMarketTradingHttpHandler.ts";
 import type {
   StockMarketOrderExecuteInput,
-  StockMarketPortfolioInitializeInput,
   StockMarketTradingRepository,
 } from "../contracts/stockMarketTradingContracts.ts";
 
@@ -27,7 +26,7 @@ Deno.test("stock trading rejects non-POST requests", async () => {
 
 Deno.test("stock trading rejects missing configured secret", async () => {
   const response = await handleStockMarketTradingRequest(
-    request(initializeBody(), SECRET),
+    request(executeBody(), SECRET),
     dependencies({ readRunnerSecret: () => undefined }),
   );
   const body = await response.json();
@@ -38,11 +37,11 @@ Deno.test("stock trading rejects missing configured secret", async () => {
 
 Deno.test("stock trading rejects missing or invalid request secret", async () => {
   const missing = await handleStockMarketTradingRequest(
-    request(initializeBody()),
+    request(executeBody()),
     dependencies(),
   );
   const invalid = await handleStockMarketTradingRequest(
-    request(initializeBody(), "wrong"),
+    request(executeBody(), "wrong"),
     dependencies(),
   );
 
@@ -52,7 +51,7 @@ Deno.test("stock trading rejects missing or invalid request secret", async () =>
 
 Deno.test("stock trading rejects invalid action", async () => {
   const response = await handleStockMarketTradingRequest(
-    request({ ...initializeBody(), action: "cancel_order" }, SECRET),
+    request({ ...executeBody(), action: "initialize_portfolio" }, SECRET),
     dependencies(),
   );
 
@@ -62,23 +61,33 @@ Deno.test("stock trading rejects invalid action", async () => {
 Deno.test("stock trading rejects missing gameSessionId or playerSessionId", async () => {
   const missingGame = await handleStockMarketTradingRequest(
     request({
-      action: "initialize_portfolio",
+      action: "execute_order",
       playerSessionId: PLAYER_SESSION_ID,
+      stockAssetId: STOCK_ASSET_ID,
+      side: "buy",
+      quantity: 5,
+      idempotencyKey: "order-1",
     }, SECRET),
     dependencies(),
   );
   const missingPlayer = await handleStockMarketTradingRequest(
     request(
-      { action: "initialize_portfolio", gameSessionId: GAME_SESSION_ID },
+      {
+        action: "execute_order",
+        gameSessionId: GAME_SESSION_ID,
+        stockAssetId: STOCK_ASSET_ID,
+        side: "buy",
+        quantity: 5,
+        idempotencyKey: "order-1",
+      },
       SECRET,
     ),
     dependencies(),
   );
   const multiple = await handleStockMarketTradingRequest(
     request({
-      action: "initialize_portfolio",
+      ...executeBody(),
       gameSessionIds: [GAME_SESSION_ID],
-      playerSessionId: PLAYER_SESSION_ID,
     }, SECRET),
     dependencies(),
   );
@@ -106,25 +115,6 @@ Deno.test("stock trading rejects invalid quantity", async () => {
   assertEquals(response.status, 400);
 });
 
-Deno.test("stock trading routes initialize_portfolio", async () => {
-  const repository = new MockTradingRepository();
-  const response = await handleStockMarketTradingRequest(
-    request(initializeBody({ startingCash: 25000 }), SECRET),
-    dependencies({ repository }),
-  );
-  const body = await response.json();
-
-  assertEquals(response.status, 200);
-  assertEquals(repository.initializeInputs[0], {
-    gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
-    startingCash: 25000,
-  });
-  assertEquals(body.ok, true);
-  assertEquals(body.action, "initialize_portfolio");
-  assertEquals(body.portfolio.cashBalance, 25000);
-});
-
 Deno.test("stock trading routes execute_order", async () => {
   const repository = new MockTradingRepository();
   const response = await handleStockMarketTradingRequest(
@@ -143,7 +133,7 @@ Deno.test("stock trading routes execute_order", async () => {
   });
 });
 
-Deno.test("stock trading returns execute success response shape", async () => {
+Deno.test("stock trading returns execute success response shape with actual cash", async () => {
   const response = await handleStockMarketTradingRequest(
     request(executeBody(), SECRET),
     dependencies(),
@@ -167,9 +157,10 @@ Deno.test("stock trading returns execute success response shape", async () => {
       status: "filled",
       rejectionReason: null,
     },
-    portfolio: {
-      cashBalance: 9500,
-      reservedCash: 0,
+    cash: {
+      accountType: "cash",
+      currencyCode: "ECO",
+      balance: 9500,
     },
     holding: {
       quantity: 5,
@@ -213,15 +204,6 @@ function request(body: unknown, secret?: string): Request {
   });
 }
 
-function initializeBody(overrides: Record<string, unknown> = {}) {
-  return {
-    action: "initialize_portfolio",
-    gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
-    ...overrides,
-  };
-}
-
 function executeBody(overrides: Record<string, unknown> = {}) {
   return {
     action: "execute_order",
@@ -236,21 +218,7 @@ function executeBody(overrides: Record<string, unknown> = {}) {
 }
 
 class MockTradingRepository implements StockMarketTradingRepository {
-  readonly initializeInputs: StockMarketPortfolioInitializeInput[] = [];
   readonly executeInputs: StockMarketOrderExecuteInput[] = [];
-
-  async initializePortfolio(input: StockMarketPortfolioInitializeInput) {
-    this.initializeInputs.push(input);
-
-    return {
-      portfolioId: "00000000-0000-4000-8000-000000000301",
-      gameSessionId: input.gameSessionId,
-      playerSessionId: input.playerSessionId,
-      cashBalance: input.startingCash,
-      reservedCash: 0,
-      realizedPnl: 0,
-    };
-  }
 
   async executeOrder(input: StockMarketOrderExecuteInput) {
     this.executeInputs.push(input);
@@ -269,9 +237,10 @@ class MockTradingRepository implements StockMarketTradingRepository {
         status: "filled" as const,
         rejectionReason: null,
       },
-      portfolio: {
-        cashBalance: 9500,
-        reservedCash: 0,
+      cash: {
+        accountType: "cash" as const,
+        currencyCode: "ECO",
+        balance: 9500,
       },
       holding: {
         quantity: 5,

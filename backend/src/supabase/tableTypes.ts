@@ -147,21 +147,6 @@ export interface InitializeStockMarketAssetsForGameRpcRow {
   readonly assets_after: number;
 }
 
-export interface InitializeStockPortfolioForPlayerRpcArgs {
-  readonly p_game_session_id: UUID;
-  readonly p_player_session_id: UUID;
-  readonly p_starting_cash: number;
-}
-
-export interface InitializeStockPortfolioForPlayerRpcRow {
-  readonly portfolio_id: UUID;
-  readonly game_session_id: UUID;
-  readonly player_session_id: UUID;
-  readonly cash_balance: number;
-  readonly reserved_cash: number;
-  readonly realized_pnl: number;
-}
-
 export interface ExecuteStockMarketOrderRpcArgs {
   readonly p_game_session_id: UUID;
   readonly p_player_session_id: UUID;
@@ -175,6 +160,7 @@ export interface ExecuteStockMarketOrderRpcRow {
   readonly order_id: UUID;
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly side: "buy" | "sell" | string;
@@ -184,7 +170,7 @@ export interface ExecuteStockMarketOrderRpcRow {
   readonly status: "filled" | "rejected" | string;
   readonly rejection_reason: string | null;
   readonly cash_balance: number;
-  readonly reserved_cash: number;
+  readonly cash_currency_code: string;
   readonly holding_quantity: number;
   readonly average_cost: number;
 }
@@ -605,31 +591,11 @@ export interface StockMarketRegimeInsert {
 
 export type StockMarketRegimeUpdate = Partial<StockMarketRegimeInsert>;
 
-export interface StockPortfoliosRow {
-  readonly id: UUID;
-  readonly game_session_id: UUID;
-  readonly player_session_id: UUID;
-  readonly cash_balance: number;
-  readonly reserved_cash: number;
-  readonly realized_pnl: number;
-  readonly created_at: ISODateTimeString;
-  readonly updated_at: ISODateTimeString;
-}
-
-export interface StockPortfolioInsert {
-  readonly game_session_id: UUID;
-  readonly player_session_id: UUID;
-  readonly cash_balance?: number;
-  readonly reserved_cash?: number;
-  readonly realized_pnl?: number;
-}
-
-export type StockPortfolioUpdate = Partial<StockPortfolioInsert>;
-
 export interface StockHoldingsRow {
   readonly id: UUID;
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly quantity: number;
@@ -643,6 +609,7 @@ export interface StockHoldingsRow {
 export interface StockHoldingInsert {
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly quantity?: number;
@@ -657,6 +624,7 @@ export interface StockOrdersRow {
   readonly id: UUID;
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly side: "buy" | "sell" | string;
@@ -669,7 +637,7 @@ export interface StockOrdersRow {
   readonly rejection_reason?: string | null;
   readonly idempotency_key: string;
   readonly cash_balance_after: number;
-  readonly reserved_cash_after: number;
+  readonly cash_currency_code: string;
   readonly holding_quantity_after: number;
   readonly average_cost_after: number;
   readonly created_at: ISODateTimeString;
@@ -679,6 +647,7 @@ export interface StockOrdersRow {
 export interface StockOrderInsert {
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly side: "buy" | "sell" | string;
@@ -691,7 +660,7 @@ export interface StockOrderInsert {
   readonly rejection_reason?: string | null;
   readonly idempotency_key: string;
   readonly cash_balance_after?: number;
-  readonly reserved_cash_after?: number;
+  readonly cash_currency_code?: string;
   readonly holding_quantity_after?: number;
   readonly average_cost_after?: number;
   readonly filled_at?: ISODateTimeString | null;
@@ -704,6 +673,7 @@ export interface StockTradesRow {
   readonly order_id: UUID;
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly side: "buy" | "sell" | string;
@@ -717,6 +687,7 @@ export interface StockTradeInsert {
   readonly order_id: UUID;
   readonly game_session_id: UUID;
   readonly player_session_id: UUID;
+  readonly player_id: UUID;
   readonly stock_asset_id: UUID;
   readonly ticker: string;
   readonly side: "buy" | "sell" | string;
@@ -743,7 +714,6 @@ export interface CoreSupabaseTables {
   readonly stock_price_ticks: StockPriceTicksRow;
   readonly stock_market_events: StockMarketEventsRow;
   readonly stock_market_regimes: StockMarketRegimesRow;
-  readonly stock_portfolios: StockPortfoliosRow;
   readonly stock_holdings: StockHoldingsRow;
   readonly stock_orders: StockOrdersRow;
   readonly stock_trades: StockTradesRow;
@@ -758,9 +728,6 @@ export interface CoreSupabaseFunctions {
   >;
   readonly initialize_stock_market_assets_for_game: ReadonlyArray<
     InitializeStockMarketAssetsForGameRpcRow
-  >;
-  readonly initialize_stock_portfolio_for_player: ReadonlyArray<
-    InitializeStockPortfolioForPlayerRpcRow
   >;
   readonly redeem_purchase_code_for_game: ReadonlyArray<
     RedeemPurchaseCodeForGameRpcRow

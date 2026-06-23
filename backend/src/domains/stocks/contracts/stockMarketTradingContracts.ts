@@ -1,13 +1,6 @@
-export type StockMarketTradingAction = "initialize_portfolio" | "execute_order";
+export type StockMarketTradingAction = "execute_order";
 export type StockMarketOrderSide = "buy" | "sell";
 export type StockMarketOrderStatus = "filled" | "rejected";
-
-export interface StockMarketTradingInitializePortfolioRequestBody {
-  readonly action: "initialize_portfolio";
-  readonly gameSessionId: string;
-  readonly playerSessionId: string;
-  readonly startingCash?: number;
-}
 
 export interface StockMarketTradingExecuteOrderRequestBody {
   readonly action: "execute_order";
@@ -20,21 +13,7 @@ export interface StockMarketTradingExecuteOrderRequestBody {
 }
 
 export type StockMarketTradingRequestBody =
-  | StockMarketTradingInitializePortfolioRequestBody
-  | StockMarketTradingExecuteOrderRequestBody;
-
-export interface StockMarketPortfolioDto {
-  readonly cashBalance: number;
-  readonly reservedCash: number;
-}
-
-export interface StockMarketInitializedPortfolioDto
-  extends StockMarketPortfolioDto {
-  readonly portfolioId: string;
-  readonly gameSessionId: string;
-  readonly playerSessionId: string;
-  readonly realizedPnl: number;
-}
+  StockMarketTradingExecuteOrderRequestBody;
 
 export interface StockMarketOrderDto {
   readonly orderId: string;
@@ -50,34 +29,27 @@ export interface StockMarketOrderDto {
   readonly rejectionReason: string | null;
 }
 
+export interface StockMarketCashDto {
+  readonly accountType: "cash";
+  readonly currencyCode: string;
+  readonly balance: number;
+}
+
 export interface StockMarketHoldingDto {
   readonly quantity: number;
   readonly averageCost: number;
-}
-
-export interface StockMarketTradingInitializeSuccessBody {
-  readonly ok: true;
-  readonly action: "initialize_portfolio";
-  readonly portfolio: StockMarketInitializedPortfolioDto;
 }
 
 export interface StockMarketTradingExecuteSuccessBody {
   readonly ok: true;
   readonly action: "execute_order";
   readonly order: StockMarketOrderDto;
-  readonly portfolio: StockMarketPortfolioDto;
+  readonly cash: StockMarketCashDto;
   readonly holding: StockMarketHoldingDto;
 }
 
 export type StockMarketTradingSuccessBody =
-  | StockMarketTradingInitializeSuccessBody
-  | StockMarketTradingExecuteSuccessBody;
-
-export interface StockMarketPortfolioInitializeInput {
-  readonly gameSessionId: string;
-  readonly playerSessionId: string;
-  readonly startingCash: number;
-}
+  StockMarketTradingExecuteSuccessBody;
 
 export interface StockMarketOrderExecuteInput {
   readonly gameSessionId: string;
@@ -89,9 +61,6 @@ export interface StockMarketOrderExecuteInput {
 }
 
 export interface StockMarketTradingRepository {
-  initializePortfolio(
-    input: StockMarketPortfolioInitializeInput,
-  ): Promise<StockMarketInitializedPortfolioDto>;
   executeOrder(
     input: StockMarketOrderExecuteInput,
   ): Promise<StockMarketTradingExecuteResult>;
@@ -99,23 +68,8 @@ export interface StockMarketTradingRepository {
 
 export interface StockMarketTradingExecuteResult {
   readonly order: StockMarketOrderDto;
-  readonly portfolio: StockMarketPortfolioDto;
+  readonly cash: StockMarketCashDto;
   readonly holding: StockMarketHoldingDto;
-}
-
-export interface InitializeStockPortfolioForPlayerRpcArgs {
-  readonly p_game_session_id: string;
-  readonly p_player_session_id: string;
-  readonly p_starting_cash: number;
-}
-
-export interface InitializeStockPortfolioForPlayerRpcRow {
-  readonly portfolio_id: string;
-  readonly game_session_id: string;
-  readonly player_session_id: string;
-  readonly cash_balance: number | string;
-  readonly reserved_cash: number | string;
-  readonly realized_pnl: number | string;
 }
 
 export interface ExecuteStockMarketOrderRpcArgs {
@@ -131,6 +85,7 @@ export interface ExecuteStockMarketOrderRpcRow {
   readonly order_id: string;
   readonly game_session_id: string;
   readonly player_session_id: string;
+  readonly player_id: string;
   readonly stock_asset_id: string;
   readonly ticker: string;
   readonly side: StockMarketOrderSide | string;
@@ -140,7 +95,7 @@ export interface ExecuteStockMarketOrderRpcRow {
   readonly status: StockMarketOrderStatus | string;
   readonly rejection_reason: string | null;
   readonly cash_balance: number | string;
-  readonly reserved_cash: number | string;
+  readonly cash_currency_code: string;
   readonly holding_quantity: number | string;
   readonly average_cost: number | string;
 }
@@ -150,7 +105,6 @@ export type StockMarketTradingErrorCode =
   | "game_session_not_found"
   | "player_session_not_found"
   | "stock_asset_not_found"
-  | "stock_portfolio_not_initialized"
   | "insufficient_cash"
   | "insufficient_shares"
   | "invalid_stock_market_trading_state"

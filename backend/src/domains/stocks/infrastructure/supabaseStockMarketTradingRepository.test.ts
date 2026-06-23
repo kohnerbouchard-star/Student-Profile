@@ -12,31 +12,9 @@ declare const Deno: {
 
 const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 const PLAYER_SESSION_ID = "00000000-0000-4000-8000-000000000011";
+const PLAYER_ID = "00000000-0000-4000-8000-000000000021";
 const STOCK_ASSET_ID = "00000000-0000-4000-8000-000000000101";
 const ORDER_ID = "00000000-0000-4000-8000-000000000201";
-
-Deno.test("stock trading repository calls initialize portfolio RPC", async () => {
-  const client = new FakeClient({
-    initialize_stock_portfolio_for_player: [portfolioRow()],
-  });
-  const repository = new SupabaseStockMarketTradingRepository(client as any);
-  const result = await repository.initializePortfolio({
-    gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
-    startingCash: 10000,
-  });
-
-  assertEquals(
-    client.calls[0].functionName,
-    "initialize_stock_portfolio_for_player",
-  );
-  assertEquals(client.calls[0].args, {
-    p_game_session_id: GAME_SESSION_ID,
-    p_player_session_id: PLAYER_SESSION_ID,
-    p_starting_cash: 10000,
-  });
-  assertEquals(result.cashBalance, 10000);
-});
 
 Deno.test("stock trading repository calls execute order RPC with one game and player session", async () => {
   const client = new FakeClient({
@@ -63,7 +41,7 @@ Deno.test("stock trading repository calls execute order RPC with one game and pl
   });
 });
 
-Deno.test("stock trading repository maps filled buy response", async () => {
+Deno.test("stock trading repository maps filled buy response with actual cash balance", async () => {
   const repository = new SupabaseStockMarketTradingRepository(
     new FakeClient({
       execute_stock_market_order: [orderRow()],
@@ -85,9 +63,10 @@ Deno.test("stock trading repository maps filled buy response", async () => {
       status: "filled",
       rejectionReason: null,
     },
-    portfolio: {
-      cashBalance: 9500,
-      reservedCash: 0,
+    cash: {
+      accountType: "cash",
+      currencyCode: "ECO",
+      balance: 9500,
     },
     holding: {
       quantity: 5,
@@ -96,7 +75,7 @@ Deno.test("stock trading repository maps filled buy response", async () => {
   });
 });
 
-Deno.test("stock trading repository maps filled sell response", async () => {
+Deno.test("stock trading repository maps filled sell response with actual cash balance", async () => {
   const repository = new SupabaseStockMarketTradingRepository(
     new FakeClient({
       execute_stock_market_order: [orderRow({
@@ -116,7 +95,8 @@ Deno.test("stock trading repository maps filled sell response", async () => {
   assertEquals(result.order.side, "sell");
   assertEquals(result.order.quantity, 2);
   assertEquals(result.order.grossValue, 210);
-  assertEquals(result.portfolio.cashBalance, 9710);
+  assertEquals(result.cash.balance, 9710);
+  assertEquals(result.cash.currencyCode, "ECO");
   assertEquals(result.holding.quantity, 3);
 });
 
@@ -183,13 +163,9 @@ Deno.test("stock trading repository maps missing schema to schema-not-applied", 
       new SupabaseStockMarketTradingRepository(
         new FakeClient({}, {
           code: "42P01",
-          message: "relation stock_portfolios does not exist",
+          message: "relation account_balances does not exist",
         }) as any,
-      ).initializePortfolio({
-        gameSessionId: GAME_SESSION_ID,
-        playerSessionId: PLAYER_SESSION_ID,
-        startingCash: 10000,
-      }),
+      ).executeOrder(orderInput()),
     "stock_market_trading_schema_not_applied",
     500,
   );
@@ -207,21 +183,26 @@ Deno.test("stock trading repository forwards idempotency key", async () => {
   assertEquals(client.calls[0].args.p_idempotency_key, "client-key-123");
 });
 
-Deno.test("stock trading repository does not call runner, read, or seed RPCs", async () => {
+Deno.test("stock trading repository does not call initialize portfolio RPC", async () => {
   const client = new FakeClient({
-    initialize_stock_portfolio_for_player: [portfolioRow()],
     execute_stock_market_order: [orderRow()],
   });
   const repository = new SupabaseStockMarketTradingRepository(client as any);
-  await repository.initializePortfolio({
-    gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
-    startingCash: 10000,
-  });
   await repository.executeOrder(orderInput());
 
   assertEquals(client.calls.map((call) => call.functionName), [
-    "initialize_stock_portfolio_for_player",
+    "execute_stock_market_order",
+  ]);
+});
+
+Deno.test("stock trading repository does not call runner, read, or seed RPCs", async () => {
+  const client = new FakeClient({
+    execute_stock_market_order: [orderRow()],
+  });
+  const repository = new SupabaseStockMarketTradingRepository(client as any);
+  await repository.executeOrder(orderInput());
+
+  assertEquals(client.calls.map((call) => call.functionName), [
     "execute_stock_market_order",
   ]);
 });
@@ -240,23 +221,12 @@ function orderInput(
   };
 }
 
-function portfolioRow(overrides: Record<string, unknown> = {}) {
-  return {
-    portfolio_id: "00000000-0000-4000-8000-000000000301",
-    game_session_id: GAME_SESSION_ID,
-    player_session_id: PLAYER_SESSION_ID,
-    cash_balance: 10000,
-    reserved_cash: 0,
-    realized_pnl: 0,
-    ...overrides,
-  };
-}
-
 function orderRow(overrides: Record<string, unknown> = {}) {
   return {
     order_id: ORDER_ID,
     game_session_id: GAME_SESSION_ID,
     player_session_id: PLAYER_SESSION_ID,
+    player_id: PLAYER_ID,
     stock_asset_id: STOCK_ASSET_ID,
     ticker: "AURA",
     side: "buy",
@@ -266,7 +236,7 @@ function orderRow(overrides: Record<string, unknown> = {}) {
     status: "filled",
     rejection_reason: null,
     cash_balance: 9500,
-    reserved_cash: 0,
+    cash_currency_code: "ECO",
     holding_quantity: 5,
     average_cost: 100,
     ...overrides,
