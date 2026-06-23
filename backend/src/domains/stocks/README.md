@@ -52,13 +52,26 @@ The result includes:
 
 - frontend-compatible market rows for snapshot and market normalizers
 - durable price tick records ready for a later persistence layer
-- student-facing movement explanations with component breakdowns
+- student-facing movement explanations with component breakdowns that teachers
+  can also use when discussing why a stock moved
 - deterministic synthetic timestamps such as `tick-12`
 - the same `gameSessionId` on all runtime outputs
 
 ## Future Phases
 
-Future work can add API handlers, persistence, scheduled tick orchestration,
-trading, portfolios, ledger integration, analyst features, admin controls, and
-audit logs. Those layers should call the pure engine rather than moving
-calculation logic into routes, Supabase functions, or frontend code.
+Future work should keep the calculation boundary intact:
+
+- V2 schema work should persist game-session-scoped stock templates, copied
+  session assets, price ticks, market events, and regimes without adding
+  trading behavior yet.
+- V3 runner work should load exactly one game session, call
+  `calculateNextStockMarketTick` with explicit inputs, and persist the returned
+  game-session-scoped rows/ticks in an orchestration layer outside this module.
+- V5 trading execution should settle market BUY/SELL activity only after the
+  read path is stable, and it must use ledger-safe transaction boundaries for
+  cash, shares, idempotency, and audit records.
+
+Future API handlers, persistence, scheduled tick orchestration, trading,
+portfolios, analyst features, admin controls, and audit logs should call the
+pure engine rather than moving calculation logic into routes, Supabase
+functions, or frontend code.

@@ -11,6 +11,7 @@ import {
   calculateNextStockMarketTick,
   getCountryExposureProfile,
   OFFICIAL_ECONOVARIA_COUNTRY_CODES,
+  SUPPORTED_STOCK_MARKET_SECTOR_KEYS,
 } from "./stockMarketEngine.ts";
 
 declare const Deno: {
@@ -58,9 +59,28 @@ Deno.test("stock market engine recognizes all ten official country exposure prof
   const result = calculateNextStockMarketTick(baseInput({ assets }));
 
   assertEquals(result.rows.length, OFFICIAL_ECONOVARIA_COUNTRY_CODES.length);
+  assert(result.rows.every((row) => row.gameSessionId === SESSION_ID));
   for (const countryCode of OFFICIAL_ECONOVARIA_COUNTRY_CODES) {
     assert(getCountryExposureProfile(countryCode) !== undefined);
   }
+});
+
+Deno.test("stock market engine accepts the required classroom sector categories", () => {
+  const assets = SUPPORTED_STOCK_MARKET_SECTOR_KEYS.map((sector, index) =>
+    baseAsset({
+      assetId: `asset-${sector.toLowerCase()}`,
+      ticker: `S${index}`,
+      companyName: `${sector} Test Co`,
+      sector,
+      countryCode: OFFICIAL_ECONOVARIA_COUNTRY_CODES[
+        index % OFFICIAL_ECONOVARIA_COUNTRY_CODES.length
+      ],
+    })
+  );
+  const result = calculateNextStockMarketTick(baseInput({ assets }));
+
+  assertEquals(result.rows.length, SUPPORTED_STOCK_MARKET_SECTOR_KEYS.length);
+  assert(result.rows.every((row) => row.gameSessionId === SESSION_ID));
 });
 
 Deno.test("stock market engine rejects invalid prices and missing official country codes", () => {
@@ -103,6 +123,32 @@ Deno.test("positive macro signals outperform high-rate risk signals", () => {
   assert(strong.ticks[0].price > weak.ticks[0].price);
   assert(strong.ticks[0].explanation.components.marketFactorPct > 0);
   assert(weak.ticks[0].explanation.components.marketFactorPct < 0);
+});
+
+Deno.test("high inflation and interest rates create downward market pressure", () => {
+  const neutral = calculateNextStockMarketTick(baseInput());
+  const stressed = calculateNextStockMarketTick(
+    baseInput({ macro: stressedMacro() }),
+  );
+
+  assert(
+    stressed.ticks[0].explanation.components.marketFactorPct <
+      neutral.ticks[0].explanation.components.marketFactorPct,
+  );
+  assert(stressed.ticks[0].price < neutral.ticks[0].price);
+});
+
+Deno.test("growth, confidence, and stability create upward market pressure", () => {
+  const neutral = calculateNextStockMarketTick(baseInput());
+  const strong = calculateNextStockMarketTick(
+    baseInput({ macro: bullishMacro() }),
+  );
+
+  assert(
+    strong.ticks[0].explanation.components.marketFactorPct >
+      neutral.ticks[0].explanation.components.marketFactorPct,
+  );
+  assert(strong.ticks[0].price > neutral.ticks[0].price);
 });
 
 Deno.test("company fundamentals affect the calculated movement", () => {
@@ -256,6 +302,44 @@ Deno.test("ticker shocks only affect the targeted company", () => {
   assertEquals(result.ticks[1].explanation.appliedShockIds, []);
 });
 
+Deno.test("positive ticker shocks increase price relative to a neutral baseline", () => {
+  const neutral = calculateNextStockMarketTick(baseInput());
+  const shocked = calculateNextStockMarketTick(
+    baseInput({
+      shocks: [
+        shock({
+          scope: "ticker",
+          targetKey: "AURA",
+          shockId: "aura-positive-contract",
+          magnitude: 0.06,
+        }),
+      ],
+    }),
+  );
+
+  assert(shocked.ticks[0].price > neutral.ticks[0].price);
+  assert(shocked.ticks[0].explanation.components.shockFactorPct > 0);
+});
+
+Deno.test("negative ticker shocks decrease price relative to a neutral baseline", () => {
+  const neutral = calculateNextStockMarketTick(baseInput());
+  const shocked = calculateNextStockMarketTick(
+    baseInput({
+      shocks: [
+        shock({
+          scope: "ticker",
+          targetKey: "AURA",
+          shockId: "aura-negative-recall",
+          magnitude: -0.06,
+        }),
+      ],
+    }),
+  );
+
+  assert(shocked.ticks[0].price < neutral.ticks[0].price);
+  assert(shocked.ticks[0].explanation.components.shockFactorPct < 0);
+});
+
 Deno.test("shock decay reduces later tick impact", () => {
   const immediate = calculateNextStockMarketTick(
     baseInput({
@@ -284,6 +368,24 @@ Deno.test("crisis regimes increase volatility and volume", () => {
 
   assert(crisis.ticks[0].currentVolatility > sideways.ticks[0].currentVolatility);
   assert(crisis.ticks[0].volume > sideways.ticks[0].volume);
+});
+
+Deno.test("recovery regimes support positive drift after crisis conditions", () => {
+  const crisis = calculateNextStockMarketTick(
+    baseInput({
+      assets: [baseAsset({ currentVolatility: 0.08 })],
+      regime: regime({ regime: "crisis" }),
+    }),
+  );
+  const recovery = calculateNextStockMarketTick(
+    baseInput({
+      assets: [baseAsset({ currentVolatility: 0.08 })],
+      regime: regime({ regime: "recovery" }),
+    }),
+  );
+
+  assert(recovery.ticks[0].price > crisis.ticks[0].price);
+  assert(recovery.ticks[0].explanation.components.regimeFactorPct > 0);
 });
 
 Deno.test("high-beta assets react more strongly to market factors", () => {
