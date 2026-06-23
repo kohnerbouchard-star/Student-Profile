@@ -120,7 +120,7 @@ snapshots exist. It loads the latest `country_economic_snapshots` for countries
 represented by active stock assets, maps each latest snapshot into a
 `StockMarketCountryInput`, and builds `StockMarketMacroInput` by equal-weight
 averaging those snapshots. `globalDemandIndex` uses the V3 proxy average of
-consumer confidence, business confidence, and export strength. If no country
+consumer confidence, business confidence, and export strength converted onto the confidence-index scale. If no country
 snapshots exist for active stock countries, V3 falls back to neutral macro
 `{ gameSessionId }` and passes `countries: []`.
 

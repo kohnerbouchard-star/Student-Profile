@@ -175,7 +175,7 @@ Deno.test("stock runner repository maps active assets, events, regimes, countrie
   assertEquals(state.countries[0].countryCode, "SOLVEND");
   assertEquals(state.countries[0].gdpGrowthRate, 0.04);
   assertEquals(state.macro.gdpGrowthRate, 0.04);
-  assertEquals(state.macro.globalDemandIndex, 77.066667);
+  assertEquals(state.macro.globalDemandIndex, 116.666667);
   assertEquals(state.sectors, []);
 });
 
@@ -229,7 +229,7 @@ Deno.test("stock runner repository averages macro from latest represented-countr
   assertEquals(state.macro.inflationRate, 0.03);
   assertEquals(state.macro.consumerConfidenceIndex, 105);
   assertEquals(state.macro.businessConfidenceIndex, 105);
-  assertEquals(state.macro.globalDemandIndex, 70.333333);
+  assertEquals(state.macro.globalDemandIndex, 103.333333);
 });
 
 Deno.test("stock runner repository falls back to neutral macro and empty countries when snapshots are missing", async () => {

@@ -839,9 +839,19 @@ function averageGlobalDemand(
     sum +
     toNumber(snapshot.consumer_confidence_index) +
     toNumber(snapshot.business_confidence_index) +
-    toNumber(snapshot.export_strength_index), 0);
+    toIndexScale(snapshot.export_strength_index), 0);
 
   return round(total / (values.length * 3));
+}
+
+function toIndexScale(value: number | string | JsonValue | undefined | null): number {
+  const numericValue = toNumber(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return Number.NaN;
+  }
+
+  return Math.abs(numericValue) <= 2 ? numericValue * 100 : numericValue;
 }
 
 function toNumber(value: number | string | JsonValue | undefined | null): number {
