@@ -57,6 +57,31 @@ The result includes:
 - deterministic synthetic timestamps such as `tick-12`
 - the same `gameSessionId` on all runtime outputs
 
+## V2 Schema Foundation
+
+V2 adds the database foundation for market data without adding routes, runner
+logic, frontend integration, trading execution, portfolio accounting, or ledger
+writes.
+
+The schema separates global reference data from runtime game data:
+
+- `stock_templates` stores reusable global stock templates that can seed a
+  game. Templates do not contain live prices for a classroom session.
+- `game_session_stock_assets` stores the authoritative runtime stocks for one
+  game session. A ticker such as `FROSTMIN` in two different games is stored as
+  two separate runtime assets.
+- `stock_price_ticks` stores append-only per-game, per-asset tick history that a
+  future runner can write after calling `calculateNextStockMarketTick`.
+- `stock_market_events` stores game-session-scoped shocks/events for a future
+  runner to pass into the engine.
+- `stock_market_regimes` stores game-session-scoped market regime state or
+  schedule inputs.
+
+Every runtime table includes `game_session_id`. Future frontend read integration
+should read market rows/ticks from backend-owned runtime data. Future trading
+execution must settle through ledger-safe transaction boundaries for cash,
+shares, idempotency, fills, reservations, and audit records.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
