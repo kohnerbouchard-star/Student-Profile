@@ -19,9 +19,11 @@ The first implementation should be a pure TypeScript engine that accepts a compl
 
 The most important architecture rule is game-session isolation. Every runtime market object must belong to exactly one `gameSessionId`. A stock in Game A and a stock with the same ticker in Game B may share a global template, but their prices, ticks, events, regimes, generated history, holdings, orders, and fills must never share runtime state.
 
+Country exposure should not be hard-coded from this research summary. The stock-market engine should use [`docs/worldbuilding/econovaria-country-lore-v1.md`](../worldbuilding/econovaria-country-lore-v1.md) as the source of truth for country exposure templates, market events, country shocks, company archetypes, and movement explanation language. This research document summarizes that lore only to explain how it should shape the engine.
+
 ## Current Repository Evidence
 
-Repository inspected: `kohnerbouchard-star/Student-Profile` on `main`.
+Repository inspected: `kohnerbouchard-star/Student-Profile` on `main`, plus the active research branch `docs/stock-market-simulation-research-v1`.
 
 Evidence files inspected:
 
@@ -35,6 +37,7 @@ Evidence files inspected:
 - [`backend/src/supabase/tableTypes.ts`](https://github.com/kohnerbouchard-star/Student-Profile/blob/main/backend/src/supabase/tableTypes.ts)
 - [`backend/supabase/migrations/20260621004500_create_country_profiles_v1.sql`](https://github.com/kohnerbouchard-star/Student-Profile/blob/main/backend/supabase/migrations/20260621004500_create_country_profiles_v1.sql)
 - [`backend/src/domains/countries/contracts/countryProfileContracts.ts`](https://github.com/kohnerbouchard-star/Student-Profile/blob/main/backend/src/domains/countries/contracts/countryProfileContracts.ts)
+- Source-of-truth country lore path to use for future engine work: [`docs/worldbuilding/econovaria-country-lore-v1.md`](../worldbuilding/econovaria-country-lore-v1.md)
 
 Confirmed current state:
 
@@ -46,15 +49,20 @@ Confirmed current state:
 6. `backend/src/supabase/tableTypes.ts` includes core session/settings types, mutation idempotency, store purchase quotes, store purchases, inventory holdings, and inventory events. It does not define the full stock runtime schema needed for `stock_assets`, `game_session_stock_assets`, `stock_price_ticks`, `stock_market_events`, `stock_market_regimes`, `stock_orders`, `stock_fills`, `stock_trades`, `player_portfolio_holdings`, or stock reservations.
 7. Repository search for stock runtime schema terms returned no matching implementation files. The schema readiness audit also identifies stock assets, price ticks, orders, fills/trades, portfolio holdings, and reservations as missing.
 8. The country profile migration provides useful world-state foundations: global `country_profiles`, per-game difficulty settings, per-game country economic baselines, per-game `country_economic_snapshots`, per-game `country_event_impacts`, and per-game player country assignments.
-9. The Eco Novaria countries and capitals are: Northreach - Frostgate, Yrethia - Sableport, Thaloris - Dusk Harbor, Solvend - Aurora Spire, Eldoran - Crescent Bay, Valerion - Glassfall, Lumenor - Starfall, Syndalis - Blacklight, Xalvoria - Emberhall, and Dravenlok - Ironhold.
+9. The Eco Novaria countries and capitals are: Northreach - Frostgate, Yrethia - Sableport, Thaloris - Dusk Harbor, Solvend - Aurora Spire, Eldoran - Crescent Bay, Valerion - Glassfall, Lumenor - Starfall, Xalvoria - Emberhall, Dravenlok - Ironhold, and Syndalis - Blacklight.
+10. All ten countries now have official market exposure lore. The engine should use `docs/worldbuilding/econovaria-country-lore-v1.md` as the country exposure source of truth instead of treating any country as a neutral placeholder.
 
 Conclusion: the first stock implementation should be a pure calculation engine. The repo has frontend display expectations and country-economic foundations, but does not yet have the stock runtime schema or route surface required for authoritative assets, ticks, orders, fills, holdings, reservations, or execution.
 
 ## Research Method
 
-Web source verification was performed on 2026-06-23. No later source-verification section is needed for this document.
+Web source verification was performed on 2026-06-23. No later source-verification section is needed for the external model research in this document.
 
-Primary and supporting sources:
+Internal source of truth for country exposure:
+
+- [`docs/worldbuilding/econovaria-country-lore-v1.md`](../worldbuilding/econovaria-country-lore-v1.md) should define the official country identities, core industries, market exposure, positive/negative market events, stock-market behavior, economic blocs, country events, company archetypes, and future movement explanation language.
+
+Primary and supporting external sources:
 
 - GBM and Monte Carlo: [Investopedia, Monte Carlo Simulation with Geometric Brownian Motion](https://www.investopedia.com/articles/07/montecarlo.asp), [Investopedia, Black-Scholes Model](https://www.investopedia.com/terms/b/blackscholes.asp)
 - Factor models: [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html), [Description of Fama/French Factors](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/f-f_factors.html)
@@ -80,7 +88,7 @@ The recommendation uses these model families as design inspiration, but delibera
 | Regime switching | Bull, bear, crisis, recovery, rotation behavior | Hidden inference is unnecessary for V1 | Medium | Excellent | Use explicit admin-selected regimes |
 | Agent-based markets | Herding, heterogeneous agents, feedback loops | Hard to control, explain, and test | High | Poor | Defer; borrow sentiment/liquidity ideas only |
 | Limit order book / exchange simulation | Bids, asks, matching, partial fills, slippage | Requires orders, holdings, reservations, concurrency | Very high | Poor | Defer until execution phases |
-| Macro-economic agent simulation | Whole-economy feedback and policy experiments | Too broad for a stock tick engine | Very high | Poor | Defer; consume country snapshots instead |
+| Macro-economic agent simulation | Whole-economy feedback and policy experiments | Too broad for a stock tick engine | Very high | Poor | Defer; consume country snapshots and lore-derived exposures instead |
 | Educational/business simulators | Classroom safety, virtual portfolios, engagement | Often rely on real-world market data | Low to medium | Useful inspiration | Use product principles, not real-market dependency |
 
 ## Model Family Notes
@@ -117,7 +125,7 @@ The direct model is too complex for V1, calibration-heavy, and not needed for a 
 
 ### 5. Jump Diffusion and Stochastic-Volatility-Jump Models
 
-Jump diffusion adds discontinuous price jumps to otherwise continuous dynamics. This maps well to classroom news: sanctions, contract wins, supply-chain disruption, export restrictions, rate hikes, energy shocks, and political stability events.
+Jump diffusion adds discontinuous price jumps to otherwise continuous dynamics. This maps well to classroom news: sanctions, contract wins, supply-chain disruption, export restrictions, rate hikes, energy shocks, cyber events, financial scandals, logistics disruption, public legitimacy events, and political stability events.
 
 V1 should not use random unexplainable jumps. It should use explicit `StockMarketShockInput` objects with scope, target, magnitude, decay, confidence, volatility impact, volume impact, headline, and explanation.
 
@@ -143,7 +151,7 @@ V1 should not implement this. It belongs after basic market data, schema, and po
 
 Macro ABMs model households, firms, banks, governments, prices, labor, credit, trade, and policy. They are useful for whole-economy experiments, but far broader than a stock tick engine.
 
-Eco Novaria should defer macro ABM implementation and instead consume the repo's existing country economic snapshots as inputs to stock factors.
+Eco Novaria should defer macro ABM implementation and instead consume the repo's existing country economic snapshots plus lore-derived country exposure templates.
 
 ### 10. Educational and Business Simulation Market Models
 
@@ -155,7 +163,7 @@ Use the educational principles: risk-free framing, virtual money, transparent ru
 
 The recommended engine hierarchy is:
 
-World state -> macro conditions -> country conditions -> sector conditions -> company fundamentals -> news/events -> volatility/liquidity -> price movement -> explanation
+World state -> macro conditions -> country lore exposure templates -> country conditions -> sector conditions -> company fundamentals -> news/events -> volatility/liquidity -> price movement -> explanation
 
 The conceptual return formula is:
 
@@ -198,18 +206,19 @@ Recommended calculation flow:
 1. Validate one top-level `gameSessionId` and reject mismatched runtime inputs.
 2. Sort assets by stable key for deterministic output.
 3. Build deterministic pseudo-random state from `gameSessionId`, `seed`, `tickIndex`, and `ticker`.
-4. Resolve regime drift, volatility multiplier, news sensitivity, and volume multiplier.
-5. Compute market factor from macro conditions.
-6. Compute country factor from country exposures and country inputs.
-7. Compute sector factor from sector conditions and sector weights.
-8. Compute fundamentals factor from revenue growth, margins, debt, cash, innovation, supply-chain risk, political exposure, commodity exposure, liquidity, beta, and volatility.
-9. Apply scoped global/country/sector/ticker shocks with confidence and decay.
-10. Update volatility memory.
-11. Apply bounded seeded volatility noise.
-12. Apply momentum and mean reversion.
-13. Compute `nextPrice = currentPrice * exp(boundedLogReturn)` with a minimum price such as 0.01.
-14. Derive previous close, open, high, low, volume, market cap, beta, history, last updated, and explanation.
-15. Return frontend-compatible market rows and tick outputs.
+4. Load or resolve country exposure templates from `docs/worldbuilding/econovaria-country-lore-v1.md`, then convert them into structured sector, event, and macro sensitivities.
+5. Resolve regime drift, volatility multiplier, news sensitivity, and volume multiplier.
+6. Compute market factor from macro conditions.
+7. Compute country factor from lore-derived country exposures and country inputs.
+8. Compute sector factor from sector conditions and sector weights.
+9. Compute fundamentals factor from revenue growth, margins, debt, cash, innovation, supply-chain risk, political exposure, commodity exposure, liquidity, beta, and volatility.
+10. Apply scoped global/country/sector/ticker shocks with confidence and decay.
+11. Update volatility memory.
+12. Apply bounded seeded volatility noise.
+13. Apply momentum and mean reversion.
+14. Compute `nextPrice = currentPrice * exp(boundedLogReturn)` with a minimum price such as 0.01.
+15. Derive previous close, open, high, low, volume, market cap, beta, history, last updated, and explanation.
+16. Return frontend-compatible market rows and tick outputs.
 
 ### Market Regimes
 
@@ -282,7 +291,12 @@ Examples:
 - logistics disruption;
 - political stability improvement;
 - rare mineral export restriction;
-- AI infrastructure breakthrough.
+- AI infrastructure breakthrough;
+- cyber-defense demand surge;
+- data breach or fintech regulatory crackdown;
+- diplomatic agreement or conference boycott;
+- infrastructure finance deal or foreign default;
+- industrial stimulus, factory accident, or component shortage.
 
 ### Company Fundamentals
 
@@ -306,24 +320,27 @@ Expected effects:
 
 - high debt plus rising interest rates creates negative pressure;
 - high cash reserves reduce crisis downside;
-- high innovation helps in technology, AI/aerospace, and clean-energy boom regimes;
+- high innovation helps in technology, AI/aerospace, cybersecurity, fintech, and clean-energy boom regimes;
 - high supply-chain risk suffers from logistics shocks;
-- high commodity exposure reacts to commodity and energy events.
+- high commodity exposure reacts to commodity and energy events;
+- high institutional exposure reacts to diplomacy, media trust, public budgets, and legitimacy shocks;
+- high capital-flow exposure reacts to interest rates, sanctions, debt crises, and foreign defaults.
 
 ## Game-Session Isolation Architecture
 
 Every stock market simulation must be scoped to exactly one `gameSessionId`.
 
-A stock market in Game A and a stock market in Game B may use the same ticker symbols, sectors, company names, or global templates, but prices, events, histories, regimes, volatility state, holdings, future orders, and future fills must remain independent unless an explicit future admin-controlled template copy feature copies them.
+A stock market in Game A and a stock market in Game B may use the same ticker symbols, sectors, company names, global country lore, or global templates, but prices, events, histories, regimes, volatility state, holdings, future orders, and future fills must remain independent unless an explicit future admin-controlled template copy feature copies them.
 
 ### Global/reference layer
 
 These may be global if they are templates/reference data only:
 
+- country lore from `docs/worldbuilding/econovaria-country-lore-v1.md`;
 - stock templates;
 - sector definitions;
 - default company archetypes;
-- country exposure templates;
+- country exposure templates derived from official lore;
 - reusable simulation presets.
 
 ### Game-session runtime layer
@@ -340,7 +357,7 @@ These must be scoped by `game_session_id`:
 
 V2 schema planning rule:
 
-- stock templates may be global;
+- stock templates and official country lore may be global/reference data;
 - game-session stock assets must be `game_session_id` scoped;
 - price ticks must be `game_session_id` scoped;
 - events/shocks must be `game_session_id` scoped;
@@ -353,13 +370,13 @@ V2 schema planning rule:
 
 Market factor: driven by GDP growth, inflation, interest rates, unemployment, confidence, political stability, infrastructure, energy security, and market risk.
 
-Country factor: driven by country exposure weights and country-specific GDP growth, inflation, interest rates, trade balance, export strength, supply constraints, import dependency, market risk, political stability, infrastructure, and energy security.
+Country factor: driven by country exposure weights and country-specific GDP growth, inflation, interest rates, trade balance, export strength, supply constraints, import dependency, market risk, political stability, infrastructure, energy security, institutions, capital flows, cyber risk, and logistics access. The baseline country exposure template should be derived from `docs/worldbuilding/econovaria-country-lore-v1.md`.
 
 Sector factor: driven by sector drift, demand, supply constraints, news sensitivity, volatility multiplier, and volume multiplier.
 
 Company factor: driven by fundamentals, beta, liquidity, long-run volatility, country exposure, sector exposure, and commodity exposure.
 
-Event factor: aggregates active shocks by global, country, sector, and ticker scope, then applies confidence, decay, and regime news sensitivity.
+Event factor: aggregates active shocks by global, country, sector, and ticker scope, then applies confidence, decay, country exposure, and regime news sensitivity.
 
 Regime factor: supplies drift, volatility multiplier, news sensitivity, volume multiplier, beta multiplier, and optional sector rotation weights.
 
@@ -371,42 +388,57 @@ Momentum and mean reversion: momentum allows recent trends to persist slightly; 
 
 ## Econovaria Country and Sector Mapping
 
+### Source Of Truth
+
+Use [`docs/worldbuilding/econovaria-country-lore-v1.md`](../worldbuilding/econovaria-country-lore-v1.md) as the country exposure source of truth. This research doc should not become a competing lore file. Future stock-market implementation should derive country exposure templates, event hooks, company archetypes, and explanation copy from the worldbuilding document.
+
+All ten countries now have meaningful market exposure. Do not treat Lumenor, Xalvoria, Dravenlok, or Syndalis as neutral placeholders.
+
 ### Countries
 
-Use these ten Eco Novaria countries and capitals:
-
-| Country code | Country | Capital | V1 exposure recommendation |
+| Country code | Country | Capital | Official market exposure summary |
 | --- | --- | --- | --- |
-| `NORTHREACH` | Northreach | Frostgate | Cold resource-security state; rare minerals, energy, defense/security, infrastructure, arctic logistics, northern shipping routes. |
-| `YRETHIA` | Yrethia | Sableport | Regulated maritime trade republic; container ports, shipping finance, customs, insurance, transshipment, infrastructure. |
-| `THALORIS` | Thaloris | Dusk Harbor | High-risk port economy; re-export trade, repair yards, salvage, informal logistics, gray-zone commerce. |
-| `SOLVEND` | Solvend | Aurora Spire | Research and high-altitude technology state; AI, aerospace, universities, technical expertise, precision engineering. |
-| `ELDORAN` | Eldoran | Crescent Bay | Central stability zone; agriculture, logistics, commodity pricing, food security, internal transport, market stability. |
-| `VALERION` | Valerion | Glassfall | Wealthy clean-tech and advanced manufacturing economy; clean energy, finance, high-value industry, capital flows. |
-| `LUMENOR` | Lumenor | Starfall | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `SYNDALIS` | Syndalis | Blacklight | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `XALVORIA` | Xalvoria | Emberhall | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
-| `DRAVENLOK` | Dravenlok | Ironhold | Repo-backed country; use neutral/admin-defined exposure until sourced economy lore is documented. |
+| `NORTHREACH` | Northreach | Frostgate | Arctic resource state and northern logistics power; rare minerals, natural gas, energy security, arctic logistics, mining, defense infrastructure, cold-climate engineering, and northern shipping routes. Reacts strongly to mineral demand, energy prices, defense spending, sanctions, infrastructure reliability, and arctic corridor access. |
+| `YRETHIA` | Yrethia | Sableport | Maritime trade republic and shipping-finance hub; container shipping, customs, maritime insurance, freight finance, port automation, ship repair, transshipment, and logistics software. Reacts to trade volume, shipping rates, port congestion, customs policy, insurance costs, and rerouted trade. |
+| `THALORIS` | Thaloris | Dusk Harbor | High-risk port economy and informal trade gateway; re-export trade, salvage, ship repair, bonded warehouses, secondary markets, informal logistics, gray-zone finance, and repair yards. Reacts to sanctions, shortages, logistics disruption, salvage demand, trade restrictions, and enforcement crackdowns. |
+| `SOLVEND` | Solvend | Aurora Spire | Research economy and high-altitude technology state; AI, aerospace, research universities, precision engineering, software, technical services, patents, advanced manufacturing, and satellite systems. Reacts to research funding, AI demand, aerospace contracts, rates, talent migration, patent disputes, and technology pressure. |
+| `ELDORAN` | Eldoran | Crescent Bay | Central market economy and agricultural-logistics anchor; agriculture, food security, commodity pricing, wholesale markets, inland logistics, rail and freight, consumer goods, grain terminals, and market exchanges. Reacts to food prices, crop yields, logistics stability, commodity contracts, inflation, transport capacity, and regional demand. |
+| `VALERION` | Valerion | Glassfall | Wealthy clean-energy and services economy; clean energy, hydropower, water infrastructure, tourism, premium services, finance, luxury districts, clean transit, and high-end real estate. Reacts to clean-energy demand, hydropower output, water access, tourism, capital flows, environmental regulation, and luxury consumption. |
+| `LUMENOR` | Lumenor | Starfall | Southern cultural, education, and public-sector economy; education, universities, media, public administration, diplomacy, cultural institutions, observatories, archives, civic infrastructure, and international conferences. Reacts to education spending, media trust, diplomatic stability, public-sector investment, cultural exports, tourism, and institutional credibility. |
+| `XALVORIA` | Xalvoria | Emberhall | Old-money financial-industrial power; banking, infrastructure finance, sovereign wealth, luxury manufacturing, energy resources, construction, capital markets, political influence, cross-border acquisitions, and megaprojects. Reacts to capital flows, interest rates, sovereign investment, infrastructure contracts, debt crises, luxury demand, resource prices, and political backlash. |
+| `DRAVENLOK` | Dravenlok | Ironhold | Heavy-industrial manufacturing state under pressure; steel, machinery, vehicles, defense manufacturing, rail, heavy logistics, energy-intensive production, state-owned enterprises, industrial exports, and armored logistics. Reacts to industrial demand, defense spending, steel prices, energy costs, sanctions, export access, components, rail capacity, and state stimulus. |
+| `SYNDALIS` | Syndalis | Blacklight | Data, cybersecurity, finance, and covert influence state; cybersecurity, fintech, data centers, surveillance technology, private intelligence, encrypted finance, undersea cable routes, platform companies, market data infrastructure, and cyber-defense systems. Reacts to cyber-defense demand, data-center expansion, fintech regulation, market volatility, trust crises, undersea cable security, platform control, and information warfare. |
 
-The V1 engine should support all ten country codes. The six countries with supplied economy context can receive opinionated default exposure templates now. Lumenor, Syndalis, Xalvoria, and Dravenlok should remain neutral or teacher/admin configured until their economy roles are documented.
+### Economic Blocs
+
+| Bloc | Countries | Stock-market logic |
+| --- | --- | --- |
+| Northern Resource Bloc | Northreach, Solvend | Northreach resource shocks can affect Solvend technology and aerospace firms; Solvend breakthroughs can increase demand for Northreach minerals. |
+| Western Maritime Corridor | Yrethia, Thaloris | Trade disruption can hurt Yrethia's stable trade flows while benefiting Thaloris's opportunistic logistics; crackdowns tend to help Yrethia and hurt Thaloris. |
+| Central Stability Zone | Eldoran, Valerion, Lumenor | Strong food, energy, services, institutions, and diplomacy should lower global volatility; failures in food, water/energy, or legitimacy should raise volatility. |
+| Eastern Pressure Zone | Xalvoria, Dravenlok, Syndalis | Capital, industry, and data power can produce larger geopolitical shocks through debt diplomacy, industrial nationalism, sanctions, cyber events, and financial routing. |
 
 ### Sectors
 
 | Sector | Primary sensitivities | Example country fit |
 | --- | --- | --- |
-| Energy | Energy security, commodity shocks, inflation, infrastructure, political risk | Northreach, Valerion |
-| Rare minerals | Export strength, sanctions, trade restrictions, technology demand, defense demand | Northreach |
-| Shipping/logistics | Trade balance, infrastructure, import dependency, port disruption, fuel costs | Yrethia, Thaloris, Eldoran |
-| Technology | Business confidence, interest rates, innovation, supply-chain risk, AI breakthroughs | Solvend, Valerion |
-| AI/aerospace | Innovation, technical expertise, defense/security, energy infrastructure | Solvend, Valerion, Northreach |
-| Agriculture/commodities | Food security, inflation, commodity prices, transport | Eldoran |
-| Food security | Consumer demand, agriculture, logistics, political stability | Eldoran |
-| Finance/insurance | Interest rates, stability, trade finance, volatility, capital flows | Yrethia, Valerion |
-| Defense/security | Geopolitical risk, public contracts, rare minerals, infrastructure security | Northreach, Solvend |
-| Consumer goods | Consumer confidence, inflation, unemployment, supply-chain risk | Eldoran, Yrethia, Valerion |
-| Clean energy | Energy security, subsidies, technology, capital costs, infrastructure | Valerion, Solvend |
-| Infrastructure | Public investment, rates, political stability, logistics, energy security | Northreach, Yrethia, Eldoran, Valerion |
-| Repair/salvage/re-export trade | Port disruption, logistics risk, trade restrictions, high-risk commerce | Thaloris |
+| Energy | Energy security, commodity shocks, inflation, infrastructure, political risk | Northreach, Valerion, Xalvoria, Dravenlok |
+| Rare minerals | Export strength, sanctions, trade restrictions, technology demand, defense demand | Northreach, Solvend |
+| Shipping/logistics | Trade balance, infrastructure, import dependency, port disruption, fuel costs | Yrethia, Thaloris, Eldoran, Dravenlok |
+| Technology | Business confidence, interest rates, innovation, supply-chain risk, cyber risk, AI breakthroughs | Solvend, Syndalis, Valerion |
+| AI/aerospace | Innovation, technical expertise, defense/security, satellite systems, energy infrastructure | Solvend, Northreach, Valerion |
+| Agriculture/commodities | Food security, inflation, crop yields, commodity prices, transport | Eldoran |
+| Food security | Consumer demand, agriculture, logistics, public stability | Eldoran, Lumenor |
+| Finance/insurance | Interest rates, stability, trade finance, volatility, capital flows, defaults | Yrethia, Valerion, Xalvoria, Syndalis |
+| Defense/security | Geopolitical risk, public contracts, rare minerals, infrastructure security, cyber-defense | Northreach, Dravenlok, Solvend, Syndalis |
+| Consumer goods | Consumer confidence, inflation, unemployment, logistics, luxury demand | Eldoran, Valerion, Xalvoria, Yrethia |
+| Clean energy | Energy security, hydropower, subsidies, technology, capital costs, infrastructure | Valerion, Solvend, Northreach |
+| Infrastructure | Public investment, rates, political stability, logistics, energy security, megaprojects | Northreach, Yrethia, Eldoran, Valerion, Xalvoria, Dravenlok |
+| Repair/salvage/re-export trade | Port disruption, logistics risk, sanctions, shortages, trade restrictions | Thaloris, Yrethia |
+| Education/media/diplomacy | Public budgets, institutional trust, conferences, cultural exports, legitimacy | Lumenor |
+| Cybersecurity/fintech/data | Data demand, cyber-defense, regulation, platform trust, undersea cables, market volatility | Syndalis |
+| Heavy industry/manufacturing | Steel, machinery, vehicles, defense, energy costs, component access, export markets | Dravenlok, Xalvoria |
+| Luxury/premium services | Capital flows, tourism, premium demand, reputation, real estate, finance | Valerion, Xalvoria |
 
 ## Proposed Input and Output Contracts
 
@@ -503,6 +535,9 @@ interface StockMarketCountryInput {
   energySecurityIndex?: number;
   supplyConstraintIndex?: number;
   importDependencyIndex?: number;
+  institutionalTrustIndex?: number;
+  cyberRiskIndex?: number;
+  capitalFlowIndex?: number;
 }
 
 interface StockMarketSectorInput {
@@ -679,7 +714,10 @@ Additional example explanations:
 - `SABLEFREIGHT rose 1.8% because Yrethia port activity improved and shipping volume increased during a recovery regime.`
 - `AURORAAI rose 3.1% after an AI infrastructure breakthrough boosted Solvend technology firms with high innovation scores.`
 - `GLASSGRID fell 1.2% because higher interest rates pressured clean-energy infrastructure firms with large financing needs.`
-- `CRESCENTFOOD gained 0.9% as Eldoran food-security demand improved while broad market conditions stayed sideways.`
+- `STARLEARN rose 0.8% after a major conference and education-export deal improved Lumenor institutional demand.`
+- `EMBERBANK fell 2.1% after a foreign default raised concern about Xalvorian infrastructure finance exposure.`
+- `IRONRAIL gained 1.6% as Dravenlok industrial stimulus lifted machinery and rail contractors.`
+- `BLACKDATA dropped 3.4% after a Syndalis platform trust crisis and regulatory crackdown hit fintech and data firms.`
 
 ## Testing Strategy
 
@@ -700,6 +738,8 @@ Future pure-engine tests:
 13. Volatility memory carries elevated volatility into the next tick.
 14. Game-session isolation: identical tickers in two different `gameSessionId`s must not share runtime state.
 15. Output contains all fields needed by the existing frontend market normalizer.
+16. Country exposure templates cover all ten countries from `docs/worldbuilding/econovaria-country-lore-v1.md`.
+17. Lumenor, Xalvoria, Dravenlok, and Syndalis produce non-neutral country factor behavior when relevant shocks apply.
 
 Additional recommended tests:
 
@@ -709,6 +749,7 @@ Additional recommended tests:
 - High cash reserves reduce crisis downside.
 - History is capped to `maxHistoryPoints` and remains sorted by tick.
 - Explanation `finalReturnPct` matches the computed price movement within rounding tolerance.
+- Movement explanations can name lore-backed country causes without duplicating source-of-truth text inside the engine.
 
 ## Implementation Roadmap
 
@@ -718,11 +759,11 @@ This PR. No implementation code, migrations, routes, frontend changes, trading e
 
 ### V1: Pure deterministic calculation engine, no DB, no routes, no frontend
 
-Build a pure TypeScript engine that accepts `StockMarketEngineInput`, returns `StockMarketEngineResult`, and includes unit tests for determinism, positive prices, shocks, regimes, volatility memory, liquidity, beta, and game-session isolation.
+Build a pure TypeScript engine that accepts `StockMarketEngineInput`, returns `StockMarketEngineResult`, and includes unit tests for determinism, positive prices, shocks, regimes, volatility memory, liquidity, beta, game-session isolation, and complete ten-country lore-backed exposure coverage.
 
 ### V2: Game-session-scoped schema foundation
 
-Add schema only after V1 is proven. Runtime market tables must be scoped by `game_session_id`, and portfolio/order/fill tables must also include `player_id` where player-specific.
+Add schema only after V1 is proven. Runtime market tables must be scoped by `game_session_id`, and portfolio/order/fill tables must also include `player_id` where player-specific. Global country lore may remain reference data; game-session market state must not.
 
 ### V3: Stock-market runner that writes game-session-scoped ticks
 
@@ -751,6 +792,19 @@ Let teachers/admins schedule regimes, author events, pause markets, and control 
 ## Best Course of Action
 
 Build V1 first: a pure deterministic calculation engine that produces stock market rows, price ticks, volatility state, chart history, and explanation breakdowns from game-session-scoped input.
+
+For country exposure, build from `docs/worldbuilding/econovaria-country-lore-v1.md` rather than from duplicated hard-coded lore inside the engine. The engine should support all ten countries as meaningful exposure categories:
+
+- Northreach: rare minerals, energy, defense, arctic logistics;
+- Yrethia: shipping, insurance, freight finance, regulated trade;
+- Thaloris: re-export trade, salvage, high-risk logistics;
+- Solvend: AI, aerospace, research, precision engineering;
+- Eldoran: agriculture, commodities, food security, internal logistics;
+- Valerion: clean energy, water infrastructure, premium services, finance;
+- Lumenor: education, media, diplomacy, public services, civic legitimacy;
+- Xalvoria: banking, infrastructure finance, luxury industry, capital influence;
+- Dravenlok: steel, machinery, defense manufacturing, heavy logistics;
+- Syndalis: cybersecurity, fintech, data centers, covert market influence.
 
 Defer:
 
@@ -781,4 +835,5 @@ Suggested PR description:
 - No routes
 - No frontend changes
 - Includes game-session isolation rule
+- Uses `docs/worldbuilding/econovaria-country-lore-v1.md` as the country exposure source of truth
 - Recommends first implementation scope
