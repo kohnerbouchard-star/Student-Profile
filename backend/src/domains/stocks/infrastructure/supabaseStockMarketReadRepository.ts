@@ -19,10 +19,17 @@ interface SupabaseReadQueryResponse<T = unknown> {
   readonly error: SupabaseReadQueryError | null;
 }
 
-type StockMarketReadTableName = "game_session_stock_assets" | "stock_price_ticks";
+type StockMarketReadTableName =
+  | "game_sessions"
+  | "game_session_stock_assets"
+  | "stock_price_ticks";
 
 interface SupabaseStockMarketReadClient {
   from(tableName: StockMarketReadTableName): SupabaseStockMarketReadQueryBuilder;
+  rpc<Data = unknown>(
+    functionName: string,
+    args?: unknown,
+  ): PromiseLike<SupabaseReadQueryResponse<Data>>;
 }
 
 interface SupabaseStockMarketReadQueryBuilder {
@@ -37,6 +44,10 @@ interface SupabaseStockMarketReadFilterBuilder
     options?: { readonly ascending?: boolean },
   ): SupabaseStockMarketReadFilterBuilder;
   limit(count: number): SupabaseStockMarketReadFilterBuilder;
+}
+
+interface GameSessionReadRow {
+  readonly id: string;
 }
 
 interface GameSessionStockAssetReadRow {
@@ -104,6 +115,8 @@ export class SupabaseStockMarketReadRepository
   constructor(private readonly client: SupabaseStockMarketReadClient) {}
 
   async read(input: StockMarketReadInput): Promise<StockMarketReadResult> {
+    await this.assertGameSessionExists(input.gameSessionId);
+
     const requestedTicker = input.ticker ? normalizeTicker(input.ticker) : undefined;
     const [assetRows, latestTickRows] = await Promise.all([
       this.readAssets(input.gameSessionId, requestedTicker),
@@ -112,9 +125,7 @@ export class SupabaseStockMarketReadRepository
     const latestTickByAssetId = new Map<string, StockPriceTickReadRow>();
 
     for (const tick of latestTickRows) {
-      if (!latestTickByAssetId.has(tick.stock_asset_id)) {
-        latestTickByAssetId.set(tick.stock_asset_id, tick);
-      }
+      latestTickByAssetId.set(tick.stock_asset_id, tick);
     }
 
     const stocks = assetRows.map((asset) =>
@@ -129,11 +140,9 @@ export class SupabaseStockMarketReadRepository
       stocks,
     };
 
-    if (stocks.length === 0) {
+    if (!requestedTicker && stocks.length === 0) {
       return {
         ...result,
-        ticker: requestedTicker,
-        stock: requestedTicker ? null : undefined,
         history: input.includeHistory ? [] : undefined,
         emptyState: {
           reason: "stock_market_not_initialized",
@@ -156,6 +165,28 @@ export class SupabaseStockMarketReadRepository
         ? await this.readHistory(input.gameSessionId, requestedTicker, input.historyLimit)
         : undefined,
     };
+  }
+
+  private async assertGameSessionExists(gameSessionId: string): Promise<void> {
+    const response = await this.client
+      .from("game_sessions")
+      .select("id")
+      .eq("id", gameSessionId)
+      .limit(1);
+
+    if (response.error) {
+      throw mapReadError(response.error);
+    }
+
+    const rows = (response.data ?? []) as GameSessionReadRow[];
+
+    if (!rows[0]?.id) {
+      throw new StockMarketReadError(
+        "game_session_not_found",
+        "Game session could not be found.",
+        404,
+      );
+    }
   }
 
   private async readAssets(
@@ -185,24 +216,19 @@ export class SupabaseStockMarketReadRepository
     gameSessionId: string,
     ticker: string | undefined,
   ): Promise<readonly StockPriceTickReadRow[]> {
-    let query = this.client
-      .from("stock_price_ticks")
-      .select(STOCK_TICK_READ_SELECT)
-      .eq("game_session_id", gameSessionId);
-
-    if (ticker) {
-      query = query.eq("ticker", ticker);
-    }
-
-    const response = await query
-      .order("tick_index", { ascending: false })
-      .limit(5000);
+    const response = await this.client.rpc<readonly StockPriceTickReadRow[]>(
+      "read_latest_stock_market_ticks_for_game",
+      {
+        p_game_session_id: gameSessionId,
+        p_ticker: ticker ?? null,
+      },
+    );
 
     if (response.error) {
       throw mapReadError(response.error);
     }
 
-    return (response.data ?? []) as StockPriceTickReadRow[];
+    return response.data ?? [];
   }
 
   private async readHistory(
