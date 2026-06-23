@@ -128,6 +128,20 @@ export interface ApplyStockMarketRunnerTickRpcRow {
   readonly ticks_inserted: number;
 }
 
+export interface InitializeStockMarketAssetsForGameRpcArgs {
+  readonly p_game_session_id: UUID;
+  readonly p_mode?: "missing_only" | "reset_empty_only" | string;
+}
+
+export interface InitializeStockMarketAssetsForGameRpcRow {
+  readonly game_session_id: UUID;
+  readonly templates_available: number;
+  readonly assets_before: number;
+  readonly assets_inserted: number;
+  readonly baseline_ticks_inserted: number;
+  readonly assets_after: number;
+}
+
 export interface PlayerSessionsRow extends PlayerSessionRecord {
   readonly created_at: ISODateTimeString;
   readonly updated_at: ISODateTimeString;
@@ -562,6 +576,9 @@ export interface CoreSupabaseTables {
 
 export interface CoreSupabaseFunctions {
   readonly apply_stock_market_runner_tick: ReadonlyArray<ApplyStockMarketRunnerTickRpcRow>;
+  readonly initialize_stock_market_assets_for_game: ReadonlyArray<
+    InitializeStockMarketAssetsForGameRpcRow
+  >;
   readonly redeem_purchase_code_for_game: ReadonlyArray<RedeemPurchaseCodeForGameRpcRow>;
 }
 
