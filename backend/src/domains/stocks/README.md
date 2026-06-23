@@ -130,12 +130,50 @@ stock-sector table yet. It does not seed stock assets, update templates, touch
 trading, portfolio, order, fill, reservation, ledger, analyst, or admin-control
 behavior.
 
+## V3.5 Seed/Copy Foundation
+
+V3.5 adds fictional default `stock_templates` and a trusted backend-only seed
+copy path for initializing one game session before runner ticks or read-only
+market display.
+
+The `initialize_stock_market_assets_for_game` RPC copies active templates into
+`game_session_stock_assets` for one `gameSessionId`. It supports only
+`missing_only` and `reset_empty_only`, never deletes existing assets, never
+overwrites existing assets, and creates `tick_index = 0` baseline
+`stock_price_ticks` for newly inserted assets only. Baseline ticks use template
+base price for both `price` and `previous_price`, `log_return = 0`,
+`change_pct = 0`, `volume = 0`, and an initialization explanation JSON object.
+
+The seed/copy Edge Function lives at
+`supabase/functions/stock-market-seed-copy`, accepts only `POST`, uses
+`STOCK_MARKET_RUNNER_SECRET` plus `x-stock-market-runner-secret`, and does not
+schedule itself. One request initializes or tops up one game session.
+
+The seed/copy RPC is `SECURITY DEFINER`, uses a fixed `search_path`, revokes
+public execution, and grants execute only to `service_role`.
+
+## V4 Read-Only Market Data
+
+V4 adds a backend-only read endpoint at `supabase/functions/stock-market-read`.
+It accepts only `POST`, uses the same backend secret pattern, and performs no
+writes.
+
+Board requests read active `game_session_stock_assets` for the requested game
+session and include the latest tick volume from `stock_price_ticks`. Ticker
+requests return the requested stock plus history from `stock_price_ticks`, which
+is the authoritative graph-history source. `game_session_stock_assets.chart_history`
+may remain a small cached sparkline, but V4 read history does not depend on it.
+
+If no stocks exist for the requested game session, the read endpoint returns
+`ok: true`, an empty `stocks` array, and an `emptyState` with reason
+`stock_market_not_initialized` and recommended action `run_stock_market_seed_copy`.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
-- V4 read-only market data should expose backend-owned market snapshots and
-  tick history for classroom display without adding student stock writes.
+- Frontend/admin wiring should let trusted staff initialize one game session and
+  display the read-only market board without adding student stock writes.
 - V5 trading execution should settle market BUY/SELL activity only after the
   read path is stable, and it must use ledger-safe transaction boundaries for
   cash, shares, idempotency, and audit records.
