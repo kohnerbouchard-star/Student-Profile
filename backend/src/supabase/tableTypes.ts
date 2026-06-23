@@ -306,6 +306,228 @@ export interface InventoryEventInsert {
   readonly metadata?: JsonObject;
 }
 
+export type StockMarketEventScope = "global" | "country" | "sector" | "ticker";
+
+export type StockMarketRegimeName =
+  | "bull"
+  | "bear"
+  | "sideways"
+  | "crisis"
+  | "recovery"
+  | "sector_rotation";
+
+export interface StockTemplatesRow {
+  readonly id: UUID;
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly sector_key: string;
+  readonly country_code: string;
+  readonly description?: string | null;
+  readonly base_price: number;
+  readonly beta: number;
+  readonly liquidity: number;
+  readonly long_run_volatility: number;
+  readonly shares_outstanding?: number | null;
+  readonly fundamentals: JsonObject;
+  readonly country_exposure: JsonObject;
+  readonly sector_exposure: JsonObject;
+  readonly commodity_exposure: JsonObject;
+  readonly is_active: boolean;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface StockTemplateInsert {
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly sector_key: string;
+  readonly country_code: string;
+  readonly description?: string | null;
+  readonly base_price: number;
+  readonly beta: number;
+  readonly liquidity: number;
+  readonly long_run_volatility: number;
+  readonly shares_outstanding?: number | null;
+  readonly fundamentals?: JsonObject;
+  readonly country_exposure?: JsonObject;
+  readonly sector_exposure?: JsonObject;
+  readonly commodity_exposure?: JsonObject;
+  readonly is_active?: boolean;
+}
+
+export type StockTemplateUpdate = Partial<StockTemplateInsert>;
+
+export interface GameSessionStockAssetsRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly template_id?: UUID | null;
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly sector_key: string;
+  readonly country_code: string;
+  readonly description?: string | null;
+  readonly current_price: number;
+  readonly previous_close: number;
+  readonly open_price: number;
+  readonly day_high: number;
+  readonly day_low: number;
+  readonly market_cap?: number | null;
+  readonly shares_outstanding?: number | null;
+  readonly beta: number;
+  readonly liquidity: number;
+  readonly current_volatility: number;
+  readonly long_run_volatility: number;
+  readonly fair_value_anchor?: number | null;
+  readonly recent_returns: JsonValue[];
+  readonly chart_history: JsonValue[];
+  readonly fundamentals: JsonObject;
+  readonly country_exposure: JsonObject;
+  readonly sector_exposure: JsonObject;
+  readonly commodity_exposure: JsonObject;
+  readonly is_active: boolean;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface GameSessionStockAssetInsert {
+  readonly game_session_id: UUID;
+  readonly template_id?: UUID | null;
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly sector_key: string;
+  readonly country_code: string;
+  readonly description?: string | null;
+  readonly current_price: number;
+  readonly previous_close: number;
+  readonly open_price: number;
+  readonly day_high: number;
+  readonly day_low: number;
+  readonly market_cap?: number | null;
+  readonly shares_outstanding?: number | null;
+  readonly beta: number;
+  readonly liquidity: number;
+  readonly current_volatility: number;
+  readonly long_run_volatility: number;
+  readonly fair_value_anchor?: number | null;
+  readonly recent_returns?: JsonValue[];
+  readonly chart_history?: JsonValue[];
+  readonly fundamentals?: JsonObject;
+  readonly country_exposure?: JsonObject;
+  readonly sector_exposure?: JsonObject;
+  readonly commodity_exposure?: JsonObject;
+  readonly is_active?: boolean;
+}
+
+export type GameSessionStockAssetUpdate = Partial<GameSessionStockAssetInsert>;
+
+export interface StockPriceTicksRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly tick_index: number;
+  readonly ticker: string;
+  readonly price: number;
+  readonly previous_price: number;
+  readonly log_return: number;
+  readonly change_pct: number;
+  readonly volume: number;
+  readonly current_volatility: number;
+  readonly long_run_volatility: number;
+  readonly explanation: JsonObject;
+  readonly created_at: ISODateTimeString;
+}
+
+export interface StockPriceTickInsert {
+  readonly game_session_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly tick_index: number;
+  readonly ticker: string;
+  readonly price: number;
+  readonly previous_price: number;
+  readonly log_return: number;
+  readonly change_pct: number;
+  readonly volume: number;
+  readonly current_volatility: number;
+  readonly long_run_volatility: number;
+  readonly explanation?: JsonObject;
+}
+
+export type StockPriceTickUpdate = Partial<StockPriceTickInsert>;
+
+export interface StockMarketEventsRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly shock_id: string;
+  readonly scope: StockMarketEventScope | string;
+  readonly target_key?: string | null;
+  readonly magnitude: number;
+  readonly decay: number;
+  readonly confidence: number;
+  readonly volatility_impact?: number | null;
+  readonly volume_impact?: number | null;
+  readonly headline: string;
+  readonly explanation: string;
+  readonly created_tick: number;
+  readonly expires_tick?: number | null;
+  readonly is_active: boolean;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface StockMarketEventInsert {
+  readonly game_session_id: UUID;
+  readonly shock_id: string;
+  readonly scope: StockMarketEventScope | string;
+  readonly target_key?: string | null;
+  readonly magnitude: number;
+  readonly decay: number;
+  readonly confidence: number;
+  readonly volatility_impact?: number | null;
+  readonly volume_impact?: number | null;
+  readonly headline: string;
+  readonly explanation: string;
+  readonly created_tick: number;
+  readonly expires_tick?: number | null;
+  readonly is_active?: boolean;
+}
+
+export type StockMarketEventUpdate = Partial<StockMarketEventInsert>;
+
+export interface StockMarketRegimesRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly regime: StockMarketRegimeName | string;
+  readonly starts_tick: number;
+  readonly ends_tick?: number | null;
+  readonly drift_bias: number;
+  readonly volatility_multiplier: number;
+  readonly news_sensitivity: number;
+  readonly volume_multiplier: number;
+  readonly beta_multiplier?: number | null;
+  readonly sector_rotation: JsonObject;
+  readonly student_label?: string | null;
+  readonly is_active: boolean;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface StockMarketRegimeInsert {
+  readonly game_session_id: UUID;
+  readonly regime: StockMarketRegimeName | string;
+  readonly starts_tick: number;
+  readonly ends_tick?: number | null;
+  readonly drift_bias: number;
+  readonly volatility_multiplier: number;
+  readonly news_sensitivity: number;
+  readonly volume_multiplier: number;
+  readonly beta_multiplier?: number | null;
+  readonly sector_rotation?: JsonObject;
+  readonly student_label?: string | null;
+  readonly is_active?: boolean;
+}
+
+export type StockMarketRegimeUpdate = Partial<StockMarketRegimeInsert>;
+
 export interface CoreSupabaseTables {
   readonly staff_users: StaffUsersRow;
   readonly purchase_codes: PurchaseCodesRow;
@@ -319,6 +541,11 @@ export interface CoreSupabaseTables {
   readonly store_purchases: StorePurchasesRow;
   readonly inventory_holdings: InventoryHoldingsRow;
   readonly inventory_events: InventoryEventsRow;
+  readonly stock_templates: StockTemplatesRow;
+  readonly game_session_stock_assets: GameSessionStockAssetsRow;
+  readonly stock_price_ticks: StockPriceTicksRow;
+  readonly stock_market_events: StockMarketEventsRow;
+  readonly stock_market_regimes: StockMarketRegimesRow;
 }
 
 export interface CoreSupabaseFunctions {
