@@ -1,0 +1,405 @@
+import {
+  EdgeActivationError,
+  jsonError,
+  jsonResponse,
+} from "../../../platform/supabase/edgeResponse.ts";
+import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
+import {
+  type EdgeSupabaseClient,
+  type SupabaseEnv,
+  readSupabaseEnv,
+} from "../../../platform/supabase/edgeStaffSession.ts";
+import type {
+  JsonObject,
+  JsonValue,
+} from "../../../supabase/tableTypes.ts";
+import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
+import type {
+  StockMarketChartPoint,
+  StockMarketEngineInput,
+  StockMarketEngineResult,
+  StockPriceMovementExplanation,
+} from "../contracts/stockMarketEngineContracts.ts";
+import {
+  type CalculateStockMarketTick,
+  StockMarketRunnerError,
+  type StockMarketRunnerPersistencePayload,
+  type StockMarketRunnerRepository,
+  type StockMarketRunnerRequestBody,
+  type StockMarketRunnerResult,
+  type StockMarketRunnerRunInput,
+  type StockMarketRunnerSuccessBody,
+} from "../contracts/stockMarketRunnerContracts.ts";
+import {
+  SupabaseStockMarketRunnerRepository,
+} from "../infrastructure/supabaseStockMarketRunnerRepository.ts";
+
+declare const Deno: {
+  readonly env: {
+    get(name: string): string | undefined;
+  };
+};
+
+interface StockMarketRunnerHttpDependencies {
+  readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readSupabaseEnv?: () =>
+    | { readonly ok: true; readonly value: SupabaseEnv }
+    | { readonly ok: false; readonly missing: readonly string[] };
+  readonly readRunnerSecret?: () => string | undefined;
+  readonly createRepository?: (
+    client: EdgeSupabaseClient,
+  ) => StockMarketRunnerRepository;
+  readonly calculateNextTick?: CalculateStockMarketTick;
+}
+
+export async function handleStockMarketRunnerRequest(
+  request: Request,
+  dependencies: StockMarketRunnerHttpDependencies,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to run one stock market tick.",
+      retryable: false,
+    });
+  }
+
+  const expectedSecret = readConfiguredRunnerSecret(dependencies);
+
+  if (!expectedSecret) {
+    return jsonError(500, {
+      code: "stock_market_runner_secret_not_configured",
+      message: "Stock market runner secret is not configured.",
+      retryable: false,
+    });
+  }
+
+  if (request.headers.get("x-stock-market-runner-secret") !== expectedSecret) {
+    return jsonError(401, {
+      code: "unauthorized_stock_market_runner",
+      message: "Stock market runner secret is missing or invalid.",
+      retryable: false,
+    });
+  }
+
+  try {
+    const envResult = (dependencies.readSupabaseEnv ?? readSupabaseEnv)();
+
+    if (!envResult.ok) {
+      return jsonError(500, {
+        code: "missing_edge_runtime_config",
+        message: "Supabase Edge runtime configuration is missing.",
+        retryable: false,
+      });
+    }
+
+    const body = await readStockMarketRunnerRequestBody(request);
+    const serviceClient = dependencies.createServiceClient(envResult.value);
+    const repository = dependencies.createRepository
+      ? dependencies.createRepository(serviceClient)
+      : new SupabaseStockMarketRunnerRepository(serviceClient as any);
+    const result = await runStockMarketRunner(body, {
+      repository,
+      calculateNextTick: dependencies.calculateNextTick ??
+        calculateNextStockMarketTick,
+    });
+
+    return jsonResponse<StockMarketRunnerSuccessBody>(200, {
+      ok: true,
+      gameSessionId: result.gameSessionId,
+      tickIndex: result.tickIndex,
+      assetsProcessed: result.assetsProcessed,
+      ticksInserted: result.ticksInserted,
+      generatedAt: result.generatedAt,
+    });
+  } catch (error) {
+    if (error instanceof StockMarketRunnerError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+      });
+    }
+
+    if (error instanceof EdgeActivationError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+      });
+    }
+
+    return jsonError(500, {
+      code: "stock_market_runner_failed",
+      message: "Stock market runner failed.",
+      retryable: false,
+    });
+  }
+}
+
+export async function runStockMarketRunner(
+  input: StockMarketRunnerRunInput,
+  dependencies: {
+    readonly repository: StockMarketRunnerRepository;
+    readonly calculateNextTick?: CalculateStockMarketTick;
+  },
+): Promise<StockMarketRunnerResult> {
+  const loaded = await dependencies.repository.load({
+    gameSessionId: input.gameSessionId,
+    tickIndex: input.tickIndex,
+  });
+  const seed = input.seed?.trim() ||
+    `stock-market-runner-v1:${input.gameSessionId}`;
+  const engineInput: StockMarketEngineInput = {
+    gameSessionId: loaded.gameSessionId,
+    seed,
+    tickIndex: loaded.tickIndex,
+    assets: loaded.assets,
+    macro: loaded.macro,
+    countries: loaded.countries,
+    sectors: loaded.sectors,
+    shocks: loaded.shocks,
+    regime: loaded.regime,
+  };
+  let result: StockMarketEngineResult;
+
+  try {
+    result = (dependencies.calculateNextTick ?? calculateNextStockMarketTick)(
+      engineInput,
+    );
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Stock market engine failed.";
+
+    throw new StockMarketRunnerError(
+      "stock_market_engine_failed",
+      message,
+      500,
+    );
+  }
+
+  const applyResult = await dependencies.repository.apply(
+    buildStockMarketRunnerPersistencePayload({ loaded, result }),
+  );
+
+  return {
+    gameSessionId: loaded.gameSessionId,
+    tickIndex: loaded.tickIndex,
+    assetsProcessed: result.rows.length,
+    ticksInserted: applyResult.ticksInserted,
+    generatedAt: result.generatedAt,
+  };
+}
+
+export function buildStockMarketRunnerPersistencePayload(args: {
+  readonly loaded: {
+    readonly gameSessionId: string;
+    readonly tickIndex: number;
+    readonly assets: readonly {
+      readonly assetId: string;
+      readonly recentReturns?: readonly number[];
+    }[];
+  };
+  readonly result: StockMarketEngineResult;
+}): StockMarketRunnerPersistencePayload {
+  const assetById = new Map(
+    args.loaded.assets.map((asset) => [asset.assetId, asset]),
+  );
+  const rowByTicker = new Map(
+    args.result.rows.map((row) => [row.ticker, row]),
+  );
+  const assetUpdates = args.result.ticks.map((tick) => {
+    const row = rowByTicker.get(tick.ticker);
+    const loadedAsset = assetById.get(tick.assetId);
+
+    if (!row || !loadedAsset) {
+      throw new StockMarketRunnerError(
+        "stock_market_tick_apply_failed",
+        "Stock market engine result did not match the loaded assets.",
+        500,
+      );
+    }
+
+    return {
+      game_session_id: args.loaded.gameSessionId,
+      asset_id: tick.assetId,
+      current_price: row.currentPrice,
+      previous_close: row.previousClose,
+      open_price: row.openPrice,
+      day_high: row.dayHigh,
+      day_low: row.dayLow,
+      market_cap: row.marketCap,
+      current_volatility: tick.currentVolatility,
+      long_run_volatility: tick.longRunVolatility,
+      recent_returns: appendRecentReturn(
+        loadedAsset.recentReturns ?? [],
+        tick.changePct / 100,
+      ),
+      chart_history: row.history.map(toJsonObject),
+    };
+  });
+  const tickRows = args.result.ticks.map((tick) => ({
+    game_session_id: args.loaded.gameSessionId,
+    stock_asset_id: tick.assetId,
+    tick_index: tick.tickIndex,
+    ticker: tick.ticker,
+    price: tick.price,
+    previous_price: tick.previousPrice,
+    log_return: tick.logReturn,
+    change_pct: tick.changePct,
+    volume: tick.volume,
+    current_volatility: tick.currentVolatility,
+    long_run_volatility: tick.longRunVolatility,
+    explanation: toExplanationJson(tick.explanation),
+  }));
+
+  return {
+    gameSessionId: args.loaded.gameSessionId,
+    tickIndex: args.loaded.tickIndex,
+    assetUpdates,
+    tickRows,
+  };
+}
+
+async function readStockMarketRunnerRequestBody(
+  request: Request,
+): Promise<StockMarketRunnerRequestBody> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch (_error) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "Request body must be valid JSON.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (
+    Array.isArray(value.gameSessionId) ||
+    Array.isArray(value.gameSessionIds) ||
+    Array.isArray(value.gameSessions) ||
+    Array.isArray(value.sessions)
+  ) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "Stock market runner accepts exactly one gameSessionId per request.",
+      400,
+    );
+  }
+
+  const gameSessionId = typeof value.gameSessionId === "string"
+    ? value.gameSessionId.trim()
+    : "";
+
+  if (!gameSessionId) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "gameSessionId is required.",
+      400,
+    );
+  }
+
+  return {
+    gameSessionId,
+    tickIndex: readOptionalTickIndex(value.tickIndex),
+    seed: readOptionalSeed(value.seed),
+  };
+}
+
+function readConfiguredRunnerSecret(
+  dependencies: StockMarketRunnerHttpDependencies,
+): string | undefined {
+  return dependencies.readRunnerSecret
+    ? dependencies.readRunnerSecret()
+    : Deno.env.get("STOCK_MARKET_RUNNER_SECRET");
+}
+
+function readOptionalTickIndex(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "tickIndex must be a non-negative integer when provided.",
+      400,
+    );
+  }
+
+  return value;
+}
+
+function readOptionalSeed(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const seed = typeof value === "string" ? value.trim() : "";
+
+  if (!seed) {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "seed must be a non-empty string when provided.",
+      400,
+    );
+  }
+
+  return seed;
+}
+
+function appendRecentReturn(
+  existing: readonly number[],
+  nextReturn: number,
+): readonly JsonValue[] {
+  return [...existing, nextReturn].slice(-30);
+}
+
+function toJsonObject(point: StockMarketChartPoint): JsonObject {
+  const value: JsonObject = {
+    tickIndex: point.tickIndex,
+    timestamp: point.timestamp,
+    label: point.label,
+    price: point.price,
+  };
+
+  if (point.gameSessionId) {
+    return {
+      ...value,
+      gameSessionId: point.gameSessionId,
+      volume: point.volume ?? null,
+    };
+  }
+
+  return {
+    ...value,
+    volume: point.volume ?? null,
+  };
+}
+
+function toExplanationJson(
+  explanation: StockPriceMovementExplanation,
+): JsonObject {
+  return {
+    gameSessionId: explanation.gameSessionId,
+    tickIndex: explanation.tickIndex,
+    ticker: explanation.ticker,
+    headline: explanation.headline,
+    summary: explanation.summary,
+    studentText: explanation.studentText,
+    components: { ...explanation.components },
+    appliedShockIds: [...explanation.appliedShockIds],
+    regime: explanation.regime,
+  };
+}

@@ -116,6 +116,18 @@ export interface RedeemPurchaseCodeForGameRpcRow {
   readonly activated_at: ISODateTimeString;
 }
 
+export interface ApplyStockMarketRunnerTickRpcArgs {
+  readonly p_game_session_id: UUID;
+  readonly p_tick_index: number;
+  readonly p_asset_updates: readonly JsonObject[];
+  readonly p_tick_rows: readonly JsonObject[];
+}
+
+export interface ApplyStockMarketRunnerTickRpcRow {
+  readonly assets_updated: number;
+  readonly ticks_inserted: number;
+}
+
 export interface PlayerSessionsRow extends PlayerSessionRecord {
   readonly created_at: ISODateTimeString;
   readonly updated_at: ISODateTimeString;
@@ -549,6 +561,7 @@ export interface CoreSupabaseTables {
 }
 
 export interface CoreSupabaseFunctions {
+  readonly apply_stock_market_runner_tick: ReadonlyArray<ApplyStockMarketRunnerTickRpcRow>;
   readonly redeem_purchase_code_for_game: ReadonlyArray<RedeemPurchaseCodeForGameRpcRow>;
 }
 
