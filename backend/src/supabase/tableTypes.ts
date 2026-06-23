@@ -110,7 +110,12 @@ export interface RedeemPurchaseCodeForGameRpcRow {
   readonly game_session_id: UUID;
   readonly entitlement_id: UUID;
   readonly purchase_code_id: UUID;
-  readonly purchase_code_status: "active" | "exhausted" | "expired" | "revoked" | string;
+  readonly purchase_code_status:
+    | "active"
+    | "exhausted"
+    | "expired"
+    | "revoked"
+    | string;
   readonly redeemed_count: number;
   readonly max_redemptions: number;
   readonly activated_at: ISODateTimeString;
@@ -140,6 +145,34 @@ export interface InitializeStockMarketAssetsForGameRpcRow {
   readonly assets_inserted: number;
   readonly baseline_ticks_inserted: number;
   readonly assets_after: number;
+}
+
+export interface ExecuteStockMarketOrderRpcArgs {
+  readonly p_game_session_id: UUID;
+  readonly p_player_session_id: UUID;
+  readonly p_stock_asset_id: UUID;
+  readonly p_side: "buy" | "sell" | string;
+  readonly p_quantity: number;
+  readonly p_idempotency_key: string;
+}
+
+export interface ExecuteStockMarketOrderRpcRow {
+  readonly order_id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly side: "buy" | "sell" | string;
+  readonly quantity: number;
+  readonly execution_price: number | null;
+  readonly gross_value: number;
+  readonly status: "filled" | "rejected" | string;
+  readonly rejection_reason: string | null;
+  readonly cash_balance: number;
+  readonly cash_currency_code: string;
+  readonly holding_quantity: number;
+  readonly average_cost: number;
 }
 
 export interface PlayerSessionsRow extends PlayerSessionRecord {
@@ -201,7 +234,11 @@ export interface MutationIdempotencyKeyInsert {
   readonly expires_at: ISODateTimeString;
 }
 
-export type StorePurchaseQuoteStatus = "CREATED" | "USED" | "EXPIRED" | "CANCELLED";
+export type StorePurchaseQuoteStatus =
+  | "CREATED"
+  | "USED"
+  | "EXPIRED"
+  | "CANCELLED";
 
 export interface StorePurchaseQuotesRow {
   readonly id: UUID;
@@ -554,6 +591,111 @@ export interface StockMarketRegimeInsert {
 
 export type StockMarketRegimeUpdate = Partial<StockMarketRegimeInsert>;
 
+export interface StockHoldingsRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly quantity: number;
+  readonly reserved_quantity: number;
+  readonly average_cost: number;
+  readonly realized_pnl: number;
+  readonly created_at: ISODateTimeString;
+  readonly updated_at: ISODateTimeString;
+}
+
+export interface StockHoldingInsert {
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly quantity?: number;
+  readonly reserved_quantity?: number;
+  readonly average_cost?: number;
+  readonly realized_pnl?: number;
+}
+
+export type StockHoldingUpdate = Partial<StockHoldingInsert>;
+
+export interface StockOrdersRow {
+  readonly id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly side: "buy" | "sell" | string;
+  readonly order_type: "market" | string;
+  readonly quantity: number;
+  readonly requested_price?: number | null;
+  readonly execution_price?: number | null;
+  readonly gross_value: number;
+  readonly status: "filled" | "rejected" | string;
+  readonly rejection_reason?: string | null;
+  readonly idempotency_key: string;
+  readonly cash_balance_after: number;
+  readonly cash_currency_code: string;
+  readonly holding_quantity_after: number;
+  readonly average_cost_after: number;
+  readonly created_at: ISODateTimeString;
+  readonly filled_at?: ISODateTimeString | null;
+}
+
+export interface StockOrderInsert {
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly side: "buy" | "sell" | string;
+  readonly order_type?: "market" | string;
+  readonly quantity: number;
+  readonly requested_price?: number | null;
+  readonly execution_price?: number | null;
+  readonly gross_value?: number;
+  readonly status: "filled" | "rejected" | string;
+  readonly rejection_reason?: string | null;
+  readonly idempotency_key: string;
+  readonly cash_balance_after?: number;
+  readonly cash_currency_code?: string;
+  readonly holding_quantity_after?: number;
+  readonly average_cost_after?: number;
+  readonly filled_at?: ISODateTimeString | null;
+}
+
+export type StockOrderUpdate = Partial<StockOrderInsert>;
+
+export interface StockTradesRow {
+  readonly id: UUID;
+  readonly order_id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly side: "buy" | "sell" | string;
+  readonly quantity: number;
+  readonly execution_price: number;
+  readonly gross_value: number;
+  readonly created_at: ISODateTimeString;
+}
+
+export interface StockTradeInsert {
+  readonly order_id: UUID;
+  readonly game_session_id: UUID;
+  readonly player_session_id: UUID;
+  readonly player_id: UUID;
+  readonly stock_asset_id: UUID;
+  readonly ticker: string;
+  readonly side: "buy" | "sell" | string;
+  readonly quantity: number;
+  readonly execution_price: number;
+  readonly gross_value: number;
+}
+
 export interface CoreSupabaseTables {
   readonly staff_users: StaffUsersRow;
   readonly purchase_codes: PurchaseCodesRow;
@@ -572,14 +714,24 @@ export interface CoreSupabaseTables {
   readonly stock_price_ticks: StockPriceTicksRow;
   readonly stock_market_events: StockMarketEventsRow;
   readonly stock_market_regimes: StockMarketRegimesRow;
+  readonly stock_holdings: StockHoldingsRow;
+  readonly stock_orders: StockOrdersRow;
+  readonly stock_trades: StockTradesRow;
 }
 
 export interface CoreSupabaseFunctions {
-  readonly apply_stock_market_runner_tick: ReadonlyArray<ApplyStockMarketRunnerTickRpcRow>;
+  readonly apply_stock_market_runner_tick: ReadonlyArray<
+    ApplyStockMarketRunnerTickRpcRow
+  >;
+  readonly execute_stock_market_order: ReadonlyArray<
+    ExecuteStockMarketOrderRpcRow
+  >;
   readonly initialize_stock_market_assets_for_game: ReadonlyArray<
     InitializeStockMarketAssetsForGameRpcRow
   >;
-  readonly redeem_purchase_code_for_game: ReadonlyArray<RedeemPurchaseCodeForGameRpcRow>;
+  readonly redeem_purchase_code_for_game: ReadonlyArray<
+    RedeemPurchaseCodeForGameRpcRow
+  >;
 }
 
 export function mapStaffUserRow(row: StaffUsersRow): StaffUserRecord {
@@ -632,7 +784,9 @@ export function mapEntitlementRow(row: EntitlementsRow): EntitlementRecord {
   };
 }
 
-export function mapPlayerSessionRow(row: PlayerSessionsRow): PlayerSessionRecord {
+export function mapPlayerSessionRow(
+  row: PlayerSessionsRow,
+): PlayerSessionRecord {
   return {
     id: row.id,
     game_session_id: row.game_session_id,
