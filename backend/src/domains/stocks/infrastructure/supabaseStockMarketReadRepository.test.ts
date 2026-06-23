@@ -13,10 +13,18 @@ const ASSET_ID = "00000000-0000-4000-8000-000000000101";
 const OTHER_ASSET_ID = "00000000-0000-4000-8000-000000000102";
 
 Deno.test("stock market read board reads only requested game session", async () => {
-  const repository = new SupabaseStockMarketReadRepository(new FakeClient({
-    game_session_stock_assets: [asset(), asset({ id: OTHER_ASSET_ID, game_session_id: OTHER_SESSION_ID, current_price: 500 })],
-    stock_price_ticks: [tick(), tick({ game_session_id: OTHER_SESSION_ID, stock_asset_id: OTHER_ASSET_ID, price: 500 })],
-  }) as any);
+  const client = new FakeClient({
+    game_sessions: [gameSession(), gameSession(OTHER_SESSION_ID)],
+    game_session_stock_assets: [
+      asset(),
+      asset({ id: OTHER_ASSET_ID, game_session_id: OTHER_SESSION_ID, current_price: 500 }),
+    ],
+    stock_price_ticks: [
+      tick(),
+      tick({ game_session_id: OTHER_SESSION_ID, stock_asset_id: OTHER_ASSET_ID, price: 500 }),
+    ],
+  });
+  const repository = new SupabaseStockMarketReadRepository(client as any);
   const result = await repository.read({
     gameSessionId: GAME_SESSION_ID,
     includeHistory: false,
@@ -27,10 +35,13 @@ Deno.test("stock market read board reads only requested game session", async () 
   assertEquals(result.stocks[0].assetId, ASSET_ID);
   assertEquals(result.stocks[0].currentPrice, 105);
   assertEquals(result.tickIndex, 1);
+  assertEquals(client.rpcCalls[0].functionName, "read_latest_stock_market_ticks_for_game");
+  assertEquals(client.rpcCalls[0].args.p_game_session_id, GAME_SESSION_ID);
 });
 
 Deno.test("stock market read ticker history reads only requested game session and stock_price_ticks", async () => {
   const client = new FakeClient({
+    game_sessions: [gameSession(), gameSession(OTHER_SESSION_ID)],
     game_session_stock_assets: [asset(), asset({ id: OTHER_ASSET_ID, game_session_id: OTHER_SESSION_ID })],
     stock_price_ticks: [
       tick({ tick_index: 0, price: 100, previous_price: 100, change_pct: 0, created_at: "tick-0" }),
@@ -50,14 +61,16 @@ Deno.test("stock market read ticker history reads only requested game session an
   assertEquals(result.stock?.ticker, "AURA");
   assertEquals(result.history?.map((point) => point.tickIndex), [0, 1]);
   assertEquals(client.queriedTables, [
+    "game_sessions",
     "game_session_stock_assets",
     "stock_price_ticks",
-    "stock_price_ticks",
   ]);
+  assertEquals(client.rpcCalls[0].args.p_ticker, "AURA");
 });
 
 Deno.test("stock market read applies history limit", async () => {
   const repository = new SupabaseStockMarketReadRepository(new FakeClient({
+    game_sessions: [gameSession()],
     game_session_stock_assets: [asset()],
     stock_price_ticks: [
       tick({ tick_index: 0 }),
@@ -75,8 +88,9 @@ Deno.test("stock market read applies history limit", async () => {
   assertEquals(result.history?.map((point) => point.tickIndex), [1, 2]);
 });
 
-Deno.test("stock market read returns empty state when no stocks exist", async () => {
+Deno.test("stock market read returns empty state when a valid game has no stocks", async () => {
   const repository = new SupabaseStockMarketReadRepository(new FakeClient({
+    game_sessions: [gameSession()],
     game_session_stock_assets: [],
     stock_price_ticks: [],
   }) as any);
@@ -93,8 +107,41 @@ Deno.test("stock market read returns empty state when no stocks exist", async ()
   });
 });
 
+Deno.test("stock market read returns null stock for a missing ticker in a valid game", async () => {
+  const repository = new SupabaseStockMarketReadRepository(new FakeClient({
+    game_sessions: [gameSession()],
+    game_session_stock_assets: [asset()],
+    stock_price_ticks: [tick()],
+  }) as any);
+  const result = await repository.read({
+    gameSessionId: GAME_SESSION_ID,
+    ticker: "MISS",
+    includeHistory: true,
+    historyLimit: 200,
+  });
+
+  assertEquals(result.ticker, "MISS");
+  assertEquals(result.stock, null);
+  assertEquals(result.history, []);
+  assertEquals(result.emptyState, undefined);
+});
+
+Deno.test("stock market read rejects a missing game session", async () => {
+  const repository = new SupabaseStockMarketReadRepository(new FakeClient({
+    game_sessions: [],
+    game_session_stock_assets: [],
+    stock_price_ticks: [],
+  }) as any);
+
+  await assertRejectsWithCode(
+    () => repository.read({ gameSessionId: GAME_SESSION_ID, includeHistory: false, historyLimit: 200 }),
+    "game_session_not_found",
+  );
+});
+
 Deno.test("stock market read maps missing schema errors", async () => {
   const client = new FakeClient({
+    game_sessions: [gameSession()],
     game_session_stock_assets: [],
     stock_price_ticks: [],
   });
@@ -109,6 +156,10 @@ Deno.test("stock market read maps missing schema errors", async () => {
     "stock_market_schema_not_applied",
   );
 });
+
+function gameSession(id = GAME_SESSION_ID) {
+  return { id };
+}
 
 function asset(overrides: Record<string, unknown> = {}) {
   return {
@@ -165,12 +216,46 @@ async function assertRejectsWithCode(run: () => Promise<unknown>, code: string):
 class FakeClient {
   readonly queriedTables: string[] = [];
   readonly tableErrors = new Map<string, { readonly code?: string; readonly message: string }>();
+  readonly rpcCalls: { readonly functionName: string; readonly args: any }[] = [];
+  rpcError: { readonly code?: string; readonly message: string } | null = null;
 
   constructor(readonly tables: Record<string, readonly Record<string, unknown>[]>) {}
 
   from(tableName: string): FakeQueryBuilder {
     this.queriedTables.push(tableName);
     return new FakeQueryBuilder(this, tableName);
+  }
+
+  async rpc(functionName: string, args: any) {
+    this.rpcCalls.push({ functionName, args });
+
+    if (this.rpcError) {
+      return { data: null, error: this.rpcError };
+    }
+
+    if (functionName !== "read_latest_stock_market_ticks_for_game") {
+      return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
+    }
+
+    let rows = [...(this.tables.stock_price_ticks ?? [])]
+      .filter((row) => row.game_session_id === args.p_game_session_id);
+
+    if (args.p_ticker) {
+      rows = rows.filter((row) => row.ticker === args.p_ticker);
+    }
+
+    const latestByAssetId = new Map<string, Record<string, unknown>>();
+
+    for (const row of rows) {
+      const assetId = String(row.stock_asset_id);
+      const existing = latestByAssetId.get(assetId);
+
+      if (!existing || Number(row.tick_index) > Number(existing.tick_index)) {
+        latestByAssetId.set(assetId, row);
+      }
+    }
+
+    return { data: [...latestByAssetId.values()], error: null };
   }
 }
 
