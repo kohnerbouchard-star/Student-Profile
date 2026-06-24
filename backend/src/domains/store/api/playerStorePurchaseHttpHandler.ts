@@ -125,6 +125,11 @@ export async function handlePlayerStoreQuoteRequest(
       finalUnitPrice: quote.pricing.finalUnitPrice,
       finalTotalPrice: quote.pricing.finalTotalPrice,
       currencyCode: quote.pricing.currencyCode,
+      itemCurrencyCode: quote.pricing.itemCurrencyCode,
+      playerCurrencyCode: quote.pricing.playerCurrencyCode,
+      exchangeRate: quote.pricing.exchangeRate,
+      itemLocalFinalUnitPrice: quote.pricing.itemLocalFinalUnitPrice,
+      itemLocalFinalTotalPrice: quote.pricing.itemLocalFinalTotalPrice,
       expiresAt: quote.expiresAt,
       pricingVersion: quote.pricing.pricingVersion,
     });

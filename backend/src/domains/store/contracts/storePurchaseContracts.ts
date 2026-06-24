@@ -17,6 +17,11 @@ export interface StorePurchasePricingBreakdown {
   readonly finalUnitPrice: number;
   readonly finalTotalPrice: number;
   readonly currencyCode: string;
+  readonly itemCurrencyCode: string;
+  readonly playerCurrencyCode: string;
+  readonly exchangeRate: number;
+  readonly itemLocalFinalUnitPrice: number;
+  readonly itemLocalFinalTotalPrice: number;
   readonly pricingVersion: string;
 }
 
@@ -112,6 +117,11 @@ export interface StoreQuoteResponseDto {
   readonly finalUnitPrice: number;
   readonly finalTotalPrice: number;
   readonly currencyCode: string;
+  readonly itemCurrencyCode: string;
+  readonly playerCurrencyCode: string;
+  readonly exchangeRate: number;
+  readonly itemLocalFinalUnitPrice: number;
+  readonly itemLocalFinalTotalPrice: number;
   readonly expiresAt: string;
   readonly pricingVersion: string;
 }
