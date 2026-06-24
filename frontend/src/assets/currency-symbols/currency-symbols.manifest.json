@@ -1,0 +1,62 @@
+{
+  "NRC": {
+    "countryCode": "NORTHREACH",
+    "currencyName": "Northreach Credit",
+    "symbolKey": "saturn",
+    "asset": "saturn.svg"
+  },
+  "YRC": {
+    "countryCode": "YRETHIA",
+    "currencyName": "Yrethian Crown",
+    "symbolKey": "neptune",
+    "asset": "neptune.svg"
+  },
+  "THD": {
+    "countryCode": "THALORIS",
+    "currencyName": "Thaloris Dinar",
+    "symbolKey": "arsenic",
+    "asset": "arsenic.svg"
+  },
+  "SLV": {
+    "countryCode": "SOLVEND",
+    "currencyName": "Solvend Volt",
+    "symbolKey": "jupiter",
+    "asset": "jupiter.svg"
+  },
+  "ELD": {
+    "countryCode": "ELDORAN",
+    "currencyName": "Eldoran Ducat",
+    "symbolKey": "alumen",
+    "asset": "alumen.svg"
+  },
+  "VAL": {
+    "countryCode": "VALERION",
+    "currencyName": "Valerion Lira",
+    "symbolKey": "gold",
+    "asset": "gold.svg"
+  },
+  "LUM": {
+    "countryCode": "LUMENOR",
+    "currencyName": "Lumenor Mark",
+    "symbolKey": "lapis_lazuli",
+    "asset": "lapis_lazuli.svg"
+  },
+  "SYN": {
+    "countryCode": "SYNDALIS",
+    "currencyName": "Syndalis Note",
+    "symbolKey": "alcali",
+    "asset": "alcali.svg"
+  },
+  "XAL": {
+    "countryCode": "XALVORIA",
+    "currencyName": "Xalvorian Lira",
+    "symbolKey": "lead",
+    "asset": "lead.svg"
+  },
+  "DRV": {
+    "countryCode": "DRAVENLOK",
+    "currencyName": "Dravenlok Vek",
+    "symbolKey": "ferrum",
+    "asset": "ferrum.svg"
+  }
+}
