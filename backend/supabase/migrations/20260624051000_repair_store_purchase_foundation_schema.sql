@@ -1,6 +1,66 @@
 -- Repair store purchase foundation schema if migration history drift left tables missing.
 -- This migration is intentionally idempotent and does not drop existing data.
 
+-- Repair missing store catalog foundation first.
+CREATE TABLE IF NOT EXISTS public.store_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_session_id uuid NOT NULL REFERENCES public.game_sessions (id),
+  item_key text NOT NULL,
+  name text NOT NULL,
+  description text NULL,
+  category text NOT NULL DEFAULT 'general',
+  price numeric(14, 2) NOT NULL DEFAULT 0,
+  currency_code text NOT NULL DEFAULT 'ECO',
+  stock_quantity integer NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'active',
+  visibility text NOT NULL DEFAULT 'visible',
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT store_items_game_item_key_unique UNIQUE (game_session_id, item_key),
+  CONSTRAINT store_items_item_key_not_blank CHECK (length(btrim(item_key)) > 0),
+  CONSTRAINT store_items_item_key_format_check CHECK (item_key ~ '^[a-z0-9_-]{1,64}$'),
+  CONSTRAINT store_items_name_not_blank CHECK (length(btrim(name)) > 0),
+  CONSTRAINT store_items_description_not_blank CHECK (
+    description IS NULL
+    OR length(btrim(description)) > 0
+  ),
+  CONSTRAINT store_items_category_not_blank CHECK (length(btrim(category)) > 0),
+  CONSTRAINT store_items_price_non_negative CHECK (price >= 0),
+  CONSTRAINT store_items_stock_quantity_non_negative CHECK (stock_quantity >= 0),
+  CONSTRAINT store_items_currency_code_check CHECK (
+    currency_code = upper(currency_code)
+    AND length(currency_code) BETWEEN 3 AND 16
+  ),
+  CONSTRAINT store_items_status_check CHECK (status IN ('active', 'disabled', 'archived')),
+  CONSTRAINT store_items_visibility_check CHECK (visibility IN ('visible', 'hidden'))
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'set_store_items_updated_at'
+      AND tgrelid = 'public.store_items'::regclass
+  ) THEN
+    CREATE TRIGGER set_store_items_updated_at
+    BEFORE UPDATE ON public.store_items
+    FOR EACH ROW
+    EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS store_items_game_status_visibility_idx
+ON public.store_items (game_session_id, status, visibility, sort_order, name);
+
+CREATE INDEX IF NOT EXISTS store_items_game_category_idx
+ON public.store_items (game_session_id, category);
+
+CREATE INDEX IF NOT EXISTS store_items_game_updated_at_idx
+ON public.store_items (game_session_id, updated_at DESC);
+
 DO $$
 BEGIN
   IF NOT EXISTS (
