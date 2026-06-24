@@ -93,7 +93,9 @@ function labelize(value) {
     rewardStatus: "Result",
     rewardAmount: "Reward",
     lastUpdated: "Updated",
-    lastPurchased: "Last Bought"
+    lastPurchased: "Last Bought",
+    priceDisplay: "Price",
+    amountDisplay: "Amount"
   };
 
   return sanitize(labels[value] || String(value).replace(/([A-Z])/g, " $1").replaceAll("_", " ").trim());
@@ -120,6 +122,10 @@ function formatValue(key, value) {
           : "";
 
     return `<span class="badge ${cls}">${sanitize(text)}</span>`;
+  }
+
+  if (/priceDisplay|amountDisplay/i.test(key)) {
+    return String(value || "—");
   }
 
   if (isCountDisplayKey(key)) {

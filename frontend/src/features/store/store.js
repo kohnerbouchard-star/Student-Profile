@@ -28,7 +28,7 @@ function renderStore() {
           <label>
             <span class="field-label">Item</span>
             <select id="storeItem" ${items.length ? "" : "disabled"}>
-              ${items.map((item) => `<option value="${sanitize(item.itemId)}">${sanitize(item.itemName)} · ${money(item.price)} · Stock ${sanitize(item.inventory === "" ? "—" : item.inventory)}</option>`).join("")}
+              ${items.map((item) => `<option value="${sanitize(item.itemId)}">${sanitize(item.itemName)} · ${sanitize(formatCurrencyAmount(item.price, item.currencyCode))} · Stock ${sanitize(item.inventory === "" ? "—" : item.inventory)}</option>`).join("")}
             </select>
           </label>
 
@@ -49,14 +49,14 @@ function renderStore() {
           <span class="badge">${items.length} available</span>
         </div>
         ${help("The item list shows price, category, and current stock when available.")}
-        ${table(items, ["itemName", "price", "inventory", "category", "description"], isLoadingStore ? "Loading store items..." : "The store is empty right now. Check again later.")}
+        ${table(items, ["itemName", "priceDisplay", "inventory", "category", "description"], isLoadingStore ? "Loading store items..." : "The store is empty right now. Check again later.")}
       </div>
     </div>
 
     <div class="card" style="margin-top:16px;">
       <h2 class="card-title">Purchase History</h2>
       ${help("Recent store purchases appear here after they are confirmed.")}
-      ${table(purchases, ["timestamp", "itemName", "amount", "endingBalance", "status"], isLoadingStore ? "Loading recent purchases..." : "No purchases yet.")}
+      ${table(purchases, ["timestamp", "itemName", "amountDisplay", "endingBalance", "status"], isLoadingStore ? "Loading recent purchases..." : "No purchases yet.")}
     </div>`;
 
   if (isSupabasePlayer) {
@@ -98,7 +98,7 @@ async function purchaseItem(button) {
     showStatus(
       status,
       null,
-      `Live price locked at ${money(quote.finalTotalPrice)}. Completing purchase...`,
+      `Live price locked at ${formatCurrencyAmount(quote.finalTotalPrice, quote.currencyCode)}. Completing purchase...`,
     );
 
     const result = await callPlayerStorePurchaseApi(sessionToken, {
@@ -255,6 +255,7 @@ function normalizePlayerStoreItems(items) {
     itemId: item.itemId || item.id,
     itemName: item.itemName || item.name || "Store item",
     price: Number(item.price || 0),
+    priceDisplay: renderCurrencyAmount(Number(item.price || 0), item.currencyCode || "ECO"),
     inventory: item.inventory ?? item.stockQuantity ?? "",
     category: item.category || "General",
     description: item.description || "",
@@ -268,6 +269,7 @@ function normalizePlayerStorePurchaseHistory(purchases) {
     timestamp: purchase.createdAt || "",
     itemName: purchase.itemName || "Store item",
     amount: Number(purchase.finalTotalPrice || 0),
+    amountDisplay: renderCurrencyAmount(Number(purchase.finalTotalPrice || 0), purchase.currencyCode || "ECO"),
     endingBalance: "",
     status: purchase.status || "COMPLETED",
   }));
