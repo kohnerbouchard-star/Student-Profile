@@ -61,24 +61,49 @@ Deno.test("player stock trading rejects runner secret on player route", async ()
   await assertErrorResponse(response, 400, "stock_runner_secret_not_allowed");
 });
 
-Deno.test("player stock trading rejects mismatched game or player session", async () => {
-  const wrongGame = await handlePlayerStockMarketTradingRequest(
+Deno.test("player stock trading rejects mismatched game session", async () => {
+  const response = await handlePlayerStockMarketTradingRequest(
     request(orderBody({ gameSessionId: OTHER_GAME_SESSION_ID })),
     dependencies(),
   );
-  const wrongPlayerSession = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ playerSessionId: OTHER_PLAYER_SESSION_ID })),
-    dependencies(),
+
+  await assertErrorResponse(response, 401, "invalid_player_session_scope");
+});
+
+Deno.test("player stock trading rejects body-supplied playerSessionId", async () => {
+  for (const body of [
+    orderBody({ playerSessionId: PLAYER_SESSION_ID }),
+    orderBody({ playerSessionIds: [PLAYER_SESSION_ID] }),
+  ]) {
+    const response = await handlePlayerStockMarketTradingRequest(
+      request(body),
+      dependencies(),
+    );
+
+    await assertErrorResponse(response, 400, "invalid_stock_market_trading_request");
+  }
+});
+
+Deno.test("player stock trading derives playerSessionId from authenticated session", async () => {
+  const repository = new MockTradingRepository();
+  const response = await handlePlayerStockMarketTradingRequest(
+    request(orderBody()),
+    dependencies({
+      client: new FakeClient({
+        ...tables(),
+        player_sessions: [playerSession({ id: OTHER_PLAYER_SESSION_ID })],
+      }),
+      repository,
+    }),
   );
 
-  await assertErrorResponse(wrongGame, 401, "invalid_player_session_scope");
-  await assertErrorResponse(wrongPlayerSession, 401, "invalid_player_session_scope");
+  assertEquals(response.status, 200);
+  assertEquals(repository.inputs[0].playerSessionId, OTHER_PLAYER_SESSION_ID);
 });
 
 Deno.test("player stock trading rejects missing IDs and idempotency key", async () => {
   for (const body of [
     orderBody({ gameSessionId: undefined }),
-    orderBody({ playerSessionId: undefined }),
     orderBody({ stockAssetId: undefined }),
     orderBody({ idempotencyKey: undefined }),
   ]) {
@@ -94,7 +119,6 @@ Deno.test("player stock trading rejects missing IDs and idempotency key", async 
 Deno.test("player stock trading rejects array-shaped IDs", async () => {
   for (const body of [
     orderBody({ gameSessionId: [GAME_SESSION_ID] }),
-    orderBody({ playerSessionId: [PLAYER_SESSION_ID] }),
     orderBody({ stockAssetId: [STOCK_ASSET_ID] }),
     orderBody({ idempotencyKey: ["order-1"] }),
   ]) {
@@ -261,7 +285,6 @@ function orderBody(
 ): Record<string, unknown> {
   const body = {
     gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
     stockAssetId: STOCK_ASSET_ID,
     side: "buy",
     quantity: 3,

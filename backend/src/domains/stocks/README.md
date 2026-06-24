@@ -292,8 +292,10 @@ V8 adds player-safe market buy/sell execution through `classroom-api`:
 The route uses the same player-session auth boundary as V7 reads:
 `x-player-session-token` is hashed server-side, resolved through the shared
 active player-session helper, and matched against the request body
-`gameSessionId` and `playerSessionId`. The request body also requires exactly
-one `stockAssetId`, `side`, positive `quantity`, and `idempotencyKey`.
+`gameSessionId`. The request body also requires exactly one `stockAssetId`,
+`side`, positive `quantity`, and `idempotencyKey`. Player clients must not send
+`playerSessionId`; the route derives it from the authenticated
+`x-player-session-token`.
 
 After validation, V8 delegates to the existing stock trading repository and
 `execute_stock_market_order` RPC. The RPC owns cash movement, holdings, order
