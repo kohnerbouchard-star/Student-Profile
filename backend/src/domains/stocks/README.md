@@ -215,14 +215,55 @@ tick-time execution, partial fills, and expiry. Future read endpoints can expose
 holdings, orders, trades, and cash snapshots after the backend trading boundary
 is stable.
 
+## V6 Player Portfolio Reads
+
+V6 adds a backend-only player stock read endpoint at
+`supabase/functions/stock-market-player-read`. It accepts only `POST`, uses
+`STOCK_MARKET_RUNNER_SECRET` plus `x-stock-market-runner-secret`, and performs
+no writes.
+
+Each request contains exactly one `gameSessionId`, one `playerSessionId`, and
+one action:
+
+- `read_portfolio`
+- `read_holdings`
+- `read_orders`
+- `read_trades`
+
+The endpoint resolves the player from the active `player_sessions` row for the
+requested game session. The session must be active, not revoked, and not
+expired. Cash and holdings are read for the resolved player and requested game;
+orders and trades are read newest-first for the requested player session and
+game. History limits are bounded by the handler.
+
+V6 reads:
+
+- `player_sessions`
+- `account_balances`
+- `stock_holdings`
+- `stock_orders`
+- `stock_trades`
+- `game_session_stock_assets`
+
+Portfolio and holdings responses include current cash, holding rows enriched
+with runtime stock metadata, market value, cost basis, unrealized P&L,
+unrealized P&L percentage, realized P&L, and summary totals. Order and trade
+responses expose the stored market-order and fill records from V5.
+
+V6 intentionally does not insert, update, delete, execute trades, write ledger
+entries, widen RLS policies, add frontend UI, add scheduler behavior, add order
+books, add reservations, add advanced order types, or call real-world financial
+APIs.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
 - Frontend/admin wiring should let trusted staff initialize one game session and
   display the read-only market board without adding student stock writes.
-- V6 read endpoints should expose player stock holdings, orders, fills, and
-  cash snapshots without widening write access.
+- Frontend/player wiring can consume the V6 player read endpoint after the
+  backend-only secret boundary is replaced or mediated by an appropriate
+  student-safe access layer.
 
 Future API handlers, persistence, scheduled tick orchestration, trading,
 analyst features, admin controls, and audit logs should call the
