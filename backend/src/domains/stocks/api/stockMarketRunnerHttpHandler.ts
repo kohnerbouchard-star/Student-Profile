@@ -5,14 +5,23 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
+  type SupabaseRealtimeBroadcastClient,
+  SupabaseRealtimeBroadcastTransport,
+} from "../../../platform/supabase/supabaseRealtimeBroadcastTransport.ts";
+import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import type {
-  JsonObject,
-  JsonValue,
-} from "../../../supabase/tableTypes.ts";
+import {
+  type GamePublicRealtimeEnvelope,
+  GamePublicRealtimePublisher,
+  type GamePublicRealtimePublishResult,
+} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+import {
+  buildGamePublicRealtimeStockTickEnvelope,
+} from "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts";
+import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
 import type {
   StockMarketChartPoint,
@@ -50,6 +59,24 @@ interface StockMarketRunnerHttpDependencies {
     client: EdgeSupabaseClient,
   ) => StockMarketRunnerRepository;
   readonly calculateNextTick?: CalculateStockMarketTick;
+  readonly createPublicRealtimePublisher?: (
+    client: EdgeSupabaseClient,
+  ) => StockMarketRunnerPublicRealtimePublisher;
+  readonly logPublicRealtimePublishFailure?: (
+    failure: StockMarketRunnerPublicRealtimePublishFailure,
+  ) => void;
+}
+
+interface StockMarketRunnerPublicRealtimePublisher {
+  publish(
+    envelope: GamePublicRealtimeEnvelope<"stock_tick">,
+  ): Promise<GamePublicRealtimePublishResult<"stock_tick">>;
+}
+
+interface StockMarketRunnerPublicRealtimePublishFailure {
+  readonly code: string;
+  readonly message: string;
+  readonly retryable: boolean;
 }
 
 export async function handleStockMarketRunnerRequest(
@@ -98,10 +125,16 @@ export async function handleStockMarketRunnerRequest(
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabaseStockMarketRunnerRepository(serviceClient as any);
+    const publicRealtimePublisher = dependencies.createPublicRealtimePublisher
+      ? dependencies.createPublicRealtimePublisher(serviceClient)
+      : createDefaultPublicRealtimePublisher(serviceClient);
     const result = await runStockMarketRunner(body, {
       repository,
       calculateNextTick: dependencies.calculateNextTick ??
         calculateNextStockMarketTick,
+      publicRealtimePublisher,
+      logPublicRealtimePublishFailure: dependencies
+        .logPublicRealtimePublishFailure,
     });
 
     return jsonResponse<StockMarketRunnerSuccessBody>(200, {
@@ -142,6 +175,10 @@ export async function runStockMarketRunner(
   dependencies: {
     readonly repository: StockMarketRunnerRepository;
     readonly calculateNextTick?: CalculateStockMarketTick;
+    readonly publicRealtimePublisher?: StockMarketRunnerPublicRealtimePublisher;
+    readonly logPublicRealtimePublishFailure?: (
+      failure: StockMarketRunnerPublicRealtimePublishFailure,
+    ) => void;
   },
 ): Promise<StockMarketRunnerResult> {
   const loaded = await dependencies.repository.load({
@@ -183,6 +220,14 @@ export async function runStockMarketRunner(
     buildStockMarketRunnerPersistencePayload({ loaded, result }),
   );
 
+  await publishStockTickPublicRealtimeBestEffort({
+    publisher: dependencies.publicRealtimePublisher,
+    loaded,
+    result,
+    onFailure: dependencies.logPublicRealtimePublishFailure ??
+      logPublicRealtimePublishFailure,
+  });
+
   return {
     gameSessionId: loaded.gameSessionId,
     tickIndex: loaded.tickIndex,
@@ -190,6 +235,84 @@ export async function runStockMarketRunner(
     ticksInserted: applyResult.ticksInserted,
     generatedAt: result.generatedAt,
   };
+}
+
+async function publishStockTickPublicRealtimeBestEffort(args: {
+  readonly publisher?: StockMarketRunnerPublicRealtimePublisher;
+  readonly loaded: {
+    readonly gameSessionId: string;
+    readonly tickIndex: number;
+    readonly assets: readonly {
+      readonly assetId: string;
+      readonly ticker: string;
+      readonly countryCode: string;
+    }[];
+  };
+  readonly result: StockMarketEngineResult;
+  readonly onFailure: (
+    failure: StockMarketRunnerPublicRealtimePublishFailure,
+  ) => void;
+}): Promise<void> {
+  if (!args.publisher) {
+    return;
+  }
+
+  let envelope: GamePublicRealtimeEnvelope<"stock_tick">;
+
+  try {
+    envelope = buildGamePublicRealtimeStockTickEnvelope({
+      gameSessionId: args.loaded.gameSessionId,
+      tickIndex: args.loaded.tickIndex,
+      generatedAt: args.result.generatedAt,
+      assets: args.loaded.assets,
+      rows: args.result.rows,
+      ticks: args.result.ticks,
+    });
+  } catch (_error) {
+    args.onFailure({
+      code: "stock_tick_public_realtime_envelope_failed",
+      message: "Stock tick public realtime event could not be built.",
+      retryable: false,
+    });
+    return;
+  }
+
+  let publishResult: GamePublicRealtimePublishResult<"stock_tick">;
+
+  try {
+    publishResult = await args.publisher.publish(envelope);
+  } catch (_error) {
+    args.onFailure({
+      code: "stock_tick_public_realtime_publish_failed",
+      message: "Stock tick public realtime event could not be published.",
+      retryable: true,
+    });
+    return;
+  }
+
+  if (!publishResult.ok) {
+    args.onFailure(publishResult.error);
+  }
+}
+
+function createDefaultPublicRealtimePublisher(
+  client: EdgeSupabaseClient,
+): StockMarketRunnerPublicRealtimePublisher {
+  return new GamePublicRealtimePublisher(
+    new SupabaseRealtimeBroadcastTransport(
+      client as unknown as SupabaseRealtimeBroadcastClient,
+    ),
+  );
+}
+
+function logPublicRealtimePublishFailure(
+  failure: StockMarketRunnerPublicRealtimePublishFailure,
+): void {
+  console.warn("stock_market_runner_public_realtime_publish_failed", {
+    code: failure.code,
+    message: failure.message,
+    retryable: failure.retryable,
+  });
 }
 
 export function buildStockMarketRunnerPersistencePayload(args: {
