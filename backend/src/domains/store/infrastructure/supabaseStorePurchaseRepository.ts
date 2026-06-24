@@ -31,10 +31,15 @@ type StorePurchaseTableName =
   | "inventory_events"
   | "mutation_idempotency_keys"
   | "player_country_assignments"
+  | "country_profiles"
   | "country_economic_snapshots";
 
 interface SupabaseStorePurchaseClient {
   from(tableName: StorePurchaseTableName): SupabaseStorePurchaseQueryBuilder;
+  rpc<T = unknown>(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<SupabaseStorePurchaseQueryResponse<T>>;
 }
 
 interface SupabaseStorePurchaseQueryBuilder {
@@ -71,6 +76,11 @@ const STORE_PURCHASE_QUOTE_SELECT = [
   "store_item_id",
   "quantity",
   "currency_code",
+  "item_currency_code",
+  "player_currency_code",
+  "exchange_rate",
+  "item_local_final_unit_price",
+  "item_local_final_total_price",
   "base_unit_price",
   "inflation_multiplier",
   "location_multiplier",
@@ -154,6 +164,10 @@ export class SupabaseStorePurchaseRepository {
     }
 
     const countryAssignment = await this.readActiveCountryAssignment(input);
+    const playerCurrencyCode = await this.readCountryProfileCurrencyCode(
+      countryAssignment.country_profile_id,
+    );
+    const itemCurrencyCode = normalizeCurrencyCode(item.currency_code);
     const economicSnapshot = await this.readLatestEffectiveEconomicSnapshot(
       input,
       countryAssignment.country_profile_id,
@@ -161,13 +175,21 @@ export class SupabaseStorePurchaseRepository {
     const pricingInputs = toStoreQuotePricingInputs(economicSnapshot);
 
     const baseUnitPrice = Number(item.price);
-    const finalUnitPrice = roundCurrency(
+    const itemLocalFinalUnitPrice = roundCurrency(
       baseUnitPrice
         * pricingInputs.inflationMultiplier
         * pricingInputs.locationMultiplier
         * pricingInputs.scarcityMultiplier,
     );
-    const finalTotalPrice = roundCurrency(finalUnitPrice * input.quantity);
+    const itemLocalFinalTotalPrice = roundCurrency(itemLocalFinalUnitPrice * input.quantity);
+    const finalTotalPrice = await this.convertCurrencyAmount(
+      input.gameSessionId,
+      itemLocalFinalTotalPrice,
+      itemCurrencyCode,
+      playerCurrencyCode,
+    );
+    const finalUnitPrice = roundCurrency(finalTotalPrice / input.quantity);
+    const exchangeRate = roundExchangeRate(finalTotalPrice / itemLocalFinalTotalPrice);
 
     const response = await this.client
       .from("store_purchase_quotes")
@@ -176,7 +198,12 @@ export class SupabaseStorePurchaseRepository {
         player_id: input.playerId,
         store_item_id: input.itemId,
         quantity: input.quantity,
-        currency_code: item.currency_code,
+        currency_code: playerCurrencyCode,
+        item_currency_code: itemCurrencyCode,
+        player_currency_code: playerCurrencyCode,
+        exchange_rate: exchangeRate,
+        item_local_final_unit_price: itemLocalFinalUnitPrice,
+        item_local_final_total_price: itemLocalFinalTotalPrice,
         base_unit_price: baseUnitPrice,
         inflation_multiplier: pricingInputs.inflationMultiplier,
         location_multiplier: pricingInputs.locationMultiplier,
@@ -252,6 +279,50 @@ export class SupabaseStorePurchaseRepository {
     return assignment;
   }
 
+  private async readCountryProfileCurrencyCode(countryProfileId: string): Promise<string> {
+    const response = await this.client
+      .from("country_profiles")
+      .select("id,currency_code")
+      .eq("id", countryProfileId)
+      .single();
+
+    if (response.error || !response.data) {
+      throw new StorePurchasePersistenceError(
+        "store_quote_country_currency_lookup_failed",
+        "Country currency could not be loaded for quote creation.",
+      );
+    }
+
+    const profile = response.data as CountryProfileCurrencyRow;
+    return normalizeCurrencyCode(profile.currency_code);
+  }
+
+  private async convertCurrencyAmount(
+    gameSessionId: string,
+    amount: number,
+    fromCurrencyCode: string,
+    toCurrencyCode: string,
+  ): Promise<number> {
+    const response = await this.client.rpc<number | string>(
+      "convert_currency_amount",
+      {
+        p_game_session_id: gameSessionId,
+        p_amount: amount,
+        p_from_currency_code: fromCurrencyCode,
+        p_to_currency_code: toCurrencyCode,
+      },
+    );
+
+    if (response.error || response.data === null) {
+      throw new StorePurchasePersistenceError(
+        "store_quote_currency_conversion_failed",
+        "Store quote currency conversion failed.",
+      );
+    }
+
+    return roundCurrency(Number(response.data));
+  }
+
   private async readLatestEffectiveEconomicSnapshot(
     input: StoreQuoteRequestInput,
     countryProfileId: string,
@@ -305,6 +376,11 @@ export function toStorePurchaseQuoteRecord(row: unknown): StorePurchaseQuoteReco
       finalUnitPrice: Number(value.final_unit_price),
       finalTotalPrice: Number(value.final_total_price),
       currencyCode: value.currency_code,
+      itemCurrencyCode: value.item_currency_code ?? value.currency_code,
+      playerCurrencyCode: value.player_currency_code ?? value.currency_code,
+      exchangeRate: Number(value.exchange_rate ?? 1),
+      itemLocalFinalUnitPrice: Number(value.item_local_final_unit_price ?? value.final_unit_price),
+      itemLocalFinalTotalPrice: Number(value.item_local_final_total_price ?? value.final_total_price),
       pricingVersion: value.pricing_version,
     },
     status: value.status,
@@ -415,6 +491,14 @@ function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function roundExchangeRate(value: number): number {
+  return Math.round(value * 100000000) / 100000000;
+}
+
+function normalizeCurrencyCode(value: string): string {
+  return String(value || "ECO").trim().toUpperCase();
+}
+
 function clampQuoteMultiplier(value: number): number {
   if (!Number.isFinite(value)) {
     return 1;
@@ -441,6 +525,11 @@ interface PlayerCountryAssignmentRow {
   readonly country_profile_id: string;
 }
 
+interface CountryProfileCurrencyRow {
+  readonly id: string;
+  readonly currency_code: string;
+}
+
 interface CountryEconomicSnapshotRow {
   readonly id: string;
   readonly country_profile_id: string;
@@ -461,6 +550,11 @@ interface StorePurchaseQuoteRow {
   readonly store_item_id: string;
   readonly quantity: number;
   readonly currency_code: string;
+  readonly item_currency_code?: string | null;
+  readonly player_currency_code?: string | null;
+  readonly exchange_rate?: number | string | null;
+  readonly item_local_final_unit_price?: number | string | null;
+  readonly item_local_final_total_price?: number | string | null;
   readonly base_unit_price: number | string;
   readonly inflation_multiplier: number | string;
   readonly location_multiplier: number | string;
