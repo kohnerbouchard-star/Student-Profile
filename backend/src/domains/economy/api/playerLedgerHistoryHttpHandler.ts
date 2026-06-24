@@ -8,10 +8,12 @@ import {
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
-import { invalidPlayerSessionResponse } from "../../players/api/playerSessionHttpHelpers.ts";
+import {
+  invalidPlayerSessionResponse,
+  readPlayerSessionTokenFromRequest,
+} from "../../players/api/playerSessionHttpHelpers.ts";
 import { readLedgerHistoryLimitQuery } from "./ledgerHistoryHttpHelpers.ts";
 
 interface PlayerLedgerHistoryDependencies {
@@ -93,7 +95,7 @@ export async function handlePlayerLedgerHistoryRequest(
       });
     }
 
-    const sessionToken = extractBearerToken(request.headers.get("authorization"));
+    const sessionToken = readPlayerSessionTokenFromRequest(request);
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();

@@ -163,6 +163,15 @@ export async function resolveActivePlayerSession(
   };
 }
 
+export function readPlayerSessionTokenFromRequest(request: Request): string | null {
+  return readPlayerSessionTokenHeader(request.headers.get("x-player-session-token"));
+}
+
+export function readPlayerSessionTokenHeader(headerValue: string | null): string | null {
+  const token = headerValue?.trim() ?? "";
+  return token ? token : null;
+}
+
 export function invalidPlayerSessionResponse(): Response {
   return jsonError(401, {
     code: "invalid_player_session",
