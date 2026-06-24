@@ -7,6 +7,12 @@ import {
   handleStockMarketRunnerRequest,
 } from "../../../src/domains/stocks/api/stockMarketRunnerHttpHandler.ts";
 
+const createSupabaseClient = createClient as unknown as (
+  url: string,
+  key: string,
+  options: unknown,
+) => EdgeSupabaseClient;
+
 Deno.serve((request) =>
   handleStockMarketRunnerRequest(request, {
     createServiceClient,
@@ -14,7 +20,7 @@ Deno.serve((request) =>
 );
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
-  return createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+  return createSupabaseClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
