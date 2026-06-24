@@ -272,16 +272,35 @@ The player-safe routes are:
 - `GET /players/me/stocks/trades`
 
 Each request includes exactly one `gameSessionId` and one `playerSessionId` as
-query parameters. The route hashes the bearer token, resolves the active
-`player_sessions` row through the shared player-session helper, verifies that
-the requested game and player session match the authenticated session, and then
-delegates to the V6 stock player read repository for the DTOs and portfolio
-math.
+query parameters. The route hashes the `x-player-session-token`, resolves the
+active `player_sessions` row through the shared player-session helper, verifies
+that the requested game and player session match the authenticated session, and
+then delegates to the V6 stock player read repository for the DTOs and
+portfolio math.
 
 V7 keeps service-role access inside the Edge Function runtime only. It does not
 expose service-role keys, runner secrets, staff/admin-only data, trading writes,
 ledger writes, runner calls, seed calls, schema changes, frontend UI, scheduler
 behavior, advanced order types, or real-world market APIs.
+
+## V8 Player-Safe Stock Trading
+
+V8 adds player-safe market buy/sell execution through `classroom-api`:
+
+- `POST /players/me/stocks/orders`
+
+The route uses the same player-session auth boundary as V7 reads:
+`x-player-session-token` is hashed server-side, resolved through the shared
+active player-session helper, and matched against the request body
+`gameSessionId` and `playerSessionId`. The request body also requires exactly
+one `stockAssetId`, `side`, positive `quantity`, and `idempotencyKey`.
+
+After validation, V8 delegates to the existing stock trading repository and
+`execute_stock_market_order` RPC. The RPC owns cash movement, holdings, order
+records, trade records, idempotency, and player-country currency handling. V8
+does not add a new cash fallback, does not create direct table writes in the
+route, and does not expose or accept `x-stock-market-runner-secret` from
+player clients.
 
 ## Future Phases
 
@@ -289,8 +308,8 @@ Future work should keep the calculation boundary intact:
 
 - Frontend/admin wiring should let trusted staff initialize one game session and
   display the read-only market board without adding student stock writes.
-- Frontend/player wiring can consume the V7 player-safe stock read routes
-  without exposing runner secrets or service-role access to students.
+- Frontend/player wiring can consume the V7/V8 player-safe stock routes without
+  exposing runner secrets or service-role access to students.
 
 Future API handlers, persistence, scheduled tick orchestration, trading,
 analyst features, admin controls, and audit logs should call the

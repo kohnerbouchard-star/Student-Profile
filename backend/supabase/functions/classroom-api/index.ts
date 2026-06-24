@@ -90,6 +90,9 @@ import {
 import {
   handlePlayerStockMarketReadRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketReadHttpHandler.ts";
+import {
+  handlePlayerStockMarketTradingRequest,
+} from "../../../src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -150,6 +153,12 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me/stocks/orders")) {
+    if (request.method === "POST") {
+      return handlePlayerStockMarketTradingRequest(request, {
+        createServiceClient,
+      });
+    }
+
     return handlePlayerStockMarketReadRequest(request, "read_orders", {
       createServiceClient,
     });
