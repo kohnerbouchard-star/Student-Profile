@@ -1,13 +1,13 @@
 import {
   normalizeRequiredQueryRow,
   type SupabaseRepositoryClient,
-} from "./queryResult";
+} from "./queryResult.ts";
 import {
   normalizeAuditLogInsert,
   type AuditLogInsert,
   type AuditLogRow,
   type CoreSupabaseTables,
-} from "./tableTypes";
+} from "./tableTypes.ts";
 
 type AuditRepositoryTables = Pick<CoreSupabaseTables, "audit_log">;
 
