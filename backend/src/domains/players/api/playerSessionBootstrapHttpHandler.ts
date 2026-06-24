@@ -214,6 +214,7 @@ export async function handlePlayerSessionBootstrapRequest(
       availableActions: [
         "dashboard.view",
         "ledger.view",
+        "STORE_PURCHASE",
       ],
     });
   } catch {

@@ -33,7 +33,7 @@ const JSON_HEADERS = {
   "access-control-allow-origin": "https://kohnerbouchard-star.github.io",
   "access-control-allow-methods": "GET, POST, PATCH, OPTIONS",
   "access-control-allow-headers":
-    "authorization, apikey, content-type, x-client-info, x-request-id",
+    "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token",
   "vary": "origin",
 };
 
