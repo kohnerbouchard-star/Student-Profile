@@ -255,15 +255,41 @@ entries, widen RLS policies, add frontend UI, add scheduler behavior, add order
 books, add reservations, add advanced order types, or call real-world financial
 APIs.
 
+## V7 Player-Safe Stock Reads
+
+V7 adds player-safe stock portfolio reads through the existing
+`classroom-api` player-session surface. These routes use the same
+`Authorization: Bearer <player session token>` pattern as player ledger,
+attendance, and store routes, and they do not require or accept
+`STOCK_MARKET_RUNNER_SECRET` from clients.
+
+The player-safe routes are:
+
+- `GET /players/me/stocks/portfolio`
+- `GET /players/me/stocks/holdings`
+- `GET /players/me/stocks/orders`
+- `GET /players/me/stocks/trades`
+
+Each request includes exactly one `gameSessionId` and one `playerSessionId` as
+query parameters. The route hashes the bearer token, resolves the active
+`player_sessions` row through the shared player-session helper, verifies that
+the requested game and player session match the authenticated session, and then
+delegates to the V6 stock player read repository for the DTOs and portfolio
+math.
+
+V7 keeps service-role access inside the Edge Function runtime only. It does not
+expose service-role keys, runner secrets, staff/admin-only data, trading writes,
+ledger writes, runner calls, seed calls, schema changes, frontend UI, scheduler
+behavior, advanced order types, or real-world market APIs.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
 - Frontend/admin wiring should let trusted staff initialize one game session and
   display the read-only market board without adding student stock writes.
-- Frontend/player wiring can consume the V6 player read endpoint after the
-  backend-only secret boundary is replaced or mediated by an appropriate
-  student-safe access layer.
+- Frontend/player wiring can consume the V7 player-safe stock read routes
+  without exposing runner secrets or service-role access to students.
 
 Future API handlers, persistence, scheduled tick orchestration, trading,
 analyst features, admin controls, and audit logs should call the
