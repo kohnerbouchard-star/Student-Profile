@@ -3,14 +3,16 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   type EdgeSupabaseClient,
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import {
+  readPlayerSessionTokenFromRequest,
+  resolveActivePlayerSession,
+} from "../../players/api/playerSessionHttpHelpers.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseResponseDto,
@@ -300,7 +302,7 @@ async function resolvePlayerRequest(
       };
     }
 > {
-  const sessionToken = extractBearerToken(request.headers.get("authorization"));
+  const sessionToken = readPlayerSessionTokenFromRequest(request);
 
   if (!sessionToken) {
     return {

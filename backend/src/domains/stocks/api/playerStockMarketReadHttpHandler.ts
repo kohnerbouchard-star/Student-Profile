@@ -11,6 +11,7 @@ import {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   invalidPlayerSessionResponse,
+  readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
 } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
@@ -81,7 +82,7 @@ export async function handlePlayerStockMarketReadRequest(
       });
     }
 
-    const sessionToken = readPlayerSessionTokenHeader(request.headers.get("x-player-session-token"));
+    const sessionToken = readPlayerSessionTokenFromRequest(request);
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();
@@ -153,11 +154,6 @@ export async function handlePlayerStockMarketReadRequest(
   }
 }
 
-
-function readPlayerSessionTokenHeader(headerValue: string | null): string | null {
-  const token = headerValue?.trim() ?? "";
-  return token ? token : null;
-}
 
 function assertRequestedSessionMatchesResolvedSession(
   gameSessionId: string,

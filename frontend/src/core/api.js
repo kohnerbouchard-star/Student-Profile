@@ -188,9 +188,12 @@ async function callPlayerLoginApi(gameCode, playerId) {
 }
 
 function callPlayerBootstrapApi(sessionToken) {
+  const { publishableKey } = getSupabaseConfig();
+
   return callSupabaseJsonRoute("/players/me", {
     method: "GET",
-    token: sessionToken,
+    token: publishableKey,
+    playerSessionToken: sessionToken,
     fallbackCode: "player_session_bootstrap_failed",
     fallbackMessage: "Your player session could not be loaded."
   });
@@ -276,6 +279,7 @@ function callStaffSignupApi(input) {
 async function callSupabaseJsonRoute(path, options) {
   const { publishableKey } = getSupabaseConfig();
   const token = normalizeBearerToken(options?.token);
+  const playerSessionToken = normalizeBearerToken(options?.playerSessionToken);
 
   if (!token) {
     return {
@@ -291,6 +295,11 @@ async function callSupabaseJsonRoute(path, options) {
       "Authorization": `Bearer ${token}`,
       "apikey": publishableKey
     };
+
+    if (playerSessionToken) {
+      headers["x-player-session-token"] = playerSessionToken;
+    }
+
     const requestOptions = {
       method: options?.method || "GET",
       headers

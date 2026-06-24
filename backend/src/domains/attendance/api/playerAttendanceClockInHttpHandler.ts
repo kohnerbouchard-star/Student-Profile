@@ -7,7 +7,6 @@ import {
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   readBalanceNumber,
@@ -23,6 +22,7 @@ import {
 } from "./attendanceHttpHelpers.ts";
 import {
   invalidPlayerSessionResponse,
+  readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
 } from "../../players/api/playerSessionHttpHelpers.ts";
 
@@ -82,7 +82,7 @@ export async function handlePlayerAttendanceClockInRequest(
       });
     }
 
-    const sessionToken = extractBearerToken(request.headers.get("authorization"));
+    const sessionToken = readPlayerSessionTokenFromRequest(request);
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();

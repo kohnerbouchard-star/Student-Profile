@@ -7,10 +7,12 @@ import {
   type SupabaseEnv,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
-import { invalidPlayerSessionResponse } from "./playerSessionHttpHelpers.ts";
+import {
+  invalidPlayerSessionResponse,
+  readPlayerSessionTokenFromRequest,
+} from "./playerSessionHttpHelpers.ts";
 
 interface PlayerSessionBootstrapDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -74,7 +76,7 @@ export async function handlePlayerSessionBootstrapRequest(
       });
     }
 
-    const sessionToken = extractBearerToken(request.headers.get("authorization"));
+    const sessionToken = readPlayerSessionTokenFromRequest(request);
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();
