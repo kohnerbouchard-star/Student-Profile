@@ -53,6 +53,7 @@ Each folder in this directory is a self-contained product domain. A domain shoul
 - `store`: item catalog and purchase rules.
 - `inventory`: owned items, inventory events, item-use requests.
 - `stocks`: stock assets, price engine, price ticks, trades, portfolios.
+- `game-dashboard`: player-safe consolidated game screen snapshots and future game-public realtime contracts.
 - `analyst`: ratings, target prices, accuracy checks, reward requests.
 - `notifications`: notification jobs and delivery state.
 - `audit`: audit trail for sensitive actions.
