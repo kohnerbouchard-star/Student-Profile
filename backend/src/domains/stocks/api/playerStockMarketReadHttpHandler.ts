@@ -3,7 +3,6 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
-import { extractBearerToken } from "../../../platform/supabase/edgeAuth.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   type EdgeSupabaseClient,
@@ -82,7 +81,7 @@ export async function handlePlayerStockMarketReadRequest(
       });
     }
 
-    const sessionToken = extractBearerToken(request.headers.get("authorization"));
+    const sessionToken = readPlayerSessionTokenHeader(request.headers.get("x-player-session-token"));
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();
@@ -152,6 +151,12 @@ export async function handlePlayerStockMarketReadRequest(
       retryable: false,
     });
   }
+}
+
+
+function readPlayerSessionTokenHeader(headerValue: string | null): string | null {
+  const token = headerValue?.trim() ?? "";
+  return token ? token : null;
 }
 
 function assertRequestedSessionMatchesResolvedSession(
