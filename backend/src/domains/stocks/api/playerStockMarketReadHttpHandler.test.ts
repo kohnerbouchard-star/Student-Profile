@@ -350,7 +350,8 @@ function request(
   const headers = new Headers();
 
   if (options.authToken !== null) {
-    headers.set("authorization", `Bearer ${options.authToken ?? "player-token"}`);
+    headers.set("authorization", "Bearer supabase-jwt-for-gateway");
+    headers.set("x-player-session-token", options.authToken ?? "player-token");
   }
 
   if (options.runnerSecret) {

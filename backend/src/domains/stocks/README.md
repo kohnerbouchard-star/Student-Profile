@@ -259,9 +259,10 @@ APIs.
 
 V7 adds player-safe stock portfolio reads through the existing
 `classroom-api` player-session surface. These routes use the same
-`Authorization: Bearer <player session token>` pattern as player ledger,
-attendance, and store routes, and they do not require or accept
-`STOCK_MARKET_RUNNER_SECRET` from clients.
+`Authorization: Bearer <Supabase JWT>` for gateway authentication plus
+`x-player-session-token: <player session token>` for app-level player-session
+authorization. They do not require or accept `STOCK_MARKET_RUNNER_SECRET` from
+clients.
 
 The player-safe routes are:
 
