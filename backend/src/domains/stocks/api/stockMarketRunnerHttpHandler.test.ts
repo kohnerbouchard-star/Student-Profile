@@ -1,6 +1,13 @@
 import {
   handleStockMarketRunnerRequest,
 } from "./stockMarketRunnerHttpHandler.ts";
+import {
+  type GamePublicRealtimeBroadcastMessage,
+  type GamePublicRealtimeEnvelope,
+  GamePublicRealtimePublisher,
+  type GamePublicRealtimePublishResult,
+  type GamePublicRealtimeTransport,
+} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
 import type {
   StockMarketEngineInput,
   StockMarketEngineResult,
@@ -87,6 +94,100 @@ Deno.test("stock market runner returns success shape", async () => {
   assertEquals(body.generatedAt, "tick-4");
 });
 
+Deno.test("stock market runner publishes one public stock tick after persistence", async () => {
+  const repository = new MockRunnerRepository();
+  const transport = new CapturingRealtimeTransport(() => {
+    assertEquals(repository.applyCalls, 1);
+  });
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      repository,
+      publicRealtimePublisher: new GamePublicRealtimePublisher(transport),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body, {
+    ok: true,
+    gameSessionId: GAME_SESSION_ID,
+    tickIndex: 4,
+    assetsProcessed: 1,
+    ticksInserted: 1,
+    generatedAt: "tick-4",
+  });
+  assertEquals(transport.messages.length, 1);
+
+  const message = transport.messages[0] as GamePublicRealtimeBroadcastMessage<
+    "stock_tick"
+  >;
+
+  assertEquals(message.channel, `game:${GAME_SESSION_ID}:public`);
+  assertEquals(message.event, "stock_tick");
+  assertEquals(message.payload.sequence, 4);
+  assertEquals(message.payload.eventType, "stock_tick");
+  assertEquals(message.payload.payload, {
+    tick: 4,
+    stocks: [{
+      stockAssetId: ASSET_ID,
+      ticker: "AURA",
+      companyName: "Aurora Works",
+      sector: "TECHNOLOGY",
+      countryCode: "SOLVEND",
+      currentPrice: 105,
+      previousClose: 100,
+      changePct: 5,
+      volume: 1000,
+    }],
+  });
+  assertNoPrivateRealtimeFields(message);
+});
+
+Deno.test("stock market runner keeps successful tick response when realtime publish fails", async () => {
+  const failures: unknown[] = [];
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      publicRealtimePublisher: new GamePublicRealtimePublisher(
+        new FailingRealtimeTransport(),
+      ),
+      logPublicRealtimePublishFailure: (failure) => failures.push(failure),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(body.tickIndex, 4);
+  assertEquals(failures, [{
+    code: "game_public_realtime_broadcast_failed",
+    message: "broadcast unavailable",
+    retryable: true,
+  }]);
+});
+
+Deno.test("stock market runner keeps successful tick response when realtime publisher throws", async () => {
+  const failures: unknown[] = [];
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      publicRealtimePublisher: new ThrowingPublicRealtimePublisher(),
+      logPublicRealtimePublishFailure: (failure) => failures.push(failure),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(body.tickIndex, 4);
+  assertEquals(failures, [{
+    code: "stock_tick_public_realtime_publish_failed",
+    message: "Stock tick public realtime event could not be published.",
+    retryable: true,
+  }]);
+});
+
 Deno.test("stock market runner derives the default seed from one game session", async () => {
   const engineInputs: StockMarketEngineInput[] = [];
   const repository = new MockRunnerRepository();
@@ -113,7 +214,19 @@ Deno.test("stock market runner derives the default seed from one game session", 
 function dependencies(options: {
   readonly repository?: StockMarketRunnerRepository;
   readonly readRunnerSecret?: () => string | undefined;
-  readonly calculateNextTick?: (input: StockMarketEngineInput) => StockMarketEngineResult;
+  readonly calculateNextTick?: (
+    input: StockMarketEngineInput,
+  ) => StockMarketEngineResult;
+  readonly publicRealtimePublisher?: {
+    publish(
+      envelope: GamePublicRealtimeEnvelope<"stock_tick">,
+    ): Promise<GamePublicRealtimePublishResult<"stock_tick">>;
+  };
+  readonly logPublicRealtimePublishFailure?: (failure: {
+    readonly code: string;
+    readonly message: string;
+    readonly retryable: boolean;
+  }) => void;
 } = {}) {
   const repository = options.repository ?? new MockRunnerRepository();
 
@@ -130,6 +243,10 @@ function dependencies(options: {
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
     createRepository: () => repository,
     calculateNextTick: options.calculateNextTick ?? engineResult,
+    createPublicRealtimePublisher: () =>
+      options.publicRealtimePublisher ?? new NoopPublicRealtimePublisher(),
+    logPublicRealtimePublishFailure: options.logPublicRealtimePublishFailure ??
+      (() => {}),
   };
 }
 
@@ -221,8 +338,11 @@ function engineResult(input: StockMarketEngineInput): StockMarketEngineResult {
 
 class MockRunnerRepository implements StockMarketRunnerRepository {
   readonly loadedGameSessionIds: string[] = [];
+  applyCalls = 0;
 
-  async load(input: { readonly gameSessionId: string; readonly tickIndex?: number }) {
+  async load(
+    input: { readonly gameSessionId: string; readonly tickIndex?: number },
+  ) {
     this.loadedGameSessionIds.push(input.gameSessionId);
 
     return {
@@ -250,10 +370,56 @@ class MockRunnerRepository implements StockMarketRunnerRepository {
   }
 
   async apply() {
+    this.applyCalls += 1;
+
     return {
       assetsUpdated: 1,
       ticksInserted: 1,
     };
+  }
+}
+
+class CapturingRealtimeTransport implements GamePublicRealtimeTransport {
+  readonly messages: GamePublicRealtimeBroadcastMessage[] = [];
+
+  constructor(private readonly beforeSend?: () => void) {}
+
+  async send(message: GamePublicRealtimeBroadcastMessage) {
+    this.beforeSend?.();
+    this.messages.push(message);
+    return { ok: true as const };
+  }
+}
+
+class FailingRealtimeTransport implements GamePublicRealtimeTransport {
+  async send() {
+    return {
+      ok: false as const,
+      error: {
+        code: "broadcast_failed",
+        message: "broadcast unavailable",
+        retryable: true,
+      },
+    };
+  }
+}
+
+class NoopPublicRealtimePublisher {
+  async publish(envelope: GamePublicRealtimeEnvelope<"stock_tick">) {
+    return {
+      ok: true as const,
+      message: {
+        channel: envelope.channel,
+        event: envelope.eventType,
+        payload: envelope,
+      },
+    };
+  }
+}
+
+class ThrowingPublicRealtimePublisher {
+  async publish(): Promise<GamePublicRealtimePublishResult<"stock_tick">> {
+    throw new Error("publish unavailable");
   }
 }
 
@@ -269,4 +435,31 @@ function assertEquals(actual: unknown, expected: unknown): void {
       }`,
     );
   }
+}
+
+function assertNoPrivateRealtimeFields(value: unknown): void {
+  const serialized = JSON.stringify(value).toLowerCase();
+
+  for (
+    const fieldName of [
+      privateFieldName("player", "Session", "Id"),
+      privateFieldName("session", "Token"),
+      privateFieldName("session", "Token", "Hash"),
+      privateFieldName("access", "Code"),
+      privateFieldName("runner", "Secret"),
+      privateFieldName("player", "Cash"),
+      "holdings",
+      "orders",
+      "trades",
+      "inventory",
+      "purchases",
+      "ledger",
+    ]
+  ) {
+    assertEquals(serialized.includes(fieldName.toLowerCase()), false);
+  }
+}
+
+function privateFieldName(...parts: readonly string[]): string {
+  return parts.join("");
 }

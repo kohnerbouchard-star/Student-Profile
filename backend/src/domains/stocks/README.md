@@ -111,6 +111,19 @@ The runner writes:
 - updated runtime state on matching `game_session_stock_assets`
 - append-only rows in `stock_price_ticks`
 
+After successful `apply_stock_market_runner_tick` persistence, the runner
+publishes one best-effort game-public `stock_tick` realtime event to
+`game:<gameSessionId>:public`. The event uses the game dashboard public realtime
+publisher seam, uses the stock tick index as its sequence, and includes only
+public stock board fields: runtime stock asset ID, ticker, company name, sector,
+country code, current price, previous close, change percentage, and volume.
+Broadcast failure is logged safely and does not fail or roll back the persisted
+stock tick. The dashboard snapshot remains the source of truth; clients must
+resync on first load, reconnect, stale tab refocus, or sequence gap.
+Player-private cash, holdings, orders, trades, inventory, purchases, ledger
+entries, session identifiers, access codes, and runner secrets are never
+published on the public channel. Private realtime channels remain deferred.
+
 The RPC rejects duplicate `(game_session_id, stock_asset_id, tick_index)` rows
 and validates that all asset updates and tick rows belong to the requested game
 session before updating or inserting anything.

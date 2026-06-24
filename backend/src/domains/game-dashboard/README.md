@@ -46,10 +46,9 @@ The realtime contract now has a minimal backend publisher seam in
 `realtime/gamePublicRealtimePublisher.ts`. The seam builds the public channel,
 validates the supported public event envelopes, rejects obvious private/session
 fields, serializes a broadcast message, and delegates delivery to an injected
-transport. There is no concrete Supabase Broadcast transport wired in this
-branch because the current backend has no existing low-risk broadcast utility
-or pattern to reuse. This branch also does not add Supabase Realtime auth or
-RLS policy migrations.
+transport. The stock runner now uses that seam after successful stock tick
+persistence to publish `stock_tick` on a best-effort basis. This branch does not
+add Supabase Realtime auth or RLS policy migrations.
 
 Future clients should subscribe only to the game-public channel:
 
@@ -109,13 +108,17 @@ foundation. Player-private realtime channels are intentionally deferred.
 
 ## Publisher Wiring
 
-Actual stock runner and market-news broadcast wiring is deferred. Future wiring
-should happen only after the database write succeeds and should treat broadcast
-failure as best-effort unless a later runtime convention says otherwise.
-Suggested future emit points:
+Actual `stock_tick` broadcast wiring is live in the stock runner flow. The
+runner publishes only after `apply_stock_market_runner_tick` succeeds, and
+broadcast failure does not roll back or fail the persisted tick. The dashboard
+snapshot remains the source of truth.
 
-- `stock_tick`: after `apply_stock_market_runner_tick` succeeds in the stock
-  runner flow.
+Clients should resync the dashboard on first load, reconnect, stale tab refocus,
+or any future sequence gap. Private player data is never published on the public
+channel, and private realtime channels remain deferred.
+
+Deferred future emit points:
+
 - `market_news_posted`: after a public `stock_market_events` row is created by
   a dedicated market-news/admin flow.
 - `market_status_changed`: after a future public market status transition is
