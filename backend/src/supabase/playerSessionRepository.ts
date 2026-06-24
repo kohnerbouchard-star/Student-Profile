@@ -3,11 +3,11 @@ import type { PlayerSessionRecord } from "../auth/types";
 import {
   normalizeQueryRows,
   type SupabaseRepositoryClient,
-} from "./queryResult";
+} from "./queryResult.ts";
 import {
   mapPlayerSessionRow,
   type CoreSupabaseTables,
-} from "./tableTypes";
+} from "./tableTypes.ts";
 
 type PlayerSessionRepositoryTables = Pick<CoreSupabaseTables, "player_sessions">;
 
