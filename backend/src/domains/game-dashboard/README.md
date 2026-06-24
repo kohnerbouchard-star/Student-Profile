@@ -42,10 +42,14 @@ secrets.
 
 ## Realtime Contract
 
-This branch prepares the public realtime contract but does not publish
-Supabase broadcast events. There is no existing low-risk broadcast utility in
-the current backend, so publishing is left for a later branch. This branch also
-does not add Supabase Realtime auth or RLS policy migrations.
+The realtime contract now has a minimal backend publisher seam in
+`realtime/gamePublicRealtimePublisher.ts`. The seam builds the public channel,
+validates the supported public event envelopes, rejects obvious private/session
+fields, serializes a broadcast message, and delegates delivery to an injected
+transport. There is no concrete Supabase Broadcast transport wired in this
+branch because the current backend has no existing low-risk broadcast utility
+or pattern to reuse. This branch also does not add Supabase Realtime auth or
+RLS policy migrations.
 
 Future clients should subscribe only to the game-public channel:
 
@@ -76,18 +80,17 @@ The dashboard response includes:
 }
 ```
 
-Future public realtime events should use an envelope compatible with
-`GamePublicRealtimeEventEnvelope` in
-`contracts/playerGameDashboardContracts.ts`:
+Publisher-backed public realtime events use the supported envelope in
+`realtime/gamePublicRealtimePublisher.ts`:
 
 ```ts
 {
   gameSessionId: string;
   channel: `game:${string}:public`;
-  sequence: number;
-  eventType: GamePublicRealtimeEvent;
+  sequence: number | null;
+  eventType: "stock_tick" | "market_news_posted" | "market_status_changed";
   occurredAt: string;
-  payload: GamePublicRealtimeEventPayload<GamePublicRealtimeEvent>;
+  payload: unknown;
 }
 ```
 
@@ -103,6 +106,20 @@ stale, and any time a future event sequence gap is detected.
 
 Do not create one channel per stock or one channel per player in this
 foundation. Player-private realtime channels are intentionally deferred.
+
+## Publisher Wiring
+
+Actual stock runner and market-news broadcast wiring is deferred. Future wiring
+should happen only after the database write succeeds and should treat broadcast
+failure as best-effort unless a later runtime convention says otherwise.
+Suggested future emit points:
+
+- `stock_tick`: after `apply_stock_market_runner_tick` succeeds in the stock
+  runner flow.
+- `market_news_posted`: after a public `stock_market_events` row is created by
+  a dedicated market-news/admin flow.
+- `market_status_changed`: after a future public market status transition is
+  durably recorded.
 
 ## Intentional Placeholders
 
