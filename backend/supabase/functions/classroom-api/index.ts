@@ -84,6 +84,9 @@ import {
   handlePlayerStorePurchaseRequest,
   handlePlayerStoreQuoteRequest,
 } from "../../../src/domains/store/api/playerStorePurchaseHttpHandler.ts";
+import {
+  handlePlayerStockMarketReadRequest,
+} from "../../../src/domains/stocks/api/playerStockMarketReadHttpHandler.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -121,6 +124,30 @@ Deno.serve(async (request) => {
     }
 
     return handlePlayerStorePurchaseRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/stocks/portfolio")) {
+    return handlePlayerStockMarketReadRequest(request, "read_portfolio", {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/stocks/holdings")) {
+    return handlePlayerStockMarketReadRequest(request, "read_holdings", {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/stocks/orders")) {
+    return handlePlayerStockMarketReadRequest(request, "read_orders", {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/stocks/trades")) {
+    return handlePlayerStockMarketReadRequest(request, "read_trades", {
       createServiceClient,
     });
   }
