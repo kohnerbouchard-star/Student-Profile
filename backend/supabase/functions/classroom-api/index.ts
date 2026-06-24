@@ -93,6 +93,9 @@ import {
 import {
   handlePlayerStockMarketTradingRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts";
+import {
+  handlePlayerGameDashboardRequest,
+} from "../../../src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -136,6 +139,12 @@ Deno.serve(async (request) => {
     }
 
     return handlePlayerStorePurchaseRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  if (url.pathname.endsWith("/players/me/game/dashboard")) {
+    return handlePlayerGameDashboardRequest(request, {
       createServiceClient,
     });
   }
