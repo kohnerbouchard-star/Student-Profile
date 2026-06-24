@@ -31,7 +31,7 @@ export function normalizeCreateStoreItemInput(
     description: normalizeNullableText(input.description),
     category: normalizeCategory(input.category ?? "general"),
     price: normalizeNonNegativeMoney(input.price ?? 0, "price"),
-    currencyCode: normalizeCurrencyCode(input.currencyCode ?? "ECO"),
+    currencyCode: normalizeRequiredCurrencyCode(input.currencyCode),
     stockQuantity: normalizeNonNegativeInteger(
       input.stockQuantity ?? 0,
       "stockQuantity",
@@ -168,6 +168,32 @@ function normalizeCategory(value: string): string {
   return normalizedValue;
 }
 
+const OFFICIAL_STORE_CURRENCY_CODES = new Set([
+  "NRC",
+  "YRC",
+  "THD",
+  "SLV",
+  "ELD",
+  "VAL",
+  "LUM",
+  "SYN",
+  "XAL",
+  "DRV",
+]);
+
+function normalizeRequiredCurrencyCode(value: string | null | undefined): string {
+  const normalizedValue = value?.trim().toUpperCase() ?? "";
+
+  if (!normalizedValue) {
+    throw new StoreCatalogValidationError(
+      "required_store_currency",
+      "currencyCode is required.",
+    );
+  }
+
+  return normalizeCurrencyCode(normalizedValue);
+}
+
 function normalizeCurrencyCode(value: string): string {
   const normalizedValue = value.trim().toUpperCase();
 
@@ -175,6 +201,16 @@ function normalizeCurrencyCode(value: string): string {
     throw new StoreCatalogValidationError(
       "invalid_store_currency",
       "currencyCode must be 3 to 16 uppercase letters or numbers.",
+    );
+  }
+
+  if (!OFFICIAL_STORE_CURRENCY_CODES.has(normalizedValue)) {
+    throw new StoreCatalogValidationError(
+      "unsupported_store_currency",
+      "currencyCode must be one of the official Econovaria country currencies.",
+      {
+        allowedCurrencyCodes: Array.from(OFFICIAL_STORE_CURRENCY_CODES),
+      },
     );
   }
 

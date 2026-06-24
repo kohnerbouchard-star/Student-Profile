@@ -496,7 +496,16 @@ function roundExchangeRate(value: number): number {
 }
 
 function normalizeCurrencyCode(value: string): string {
-  return String(value || "ECO").trim().toUpperCase();
+  const normalizedValue = String(value || "").trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{3,16}$/.test(normalizedValue)) {
+    throw new StorePurchasePersistenceError(
+      "store_quote_invalid_currency_code",
+      "Store quote currency code is invalid.",
+    );
+  }
+
+  return normalizedValue;
 }
 
 function clampQuoteMultiplier(value: number): number {
