@@ -42,7 +42,6 @@ interface PlayerStockMarketTradingHttpDependencies {
 
 interface PlayerStockMarketTradingBody {
   readonly gameSessionId: string;
-  readonly playerSessionId: string;
   readonly stockAssetId: string;
   readonly side: StockMarketOrderSide;
   readonly quantity: number;
@@ -108,7 +107,6 @@ export async function handlePlayerStockMarketTradingRequest(
 
     assertRequestedSessionMatchesResolvedSession(
       body.gameSessionId,
-      body.playerSessionId,
       sessionResult,
     );
 
@@ -117,7 +115,7 @@ export async function handlePlayerStockMarketTradingRequest(
       : new SupabaseStockMarketTradingRepository(serviceClient as any);
     const result = await repository.executeOrder({
       gameSessionId: body.gameSessionId,
-      playerSessionId: body.playerSessionId,
+      playerSessionId: sessionResult.session.id,
       stockAssetId: body.stockAssetId,
       side: body.side,
       quantity: body.quantity,
@@ -171,14 +169,11 @@ async function readPlayerStockMarketTradingBody(
     throw invalidRequest("Request body must be a JSON object.");
   }
 
+  rejectBodySuppliedPlayerSessionFields(value);
   rejectArrayShapedFields(value);
 
   return {
     gameSessionId: readRequiredString(value.gameSessionId, "gameSessionId"),
-    playerSessionId: readRequiredString(
-      value.playerSessionId,
-      "playerSessionId",
-    ),
     stockAssetId: readRequiredString(value.stockAssetId, "stockAssetId"),
     side: readOrderSide(value.side),
     quantity: readPositiveNumber(value.quantity, "quantity"),
@@ -189,37 +184,41 @@ async function readPlayerStockMarketTradingBody(
   };
 }
 
+function rejectBodySuppliedPlayerSessionFields(
+  value: Record<string, unknown>,
+): void {
+  if ("playerSessionId" in value || "playerSessionIds" in value) {
+    throw invalidRequest(
+      "playerSessionId must not be sent; player stock trading derives it from x-player-session-token.",
+    );
+  }
+}
+
 function rejectArrayShapedFields(value: Record<string, unknown>): void {
   if (
     Array.isArray(value.gameSessionId) ||
     Array.isArray(value.gameSessionIds) ||
     Array.isArray(value.gameSessions) ||
     Array.isArray(value.sessions) ||
-    Array.isArray(value.playerSessionId) ||
-    Array.isArray(value.playerSessionIds) ||
     Array.isArray(value.stockAssetId) ||
     Array.isArray(value.stockAssetIds) ||
     Array.isArray(value.idempotencyKey) ||
     Array.isArray(value.idempotencyKeys)
   ) {
     throw invalidRequest(
-      "Player stock trading accepts exactly one gameSessionId, playerSessionId, stockAssetId, and idempotencyKey per request.",
+      "Player stock trading accepts exactly one gameSessionId, stockAssetId, and idempotencyKey per request.",
     );
   }
 }
 
 function assertRequestedSessionMatchesResolvedSession(
   gameSessionId: string,
-  playerSessionId: string,
   sessionResult: ResolvedPlayerSession,
 ): void {
-  if (
-    sessionResult.session.game_session_id !== gameSessionId ||
-    sessionResult.session.id !== playerSessionId
-  ) {
+  if (sessionResult.session.game_session_id !== gameSessionId) {
     throw new EdgeActivationError(
       "invalid_player_session_scope",
-      "Requested player session does not match the authenticated player session.",
+      "Requested game session does not match the authenticated player session.",
       401,
       false,
     );
