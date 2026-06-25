@@ -15,6 +15,11 @@ import type {
 import type {
   StockMarketRunnerRepository,
 } from "../contracts/stockMarketRunnerContracts.ts";
+import type {
+  StockMarketNewsCreateResult,
+  StockMarketNewsInsertInput,
+  StockMarketNewsRepository,
+} from "../contracts/stockMarketNewsContracts.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -144,6 +149,60 @@ Deno.test("stock market runner publishes one public stock tick after persistence
   assertNoPrivateRealtimeFields(message);
 });
 
+Deno.test("stock market runner posts market news and broadcasts public event", async () => {
+  const newsRepository = new MockMarketNewsRepository();
+  const transport = new CapturingRealtimeTransport();
+  const response = await handleStockMarketRunnerRequest(
+    request({
+      action: "post_market_news",
+      gameSessionId: GAME_SESSION_ID,
+      headline: "Border escalation lifts emergency energy demand",
+      explanation: "Government procurement increases oil, steel, and logistics pressure.",
+      category: "war_conflict",
+      scope: "sector",
+      targetKey: "ENERGY",
+      sentiment: "positive",
+      impactStrength: "medium",
+      durationTicks: 5,
+      metadata: {
+        affectedResources: ["oil", "steel"],
+      },
+    }, SECRET),
+    dependencies({
+      newsRepository,
+      publicRealtimePublisher: new GamePublicRealtimePublisher(transport),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(body.action, "post_market_news");
+  assertEquals(body.gameSessionId, GAME_SESSION_ID);
+  assertEquals(body.news.category, "war_conflict");
+  assertEquals(body.news.sentiment, "positive");
+
+  assertEquals(newsRepository.createdInputs.length, 1);
+  assertEquals(newsRepository.createdInputs[0].gameSessionId, GAME_SESSION_ID);
+  assertEquals(newsRepository.createdInputs[0].createdTick, 8);
+  assertEquals(newsRepository.createdInputs[0].scope, "sector");
+  assertEquals(newsRepository.createdInputs[0].targetKey, "ENERGY");
+
+  assertEquals(transport.messages.length, 1);
+
+  const message = transport.messages[0] as GamePublicRealtimeBroadcastMessage<
+    "market_news_posted"
+  >;
+
+  assertEquals(message.channel, `game:${GAME_SESSION_ID}:public`);
+  assertEquals(message.event, "market_news_posted");
+  assertEquals(message.payload.sequence, 8);
+  assertEquals(message.payload.payload.news.category, "war_conflict");
+  assertEquals(message.payload.payload.news.sentiment, "positive");
+  assertEquals(message.payload.payload.news.source, "runner");
+  assertNoPrivateRealtimeFields(message);
+});
+
 Deno.test("stock market runner keeps successful tick response when realtime publish fails", async () => {
   const failures: unknown[] = [];
   const response = await handleStockMarketRunnerRequest(
@@ -218,10 +277,11 @@ function dependencies(options: {
     input: StockMarketEngineInput,
   ) => StockMarketEngineResult;
   readonly publicRealtimePublisher?: {
-    publish(
-      envelope: GamePublicRealtimeEnvelope<"stock_tick">,
-    ): Promise<GamePublicRealtimePublishResult<"stock_tick">>;
+    publish<TEvent extends "stock_tick" | "market_news_posted">(
+      envelope: GamePublicRealtimeEnvelope<TEvent>,
+    ): Promise<GamePublicRealtimePublishResult<TEvent>>;
   };
+  readonly newsRepository?: StockMarketNewsRepository;
   readonly logPublicRealtimePublishFailure?: (failure: {
     readonly code: string;
     readonly message: string;
@@ -242,6 +302,7 @@ function dependencies(options: {
     }),
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
     createRepository: () => repository,
+    createNewsRepository: () => options.newsRepository ?? new MockMarketNewsRepository(),
     calculateNextTick: options.calculateNextTick ?? engineResult,
     createPublicRealtimePublisher: () =>
       options.publicRealtimePublisher ?? new NoopPublicRealtimePublisher(),
@@ -379,6 +440,38 @@ class MockRunnerRepository implements StockMarketRunnerRepository {
   }
 }
 
+class MockMarketNewsRepository implements StockMarketNewsRepository {
+  readonly createdInputs: StockMarketNewsInsertInput[] = [];
+  currentTick = 7;
+
+  async readCurrentTick(_gameSessionId: string): Promise<number> {
+    return this.currentTick;
+  }
+
+  async create(
+    input: StockMarketNewsInsertInput,
+  ): Promise<StockMarketNewsCreateResult> {
+    this.createdInputs.push(input);
+
+    return {
+      news: {
+        id: "event-news-1",
+        shockId: input.shockId,
+        category: input.category,
+        sentiment: input.sentiment,
+        source: input.source,
+        scope: input.scope,
+        targetKey: input.targetKey,
+        headline: input.headline,
+        explanation: input.explanation,
+        createdTick: input.createdTick,
+        expiresTick: input.createdTick + input.durationTicks,
+        createdAt: "2026-01-01T00:00:00Z",
+      },
+    };
+  }
+}
+
 class CapturingRealtimeTransport implements GamePublicRealtimeTransport {
   readonly messages: GamePublicRealtimeBroadcastMessage[] = [];
 
@@ -405,7 +498,9 @@ class FailingRealtimeTransport implements GamePublicRealtimeTransport {
 }
 
 class NoopPublicRealtimePublisher {
-  async publish(envelope: GamePublicRealtimeEnvelope<"stock_tick">) {
+  async publish<TEvent extends "stock_tick" | "market_news_posted">(
+    envelope: GamePublicRealtimeEnvelope<TEvent>,
+  ) {
     return {
       ok: true as const,
       message: {
@@ -418,7 +513,9 @@ class NoopPublicRealtimePublisher {
 }
 
 class ThrowingPublicRealtimePublisher {
-  async publish(): Promise<GamePublicRealtimePublishResult<"stock_tick">> {
+  async publish<TEvent extends "stock_tick" | "market_news_posted">(): Promise<
+    GamePublicRealtimePublishResult<TEvent>
+  > {
     throw new Error("publish unavailable");
   }
 }

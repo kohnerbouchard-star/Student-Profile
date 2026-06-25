@@ -14,6 +14,7 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
+  buildGamePublicRealtimeEnvelope,
   type GamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
   type GamePublicRealtimePublishResult,
@@ -33,6 +34,8 @@ import {
   type CalculateStockMarketTick,
   StockMarketRunnerError,
   type StockMarketRunnerPersistencePayload,
+  type StockMarketRunnerPostMarketNewsRequestBody,
+  type StockMarketRunnerPostMarketNewsSuccessBody,
   type StockMarketRunnerRepository,
   type StockMarketRunnerRequestBody,
   type StockMarketRunnerResult,
@@ -42,6 +45,15 @@ import {
 import {
   SupabaseStockMarketRunnerRepository,
 } from "../infrastructure/supabaseStockMarketRunnerRepository.ts";
+import {
+  parseStockMarketNewsCreateRequest,
+  StockMarketNewsError,
+  type StockMarketNewsCreateResult,
+  type StockMarketNewsRepository,
+} from "../contracts/stockMarketNewsContracts.ts";
+import {
+  SupabaseStockMarketNewsRepository,
+} from "../infrastructure/supabaseStockMarketNewsRepository.ts";
 
 declare const Deno: {
   readonly env: {
@@ -58,6 +70,9 @@ interface StockMarketRunnerHttpDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => StockMarketRunnerRepository;
+  readonly createNewsRepository?: (
+    client: EdgeSupabaseClient,
+  ) => StockMarketNewsRepository;
   readonly calculateNextTick?: CalculateStockMarketTick;
   readonly createPublicRealtimePublisher?: (
     client: EdgeSupabaseClient,
@@ -68,9 +83,9 @@ interface StockMarketRunnerHttpDependencies {
 }
 
 interface StockMarketRunnerPublicRealtimePublisher {
-  publish(
-    envelope: GamePublicRealtimeEnvelope<"stock_tick">,
-  ): Promise<GamePublicRealtimePublishResult<"stock_tick">>;
+  publish<TEvent extends "stock_tick" | "market_news_posted">(
+    envelope: GamePublicRealtimeEnvelope<TEvent>,
+  ): Promise<GamePublicRealtimePublishResult<TEvent>>;
 }
 
 interface StockMarketRunnerPublicRealtimePublishFailure {
@@ -128,6 +143,26 @@ export async function handleStockMarketRunnerRequest(
     const publicRealtimePublisher = dependencies.createPublicRealtimePublisher
       ? dependencies.createPublicRealtimePublisher(serviceClient)
       : createDefaultPublicRealtimePublisher(serviceClient);
+
+    if (body.action === "post_market_news") {
+      const newsRepository = dependencies.createNewsRepository
+        ? dependencies.createNewsRepository(serviceClient)
+        : new SupabaseStockMarketNewsRepository(serviceClient as any);
+      const result = await postStockMarketNews(body, {
+        newsRepository,
+        publicRealtimePublisher,
+        logPublicRealtimePublishFailure: dependencies
+          .logPublicRealtimePublishFailure,
+      });
+
+      return jsonResponse<StockMarketRunnerPostMarketNewsSuccessBody>(200, {
+        ok: true,
+        action: "post_market_news",
+        gameSessionId: body.gameSessionId,
+        news: result.news,
+      });
+    }
+
     const result = await runStockMarketRunner(body, {
       repository,
       calculateNextTick: dependencies.calculateNextTick ??
@@ -146,6 +181,14 @@ export async function handleStockMarketRunnerRequest(
       generatedAt: result.generatedAt,
     });
   } catch (error) {
+    if (error instanceof StockMarketNewsError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+      });
+    }
+
     if (error instanceof StockMarketRunnerError) {
       return jsonError(error.status, {
         code: error.code,
@@ -168,6 +211,118 @@ export async function handleStockMarketRunnerRequest(
       retryable: false,
     });
   }
+}
+
+export async function postStockMarketNews(
+  input: StockMarketRunnerPostMarketNewsRequestBody,
+  dependencies: {
+    readonly newsRepository: StockMarketNewsRepository;
+    readonly publicRealtimePublisher?: StockMarketRunnerPublicRealtimePublisher;
+    readonly logPublicRealtimePublishFailure?: (
+      failure: StockMarketRunnerPublicRealtimePublishFailure,
+    ) => void;
+  },
+): Promise<StockMarketNewsCreateResult> {
+  const currentTick = await dependencies.newsRepository.readCurrentTick(
+    input.gameSessionId,
+  );
+  const createdTick = currentTick + 1;
+  const result = await dependencies.newsRepository.create({
+    ...input,
+    shockId: buildStockMarketNewsShockId(input, createdTick),
+    createdTick,
+  });
+
+  await publishMarketNewsPublicRealtimeBestEffort({
+    publisher: dependencies.publicRealtimePublisher,
+    gameSessionId: input.gameSessionId,
+    result,
+    onFailure: dependencies.logPublicRealtimePublishFailure ??
+      logPublicRealtimePublishFailure,
+  });
+
+  return result;
+}
+
+async function publishMarketNewsPublicRealtimeBestEffort(args: {
+  readonly publisher?: StockMarketRunnerPublicRealtimePublisher;
+  readonly gameSessionId: string;
+  readonly result: StockMarketNewsCreateResult;
+  readonly onFailure: (
+    failure: StockMarketRunnerPublicRealtimePublishFailure,
+  ) => void;
+}): Promise<void> {
+  if (!args.publisher) {
+    return;
+  }
+
+  const news = args.result.news;
+  let envelope: GamePublicRealtimeEnvelope<"market_news_posted">;
+
+  try {
+    envelope = buildGamePublicRealtimeEnvelope({
+      gameSessionId: args.gameSessionId,
+      sequence: news.createdTick,
+      eventType: "market_news_posted",
+      occurredAt: news.createdAt,
+      payload: {
+        news: {
+          id: news.id,
+          headline: news.headline,
+          explanation: news.explanation,
+          category: String(news.category),
+          sentiment: String(news.sentiment),
+          source: String(news.source),
+          scope: String(news.scope),
+          targetKey: news.targetKey,
+          createdTick: news.createdTick,
+          expiresTick: news.expiresTick,
+          createdAt: news.createdAt,
+        },
+      },
+    });
+  } catch (_error) {
+    args.onFailure({
+      code: "market_news_public_realtime_envelope_failed",
+      message: "Market news public realtime event could not be built.",
+      retryable: false,
+    });
+    return;
+  }
+
+  let publishResult: GamePublicRealtimePublishResult<"market_news_posted">;
+
+  try {
+    publishResult = await args.publisher.publish(envelope);
+  } catch (_error) {
+    args.onFailure({
+      code: "market_news_public_realtime_publish_failed",
+      message: "Market news public realtime event could not be published.",
+      retryable: true,
+    });
+    return;
+  }
+
+  if (!publishResult.ok) {
+    args.onFailure(publishResult.error);
+  }
+}
+
+function buildStockMarketNewsShockId(
+  input: StockMarketRunnerPostMarketNewsRequestBody,
+  createdTick: number,
+): string {
+  const target = input.targetKey ?? "global";
+
+  return [
+    "market-news",
+    input.gameSessionId,
+    createdTick,
+    input.category,
+    input.scope,
+    target,
+    Date.now(),
+  ].join(":");
 }
 
 export async function runStockMarketRunner(
@@ -421,6 +576,25 @@ async function readStockMarketRunnerRequestBody(
     );
   }
 
+  const action = typeof value.action === "string"
+    ? value.action.trim()
+    : "run_tick";
+
+  if (action === "post_market_news") {
+    return {
+      action,
+      ...parseStockMarketNewsCreateRequest(value),
+    };
+  }
+
+  if (action !== "run_tick") {
+    throw new StockMarketRunnerError(
+      "invalid_stock_market_runner_request",
+      "Unsupported stock market runner action.",
+      400,
+    );
+  }
+
   const gameSessionId = typeof value.gameSessionId === "string"
     ? value.gameSessionId.trim()
     : "";
@@ -434,6 +608,7 @@ async function readStockMarketRunnerRequestBody(
   }
 
   return {
+    action: "run_tick",
     gameSessionId,
     tickIndex: readOptionalTickIndex(value.tickIndex),
     seed: readOptionalSeed(value.seed),

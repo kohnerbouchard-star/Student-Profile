@@ -29,6 +29,9 @@ export interface GamePublicRealtimeMarketNewsPayload {
   readonly id: string;
   readonly headline: string;
   readonly explanation: string;
+  readonly category: string;
+  readonly sentiment: string;
+  readonly source: string;
   readonly scope: string;
   readonly targetKey: string | null;
   readonly createdTick: number;
@@ -363,7 +366,18 @@ function validateMarketNewsPayload(payload: unknown): ValidationResult {
 
   const news = payload.news;
 
-  for (const fieldName of ["id", "headline", "explanation", "scope", "createdAt"]) {
+  for (
+    const fieldName of [
+      "id",
+      "headline",
+      "explanation",
+      "category",
+      "sentiment",
+      "source",
+      "scope",
+      "createdAt",
+    ]
+  ) {
     if (!normalizeText(news[fieldName])) {
       return invalidEvent(`market_news_posted news.${fieldName} is required.`);
     }

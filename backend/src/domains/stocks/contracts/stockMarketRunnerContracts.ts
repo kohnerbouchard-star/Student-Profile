@@ -9,11 +9,25 @@ import type {
   StockMarketShockInput,
 } from "./stockMarketEngineContracts.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
+import type {
+  StockMarketNewsCreateInput,
+  StockMarketNewsDto,
+} from "./stockMarketNewsContracts.ts";
 
-export interface StockMarketRunnerRequestBody {
+export type StockMarketRunnerRequestBody =
+  | StockMarketRunnerTickRequestBody
+  | StockMarketRunnerPostMarketNewsRequestBody;
+
+export interface StockMarketRunnerTickRequestBody {
+  readonly action?: "run_tick";
   readonly gameSessionId: string;
   readonly tickIndex?: number;
   readonly seed?: string;
+}
+
+export interface StockMarketRunnerPostMarketNewsRequestBody
+  extends StockMarketNewsCreateInput {
+  readonly action: "post_market_news";
 }
 
 export interface StockMarketRunnerSuccessBody {
@@ -23,6 +37,13 @@ export interface StockMarketRunnerSuccessBody {
   readonly assetsProcessed: number;
   readonly ticksInserted: number;
   readonly generatedAt: string;
+}
+
+export interface StockMarketRunnerPostMarketNewsSuccessBody {
+  readonly ok: true;
+  readonly action: "post_market_news";
+  readonly gameSessionId: string;
+  readonly news: StockMarketNewsDto;
 }
 
 export interface StockMarketRunnerLoadedState {
