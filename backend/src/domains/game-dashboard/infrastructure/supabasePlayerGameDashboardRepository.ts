@@ -224,7 +224,8 @@ const PLAYER_SELECT = "id,display_name,roster_label";
 const COUNTRY_ASSIGNMENT_SELECT = "player_id,country_profile_id,assigned_at";
 const COUNTRY_PROFILE_SELECT = "id,country_code,currency_code";
 const CASH_SELECT = "player_id,account_type,balance,currency_code";
-const HOLDING_SELECT = "player_id,stock_asset_id,ticker,quantity,average_cost,realized_pnl";
+const HOLDING_SELECT =
+  "player_id,stock_asset_id,ticker,quantity,average_cost,realized_pnl";
 const ORDER_SELECT = [
   "id",
   "player_id",
@@ -338,7 +339,9 @@ export class SupabasePlayerGameDashboardRepository
     );
     const meHoldings = holdings
       .filter((holding) => holding.player_id === input.playerId)
-      .map((holding) => toHoldingDto(holding, stockByAssetId.get(holding.stock_asset_id)));
+      .map((holding) =>
+        toHoldingDto(holding, stockByAssetId.get(holding.stock_asset_id))
+      );
     const portfolio = summarizePortfolio(meCash, meHoldings);
     const leaderboard = toLeaderboard(
       players,
@@ -398,10 +401,13 @@ export class SupabasePlayerGameDashboardRepository
         contracts: [],
         storeListings: storeListings.map(toPublicStoreListingDto),
       },
+      unseenCutscenes: [],
     };
   }
 
-  private async readGameSession(gameSessionId: string): Promise<GameSessionRow> {
+  private async readGameSession(
+    gameSessionId: string,
+  ): Promise<GameSessionRow> {
     const response = await this.client
       .from("game_sessions")
       .select(GAME_SESSION_SELECT)
@@ -432,7 +438,9 @@ export class SupabasePlayerGameDashboardRepository
     readonly stocks: readonly StockMarketBoardStockDto[];
   }> {
     try {
-      const result = await new SupabaseStockMarketReadRepository(this.client as any)
+      const result = await new SupabaseStockMarketReadRepository(
+        this.client as any,
+      )
         .read({
           gameSessionId,
           includeHistory: false,
@@ -458,7 +466,9 @@ export class SupabasePlayerGameDashboardRepository
     }
   }
 
-  private async readActivePlayers(gameSessionId: string): Promise<readonly PlayerRow[]> {
+  private async readActivePlayers(
+    gameSessionId: string,
+  ): Promise<readonly PlayerRow[]> {
     const response = await this.client
       .from("players")
       .select(PLAYER_SELECT)
@@ -595,7 +605,9 @@ export class SupabasePlayerGameDashboardRepository
     return ((response.data ?? []) as StockTradeRow[]).map(toTradeDto);
   }
 
-  private async readStoreListings(gameSessionId: string): Promise<readonly StoreItemDto[]> {
+  private async readStoreListings(
+    gameSessionId: string,
+  ): Promise<readonly StoreItemDto[]> {
     const response = await this.client
       .from("store_items")
       .select(STORE_ITEM_SELECT)
@@ -683,7 +695,8 @@ function toCashDto(
 
   return {
     balances,
-    primaryCurrencyCode: preferredCurrencyCode ?? balances[0]?.currencyCode ?? null,
+    primaryCurrencyCode: preferredCurrencyCode ?? balances[0]?.currencyCode ??
+      null,
     totalBalance: round(sum(balances, (balance) => balance.balance)),
   };
 }
@@ -722,9 +735,13 @@ function summarizePortfolio(
   cash: ReturnType<typeof toCashDto>,
   holdings: readonly StockMarketPlayerHoldingDto[],
 ): StockMarketPlayerPortfolioSummaryDto {
-  const holdingsMarketValue = round(sum(holdings, (holding) => holding.marketValue));
+  const holdingsMarketValue = round(
+    sum(holdings, (holding) => holding.marketValue),
+  );
   const totalCostBasis = round(sum(holdings, (holding) => holding.costBasis));
-  const unrealizedPnl = round(sum(holdings, (holding) => holding.unrealizedPnl));
+  const unrealizedPnl = round(
+    sum(holdings, (holding) => holding.unrealizedPnl),
+  );
   const realizedPnl = round(sum(holdings, (holding) => holding.realizedPnl));
 
   return {
@@ -838,7 +855,9 @@ function toPublicStoreListingDto(
   };
 }
 
-function toMarketNewsDto(row: StockMarketEventRow): PlayerGameDashboardMarketNewsDto {
+function toMarketNewsDto(
+  row: StockMarketEventRow,
+): PlayerGameDashboardMarketNewsDto {
   return {
     id: row.id,
     shockId: row.shock_id,

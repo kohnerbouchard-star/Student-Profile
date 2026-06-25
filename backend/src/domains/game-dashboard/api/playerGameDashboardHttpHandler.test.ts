@@ -5,7 +5,12 @@ import type {
   PlayerGameDashboardReadInput,
   PlayerGameDashboardRepository,
   PlayerGameDashboardSnapshot,
+  PlayerGameDashboardStoryNotificationReader,
 } from "../contracts/playerGameDashboardContracts.ts";
+import type {
+  ListUnseenStoryCutsceneDeliveriesInput,
+  StoryNotificationDeliveryWithNotification,
+} from "../../storylines/contracts/storyNotificationContracts.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -36,6 +41,17 @@ const OTHER_INVENTORY_ID = "00000000-0000-4000-8000-000000000502";
 const PURCHASE_ID = "00000000-0000-4000-8000-000000000601";
 const OTHER_PURCHASE_ID = "00000000-0000-4000-8000-000000000602";
 const MARKET_EVENT_ID = "00000000-0000-4000-8000-000000000701";
+const STORY_NOTIFICATION_ID = "00000000-0000-4000-8000-000000000801";
+const STORY_NOTIFICATION_LOW_ID = "00000000-0000-4000-8000-000000000802";
+const STORY_NOTIFICATION_SEEN_ID = "00000000-0000-4000-8000-000000000803";
+const STORY_NOTIFICATION_DISMISSED_ID = "00000000-0000-4000-8000-000000000804";
+const STORY_NOTIFICATION_OTHER_PLAYER_ID =
+  "00000000-0000-4000-8000-000000000805";
+const STORY_DELIVERY_ID = "00000000-0000-4000-8000-000000000901";
+const STORY_DELIVERY_LOW_ID = "00000000-0000-4000-8000-000000000902";
+const STORY_DELIVERY_SEEN_ID = "00000000-0000-4000-8000-000000000903";
+const STORY_DELIVERY_DISMISSED_ID = "00000000-0000-4000-8000-000000000904";
+const STORY_DELIVERY_OTHER_PLAYER_ID = "00000000-0000-4000-8000-000000000905";
 
 Deno.test("player dashboard rejects missing player session token", async () => {
   const response = await handlePlayerGameDashboardRequest(
@@ -49,18 +65,25 @@ Deno.test("player dashboard rejects missing player session token", async () => {
 Deno.test("player dashboard rejects invalid player session token", async () => {
   const response = await handlePlayerGameDashboardRequest(
     request(),
-    dependencies({ client: new FakeClient({ ...tables(), player_sessions: [] }) }),
+    dependencies({
+      client: new FakeClient({ ...tables(), player_sessions: [] }),
+    }),
   );
 
   await assertErrorResponse(response, 401, "invalid_player_session");
 });
 
 Deno.test("player dashboard rejects revoked, expired, or inactive sessions", async () => {
-  for (const session of [
-    playerSession({ status: "revoked", revoked_at: "2026-06-24T00:00:00.000Z" }),
-    playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
-    playerSession({ status: "expired" }),
-  ]) {
+  for (
+    const session of [
+      playerSession({
+        status: "revoked",
+        revoked_at: "2026-06-24T00:00:00.000Z",
+      }),
+      playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
+      playerSession({ status: "expired" }),
+    ]
+  ) {
     const response = await handlePlayerGameDashboardRequest(
       request(),
       dependencies({
@@ -100,9 +123,21 @@ Deno.test("player dashboard rejects runner secret and client-supplied identity",
   );
 
   await assertErrorResponse(withSecret, 400, "stock_runner_secret_not_allowed");
-  await assertErrorResponse(withPlayerId, 400, "invalid_game_dashboard_request");
-  await assertErrorResponse(withPlayerSessionId, 400, "invalid_game_dashboard_request");
-  await assertErrorResponse(withPlayerSessionHeader, 400, "invalid_game_dashboard_request");
+  await assertErrorResponse(
+    withPlayerId,
+    400,
+    "invalid_game_dashboard_request",
+  );
+  await assertErrorResponse(
+    withPlayerSessionId,
+    400,
+    "invalid_game_dashboard_request",
+  );
+  await assertErrorResponse(
+    withPlayerSessionHeader,
+    400,
+    "invalid_game_dashboard_request",
+  );
 });
 
 Deno.test("player dashboard does not require playerSessionId and derives it from token", async () => {
@@ -177,17 +212,30 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     unrealizedPnlPct: 25,
     realizedPnl: 30,
   }]);
-  assertEquals(body.me.stocks.orders.map((order: { readonly orderId: string }) => order.orderId), [
-    ORDER_ID,
-    PREVIOUS_SESSION_ORDER_ID,
-  ]);
-  assertEquals(body.me.stocks.trades.map((trade: { readonly tradeId: string }) => trade.tradeId), [
-    TRADE_ID,
-    PREVIOUS_SESSION_TRADE_ID,
-  ]);
-  assertEquals(body.me.store.listings.map((item: { readonly id: string }) => item.id), [
-    STORE_ITEM_ID,
-  ]);
+  assertEquals(
+    body.me.stocks.orders.map((order: { readonly orderId: string }) =>
+      order.orderId
+    ),
+    [
+      ORDER_ID,
+      PREVIOUS_SESSION_ORDER_ID,
+    ],
+  );
+  assertEquals(
+    body.me.stocks.trades.map((trade: { readonly tradeId: string }) =>
+      trade.tradeId
+    ),
+    [
+      TRADE_ID,
+      PREVIOUS_SESSION_TRADE_ID,
+    ],
+  );
+  assertEquals(
+    body.me.store.listings.map((item: { readonly id: string }) => item.id),
+    [
+      STORE_ITEM_ID,
+    ],
+  );
   assertEquals(body.me.store.inventory, [{
     inventoryId: INVENTORY_ID,
     itemId: STORE_ITEM_ID,
@@ -207,24 +255,46 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     createdAt: "2026-06-24T00:06:00.000Z",
   }]);
   assertEquals(body.me.contracts, { available: [], progress: [] });
-  assertEquals(body.public.players.map((player: { readonly playerId: string }) => player.playerId), [
-    PLAYER_ID,
-    OTHER_PLAYER_ID,
-  ]);
-  assertEquals(body.public.leaderboard.map((entry: { readonly playerId: string; readonly rank: number; readonly netWorth: number }) => ({
-    playerId: entry.playerId,
-    rank: entry.rank,
-    netWorth: entry.netWorth,
-  })), [
-    { playerId: OTHER_PLAYER_ID, rank: 1, netWorth: 52500 },
-    { playerId: PLAYER_ID, rank: 2, netWorth: 10125 },
-  ]);
-  assertEquals(body.public.market.stocks.map((stock: { readonly assetId: string }) => stock.assetId), [
-    STOCK_ASSET_ID,
-  ]);
-  assertEquals(body.public.market.news.map((news: { readonly id: string }) => news.id), [
-    MARKET_EVENT_ID,
-  ]);
+  assertEquals(
+    body.public.players.map((player: { readonly playerId: string }) =>
+      player.playerId
+    ),
+    [
+      PLAYER_ID,
+      OTHER_PLAYER_ID,
+    ],
+  );
+  assertEquals(
+    body.public.leaderboard.map((
+      entry: {
+        readonly playerId: string;
+        readonly rank: number;
+        readonly netWorth: number;
+      },
+    ) => ({
+      playerId: entry.playerId,
+      rank: entry.rank,
+      netWorth: entry.netWorth,
+    })),
+    [
+      { playerId: OTHER_PLAYER_ID, rank: 1, netWorth: 52500 },
+      { playerId: PLAYER_ID, rank: 2, netWorth: 10125 },
+    ],
+  );
+  assertEquals(
+    body.public.market.stocks.map((stock: { readonly assetId: string }) =>
+      stock.assetId
+    ),
+    [
+      STOCK_ASSET_ID,
+    ],
+  );
+  assertEquals(
+    body.public.market.news.map((news: { readonly id: string }) => news.id),
+    [
+      MARKET_EVENT_ID,
+    ],
+  );
   assertEquals(body.public.contracts, []);
   assertEquals(body.public.storeListings, [{
     itemId: STORE_ITEM_ID,
@@ -238,6 +308,7 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     sortOrder: 10,
     updatedAt: "2026-06-24T00:04:00.000Z",
   }]);
+  assertEquals(body.unseenCutscenes, []);
   assertEquals(body.realtime.publicChannel, `game:${GAME_SESSION_ID}:public`);
   assertEquals(body.realtime.lastSequence, null);
   assertEquals(body.realtime.events.includes("stock_tick"), true);
@@ -257,9 +328,140 @@ Deno.test("player dashboard includes same-player stock history across sessions a
   assertEquals("price" in body.public.storeListings[0], false);
 });
 
+Deno.test("player dashboard includes unseen cutscene deliveries for the authenticated player only", async () => {
+  const seededTables = tables();
+  seededTables.notifications = [
+    storyNotificationRow(),
+    storyNotificationRow({
+      id: STORY_NOTIFICATION_LOW_ID,
+      source_id: "story-event-low",
+      title: "Minor update",
+      summary: "A lower priority cutscene.",
+      priority: "low",
+      payload: {
+        videoAssetKey: "story-low",
+      },
+      published_at: "2026-06-24T00:11:00.000Z",
+    }),
+    storyNotificationRow({
+      id: STORY_NOTIFICATION_SEEN_ID,
+      source_id: "story-event-seen",
+      title: "Already seen",
+    }),
+    storyNotificationRow({
+      id: STORY_NOTIFICATION_DISMISSED_ID,
+      source_id: "story-event-dismissed",
+      title: "Dismissed",
+    }),
+    storyNotificationRow({
+      id: STORY_NOTIFICATION_OTHER_PLAYER_ID,
+      source_id: "story-event-other-player",
+      title: "Other player",
+      priority: "critical",
+    }),
+  ];
+  seededTables.notification_deliveries = [
+    storyDeliveryRow(),
+    storyDeliveryRow({
+      id: STORY_DELIVERY_LOW_ID,
+      notification_id: STORY_NOTIFICATION_LOW_ID,
+    }),
+    storyDeliveryRow({
+      id: STORY_DELIVERY_SEEN_ID,
+      notification_id: STORY_NOTIFICATION_SEEN_ID,
+      seen_at: "2026-06-24T00:15:00.000Z",
+    }),
+    storyDeliveryRow({
+      id: STORY_DELIVERY_DISMISSED_ID,
+      notification_id: STORY_NOTIFICATION_DISMISSED_ID,
+      dismissed_at: "2026-06-24T00:16:00.000Z",
+    }),
+    storyDeliveryRow({
+      id: STORY_DELIVERY_OTHER_PLAYER_ID,
+      notification_id: STORY_NOTIFICATION_OTHER_PLAYER_ID,
+      player_id: OTHER_PLAYER_ID,
+    }),
+  ];
+  const client = new FakeClient(seededTables);
+
+  const response = await handlePlayerGameDashboardRequest(
+    request(),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.unseenCutscenes, [
+    {
+      deliveryId: STORY_DELIVERY_ID,
+      notificationId: STORY_NOTIFICATION_ID,
+      title: "Northreach closes northern migration corridors",
+      summary: "Border restrictions escalate after security concerns.",
+      priority: "major",
+      displayMode: "modal_on_next_login",
+      payload: {
+        videoAssetKey: "northreach-border-closure-v1",
+        posterAssetKey: "northreach-border-closure-poster",
+        requiresAcknowledgement: true,
+      },
+      publishedAt: "2026-06-24T00:12:00.000Z",
+      deliveredAt: "2026-06-24T00:12:30.000Z",
+      requiresAcknowledgement: true,
+    },
+    {
+      deliveryId: STORY_DELIVERY_LOW_ID,
+      notificationId: STORY_NOTIFICATION_LOW_ID,
+      title: "Minor update",
+      summary: "A lower priority cutscene.",
+      priority: "low",
+      displayMode: "modal_on_next_login",
+      payload: {
+        videoAssetKey: "story-low",
+      },
+      publishedAt: "2026-06-24T00:11:00.000Z",
+      deliveredAt: "2026-06-24T00:12:30.000Z",
+      requiresAcknowledgement: false,
+    },
+  ]);
+  assertEquals(client.forbiddenCalls, []);
+  assertEquals(
+    seededTables.notification_deliveries.find((row) =>
+      row.id === STORY_DELIVERY_ID
+    )?.seen_at,
+    null,
+  );
+});
+
+Deno.test("player dashboard reads cutscenes through derived session identity", async () => {
+  const storyNotificationRepository = new CapturingStoryNotificationReader();
+
+  const response = await handlePlayerGameDashboardRequest(
+    request(),
+    dependencies({
+      repository: new CapturingRepository(),
+      storyNotificationRepository,
+    }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(storyNotificationRepository.inputs, [{
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+  }]);
+  assertEquals(
+    body.unseenCutscenes.map((cutscene: { deliveryId: string }) =>
+      cutscene.deliveryId
+    ),
+    [STORY_DELIVERY_ID],
+  );
+});
+
 function dependencies(options: {
   readonly client?: FakeClient;
   readonly repository?: PlayerGameDashboardRepository;
+  readonly storyNotificationRepository?:
+    PlayerGameDashboardStoryNotificationReader;
 } = {}): any {
   const client = options.client ?? new FakeClient(tables());
 
@@ -274,8 +476,9 @@ function dependencies(options: {
       },
     }),
     hashSessionToken: async () => "session-token-hash",
-    createRepository: options.repository
-      ? () => options.repository
+    createRepository: options.repository ? () => options.repository : undefined,
+    createStoryNotificationRepository: options.storyNotificationRepository
+      ? () => options.storyNotificationRepository
       : undefined,
   };
 }
@@ -554,6 +757,8 @@ function tables(): Record<string, readonly Record<string, unknown>[]> {
         created_at: "2026-06-24T00:05:00.000Z",
       },
     ],
+    notifications: [],
+    notification_deliveries: [],
   };
 }
 
@@ -679,10 +884,51 @@ function storeItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function storyNotificationRow(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: STORY_NOTIFICATION_ID,
+    game_session_id: GAME_SESSION_ID,
+    source_type: "storyline_event",
+    source_id: "story-event-1",
+    notification_type: "story_cutscene",
+    title: "Northreach closes northern migration corridors",
+    summary: "Border restrictions escalate after security concerns.",
+    priority: "major",
+    display_mode: "modal_on_next_login",
+    payload: {
+      videoAssetKey: "northreach-border-closure-v1",
+      posterAssetKey: "northreach-border-closure-poster",
+      requiresAcknowledgement: true,
+    },
+    published_at: "2026-06-24T00:12:00.000Z",
+    ...overrides,
+  };
+}
+
+function storyDeliveryRow(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: STORY_DELIVERY_ID,
+    notification_id: STORY_NOTIFICATION_ID,
+    game_session_id: GAME_SESSION_ID,
+    player_id: PLAYER_ID,
+    delivered_at: "2026-06-24T00:12:30.000Z",
+    seen_at: null,
+    dismissed_at: null,
+    acknowledged_at: null,
+    ...overrides,
+  };
+}
+
 class CapturingRepository implements PlayerGameDashboardRepository {
   readonly inputs: PlayerGameDashboardReadInput[] = [];
 
-  async read(input: PlayerGameDashboardReadInput): Promise<PlayerGameDashboardSnapshot> {
+  async read(
+    input: PlayerGameDashboardReadInput,
+  ): Promise<PlayerGameDashboardSnapshot> {
     this.inputs.push(input);
 
     return {
@@ -740,7 +986,46 @@ class CapturingRepository implements PlayerGameDashboardRepository {
         contracts: [],
         storeListings: [],
       },
+      unseenCutscenes: [],
     };
+  }
+}
+
+class CapturingStoryNotificationReader
+  implements PlayerGameDashboardStoryNotificationReader {
+  readonly inputs: ListUnseenStoryCutsceneDeliveriesInput[] = [];
+
+  listUnseenStoryCutsceneDeliveries(
+    input: ListUnseenStoryCutsceneDeliveriesInput,
+  ): Promise<readonly StoryNotificationDeliveryWithNotification[]> {
+    this.inputs.push(input);
+
+    return Promise.resolve([{
+      id: STORY_DELIVERY_ID,
+      notificationId: STORY_NOTIFICATION_ID,
+      gameSessionId: input.gameSessionId,
+      playerId: input.playerId,
+      deliveredAt: "2026-06-24T00:12:30.000Z",
+      seenAt: null,
+      dismissedAt: null,
+      acknowledgedAt: null,
+      notification: {
+        id: STORY_NOTIFICATION_ID,
+        gameSessionId: input.gameSessionId,
+        sourceType: "storyline_event",
+        sourceId: "story-event-1",
+        notificationType: "story_cutscene",
+        title: "Northreach closes northern migration corridors",
+        summary: "Border restrictions escalate after security concerns.",
+        priority: "major",
+        displayMode: "modal_on_next_login",
+        payload: {
+          videoAssetKey: "northreach-border-closure-v1",
+          requiresAcknowledgement: true,
+        },
+        publishedAt: "2026-06-24T00:12:00.000Z",
+      },
+    }]);
   }
 }
 
@@ -758,14 +1043,19 @@ class FakeClient {
   async rpc(functionName: string, args: Record<string, unknown> = {}) {
     if (functionName !== "read_latest_stock_market_ticks_for_game") {
       this.forbiddenCalls.push(`rpc:${functionName}`);
-      return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
+      return {
+        data: null,
+        error: { message: `Unexpected RPC ${functionName}` },
+      };
     }
 
     const gameSessionId = args.p_game_session_id;
     const ticker = args.p_ticker;
     const rows = (this.tables.stock_price_ticks ?? [])
       .filter((row) => row.game_session_id === gameSessionId)
-      .filter((row) => ticker === null || ticker === undefined || row.ticker === ticker);
+      .filter((row) =>
+        ticker === null || ticker === undefined || row.ticker === ticker
+      );
     const latestByAssetId = new Map<string, Record<string, unknown>>();
 
     for (const row of rows) {
@@ -789,13 +1079,20 @@ class FakeClient {
 }
 
 class FakeQueryBuilder
-  implements PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
-  private readonly filters: { readonly column: string; readonly value: unknown }[] = [];
+  implements
+    PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
+  private readonly filters: {
+    readonly column: string;
+    readonly value: unknown;
+  }[] = [];
   private readonly inFilters: {
     readonly column: string;
     readonly values: readonly unknown[];
   }[] = [];
-  private readonly orderings: { readonly column: string; readonly ascending: boolean }[] = [];
+  private readonly orderings: {
+    readonly column: string;
+    readonly ascending: boolean;
+  }[] = [];
   private limitCount: number | null = null;
 
   constructor(
@@ -827,6 +1124,11 @@ class FakeQueryBuilder
     return this;
   }
 
+  is(column: string, value: null): FakeQueryBuilder {
+    this.filters.push({ column, value });
+    return this;
+  }
+
   in(column: string, values: readonly unknown[]): FakeQueryBuilder {
     this.inFilters.push({ column, values });
     return this;
@@ -850,10 +1152,15 @@ class FakeQueryBuilder
     return { data: result.data?.[0] ?? null, error: result.error };
   }
 
-  then<TResult1 = { readonly data: unknown[] | null; readonly error: unknown }, TResult2 = never>(
-    onfulfilled?: ((
-      value: { readonly data: unknown[] | null; readonly error: unknown },
-    ) => TResult1 | PromiseLike<TResult1>) | null,
+  then<
+    TResult1 = { readonly data: unknown[] | null; readonly error: unknown },
+    TResult2 = never,
+  >(
+    onfulfilled?:
+      | ((
+        value: { readonly data: unknown[] | null; readonly error: unknown },
+      ) => TResult1 | PromiseLike<TResult1>)
+      | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
@@ -875,7 +1182,10 @@ class FakeQueryBuilder
 
     for (const ordering of [...this.orderings].reverse()) {
       rows.sort((left, right) => {
-        const comparison = compareValues(left[ordering.column], right[ordering.column]);
+        const comparison = compareValues(
+          left[ordering.column],
+          right[ordering.column],
+        );
         return ordering.ascending ? comparison : -comparison;
       });
     }
