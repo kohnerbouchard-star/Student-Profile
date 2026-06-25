@@ -18,6 +18,8 @@ import {
   GAME_PUBLIC_REALTIME_EVENTS,
   type PlayerGameDashboardRepository,
   type PlayerGameDashboardResponseBody,
+  type PlayerGameDashboardStoryNotificationReader,
+  type PlayerGameDashboardUnseenCutsceneDto,
 } from "../contracts/playerGameDashboardContracts.ts";
 import {
   PlayerGameDashboardError,
@@ -25,6 +27,12 @@ import {
 import {
   SupabasePlayerGameDashboardRepository,
 } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
+import {
+  SupabaseStoryNotificationRepository,
+} from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+import type {
+  StoryNotificationDeliveryWithNotification,
+} from "../../storylines/contracts/storyNotificationContracts.ts";
 
 interface PlayerGameDashboardHttpDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -39,6 +47,9 @@ interface PlayerGameDashboardHttpDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerGameDashboardRepository;
+  readonly createStoryNotificationRepository?: (
+    client: EdgeSupabaseClient,
+  ) => PlayerGameDashboardStoryNotificationReader;
 }
 
 export async function handlePlayerGameDashboardRequest(
@@ -56,7 +67,8 @@ export async function handlePlayerGameDashboardRequest(
   if (request.headers.has("x-stock-market-runner-secret")) {
     return jsonError(400, {
       code: "stock_runner_secret_not_allowed",
-      message: "Player dashboard reads must not send the stock market runner secret.",
+      message:
+        "Player dashboard reads must not send the stock market runner secret.",
       retryable: false,
     });
   }
@@ -111,10 +123,21 @@ export async function handlePlayerGameDashboardRequest(
       playerDisplayName: sessionResult.player.display_name,
       playerRosterLabel: sessionResult.player.roster_label,
     });
+    const createStoryNotificationRepository =
+      dependencies.createStoryNotificationRepository;
+    const storyNotificationRepository = createStoryNotificationRepository
+      ? createStoryNotificationRepository(serviceClient)
+      : new SupabaseStoryNotificationRepository(serviceClient as any);
+    const unseenCutscenes = await readUnseenCutscenes({
+      repository: storyNotificationRepository,
+      gameSessionId,
+      playerId: sessionResult.player.id,
+    });
 
     return jsonResponse<PlayerGameDashboardResponseBody>(200, {
       ok: true,
       ...snapshot,
+      unseenCutscenes,
       realtime: {
         publicChannel: `game:${gameSessionId}:public`,
         lastSequence: null,
@@ -150,7 +173,9 @@ function readDashboardGameSessionId(searchParams: URLSearchParams): string {
   const values = searchParams.getAll("gameSessionId");
 
   if (values.length !== 1) {
-    throw invalidRequest("Exactly one gameSessionId query parameter is required.");
+    throw invalidRequest(
+      "Exactly one gameSessionId query parameter is required.",
+    );
   }
 
   const value = values[0]?.trim() ?? "";
@@ -166,14 +191,16 @@ function rejectClientSuppliedIdentity(
   searchParams: URLSearchParams,
   headers: Headers,
 ): void {
-  for (const fieldName of [
-    "playerId",
-    "playerIds",
-    "playerSessionId",
-    "playerSessionIds",
-    "sessionId",
-    "sessionIds",
-  ]) {
+  for (
+    const fieldName of [
+      "playerId",
+      "playerIds",
+      "playerSessionId",
+      "playerSessionIds",
+      "sessionId",
+      "sessionIds",
+    ]
+  ) {
     if (searchParams.has(fieldName)) {
       throw invalidRequest(
         "Player dashboard derives player identity from x-player-session-token.",
@@ -181,11 +208,13 @@ function rejectClientSuppliedIdentity(
     }
   }
 
-  for (const headerName of [
-    "x-player-id",
-    "x-player-session-id",
-    "x-player-session",
-  ]) {
+  for (
+    const headerName of [
+      "x-player-id",
+      "x-player-session-id",
+      "x-player-session",
+    ]
+  ) {
     if (headers.has(headerName)) {
       throw invalidRequest(
         "Player dashboard derives player identity from x-player-session-token.",
@@ -201,4 +230,35 @@ function invalidRequest(message: string): EdgeActivationError {
     400,
     false,
   );
+}
+
+async function readUnseenCutscenes(input: {
+  readonly repository: PlayerGameDashboardStoryNotificationReader;
+  readonly gameSessionId: string;
+  readonly playerId: string;
+}): Promise<readonly PlayerGameDashboardUnseenCutsceneDto[]> {
+  const deliveries = await input.repository.listUnseenStoryCutsceneDeliveries({
+    gameSessionId: input.gameSessionId,
+    playerId: input.playerId,
+  });
+
+  return deliveries.map(toUnseenCutsceneDto);
+}
+
+function toUnseenCutsceneDto(
+  delivery: StoryNotificationDeliveryWithNotification,
+): PlayerGameDashboardUnseenCutsceneDto {
+  return {
+    deliveryId: delivery.id,
+    notificationId: delivery.notificationId,
+    title: delivery.notification.title,
+    summary: delivery.notification.summary,
+    priority: delivery.notification.priority,
+    displayMode: delivery.notification.displayMode,
+    payload: delivery.notification.payload,
+    publishedAt: delivery.notification.publishedAt,
+    deliveredAt: delivery.deliveredAt,
+    requiresAcknowledgement:
+      delivery.notification.payload.requiresAcknowledgement === true,
+  };
 }

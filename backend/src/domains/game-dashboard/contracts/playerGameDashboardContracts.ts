@@ -13,6 +13,13 @@ import type {
 import type {
   StorePurchaseHistoryItemDto,
 } from "../../store/contracts/storePurchaseContracts.ts";
+import type { JsonObject } from "../../../supabase/tableTypes.ts";
+import type {
+  ListUnseenStoryCutsceneDeliveriesInput,
+  StoryNotificationDeliveryWithNotification,
+  StoryNotificationDisplayMode,
+  StoryNotificationPriority,
+} from "../../storylines/contracts/storyNotificationContracts.ts";
 
 export const GAME_PUBLIC_REALTIME_EVENTS = [
   "stock_tick",
@@ -150,6 +157,19 @@ export interface PlayerGameDashboardPublicStoreListingDto {
   readonly updatedAt: string;
 }
 
+export interface PlayerGameDashboardUnseenCutsceneDto {
+  readonly deliveryId: string;
+  readonly notificationId: string;
+  readonly title: string;
+  readonly summary: string;
+  readonly priority: StoryNotificationPriority | string;
+  readonly displayMode: StoryNotificationDisplayMode | string;
+  readonly payload: JsonObject;
+  readonly publishedAt: string;
+  readonly deliveredAt: string;
+  readonly requiresAcknowledgement: boolean;
+}
+
 export interface PlayerGameDashboardSnapshot {
   readonly gameSession: PlayerGameDashboardGameSessionDto;
   readonly me: {
@@ -186,6 +206,7 @@ export interface PlayerGameDashboardSnapshot {
     readonly contracts: readonly unknown[];
     readonly storeListings: readonly PlayerGameDashboardPublicStoreListingDto[];
   };
+  readonly unseenCutscenes: readonly PlayerGameDashboardUnseenCutsceneDto[];
 }
 
 export interface PlayerGameDashboardResponseBody
@@ -202,6 +223,12 @@ export interface PlayerGameDashboardRepository {
   read(
     input: PlayerGameDashboardReadInput,
   ): Promise<PlayerGameDashboardSnapshot>;
+}
+
+export interface PlayerGameDashboardStoryNotificationReader {
+  listUnseenStoryCutsceneDeliveries(
+    input: ListUnseenStoryCutsceneDeliveriesInput,
+  ): Promise<readonly StoryNotificationDeliveryWithNotification[]>;
 }
 
 export type PlayerGameDashboardErrorCode =
