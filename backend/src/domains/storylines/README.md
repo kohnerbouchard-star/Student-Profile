@@ -11,9 +11,11 @@ story effects and injected ledger, policy, flag, and impact dependencies. The
 repositories own database access for storyline activations, event candidates,
 idempotent event resolutions, player impacts, policies, story flags,
 notifications, and per-player notification deliveries. The runner composes the
-story pieces to resolve eligible candidate events and apply player-rule effects,
-but it is still not wired to an HTTP handler, scheduler, frontend, realtime
-publisher, market runner, or notification delivery path.
+story pieces to resolve eligible candidate events, apply player-rule effects,
+and optionally create cutscene notification deliveries through an injected
+notification repository after an idempotent resolution insert. It is still not
+wired to an HTTP handler, scheduler, frontend, realtime publisher, market
+runner, dashboard snapshot, or modal UI path.
 
 Deferred work:
 
