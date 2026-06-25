@@ -44,6 +44,13 @@ const OTHER_INVENTORY_ID = "00000000-0000-4000-8000-000000000502";
 const PURCHASE_ID = "00000000-0000-4000-8000-000000000601";
 const OTHER_PURCHASE_ID = "00000000-0000-4000-8000-000000000602";
 const MARKET_EVENT_ID = "00000000-0000-4000-8000-000000000701";
+const CONTRACT_ID = "00000000-0000-4000-8000-000000000a01";
+const DRAFT_CONTRACT_ID = "00000000-0000-4000-8000-000000000a02";
+const OTHER_GAME_CONTRACT_ID = "00000000-0000-4000-8000-000000000a03";
+const CONTRACT_PROGRESS_ID = "00000000-0000-4000-8000-000000000b01";
+const OTHER_PLAYER_CONTRACT_PROGRESS_ID =
+  "00000000-0000-4000-8000-000000000b02";
+const OTHER_GAME_CONTRACT_PROGRESS_ID = "00000000-0000-4000-8000-000000000b03";
 const STORY_NOTIFICATION_ID = "00000000-0000-4000-8000-000000000801";
 const STORY_NOTIFICATION_LOW_ID = "00000000-0000-4000-8000-000000000802";
 const STORY_NOTIFICATION_SEEN_ID = "00000000-0000-4000-8000-000000000803";
@@ -665,6 +672,77 @@ function dependencies(options: {
   };
 }
 
+Deno.test("player dashboard populates contracts for authenticated player only", async () => {
+  const seededTables = tables();
+  seededTables.game_session_contracts = [
+    gameSessionContract(),
+    gameSessionContract({
+      id: DRAFT_CONTRACT_ID,
+      contract_key: "draft_contract",
+      title: "Draft Contract",
+      status: "draft",
+    }),
+    gameSessionContract({
+      id: OTHER_GAME_CONTRACT_ID,
+      game_session_id: OTHER_GAME_SESSION_ID,
+      contract_key: "other_game_contract",
+      title: "Other Game Contract",
+    }),
+  ];
+  seededTables.player_contract_progress = [
+    playerContractProgress(),
+    playerContractProgress({
+      id: OTHER_PLAYER_CONTRACT_PROGRESS_ID,
+      player_id: OTHER_PLAYER_ID,
+    }),
+    playerContractProgress({
+      id: OTHER_GAME_CONTRACT_PROGRESS_ID,
+      game_session_id: OTHER_GAME_SESSION_ID,
+      contract_id: OTHER_GAME_CONTRACT_ID,
+      player_id: OTHER_GAME_PLAYER_ID,
+    }),
+  ];
+
+  const client = new FakeClient(seededTables);
+  const response = await handlePlayerGameDashboardRequest(
+    request(),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(
+    body.me.contracts.available.map((
+      contract: { readonly contractId: string },
+    ) => contract.contractId),
+    [CONTRACT_ID],
+  );
+  assertEquals(body.me.contracts.available[0].title, "Market Research Brief");
+  assertEquals(body.me.contracts.available[0].status, "active");
+
+  assertEquals(
+    body.me.contracts.progress.map((
+      progress: { readonly progressId: string },
+    ) => progress.progressId),
+    [CONTRACT_PROGRESS_ID],
+  );
+  assertEquals(body.me.contracts.progress[0].status, "submitted");
+  assertEquals(body.me.contracts.progress[0].playerId, PLAYER_ID);
+
+  assertEquals(
+    body.public.contracts.map((
+      contract: { readonly contractId: string },
+    ) => contract.contractId),
+    [CONTRACT_ID],
+  );
+
+  const serialized = JSON.stringify(body);
+  assertEquals(serialized.includes(DRAFT_CONTRACT_ID), false);
+  assertEquals(serialized.includes(OTHER_GAME_CONTRACT_ID), false);
+  assertEquals(serialized.includes(OTHER_PLAYER_CONTRACT_PROGRESS_ID), false);
+  assertEquals(serialized.includes(OTHER_GAME_CONTRACT_PROGRESS_ID), false);
+});
+
 function request(options: {
   readonly authToken?: string | null;
   readonly gameSessionId?: string;
@@ -1102,6 +1180,56 @@ function storeItem(overrides: Record<string, unknown> = {}) {
     sort_order: 10,
     created_at: "2026-06-24T00:03:00.000Z",
     updated_at: "2026-06-24T00:04:00.000Z",
+    ...overrides,
+  };
+}
+
+function gameSessionContract(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: CONTRACT_ID,
+    game_session_id: GAME_SESSION_ID,
+    contract_key: "market_research_brief",
+    source_type: "teacher",
+    source_id: null,
+    created_by_staff_id: "00000000-0000-4000-8000-000000000c01",
+    title: "Market Research Brief",
+    description: "Research one Econovaria market.",
+    instructions: "Submit a short market note.",
+    category: "research",
+    status: "active",
+    visibility: "public",
+    targeting_payload: {},
+    requirements_payload: {},
+    reward_payload: { cash: { amount: 100, currencyCode: "SLV" } },
+    completion_mode: "manual_review",
+    published_at: "2026-06-24T00:01:00.000Z",
+    deadline_at: "2026-06-30T00:00:00.000Z",
+    expires_at: null,
+    metadata: {},
+    created_at: "2026-06-24T00:00:00.000Z",
+    updated_at: "2026-06-24T00:01:00.000Z",
+    ...overrides,
+  };
+}
+
+function playerContractProgress(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: CONTRACT_PROGRESS_ID,
+    game_session_id: GAME_SESSION_ID,
+    contract_id: CONTRACT_ID,
+    player_id: PLAYER_ID,
+    status: "submitted",
+    evidence_payload: { note: "Solvend demand is rising." },
+    result_payload: {},
+    submitted_at: "2026-06-24T00:08:00.000Z",
+    completed_at: null,
+    reward_issued_at: null,
+    created_at: "2026-06-24T00:07:00.000Z",
+    updated_at: "2026-06-24T00:08:00.000Z",
     ...overrides,
   };
 }
