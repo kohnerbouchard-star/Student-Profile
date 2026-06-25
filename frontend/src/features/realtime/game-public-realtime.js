@@ -29,16 +29,26 @@
       subscribedOnce: false,
       closed: false,
     };
+    const broadcastOptions = {
+      gameSessionId,
+      publicChannel,
+      state,
+      onStockTick: options?.onStockTick,
+      onMarketNewsPosted: options?.onMarketNewsPosted,
+      onMarketStatusChanged: options?.onMarketStatusChanged,
+      onResync: options?.onResync,
+    };
+
     const channel = supabaseClient
       .channel(publicChannel)
       .on("broadcast", { event: "stock_tick" }, (message) => {
-        handleGamePublicRealtimeBroadcast(message, {
-          gameSessionId,
-          publicChannel,
-          state,
-          onStockTick: options?.onStockTick,
-          onResync: options?.onResync,
-        });
+        handleGamePublicRealtimeBroadcast(message, broadcastOptions);
+      })
+      .on("broadcast", { event: "market_news_posted" }, (message) => {
+        handleGamePublicRealtimeBroadcast(message, broadcastOptions);
+      })
+      .on("broadcast", { event: "market_status_changed" }, (message) => {
+        handleGamePublicRealtimeBroadcast(message, broadcastOptions);
       });
 
     channel.subscribe((status) => {
@@ -79,7 +89,17 @@
   function handleGamePublicRealtimeBroadcast(message, options) {
     const envelope = readBroadcastEnvelope(message);
 
-    if (!envelope || envelope.eventType !== "stock_tick") {
+    if (!envelope) {
+      return false;
+    }
+
+    const eventType = readText(envelope.eventType);
+
+    if (
+      eventType !== "stock_tick" &&
+      eventType !== "market_news_posted" &&
+      eventType !== "market_status_changed"
+    ) {
       return false;
     }
 
@@ -88,11 +108,33 @@
       readText(envelope.channel) !== readText(options?.publicChannel)
     ) {
       if (typeof options?.onResync === "function") {
-        options.onResync("stock_tick_scope_mismatch");
+        options.onResync(`${eventType}_scope_mismatch`);
       }
       return false;
     }
 
+    if (eventType === "stock_tick") {
+      return handleStockTickBroadcast(envelope, options);
+    }
+
+    if (eventType === "market_news_posted") {
+      if (typeof options?.onMarketNewsPosted === "function") {
+        options.onMarketNewsPosted(envelope.payload, envelope);
+      }
+      return true;
+    }
+
+    if (eventType === "market_status_changed") {
+      if (typeof options?.onMarketStatusChanged === "function") {
+        options.onMarketStatusChanged(envelope.payload, envelope);
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  function handleStockTickBroadcast(envelope, options) {
     const sequence = Number.isInteger(envelope.sequence)
       ? envelope.sequence
       : null;
@@ -189,6 +231,69 @@
     return nextState;
   }
 
+
+  function applyMarketNewsPostedToState(stateApi, payload, envelope) {
+    if (
+      !stateApi || typeof stateApi.getState !== "function" ||
+      typeof stateApi.setState !== "function"
+    ) {
+      return null;
+    }
+
+    const newsItem = normalizeMarketNewsPostedRow(payload, envelope);
+
+    if (!newsItem) {
+      return null;
+    }
+
+    const currentState = stateApi.getState() || {};
+    const currentNews = Array.isArray(currentState.news)
+      ? currentState.news
+      : [];
+    const existingIndex = currentNews.findIndex((row) =>
+      sameNewsItem(row, newsItem)
+    );
+    const nextNews = currentNews.slice();
+
+    if (existingIndex >= 0) {
+      nextNews.splice(existingIndex, 1);
+    }
+
+    nextNews.unshift(newsItem);
+
+    const nextState = {
+      ...currentState,
+      news: nextNews.slice(0, 50),
+    };
+
+    stateApi.setState(nextState);
+    return nextState;
+  }
+
+  function applyMarketStatusChangedToState(stateApi, payload, envelope) {
+    if (
+      !stateApi || typeof stateApi.getState !== "function" ||
+      typeof stateApi.setState !== "function"
+    ) {
+      return null;
+    }
+
+    const marketStatus = normalizeMarketStatusChanged(payload, envelope);
+
+    if (!marketStatus) {
+      return null;
+    }
+
+    const currentState = stateApi.getState() || {};
+    const nextState = {
+      ...currentState,
+      marketStatus,
+    };
+
+    stateApi.setState(nextState);
+    return nextState;
+  }
+
   function normalizeStockTickMarketRow(stock, tick) {
     const stockAssetId = readText(stock?.stockAssetId || stock?.assetId);
     const ticker = readText(stock?.ticker).toUpperCase();
@@ -236,6 +341,95 @@
 
     history.push(point);
     return history.slice(-30);
+  }
+
+  function normalizeMarketNewsPostedRow(payload, envelope) {
+    const source = payload?.news || payload?.item || payload;
+    const id = readText(
+      source?.newsId ||
+      source?.id ||
+      source?.marketNewsId ||
+      envelope?.id ||
+      envelope?.sequence
+    );
+    const headline = readText(
+      source?.headline ||
+      source?.title ||
+      source?.message ||
+      source?.summary
+    );
+
+    if (!headline) {
+      return null;
+    }
+
+    return {
+      id,
+      headline,
+      title: headline,
+      summary: readText(source?.summary || source?.body || source?.description),
+      body: readText(source?.body || source?.description),
+      source: readText(source?.source || source?.publisher),
+      severity: readText(source?.severity || source?.impact || source?.tone),
+      countryCode: readText(source?.countryCode),
+      sector: readText(source?.sector),
+      tick: Number.isInteger(payload?.tick)
+        ? payload.tick
+        : Number.isInteger(envelope?.sequence)
+          ? envelope.sequence
+          : undefined,
+      createdAt: readText(
+        source?.createdAt ||
+        source?.postedAt ||
+        source?.timestamp ||
+        envelope?.createdAt
+      ),
+    };
+  }
+
+  function normalizeMarketStatusChanged(payload, envelope) {
+    const source = payload?.status || payload?.marketStatus || payload;
+    const status = readText(
+      source?.status ||
+      source?.marketStatus ||
+      source?.state ||
+      source?.phase
+    );
+
+    if (!status) {
+      return null;
+    }
+
+    return {
+      status,
+      label: readText(source?.label || source?.name) || status,
+      reason: readText(source?.reason || source?.message || source?.summary),
+      tick: Number.isInteger(source?.tick)
+        ? source.tick
+        : Number.isInteger(payload?.tick)
+          ? payload.tick
+          : undefined,
+      updatedAt: readText(
+        source?.updatedAt ||
+        source?.changedAt ||
+        source?.timestamp ||
+        envelope?.createdAt
+      ),
+    };
+  }
+
+  function sameNewsItem(left, right) {
+    const leftId = readText(left?.id || left?.newsId);
+    const rightId = readText(right?.id || right?.newsId);
+
+    if (leftId && rightId) {
+      return leftId === rightId;
+    }
+
+    const leftHeadline = readText(left?.headline || left?.title).toLowerCase();
+    const rightHeadline = readText(right?.headline || right?.title).toLowerCase();
+
+    return Boolean(leftHeadline && rightHeadline && leftHeadline === rightHeadline);
   }
 
   function bindStaleFocusResync(options) {
@@ -338,6 +532,8 @@
     handleGamePublicRealtimeBroadcast,
     applyStockTickToMarketRows,
     applyStockTickToState,
+    applyMarketNewsPostedToState,
+    applyMarketStatusChangedToState,
     getGamePublicRealtimeSupabaseClient,
   });
 })(typeof window !== "undefined" ? window : globalThis);

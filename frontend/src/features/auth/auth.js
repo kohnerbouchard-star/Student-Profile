@@ -432,6 +432,8 @@ function startGamePublicRealtimeForDashboard(dashboard) {
     supabaseClient: client,
     lastSequence: dashboard?.realtime?.lastSequence,
     onStockTick: handlePublicStockTick,
+    onMarketNewsPosted: handlePublicMarketNewsPosted,
+    onMarketStatusChanged: handlePublicMarketStatusChanged,
     onReconnect: () => schedulePlayerDashboardResync("reconnect"),
     onResync: schedulePlayerDashboardResync
   });
@@ -445,6 +447,36 @@ function handlePublicStockTick(payload) {
   realtimeApi.applyStockTickToState(window.Econovaria.state, payload);
 
   if (["stockProfile", "trade", "portfolio"].includes(currentView())) {
+    renderCurrentView();
+  }
+}
+
+function handlePublicMarketNewsPosted(payload, envelope) {
+  const realtimeApi = window.Econovaria?.features?.realtime;
+  if (typeof realtimeApi?.applyMarketNewsPostedToState !== "function") return;
+
+  const nextState = realtimeApi.applyMarketNewsPostedToState(
+    window.Econovaria.state,
+    payload,
+    envelope
+  );
+
+  if (nextState) {
+    renderCurrentView();
+  }
+}
+
+function handlePublicMarketStatusChanged(payload, envelope) {
+  const realtimeApi = window.Econovaria?.features?.realtime;
+  if (typeof realtimeApi?.applyMarketStatusChangedToState !== "function") return;
+
+  const nextState = realtimeApi.applyMarketStatusChangedToState(
+    window.Econovaria.state,
+    payload,
+    envelope
+  );
+
+  if (nextState) {
     renderCurrentView();
   }
 }
