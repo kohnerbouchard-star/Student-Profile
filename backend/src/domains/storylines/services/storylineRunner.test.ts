@@ -9,6 +9,16 @@ import type {
   StoryWriteResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
 import type {
+  CreateNotificationDeliveriesInput,
+  CreateNotificationDeliveriesResult,
+  CreateStoryNotificationInput,
+  CreateStoryNotificationResult,
+  MarkNotificationDeliveryInput,
+  StoryNotificationDeliveryRecord,
+  StoryNotificationDeliveryWithNotification,
+  StoryNotificationRepository,
+} from "../contracts/storyNotificationContracts.ts";
+import type {
   CreateStoryEventResolutionInput,
   CreateStoryEventResolutionResult,
   GameSessionStorylineRecord,
@@ -94,6 +104,7 @@ Deno.test("storyline runner does not create resolutions for ineligible events", 
         eventKey: "future-event",
         triggerType: "wall_clock_time",
         scheduledAt: "2026-06-25T13:00:00.000Z",
+        revealPayload: cutsceneRevealPayload(),
       }),
     ],
   });
@@ -124,6 +135,7 @@ Deno.test("storyline runner skips effects when resolution already exists", async
         eventKey: "already-resolved",
         triggerType: "market_tick",
         scheduledMarketTick: 3,
+        revealPayload: cutsceneRevealPayload(),
         playerRules: [
           {
             ruleKey: "matching-rule",
@@ -145,6 +157,7 @@ Deno.test("storyline runner skips effects when resolution already exists", async
     ],
   });
   const effectDependencies = createFakeEffectDependencies();
+  const notificationRepository = new FakeStoryNotificationRepository();
 
   const result = await runDueStorylineEvents({
     gameSessionId: "game-1",
@@ -153,6 +166,7 @@ Deno.test("storyline runner skips effects when resolution already exists", async
     playerContexts: [playerContext("player-1", "NORTHREACH")],
     repository,
     effectDependencies,
+    notificationRepository,
   });
 
   assertEquals(result.alreadyExistingCount, 1);
@@ -160,6 +174,7 @@ Deno.test("storyline runner skips effects when resolution already exists", async
   assertEquals(result.events[0]?.status, "already_existing");
   assertEquals(repository.resolutions.length, 0);
   assertEquals(effectDependencies.writes.cashAdjustments.length, 0);
+  assertEquals(notificationRepository.createdNotifications.length, 0);
 });
 
 Deno.test("storyline runner does not auto-run manual events", async () => {
@@ -190,6 +205,7 @@ Deno.test("storyline runner does not auto-run manual events", async () => {
     ],
   });
   const effectDependencies = createFakeEffectDependencies();
+  const notificationRepository = new FakeStoryNotificationRepository();
 
   const result = await runDueStorylineEvents({
     gameSessionId: "game-1",
@@ -198,12 +214,14 @@ Deno.test("storyline runner does not auto-run manual events", async () => {
     playerContexts: [playerContext("player-1", "NORTHREACH")],
     repository,
     effectDependencies,
+    notificationRepository,
   });
 
   assertEquals(result.skippedCount, 1);
   assertEquals(result.events[0]?.status, "skipped");
   assertEquals(repository.resolutions.length, 0);
   assertEquals(effectDependencies.writes.cashAdjustments.length, 0);
+  assertEquals(notificationRepository.createdNotifications.length, 0);
 });
 
 Deno.test("storyline runner evaluates condition triggers using game story flags", async () => {
@@ -293,6 +311,116 @@ Deno.test("storyline runner reports failed effects after idempotent resolution i
 
   assertEquals(result.failedCount, 1);
   assertEquals(result.resolvedCount, 0);
+  assertEquals(repository.resolutions.length, 1);
+  assertEquals(result.events[0]?.status, "failed");
+});
+
+Deno.test("storyline runner creates cutscene notification deliveries after inserted resolution", async () => {
+  const repository = new FakeStorylineRepository({
+    candidates: [
+      storylineEventCandidate({
+        id: "event-1",
+        eventKey: "cutscene-event",
+        triggerType: "market_tick",
+        scheduledMarketTick: 1,
+        revealPayload: cutsceneRevealPayload(),
+      }),
+    ],
+  });
+  const effectDependencies = createFakeEffectDependencies();
+  const notificationRepository = new FakeStoryNotificationRepository();
+
+  const result = await runDueStorylineEvents({
+    gameSessionId: "game-1",
+    now: "2026-06-25T12:10:00.000Z",
+    currentMarketTick: 5,
+    playerContexts: [
+      playerContext("player-1", "NORTHREACH"),
+      playerContext("player-2", "YRETHIA"),
+      playerContext("player-1", "NORTHREACH"),
+    ],
+    repository,
+    effectDependencies,
+    notificationRepository,
+  });
+
+  assertEquals(result.resolvedCount, 1);
+  assertEquals(result.notificationCreatedCount, 1);
+  assertEquals(result.notificationDeliveryCount, 2);
+  assertEquals(result.notificationFailedCount, 0);
+  assertEquals(
+    notificationRepository.createdNotifications[0]?.sourceId,
+    "event-1",
+  );
+  assertEquals(
+    notificationRepository.createdNotifications[0]?.notificationType,
+    "story_cutscene",
+  );
+  assertEquals(notificationRepository.createdDeliveries[0]?.playerIds, [
+    "player-1",
+    "player-2",
+  ]);
+});
+
+Deno.test("storyline runner works with reveal payload when notification dependency is omitted", async () => {
+  const repository = new FakeStorylineRepository({
+    candidates: [
+      storylineEventCandidate({
+        id: "event-1",
+        eventKey: "cutscene-without-notification-dependency",
+        triggerType: "market_tick",
+        scheduledMarketTick: 1,
+        revealPayload: cutsceneRevealPayload(),
+      }),
+    ],
+  });
+  const effectDependencies = createFakeEffectDependencies();
+
+  const result = await runDueStorylineEvents({
+    gameSessionId: "game-1",
+    now: "2026-06-25T12:10:00.000Z",
+    currentMarketTick: 5,
+    playerContexts: [playerContext("player-1", "NORTHREACH")],
+    repository,
+    effectDependencies,
+  });
+
+  assertEquals(result.resolvedCount, 1);
+  assertEquals(result.failedCount, 0);
+  assertEquals(result.notificationCreatedCount, 0);
+  assertEquals(result.notificationDeliveryCount, 0);
+});
+
+Deno.test("storyline runner reports notification creation failure safely", async () => {
+  const repository = new FakeStorylineRepository({
+    candidates: [
+      storylineEventCandidate({
+        id: "event-1",
+        eventKey: "cutscene-notification-fails",
+        triggerType: "market_tick",
+        scheduledMarketTick: 1,
+        revealPayload: cutsceneRevealPayload(),
+      }),
+    ],
+  });
+  const effectDependencies = createFakeEffectDependencies();
+  const notificationRepository = new FakeStoryNotificationRepository({
+    failCreateNotification: true,
+  });
+
+  const result = await runDueStorylineEvents({
+    gameSessionId: "game-1",
+    now: "2026-06-25T12:10:00.000Z",
+    currentMarketTick: 5,
+    playerContexts: [playerContext("player-1", "NORTHREACH")],
+    repository,
+    effectDependencies,
+    notificationRepository,
+  });
+
+  assertEquals(result.failedCount, 1);
+  assertEquals(result.resolvedCount, 0);
+  assertEquals(result.notificationFailedCount, 1);
   assertEquals(repository.resolutions.length, 1);
   assertEquals(result.events[0]?.status, "failed");
 });
@@ -406,6 +534,83 @@ interface FakeEffectOptions {
   readonly failLedger?: boolean;
 }
 
+interface FakeStoryNotificationRepositoryOptions {
+  readonly failCreateNotification?: boolean;
+}
+
+class FakeStoryNotificationRepository implements StoryNotificationRepository {
+  readonly createdNotifications: CreateStoryNotificationInput[] = [];
+  readonly createdDeliveries: CreateNotificationDeliveriesInput[] = [];
+  private readonly failCreateNotification: boolean;
+
+  constructor(options: FakeStoryNotificationRepositoryOptions = {}) {
+    this.failCreateNotification = options.failCreateNotification ?? false;
+  }
+
+  createStoryNotification(
+    input: CreateStoryNotificationInput,
+  ): Promise<CreateStoryNotificationResult> {
+    if (this.failCreateNotification) {
+      throw new Error("notification repository unavailable");
+    }
+
+    this.createdNotifications.push(input);
+
+    return Promise.resolve({
+      status: "inserted",
+      notification: {
+        id: `notification-${this.createdNotifications.length}`,
+        gameSessionId: input.gameSessionId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        notificationType: input.notificationType,
+        title: input.title,
+        summary: input.summary,
+        priority: input.priority,
+        displayMode: input.displayMode,
+        payload: input.payload,
+        publishedAt: input.publishedAt,
+      },
+    });
+  }
+
+  createNotificationDeliveries(
+    input: CreateNotificationDeliveriesInput,
+  ): Promise<CreateNotificationDeliveriesResult> {
+    this.createdDeliveries.push(input);
+
+    return Promise.resolve({
+      deliveryIds: input.playerIds.map((_, index) => `delivery-${index + 1}`),
+      insertedCount: input.playerIds.length,
+      existingCount: 0,
+    });
+  }
+
+  listUnseenStoryCutsceneDeliveries(): Promise<
+    readonly StoryNotificationDeliveryWithNotification[]
+  > {
+    return Promise.resolve([]);
+  }
+
+  markNotificationDeliverySeen(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(notificationDeliveryRecord(input.deliveryId));
+  }
+
+  markNotificationDeliveryDismissed(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(notificationDeliveryRecord(input.deliveryId));
+  }
+
+  markNotificationDeliveryAcknowledged(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(notificationDeliveryRecord(input.deliveryId));
+  }
+}
+
 function createFakeEffectDependencies(
   options: FakeEffectOptions = {},
 ): FakeEffectDependencies {
@@ -484,6 +689,21 @@ function storylineEventCandidate(
   };
 }
 
+function cutsceneRevealPayload(): JsonObject {
+  return {
+    notificationType: "story_cutscene",
+    displayMode: "modal_on_next_login",
+    videoAssetKey: "cutscene-1",
+    posterAssetKey: "poster-1",
+    headline: "Cutscene Event",
+    summary: "A major story cutscene.",
+    requiresAcknowledgement: true,
+    payload: {
+      route: "intel",
+    },
+  };
+}
+
 function playerContext(
   playerId: string,
   currentCountryCode: string,
@@ -518,6 +738,21 @@ function resolutionRecord(
     status: input.status ?? "resolved",
     resultPayload: input.resultPayload ?? {},
     createdAt: input.resolvedAt,
+  };
+}
+
+function notificationDeliveryRecord(
+  id: string,
+): StoryNotificationDeliveryRecord {
+  return {
+    id,
+    notificationId: "notification-1",
+    gameSessionId: "game-1",
+    playerId: "player-1",
+    deliveredAt: "2026-06-25T12:10:00.000Z",
+    seenAt: null,
+    dismissedAt: null,
+    acknowledgedAt: null,
   };
 }
 

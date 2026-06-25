@@ -5,6 +5,10 @@ import type {
   StoryEffectExecutionDependencies,
 } from "./storyEffectExecutionContracts.ts";
 import type {
+  CreateStoryCutsceneNotificationForPlayersResult,
+  StoryNotificationRepository,
+} from "./storyNotificationContracts.ts";
+import type {
   StorylineEventCandidateRecord,
   StorylineRepository,
 } from "./storylineRepositoryContracts.ts";
@@ -16,6 +20,7 @@ export interface RunDueStorylineEventsInput {
   readonly playerContexts: readonly PlayerStoryContext[];
   readonly repository: StorylineRepository;
   readonly effectDependencies: StoryEffectExecutionDependencies;
+  readonly notificationRepository?: StoryNotificationRepository | null;
 }
 
 export interface StorylineRunnerResult {
@@ -28,6 +33,9 @@ export interface StorylineRunnerResult {
   readonly effectAppliedCount: number;
   readonly effectSkippedCount: number;
   readonly effectFailedCount: number;
+  readonly notificationCreatedCount: number;
+  readonly notificationDeliveryCount: number;
+  readonly notificationFailedCount: number;
   readonly events: readonly StorylineRunnerEventResult[];
 }
 
@@ -54,6 +62,7 @@ export interface StorylineRunnerResolvedEventResult
   readonly resolutionId: string;
   readonly playerRuleMatchCount: number;
   readonly effectResult: StoryEffectBatchExecutionResult;
+  readonly notificationResult?: StorylineRunnerNotificationResult;
 }
 
 export interface StorylineRunnerSkippedEventResult
@@ -73,7 +82,39 @@ export interface StorylineRunnerFailedEventResult
   readonly status: "failed";
   readonly errorMessage: string;
   readonly effectResult?: StoryEffectBatchExecutionResult;
+  readonly notificationResult?: StorylineRunnerNotificationResult;
   readonly resultPayload?: JsonObject;
+}
+
+export type StorylineRunnerNotificationStatus = "created" | "failed";
+
+export interface StorylineRunnerNotificationCreatedResult {
+  readonly status: "created";
+  readonly notificationId: string;
+  readonly deliveryCount: number;
+  readonly insertedDeliveryCount: number;
+  readonly existingDeliveryCount: number;
+}
+
+export interface StorylineRunnerNotificationFailedResult {
+  readonly status: "failed";
+  readonly errorMessage: string;
+}
+
+export type StorylineRunnerNotificationResult =
+  | StorylineRunnerNotificationCreatedResult
+  | StorylineRunnerNotificationFailedResult;
+
+export function toStorylineRunnerNotificationCreatedResult(
+  result: CreateStoryCutsceneNotificationForPlayersResult,
+): StorylineRunnerNotificationCreatedResult {
+  return {
+    status: "created",
+    notificationId: result.notificationId,
+    deliveryCount: result.deliveryCount,
+    insertedDeliveryCount: result.insertedDeliveryCount,
+    existingDeliveryCount: result.existingDeliveryCount,
+  };
 }
 
 export type StorylineRunnerEventResult =
