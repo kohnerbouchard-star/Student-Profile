@@ -5,9 +5,9 @@ import {
 } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
   resolveStaffSessionForRequest,
+  type SupabaseEnv,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   handleStaffBootstrapRequest,
@@ -80,6 +80,12 @@ import {
   handleStaffStoreCatalogRequest,
 } from "../../../src/domains/store/api/storeCatalogHttpHandler.ts";
 import {
+  readStaffContractRoutePath,
+} from "../../../src/domains/contracts/api/contractRoutePaths.ts";
+import {
+  handleStaffContractRequest,
+} from "../../../src/domains/contracts/api/staffContractHttpHandler.ts";
+import {
   handlePlayerStoreCatalogRequest,
 } from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
 import {
@@ -102,7 +108,6 @@ interface EdgeHealthBody {
   readonly service: "classroom-api";
   readonly status: "ready";
 }
-
 
 Deno.serve(async (request) => {
   const url = new URL(request.url);
@@ -200,9 +205,13 @@ Deno.serve(async (request) => {
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
 
   if (gameJoinCodeRoute) {
-    return handleResetGameJoinCodeRequest(request, gameJoinCodeRoute.gameSessionId, {
-      resolveStaffForRequest,
-    });
+    return handleResetGameJoinCodeRequest(
+      request,
+      gameJoinCodeRoute.gameSessionId,
+      {
+        resolveStaffForRequest,
+      },
+    );
   }
 
   const gameSettingsRoute = readGameSettingsRoutePath(url.pathname);
@@ -217,6 +226,14 @@ Deno.serve(async (request) => {
 
   if (staffStoreCatalogRoute) {
     return handleStaffStoreCatalogRequest(request, staffStoreCatalogRoute, {
+      resolveStaffForRequest,
+    });
+  }
+
+  const staffContractRoute = readStaffContractRoutePath(url.pathname);
+
+  if (staffContractRoute) {
+    return handleStaffContractRequest(request, staffContractRoute, {
       resolveStaffForRequest,
     });
   }
@@ -240,7 +257,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const staffAttendanceDailyRoute = readStaffAttendanceDailyRoutePath(url.pathname);
+  const staffAttendanceDailyRoute = readStaffAttendanceDailyRoutePath(
+    url.pathname,
+  );
 
   if (staffAttendanceDailyRoute) {
     return handleStaffAttendanceDailyRequest(
@@ -252,7 +271,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const staffAttendanceScanRoute = readStaffAttendanceScanRoutePath(url.pathname);
+  const staffAttendanceScanRoute = readStaffAttendanceScanRoutePath(
+    url.pathname,
+  );
 
   if (staffAttendanceScanRoute) {
     return handleStaffAttendanceScanRequest(
@@ -274,7 +295,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const staffPlayerLedgerHistoryRoute = readStaffPlayerLedgerHistoryRoutePath(url.pathname);
+  const staffPlayerLedgerHistoryRoute = readStaffPlayerLedgerHistoryRoutePath(
+    url.pathname,
+  );
 
   if (staffPlayerLedgerHistoryRoute) {
     return handleStaffPlayerLedgerHistoryRequest(
@@ -285,7 +308,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const staffLedgerAdjustmentRoute = readStaffLedgerAdjustmentRoutePath(url.pathname);
+  const staffLedgerAdjustmentRoute = readStaffLedgerAdjustmentRoutePath(
+    url.pathname,
+  );
 
   if (staffLedgerAdjustmentRoute) {
     return handleStaffLedgerAdjustmentRequest(
@@ -322,7 +347,6 @@ Deno.serve(async (request) => {
     retryable: false,
   });
 });
-
 
 function createAuthClient(env: SupabaseEnv): EdgeSupabaseClient {
   return createClient(

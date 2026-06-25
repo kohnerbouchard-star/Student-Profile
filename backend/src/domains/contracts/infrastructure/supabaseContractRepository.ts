@@ -14,11 +14,13 @@ import type {
   CreateContractTemplateInput,
   CreateGameSessionContractInput,
   GameSessionContractRecord,
+  GetGameSessionContractByIdInput,
   GetPlayerContractProgressInput,
   ListGameSessionContractsInput,
   ListPlayerAvailableContractsInput,
   ListPlayerContractProgressInput,
   PlayerContractProgressRecord,
+  UpdateGameSessionContractStatusInput,
   UpsertPlayerContractProgressInput,
 } from "../contracts/contractRepositoryContracts.ts";
 import { ContractRepositoryError } from "../contracts/contractRepositoryContracts.ts";
@@ -47,6 +49,7 @@ interface SupabaseContractClient {
 interface SupabaseContractQueryBuilder {
   select(columns: string): SupabaseContractFilterBuilder;
   insert(row: unknown): SupabaseContractWriteBuilder;
+  update(row: unknown): SupabaseContractUpdateBuilder;
   upsert(
     row: unknown,
     options?: { readonly onConflict?: string },
@@ -71,6 +74,11 @@ interface SupabaseContractFilterBuilder
 }
 
 interface SupabaseContractWriteBuilder {
+  select(columns: string): SupabaseContractWriteSelectBuilder;
+}
+
+interface SupabaseContractUpdateBuilder {
+  eq(column: string, value: unknown): SupabaseContractUpdateBuilder;
   select(columns: string): SupabaseContractWriteSelectBuilder;
 }
 
@@ -347,6 +355,62 @@ export class SupabaseContractRepository implements ContractRepository {
     return (response.data ?? []).map((row) =>
       toGameSessionContractRecord(row as GameSessionContractRow)
     );
+  }
+
+  async getGameSessionContractById(
+    input: GetGameSessionContractByIdInput,
+  ): Promise<GameSessionContractRecord | null> {
+    const response = await this.client
+      .from("game_session_contracts")
+      .select(GAME_SESSION_CONTRACT_SELECT)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("id", input.contractId)
+      .maybeSingle();
+
+    assertNoError(response, "game_session_contracts", "select");
+
+    return response.data
+      ? toGameSessionContractRecord(response.data as GameSessionContractRow)
+      : null;
+  }
+
+  async updateGameSessionContractStatus(
+    input: UpdateGameSessionContractStatusInput,
+  ): Promise<GameSessionContractRecord | null> {
+    const parsed = parseGameSessionContractConfig({
+      gameSessionId: input.gameSessionId,
+      contractTemplateId: null,
+      contractKey: "status-update-validation-placeholder",
+      sourceType: "teacher",
+      sourceId: null,
+      createdByStaffId: null,
+      title: "Status update validation placeholder",
+      description: "Status update validation placeholder",
+      instructions: "Status update validation placeholder",
+      status: input.status,
+      publishedAt: input.publishedAt ?? null,
+    });
+    const row: Record<string, unknown> = {
+      status: parsed.status,
+    };
+
+    if (input.publishedAt !== undefined) {
+      row.published_at = parsed.publishedAt;
+    }
+
+    const response = await this.client
+      .from("game_session_contracts")
+      .update(row)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("id", input.contractId)
+      .select(GAME_SESSION_CONTRACT_SELECT)
+      .maybeSingle();
+
+    assertNoError(response, "game_session_contracts", "update");
+
+    return response.data
+      ? toGameSessionContractRecord(response.data as GameSessionContractRow)
+      : null;
   }
 
   async listPlayerAvailableContracts(
