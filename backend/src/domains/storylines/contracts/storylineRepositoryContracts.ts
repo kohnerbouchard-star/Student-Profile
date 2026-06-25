@@ -72,6 +72,9 @@ export interface StorylineEventCandidateRecord {
   readonly storylineId: string;
   readonly gameSessionId: string;
   readonly gameSessionStorylineId: string;
+  readonly storyStartedAt: string;
+  readonly accumulatedPauseSeconds: number;
+  readonly timeScale: number;
   readonly eventKey: string;
   readonly title: string;
   readonly description: string;
