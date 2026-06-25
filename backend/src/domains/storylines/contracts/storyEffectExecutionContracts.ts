@@ -1,3 +1,4 @@
+import type { CreateGameSessionContractInput } from "../../contracts/contracts/contractRepositoryContracts.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "./playerStoryContext.ts";
 import type {
@@ -12,6 +13,7 @@ export type SupportedStoryEffectExecutionType =
   | "cash_debit"
   | "tax_modifier"
   | "immigration_lock"
+  | "contract_unlock"
   | "story_flag_set";
 
 export type StoryEffectExecutionStatus = "applied" | "skipped" | "failed";
@@ -51,6 +53,7 @@ export interface StoryEffectExecutionDependencies {
   readonly policies: StoryEffectPolicyWriter;
   readonly flags: StoryEffectFlagWriter;
   readonly impacts: StoryEffectImpactWriter;
+  readonly contracts?: StoryEffectContractWriter;
 }
 
 export interface StoryEffectLedgerWriter {
@@ -70,6 +73,14 @@ export interface StoryEffectFlagWriter {
 export interface StoryEffectImpactWriter {
   createPlayerImpact(
     input: StoryPlayerImpactWriteInput,
+  ): Promise<StoryWriteResult>;
+}
+
+export type StoryContractCreateWriteInput = CreateGameSessionContractInput;
+
+export interface StoryEffectContractWriter {
+  createGameSessionContract(
+    input: StoryContractCreateWriteInput,
   ): Promise<StoryWriteResult>;
 }
 

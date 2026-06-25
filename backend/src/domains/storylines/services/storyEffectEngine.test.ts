@@ -3,6 +3,7 @@ import { parseStoryEffect } from "../contracts/storyEffectContracts.ts";
 import { StorylineContractError } from "../contracts/storylineContractErrors.ts";
 import type {
   StoryCashAdjustmentWriteInput,
+  StoryContractCreateWriteInput,
   StoryEffectExecutionDependencies,
   StoryFlagWriteInput,
   StoryPlayerImpactWriteInput,
@@ -180,6 +181,58 @@ Deno.test("story effect engine applies story_flag_set through flag dependency", 
   assertEquals(dependencies.writes.flags[0]?.value, true);
 });
 
+Deno.test("story effect engine creates story contracts from contract_unlock", async () => {
+  const dependencies = createFakeDependencies({ enableContracts: true });
+  const result = await executeStoryEffect({
+    ...baseExecutionInput(dependencies),
+    effect: parseStoryEffect({
+      type: "contract_unlock",
+      contractKey: "northreach_market_brief",
+      label: "Northreach Market Brief",
+      reason: "A new market research contract was unlocked.",
+      payload: {
+        title: "Northreach Market Brief",
+        description: "Analyze the Northreach border closure.",
+        instructions: "Submit a short market brief before the deadline.",
+        category: "research",
+        targetingPayload: { countryCodes: ["NORTHREACH"] },
+        requirementsPayload: { evidenceType: "written_brief" },
+        rewardPayload: { cash: { amount: 100, currencyCode: "SLV" } },
+        metadata: { source: "storyline" },
+      },
+    }),
+    playerContext: basePlayerStoryContext,
+  });
+
+  assertEquals(result.status, "applied");
+  assertEquals(dependencies.writes.contracts.length, 1);
+  assertEquals(dependencies.writes.contracts[0]?.gameSessionId, "game-1");
+  assertEquals(
+    dependencies.writes.contracts[0]?.contractKey,
+    "northreach_market_brief",
+  );
+  assertEquals(dependencies.writes.contracts[0]?.sourceType, "story_event");
+  assertEquals(dependencies.writes.contracts[0]?.sourceId, "event-1");
+  assertEquals(dependencies.writes.contracts[0]?.createdByStaffId, null);
+  assertEquals(
+    dependencies.writes.contracts[0]?.title,
+    "Northreach Market Brief",
+  );
+  assertEquals(dependencies.writes.contracts[0]?.status, "active");
+  assertEquals(dependencies.writes.contracts[0]?.visibility, "public");
+  assertEquals(
+    dependencies.writes.contracts[0]?.completionMode,
+    "manual_review",
+  );
+  assertEquals(
+    dependencies.writes.contracts[0]?.publishedAt,
+    "2026-06-25T12:00:00.000Z",
+  );
+  assertEquals(dependencies.writes.contracts[0]?.rewardPayload, {
+    cash: { amount: 100, currencyCode: "SLV" },
+  });
+});
+
 Deno.test("story effect engine skips unsupported parsed effect types", async () => {
   const dependencies = createFakeDependencies();
   const result = await executeStoryEffect({
@@ -276,6 +329,7 @@ interface FakeStoryEffectDependencies extends StoryEffectExecutionDependencies {
     readonly policies: StoryPolicyWriteInput[];
     readonly flags: StoryFlagWriteInput[];
     readonly impacts: StoryPlayerImpactWriteInput[];
+    readonly contracts: StoryContractCreateWriteInput[];
   };
 }
 
@@ -284,6 +338,8 @@ interface FakeFailureOptions {
   readonly failPolicies?: boolean;
   readonly failFlags?: boolean;
   readonly failImpacts?: boolean;
+  readonly enableContracts?: boolean;
+  readonly failContracts?: boolean;
 }
 
 const basePlayerStoryContext: PlayerStoryContext = {
@@ -319,6 +375,7 @@ function createFakeDependencies(
     policies: [],
     flags: [],
     impacts: [],
+    contracts: [],
   };
 
   return {
@@ -363,6 +420,18 @@ function createFakeDependencies(
         return { id: `impact-${writes.impacts.length}` };
       },
     },
+    contracts: options.enableContracts
+      ? {
+        async createGameSessionContract(input) {
+          if (options.failContracts) {
+            throw new Error("contract repository unavailable");
+          }
+
+          writes.contracts.push(input);
+          return { id: `contract-${writes.contracts.length}` };
+        },
+      }
+      : undefined,
   };
 }
 
