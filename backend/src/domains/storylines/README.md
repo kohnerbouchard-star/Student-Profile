@@ -2,9 +2,12 @@
 
 Backend foundation for data-driven Econovaria storylines.
 
-This slice is intentionally schema and contracts only. It adds validation for
-story event configuration, player-rule conditions, effect payloads, policies,
-flags, cutscene reveal metadata, and public market-news payloads.
+The current implementation includes schema/contracts plus the evaluation-only
+condition engine. The condition engine accepts parsed story conditions and a
+normalized backend `PlayerStoryContext`, then returns a boolean. It does not
+load player state, run story events, apply effects, write impacts, create ledger
+entries, mutate policies/flags, publish realtime events, or deliver
+notifications.
 
 Deferred work:
 
