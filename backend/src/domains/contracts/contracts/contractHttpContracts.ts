@@ -67,6 +67,19 @@ export interface PlayerContractProgressDto {
   readonly updatedAt: string;
 }
 
+export interface StaffContractSummaryDto {
+  readonly contractId: string;
+  readonly gameSessionId: string;
+  readonly contractKey: string;
+  readonly title: string;
+  readonly status: string;
+  readonly sourceType: string;
+  readonly visibility: string;
+  readonly completionMode: string;
+  readonly deadlineAt: string | null;
+  readonly expiresAt: string | null;
+}
+
 export interface StaffContractListResponseBody {
   readonly ok: true;
   readonly contracts: readonly StaffContractDto[];
@@ -87,6 +100,27 @@ export interface PlayerContractSubmitResponseBody {
   readonly ok: true;
   readonly contract: PlayerContractDto;
   readonly progress: PlayerContractProgressDto;
+}
+
+export interface StaffContractProgressListResponseBody {
+  readonly ok: true;
+  readonly contract: StaffContractSummaryDto;
+  readonly progress: readonly PlayerContractProgressDto[];
+}
+
+export interface StaffContractProgressReviewResponseBody {
+  readonly ok: true;
+  readonly contract: StaffContractSummaryDto;
+  readonly progress: PlayerContractProgressDto;
+}
+
+export interface StaffContractRewardIssueResponseBody {
+  readonly ok: true;
+  readonly rewardIssued: boolean;
+  readonly alreadyIssued: boolean;
+  readonly contract: StaffContractSummaryDto;
+  readonly progress: PlayerContractProgressDto;
+  readonly rewardResult: Record<string, unknown>;
 }
 
 export function toStaffContractDto(
@@ -115,6 +149,23 @@ export function toStaffContractDto(
     metadata: contract.metadata,
     createdAt: contract.createdAt,
     updatedAt: contract.updatedAt,
+  };
+}
+
+export function toStaffContractSummaryDto(
+  contract: GameSessionContractRecord,
+): StaffContractSummaryDto {
+  return {
+    contractId: contract.id,
+    gameSessionId: contract.gameSessionId,
+    contractKey: contract.contractKey,
+    title: contract.title,
+    status: contract.status,
+    sourceType: contract.sourceType,
+    visibility: contract.visibility,
+    completionMode: contract.completionMode,
+    deadlineAt: contract.deadlineAt,
+    expiresAt: contract.expiresAt,
   };
 }
 

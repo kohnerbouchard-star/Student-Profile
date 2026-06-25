@@ -14,12 +14,16 @@ import type {
   CreateContractTemplateInput,
   CreateGameSessionContractInput,
   GameSessionContractRecord,
+  GetContractProgressByIdInput,
   GetGameSessionContractByIdInput,
   GetPlayerContractProgressInput,
+  ListContractProgressForStaffInput,
   ListGameSessionContractsInput,
   ListPlayerAvailableContractsInput,
   ListPlayerContractProgressInput,
+  MarkContractRewardIssuedInput,
   PlayerContractProgressRecord,
+  ReviewPlayerContractProgressInput,
   UpdateGameSessionContractStatusInput,
   UpsertPlayerContractProgressInput,
 } from "../contracts/contractRepositoryContracts.ts";
@@ -79,6 +83,7 @@ interface SupabaseContractWriteBuilder {
 
 interface SupabaseContractUpdateBuilder {
   eq(column: string, value: unknown): SupabaseContractUpdateBuilder;
+  is(column: string, value: unknown): SupabaseContractUpdateBuilder;
   select(columns: string): SupabaseContractWriteSelectBuilder;
 }
 
@@ -493,6 +498,126 @@ export class SupabaseContractRepository implements ContractRepository {
     return (response.data ?? []).map((row) =>
       toPlayerContractProgressRecord(row as PlayerContractProgressRow)
     );
+  }
+
+  async listContractProgressForStaff(
+    input: ListContractProgressForStaffInput,
+  ): Promise<readonly PlayerContractProgressRecord[]> {
+    let query = this.client
+      .from("player_contract_progress")
+      .select(PLAYER_CONTRACT_PROGRESS_SELECT)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("contract_id", input.contractId);
+
+    if (input.statuses && input.statuses.length > 0) {
+      query = query.in("status", input.statuses);
+    }
+
+    if (input.playerId) {
+      query = query.eq("player_id", input.playerId);
+    }
+
+    const response = await query
+      .order("submitted_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+
+    assertNoError(response, "player_contract_progress", "select");
+
+    return (response.data ?? []).map((row) =>
+      toPlayerContractProgressRecord(row as PlayerContractProgressRow)
+    );
+  }
+
+  async getContractProgressById(
+    input: GetContractProgressByIdInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    const response = await this.client
+      .from("player_contract_progress")
+      .select(PLAYER_CONTRACT_PROGRESS_SELECT)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("contract_id", input.contractId)
+      .eq("id", input.progressId)
+      .maybeSingle();
+
+    assertNoError(response, "player_contract_progress", "select");
+
+    return response.data
+      ? toPlayerContractProgressRecord(
+        response.data as PlayerContractProgressRow,
+      )
+      : null;
+  }
+
+  async reviewPlayerContractProgress(
+    input: ReviewPlayerContractProgressInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    const parsed = parsePlayerContractProgressConfig({
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      playerId: "review-validation-placeholder",
+      status: input.status,
+      resultPayload: input.resultPayload ?? {},
+      completedAt: input.completedAt ?? null,
+    });
+    const row: Record<string, unknown> = {
+      status: parsed.status,
+    };
+
+    if (input.resultPayload !== undefined) {
+      row.result_payload = parsed.resultPayload;
+    }
+
+    if (input.completedAt !== undefined) {
+      row.completed_at = parsed.completedAt;
+    }
+
+    const response = await this.client
+      .from("player_contract_progress")
+      .update(row)
+      .eq("game_session_id", input.gameSessionId)
+      .eq("contract_id", input.contractId)
+      .eq("id", input.progressId)
+      .select(PLAYER_CONTRACT_PROGRESS_SELECT)
+      .maybeSingle();
+
+    assertNoError(response, "player_contract_progress", "update");
+
+    return response.data
+      ? toPlayerContractProgressRecord(
+        response.data as PlayerContractProgressRow,
+      )
+      : null;
+  }
+
+  async markContractRewardIssued(
+    input: MarkContractRewardIssuedInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    const parsed = parsePlayerContractProgressConfig({
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      playerId: "reward-validation-placeholder",
+      status: "completed",
+      rewardIssuedAt: input.rewardIssuedAt,
+    });
+    const response = await this.client
+      .from("player_contract_progress")
+      .update({
+        reward_issued_at: parsed.rewardIssuedAt,
+      })
+      .eq("game_session_id", input.gameSessionId)
+      .eq("contract_id", input.contractId)
+      .eq("id", input.progressId)
+      .is("reward_issued_at", null)
+      .select(PLAYER_CONTRACT_PROGRESS_SELECT)
+      .maybeSingle();
+
+    assertNoError(response, "player_contract_progress", "update");
+
+    return response.data
+      ? toPlayerContractProgressRecord(
+        response.data as PlayerContractProgressRow,
+      )
+      : null;
   }
 }
 
