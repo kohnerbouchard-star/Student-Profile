@@ -24,6 +24,54 @@ function mergeSnapshot(snapshot) {
   stateApi.setState(next);
 }
 
+function mergeGameDashboardSnapshot(dashboard) {
+  const stateApi = getSnapshotStateApi();
+  const previous = stateApi.getState() || stateApi.emptyState();
+  const base = stateApi.emptyState();
+  const legacySnapshot = toLegacySnapshotFromGameDashboard(dashboard || {});
+  const normalized = normalizeSnapshot(legacySnapshot);
+  const next = {
+    ...base,
+    ...previous,
+    profile: normalized.profile || previous.profile || null,
+    store: normalized.store,
+    inventory: normalized.inventory,
+    market: normalized.market,
+    portfolio: normalized.portfolio,
+    ratings: Array.isArray(previous.ratings) ? previous.ratings : base.ratings,
+    news: normalized.news
+  };
+
+  mergeSnapshotTransactions(next, previous, base, legacySnapshot, normalized);
+  stateApi.setState(next);
+}
+
+function toLegacySnapshotFromGameDashboard(dashboard) {
+  const gameSession = dashboard.gameSession || {};
+  const me = dashboard.me || {};
+  const cash = me.cash || {};
+  const stocks = me.stocks || {};
+  const store = me.store || {};
+  const publicData = dashboard.public || {};
+  const publicMarket = publicData.market || {};
+
+  return {
+    profile: {
+      name: me.displayName || "Player",
+      grade: me.rosterLabel || "Player",
+      homeroom: gameSession.name || "Active session",
+      balance: cash.totalBalance || 0,
+      active: gameSession.status || "active"
+    },
+    store: (store.listings || publicData.storeListings || []).map(toLegacyStoreItem),
+    inventory: (store.inventory || []).map(toLegacyInventoryItem),
+    market: (publicMarket.stocks || []).map(toLegacyMarketRow),
+    portfolio: (stocks.holdings || []).map(toLegacyPortfolioRow),
+    stockTrades: (stocks.trades || []).map(toLegacyStockTradeRow),
+    news: (publicMarket.news || []).map(toLegacyMarketNewsRow)
+  };
+}
+
 function getSnapshotStateApi() {
   const stateApi = window.Econovaria?.state;
 
@@ -249,9 +297,12 @@ function normalizeMarketRow(row) {
         : pick(row, ["history", "History", "Price_History", "Price History", "priceHistory"]);
 
   return {
+    assetId: pick(row, ["assetId", "stockAssetId", "Stock_Asset_ID", "Stock Asset ID"]),
+    stockAssetId: pick(row, ["stockAssetId", "assetId", "Stock_Asset_ID", "Stock Asset ID"]),
     ticker: pick(row, ["ticker", "Ticker"]),
     companyName: pick(row, ["companyName", "Company_Name", "Company Name", "Name", "name"]),
     sector: pick(row, ["sector", "Sector"]),
+    countryCode: pick(row, ["countryCode", "Country_Code", "Country Code"]),
     currentPrice: numberForSnapshot(pick(row, ["currentPrice", "Current_Price", "Current Price", "Price", "price", "Close", "close"])),
     changePct: pick(row, ["changePct", "Change_%", "Change %", "Change", "change", "Price_Change_%", "Price Change %"]),
     trend: pick(row, ["trend", "Trend"]),
@@ -310,6 +361,103 @@ function normalizeRatingRow(row) {
   };
 }
 
+function toLegacyStoreItem(item) {
+  return {
+    itemId: item.itemId || item.id,
+    itemName: item.itemName || item.name,
+    price: item.price,
+    inventory: item.inventory ?? item.stockQuantity ?? "",
+    category: item.category,
+    description: item.description || "",
+    currencyCode: item.currencyCode,
+    priceDisplay: item.priceDisplay || renderSnapshotCurrency(item.price, item.currencyCode)
+  };
+}
+
+function toLegacyInventoryItem(item) {
+  return {
+    itemName: item.itemName,
+    category: item.category || "",
+    quantityPurchased: item.quantityPurchased ?? item.quantityOwned ?? 0,
+    totalSpent: item.totalSpent ?? "",
+    lastPurchased: item.lastPurchased || item.updatedAt || ""
+  };
+}
+
+function toLegacyMarketRow(stock) {
+  return {
+    assetId: stock.assetId || stock.stockAssetId,
+    stockAssetId: stock.stockAssetId || stock.assetId,
+    ticker: stock.ticker,
+    companyName: stock.companyName,
+    sector: stock.sector,
+    countryCode: stock.countryCode,
+    currentPrice: stock.currentPrice,
+    changePct: stock.changePct,
+    previousClose: stock.previousClose,
+    openPrice: stock.openPrice,
+    dayHigh: stock.dayHigh,
+    dayLow: stock.dayLow,
+    volume: stock.volume,
+    marketCap: stock.marketCap,
+    description: stock.description || "",
+    trend: Number(stock.changePct || 0) > 0 ? "up" : Number(stock.changePct || 0) < 0 ? "down" : "flat",
+    assetType: "Stock",
+    lastUpdated: stock.lastUpdated || ""
+  };
+}
+
+function toLegacyPortfolioRow(holding) {
+  return {
+    stockAssetId: holding.stockAssetId,
+    ticker: holding.ticker,
+    sharesOwned: holding.quantity,
+    avgBuyPrice: holding.averageCost,
+    totalCost: holding.costBasis,
+    currentPrice: holding.currentPrice,
+    marketValue: holding.marketValue,
+    gainLoss: holding.unrealizedPnl,
+    lastUpdated: holding.lastUpdated || ""
+  };
+}
+
+function toLegacyStockTradeRow(trade) {
+  return {
+    timestamp: trade.createdAt,
+    mode: trade.side || "STOCK_TRADE",
+    ticker: trade.ticker,
+    shares: trade.quantity,
+    price: trade.executionPrice,
+    totalValue: trade.grossValue,
+    companyName: trade.ticker,
+    status: "filled"
+  };
+}
+
+function toLegacyMarketNewsRow(news) {
+  return {
+    timestamp: news.createdAt,
+    date: news.createdAt,
+    ticker: news.scope === "ticker" ? news.targetKey : "",
+    sector: news.scope === "sector" ? news.targetKey : "",
+    headline: news.headline,
+    summary: news.explanation,
+    impact: news.scope,
+    sentiment: "Neutral",
+    changePct: ""
+  };
+}
+
+function renderSnapshotCurrency(amount, currencyCode) {
+  const formatter = window.Econovaria?.utils?.formatCurrencyAmount;
+
+  if (typeof formatter === "function") {
+    return formatter(amount, currencyCode);
+  }
+
+  return String(amount ?? "");
+}
+
 function getFirstArray(source, keys) {
   for (const key of keys) {
     if (Array.isArray(source[key])) return source[key];
@@ -366,6 +514,8 @@ function sortNewestFirst(a, b) {
 
 const snapshotApi = {
   mergeSnapshot,
+  mergeGameDashboardSnapshot,
+  toLegacySnapshotFromGameDashboard,
   normalizeSnapshot,
   normalizeProfile,
   normalizeStoreItem,
