@@ -76,14 +76,18 @@ interface EdgeSupabaseSelectBuilder<Row = EdgeSupabaseRow> {
 }
 
 interface EdgeSupabaseFilterBuilder<Row = EdgeSupabaseRow>
-  extends EdgeSupabaseSelectBuilder<Row>,
+  extends
+    EdgeSupabaseSelectBuilder<Row>,
     PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
   eq(column: string, value: unknown): EdgeSupabaseFilterBuilder<Row>;
-  in(column: string, values: readonly unknown[]): EdgeSupabaseFilterBuilder<Row>;
+  in(
+    column: string,
+    values: readonly unknown[],
+  ): EdgeSupabaseFilterBuilder<Row>;
   limit(count: number): EdgeSupabaseFilterBuilder<Row>;
   order(
     column: string,
-    options?: { readonly ascending?: boolean },
+    options?: { readonly ascending?: boolean; readonly nullsFirst?: boolean },
   ): EdgeSupabaseFilterBuilder<Row>;
 }
 
@@ -97,6 +101,10 @@ interface EdgeSupabaseUpdateBuilder<Row = EdgeSupabaseRow>
   select(columns: string): EdgeSupabaseSelectBuilder<Row>;
 }
 
+interface EdgeSupabaseUpsertBuilder<Row = EdgeSupabaseRow> {
+  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
+}
+
 interface EdgeSupabaseDeleteBuilder<Row = EdgeSupabaseRow>
   extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
   eq(column: string, value: unknown): EdgeSupabaseDeleteBuilder<Row>;
@@ -106,6 +114,10 @@ interface EdgeSupabaseQueryBuilder<Row = EdgeSupabaseRow> {
   select(columns: string): EdgeSupabaseFilterBuilder<Row>;
   insert(values: unknown): EdgeSupabaseInsertBuilder<Row>;
   update(values: unknown): EdgeSupabaseUpdateBuilder<Row>;
+  upsert(
+    values: unknown,
+    options?: { readonly onConflict?: string },
+  ): EdgeSupabaseUpsertBuilder<Row>;
   delete(): EdgeSupabaseDeleteBuilder<Row>;
 }
 
@@ -138,11 +150,11 @@ type EdgeStaffSessionFailure = {
 
 type EdgeStaffSessionResolution =
   | {
-      readonly ok: true;
-      readonly authUser: EdgeSupabaseAuthUser;
-      readonly staff: EdgeStaffSessionStaff;
-      readonly serviceClient: EdgeSupabaseClient;
-    }
+    readonly ok: true;
+    readonly authUser: EdgeSupabaseAuthUser;
+    readonly staff: EdgeStaffSessionStaff;
+    readonly serviceClient: EdgeSupabaseClient;
+  }
   | EdgeStaffSessionFailure;
 
 interface ResolveStaffSessionOptions {
@@ -266,18 +278,18 @@ export async function readOwnedGameSession(
   staffUserId: string,
 ): Promise<
   | {
-      readonly ok: true;
-      readonly gameSession: {
-        readonly id: string;
-        readonly name: string;
-        readonly status: string;
-      };
-    }
+    readonly ok: true;
+    readonly gameSession: {
+      readonly id: string;
+      readonly name: string;
+      readonly status: string;
+    };
+  }
   | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
+    readonly ok: false;
+    readonly status: number;
+    readonly error: EdgeErrorBody["error"];
+  }
 > {
   const gameResponse = await serviceClient
     .from("game_sessions")

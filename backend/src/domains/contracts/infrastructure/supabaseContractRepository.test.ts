@@ -158,6 +158,79 @@ Deno.test("contract repository lists game session contracts and excludes other s
   ]);
 });
 
+Deno.test("contract repository gets game session contract by scoped id", async () => {
+  const client = new FakeClient(baseTables({
+    game_session_contracts: [
+      gameSessionContractRow({
+        id: "contract-1",
+        game_session_id: "game-1",
+      }),
+      gameSessionContractRow({
+        id: "contract-1",
+        game_session_id: "game-2",
+        contract_key: "other-game-contract",
+      }),
+    ],
+  }));
+  const repository = new SupabaseContractRepository(client as never);
+
+  const contract = await repository.getGameSessionContractById({
+    gameSessionId: "game-1",
+    contractId: "contract-1",
+  });
+  const missing = await repository.getGameSessionContractById({
+    gameSessionId: "game-1",
+    contractId: "missing-contract",
+  });
+
+  assertEquals(contract?.gameSessionId, "game-1");
+  assertEquals(contract?.contractKey, "contract-1");
+  assertEquals(missing, null);
+});
+
+Deno.test("contract repository updates contract status scoped by game session", async () => {
+  const client = new FakeClient(baseTables({
+    game_session_contracts: [
+      gameSessionContractRow({
+        id: "contract-1",
+        game_session_id: "game-1",
+        status: "draft",
+        published_at: null,
+      }),
+      gameSessionContractRow({
+        id: "contract-1",
+        game_session_id: "game-2",
+        status: "draft",
+        published_at: null,
+      }),
+    ],
+  }));
+  const repository = new SupabaseContractRepository(client as never);
+
+  const updated = await repository.updateGameSessionContractStatus({
+    gameSessionId: "game-1",
+    contractId: "contract-1",
+    status: "active",
+    publishedAt: "2026-06-25T12:30:00.000Z",
+  });
+  const missing = await repository.updateGameSessionContractStatus({
+    gameSessionId: "game-1",
+    contractId: "missing-contract",
+    status: "active",
+    publishedAt: "2026-06-25T12:30:00.000Z",
+  });
+
+  assertEquals(updated?.status, "active");
+  assertEquals(updated?.publishedAt, "2026-06-25T12:30:00.000Z");
+  assertEquals(
+    client.tables.game_session_contracts.find((row) =>
+      row.game_session_id === "game-2"
+    )?.status,
+    "draft",
+  );
+  assertEquals(missing, null);
+});
+
 Deno.test("contract repository filters game session contracts by status and source type", async () => {
   const client = new FakeClient(baseTables({
     game_session_contracts: [
@@ -430,7 +503,7 @@ interface FakeTables {
 }
 
 type FakeTableName = keyof FakeTables;
-type FakeOperation = "select" | "insert" | "upsert";
+type FakeOperation = "select" | "insert" | "update" | "upsert";
 type FakeFailureKey = `${FakeTableName}:${FakeOperation}`;
 
 class FakeClient {
@@ -485,6 +558,15 @@ class FakeQueryBuilder {
     this.tables[this.tableName].push(stored);
 
     return new FakeWriteBuilder(stored, null);
+  }
+
+  update(row: unknown): FakeUpdateBuilder {
+    return new FakeUpdateBuilder(
+      this.tables,
+      this.failures,
+      this.tableName,
+      row,
+    );
   }
 
   upsert(
@@ -633,6 +715,47 @@ class FakeQueryBuilder {
       created_at: "2026-06-25T12:00:00.000Z",
       updated_at: "2026-06-25T12:00:00.000Z",
     };
+  }
+}
+
+class FakeUpdateBuilder {
+  private readonly filters: {
+    readonly column: string;
+    readonly value: unknown;
+  }[] = [];
+
+  constructor(
+    private readonly tables: FakeTables,
+    private readonly failures: Partial<Record<FakeFailureKey, FakeQueryError>>,
+    private readonly tableName: FakeTableName,
+    private readonly values: unknown,
+  ) {}
+
+  eq(column: string, value: unknown): FakeUpdateBuilder {
+    this.filters.push({ column, value });
+    return this;
+  }
+
+  select(_columns: string): FakeWriteBuilder {
+    const failure = this.failures[`${this.tableName}:update`];
+
+    if (failure) {
+      return new FakeWriteBuilder(null, failure);
+    }
+
+    const row = this.tables[this.tableName].find((stored) =>
+      this.filters.every((filter) => stored[filter.column] === filter.value)
+    );
+
+    if (!row) {
+      return new FakeWriteBuilder(null, null);
+    }
+
+    Object.assign(row, this.values, {
+      updated_at: "2026-06-25T12:30:00.000Z",
+    });
+
+    return new FakeWriteBuilder(row, null);
   }
 }
 

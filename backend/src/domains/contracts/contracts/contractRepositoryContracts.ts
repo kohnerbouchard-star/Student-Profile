@@ -27,6 +27,14 @@ export interface ContractRepository {
     input: ListGameSessionContractsInput,
   ): Promise<readonly GameSessionContractRecord[]>;
 
+  getGameSessionContractById(
+    input: GetGameSessionContractByIdInput,
+  ): Promise<GameSessionContractRecord | null>;
+
+  updateGameSessionContractStatus(
+    input: UpdateGameSessionContractStatusInput,
+  ): Promise<GameSessionContractRecord | null>;
+
   listPlayerAvailableContracts(
     input: ListPlayerAvailableContractsInput,
   ): Promise<readonly GameSessionContractRecord[]>;
@@ -144,6 +152,18 @@ export interface ListGameSessionContractsInput {
   readonly statuses?: readonly ContractStatus[];
   readonly sourceTypes?: readonly ContractSourceType[];
   readonly visibility?: ContractVisibility | null;
+}
+
+export interface GetGameSessionContractByIdInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+}
+
+export interface UpdateGameSessionContractStatusInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly status: ContractStatus;
+  readonly publishedAt?: string | null;
 }
 
 export interface ListPlayerAvailableContractsInput {
