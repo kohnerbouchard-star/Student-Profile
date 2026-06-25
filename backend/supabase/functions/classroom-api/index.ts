@@ -108,6 +108,12 @@ import {
 import {
   handlePlayerGameDashboardRequest,
 } from "../../../src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts";
+import {
+  readStaffDemoStorylineInitializeRoutePath,
+} from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
+import {
+  handleStaffDemoStorylineInitializationRequest,
+} from "../../../src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -250,6 +256,19 @@ Deno.serve(async (request) => {
     return handleStaffContractRequest(request, staffContractRoute, {
       resolveStaffForRequest,
     });
+  }
+
+  const staffDemoStorylineInitializeRoute =
+    readStaffDemoStorylineInitializeRoutePath(url.pathname);
+
+  if (staffDemoStorylineInitializeRoute) {
+    return handleStaffDemoStorylineInitializationRequest(
+      request,
+      staffDemoStorylineInitializeRoute,
+      {
+        resolveStaffForRequest,
+      },
+    );
   }
 
   const playerRosterRoute = readPlayerRosterRoutePath(url.pathname);
