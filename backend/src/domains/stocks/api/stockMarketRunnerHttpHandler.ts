@@ -47,8 +47,8 @@ import {
 } from "../infrastructure/supabaseStockMarketRunnerRepository.ts";
 import {
   parseStockMarketNewsCreateRequest,
-  StockMarketNewsError,
   type StockMarketNewsCreateResult,
+  StockMarketNewsError,
   type StockMarketNewsRepository,
 } from "../contracts/stockMarketNewsContracts.ts";
 import {
@@ -80,6 +80,12 @@ interface StockMarketRunnerHttpDependencies {
   readonly logPublicRealtimePublishFailure?: (
     failure: StockMarketRunnerPublicRealtimePublishFailure,
   ) => void;
+  readonly runStorylineEventsAfterTick?: (
+    input: StockMarketRunnerStorylineTickHookInput,
+  ) => Promise<void>;
+  readonly logStorylineRunnerFailure?: (
+    failure: StockMarketRunnerStorylineTickHookFailure,
+  ) => void;
 }
 
 interface StockMarketRunnerPublicRealtimePublisher {
@@ -89,6 +95,18 @@ interface StockMarketRunnerPublicRealtimePublisher {
 }
 
 interface StockMarketRunnerPublicRealtimePublishFailure {
+  readonly code: string;
+  readonly message: string;
+  readonly retryable: boolean;
+}
+
+interface StockMarketRunnerStorylineTickHookInput {
+  readonly gameSessionId: string;
+  readonly currentMarketTick: number;
+  readonly generatedAt: string;
+}
+
+interface StockMarketRunnerStorylineTickHookFailure {
   readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
@@ -170,6 +188,13 @@ export async function handleStockMarketRunnerRequest(
       publicRealtimePublisher,
       logPublicRealtimePublishFailure: dependencies
         .logPublicRealtimePublishFailure,
+    });
+
+    await runStorylineEventsAfterStockTickBestEffort({
+      hook: dependencies.runStorylineEventsAfterTick,
+      result,
+      onFailure: dependencies.logStorylineRunnerFailure ??
+        logStorylineRunnerFailure,
     });
 
     return jsonResponse<StockMarketRunnerSuccessBody>(200, {
@@ -450,6 +475,36 @@ async function publishStockTickPublicRealtimeBestEffort(args: {
   }
 }
 
+async function runStorylineEventsAfterStockTickBestEffort(args: {
+  readonly hook?: (
+    input: StockMarketRunnerStorylineTickHookInput,
+  ) => Promise<void>;
+  readonly result: StockMarketRunnerResult;
+  readonly onFailure: (
+    failure: StockMarketRunnerStorylineTickHookFailure,
+  ) => void;
+}): Promise<void> {
+  if (!args.hook) {
+    return;
+  }
+
+  try {
+    await args.hook({
+      gameSessionId: args.result.gameSessionId,
+      currentMarketTick: args.result.tickIndex,
+      generatedAt: args.result.generatedAt,
+    });
+  } catch (error) {
+    args.onFailure({
+      code: "storyline_runner_after_stock_tick_failed",
+      message: error instanceof Error
+        ? error.message
+        : "Storyline runner failed after stock tick.",
+      retryable: true,
+    });
+  }
+}
+
 function createDefaultPublicRealtimePublisher(
   client: EdgeSupabaseClient,
 ): StockMarketRunnerPublicRealtimePublisher {
@@ -464,6 +519,16 @@ function logPublicRealtimePublishFailure(
   failure: StockMarketRunnerPublicRealtimePublishFailure,
 ): void {
   console.warn("stock_market_runner_public_realtime_publish_failed", {
+    code: failure.code,
+    message: failure.message,
+    retryable: failure.retryable,
+  });
+}
+
+function logStorylineRunnerFailure(
+  failure: StockMarketRunnerStorylineTickHookFailure,
+): void {
+  console.warn("stock_market_runner_storyline_after_tick_failed", {
     code: failure.code,
     message: failure.message,
     retryable: failure.retryable,

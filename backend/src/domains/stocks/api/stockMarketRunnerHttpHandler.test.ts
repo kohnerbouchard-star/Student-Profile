@@ -157,7 +157,8 @@ Deno.test("stock market runner posts market news and broadcasts public event", a
       action: "post_market_news",
       gameSessionId: GAME_SESSION_ID,
       headline: "Border escalation lifts emergency energy demand",
-      explanation: "Government procurement increases oil, steel, and logistics pressure.",
+      explanation:
+        "Government procurement increases oil, steel, and logistics pressure.",
       category: "war_conflict",
       scope: "sector",
       targetKey: "ENERGY",
@@ -247,6 +248,50 @@ Deno.test("stock market runner keeps successful tick response when realtime publ
   }]);
 });
 
+Deno.test("stock market runner invokes storyline hook after successful tick", async () => {
+  const calls: unknown[] = [];
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      runStorylineEventsAfterTick: async (input) => {
+        calls.push(input);
+      },
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(calls, [{
+    gameSessionId: GAME_SESSION_ID,
+    currentMarketTick: 4,
+    generatedAt: "tick-4",
+  }]);
+});
+
+Deno.test("stock market runner keeps successful tick response when storyline hook fails", async () => {
+  const failures: unknown[] = [];
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      runStorylineEventsAfterTick: async () => {
+        throw new Error("storyline repository unavailable");
+      },
+      logStorylineRunnerFailure: (failure) => failures.push(failure),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(body.tickIndex, 4);
+  assertEquals(failures, [{
+    code: "storyline_runner_after_stock_tick_failed",
+    message: "storyline repository unavailable",
+    retryable: true,
+  }]);
+});
+
 Deno.test("stock market runner derives the default seed from one game session", async () => {
   const engineInputs: StockMarketEngineInput[] = [];
   const repository = new MockRunnerRepository();
@@ -287,6 +332,16 @@ function dependencies(options: {
     readonly message: string;
     readonly retryable: boolean;
   }) => void;
+  readonly runStorylineEventsAfterTick?: (input: {
+    readonly gameSessionId: string;
+    readonly currentMarketTick: number;
+    readonly generatedAt: string;
+  }) => Promise<void>;
+  readonly logStorylineRunnerFailure?: (failure: {
+    readonly code: string;
+    readonly message: string;
+    readonly retryable: boolean;
+  }) => void;
 } = {}) {
   const repository = options.repository ?? new MockRunnerRepository();
 
@@ -302,12 +357,15 @@ function dependencies(options: {
     }),
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
     createRepository: () => repository,
-    createNewsRepository: () => options.newsRepository ?? new MockMarketNewsRepository(),
+    createNewsRepository: () =>
+      options.newsRepository ?? new MockMarketNewsRepository(),
     calculateNextTick: options.calculateNextTick ?? engineResult,
     createPublicRealtimePublisher: () =>
       options.publicRealtimePublisher ?? new NoopPublicRealtimePublisher(),
     logPublicRealtimePublishFailure: options.logPublicRealtimePublishFailure ??
       (() => {}),
+    runStorylineEventsAfterTick: options.runStorylineEventsAfterTick,
+    logStorylineRunnerFailure: options.logStorylineRunnerFailure ?? (() => {}),
   };
 }
 
