@@ -66,9 +66,9 @@ import {
 import {
   SupabaseStorylineRepository,
 } from "../../storylines/infrastructure/supabaseStorylineRepository.ts";
-import type {
-  StoryEffectLedgerWriter,
-} from "../../storylines/contracts/storyEffectExecutionContracts.ts";
+import {
+  SupabaseStoryEffectLedgerWriter,
+} from "../../storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
 import {
   runDueStorylineEvents,
 } from "../../storylines/services/storylineRunner.ts";
@@ -514,7 +514,7 @@ function createDefaultStorylineRunnerAfterTick(
     client as any,
   );
   const contractRepository = new SupabaseContractRepository(client as any);
-  const ledger = createFailClosedStorylineLedgerWriter();
+  const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
 
   return async (input) => {
     const playerContexts = await playerContextRepository
@@ -537,16 +537,6 @@ function createDefaultStorylineRunnerAfterTick(
         contracts: contractRepository,
       },
     });
-  };
-}
-
-function createFailClosedStorylineLedgerWriter(): StoryEffectLedgerWriter {
-  return {
-    async recordCashAdjustment() {
-      throw new Error(
-        "Storyline cash effects require a ledger writer before production execution.",
-      );
-    },
   };
 }
 
