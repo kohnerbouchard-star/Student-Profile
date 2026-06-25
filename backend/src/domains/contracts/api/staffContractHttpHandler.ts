@@ -13,6 +13,8 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
+import { isUuid } from "../../../platform/supabase/uuid.ts";
+import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import {
   CONTRACT_COMPLETION_MODES,
   CONTRACT_SOURCE_TYPES,
@@ -23,19 +25,34 @@ import {
   type ContractStatus,
   type ContractVisibility,
   parseGameSessionContractConfig,
+  PLAYER_CONTRACT_STATUSES,
+  type PlayerContractStatus,
 } from "../contracts/contractContracts.ts";
 import { ContractContractError } from "../contracts/contractContractErrors.ts";
 import {
   type StaffContractListResponseBody,
+  type StaffContractProgressListResponseBody,
+  type StaffContractProgressReviewResponseBody,
+  type StaffContractRewardIssueResponseBody,
   type StaffContractWriteResponseBody,
+  toPlayerContractProgressDto,
   toStaffContractDto,
+  toStaffContractSummaryDto,
 } from "../contracts/contractHttpContracts.ts";
 import type {
   ContractRepository,
   CreateGameSessionContractInput,
+  GameSessionContractRecord,
+  PlayerContractProgressRecord,
 } from "../contracts/contractRepositoryContracts.ts";
 import { ContractRepositoryError } from "../contracts/contractRepositoryContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
+import {
+  alreadyIssuedRewardResult,
+  ContractRewardLedgerRpcWriter,
+  type ContractRewardLedgerWriter,
+  issueContractRewards,
+} from "../services/contractRewardService.ts";
 import type { StaffContractRoute } from "./contractRoutePaths.ts";
 
 export interface StaffContractHttpHandlerDependencies {
@@ -62,11 +79,17 @@ export interface StaffContractHttpHandlerDependencies {
   readonly createRepository?: (
     serviceClient: EdgeSupabaseClient,
   ) => ContractRepository;
+  readonly createRewardLedgerWriter?: (
+    serviceClient: EdgeSupabaseClient,
+  ) => ContractRewardLedgerWriter;
   readonly now?: () => string;
 }
 
 const CREATE_CONTRACT_STATUSES = ["draft", "scheduled", "active"] as const;
 const PUBLISHABLE_CONTRACT_STATUSES = ["draft", "scheduled"] as const;
+const REVIEW_ACTIONS = ["approve", "reject", "request_revision"] as const;
+
+type ReviewAction = typeof REVIEW_ACTIONS[number];
 
 export async function handleStaffContractRequest(
   request: Request,
@@ -89,6 +112,30 @@ export async function handleStaffContractRequest(
     return jsonError(405, {
       code: "method_not_allowed",
       message: "Use POST to publish a contract.",
+      retryable: false,
+    });
+  }
+
+  if (route.kind === "progress" && request.method !== "GET") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use GET to list contract progress.",
+      retryable: false,
+    });
+  }
+
+  if (route.kind === "review" && request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to review contract progress.",
+      retryable: false,
+    });
+  }
+
+  if (route.kind === "issueRewards" && request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to issue contract rewards.",
       retryable: false,
     });
   }
@@ -130,6 +177,7 @@ export async function handleStaffContractRequest(
     const repository = dependencies.createRepository
       ? dependencies.createRepository(staffResult.serviceClient)
       : new SupabaseContractRepository(staffResult.serviceClient);
+    const now = dependencies.now ?? (() => new Date().toISOString());
 
     if (route.kind === "contracts" && request.method === "GET") {
       const filters = readListFilters(new URL(request.url));
@@ -188,7 +236,7 @@ export async function handleStaffContractRequest(
       const publishedAt = readOptionalIsoDateTimeText(
         body.publishedAt,
         "publishedAt",
-      ) ?? (dependencies.now ?? (() => new Date().toISOString()))();
+      ) ?? now();
       const updated = await repository.updateGameSessionContractStatus({
         gameSessionId: route.gameSessionId,
         contractId: route.contractId,
@@ -207,6 +255,43 @@ export async function handleStaffContractRequest(
       return jsonResponse<StaffContractWriteResponseBody>(200, {
         ok: true,
         contract: toStaffContractDto(updated),
+      });
+    }
+
+    if (route.kind === "progress" && request.method === "GET") {
+      return await listStaffContractProgress(
+        request,
+        route.gameSessionId,
+        route.contractId,
+        repository,
+      );
+    }
+
+    if (route.kind === "review" && request.method === "POST") {
+      return await reviewStaffContractProgress(
+        request,
+        route.gameSessionId,
+        route.contractId,
+        route.progressId,
+        repository,
+        now(),
+      );
+    }
+
+    if (route.kind === "issueRewards" && request.method === "POST") {
+      const rewardLedgerWriter = dependencies.createRewardLedgerWriter
+        ? dependencies.createRewardLedgerWriter(staffResult.serviceClient)
+        : new ContractRewardLedgerRpcWriter(staffResult.serviceClient);
+
+      return await issueStaffContractRewards({
+        request,
+        gameSessionId: route.gameSessionId,
+        contractId: route.contractId,
+        progressId: route.progressId,
+        staffId: staffResult.staff.id,
+        repository,
+        rewardLedgerWriter,
+        issuedAt: now(),
       });
     }
 
@@ -325,6 +410,363 @@ function readCreateContractInput(
   };
 }
 
+async function listStaffContractProgress(
+  request: Request,
+  gameSessionId: string,
+  contractId: string,
+  repository: ContractRepository,
+): Promise<Response> {
+  const contract = await readRequiredContract(
+    repository,
+    gameSessionId,
+    contractId,
+  );
+  const filters = readProgressListFilters(new URL(request.url));
+  const progress = await repository.listContractProgressForStaff({
+    gameSessionId,
+    contractId,
+    statuses: filters.statuses,
+    playerId: filters.playerId,
+  });
+
+  return jsonResponse<StaffContractProgressListResponseBody>(200, {
+    ok: true,
+    contract: toStaffContractSummaryDto(contract),
+    progress: progress.map(toPlayerContractProgressDto),
+  });
+}
+
+async function reviewStaffContractProgress(
+  request: Request,
+  gameSessionId: string,
+  contractId: string,
+  progressId: string,
+  repository: ContractRepository,
+  reviewedAt: string,
+): Promise<Response> {
+  const body = await readRequiredJsonObjectBody(request);
+  rejectClientSuppliedReviewAuthority(body);
+
+  if (body.issueRewardNow === true) {
+    throw new EdgeActivationError(
+      "issue_reward_now_not_supported",
+      "Use the contract rewards issue route after approving progress.",
+      400,
+    );
+  }
+
+  const action = readReviewAction(body.action);
+  const resultPayload = readOptionalJsonObject(
+    body.resultPayload,
+    "resultPayload",
+  );
+  const [contract, existingProgress] = await Promise.all([
+    readRequiredContract(repository, gameSessionId, contractId),
+    repository.getContractProgressById({
+      gameSessionId,
+      contractId,
+      progressId,
+    }),
+  ]);
+
+  if (!existingProgress) {
+    return jsonError(404, {
+      code: "contract_progress_not_found",
+      message: "Contract progress was not found for this contract.",
+      retryable: false,
+    });
+  }
+
+  if (existingProgress.rewardIssuedAt !== null) {
+    return jsonError(409, {
+      code: "contract_reward_already_issued",
+      message: "Contract progress cannot be reviewed after rewards are issued.",
+      retryable: false,
+    });
+  }
+
+  const updated = await repository.reviewPlayerContractProgress({
+    gameSessionId,
+    contractId,
+    progressId,
+    status: reviewActionToStatus(action),
+    resultPayload,
+    completedAt: action === "approve" ? reviewedAt : undefined,
+  });
+
+  if (!updated) {
+    return jsonError(404, {
+      code: "contract_progress_not_found",
+      message: "Contract progress was not found for this contract.",
+      retryable: false,
+    });
+  }
+
+  return jsonResponse<StaffContractProgressReviewResponseBody>(200, {
+    ok: true,
+    contract: toStaffContractSummaryDto(contract),
+    progress: toPlayerContractProgressDto(updated),
+  });
+}
+
+async function issueStaffContractRewards(input: {
+  readonly request: Request;
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+  readonly staffId: string;
+  readonly repository: ContractRepository;
+  readonly rewardLedgerWriter: ContractRewardLedgerWriter;
+  readonly issuedAt: string;
+}): Promise<Response> {
+  const [contract, progress] = await Promise.all([
+    readRequiredContract(
+      input.repository,
+      input.gameSessionId,
+      input.contractId,
+    ),
+    input.repository.getContractProgressById({
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      progressId: input.progressId,
+    }),
+  ]);
+
+  if (!progress) {
+    return jsonError(404, {
+      code: "contract_progress_not_found",
+      message: "Contract progress was not found for this contract.",
+      retryable: false,
+    });
+  }
+
+  if (progress.rewardIssuedAt !== null) {
+    return rewardIssueResponse({
+      rewardIssued: false,
+      alreadyIssued: true,
+      contract,
+      progress,
+      rewardResult: alreadyIssuedRewardResult(),
+    });
+  }
+
+  if (progress.status !== "completed") {
+    return jsonError(409, {
+      code: "contract_progress_not_completed",
+      message: "Only completed contract progress can receive rewards.",
+      retryable: false,
+    });
+  }
+
+  const rewardResult = await issueContractRewards({
+    gameSessionId: input.gameSessionId,
+    contractId: input.contractId,
+    progressId: input.progressId,
+    playerId: progress.playerId,
+    rewardPayload: contract.rewardPayload,
+    issuedAt: input.issuedAt,
+    staffId: input.staffId,
+    requestId: buildContractRewardIdempotencyKey({
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      progressId: input.progressId,
+    }),
+    ledger: input.rewardLedgerWriter,
+  });
+
+  if (!rewardResult.ok) {
+    return jsonError(
+      rewardResult.code === "contract_reward_issue_failed" ? 500 : 400,
+      {
+        code: rewardResult.code,
+        message: rewardResult.message,
+        retryable: false,
+      },
+    );
+  }
+
+  const updatedProgress = await input.repository.markContractRewardIssued({
+    gameSessionId: input.gameSessionId,
+    contractId: input.contractId,
+    progressId: input.progressId,
+    rewardIssuedAt: input.issuedAt,
+  });
+
+  if (!updatedProgress) {
+    const latestProgress = await input.repository.getContractProgressById({
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      progressId: input.progressId,
+    });
+
+    if (latestProgress && latestProgress.rewardIssuedAt !== null) {
+      return rewardIssueResponse({
+        rewardIssued: false,
+        alreadyIssued: true,
+        contract,
+        progress: latestProgress,
+        rewardResult: alreadyIssuedRewardResult(),
+      });
+    }
+
+    return jsonError(409, {
+      code: "contract_reward_mark_failed",
+      message: "Contract reward was issued but progress could not be marked.",
+      retryable: false,
+    });
+  }
+
+  return rewardIssueResponse({
+    rewardIssued: true,
+    alreadyIssued: false,
+    contract,
+    progress: updatedProgress,
+    rewardResult: rewardResult.rewardResult,
+  });
+}
+
+function buildContractRewardIdempotencyKey(input: {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+}): string {
+  return [
+    "contract_reward",
+    input.gameSessionId,
+    input.contractId,
+    input.progressId,
+  ].join(":");
+}
+
+function rewardIssueResponse(input: {
+  readonly rewardIssued: boolean;
+  readonly alreadyIssued: boolean;
+  readonly contract: GameSessionContractRecord;
+  readonly progress: PlayerContractProgressRecord;
+  readonly rewardResult: unknown;
+}): Response {
+  return jsonResponse<StaffContractRewardIssueResponseBody>(200, {
+    ok: true,
+    rewardIssued: input.rewardIssued,
+    alreadyIssued: input.alreadyIssued,
+    contract: toStaffContractSummaryDto(input.contract),
+    progress: toPlayerContractProgressDto(input.progress),
+    rewardResult: input.rewardResult as Record<string, unknown>,
+  });
+}
+
+async function readRequiredContract(
+  repository: ContractRepository,
+  gameSessionId: string,
+  contractId: string,
+): Promise<GameSessionContractRecord> {
+  const contract = await repository.getGameSessionContractById({
+    gameSessionId,
+    contractId,
+  });
+
+  if (!contract) {
+    throw new EdgeActivationError(
+      "contract_not_found",
+      "Contract was not found for this game session.",
+      404,
+      false,
+    );
+  }
+
+  return contract;
+}
+
+function readProgressListFilters(url: URL): {
+  readonly statuses?: readonly PlayerContractStatus[];
+  readonly playerId?: string | null;
+} {
+  return {
+    statuses: readEnumQueryValues(
+      url.searchParams,
+      "status",
+      PLAYER_CONTRACT_STATUSES,
+      "invalid_contract_progress_status_filter",
+    ),
+    playerId: readOptionalPlayerIdFilter(url.searchParams),
+  };
+}
+
+function readOptionalPlayerIdFilter(
+  searchParams: URLSearchParams,
+): string | null {
+  const values = searchParams.getAll("playerId");
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  if (values.length > 1) {
+    throw new EdgeActivationError(
+      "invalid_contract_progress_player_filter",
+      "playerId query filter accepts one value.",
+      400,
+    );
+  }
+
+  const playerId = values[0]?.trim() ?? "";
+
+  if (!playerId || !isUuid(playerId)) {
+    throw new EdgeActivationError(
+      "invalid_contract_progress_player_filter",
+      "playerId query filter is invalid.",
+      400,
+    );
+  }
+
+  return playerId;
+}
+
+function rejectClientSuppliedReviewAuthority(
+  body: Record<string, unknown>,
+): void {
+  for (
+    const fieldName of [
+      "staffId",
+      "staffUserId",
+      "reviewedByStaffId",
+      "createdByStaffId",
+    ]
+  ) {
+    if (fieldName in body) {
+      throw new EdgeActivationError(
+        "staff_id_not_allowed",
+        "Review authority is derived from the staff session.",
+        400,
+      );
+    }
+  }
+}
+
+function readReviewAction(value: unknown): ReviewAction {
+  if (isAllowedText(value, REVIEW_ACTIONS)) {
+    return value;
+  }
+
+  throw new EdgeActivationError(
+    "invalid_contract_review_action",
+    "action must be approve, reject, or request_revision.",
+    400,
+  );
+}
+
+function reviewActionToStatus(action: ReviewAction): PlayerContractStatus {
+  if (action === "approve") {
+    return "completed";
+  }
+
+  if (action === "reject") {
+    return "failed";
+  }
+
+  return "in_progress";
+}
+
 async function readRequiredJsonObjectBody(
   request: Request,
 ): Promise<Record<string, unknown>> {
@@ -375,6 +817,25 @@ function parseJsonObjectBody(text: string): Record<string, unknown> {
   }
 
   return value;
+}
+
+function readOptionalJsonObject(
+  value: unknown,
+  fieldName: string,
+): JsonObject {
+  if (value === undefined || value === null) {
+    return {};
+  }
+
+  if (!isRecord(value) || !isJsonValue(value)) {
+    throw new EdgeActivationError(
+      "invalid_contract_request",
+      `${fieldName} must be a JSON object.`,
+      400,
+    );
+  }
+
+  return value as JsonObject;
 }
 
 function readEnumQueryValues<TAllowed extends readonly string[]>(
@@ -486,6 +947,27 @@ function isAllowedText<TAllowed extends readonly string[]>(
   allowed: TAllowed,
 ): value is TAllowed[number] {
   return typeof value === "string" && allowed.includes(value);
+}
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return typeof value !== "number" || Number.isFinite(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+
+  if (isRecord(value)) {
+    return Object.values(value).every(isJsonValue);
+  }
+
+  return false;
 }
 
 function contractErrorToResponse(error: unknown): Response {

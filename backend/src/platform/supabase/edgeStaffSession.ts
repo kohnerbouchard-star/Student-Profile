@@ -98,6 +98,7 @@ interface EdgeSupabaseInsertBuilder<Row = EdgeSupabaseRow> {
 interface EdgeSupabaseUpdateBuilder<Row = EdgeSupabaseRow>
   extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
   eq(column: string, value: unknown): EdgeSupabaseUpdateBuilder<Row>;
+  is(column: string, value: unknown): EdgeSupabaseUpdateBuilder<Row>;
   select(columns: string): EdgeSupabaseSelectBuilder<Row>;
 }
 

@@ -18,15 +18,20 @@ visible to all, and targeted contracts are included only when the targeting
 payload explicitly names the player id or matches an optional country code or
 roster label supplied by a future caller.
 
-Teacher routes are exposed through classroom-api:
+Staff routes are exposed through classroom-api:
 
 - `GET /staff/game-sessions/:gameSessionId/contracts`
 - `POST /staff/game-sessions/:gameSessionId/contracts`
 - `POST /staff/game-sessions/:gameSessionId/contracts/:contractId/publish`
+- `GET /staff/game-sessions/:gameSessionId/contracts/:contractId/progress`
+- `POST /staff/game-sessions/:gameSessionId/contracts/:contractId/progress/:progressId/review`
+- `POST /staff/game-sessions/:gameSessionId/contracts/:contractId/progress/:progressId/rewards/issue`
 
 These routes require a resolved staff session and owned game session. The create
 route always writes `sourceType: "teacher"` and derives `createdByStaffId` from
-the staff session; clients cannot supply either value.
+the staff session; clients cannot supply either value. Review routes scope every
+progress read/write by `gameSessionId`, `contractId`, and `progressId`; review
+authority is derived from the staff session, not request payload fields.
 
 Player routes are exposed through classroom-api:
 
@@ -41,15 +46,23 @@ contracts available through repository targeting plus progress rows scoped to
 the authenticated player. Submit writes `status: "submitted"`,
 `evidencePayload`, preserved `resultPayload`, and `submittedAt` only.
 
+Reward issuance is explicit and backend-only. Completed progress can receive
+cash rewards through the existing `record_player_ledger_entry` RPC; the route
+does not mutate account balances directly. Reward payloads containing item,
+score, story-flag, or unknown reward types are rejected with
+`unsupported_reward_type` before any reward write, and `rewardIssuedAt` remains
+null. Item reward grants remain deferred because there is no dedicated safe
+inventory award boundary yet.
+
 Payloads are intentionally data-only in this PR. Targeting, requirements,
 rewards, evidence, results, and metadata are validated as JSON objects, but they
-are not executed. Cash rewards, item rewards, score/grade modifiers, story flag
+are not broadly executed. Item rewards, score/grade modifiers, story flag
 placeholders, manual requirements, stock trade requirements, attendance
 requirements, and story flag requirements remain future backend work.
 
 Deferred work:
 
 - storyline runner integration
-- reward issuance
-- cash, inventory, ledger, stock, and player-state mutations
+- item reward issuance
+- inventory, stock, and player-state mutations
 - frontend contract UI

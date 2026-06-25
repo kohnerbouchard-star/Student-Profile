@@ -50,6 +50,22 @@ export interface ContractRepository {
   listPlayerContractProgress(
     input: ListPlayerContractProgressInput,
   ): Promise<readonly PlayerContractProgressRecord[]>;
+
+  listContractProgressForStaff(
+    input: ListContractProgressForStaffInput,
+  ): Promise<readonly PlayerContractProgressRecord[]>;
+
+  getContractProgressById(
+    input: GetContractProgressByIdInput,
+  ): Promise<PlayerContractProgressRecord | null>;
+
+  reviewPlayerContractProgress(
+    input: ReviewPlayerContractProgressInput,
+  ): Promise<PlayerContractProgressRecord | null>;
+
+  markContractRewardIssued(
+    input: MarkContractRewardIssuedInput,
+  ): Promise<PlayerContractProgressRecord | null>;
 }
 
 export interface ContractTemplateRecord {
@@ -195,6 +211,35 @@ export interface ListPlayerContractProgressInput {
   readonly gameSessionId: string;
   readonly playerId: string;
   readonly statuses?: readonly PlayerContractStatus[];
+}
+
+export interface ListContractProgressForStaffInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly statuses?: readonly PlayerContractStatus[];
+  readonly playerId?: string | null;
+}
+
+export interface GetContractProgressByIdInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+}
+
+export interface ReviewPlayerContractProgressInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+  readonly status: PlayerContractStatus;
+  readonly resultPayload?: JsonObject;
+  readonly completedAt?: string | null;
+}
+
+export interface MarkContractRewardIssuedInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly progressId: string;
+  readonly rewardIssuedAt: string;
 }
 
 export type ContractRepositoryErrorCode =

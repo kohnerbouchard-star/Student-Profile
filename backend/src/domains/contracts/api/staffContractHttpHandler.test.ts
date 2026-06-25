@@ -4,12 +4,16 @@ import type {
   CreateContractTemplateInput,
   CreateGameSessionContractInput,
   GameSessionContractRecord,
+  GetContractProgressByIdInput,
   GetGameSessionContractByIdInput,
   GetPlayerContractProgressInput,
+  ListContractProgressForStaffInput,
   ListGameSessionContractsInput,
   ListPlayerAvailableContractsInput,
   ListPlayerContractProgressInput,
+  MarkContractRewardIssuedInput,
   PlayerContractProgressRecord,
+  ReviewPlayerContractProgressInput,
   UpdateGameSessionContractStatusInput,
   UpsertPlayerContractProgressInput,
 } from "../contracts/contractRepositoryContracts.ts";
@@ -594,6 +598,30 @@ class MockContractRepository implements ContractRepository {
     _input: ListPlayerContractProgressInput,
   ): Promise<readonly PlayerContractProgressRecord[]> {
     return Promise.resolve([]);
+  }
+
+  listContractProgressForStaff(
+    _input: ListContractProgressForStaffInput,
+  ): Promise<readonly PlayerContractProgressRecord[]> {
+    return Promise.resolve([]);
+  }
+
+  getContractProgressById(
+    _input: GetContractProgressByIdInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    return Promise.resolve(null);
+  }
+
+  reviewPlayerContractProgress(
+    _input: ReviewPlayerContractProgressInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    return Promise.resolve(null);
+  }
+
+  markContractRewardIssued(
+    _input: MarkContractRewardIssuedInput,
+  ): Promise<PlayerContractProgressRecord | null> {
+    return Promise.resolve(null);
   }
 }
 
