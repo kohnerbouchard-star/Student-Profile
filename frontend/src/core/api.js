@@ -199,6 +199,21 @@ function callPlayerBootstrapApi(sessionToken) {
   });
 }
 
+function callPlayerGameDashboardApi(sessionToken, gameSessionId) {
+  const { publishableKey } = getSupabaseConfig();
+  const query = new URLSearchParams({
+    gameSessionId: String(gameSessionId || "").trim()
+  });
+
+  return callSupabaseJsonRoute(`/players/me/game/dashboard?${query.toString()}`, {
+    method: "GET",
+    token: publishableKey,
+    playerSessionToken: sessionToken,
+    fallbackCode: "player_game_dashboard_failed",
+    fallbackMessage: "Your game dashboard could not be loaded."
+  });
+}
+
 async function callSupabasePasswordSignIn(email, password) {
   const { supabaseUrl, publishableKey } = getSupabaseConfig();
 
@@ -557,6 +572,7 @@ Object.assign(window.Econovaria.core.api, {
   callApi,
   callPlayerLoginApi,
   callPlayerBootstrapApi,
+  callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
   callStaffSignupApi,
   callLicensingActivationApi,
@@ -570,6 +586,7 @@ Object.assign(window.Econovaria.core, {
   callApi,
   callPlayerLoginApi,
   callPlayerBootstrapApi,
+  callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
   callStaffSignupApi,
   callLicensingActivationApi,

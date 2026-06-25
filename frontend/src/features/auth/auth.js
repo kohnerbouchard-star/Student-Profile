@@ -6,6 +6,8 @@ const LOGIN_MODES = new Set(["player", "admin", "create"]);
 const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
 let loginMode = "player";
 let loginClockTimer = null;
+let playerGamePublicRealtimeSubscription = null;
+let playerDashboardResyncPromise = null;
 
 function init() {
   document.getElementById("playerForm")?.addEventListener("submit", handlePlayerLogin);
@@ -90,12 +92,15 @@ async function handlePlayerLogin(event) {
       role: "STUDENT",
       token: result.session.token,
       authSource: "supabase-player",
+      gameSessionId: bootstrap.gameSession?.id || "",
       permissions: Array.isArray(bootstrap.availableActions) ? bootstrap.availableActions : []
     };
 
     state = Object.assign(emptyState(), {
       profile: createPlayerProfileFromBootstrap(bootstrap)
     });
+
+    await loadPlayerGameDashboardSnapshot({ bootstrap, subscribe: true });
 
     form.reset();
     document.getElementById("playerAccessCode").disabled = true;
@@ -358,6 +363,7 @@ function selectAdminGameSession(gameSessionId) {
 }
 
 function resetAdminLoginStep() {
+  stopGamePublicRealtimeSubscription();
   document.getElementById("adminGamesStep")?.classList.add("hidden");
   document.getElementById("adminLoginStep")?.classList.remove("hidden");
   document.getElementById("adminForm")?.reset();
@@ -377,6 +383,96 @@ function createPlayerProfileFromBootstrap(bootstrap) {
     balance: primaryBalance?.balance || 0,
     status: bootstrap.player?.status || "active"
   });
+}
+
+async function loadPlayerGameDashboardSnapshot(options = {}) {
+  const sessionToken = currentSession?.token;
+  const gameSessionId = options.gameSessionId || options.bootstrap?.gameSession?.id || currentSession?.gameSessionId || "";
+
+  if (!sessionToken || !gameSessionId) return null;
+
+  const dashboard = await callPlayerGameDashboardApi(sessionToken, gameSessionId);
+
+  if (!dashboard?.ok) {
+    throw new Error(dashboard?.message || dashboard?.error?.message || "Your game dashboard could not be loaded.");
+  }
+
+  const snapshotApi = window.Econovaria?.core?.snapshot || {};
+
+  if (typeof snapshotApi.mergeGameDashboardSnapshot === "function") {
+    snapshotApi.mergeGameDashboardSnapshot(dashboard);
+  }
+
+  currentSession.gameSessionId = dashboard.gameSession?.id || gameSessionId;
+  currentSession.gameDashboardRealtime = dashboard.realtime || null;
+  currentSession.gameDashboardLoadedAt = Date.now();
+
+  if (options.subscribe !== false) {
+    startGamePublicRealtimeForDashboard(dashboard);
+  }
+
+  return dashboard;
+}
+
+function startGamePublicRealtimeForDashboard(dashboard) {
+  stopGamePublicRealtimeSubscription();
+
+  const realtimeApi = window.Econovaria?.features?.realtime;
+  const client = realtimeApi?.getGamePublicRealtimeSupabaseClient?.();
+  const publicChannel = dashboard?.realtime?.publicChannel || "";
+  const gameSessionId = dashboard?.gameSession?.id || currentSession?.gameSessionId || "";
+
+  if (!client || !publicChannel || !gameSessionId || typeof realtimeApi.startGamePublicRealtimeSubscription !== "function") {
+    return;
+  }
+
+  playerGamePublicRealtimeSubscription = realtimeApi.startGamePublicRealtimeSubscription({
+    gameSessionId,
+    publicChannel,
+    supabaseClient: client,
+    lastSequence: dashboard?.realtime?.lastSequence,
+    onStockTick: handlePublicStockTick,
+    onReconnect: () => schedulePlayerDashboardResync("reconnect"),
+    onResync: schedulePlayerDashboardResync
+  });
+}
+
+function handlePublicStockTick(payload) {
+  const realtimeApi = window.Econovaria?.features?.realtime;
+
+  if (typeof realtimeApi?.applyStockTickToState !== "function") return;
+
+  realtimeApi.applyStockTickToState(window.Econovaria.state, payload);
+
+  if (["stockProfile", "trade", "portfolio"].includes(currentView())) {
+    renderCurrentView();
+  }
+}
+
+function schedulePlayerDashboardResync(reason) {
+  if (playerDashboardResyncPromise || currentSession?.authSource !== "supabase-player") {
+    return;
+  }
+
+  playerDashboardResyncPromise = refreshDashboard({ silent: true, reason })
+    .catch((err) => {
+      console.warn("[Econovaria realtime] Dashboard resync failed.", reason, err);
+    })
+    .finally(() => {
+      playerDashboardResyncPromise = null;
+    });
+}
+
+function stopGamePublicRealtimeSubscription() {
+  if (!playerGamePublicRealtimeSubscription) return;
+
+  try {
+    playerGamePublicRealtimeSubscription.unsubscribe();
+  } catch (err) {
+    console.warn("[Econovaria realtime] Public realtime cleanup failed.", err);
+  } finally {
+    playerGamePublicRealtimeSubscription = null;
+  }
 }
 
 function showApp(defaultView = "profile") {
@@ -405,6 +501,8 @@ async function logout() {
   setButtonLoading(button, true, "Logging out...");
 
   try {
+    stopGamePublicRealtimeSubscription();
+
     if (currentSession?.token && !String(currentSession.authSource || "").startsWith("supabase-")) {
       await callApi({ action: "LOGOUT", token: currentSession.token });
     }
@@ -419,23 +517,29 @@ async function logout() {
   }
 }
 
-async function refreshDashboard() {
+async function refreshDashboard(options = {}) {
+  const silent = options?.silent === true;
   const button = document.getElementById("refreshButton");
-  if (isButtonLoading(button)) return;
+  if (!silent && isButtonLoading(button)) return;
 
   if (!currentSession?.token) {
-    showGlobalStatus("bad", "Sign in again to refresh your dashboard.");
+    if (!silent) showGlobalStatus("bad", "Sign in again to refresh your dashboard.");
     return showLogin();
   }
 
-  setButtonLoading(button, true, "Refreshing...");
-  showGlobalStatus("loading", "Refreshing your latest dashboard data...");
+  if (!silent) {
+    setButtonLoading(button, true, "Refreshing...");
+    showGlobalStatus("loading", "Refreshing your latest dashboard data...");
+  }
 
   try {
     if (currentSession.authSource === "supabase-player") {
       const result = await callPlayerBootstrapApi(currentSession.token);
       if (!result?.ok) throw new Error(cleanLoginError(result, "Refresh failed."));
+      currentSession.gameSessionId = result.gameSession?.id || currentSession.gameSessionId || "";
+      if (Array.isArray(result.availableActions)) currentSession.permissions = result.availableActions;
       state.profile = createPlayerProfileFromBootstrap(result);
+      await loadPlayerGameDashboardSnapshot({ bootstrap: result, subscribe: true });
     } else if (currentSession.authSource === "supabase-admin") {
       const selectedGameSessionId = currentSession.staffSession?.selectedGameSessionId || null;
       const result = await bootstrapStaffAdminSession(currentSession.token);
@@ -451,11 +555,15 @@ async function refreshDashboard() {
 
     renderCurrentView();
     updateIdentity();
-    showGlobalStatus("ok", "Dashboard refreshed.");
+    if (!silent) showGlobalStatus("ok", "Dashboard refreshed.");
   } catch (err) {
-    showGlobalStatus("bad", cleanErrorMessage(err.message || String(err)));
+    if (!silent) {
+      showGlobalStatus("bad", cleanErrorMessage(err.message || String(err)));
+    } else {
+      throw err;
+    }
   } finally {
-    setButtonLoading(button, false);
+    if (!silent) setButtonLoading(button, false);
   }
 }
 
@@ -651,6 +759,9 @@ Object.assign(window.Econovaria.features.auth, {
   handleCreateGame,
   showApp,
   updateNavigationForRole,
+  loadPlayerGameDashboardSnapshot,
+  startGamePublicRealtimeForDashboard,
+  stopGamePublicRealtimeSubscription,
   logout,
   refreshDashboard,
   bootstrapStaffAdminSession,
