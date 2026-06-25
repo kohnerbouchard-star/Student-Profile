@@ -248,6 +248,32 @@ Deno.test("stock market runner keeps successful tick response when realtime publ
   }]);
 });
 
+Deno.test("stock market runner creates storyline hook from factory after successful tick", async () => {
+  const serviceClient = { source: "test-client" };
+  const calls: unknown[] = [];
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      createServiceClient: () => serviceClient,
+      createStorylineRunnerAfterTick: (client) => async (input) => {
+        calls.push({ client, input });
+      },
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(calls, [{
+    client: serviceClient,
+    input: {
+      gameSessionId: GAME_SESSION_ID,
+      currentMarketTick: 4,
+      generatedAt: "tick-4",
+    },
+  }]);
+});
+
 Deno.test("stock market runner invokes storyline hook after successful tick", async () => {
   const calls: unknown[] = [];
   const response = await handleStockMarketRunnerRequest(
@@ -316,6 +342,7 @@ Deno.test("stock market runner derives the default seed from one game session", 
 });
 
 function dependencies(options: {
+  readonly createServiceClient?: () => unknown;
   readonly repository?: StockMarketRunnerRepository;
   readonly readRunnerSecret?: () => string | undefined;
   readonly calculateNextTick?: (
@@ -337,6 +364,16 @@ function dependencies(options: {
     readonly currentMarketTick: number;
     readonly generatedAt: string;
   }) => Promise<void>;
+  readonly createStorylineRunnerAfterTick?: (
+    client: unknown,
+  ) =>
+    | ((input: {
+      readonly gameSessionId: string;
+      readonly currentMarketTick: number;
+      readonly generatedAt: string;
+    }) => Promise<void>)
+    | null
+    | undefined;
   readonly logStorylineRunnerFailure?: (failure: {
     readonly code: string;
     readonly message: string;
@@ -346,7 +383,7 @@ function dependencies(options: {
   const repository = options.repository ?? new MockRunnerRepository();
 
   return {
-    createServiceClient: () => ({}) as any,
+    createServiceClient: () => (options.createServiceClient?.() ?? {}) as any,
     readSupabaseEnv: () => ({
       ok: true as const,
       value: {
@@ -365,6 +402,8 @@ function dependencies(options: {
     logPublicRealtimePublishFailure: options.logPublicRealtimePublishFailure ??
       (() => {}),
     runStorylineEventsAfterTick: options.runStorylineEventsAfterTick,
+    createStorylineRunnerAfterTick: options.createStorylineRunnerAfterTick ??
+      (() => undefined),
     logStorylineRunnerFailure: options.logStorylineRunnerFailure ?? (() => {}),
   };
 }

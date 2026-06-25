@@ -54,6 +54,24 @@ import {
 import {
   SupabaseStockMarketNewsRepository,
 } from "../infrastructure/supabaseStockMarketNewsRepository.ts";
+import {
+  SupabaseContractRepository,
+} from "../../contracts/infrastructure/supabaseContractRepository.ts";
+import {
+  SupabasePlayerStoryContextRepository,
+} from "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
+import {
+  SupabaseStoryNotificationRepository,
+} from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+import {
+  SupabaseStorylineRepository,
+} from "../../storylines/infrastructure/supabaseStorylineRepository.ts";
+import type {
+  StoryEffectLedgerWriter,
+} from "../../storylines/contracts/storyEffectExecutionContracts.ts";
+import {
+  runDueStorylineEvents,
+} from "../../storylines/services/storylineRunner.ts";
 
 declare const Deno: {
   readonly env: {
@@ -80,9 +98,10 @@ interface StockMarketRunnerHttpDependencies {
   readonly logPublicRealtimePublishFailure?: (
     failure: StockMarketRunnerPublicRealtimePublishFailure,
   ) => void;
-  readonly runStorylineEventsAfterTick?: (
-    input: StockMarketRunnerStorylineTickHookInput,
-  ) => Promise<void>;
+  readonly runStorylineEventsAfterTick?: StockMarketRunnerStorylineTickHook;
+  readonly createStorylineRunnerAfterTick?: (
+    client: EdgeSupabaseClient,
+  ) => StockMarketRunnerStorylineTickHook | null | undefined;
   readonly logStorylineRunnerFailure?: (
     failure: StockMarketRunnerStorylineTickHookFailure,
   ) => void;
@@ -99,6 +118,10 @@ interface StockMarketRunnerPublicRealtimePublishFailure {
   readonly message: string;
   readonly retryable: boolean;
 }
+
+type StockMarketRunnerStorylineTickHook = (
+  input: StockMarketRunnerStorylineTickHookInput,
+) => Promise<void>;
 
 interface StockMarketRunnerStorylineTickHookInput {
   readonly gameSessionId: string;
@@ -181,6 +204,11 @@ export async function handleStockMarketRunnerRequest(
       });
     }
 
+    const storylineRunnerAfterTick = dependencies.runStorylineEventsAfterTick ??
+      (dependencies.createStorylineRunnerAfterTick
+        ? dependencies.createStorylineRunnerAfterTick(serviceClient)
+        : createDefaultStorylineRunnerAfterTick(serviceClient));
+
     const result = await runStockMarketRunner(body, {
       repository,
       calculateNextTick: dependencies.calculateNextTick ??
@@ -191,7 +219,7 @@ export async function handleStockMarketRunnerRequest(
     });
 
     await runStorylineEventsAfterStockTickBestEffort({
-      hook: dependencies.runStorylineEventsAfterTick,
+      hook: storylineRunnerAfterTick ?? undefined,
       result,
       onFailure: dependencies.logStorylineRunnerFailure ??
         logStorylineRunnerFailure,
@@ -473,6 +501,53 @@ async function publishStockTickPublicRealtimeBestEffort(args: {
   if (!publishResult.ok) {
     args.onFailure(publishResult.error);
   }
+}
+
+function createDefaultStorylineRunnerAfterTick(
+  client: EdgeSupabaseClient,
+): StockMarketRunnerStorylineTickHook {
+  const storylineRepository = new SupabaseStorylineRepository(client as any);
+  const notificationRepository = new SupabaseStoryNotificationRepository(
+    client as any,
+  );
+  const playerContextRepository = new SupabasePlayerStoryContextRepository(
+    client as any,
+  );
+  const contractRepository = new SupabaseContractRepository(client as any);
+  const ledger = createFailClosedStorylineLedgerWriter();
+
+  return async (input) => {
+    const playerContexts = await playerContextRepository
+      .listPlayerStoryContexts(
+        input.gameSessionId,
+      );
+
+    await runDueStorylineEvents({
+      gameSessionId: input.gameSessionId,
+      now: input.generatedAt,
+      currentMarketTick: input.currentMarketTick,
+      playerContexts,
+      repository: storylineRepository,
+      notificationRepository,
+      effectDependencies: {
+        ledger,
+        policies: storylineRepository,
+        flags: storylineRepository,
+        impacts: storylineRepository,
+        contracts: contractRepository,
+      },
+    });
+  };
+}
+
+function createFailClosedStorylineLedgerWriter(): StoryEffectLedgerWriter {
+  return {
+    async recordCashAdjustment() {
+      throw new Error(
+        "Storyline cash effects require a ledger writer before production execution.",
+      );
+    },
+  };
 }
 
 async function runStorylineEventsAfterStockTickBestEffort(args: {
