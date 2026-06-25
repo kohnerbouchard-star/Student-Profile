@@ -16,6 +16,8 @@ import type {
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type {
   ListUnseenStoryCutsceneDeliveriesInput,
+  MarkNotificationDeliveryInput,
+  StoryNotificationDeliveryRecord,
   StoryNotificationDeliveryWithNotification,
   StoryNotificationDisplayMode,
   StoryNotificationPriority,
@@ -170,6 +172,35 @@ export interface PlayerGameDashboardUnseenCutsceneDto {
   readonly requiresAcknowledgement: boolean;
 }
 
+export const PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS = [
+  "mark_cutscene_seen",
+  "mark_cutscene_dismissed",
+  "mark_cutscene_acknowledged",
+] as const;
+
+export type PlayerGameDashboardCutsceneAction =
+  typeof PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS[number];
+
+export interface PlayerGameDashboardCutsceneActionRequestBody {
+  readonly action: PlayerGameDashboardCutsceneAction;
+  readonly gameSessionId: string;
+  readonly deliveryId: string;
+}
+
+export interface PlayerGameDashboardCutsceneDeliveryStateDto {
+  readonly deliveryId: string;
+  readonly notificationId: string;
+  readonly deliveredAt: string;
+  readonly seenAt: string | null;
+  readonly dismissedAt: string | null;
+  readonly acknowledgedAt: string | null;
+}
+
+export interface PlayerGameDashboardCutsceneActionResponseBody {
+  readonly ok: true;
+  readonly delivery: PlayerGameDashboardCutsceneDeliveryStateDto;
+}
+
 export interface PlayerGameDashboardSnapshot {
   readonly gameSession: PlayerGameDashboardGameSessionDto;
   readonly me: {
@@ -231,10 +262,27 @@ export interface PlayerGameDashboardStoryNotificationReader {
   ): Promise<readonly StoryNotificationDeliveryWithNotification[]>;
 }
 
+export interface PlayerGameDashboardStoryNotificationRepository
+  extends PlayerGameDashboardStoryNotificationReader {
+  markNotificationDeliverySeen(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord>;
+
+  markNotificationDeliveryDismissed(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord>;
+
+  markNotificationDeliveryAcknowledged(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord>;
+}
+
 export type PlayerGameDashboardErrorCode =
   | "invalid_game_dashboard_request"
   | "game_dashboard_game_session_not_found"
-  | "game_dashboard_read_failed";
+  | "game_dashboard_read_failed"
+  | "game_dashboard_cutscene_delivery_not_found"
+  | "game_dashboard_cutscene_action_failed";
 
 export class PlayerGameDashboardError extends Error {
   readonly code: PlayerGameDashboardErrorCode;

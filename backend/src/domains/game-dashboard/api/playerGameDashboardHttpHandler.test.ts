@@ -6,9 +6,12 @@ import type {
   PlayerGameDashboardRepository,
   PlayerGameDashboardSnapshot,
   PlayerGameDashboardStoryNotificationReader,
+  PlayerGameDashboardStoryNotificationRepository,
 } from "../contracts/playerGameDashboardContracts.ts";
 import type {
   ListUnseenStoryCutsceneDeliveriesInput,
+  MarkNotificationDeliveryInput,
+  StoryNotificationDeliveryRecord,
   StoryNotificationDeliveryWithNotification,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
 
@@ -457,11 +460,189 @@ Deno.test("player dashboard reads cutscenes through derived session identity", a
   );
 });
 
+Deno.test("player dashboard marks own cutscene delivery seen", async () => {
+  const seededTables = tables();
+  seededTables.notifications = [storyNotificationRow()];
+  seededTables.notification_deliveries = [storyDeliveryRow()];
+  const client = new FakeClient(seededTables);
+
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ action: "mark_cutscene_seen" }),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body, {
+    ok: true,
+    delivery: {
+      deliveryId: STORY_DELIVERY_ID,
+      notificationId: STORY_NOTIFICATION_ID,
+      deliveredAt: "2026-06-24T00:12:30.000Z",
+      seenAt: "2026-06-25T12:30:00.000Z",
+      dismissedAt: null,
+      acknowledgedAt: null,
+    },
+  });
+  assertEquals(
+    seededTables.notification_deliveries[0]?.seen_at,
+    "2026-06-25T12:30:00.000Z",
+  );
+  assertEquals(seededTables.notification_deliveries[0]?.dismissed_at, null);
+  assertEquals(seededTables.notification_deliveries[0]?.acknowledged_at, null);
+});
+
+Deno.test("player dashboard marks own cutscene delivery dismissed", async () => {
+  const seededTables = tables();
+  seededTables.notifications = [storyNotificationRow()];
+  seededTables.notification_deliveries = [storyDeliveryRow()];
+  const client = new FakeClient(seededTables);
+
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ action: "mark_cutscene_dismissed" }),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.delivery, {
+    deliveryId: STORY_DELIVERY_ID,
+    notificationId: STORY_NOTIFICATION_ID,
+    deliveredAt: "2026-06-24T00:12:30.000Z",
+    seenAt: null,
+    dismissedAt: "2026-06-25T12:30:00.000Z",
+    acknowledgedAt: null,
+  });
+  assertEquals(seededTables.notification_deliveries[0]?.seen_at, null);
+  assertEquals(
+    seededTables.notification_deliveries[0]?.dismissed_at,
+    "2026-06-25T12:30:00.000Z",
+  );
+  assertEquals(seededTables.notification_deliveries[0]?.acknowledged_at, null);
+});
+
+Deno.test("player dashboard marks own cutscene delivery acknowledged", async () => {
+  const seededTables = tables();
+  seededTables.notifications = [storyNotificationRow()];
+  seededTables.notification_deliveries = [storyDeliveryRow({
+    seen_at: "2026-06-25T12:29:00.000Z",
+  })];
+  const client = new FakeClient(seededTables);
+
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ action: "mark_cutscene_acknowledged" }),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.delivery, {
+    deliveryId: STORY_DELIVERY_ID,
+    notificationId: STORY_NOTIFICATION_ID,
+    deliveredAt: "2026-06-24T00:12:30.000Z",
+    seenAt: "2026-06-25T12:29:00.000Z",
+    dismissedAt: null,
+    acknowledgedAt: "2026-06-25T12:30:00.000Z",
+  });
+  assertEquals(
+    seededTables.notification_deliveries[0]?.seen_at,
+    "2026-06-25T12:29:00.000Z",
+  );
+  assertEquals(seededTables.notification_deliveries[0]?.dismissed_at, null);
+  assertEquals(
+    seededTables.notification_deliveries[0]?.acknowledged_at,
+    "2026-06-25T12:30:00.000Z",
+  );
+});
+
+Deno.test("player dashboard cutscene actions reject missing player session token", async () => {
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ authToken: null }),
+    dependencies(),
+  );
+
+  await assertErrorResponse(response, 401, "invalid_player_session");
+});
+
+Deno.test("player dashboard cutscene actions reject revoked expired or inactive sessions", async () => {
+  for (
+    const session of [
+      playerSession({
+        status: "revoked",
+        revoked_at: "2026-06-24T00:00:00.000Z",
+      }),
+      playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
+      playerSession({ status: "expired" }),
+    ]
+  ) {
+    const response = await handlePlayerGameDashboardRequest(
+      cutsceneActionRequest(),
+      dependencies({
+        client: new FakeClient({ ...tables(), player_sessions: [session] }),
+      }),
+    );
+
+    await assertErrorResponse(response, 401, "invalid_player_session");
+  }
+});
+
+Deno.test("player dashboard cutscene actions reject mismatched gameSessionId", async () => {
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ gameSessionId: OTHER_GAME_SESSION_ID }),
+    dependencies(),
+  );
+
+  await assertErrorResponse(response, 401, "invalid_player_session_scope");
+});
+
+Deno.test("player dashboard cutscene actions reject client-supplied player identity", async () => {
+  const withBodyPlayerId = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ bodyOverrides: { playerId: OTHER_PLAYER_ID } }),
+    dependencies(),
+  );
+  const withQueryPlayerId = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ extraQuery: `playerId=${OTHER_PLAYER_ID}` }),
+    dependencies(),
+  );
+
+  await assertErrorResponse(
+    withBodyPlayerId,
+    400,
+    "invalid_game_dashboard_request",
+  );
+  await assertErrorResponse(
+    withQueryPlayerId,
+    400,
+    "invalid_game_dashboard_request",
+  );
+});
+
+Deno.test("player dashboard cutscene actions cannot mark another player's delivery", async () => {
+  const seededTables = tables();
+  seededTables.notifications = [storyNotificationRow()];
+  seededTables.notification_deliveries = [storyDeliveryRow({
+    player_id: OTHER_PLAYER_ID,
+  })];
+  const client = new FakeClient(seededTables);
+
+  const response = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ action: "mark_cutscene_seen" }),
+    dependencies({ client }),
+  );
+
+  await assertErrorResponse(
+    response,
+    404,
+    "game_dashboard_cutscene_delivery_not_found",
+  );
+  assertEquals(seededTables.notification_deliveries[0]?.seen_at, null);
+});
+
 function dependencies(options: {
   readonly client?: FakeClient;
   readonly repository?: PlayerGameDashboardRepository;
   readonly storyNotificationRepository?:
-    PlayerGameDashboardStoryNotificationReader;
+    PlayerGameDashboardStoryNotificationRepository;
 } = {}): any {
   const client = options.client ?? new FakeClient(tables());
 
@@ -476,6 +657,7 @@ function dependencies(options: {
       },
     }),
     hashSessionToken: async () => "session-token-hash",
+    now: () => "2026-06-25T12:30:00.000Z",
     createRepository: options.repository ? () => options.repository : undefined,
     createStoryNotificationRepository: options.storyNotificationRepository
       ? () => options.storyNotificationRepository
@@ -511,6 +693,46 @@ function request(options: {
   return new Request(
     `https://example.test/players/me/game/dashboard?${query}${suffix}`,
     { method: "GET", headers },
+  );
+}
+
+function cutsceneActionRequest(options: {
+  readonly action?:
+    | "mark_cutscene_seen"
+    | "mark_cutscene_dismissed"
+    | "mark_cutscene_acknowledged";
+  readonly authToken?: string | null;
+  readonly gameSessionId?: string;
+  readonly deliveryId?: string;
+  readonly runnerSecret?: string;
+  readonly extraQuery?: string;
+  readonly bodyOverrides?: Record<string, unknown>;
+} = {}): Request {
+  const headers = new Headers({
+    "content-type": "application/json",
+  });
+  const query = options.extraQuery ? `?${options.extraQuery}` : "";
+
+  if (options.authToken !== null) {
+    headers.set("x-player-session-token", options.authToken ?? "player-token");
+  }
+
+  if (options.runnerSecret) {
+    headers.set("x-stock-market-runner-secret", options.runnerSecret);
+  }
+
+  return new Request(
+    `https://example.test/players/me/game/dashboard${query}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: options.action ?? "mark_cutscene_seen",
+        gameSessionId: options.gameSessionId ?? GAME_SESSION_ID,
+        deliveryId: options.deliveryId ?? STORY_DELIVERY_ID,
+        ...options.bodyOverrides,
+      }),
+    },
   );
 }
 
@@ -992,7 +1214,7 @@ class CapturingRepository implements PlayerGameDashboardRepository {
 }
 
 class CapturingStoryNotificationReader
-  implements PlayerGameDashboardStoryNotificationReader {
+  implements PlayerGameDashboardStoryNotificationRepository {
   readonly inputs: ListUnseenStoryCutsceneDeliveriesInput[] = [];
 
   listUnseenStoryCutsceneDeliveries(
@@ -1027,6 +1249,47 @@ class CapturingStoryNotificationReader
       },
     }]);
   }
+
+  markNotificationDeliverySeen(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(deliveryRecord(input, {
+      seenAt: input.markedAt,
+    }));
+  }
+
+  markNotificationDeliveryDismissed(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(deliveryRecord(input, {
+      dismissedAt: input.markedAt,
+    }));
+  }
+
+  markNotificationDeliveryAcknowledged(
+    input: MarkNotificationDeliveryInput,
+  ): Promise<StoryNotificationDeliveryRecord> {
+    return Promise.resolve(deliveryRecord(input, {
+      acknowledgedAt: input.markedAt,
+    }));
+  }
+}
+
+function deliveryRecord(
+  input: MarkNotificationDeliveryInput,
+  overrides: Partial<StoryNotificationDeliveryRecord> = {},
+): StoryNotificationDeliveryRecord {
+  return {
+    id: input.deliveryId,
+    notificationId: STORY_NOTIFICATION_ID,
+    gameSessionId: input.gameSessionId,
+    playerId: input.playerId,
+    deliveredAt: "2026-06-24T00:12:30.000Z",
+    seenAt: null,
+    dismissedAt: null,
+    acknowledgedAt: null,
+    ...overrides,
+  };
 }
 
 class FakeClient {
@@ -1093,6 +1356,8 @@ class FakeQueryBuilder
     readonly column: string;
     readonly ascending: boolean;
   }[] = [];
+  private operation: "select" | "update" = "select";
+  private updateValues: Record<string, unknown> | null = null;
   private limitCount: number | null = null;
 
   constructor(
@@ -1109,7 +1374,9 @@ class FakeQueryBuilder
     return this;
   }
 
-  update(): FakeQueryBuilder {
+  update(values: Record<string, unknown>): FakeQueryBuilder {
+    this.operation = "update";
+    this.updateValues = values;
     this.client.forbiddenCalls.push(`update:${this.tableName}`);
     return this;
   }
@@ -1148,7 +1415,9 @@ class FakeQueryBuilder
   }
 
   async maybeSingle() {
-    const result = await this.execute();
+    const result = this.operation === "update"
+      ? await this.executeUpdate()
+      : await this.execute();
     return { data: result.data?.[0] ?? null, error: result.error };
   }
 
@@ -1170,6 +1439,23 @@ class FakeQueryBuilder
     readonly data: unknown[] | null;
     readonly error: unknown;
   }> {
+    return { data: this.readRows(), error: null };
+  }
+
+  private async executeUpdate(): Promise<{
+    readonly data: unknown[] | null;
+    readonly error: unknown;
+  }> {
+    const rows = this.readRows();
+
+    for (const row of rows) {
+      Object.assign(row, this.updateValues ?? {});
+    }
+
+    return { data: rows, error: null };
+  }
+
+  private readRows(): Record<string, unknown>[] {
     let rows = [...(this.client.tables[this.tableName] ?? [])];
 
     for (const filter of this.filters) {
@@ -1194,7 +1480,7 @@ class FakeQueryBuilder
       rows = rows.slice(0, this.limitCount);
     }
 
-    return { data: rows, error: null };
+    return rows;
   }
 }
 

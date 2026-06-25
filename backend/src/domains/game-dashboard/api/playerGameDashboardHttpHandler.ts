@@ -16,9 +16,15 @@ import {
 } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
   GAME_PUBLIC_REALTIME_EVENTS,
+  PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS,
+  type PlayerGameDashboardCutsceneAction,
+  type PlayerGameDashboardCutsceneActionRequestBody,
+  type PlayerGameDashboardCutsceneActionResponseBody,
+  type PlayerGameDashboardCutsceneDeliveryStateDto,
   type PlayerGameDashboardRepository,
   type PlayerGameDashboardResponseBody,
   type PlayerGameDashboardStoryNotificationReader,
+  type PlayerGameDashboardStoryNotificationRepository,
   type PlayerGameDashboardUnseenCutsceneDto,
 } from "../contracts/playerGameDashboardContracts.ts";
 import {
@@ -31,7 +37,11 @@ import {
   SupabaseStoryNotificationRepository,
 } from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
 import type {
+  StoryNotificationDeliveryRecord,
   StoryNotificationDeliveryWithNotification,
+} from "../../storylines/contracts/storyNotificationContracts.ts";
+import {
+  StoryNotificationRepositoryError,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
 
 interface PlayerGameDashboardHttpDependencies {
@@ -49,17 +59,19 @@ interface PlayerGameDashboardHttpDependencies {
   ) => PlayerGameDashboardRepository;
   readonly createStoryNotificationRepository?: (
     client: EdgeSupabaseClient,
-  ) => PlayerGameDashboardStoryNotificationReader;
+  ) => PlayerGameDashboardStoryNotificationRepository;
+  readonly now?: () => string;
 }
 
 export async function handlePlayerGameDashboardRequest(
   request: Request,
   dependencies: PlayerGameDashboardHttpDependencies,
 ): Promise<Response> {
-  if (request.method !== "GET") {
+  if (request.method !== "GET" && request.method !== "POST") {
     return jsonError(405, {
       code: "method_not_allowed",
-      message: "Use GET to load the player game dashboard.",
+      message:
+        "Use GET to load the player game dashboard or POST to update cutscene delivery state.",
       retryable: false,
     });
   }
@@ -68,7 +80,7 @@ export async function handlePlayerGameDashboardRequest(
     return jsonError(400, {
       code: "stock_runner_secret_not_allowed",
       message:
-        "Player dashboard reads must not send the stock market runner secret.",
+        "Player dashboard requests must not send the stock market runner secret.",
       retryable: false,
     });
   }
@@ -86,13 +98,17 @@ export async function handlePlayerGameDashboardRequest(
 
     const url = new URL(request.url);
     rejectClientSuppliedIdentity(url.searchParams, request.headers);
-    const gameSessionId = readDashboardGameSessionId(url.searchParams);
     const sessionToken = readPlayerSessionTokenFromRequest(request);
 
     if (!sessionToken) {
       return invalidPlayerSessionResponse();
     }
 
+    const actionRequest = request.method === "POST"
+      ? await readCutsceneActionRequestBody(request)
+      : null;
+    const gameSessionId = actionRequest?.gameSessionId ??
+      readDashboardGameSessionId(url.searchParams);
     const serviceClient = dependencies.createServiceClient(envResult.value);
     const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
       sessionToken,
@@ -113,6 +129,26 @@ export async function handlePlayerGameDashboardRequest(
       );
     }
 
+    const createStoryNotificationRepository =
+      dependencies.createStoryNotificationRepository;
+    const storyNotificationRepository = createStoryNotificationRepository
+      ? createStoryNotificationRepository(serviceClient)
+      : new SupabaseStoryNotificationRepository(serviceClient as any);
+
+    if (actionRequest) {
+      const delivery = await markCutsceneDelivery({
+        input: actionRequest,
+        playerId: sessionResult.player.id,
+        markedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+        repository: storyNotificationRepository,
+      });
+
+      return jsonResponse<PlayerGameDashboardCutsceneActionResponseBody>(200, {
+        ok: true,
+        delivery: toDeliveryStateDto(delivery),
+      });
+    }
+
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabasePlayerGameDashboardRepository(serviceClient as any);
@@ -123,11 +159,6 @@ export async function handlePlayerGameDashboardRequest(
       playerDisplayName: sessionResult.player.display_name,
       playerRosterLabel: sessionResult.player.roster_label,
     });
-    const createStoryNotificationRepository =
-      dependencies.createStoryNotificationRepository;
-    const storyNotificationRepository = createStoryNotificationRepository
-      ? createStoryNotificationRepository(serviceClient)
-      : new SupabaseStoryNotificationRepository(serviceClient as any);
     const unseenCutscenes = await readUnseenCutscenes({
       repository: storyNotificationRepository,
       gameSessionId,
@@ -153,6 +184,23 @@ export async function handlePlayerGameDashboardRequest(
       });
     }
 
+    if (
+      request.method === "POST" &&
+      error instanceof StoryNotificationRepositoryError
+    ) {
+      const notFound = error.code === "story_notification_delivery_not_found";
+
+      return jsonError(notFound ? 404 : 500, {
+        code: notFound
+          ? "game_dashboard_cutscene_delivery_not_found"
+          : "game_dashboard_cutscene_action_failed",
+        message: notFound
+          ? "Cutscene delivery could not be found for the authenticated player."
+          : "Cutscene delivery state could not be updated.",
+        retryable: false,
+      });
+    }
+
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
         code: error.code,
@@ -161,12 +209,46 @@ export async function handlePlayerGameDashboardRequest(
       });
     }
 
+    const actionFailed = request.method === "POST";
+
     return jsonError(500, {
-      code: "game_dashboard_read_failed",
-      message: "Player game dashboard could not be loaded.",
+      code: actionFailed
+        ? "game_dashboard_cutscene_action_failed"
+        : "game_dashboard_read_failed",
+      message: actionFailed
+        ? "Cutscene delivery state could not be updated."
+        : "Player game dashboard could not be loaded.",
       retryable: false,
     });
   }
+}
+
+async function readCutsceneActionRequestBody(
+  request: Request,
+): Promise<PlayerGameDashboardCutsceneActionRequestBody> {
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    throw invalidRequest("Cutscene action request body must be valid JSON.");
+  }
+
+  if (!isRecord(body)) {
+    throw invalidRequest("Cutscene action request body must be a JSON object.");
+  }
+
+  rejectClientSuppliedBodyIdentity(body);
+
+  const action = readCutsceneAction(body.action);
+  const gameSessionId = readRequiredString(body.gameSessionId, "gameSessionId");
+  const deliveryId = readRequiredString(body.deliveryId, "deliveryId");
+
+  return {
+    action,
+    gameSessionId,
+    deliveryId,
+  };
 }
 
 function readDashboardGameSessionId(searchParams: URLSearchParams): string {
@@ -223,6 +305,25 @@ function rejectClientSuppliedIdentity(
   }
 }
 
+function rejectClientSuppliedBodyIdentity(body: Record<string, unknown>): void {
+  for (
+    const fieldName of [
+      "playerId",
+      "playerIds",
+      "playerSessionId",
+      "playerSessionIds",
+      "sessionId",
+      "sessionIds",
+    ]
+  ) {
+    if (fieldName in body) {
+      throw invalidRequest(
+        "Player dashboard derives player identity from x-player-session-token.",
+      );
+    }
+  }
+}
+
 function invalidRequest(message: string): EdgeActivationError {
   return new EdgeActivationError(
     "invalid_game_dashboard_request",
@@ -230,6 +331,30 @@ function invalidRequest(message: string): EdgeActivationError {
     400,
     false,
   );
+}
+
+async function markCutsceneDelivery(input: {
+  readonly input: PlayerGameDashboardCutsceneActionRequestBody;
+  readonly playerId: string;
+  readonly markedAt: string;
+  readonly repository: PlayerGameDashboardStoryNotificationRepository;
+}): Promise<StoryNotificationDeliveryRecord> {
+  const markInput = {
+    deliveryId: input.input.deliveryId,
+    gameSessionId: input.input.gameSessionId,
+    playerId: input.playerId,
+    markedAt: input.markedAt,
+  };
+
+  if (input.input.action === "mark_cutscene_seen") {
+    return input.repository.markNotificationDeliverySeen(markInput);
+  }
+
+  if (input.input.action === "mark_cutscene_dismissed") {
+    return input.repository.markNotificationDeliveryDismissed(markInput);
+  }
+
+  return input.repository.markNotificationDeliveryAcknowledged(markInput);
 }
 
 async function readUnseenCutscenes(input: {
@@ -243,6 +368,19 @@ async function readUnseenCutscenes(input: {
   });
 
   return deliveries.map(toUnseenCutsceneDto);
+}
+
+function toDeliveryStateDto(
+  delivery: StoryNotificationDeliveryRecord,
+): PlayerGameDashboardCutsceneDeliveryStateDto {
+  return {
+    deliveryId: delivery.id,
+    notificationId: delivery.notificationId,
+    deliveredAt: delivery.deliveredAt,
+    seenAt: delivery.seenAt,
+    dismissedAt: delivery.dismissedAt,
+    acknowledgedAt: delivery.acknowledgedAt,
+  };
 }
 
 function toUnseenCutsceneDto(
@@ -261,4 +399,37 @@ function toUnseenCutsceneDto(
     requiresAcknowledgement:
       delivery.notification.payload.requiresAcknowledgement === true,
   };
+}
+
+function readCutsceneAction(
+  value: unknown,
+): PlayerGameDashboardCutsceneAction {
+  if (
+    typeof value === "string" &&
+    PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS.includes(
+      value as PlayerGameDashboardCutsceneAction,
+    )
+  ) {
+    return value as PlayerGameDashboardCutsceneAction;
+  }
+
+  throw invalidRequest("Cutscene action is invalid.");
+}
+
+function readRequiredString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string") {
+    throw invalidRequest(`${fieldName} is required.`);
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    throw invalidRequest(`${fieldName} is required.`);
+  }
+
+  return trimmed;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -10,20 +10,40 @@ GET /players/me/game/dashboard?gameSessionId=<gameSessionId>
 ```
 
 The route uses `x-player-session-token`, resolves the active player session on
-the server, and verifies the requested `gameSessionId` matches that session.
-The request must not include `playerId`, `playerSessionId`, or stock runner
-secret headers. Player identity and player session scope are derived only from
-the resolved session token.
+the server, and verifies the requested `gameSessionId` matches that session. The
+request must not include `playerId`, `playerSessionId`, or stock runner secret
+headers. Player identity and player session scope are derived only from the
+resolved session token.
 
 The response has three top-level data areas:
 
-- `gameSession`: game metadata, market status, current stock tick, and update time.
+- `gameSession`: game metadata, market status, current stock tick, and update
+  time.
 - `me`: private data for the resolved player only, including cash balances,
   stock holdings/orders/trades, store inventory, recent purchases, and empty
   contract progress placeholders.
 - `public`: game-public data scoped to the same game session, including public
   player identity, leaderboard summaries, public stock market data, market news,
   public store listing metadata, and empty contract placeholders.
+
+## Cutscene Delivery Actions
+
+```text
+POST /players/me/game/dashboard
+```
+
+The same player-session validation boundary supports story cutscene delivery
+state actions. The request body must include `gameSessionId`, `deliveryId`, and
+one of these action values:
+
+- `mark_cutscene_seen`
+- `mark_cutscene_dismissed`
+- `mark_cutscene_acknowledged`
+
+The backend derives `playerId` only from `x-player-session-token` and rejects
+client-supplied player identity. Each action updates only the matching delivery
+state field for the authenticated player and returns the updated delivery state.
+Listing dashboard cutscenes remains read-only and does not mark deliveries.
 
 ## Data Boundary
 
@@ -94,8 +114,8 @@ Publisher-backed public realtime events use the supported envelope in
 ```
 
 The public channel must never carry player-private cash, holdings, orders,
-trades, ledger entries, store inventory, purchase history, contract
-submissions, access codes, session IDs, session tokens, or token hashes.
+trades, ledger entries, store inventory, purchase history, contract submissions,
+access codes, session IDs, session tokens, or token hashes.
 
 ## Resync Rules
 
@@ -119,8 +139,8 @@ channel, and private realtime channels remain deferred.
 
 Deferred future emit points:
 
-- `market_news_posted`: after a public `stock_market_events` row is created by
-  a dedicated market-news/admin flow.
+- `market_news_posted`: after a public `stock_market_events` row is created by a
+  dedicated market-news/admin flow.
 - `market_status_changed`: after a future public market status transition is
   durably recorded.
 
@@ -128,6 +148,6 @@ Deferred future emit points:
 
 Contracts/missions do not have a clean current repository in this codebase, so
 the dashboard returns empty contract arrays while preserving the future response
-shape. Public market news is read from current `stock_market_events` rows.
-Store listings and player inventory/purchase summaries use the current store
-tables and remain read-only in the snapshot.
+shape. Public market news is read from current `stock_market_events` rows. Store
+listings and player inventory/purchase summaries use the current store tables
+and remain read-only in the snapshot.
