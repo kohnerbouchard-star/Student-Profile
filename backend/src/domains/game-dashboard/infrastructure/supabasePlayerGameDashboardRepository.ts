@@ -31,6 +31,13 @@ import {
 import type {
   StoreItemDto,
 } from "../../store/contracts/storeCatalogContracts.ts";
+import {
+  SupabaseContractRepository,
+} from "../../contracts/infrastructure/supabaseContractRepository.ts";
+import {
+  toPlayerContractDto,
+  toPlayerContractProgressDto,
+} from "../../contracts/contracts/contractHttpContracts.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseStatus,
@@ -295,6 +302,9 @@ export class SupabasePlayerGameDashboardRepository
   async read(
     input: PlayerGameDashboardReadInput,
   ): Promise<PlayerGameDashboardSnapshot> {
+    const contractRepository = new SupabaseContractRepository(
+      this.client as any,
+    );
     const [
       gameSession,
       publicMarket,
@@ -308,6 +318,8 @@ export class SupabasePlayerGameDashboardRepository
       inventory,
       purchases,
       marketNews,
+      availableContracts,
+      contractProgress,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
       this.readPublicStockMarket(input.gameSessionId),
@@ -321,6 +333,14 @@ export class SupabasePlayerGameDashboardRepository
       this.readInventory(input),
       this.readRecentPurchases(input),
       this.readMarketNews(input.gameSessionId),
+      contractRepository.listPlayerAvailableContracts({
+        gameSessionId: input.gameSessionId,
+        playerId: input.playerId,
+      }),
+      contractRepository.listPlayerContractProgress({
+        gameSessionId: input.gameSessionId,
+        playerId: input.playerId,
+      }),
     ]);
 
     const stockByAssetId = new Map(
@@ -385,8 +405,8 @@ export class SupabasePlayerGameDashboardRepository
           ),
         },
         contracts: {
-          available: [],
-          progress: [],
+          available: availableContracts.map(toPlayerContractDto),
+          progress: contractProgress.map(toPlayerContractProgressDto),
         },
       },
       public: {
@@ -398,7 +418,7 @@ export class SupabasePlayerGameDashboardRepository
           stocks: publicMarket.stocks,
           news: marketNews.map(toMarketNewsDto),
         },
-        contracts: [],
+        contracts: availableContracts.map(toPlayerContractDto),
         storeListings: storeListings.map(toPublicStoreListingDto),
       },
       unseenCutscenes: [],

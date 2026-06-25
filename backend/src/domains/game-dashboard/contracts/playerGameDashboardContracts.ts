@@ -1,4 +1,8 @@
 import type {
+  PlayerContractDto,
+  PlayerContractProgressDto,
+} from "../../contracts/contracts/contractHttpContracts.ts";
+import type {
   StockMarketBoardStockDto,
 } from "../../stocks/contracts/stockMarketReadContracts.ts";
 import type {
@@ -223,8 +227,8 @@ export interface PlayerGameDashboardSnapshot {
       readonly recentPurchases: readonly StorePurchaseHistoryItemDto[];
     };
     readonly contracts: {
-      readonly available: readonly unknown[];
-      readonly progress: readonly unknown[];
+      readonly available: readonly PlayerContractDto[];
+      readonly progress: readonly PlayerContractProgressDto[];
     };
   };
   readonly public: {
@@ -234,7 +238,7 @@ export interface PlayerGameDashboardSnapshot {
       readonly stocks: readonly StockMarketBoardStockDto[];
       readonly news: readonly PlayerGameDashboardMarketNewsDto[];
     };
-    readonly contracts: readonly unknown[];
+    readonly contracts: readonly PlayerContractDto[];
     readonly storeListings: readonly PlayerGameDashboardPublicStoreListingDto[];
   };
   readonly unseenCutscenes: readonly PlayerGameDashboardUnseenCutsceneDto[];
