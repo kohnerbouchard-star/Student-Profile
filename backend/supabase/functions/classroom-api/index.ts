@@ -86,6 +86,12 @@ import {
   handleStaffContractRequest,
 } from "../../../src/domains/contracts/api/staffContractHttpHandler.ts";
 import {
+  readPlayerContractRoutePath,
+} from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
+import {
+  handlePlayerContractRequest,
+} from "../../../src/domains/contracts/api/playerContractHttpHandler.ts";
+import {
   handlePlayerStoreCatalogRequest,
 } from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
 import {
@@ -150,6 +156,14 @@ Deno.serve(async (request) => {
 
   if (url.pathname.endsWith("/players/me/game/dashboard")) {
     return handlePlayerGameDashboardRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  const playerContractRoute = readPlayerContractRoutePath(url.pathname);
+
+  if (playerContractRoute) {
+    return handlePlayerContractRequest(request, playerContractRoute, {
       createServiceClient,
     });
   }
