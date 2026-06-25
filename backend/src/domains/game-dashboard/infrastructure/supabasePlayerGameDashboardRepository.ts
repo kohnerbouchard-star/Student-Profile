@@ -201,6 +201,10 @@ interface StorePurchaseRow {
 interface StockMarketEventRow {
   readonly id: string;
   readonly shock_id: string;
+  readonly category?: string | null;
+  readonly sentiment?: string | null;
+  readonly source?: string | null;
+  readonly visibility?: string | null;
   readonly scope: string;
   readonly target_key?: string | null;
   readonly headline: string;
@@ -270,6 +274,10 @@ const STORE_PURCHASE_SELECT =
 const MARKET_NEWS_SELECT = [
   "id",
   "shock_id",
+  "category",
+  "sentiment",
+  "source",
+  "visibility",
   "scope",
   "target_key",
   "headline",
@@ -834,6 +842,9 @@ function toMarketNewsDto(row: StockMarketEventRow): PlayerGameDashboardMarketNew
   return {
     id: row.id,
     shockId: row.shock_id,
+    category: row.category ?? "sector",
+    sentiment: row.sentiment ?? "neutral",
+    source: row.source ?? "runner",
     scope: row.scope,
     targetKey: row.target_key ?? null,
     headline: row.headline,

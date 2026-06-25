@@ -112,6 +112,9 @@ export interface PlayerGameDashboardInventoryItemDto {
 export interface PlayerGameDashboardMarketNewsDto {
   readonly id: string;
   readonly shockId: string;
+  readonly category: string;
+  readonly sentiment: "positive" | "negative" | "neutral" | "mixed" | string;
+  readonly source: "runner" | "staff" | "admin" | "system" | string;
   readonly scope: "global" | "country" | "sector" | "ticker" | string;
   readonly targetKey: string | null;
   readonly headline: string;
