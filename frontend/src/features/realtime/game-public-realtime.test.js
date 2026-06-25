@@ -4,7 +4,7 @@ const realtime = globalThis.Econovaria.features.realtime;
 const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 const CHANNEL = `game:${GAME_SESSION_ID}:public`;
 
-Deno.test("game public realtime subscribes to the dashboard public channel", () => {
+Deno.test("game public realtime subscribes to supported dashboard public events", () => {
   const client = new FakeSupabaseRealtimeClient();
 
   const subscription = realtime.startGamePublicRealtimeSubscription({
@@ -14,10 +14,11 @@ Deno.test("game public realtime subscribes to the dashboard public channel", () 
   });
 
   assertEquals(client.topic, CHANNEL);
-  assertEquals(client.createdChannel.handlers[0].type, "broadcast");
-  assertEquals(client.createdChannel.handlers[0].filter, {
-    event: "stock_tick",
-  });
+  assertEquals(client.createdChannel.handlers.map((handler) => handler.filter), [
+    { event: "stock_tick" },
+    { event: "market_news_posted" },
+    { event: "market_status_changed" },
+  ]);
 
   subscription.unsubscribe();
   assertEquals(client.removedChannels, 1);
@@ -30,8 +31,8 @@ Deno.test("game public realtime handles stock_tick and ignores unsupported event
       gameSessionId: GAME_SESSION_ID,
       channel: CHANNEL,
       sequence: 1,
-      eventType: "market_news_posted",
-      payload: { news: { id: "news-1" } },
+      eventType: "unsupported_event",
+      payload: { ok: true },
     },
   }, {
     gameSessionId: GAME_SESSION_ID,
@@ -54,6 +55,38 @@ Deno.test("game public realtime handles stock_tick and ignores unsupported event
   assertEquals(handledPayloads[0].tick, 2);
 });
 
+Deno.test("game public realtime handles market_news_posted", () => {
+  const handledPayloads = [];
+  const handled = realtime.handleGamePublicRealtimeBroadcast({
+    payload: marketNewsEnvelope(3),
+  }, {
+    gameSessionId: GAME_SESSION_ID,
+    publicChannel: CHANNEL,
+    state: { lastSequence: null },
+    onMarketNewsPosted: (payload) => handledPayloads.push(payload),
+  });
+
+  assertEquals(handled, true);
+  assertEquals(handledPayloads.length, 1);
+  assertEquals(handledPayloads[0].news.headline, "Aurora exports surge");
+});
+
+Deno.test("game public realtime handles market_status_changed", () => {
+  const handledPayloads = [];
+  const handled = realtime.handleGamePublicRealtimeBroadcast({
+    payload: marketStatusEnvelope(4),
+  }, {
+    gameSessionId: GAME_SESSION_ID,
+    publicChannel: CHANNEL,
+    state: { lastSequence: null },
+    onMarketStatusChanged: (payload) => handledPayloads.push(payload),
+  });
+
+  assertEquals(handled, true);
+  assertEquals(handledPayloads.length, 1);
+  assertEquals(handledPayloads[0].status.status, "open");
+});
+
 Deno.test("game public realtime updates existing stocks without duplication", () => {
   const rows = [{
     assetId: "asset-1",
@@ -73,6 +106,80 @@ Deno.test("game public realtime updates existing stocks without duplication", ()
   assertEquals(next[0].history.length, 2);
 });
 
+Deno.test("game public realtime applies market_news_posted to state", () => {
+  const stateApi = createStateApi({
+    news: [{ id: "old-news", headline: "Old headline" }],
+  });
+
+  const next = realtime.applyMarketNewsPostedToState(
+    stateApi,
+    marketNewsEnvelope(5).payload,
+    marketNewsEnvelope(5),
+  );
+
+  assertEquals(next.news.length, 2);
+  assertEquals(next.news[0].id, "news-5");
+  assertEquals(next.news[0].headline, "Aurora exports surge");
+  assertEquals(stateApi.getState().news[0].id, "news-5");
+});
+
+Deno.test("game public realtime upserts duplicate market news", () => {
+  const stateApi = createStateApi({
+    news: [{ id: "news-5", headline: "Old version" }],
+  });
+
+  const next = realtime.applyMarketNewsPostedToState(
+    stateApi,
+    {
+      news: {
+        id: "news-5",
+        headline: "Updated version",
+      },
+    },
+    marketNewsEnvelope(5),
+  );
+
+  assertEquals(next.news.length, 1);
+  assertEquals(next.news[0].headline, "Updated version");
+});
+
+Deno.test("game public realtime ignores malformed market news state payload", () => {
+  const stateApi = createStateApi({ news: [] });
+  const next = realtime.applyMarketNewsPostedToState(
+    stateApi,
+    { news: { id: "missing-headline" } },
+    marketNewsEnvelope(6),
+  );
+
+  assertEquals(next, null);
+  assertEquals(stateApi.getState().news.length, 0);
+});
+
+Deno.test("game public realtime applies market_status_changed to state", () => {
+  const stateApi = createStateApi({ marketStatus: null });
+  const next = realtime.applyMarketStatusChangedToState(
+    stateApi,
+    marketStatusEnvelope(7).payload,
+    marketStatusEnvelope(7),
+  );
+
+  assertEquals(next.marketStatus.status, "open");
+  assertEquals(next.marketStatus.label, "Market Open");
+  assertEquals(stateApi.getState().marketStatus.status, "open");
+});
+
+Deno.test("game public realtime ignores malformed market status state payload", () => {
+  const stateApi = createStateApi({ marketStatus: null });
+  const next = realtime.applyMarketStatusChangedToState(
+    stateApi,
+    { status: { reason: "missing status" } },
+    marketStatusEnvelope(8),
+  );
+
+  assertEquals(next, null);
+  assertEquals(stateApi.getState().marketStatus, null);
+});
+
 Deno.test("game public realtime triggers resync on sequence gap", () => {
   const resyncReasons = [];
   const handled = realtime.handleGamePublicRealtimeBroadcast({
@@ -86,6 +193,24 @@ Deno.test("game public realtime triggers resync on sequence gap", () => {
 
   assertEquals(handled, false);
   assertEquals(resyncReasons, ["stock_tick_sequence_gap"]);
+});
+
+Deno.test("game public realtime triggers resync on public event scope mismatch", () => {
+  const resyncReasons = [];
+  const handled = realtime.handleGamePublicRealtimeBroadcast({
+    payload: {
+      ...marketNewsEnvelope(9),
+      gameSessionId: "wrong-session",
+    },
+  }, {
+    gameSessionId: GAME_SESSION_ID,
+    publicChannel: CHANNEL,
+    state: { lastSequence: null },
+    onResync: (reason) => resyncReasons.push(reason),
+  });
+
+  assertEquals(handled, false);
+  assertEquals(resyncReasons, ["market_news_posted_scope_mismatch"]);
 });
 
 Deno.test("game public realtime triggers reconnect callback after initial subscribe", () => {
@@ -166,6 +291,20 @@ class FakeRealtimeChannel {
   }
 }
 
+function createStateApi(initialState) {
+  let state = initialState;
+
+  return {
+    getState() {
+      return state;
+    },
+    setState(nextState) {
+      state = nextState;
+      return state;
+    },
+  };
+}
+
 function stockTickEnvelope(sequence) {
   return {
     gameSessionId: GAME_SESSION_ID,
@@ -191,6 +330,48 @@ function stockTickPayload(tick) {
       changePct: 5,
       volume: 1000,
     }],
+  };
+}
+
+function marketNewsEnvelope(sequence) {
+  return {
+    gameSessionId: GAME_SESSION_ID,
+    channel: CHANNEL,
+    sequence,
+    eventType: "market_news_posted",
+    occurredAt: `tick-${sequence}`,
+    payload: {
+      tick: sequence,
+      news: {
+        id: `news-${sequence}`,
+        headline: "Aurora exports surge",
+        summary: "Port activity increased after new contracts cleared.",
+        source: "Econovaria Wire",
+        severity: "positive",
+        countryCode: "SOLVEND",
+        sector: "TECHNOLOGY",
+        createdAt: `tick-${sequence}`,
+      },
+    },
+  };
+}
+
+function marketStatusEnvelope(sequence) {
+  return {
+    gameSessionId: GAME_SESSION_ID,
+    channel: CHANNEL,
+    sequence,
+    eventType: "market_status_changed",
+    occurredAt: `tick-${sequence}`,
+    payload: {
+      tick: sequence,
+      status: {
+        status: "open",
+        label: "Market Open",
+        reason: "Scheduled session window started.",
+        updatedAt: `tick-${sequence}`,
+      },
+    },
   };
 }
 

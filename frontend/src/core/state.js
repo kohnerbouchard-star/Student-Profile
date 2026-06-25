@@ -14,6 +14,7 @@ function emptyState() {
     portfolio: [],
     ratings: [],
     news: [],
+    marketStatus: null,
     staffSession: null
   };
 }
