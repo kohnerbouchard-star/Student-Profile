@@ -433,6 +433,23 @@ function updateAdminStoreItem(gameSessionId, itemId, bearerToken, body) {
   );
 }
 
+function initializeDemoStorylineForGame(gameSessionId, bearerToken, options = {}) {
+  const normalizedGameSessionId = String(gameSessionId || "").trim();
+  const mode = String(options?.mode || "").trim();
+  const body = mode ? { mode } : undefined;
+
+  return callSupabaseJsonRoute(
+    `/staff/game-sessions/${encodeURIComponent(normalizedGameSessionId)}/storylines/demo/initialize`,
+    {
+      method: "POST",
+      token: bearerToken,
+      body,
+      fallbackCode: "demo_storyline_initialization_failed",
+      fallbackMessage: "Demo storyline initialization failed."
+    }
+  );
+}
+
 async function callAdminStoreCatalogRoute(method, path, bearerToken, body) {
   const token = normalizeBearerToken(bearerToken);
 
@@ -577,6 +594,7 @@ Object.assign(window.Econovaria.core.api, {
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
+  initializeDemoStorylineForGame,
   listAdminStoreItems,
   createAdminStoreItem,
   updateAdminStoreItem
@@ -591,6 +609,7 @@ Object.assign(window.Econovaria.core, {
   callStaffSignupApi,
   callLicensingActivationApi,
   callStaffBootstrapApi,
+  initializeDemoStorylineForGame,
   listAdminStoreItems,
   createAdminStoreItem,
   updateAdminStoreItem
