@@ -116,8 +116,6 @@
 
           <div class="mode-tabs" role="tablist" aria-label="Login mode">
             <button class="mode-tab active" data-mode="player" type="button" role="tab" aria-selected="true">Player</button>
-            <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin</button>
-            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">New Game</button>
           </div>
 
           <div id="playerPane" class="mode-pane active">
@@ -136,68 +134,6 @@
               </label>
               <div id="playerMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn cyan" type="submit">Enter Game</button>
-            </form>
-          </div>
-
-          <div id="adminPane" class="mode-pane">
-            <div id="adminLoginStep">
-              <form id="adminForm" class="form-stack">
-                <label>
-                  <span>Admin Email</span>
-                  <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@school.edu" />
-                </label>
-                <label>
-                  <span>Access Code</span>
-                  <input id="adminAccessCode" type="password" autocomplete="current-password" spellcheck="false" placeholder="Enter Access Code" />
-                </label>
-                <div id="adminMessage" class="login-message status-message hidden"></div>
-                <button class="submit-btn amber" type="submit">Verify Access</button>
-              </form>
-            </div>
-            <div id="adminGamesStep" class="hidden">
-              <div class="step-header">
-                <span>Select Game Session</span>
-                <button id="backToAdminLogin" type="button">&larr; Back</button>
-              </div>
-              <div id="adminGameList" class="game-list"></div>
-              <div id="selectedGameMessage" class="login-message status-message hidden"></div>
-            </div>
-          </div>
-
-          <div id="createPane" class="mode-pane">
-            <form id="createForm" class="form-stack form-stack-compact">
-              <label>
-                <span>License Code</span>
-                <input id="licenseCode" autocomplete="off" placeholder="License Code" required />
-              </label>
-              <label>
-                <span>Admin Email</span>
-                <input id="createEmail" type="email" autocomplete="username" placeholder="admin@school.edu" required />
-              </label>
-              <input id="createDisplayName" type="hidden" autocomplete="name" />
-              <div class="two-col">
-                <label>
-                  <span>Session Name</span>
-                  <input id="sessionName" autocomplete="off" placeholder="Fall 2026" required />
-                </label>
-                <label>
-                  <span>Difficulty</span>
-                  <select id="difficultyLevel" required>
-                    <option value="" disabled selected hidden>Select</option>
-                    <option value="easy">Easy</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="hard">Hard</option>
-                    <option value="insane">Insane</option>
-                  </select>
-                </label>
-              </div>
-              <label>
-                <span>Access Code</span>
-                <input id="createAccessCode" type="password" autocomplete="new-password" minlength="8" spellcheck="false" placeholder="Enter Access Code" required />
-              </label>
-              <input id="confirmAccessCode" type="hidden" />
-              <div id="createMessage" class="login-message status-message hidden"></div>
-              <button class="submit-btn purple" type="submit">Create Game</button>
             </form>
           </div>
 
@@ -228,7 +164,6 @@
         <button class="nav-item" data-view="trade">Trading</button>
         <button class="nav-item" data-view="stockProfile">Market Data</button>
         <button class="nav-item" data-view="rating">Forecasts</button>
-        <button class="nav-item admin-nav-item hidden" data-view="admin">Admin</button>
       </nav>
 
       <div class="sidebar-card">
@@ -265,7 +200,6 @@
       <section id="trade" class="view"></section>
       <section id="stockProfile" class="view"></section>
       <section id="rating" class="view"></section>
-      <section id="admin" class="view"></section>
     </main>
   </div>
 
@@ -278,33 +212,6 @@
   <script src="frontend/src/core/snapshot.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="frontend/src/features/realtime/game-public-realtime.js"></script>
-  <script>
-    function syncCreateGameCompatibilityFields() {
-      var email = document.getElementById("createEmail")?.value.trim() || "";
-      var password = document.getElementById("createAccessCode")?.value || "";
-      var displayName = document.getElementById("createDisplayName");
-      var confirmAccessCode = document.getElementById("confirmAccessCode");
-
-      if (displayName && !displayName.value.trim()) {
-        displayName.value = email.split("@")[0] || "Teacher Console";
-      }
-
-      if (confirmAccessCode) {
-        confirmAccessCode.value = password;
-      }
-    }
-
-    function handleCreateGame(event) {
-      syncCreateGameCompatibilityFields();
-      return handleStaffSignup(event);
-    }
-
-    document.addEventListener("submit", function (event) {
-      if (event.target && event.target.id === "createForm") {
-        syncCreateGameCompatibilityFields();
-      }
-    }, true);
-  </script>
   <script src="frontend/src/features/auth/auth.js"></script>
   <script src="frontend/src/features/dashboard/dashboard.js"></script>
   <script src="frontend/src/features/store/store.js"></script>
@@ -313,9 +220,6 @@
   <script src="frontend/src/features/trading/trading.js"></script>
   <script src="frontend/src/features/market/market.js"></script>
   <script src="frontend/src/features/forecasts/forecasts.js"></script>
-  <script src="frontend/src/features/admin/admin.js?v=20260614-admin1"></script>
-  <script src="frontend/src/features/admin/admin-player-roster.js?v=20260622-roster1"></script>
-  <script src="frontend/src/features/admin/admin-layout.js?v=20260622-adminlayout1"></script>
   <script src="frontend/src/core/router.js"></script>
   <script src="frontend/src/core/bootstrap.js"></script>
   <script src="frontend/src/ui/student-ui.js"></script>

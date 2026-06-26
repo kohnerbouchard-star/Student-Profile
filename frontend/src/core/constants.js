@@ -19,7 +19,7 @@ const PERMISSION_SETS = {
   },
   ADMIN: {
     label: "Teacher admin",
-    views: ["admin"],
+    views: [],
     actions: []
   }
 };
@@ -48,10 +48,6 @@ const VIEW_COPY = {
   rating: {
     title: "Forecasts",
     subtitle: "Submit a target price and explain your market reasoning."
-  },
-  admin: {
-    title: "Admin Console",
-    subtitle: "Prototype teacher controls for monitoring the classroom economy."
   }
 };
 
