@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eco Novaria Admin Overview Terminal</title>
+  <link rel="stylesheet" href="./css/page-shell.css" />
+  <link rel="stylesheet" href="./css/admin-overview-terminal.css" data-admin-terminal-stylesheet />
+</head>
+<body>
+  <main id="adminPreview" aria-label="Eco Novaria admin overview preview"></main>
+
+  <script src="./src/admin-overview/adminApi.js"></script>
+  <script src="./dist/admin-overview-terminal.js"></script>
+  <script>
+    (function bootAdminOverviewPreview() {
+      const feature = window.Econovaria?.features?.adminOverviewTerminal;
+      const mount = document.getElementById("adminPreview");
+
+      if (!feature || typeof feature.renderShell !== "function" || !mount) {
+        console.error("Eco Novaria admin overview failed to initialize.");
+        return;
+      }
+
+      mount.innerHTML = feature.renderShell();
+    })();
+  </script>
+</body>
+</html>

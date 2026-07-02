@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="./css/page-shell.css"><link rel="stylesheet" href="./css/admin-overview-terminal.css" data-admin-terminal-stylesheet></head><body><main id="adminPreview"></main><pre id="metrics"></pre><script src="./dist/admin-overview-terminal.js"></script><script>
+const feature = window.Econovaria.features.adminOverviewTerminal;
+feature.currentSection = 'Players';
+const model = feature.currentModel || {};
+model.playersPerPage = 10;
+model.selectedPlayerRank = 1;
+feature.currentModel = model;
+document.getElementById('adminPreview').innerHTML = feature.renderShell(model);
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  const selectors = ['.admin-terminal-shell','.admin-terminal-overview.admin-terminal-players-page','.admin-terminal-players-command','.admin-terminal-players-layout','.admin-terminal-players-roster','.admin-terminal-player-table-list-v295','.admin-terminal-page-top'];
+  const data = {};
+  selectors.forEach(sel=>{
+    const el=document.querySelector(sel); if(!el)return;
+    const cs=getComputedStyle(el); const r=el.getBoundingClientRect();
+    data[sel]={h:r.height, w:r.width, scrollH:el.scrollHeight, clientH:el.clientHeight, overflowY:cs.overflowY, display:cs.display, gridTemplateRows:cs.gridTemplateRows, position:cs.position};
+  });
+  data.body={scrollH:document.documentElement.scrollHeight, clientH:document.documentElement.clientHeight};
+  document.getElementById('metrics').textContent=JSON.stringify(data,null,2);
+}));
+</script></body></html>

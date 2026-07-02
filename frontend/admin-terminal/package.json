@@ -1,0 +1,12 @@
+{
+  "name": "econovaria-admin-overview-terminal-clean-code",
+  "version": "532.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node tools/serve-admin-terminal.js",
+    "build": "node tools/build-admin-overview.js",
+    "check": "node --check dist/admin-overview-terminal.js",
+    "smoke": "node tools/smoke-test-admin-overview.js && node tools/smoke-test-admin-api.js"
+  },
+  "description": "Eco Novaria admin overview terminal package v532 with backend adapter prep and Marketplace options inside the order ticket."
+}
