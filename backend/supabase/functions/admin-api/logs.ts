@@ -45,6 +45,7 @@ export async function loadLogsPage(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  const eventId = text(url.searchParams.get("eventId"));
   const action = text(url.searchParams.get("action"));
   const actorType = text(url.searchParams.get("actorType"));
   const targetType = text(url.searchParams.get("targetType"));
@@ -62,6 +63,7 @@ export async function loadLogsPage(
     .order("created_at", { ascending: false })
     .range(from, to);
 
+  if (eventId) query = query.eq("id", eventId);
   if (action) query = query.eq("action", action);
   if (actorType) query = query.eq("actor_type", actorType);
   if (targetType) query = query.eq("target_type", targetType);
@@ -139,6 +141,7 @@ export async function loadLogsPage(
       hasPreviousPage: page > 1,
     },
     filters: {
+      eventId: eventId || null,
       action: action || null,
       actorType: actorType || null,
       targetType: targetType || null,
