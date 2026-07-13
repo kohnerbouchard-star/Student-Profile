@@ -14,46 +14,43 @@
     timeoutId = null;
   }
 
+  function verificationViewIsVisible(mount) {
+    if (!mount) return false;
+    if (mount.querySelector(".admin-terminal-session-gate-v604")) return true;
+    return String(mount.textContent || "").includes("Verifying administrator access");
+  }
+
   function repair() {
     if (repaired) return true;
 
     const feature = window.Econovaria?.features?.adminOverviewTerminal;
-    if (!feature || feature.authState?.state !== "ready") return false;
+    const mount = document.getElementById("adminPreview");
+    if (!feature || !mount || feature.authState?.state !== "ready") return false;
 
     const model = feature.currentModel;
-    if (!model || model.__sessionBootstrapPending !== true) {
-      repaired = true;
-      stop();
-      return true;
+    if (!model) return false;
+
+    if (model.__sessionBootstrapPending === true) {
+      feature.currentModel = {
+        ...model,
+        __sessionBootstrapPending: false
+      };
     }
 
-    feature.currentModel = {
-      ...model,
-      __sessionBootstrapPending: false
-    };
+    if (verificationViewIsVisible(mount)) {
+      if (typeof feature.renderShell !== "function") return false;
+      mount.innerHTML = feature.renderShell();
+    }
 
+    window.EconovariaAdminSessionGate?.release?.();
     repaired = true;
     stop();
-
-    const section = feature.currentSection || "Overview";
-    if (typeof feature.loadAdminTerminalPageData === "function") {
-      Promise.resolve(
-        feature.loadAdminTerminalPageData(section, {
-          silent: true,
-          force: true
-        })
-      ).catch(() => {
-        window.EconovariaAdminSessionGate?.showError?.(
-          "Administrator access was verified, but the protected dashboard could not be rendered. Reload this page."
-        );
-      });
-    }
-
     return true;
   }
 
   function start() {
     if (repair()) return;
+
     pollId = window.setInterval(repair, POLL_INTERVAL_MS);
     timeoutId = window.setTimeout(() => {
       stop();
