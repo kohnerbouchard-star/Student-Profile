@@ -62,9 +62,11 @@ const requestMethods = unique(
 );
 
 const visibleRoutes = unique(endpointFragments.map(normalizedRoute));
+const actionRoutes = unique(actionContracts.map((contract) => contract.route));
+const auditedRoutes = unique([...visibleRoutes, ...actionRoutes]);
 const manifestRoutes = Object.keys(routeManifest).sort();
-const missingDispositions = visibleRoutes.filter((route) => !routeManifest[route]);
-const staleDispositions = manifestRoutes.filter((route) => !visibleRoutes.includes(route));
+const missingDispositions = auditedRoutes.filter((route) => !routeManifest[route]);
+const staleDispositions = manifestRoutes.filter((route) => !auditedRoutes.includes(route));
 const invalidDispositions = Object.entries(routeManifest)
   .filter(([, disposition]) => ![
     "implemented",
@@ -107,6 +109,8 @@ console.log(JSON.stringify({
   requestMethods,
   routeCoverage: {
     visibleRouteCount: visibleRoutes.length,
+    actionRouteCount: actionRoutes.length,
+    auditedRouteCount: auditedRoutes.length,
     manifestRouteCount: manifestRoutes.length,
     dispositionCounts,
     complete: true,
