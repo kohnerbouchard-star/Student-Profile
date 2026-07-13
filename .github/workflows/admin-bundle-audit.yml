@@ -8,6 +8,9 @@ on:
       - ".github/workflows/admin-bundle-audit.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest
