@@ -11,7 +11,9 @@ function number(value: unknown, fallback = 0): number {
 }
 
 function object(value: unknown): Record<string, any> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 function contractDto(row: any): any {
@@ -250,7 +252,11 @@ async function archivePlayer(
 
   const credentialResult = await service
     .from("player_access_credentials")
-    .update({ status: "revoked", revoked_at: archivedAt, updated_at: archivedAt })
+    .update({
+      status: "revoked",
+      revoked_at: archivedAt,
+      updated_at: archivedAt,
+    })
     .eq("game_session_id", gameSessionId)
     .eq("player_id", playerId)
     .eq("status", "active");
@@ -258,7 +264,11 @@ async function archivePlayer(
 
   const sessionResult = await service
     .from("player_sessions")
-    .update({ status: "revoked", revoked_at: archivedAt, updated_at: archivedAt })
+    .update({
+      status: "revoked",
+      revoked_at: archivedAt,
+      updated_at: archivedAt,
+    })
     .eq("game_session_id", gameSessionId)
     .eq("player_id", playerId)
     .eq("status", "active");
@@ -329,7 +339,10 @@ async function restockStoreItem(
   const stockQuantity = number(existing.data.stock_quantity) + quantity;
   const result = await service
     .from("store_items")
-    .update({ stock_quantity: stockQuantity, updated_at: new Date().toISOString() })
+    .update({
+      stock_quantity: stockQuantity,
+      updated_at: new Date().toISOString(),
+    })
     .eq("game_session_id", gameSessionId)
     .eq("id", itemId)
     .select("*")
@@ -369,14 +382,18 @@ async function rebalanceStorePrice(
   staffUserId: string,
   body: Record<string, any>,
 ): Promise<any> {
-  const price = number(body.price ?? body.newPrice ?? body.targetPrice, Number.NaN);
+  const price = number(
+    body.price ?? body.newPrice ?? body.targetPrice,
+    Number.NaN,
+  );
   if (!Number.isFinite(price) || price < 0) {
     return {
       handled: true,
       status: 400,
       body: {
         code: "store_rebalance_price_required",
-        message: "A non-negative target price is required. Automatic repricing is not configured.",
+        message:
+          "A non-negative target price is required. Automatic repricing is not configured.",
       },
     };
   }
@@ -423,10 +440,14 @@ async function resetSettingsGroup(
 ): Promise<any> {
   const normalizedGroup = text(group).toLowerCase();
   if (["difficulty", "economy", "simulation"].includes(normalizedGroup)) {
-    const difficultyPolicy = await applyDifficultyPolicy(service, gameSessionId, {
-      difficulty_preset: "moderate",
-      source: "preset",
-    });
+    const difficultyPolicy = await applyDifficultyPolicy(
+      service,
+      gameSessionId,
+      {
+        difficulty_preset: "moderate",
+        source: "preset",
+      },
+    );
     const settings = await service
       .from("game_settings")
       .update({ difficulty_preset: "moderate" })
@@ -463,7 +484,8 @@ async function resetSettingsGroup(
       status: 409,
       body: {
         code: "settings_group_reset_not_configured",
-        message: "That settings group does not have an authoritative reset profile.",
+        message:
+          "That settings group does not have an authoritative reset profile.",
       },
     };
   }
@@ -494,8 +516,45 @@ export async function handleCompatibilityOperation(
     body: Record<string, any>;
   },
 ): Promise<any> {
-  const operation = text(input.body.adminOperation).toLowerCase();
+  let operation = text(input.body.adminOperation).toLowerCase();
+  if (!operation) {
+    if (/\/contracts\/[^/]+\/archive$/.test(input.path)) {
+      operation = "archive-contract";
+    } else if (/\/contracts\/[^/]+\/duplicate$/.test(input.path)) {
+      operation = "duplicate-contract";
+    } else if (
+      /\/players\/[^/]+$/.test(input.path) && input.method === "DELETE"
+    ) operation = "archive-player";
+    else if (/\/store\/items\/[^/]+\/restock$/.test(input.path)) {
+      operation = "restock-store-item";
+    } else if (/\/store\/items\/[^/]+\/rebalance-price$/.test(input.path)) {
+      operation = "rebalance-store-price";
+    } else if (/\/settings\/[^/]+\/reset$/.test(input.path)) {
+      operation = "reset-settings-group";
+    }
+  }
   if (!operation) return { handled: false };
+
+  const pathContract = input.path.match(
+    /\/contracts\/([^/]+)\/(?:archive|duplicate)$/,
+  );
+  const pathPlayer = input.path.match(/\/players\/([^/]+)$/);
+  const pathStoreItem = input.path.match(
+    /\/store\/items\/([^/]+)\/(?:restock|rebalance-price)$/,
+  );
+  const pathSettingsGroup = input.path.match(/\/settings\/([^/]+)\/reset$/);
+  if (pathContract && !input.body.contractId) {
+    input.body.contractId = decodeURIComponent(pathContract[1]);
+  }
+  if (pathPlayer && !input.body.playerId) {
+    input.body.playerId = decodeURIComponent(pathPlayer[1]);
+  }
+  if (pathStoreItem && !input.body.itemId) {
+    input.body.itemId = decodeURIComponent(pathStoreItem[1]);
+  }
+  if (pathSettingsGroup && !input.body.group) {
+    input.body.group = decodeURIComponent(pathSettingsGroup[1]);
+  }
 
   if (operation === "archive-contract") {
     return archiveContract(
