@@ -7,6 +7,7 @@ import {
   normalizeStoreMutation,
 } from "./mutationAdapters.ts";
 import { issueContractRewardsAtomically } from "./contractRewards.ts";
+import { handleCompatibilityOperation } from "./compatibilityOperations.ts";
 
 export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -145,9 +146,15 @@ export function ensureOwnedGame(context, gameId) {
   return context.games.find((game) => String(game.id) === String(gameId)) || null;
 }
 
+function gameSessionIdFromPath(path) {
+  const gameMatch = String(path).match(/^\/games\/([^/]+)/);
+  if (gameMatch) return decodeURIComponent(gameMatch[1]);
+  const staffMatch = String(path).match(/^\/staff\/game-sessions\/([^/]+)/);
+  return staffMatch ? decodeURIComponent(staffMatch[1]) : "";
+}
+
 function gameIdFromClassroomPath(path) {
-  const match = String(path).match(/^\/games\/([^/]+)\//);
-  return match ? decodeURIComponent(match[1]) : "";
+  return gameSessionIdFromPath(path);
 }
 
 function isStoreMutationPath(path, method) {
@@ -220,6 +227,20 @@ export async function proxyClassroom(
   method = request.method,
   overrideBody = undefined,
 ) {
+  if (!["GET", "HEAD"].includes(method) && overrideBody === undefined) {
+    const compatibilityBody = await request.clone().json().catch(() => ({}));
+    const compatibility = await handleCompatibilityOperation(context.service, {
+      gameSessionId: gameSessionIdFromPath(path),
+      staffUserId: context.staff.id,
+      path,
+      method,
+      body: object(compatibilityBody),
+    });
+    if (compatibility.handled) {
+      return json(request, compatibility.status, compatibility.body);
+    }
+  }
+
   const rewardRoute = atomicContractRewardPath(path, method);
   if (rewardRoute) {
     const result = await issueContractRewardsAtomically(context.service, {
