@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  applyDifficultyPolicy,
+  normalizeSettingsMutation,
+  normalizeStoreMutation,
+} from "./mutationAdapters.ts";
 
 export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -137,20 +142,40 @@ export function ensureOwnedGame(context, gameId) {
   return context.games.find((game) => String(game.id) === String(gameId)) || null;
 }
 
-export async function proxyClassroom(request, context, path, method = request.method, overrideBody = undefined) {
+function gameIdFromClassroomPath(path) {
+  const match = String(path).match(/^\/games\/([^/]+)\//);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+function isStoreMutationPath(path, method) {
+  return !["GET", "HEAD"].includes(method) &&
+    /^\/games\/[^/]+\/store\/items(?:\/[^/]+)?$/.test(String(path));
+}
+
+function isSettingsMutationPath(path, method) {
+  return !["GET", "HEAD"].includes(method) &&
+    /^\/games\/[^/]+\/settings$/.test(String(path));
+}
+
+async function fetchClassroom(request, context, path, method, body) {
   const headers = new Headers();
   headers.set("apikey", SUPABASE_ANON_KEY);
   headers.set("Authorization", `Bearer ${context.token}`);
-  headers.set("X-Request-Id", request.headers.get("x-request-id") || request.headers.get("x-idempotency-key") || crypto.randomUUID());
+  headers.set(
+    "X-Request-Id",
+    request.headers.get("x-request-id") ||
+      request.headers.get("x-idempotency-key") ||
+      crypto.randomUUID(),
+  );
   headers.set("Content-Type", "application/json");
 
-  const body = ["GET", "HEAD"].includes(method)
-    ? undefined
-    : overrideBody !== undefined
-      ? JSON.stringify(overrideBody)
-      : await request.clone().text();
-
-  const response = await fetch(`${CLASSROOM_API_URL}${path}`, { method, headers, body });
+  const response = await fetch(`${CLASSROOM_API_URL}${path}`, {
+    method,
+    headers,
+    body: ["GET", "HEAD"].includes(method)
+      ? undefined
+      : JSON.stringify(body ?? {}),
+  });
   const responseText = await response.text();
   return new Response(responseText, {
     status: response.status,
@@ -160,4 +185,56 @@ export async function proxyClassroom(request, context, path, method = request.me
       "Cache-Control": "no-store",
     },
   });
+}
+
+export async function proxyClassroom(
+  request,
+  context,
+  path,
+  method = request.method,
+  overrideBody = undefined,
+) {
+  if (isStoreMutationPath(path, method) && overrideBody === undefined) {
+    const normalized = await normalizeStoreMutation(request, method);
+    return fetchClassroom(request, context, path, normalized.method, normalized.body);
+  }
+
+  if (isSettingsMutationPath(path, method) && overrideBody === undefined) {
+    const gameId = gameIdFromClassroomPath(path);
+    const normalized = await normalizeSettingsMutation(request);
+
+    let settingsResponse = null;
+    if (Object.keys(normalized.gameSettings).length > 0) {
+      settingsResponse = await fetchClassroom(
+        request,
+        context,
+        path,
+        "PATCH",
+        normalized.gameSettings,
+      );
+      if (!settingsResponse.ok) return settingsResponse;
+    }
+
+    const difficultyPolicy = await applyDifficultyPolicy(
+      context.service,
+      gameId,
+      normalized.policySettings,
+    );
+
+    if (settingsResponse) return settingsResponse;
+    return json(request, 200, {
+      data: {
+        saved: true,
+        difficultyPolicy,
+      },
+    });
+  }
+
+  const body = ["GET", "HEAD"].includes(method)
+    ? undefined
+    : overrideBody !== undefined
+      ? overrideBody
+      : await request.clone().json().catch(() => ({}));
+
+  return fetchClassroom(request, context, path, method, body);
 }
