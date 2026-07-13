@@ -1,0 +1,31 @@
+name: Admin Shell Smoke
+
+on:
+  pull_request:
+    paths:
+      - "admin/**"
+      - "scripts/admin-shell-smoke.mjs"
+      - ".github/workflows/admin-shell-smoke.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "admin/**"
+      - "scripts/admin-shell-smoke.mjs"
+      - ".github/workflows/admin-shell-smoke.yml"
+
+jobs:
+  admin-shell-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate admin shell assets and runtime order
+        run: node scripts/admin-shell-smoke.mjs
