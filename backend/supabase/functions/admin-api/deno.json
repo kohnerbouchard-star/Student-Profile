@@ -2,9 +2,6 @@
   "compilerOptions": {
     "strict": false,
     "noImplicitAny": false,
-    "useUnknownInCatchVariables": false,
-    "types": [
-      "./dynamicDatabaseRows.d.ts"
-    ]
+    "useUnknownInCatchVariables": false
   }
 }
