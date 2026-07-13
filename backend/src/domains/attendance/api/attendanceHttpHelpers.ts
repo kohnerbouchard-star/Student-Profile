@@ -183,6 +183,25 @@ export function readPlayerAttendanceWindowConfig(
   };
 }
 
+function firstDefined(
+  record: Record<string, unknown>,
+  keys: readonly string[],
+): unknown {
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null) return value;
+  }
+  return undefined;
+}
+
+function normalizedPayload(value: Record<string, unknown>): Record<string, unknown> {
+  for (const key of ["scan", "player", "data", "payload"] as const) {
+    const nested = value[key];
+    if (isRecord(nested)) return { ...value, ...nested };
+  }
+  return value;
+}
+
 export async function readStaffAttendanceScanRequestBody(
   request: Request,
 ): Promise<StaffAttendanceScanRequestBody> {
@@ -206,8 +225,27 @@ export async function readStaffAttendanceScanRequestBody(
     );
   }
 
+  const payload = normalizedPayload(value);
+
   return {
-    playerId: parseRequiredText(value.playerId, "playerId", "Player ID is required."),
-    deviceTimezone: parseOptionalText(value.deviceTimezone),
+    playerId: parseRequiredText(
+      firstDefined(payload, [
+        "playerId",
+        "studentCode",
+        "accessCode",
+        "playerCode",
+        "scannedCode",
+        "scanValue",
+        "qrCode",
+        "code",
+        "value",
+        "scan",
+      ]),
+      "playerId",
+      "Player ID is required.",
+    ),
+    deviceTimezone: parseOptionalText(
+      firstDefined(payload, ["deviceTimezone", "timezone", "timeZone"]),
+    ),
   };
 }
