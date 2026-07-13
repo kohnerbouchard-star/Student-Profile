@@ -20,19 +20,37 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Extract and enforce v606 route coverage
+      - name: Capture v606 route coverage audit
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           node scripts/admin-bundle-contract-audit.mjs \
-            | tee admin-bundle-contract-audit.json
-          test -s admin-bundle-contract-audit.json
-          node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("admin-bundle-contract-audit.json", "utf8")); if (report?.routeCoverage?.complete !== true) process.exit(1);'
+            > admin-bundle-contract-audit.json \
+            2> admin-bundle-contract-audit.error.log
+          echo "$?" > admin-bundle-contract-audit.status
+          cat admin-bundle-contract-audit.json
+          cat admin-bundle-contract-audit.error.log >&2
+          exit 0
 
       - name: Upload bundle contract audit
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: admin-bundle-contract-audit
-          path: admin-bundle-contract-audit.json
+          path: |
+            admin-bundle-contract-audit.json
+            admin-bundle-contract-audit.error.log
+            admin-bundle-contract-audit.status
           if-no-files-found: error
           retention-days: 7
+
+      - name: Enforce v606 route coverage
+        shell: bash
+        run: |
+          status="$(cat admin-bundle-contract-audit.status)"
+          if [ "$status" != "0" ]; then
+            echo "Admin route coverage audit failed. Download the admin-bundle-contract-audit artifact."
+            exit 1
+          fi
+          test -s admin-bundle-contract-audit.json
+          node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("admin-bundle-contract-audit.json", "utf8")); if (report?.routeCoverage?.complete !== true) process.exit(1);'
