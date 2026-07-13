@@ -12,6 +12,10 @@ function object(value: unknown): Record<string, any> {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function array(value: unknown): any[] {
+  return Array.isArray(value) ? value : [];
+}
+
 async function readJson(request: Request): Promise<Record<string, any>> {
   try {
     return object(await request.json());
@@ -46,6 +50,20 @@ function optionalInteger(record: Record<string, any>, keys: readonly string[]): 
   return value === undefined ? undefined : Math.max(0, Math.trunc(value));
 }
 
+function compactObject(record: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([, value]) => value !== undefined),
+  );
+}
+
+function slug(value: unknown): string {
+  return text(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
 export async function normalizeStoreMutation(request: Request, method: string): Promise<any> {
   const source = object(await readJson(request));
   const body = object(source.item || source.storeItem || source.payload || source);
@@ -72,11 +90,7 @@ export async function normalizeStoreMutation(request: Request, method: string): 
   if (visibility !== undefined) normalized.visibility = visibility === "private" ? "hidden" : visibility;
   if (sortOrder !== undefined) normalized.sortOrder = sortOrder;
   if (itemKey !== undefined && method === "POST") {
-    normalized.itemKey = itemKey
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 64);
+    normalized.itemKey = slug(itemKey).slice(0, 64);
   }
 
   if (method === "DELETE") {
@@ -84,6 +98,142 @@ export async function normalizeStoreMutation(request: Request, method: string): 
   }
 
   return { method: method === "PUT" ? "PATCH" : method, body: normalized };
+}
+
+function normalizeTargeting(body: Record<string, any>): Record<string, any> {
+  const explicit = object(body.targetingPayload || body.targeting);
+  const locations = array(
+    firstDefined(body, ["locations", "countries", "countryCodes", "targetLocations"]),
+  ).map((value) => text(object(value).code || object(value).countryCode || value))
+    .filter(Boolean);
+  const allPlayers = explicit.allPlayers === true ||
+    locations.some((value) => ["all", "all locations", "all countries"].includes(value.toLowerCase()));
+  const countryCodes = locations
+    .filter((value) => !["all", "all locations", "all countries"].includes(value.toLowerCase()))
+    .map((value) => value.toUpperCase());
+
+  return compactObject({
+    ...explicit,
+    allPlayers: allPlayers || explicit.allPlayers === true ? true : undefined,
+    countryCodes: countryCodes.length ? [...new Set(countryCodes)] : explicit.countryCodes,
+    playerIds: array(body.playerIds).length ? array(body.playerIds) : explicit.playerIds,
+    rosterLabels: array(body.rosterLabels).length ? array(body.rosterLabels) : explicit.rosterLabels,
+  });
+}
+
+function normalizeContractRewards(body: Record<string, any>): Record<string, any> {
+  const explicit = object(body.rewardPayload || body.rewards);
+  const explicitCash = object(explicit.cash || body.cashReward);
+  const cashAmount = optionalNumber(explicitCash, ["amount", "value"]) ??
+    optionalNumber(body, ["cashRewardAmount", "rewardCash", "cashAmount", "rewardAmount"]);
+  const currencyCode = optionalText(explicitCash, ["currencyCode", "currency"]) ||
+    optionalText(body, ["rewardCurrencyCode", "currencyCode", "currency"]) ||
+    "ECO";
+
+  const rawItems = array(explicit.items).length
+    ? array(explicit.items)
+    : array(firstDefined(body, ["itemRewards", "rewardItems", "attachedItemRewards"]));
+  const items = rawItems.map((value) => {
+    const item = object(value);
+    const storeItemId = optionalText(item, ["storeItemId", "itemUuid", "id", "value"]);
+    const quantity = optionalInteger(item, ["quantity", "qty", "amount"]);
+    if (!storeItemId || !quantity || quantity < 1) return null;
+    return { storeItemId, quantity };
+  }).filter(Boolean);
+
+  return compactObject({
+    cash: cashAmount !== undefined && cashAmount > 0
+      ? {
+          amount: Math.round(cashAmount * 100) / 100,
+          accountType: optionalText(explicitCash, ["accountType"]) || "cash",
+          currencyCode: currencyCode.toUpperCase(),
+        }
+      : explicit.cash === null ? null : undefined,
+    items: items.length ? items : undefined,
+  });
+}
+
+export async function normalizeContractCreate(request: Request): Promise<Record<string, any>> {
+  const source = object(await readJson(request));
+  const body = object(source.contract || source.assignment || source.payload || source);
+  const title = optionalText(body, ["title", "name"]) || "";
+  const instructions = optionalText(body, ["instructions", "details", "taskInstructions"]) || "";
+  const description = optionalText(body, ["description", "summary"]) || instructions;
+  const scheduledAt = optionalText(body, ["scheduledAt", "scheduleAt", "postAt", "publishAt"]);
+  const requestedStatus = (optionalText(body, ["status", "publishStatus"]) || "").toLowerCase();
+  const status = scheduledAt
+    ? "scheduled"
+    : ["draft", "scheduled", "active"].includes(requestedStatus)
+      ? requestedStatus
+      : body.publishNow === true
+        ? "active"
+        : "draft";
+  const targetingPayload = normalizeTargeting(body);
+  const metadata = {
+    ...object(body.metadata),
+    materials: array(firstDefined(body, ["materials", "attachments", "resources"])),
+    submissionRequirements: array(
+      firstDefined(body, ["submissionRequirements", "studentWork", "requiredSubmissions"]),
+    ),
+  };
+  const rewardPayload = normalizeContractRewards(body);
+  const explicitRequirements = object(body.requirementsPayload || body.requirements);
+  const requirementsPayload = compactObject({
+    ...explicitRequirements,
+    manualText: explicitRequirements.manualText || instructions || undefined,
+  });
+  const suppliedKey = optionalText(body, ["contractKey", "key", "slug"]);
+  const generatedKey = `${slug(title) || "contract"}-${crypto.randomUUID().slice(0, 8)}`;
+  const visibility = optionalText(body, ["visibility"]) ||
+    (targetingPayload.allPlayers === true ? "public" : "targeted");
+
+  return compactObject({
+    contractKey: suppliedKey ? slug(suppliedKey).slice(0, 64) : generatedKey,
+    title,
+    description,
+    instructions,
+    category: optionalText(body, ["category"]) || "general",
+    status,
+    visibility,
+    targetingPayload,
+    requirementsPayload,
+    rewardPayload,
+    completionMode: optionalText(body, ["completionMode"]) || "manual_review",
+    publishedAt: scheduledAt || optionalText(body, ["publishedAt"]),
+    deadlineAt: optionalText(body, ["deadlineAt", "deadline", "dueAt", "dueDate"]),
+    expiresAt: optionalText(body, ["expiresAt", "expirationAt"]),
+    metadata,
+  });
+}
+
+export async function normalizeContractReview(request: Request): Promise<Record<string, any>> {
+  const source = object(await readJson(request));
+  const body = object(source.review || source.payload || source);
+  const rawAction = (optionalText(body, ["action", "decision", "status"]) || "").toLowerCase();
+  const actionMap: Record<string, string> = {
+    approve: "approve",
+    approved: "approve",
+    complete: "approve",
+    completed: "approve",
+    accept: "approve",
+    accepted: "approve",
+    reject: "reject",
+    rejected: "reject",
+    fail: "reject",
+    failed: "reject",
+    request_revision: "request_revision",
+    revision: "request_revision",
+    revise: "request_revision",
+    changes_requested: "request_revision",
+  };
+  const feedback = optionalText(body, ["feedback", "comment", "note", "message"]);
+  return {
+    action: actionMap[rawAction] || rawAction,
+    resultPayload: {
+      ...object(body.resultPayload || body.result),
+      ...(feedback ? { feedback } : {}),
+    },
+  };
 }
 
 export async function normalizeSettingsMutation(request: Request): Promise<any> {
