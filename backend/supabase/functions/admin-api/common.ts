@@ -16,18 +16,31 @@ export const SUPABASE_SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 export const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`;
 
-const ALLOWED_ORIGINS = new Set([
-  "https://kohnerbouchard-star.github.io",
-  "http://localhost:4173",
-  "http://127.0.0.1:4173",
-  "http://[::]:4173",
+const PRODUCTION_ORIGIN = "https://kohnerbouchard-star.github.io";
+const LOOPBACK_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
 ]);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (origin === PRODUCTION_ORIGIN) return true;
+
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    return url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
 
 export function corsHeaders(request) {
   const origin = request.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.has(origin)
+  const allowedOrigin = origin && isAllowedOrigin(origin)
     ? origin
-    : "https://kohnerbouchard-star.github.io";
+    : PRODUCTION_ORIGIN;
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers":
