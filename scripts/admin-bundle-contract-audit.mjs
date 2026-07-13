@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 
 const source = readFileSync("admin/dist/admin-overview-terminal.js", "utf8");
+const routeManifest = JSON.parse(
+  readFileSync("scripts/admin-visible-route-manifest.json", "utf8"),
+);
 
 function unique(values) {
   return [...new Set(values)].sort();
@@ -10,6 +13,10 @@ function normalizeContext(value) {
   return String(value)
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizedRoute(value) {
+  return String(value).split("?", 1)[0];
 }
 
 const endpointMatches = [...source.matchAll(/(["'`])(\/[^"'`\n]{2,180})\1/g)]
@@ -36,6 +43,15 @@ const endpointOccurrences = endpointMatches.map((match) => {
   };
 });
 
+const actionContracts = [...source.matchAll(
+  /["']([^"']+)["']\s*:\s*\{\s*method\s*:\s*["'](GET|POST|PUT|PATCH|DELETE)["']\s*,\s*path\s*:\s*["']([^"']+)["']/g,
+)].map((match) => ({
+  action: match[1],
+  method: match[2],
+  path: match[3],
+  route: normalizedRoute(match[3]),
+}));
+
 const actionNames = unique([
   ...[...source.matchAll(/data-admin-terminal-action=["']([^"']+)["']/g)].map((match) => match[1]),
   ...[...source.matchAll(/dataset\.adminTerminalAction\s*=\s*["']([^"']+)["']/g)].map((match) => match[1]),
@@ -45,9 +61,53 @@ const requestMethods = unique(
   [...source.matchAll(/method\s*:\s*["'](GET|POST|PUT|PATCH|DELETE)["']/g)].map((match) => match[1]),
 );
 
+const visibleRoutes = unique(endpointFragments.map(normalizedRoute));
+const manifestRoutes = Object.keys(routeManifest).sort();
+const missingDispositions = visibleRoutes.filter((route) => !routeManifest[route]);
+const staleDispositions = manifestRoutes.filter((route) => !visibleRoutes.includes(route));
+const invalidDispositions = Object.entries(routeManifest)
+  .filter(([, disposition]) => ![
+    "implemented",
+    "explicitly_disabled",
+    "read_only_or_disabled_mutations",
+  ].includes(disposition))
+  .map(([route, disposition]) => ({ route, disposition }));
+const actionRoutesWithoutDisposition = unique(
+  actionContracts
+    .map((contract) => contract.route)
+    .filter((route) => !routeManifest[route]),
+);
+
+if (
+  missingDispositions.length ||
+  staleDispositions.length ||
+  invalidDispositions.length ||
+  actionRoutesWithoutDisposition.length
+) {
+  console.error(JSON.stringify({
+    missingDispositions,
+    staleDispositions,
+    invalidDispositions,
+    actionRoutesWithoutDisposition,
+  }, null, 2));
+  throw new Error("Visible admin route coverage is incomplete or stale.");
+}
+
+const dispositionCounts = Object.values(routeManifest).reduce((counts, disposition) => {
+  counts[disposition] = (counts[disposition] || 0) + 1;
+  return counts;
+}, {});
+
 console.log(JSON.stringify({
   endpointFragments,
   endpointOccurrences,
+  actionContracts,
   actionNames,
   requestMethods,
+  routeCoverage: {
+    visibleRouteCount: visibleRoutes.length,
+    manifestRouteCount: manifestRoutes.length,
+    dispositionCounts,
+    complete: true,
+  },
 }, null, 2));
