@@ -72,7 +72,7 @@ interface ActivePlayerCredentialRow {
   readonly player_id?: unknown;
 }
 
-interface CreatePlayerRequestBody {
+export interface CreatePlayerRequestBody {
   readonly displayName: string;
   readonly rosterLabel: string | null;
 }
@@ -263,7 +263,26 @@ export async function handlePlayerRosterRequest(
   }
 }
 
-async function readCreatePlayerRequestBody(
+function firstDefined(
+  record: Record<string, unknown>,
+  keys: readonly string[],
+): unknown {
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null) return value;
+  }
+  return undefined;
+}
+
+function normalizedPayload(value: Record<string, unknown>): Record<string, unknown> {
+  for (const key of ["player", "data", "payload"] as const) {
+    const nested = value[key];
+    if (isRecord(nested)) return { ...value, ...nested };
+  }
+  return value;
+}
+
+export async function readCreatePlayerRequestBody(
   request: Request,
 ): Promise<CreatePlayerRequestBody> {
   let value: unknown;
@@ -286,12 +305,29 @@ async function readCreatePlayerRequestBody(
     );
   }
 
+  const payload = normalizedPayload(value);
+
   return {
     displayName: parseRequiredText(
-      value.displayName,
+      firstDefined(payload, [
+        "displayName",
+        "name",
+        "playerName",
+        "studentName",
+        "fullName",
+        "username",
+      ]),
       "player_display_name_required",
       "displayName is required.",
     ),
-    rosterLabel: parseOptionalText(value.rosterLabel),
+    rosterLabel: parseOptionalText(
+      firstDefined(payload, [
+        "rosterLabel",
+        "roster",
+        "label",
+        "studentLabel",
+        "classLabel",
+      ]),
+    ),
   };
 }
