@@ -100,6 +100,15 @@ create table if not exists public.staff_admin_preferences (
 
 alter table public.staff_admin_preferences enable row level security;
 
+revoke all privileges on table public.attendance_day_locks
+  from anon, authenticated;
+revoke all privileges on table public.player_admin_flags
+  from anon, authenticated;
+revoke all privileges on table public.player_admin_settings
+  from anon, authenticated;
+revoke all privileges on table public.staff_admin_preferences
+  from anon, authenticated;
+
 comment on table public.attendance_day_locks is
   'Server-enforced administrator lock state for a game attendance date.';
 comment on table public.player_admin_flags is
