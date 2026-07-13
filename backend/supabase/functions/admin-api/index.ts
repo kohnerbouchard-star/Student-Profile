@@ -6,27 +6,14 @@ import {
   ensureOwnedGame,
   gameDto,
   json,
-  number,
-  proxyClassroom,
   resolveContext,
   selectGame,
 } from "./common.ts";
-import {
-  loadAttendance,
-  loadAttendanceHistory,
-  loadContracts,
-  loadMarket,
-  loadPlayers,
-  loadSettings,
-  loadStore,
-} from "./readModels.ts";
-import {
-  loadLogsPage,
-  logsToCsv,
-  updateAuditLogFlag,
-} from "./logs.ts";
+import { handleAccountOperation } from "./accountOperations.ts";
+import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
+import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 
-function routePath(url) {
+function routePath(url: URL): string {
   const marker = "/admin-api";
   const markerIndex = url.pathname.indexOf(marker);
   return markerIndex >= 0
@@ -34,106 +21,25 @@ function routePath(url) {
     : url.pathname;
 }
 
-function classroomGamePath(gameId, suffix) {
-  return `/games/${encodeURIComponent(gameId)}${suffix}`;
-}
-
-function classroomContractPath(gameId, suffix = "") {
-  return `/staff/game-sessions/${encodeURIComponent(gameId)}/contracts${suffix}`;
-}
-
-function csvResponse(request, csv, filename) {
-  return new Response(csv, {
-    status: 200,
-    headers: {
-      ...corsHeaders(request),
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
+async function handleGlobalRoute(
+  request: Request,
+  context: any,
+  path: string,
+): Promise<Response | null> {
+  const body = ["GET", "HEAD"].includes(request.method)
+    ? {}
+    : await request.clone().json().catch(() => ({}));
+  const accountOperation = await handleAccountOperation(context.service, {
+    path,
+    method: request.method,
+    staff: context.staff,
+    games: context.games,
+    body,
   });
-}
+  if (accountOperation.handled) {
+    return json(request, accountOperation.status, accountOperation.body);
+  }
 
-async function loadContractSubmissions(service, gameId) {
-  const result = await service
-    .from("player_contract_progress")
-    .select("*")
-    .eq("game_session_id", gameId)
-    .order("updated_at", { ascending: false });
-  if (result.error) throw result.error;
-  return result.data || [];
-}
-
-async function loadContractRewardAudit(service, gameId, contractId = "") {
-  let progressQuery = service
-    .from("player_contract_progress")
-    .select("id,contract_id,player_id,status,reward_issued_at,updated_at")
-    .eq("game_session_id", gameId)
-    .order("updated_at", { ascending: false });
-  if (contractId) progressQuery = progressQuery.eq("contract_id", contractId);
-
-  const progressResult = await progressQuery;
-  if (progressResult.error) throw progressResult.error;
-  const progress = progressResult.data || [];
-  if (!progress.length) return [];
-
-  const ledgerResult = await service
-    .from("ledger_entries")
-    .select("id,player_id,amount,currency_code,entry_type,source_domain,source_action,source_id,created_at")
-    .eq("game_session_id", gameId)
-    .eq("source_domain", "contracts")
-    .eq("source_action", "contract_reward_cash")
-    .in("source_id", progress.map((row) => row.id))
-    .order("created_at", { ascending: false });
-  if (ledgerResult.error) throw ledgerResult.error;
-
-  const progressById = new Map(progress.map((row) => [row.id, row]));
-  return (ledgerResult.data || []).map((entry) => {
-    const row = progressById.get(entry.source_id);
-    return {
-      id: entry.id,
-      ledgerEntryId: entry.id,
-      contractId: row?.contract_id || contractId || null,
-      progressId: entry.source_id,
-      playerId: entry.player_id,
-      amount: number(entry.amount),
-      currencyCode: entry.currency_code,
-      entryType: entry.entry_type,
-      sourceDomain: entry.source_domain,
-      sourceAction: entry.source_action,
-      rewardIssuedAt: row?.reward_issued_at || entry.created_at,
-      createdAt: entry.created_at,
-    };
-  });
-}
-
-async function loadMarketChart(service, gameId, assetId) {
-  const ticks = await service
-    .from("stock_price_ticks")
-    .select("tick_index,price,previous_price,change_pct,volume,created_at")
-    .eq("game_session_id", gameId)
-    .eq("stock_asset_id", assetId)
-    .order("tick_index", { ascending: true })
-    .limit(500);
-  if (ticks.error) throw ticks.error;
-
-  return (ticks.data || []).map((row) => {
-    const close = number(row.price);
-    const open = number(row.previous_price, close);
-    return {
-      time: row.created_at,
-      timestamp: row.created_at,
-      close,
-      open,
-      high: Math.max(close, open),
-      low: Math.min(close, open),
-      volume: number(row.volume),
-      changePct: number(row.change_pct),
-    };
-  });
-}
-
-async function handleGlobalRoute(request, context, path) {
   if (path === "/session/bootstrap" && request.method === "GET") {
     const selected = selectGame(context, request);
     const claims = context.user || {};
@@ -155,7 +61,9 @@ async function handleGlobalRoute(request, context, path) {
         session: {
           id: claims.id || context.staff.id,
           csrfToken: "",
-          expiresAt: claims.exp ? new Date(Number(claims.exp) * 1000).toISOString() : null,
+          expiresAt: claims.exp
+            ? new Date(Number(claims.exp) * 1000).toISOString()
+            : null,
         },
         capabilities: {
           notifications: false,
@@ -163,13 +71,17 @@ async function handleGlobalRoute(request, context, path) {
           helpArticles: true,
           auditLogFlags: true,
           auditLogExport: true,
+          overallScore: false,
+          marketplaceAdminTrading: false,
         },
       },
     });
   }
 
   if (path === "/games" && request.method === "GET") {
-    return json(request, 200, { data: { games: context.games.map(gameDto) } });
+    return json(request, 200, {
+      data: { games: context.games.map(gameDto) },
+    });
   }
 
   if (path === "/account/profile" && request.method === "GET") {
@@ -187,10 +99,6 @@ async function handleGlobalRoute(request, context, path) {
     });
   }
 
-  if (path === "/account/preferences" && request.method === "GET") {
-    return json(request, 200, { data: { preferences: {} } });
-  }
-
   if (path === "/notifications" && request.method === "GET") {
     return json(request, 200, {
       data: {
@@ -202,7 +110,10 @@ async function handleGlobalRoute(request, context, path) {
     });
   }
 
-  if (path.startsWith("/account/security") && request.method === "GET") {
+  if (
+    (path === "/account/security" || path === "/account/sessions") &&
+    request.method === "GET"
+  ) {
     const claims = context.user || {};
     return json(request, 200, {
       data: {
@@ -213,36 +124,13 @@ async function handleGlobalRoute(request, context, path) {
             current: true,
             userId: claims.id || null,
             email: context.staff.email,
-            expiresAt: claims.exp ? new Date(Number(claims.exp) * 1000).toISOString() : null,
+            expiresAt: claims.exp
+              ? new Date(Number(claims.exp) * 1000).toISOString()
+              : null,
           }],
           events: [],
           implementationStatus: "current_session_only",
         },
-      },
-    });
-  }
-
-  if (path === "/help/admin-console" && request.method === "GET") {
-    return json(request, 200, {
-      data: {
-        articles: [
-          {
-            id: "admin-start",
-            title: "Administrator console basics",
-            summary: "Select a game, review the overview, and use the left navigation to manage the simulation.",
-          },
-          {
-            id: "attendance-scan",
-            title: "Attendance scanning",
-            summary: "Scan a player's access code. Duplicate attendance and duplicate rewards are rejected by the backend.",
-          },
-          {
-            id: "contract-rewards",
-            title: "Contract review and rewards",
-            summary: "Approve submitted work before issuing rewards. Reward issuance is idempotent.",
-          },
-        ],
-        implementationStatus: "available",
       },
     });
   }
@@ -254,417 +142,20 @@ async function handleGlobalRoute(request, context, path) {
   const switchMatch = path.match(/^\/games\/([^/]+)\/switch$/);
   if (switchMatch && request.method === "POST") {
     const game = ensureOwnedGame(context, decodeURIComponent(switchMatch[1]));
-    if (!game) {
-      return json(request, 404, {
+    return game
+      ? json(request, 200, { data: { activeGame: gameDto(game) } })
+      : json(request, 404, {
         code: "game_not_found",
         message: "That game is not available to this administrator.",
       });
-    }
-    return json(request, 200, { data: { activeGame: gameDto(game) } });
   }
 
   return null;
 }
 
-async function handleGameReads(request, context, url, game, gameId, suffix) {
-  if (request.method !== "GET") return null;
-
-  if (suffix === "/dashboard") {
-    const players = await loadPlayers(context.service, gameId);
-    const [attendance, contracts] = await Promise.all([
-      loadAttendance(context.service, gameId, players),
-      loadContracts(context.service, gameId),
-    ]);
-    const leaderboard = [...players]
-      .sort((a, b) => number(b.netWorth) - number(a.netWorth))
-      .map((player, index) => ({
-        ...player,
-        rank: index + 1,
-        leaderboardBasis: "net_worth",
-      }));
-
-    return json(request, 200, {
-      data: {
-        game: gameDto(game),
-        leaderboard,
-        leaderboardBasis: "net_worth",
-        overallScoreStatus: "not_configured",
-        contracts: contracts.filter((item) =>
-          ["active", "scheduled", "draft"].includes(item.status)
-        ),
-        notifications: [],
-        notificationCount: 0,
-        ...attendance,
-      },
-    });
-  }
-
-  if (suffix === "/players") {
-    const players = await loadPlayers(context.service, gameId);
-    return json(request, 200, {
-      data: { players, roster: players, totalPlayers: players.length },
-    });
-  }
-
-  if (suffix === "/attendance/today") {
-    const players = await loadPlayers(context.service, gameId);
-    return json(request, 200, {
-      data: await loadAttendance(context.service, gameId, players),
-    });
-  }
-
-  if (suffix === "/attendance/history") {
-    const players = await loadPlayers(context.service, gameId);
-    return json(request, 200, {
-      data: await loadAttendanceHistory(context.service, gameId, players, url),
-    });
-  }
-
-  if (suffix === "/contracts") {
-    const contracts = await loadContracts(context.service, gameId);
-    return json(request, 200, {
-      data: { contracts, assignments: contracts },
-    });
-  }
-
-  if (suffix === "/contracts/reward-audit") {
-    const rewardAudit = await loadContractRewardAudit(context.service, gameId);
-    return json(request, 200, {
-      data: { rewardAudit, contractRewardAudit: rewardAudit },
-    });
-  }
-
-  const rewardAuditMatch = suffix.match(/^\/contracts\/([^/]+)\/reward-audit$/);
-  if (rewardAuditMatch) {
-    const contractId = decodeURIComponent(rewardAuditMatch[1]);
-    const rewardAudit = await loadContractRewardAudit(
-      context.service,
-      gameId,
-      contractId,
-    );
-    return json(request, 200, {
-      data: { contractId, rewardAudit, contractRewardAudit: rewardAudit },
-    });
-  }
-
-  const progressMatch = suffix.match(/^\/contracts\/([^/]+)\/progress$/);
-  if (progressMatch) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(decodeURIComponent(progressMatch[1]))}/progress`,
-      ),
-      "GET",
-    );
-  }
-
-  if (suffix === "/contract-submissions") {
-    const submissions = await loadContractSubmissions(context.service, gameId);
-    return json(request, 200, {
-      data: { contractSubmissions: submissions, submissions },
-    });
-  }
-
-  if (suffix === "/store/items") {
-    const storeItems = await loadStore(context.service, gameId);
-    return json(request, 200, {
-      data: { storeItems, items: storeItems },
-    });
-  }
-
-  if (suffix === "/market/assets") {
-    const market = await loadMarket(context.service, gameId);
-    return json(request, 200, {
-      data: {
-        assets: market.assets,
-        marketplaceSecurities: market.assets,
-      },
-    });
-  }
-
-  const profileMatch = suffix.match(/^\/market\/assets\/([^/]+)\/profile$/);
-  if (profileMatch) {
-    const market = await loadMarket(context.service, gameId);
-    const assetId = decodeURIComponent(profileMatch[1]);
-    const asset = market.assets.find((item) => String(item.id) === assetId);
-    if (!asset) {
-      return json(request, 404, {
-        code: "asset_not_found",
-        message: "Market asset was not found.",
-      });
-    }
-    return json(request, 200, { data: { asset, profile: asset } });
-  }
-
-  const chartMatch = suffix.match(/^\/market\/assets\/([^/]+)\/chart$/);
-  if (chartMatch) {
-    const candles = await loadMarketChart(
-      context.service,
-      gameId,
-      decodeURIComponent(chartMatch[1]),
-    );
-    return json(request, 200, { data: { candles, chart: candles } });
-  }
-
-  const financialsMatch = suffix.match(
-    /^\/market\/assets\/([^/]+)\/financials$/,
-  );
-  if (financialsMatch) {
-    const market = await loadMarket(context.service, gameId);
-    const assetId = decodeURIComponent(financialsMatch[1]);
-    const asset = market.assets.find((item) => String(item.id) === assetId);
-    if (!asset) {
-      return json(request, 404, {
-        code: "asset_not_found",
-        message: "Market asset was not found.",
-      });
-    }
-    return json(request, 200, {
-      data: {
-        assetId: asset.id,
-        financials: asset.financials || {},
-        fundamentals: asset.fundamentals || {},
-      },
-    });
-  }
-
-  if (suffix === "/market/trades/recent") {
-    const market = await loadMarket(context.service, gameId);
-    return json(request, 200, {
-      data: {
-        trades: market.trades,
-        marketplaceTrades: market.trades,
-      },
-    });
-  }
-
-  if (suffix === "/market/events") {
-    const market = await loadMarket(context.service, gameId);
-    return json(request, 200, {
-      data: {
-        events: market.events,
-        marketEvents: market.events,
-      },
-    });
-  }
-
-  if (suffix === "/settings") {
-    return json(request, 200, {
-      data: { settings: await loadSettings(context.service, gameId) },
-    });
-  }
-
-  if (suffix === "/logs") {
-    return json(request, 200, {
-      data: await loadLogsPage(
-        context.service,
-        gameId,
-        context.staff.id,
-        url,
-      ),
-    });
-  }
-
-  if (suffix === "/logs/export") {
-    const exportUrl = new URL(url);
-    exportUrl.searchParams.set("page", "1");
-    exportUrl.searchParams.set("pageSize", "500");
-    const page = await loadLogsPage(
-      context.service,
-      gameId,
-      context.staff.id,
-      exportUrl,
-      { page: 1, pageSize: 500 },
-    );
-    return csvResponse(
-      request,
-      logsToCsv(page.logs),
-      `econovaria-audit-log-${gameId}.csv`,
-    );
-  }
-
-  return null;
-}
-
-async function handleGameWrites(request, context, gameId, suffix) {
-  if (suffix === "/join-code/reset" && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/join-code/reset"),
-      "POST",
-    );
-  }
-
-  if (suffix === "/players" && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/players"),
-      "POST",
-    );
-  }
-
-  const resetCodeMatch = suffix.match(
-    /^\/players\/([^/]+)\/access-code\/reset$/,
-  );
-  if (resetCodeMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(
-        gameId,
-        `/players/${
-          encodeURIComponent(decodeURIComponent(resetCodeMatch[1]))
-        }/access-code/reset`,
-      ),
-      "POST",
-    );
-  }
-
-  if (suffix === "/attendance/scans" && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/attendance/scan"),
-      "POST",
-    );
-  }
-
-  if (suffix === "/contracts" && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(gameId),
-      "POST",
-    );
-  }
-
-  const publishMatch = suffix.match(/^\/contracts\/([^/]+)\/publish$/);
-  if (publishMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(decodeURIComponent(publishMatch[1]))}/publish`,
-      ),
-      "POST",
-    );
-  }
-
-  const reviewMatch = suffix.match(
-    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/,
-  );
-  if (reviewMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(decodeURIComponent(reviewMatch[1]))}/progress/${
-          encodeURIComponent(decodeURIComponent(reviewMatch[2]))
-        }/review`,
-      ),
-      "POST",
-    );
-  }
-
-  const rewardMatch = suffix.match(
-    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/,
-  );
-  if (rewardMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${
-          encodeURIComponent(decodeURIComponent(rewardMatch[2]))
-        }/rewards/issue`,
-      ),
-      "POST",
-    );
-  }
-
-  if (suffix === "/store/items" && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/store/items"),
-      "POST",
-    );
-  }
-
-  const storeItemMatch = suffix.match(/^\/store\/items\/([^/]+)$/);
-  if (
-    storeItemMatch &&
-    ["PUT", "PATCH", "DELETE"].includes(request.method)
-  ) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(
-        gameId,
-        `/store/items/${
-          encodeURIComponent(decodeURIComponent(storeItemMatch[1]))
-        }`,
-      ),
-      request.method,
-    );
-  }
-
-  if (
-    suffix === "/settings" &&
-    ["PUT", "PATCH", "POST"].includes(request.method)
-  ) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/settings"),
-      request.method,
-    );
-  }
-
-  const logFlagMatch = suffix.match(/^\/logs\/([^/]+)\/flag$/);
-  if (
-    logFlagMatch &&
-    ["POST", "PATCH", "DELETE"].includes(request.method)
-  ) {
-    const auditLogId = decodeURIComponent(logFlagMatch[1]);
-    const result = await updateAuditLogFlag(
-      context.service,
-      gameId,
-      auditLogId,
-      context.staff.id,
-      request,
-    );
-    if (!result.found) {
-      return json(request, 404, {
-        code: "audit_log_not_found",
-        message: "Audit-log event was not found for this game.",
-      });
-    }
-    return json(request, 200, {
-      data: {
-        auditLogId,
-        flag: result.flag,
-        flagged: result.flag?.status === "open",
-      },
-    });
-  }
-
-  return null;
-}
-
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders(request),
-    });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -691,10 +182,16 @@ Deno.serve(async (request) => {
 
     const gameMatch = path.match(/^\/games\/([^/]+)(\/.*)?$/);
     if (!gameMatch) {
-      return json(request, 404, {
-        code: "route_not_found",
-        message: "Admin API route was not found.",
+      const unsupported = handleUnsupportedOperation({
+        path,
+        method: request.method,
       });
+      return unsupported.handled
+        ? json(request, unsupported.status, unsupported.body)
+        : json(request, 404, {
+          code: "route_not_found",
+          message: "Admin API route was not found.",
+        });
     }
 
     const gameId = decodeURIComponent(gameMatch[1]);
@@ -707,7 +204,7 @@ Deno.serve(async (request) => {
       });
     }
 
-    const readResponse = await handleGameReads(
+    const readResponse = await handleGameRead(
       request,
       context,
       url,
@@ -717,13 +214,22 @@ Deno.serve(async (request) => {
     );
     if (readResponse) return readResponse;
 
-    const writeResponse = await handleGameWrites(
+    const writeResponse = await handleGameWrite(
       request,
       context,
+      url,
       gameId,
       suffix,
     );
     if (writeResponse) return writeResponse;
+
+    const unsupported = handleUnsupportedOperation({
+      path,
+      method: request.method,
+    });
+    if (unsupported.handled) {
+      return json(request, unsupported.status, unsupported.body);
+    }
 
     return json(request, 501, {
       code: "admin_route_not_implemented",
@@ -733,7 +239,7 @@ Deno.serve(async (request) => {
   } catch (error) {
     console.error("admin-api failure", {
       path,
-      error: String(error?.message || error),
+      error: String((error as any)?.message || error),
     });
     return json(request, 500, {
       code: "admin_api_failed",
