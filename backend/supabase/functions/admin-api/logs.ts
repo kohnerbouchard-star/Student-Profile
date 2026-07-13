@@ -3,14 +3,14 @@ import { number, object, text } from "./common.ts";
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_PAGE_SIZE = 500;
 
-function safeDateTime(value) {
+function safeDateTime(value: unknown): string {
   const normalized = text(value);
   if (!normalized) return "";
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
 }
 
-function relatedPageFor(targetType) {
+function relatedPageFor(targetType: unknown): string | null {
   const type = text(targetType).toLowerCase();
   if (type.includes("attendance")) return "Attendance";
   if (type.includes("contract")) return "Assignments";
@@ -21,16 +21,22 @@ function relatedPageFor(targetType) {
   return null;
 }
 
-function sanitizeSearch(value) {
+function sanitizeSearch(value: unknown): string {
   return text(value).replace(/[%_(),]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
-function csvCell(value) {
+function csvCell(value: unknown): string {
   const source = typeof value === "string" ? value : JSON.stringify(value ?? "");
   return `"${source.replace(/"/g, '""')}"`;
 }
 
-export async function loadLogsPage(service, gameId, staffId, url, options = {}) {
+export async function loadLogsPage(
+  service: any,
+  gameId: string,
+  staffId: string,
+  url: URL,
+  options: Record<string, any> = {},
+): Promise<any> {
   const page = Math.max(1, Math.trunc(number(options.page ?? url.searchParams.get("page"), 1)));
   const requestedPageSize = Math.trunc(
     number(options.pageSize ?? url.searchParams.get("pageSize") ?? url.searchParams.get("limit"), DEFAULT_PAGE_SIZE),
@@ -65,15 +71,15 @@ export async function loadLogsPage(service, gameId, staffId, url, options = {}) 
 
   const result = await query;
   if (result.error) throw result.error;
-  let rows = result.data || [];
+  let rows: any[] = result.data || [];
 
-  const flagsByAuditId = new Map();
+  const flagsByAuditId = new Map<string, any>();
   if (rows.length) {
     const flags = await service
       .from("audit_log_flags")
       .select("id,audit_log_id,flagged_by_staff_user_id,reason,status,created_at,resolved_at")
       .eq("game_session_id", gameId)
-      .in("audit_log_id", rows.map((row) => row.id))
+      .in("audit_log_id", rows.map((row: any) => row.id))
       .order("created_at", { ascending: false });
     if (flags.error) throw flags.error;
     for (const flag of flags.data || []) {
@@ -83,7 +89,7 @@ export async function loadLogsPage(service, gameId, staffId, url, options = {}) 
     }
   }
 
-  rows = rows.map((row) => {
+  rows = rows.map((row: any) => {
     const flag = flagsByAuditId.get(row.id) || null;
     const relatedPage = relatedPageFor(row.target_type);
     return {
@@ -117,7 +123,7 @@ export async function loadLogsPage(service, gameId, staffId, url, options = {}) 
     };
   });
 
-  if (flaggedOnly) rows = rows.filter((row) => row.flagged);
+  if (flaggedOnly) rows = rows.filter((row: any) => row.flagged);
 
   const total = number(result.count, rows.length);
   return {
@@ -145,7 +151,7 @@ export async function loadLogsPage(service, gameId, staffId, url, options = {}) 
   };
 }
 
-export function logsToCsv(rows) {
+export function logsToCsv(rows: any[]): string {
   const headers = [
     "Timestamp",
     "Action",
@@ -175,12 +181,12 @@ export function logsToCsv(rows) {
 }
 
 export async function updateAuditLogFlag(
-  service,
-  gameId,
-  auditLogId,
-  staffId,
-  request,
-) {
+  service: any,
+  gameId: string,
+  auditLogId: string,
+  staffId: string,
+  request: Request,
+): Promise<any> {
   const audit = await service
     .from("audit_log")
     .select("id")
@@ -190,7 +196,7 @@ export async function updateAuditLogFlag(
   if (audit.error) throw audit.error;
   if (!audit.data) return { found: false, flag: null };
 
-  let body = {};
+  let body: Record<string, any> = {};
   try {
     body = object(await request.json());
   } catch {
