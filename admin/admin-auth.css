@@ -109,3 +109,20 @@ body.admin-auth-active { overflow: hidden; }
   .admin-auth-two-col { grid-template-columns: 1fr; }
   .admin-auth-intro { display: none; }
 }
+
+
+.admin-auth-link {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 6px 0;
+  border: 0;
+  color: rgba(186, 243, 255, 0.72);
+  background: transparent;
+  cursor: pointer;
+  font: 800 9px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.admin-auth-link:hover { color: var(--auth-cyan); text-decoration: underline; }
+.admin-auth-link:disabled { cursor: wait; opacity: 0.55; }

@@ -508,3 +508,20 @@
   .login-root .scanline,
   .login-root .logo-mark { animation: none; }
 }
+
+
+.login-root .auth-link-button {
+  width: 100%;
+  margin: -4px 0 0;
+  padding: 5px 0;
+  border: 0;
+  color: color-mix(in srgb, var(--login-input) 72%, white 8%);
+  background: transparent;
+  cursor: pointer;
+  font: 800 9px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.login-root .auth-link-button:hover { text-decoration: underline; }
+.login-root .auth-link-button:disabled { cursor: wait; opacity: 0.55; }

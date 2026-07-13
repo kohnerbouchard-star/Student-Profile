@@ -395,6 +395,61 @@
     }
   }
 
+  async function requestPasswordReset() {
+    const form = document.getElementById("adminSignInForm");
+    const message = document.getElementById("adminSignInMessage");
+    const button = document.getElementById("adminForgotAccessCode");
+    const email = form?.elements?.email?.value?.trim() || "";
+
+    showMessage(message, "", false);
+
+    if (!email) {
+      return showMessage(message, "Enter your Admin Email first.", true);
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return showMessage(message, "Enter a valid Admin Email.", true);
+    }
+
+    const redirectTo = new URL("../auth/reset-password.html", document.baseURI).href;
+    if (button) button.disabled = true;
+
+    try {
+      const response = await nativeFetch(
+        `${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+          },
+          body: JSON.stringify({ email })
+        }
+      );
+
+      const data = await readJson(response);
+
+      if (!response.ok) {
+        return showMessage(
+          message,
+          data?.msg || data?.message || data?.error_description || "The reset email could not be sent.",
+          true
+        );
+      }
+
+      showMessage(
+        message,
+        "If that administrator account exists, a password reset email has been sent.",
+        false
+      );
+    } catch (_) {
+      showMessage(message, "Could not connect to password recovery.", true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   async function handleSignIn(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -478,6 +533,7 @@
     authState.initialized = true;
     document.querySelectorAll("[data-auth-mode]").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
     document.getElementById("adminSignInForm")?.addEventListener("submit", handleSignIn);
+    document.getElementById("adminForgotAccessCode")?.addEventListener("click", requestPasswordReset);
     document.getElementById("adminCreateForm")?.addEventListener("submit", handleCreate);
     document.getElementById("adminGameBack")?.addEventListener("click", showSignIn);
     void restoreSession();
