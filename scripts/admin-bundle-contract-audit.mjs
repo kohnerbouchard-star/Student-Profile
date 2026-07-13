@@ -72,10 +72,10 @@ const invalidDispositions = Object.entries(routeManifest)
     "read_only_or_disabled_mutations",
   ].includes(disposition))
   .map(([route, disposition]) => ({ route, disposition }));
+const actionContractsWithoutDisposition = actionContracts
+  .filter((contract) => !routeManifest[contract.route]);
 const actionRoutesWithoutDisposition = unique(
-  actionContracts
-    .map((contract) => contract.route)
-    .filter((route) => !routeManifest[route]),
+  actionContractsWithoutDisposition.map((contract) => contract.route),
 );
 
 if (
@@ -89,6 +89,7 @@ if (
     staleDispositions,
     invalidDispositions,
     actionRoutesWithoutDisposition,
+    actionContractsWithoutDisposition,
   }, null, 2));
   throw new Error("Visible admin route coverage is incomplete or stale.");
 }
