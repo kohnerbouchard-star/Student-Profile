@@ -4,6 +4,7 @@ import {
   normalizeSettingsMutation,
   normalizeStoreMutation,
 } from "./mutationAdapters.ts";
+import { issueContractRewardsAtomically } from "./contractRewards.ts";
 
 export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -157,6 +158,19 @@ function isSettingsMutationPath(path, method) {
     /^\/games\/[^/]+\/settings$/.test(String(path));
 }
 
+function atomicContractRewardPath(path, method) {
+  if (method !== "POST") return null;
+  const match = String(path).match(
+    /^\/staff\/game-sessions\/([^/]+)\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/,
+  );
+  if (!match) return null;
+  return {
+    gameSessionId: decodeURIComponent(match[1]),
+    contractId: decodeURIComponent(match[2]),
+    progressId: decodeURIComponent(match[3]),
+  };
+}
+
 async function fetchClassroom(request, context, path, method, body) {
   const headers = new Headers();
   headers.set("apikey", SUPABASE_ANON_KEY);
@@ -194,6 +208,21 @@ export async function proxyClassroom(
   method = request.method,
   overrideBody = undefined,
 ) {
+  const rewardRoute = atomicContractRewardPath(path, method);
+  if (rewardRoute) {
+    const result = await issueContractRewardsAtomically(context.service, {
+      ...rewardRoute,
+      staffUserId: context.staff.id,
+      requestId: request.headers.get("x-request-id") ||
+        request.headers.get("x-idempotency-key") ||
+        crypto.randomUUID(),
+    });
+    if (!result.ok) {
+      return json(request, result.status, { error: result.error });
+    }
+    return json(request, result.status, result.body);
+  }
+
   if (isStoreMutationPath(path, method) && overrideBody === undefined) {
     const normalized = await normalizeStoreMutation(request, method);
     return fetchClassroom(request, context, path, normalized.method, normalized.body);
