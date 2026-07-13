@@ -116,6 +116,8 @@
 
           <div class="mode-tabs" role="tablist" aria-label="Login mode">
             <button class="mode-tab active" data-mode="player" type="button" role="tab" aria-selected="true">Player</button>
+            <button class="mode-tab" data-mode="admin" type="button" role="tab" aria-selected="false">Admin</button>
+            <button class="mode-tab" data-mode="create" type="button" role="tab" aria-selected="false">Create Game</button>
           </div>
 
           <div id="playerPane" class="mode-pane active">
@@ -124,16 +126,146 @@
                 <span>Game / Session Code</span>
                 <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" />
               </label>
+
               <label>
                 <span>Player ID</span>
                 <input id="playerId" autocomplete="off" placeholder="Enter Player ID" />
               </label>
+
               <label class="disabled-field">
                 <span>Access Code <em>Future feature</em></span>
                 <input id="playerAccessCode" type="password" placeholder="Disabled for this release" disabled aria-disabled="true" />
               </label>
+
               <div id="playerMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn cyan" type="submit">Enter Game</button>
+            </form>
+          </div>
+
+          <div id="adminPane" class="mode-pane">
+            <div id="adminLoginStep">
+              <form id="adminForm" class="form-stack">
+                <label>
+                  <span>Admin Email</span>
+                  <input
+                    id="adminEmail"
+                    type="email"
+                    autocomplete="username"
+                    placeholder="teacher@example.com"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Access Code</span>
+                  <input
+                    id="adminAccessCode"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Enter Access Code"
+                    required
+                  />
+                </label>
+
+                <div id="adminMessage" class="login-message status-message hidden"></div>
+                <button class="submit-btn amber" type="submit">Admin Login</button>
+                <button id="forgotAdminAccessCode" class="auth-link-button" type="button">Forgot Access Code?</button>
+              </form>
+            </div>
+
+            <div id="adminGamesStep" class="hidden">
+              <div class="step-header">
+                <span>Select Active Game</span>
+                <button id="backToAdminLogin" type="button">Back</button>
+              </div>
+
+              <div id="selectedGameMessage" class="login-message status-message hidden"></div>
+              <div id="adminGameList" class="game-list"></div>
+            </div>
+          </div>
+
+          <div id="createPane" class="mode-pane">
+            <form id="createForm" class="form-stack form-stack-compact">
+              <label>
+                <span>License / Purchase Code</span>
+                <input
+                  id="licenseCode"
+                  autocomplete="off"
+                  placeholder="Enter License Code"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Teacher / Admin Email</span>
+                <input
+                  id="createEmail"
+                  type="email"
+                  autocomplete="username"
+                  placeholder="teacher@example.com"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Display Name</span>
+                <input
+                  id="createDisplayName"
+                  autocomplete="name"
+                  placeholder="Teacher Name"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Game Name</span>
+                <input
+                  id="sessionName"
+                  autocomplete="off"
+                  placeholder="Period 3 Economy"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Difficulty</span>
+                <select id="difficultyLevel" required>
+                  <option value="" selected disabled>Select difficulty</option>
+                  <option value="easy">Easy</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="hard">Hard</option>
+                  <option value="insane">Insane</option>
+                </select>
+              </label>
+
+              <div class="two-col">
+                <label>
+                  <span>Access Code</span>
+                  <input
+                    id="createAccessCode"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="Minimum 8 characters"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Confirm</span>
+                  <input
+                    id="confirmAccessCode"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="Confirm Access Code"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div id="createMessage" class="login-message status-message hidden"></div>
+              <button class="submit-btn purple" type="submit">Create Game</button>
             </form>
           </div>
 

@@ -1,0 +1,68 @@
+
+.admin-terminal-session-gate-v604{min-height:calc(100vh - 48px);display:grid;place-content:center;text-align:center;gap:10px;padding:48px;color:#dffbff;background:radial-gradient(circle at 50% 40%,rgba(0,221,255,.08),transparent 38%)}
+.admin-terminal-session-gate-v604 span,.admin-terminal-endpoint-state-v604 span{font:700 11px/1.2 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#61e9ff}.admin-terminal-session-gate-v604 strong{font-size:24px}.admin-terminal-session-gate-v604 p{max-width:560px;color:#91aeb7}.admin-terminal-session-gate-v604 a{justify-self:center;padding:10px 16px;border:1px solid #ff6b4a;color:#fff;text-decoration:none}.admin-terminal-session-gate-v604.is-error strong{color:#ff8d76}
+.admin-terminal-endpoint-state-v604{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(255,184,72,.4);background:rgba(255,184,72,.08)}.admin-terminal-endpoint-state-v604 div{display:grid;gap:3px}.admin-terminal-endpoint-state-v604 small{color:#b8c6ca}.admin-terminal-endpoint-state-v604 button{white-space:nowrap}
+.admin-terminal-player-real-data-v604{display:grid;gap:16px;padding:18px}.admin-terminal-player-real-data-v604>header{display:grid;gap:4px}.admin-terminal-player-real-data-v604>header span{font:700 10px/1.2 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#61e9ff}.admin-terminal-player-real-data-v604>header small{color:#8ea6ad}.admin-terminal-player-real-summary-v604{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.admin-terminal-player-real-summary-v604 article,.admin-terminal-player-real-grid-v604>section{border:1px solid rgba(111,226,245,.18);background:rgba(5,18,24,.7);padding:12px}.admin-terminal-player-real-summary-v604 article{display:grid;gap:6px}.admin-terminal-player-real-summary-v604 span{font-size:11px;color:#8ea6ad}.admin-terminal-player-real-grid-v604{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.admin-terminal-player-real-grid-v604>section{display:grid;align-content:start;gap:8px}.admin-terminal-player-real-grid-v604 h4{margin:0 0 4px;color:#eaffff}.admin-terminal-player-real-grid-v604 section>article{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)}.admin-terminal-player-real-grid-v604 section>article div{display:grid;gap:2px}.admin-terminal-player-real-grid-v604 small{color:#82979d}.admin-terminal-player-real-grid-v604 b{white-space:nowrap}
+@media(max-width:900px){.admin-terminal-player-real-summary-v604,.admin-terminal-player-real-grid-v604{grid-template-columns:1fr 1fr}}@media(max-width:620px){.admin-terminal-player-real-summary-v604,.admin-terminal-player-real-grid-v604{grid-template-columns:1fr}.admin-terminal-endpoint-state-v604{align-items:flex-start;flex-direction:column}}
+
+/* Durable export history rows retained as part of the active integrity layer. */
+.admin-terminal-export-history-row {
+  display: grid;
+  width: 100%;
+  gap: 0.3rem;
+  text-align: left;
+}
+
+/* v605 cross-game and integrity states */
+.admin-terminal-auth-cleared-v605{grid-template-columns:1fr;min-height:100vh}
+.admin-terminal-auth-cleared-v605 .admin-terminal-shell-main{display:grid;place-items:center;min-height:100vh;padding:32px}
+.admin-terminal-log-detail.is-empty .admin-terminal-log-detail-card{min-height:180px;display:grid;place-items:center;text-align:center}
+[data-admin-terminal-attendance-reward-form] input[readonly]{opacity:.78;cursor:not-allowed}
+
+
+/* v606 CSP-safe migrated player operations rules */
+          .admin-terminal-modal-backdrop.is-player-ops-backdrop{padding:18px!important;place-items:center!important;}
+          .admin-terminal-modal.is-player-ops-frame{width:min(860px,calc(100vw - 36px))!important;height:min(590px,calc(100vh - 36px))!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;overflow:visible!important;}
+          .admin-terminal-modal.is-player-ops-frame .admin-terminal-modal-body{position:absolute!important;inset:0!important;display:block!important;overflow:visible!important;padding:0!important;}
+          .admin-terminal-player-ops-modal{box-sizing:border-box!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;overflow:hidden!important;padding:24px!important;}
+          .admin-terminal-player-ops-modal.is-amber{border-color:rgba(255,196,121,.34)!important;}
+          .admin-terminal-player-ops-modal.is-red{border-color:rgba(255,119,119,.34)!important;}
+          .admin-terminal-player-ops-close{top:10px!important;right:10px!important;width:32px!important;height:32px!important;font-size:17px!important;}
+          .admin-terminal-player-ops-head{min-height:0!important;padding:0 48px 12px 0!important;border-bottom:1px solid rgba(0,212,255,.14)!important;}
+          .admin-terminal-player-ops-head span{font-size:8px!important;letter-spacing:.11em!important;}
+          .admin-terminal-player-ops-head strong{margin-top:3px!important;font-size:23px!important;letter-spacing:-.065em!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+          .admin-terminal-player-ops-head small{display:block!important;margin-top:4px!important;max-width:none!important;font-size:9px!important;line-height:1.22!important;color:rgba(190,205,207,.82)!important;}
+          .admin-terminal-player-ops-body{display:grid!important;align-content:start!important;gap:10px!important;min-height:0!important;overflow:auto!important;padding:14px 8px 2px 0!important;scrollbar-width:thin!important;}
+          .admin-terminal-player-ops-grid{display:grid!important;gap:7px!important;min-width:0!important;}
+          .admin-terminal-player-ops-grid.is-two{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-grid.is-three{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-grid.is-four{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-panel{position:relative!important;min-width:0!important;min-height:0!important;padding:12px!important;border-color:rgba(0,212,255,.16)!important;background:linear-gradient(180deg,rgba(0,212,255,.045),rgba(2,10,20,.56))!important;}
+          .admin-terminal-player-ops-modal.is-amber .admin-terminal-player-ops-panel{border-color:rgba(255,196,121,.18)!important;background:linear-gradient(180deg,rgba(255,196,121,.055),rgba(2,10,20,.56))!important;}
+          .admin-terminal-player-ops-modal.is-red .admin-terminal-player-ops-panel{border-color:rgba(255,119,119,.20)!important;background:linear-gradient(180deg,rgba(255,119,119,.060),rgba(2,10,20,.56))!important;}
+          .admin-terminal-player-ops-panel b{display:inline-grid!important;place-items:center!important;min-height:15px!important;margin-bottom:4px!important;padding:0 6px!important;color:rgba(10,18,24,.92)!important;background:rgba(157,236,250,.88)!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:7px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important;border-radius:999px!important;}
+          .admin-terminal-player-ops-modal.is-amber .admin-terminal-player-ops-panel b{background:rgba(255,196,121,.92)!important;}
+          .admin-terminal-player-ops-modal.is-red .admin-terminal-player-ops-panel b{background:rgba(255,119,119,.92)!important;}
+          .admin-terminal-player-ops-panel span,.admin-terminal-player-ops-field span{font-size:7.5px!important;letter-spacing:.09em!important;}
+          .admin-terminal-player-ops-panel strong{display:block!important;margin-top:4px!important;font-size:17px!important;letter-spacing:-.04em!important;line-height:1.03!important;overflow-wrap:anywhere!important;}
+          .admin-terminal-player-ops-panel p{margin-top:4px!important;font-size:8.5px!important;line-height:1.18!important;color:rgba(183,197,200,.78)!important;}
+          .admin-terminal-player-ops-form-grid{display:grid!important;gap:7px!important;min-width:0!important;}
+          .admin-terminal-player-ops-form-grid.is-two{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-form-grid.is-three{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-form-grid.is-four{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+          .admin-terminal-player-ops-field{display:grid!important;gap:4px!important;min-width:0!important;}
+          .admin-terminal-player-ops-field.is-block{grid-column:1 / -1!important;}
+          .admin-terminal-player-ops-field input,.admin-terminal-player-ops-field select{height:32px!important;padding:0 8px!important;font-size:9px!important;}
+          .admin-terminal-player-ops-field textarea{height:64px!important;min-height:64px!important;max-height:96px!important;padding:8px!important;font-size:9px!important;resize:none!important;overflow:auto!important;}
+          .admin-terminal-player-ops-note{display:grid!important;gap:4px!important;padding:10px 12px!important;border:1px solid rgba(0,212,255,.12)!important;background:rgba(0,212,255,.025)!important;color:rgba(183,197,200,.80)!important;font-size:9px!important;line-height:1.22!important;}
+          .admin-terminal-player-ops-note strong{color:rgba(244,251,252,.95)!important;font-size:10px!important;font-weight:950!important;letter-spacing:-.02em!important;}
+          .admin-terminal-player-ops-footer{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))!important;gap:9px!important;margin-top:10px!important;padding-top:12px!important;border-top:1px solid rgba(0,212,255,.12)!important;}
+          .admin-terminal-player-ops-footer button{min-height:36px!important;padding:7px 9px!important;font-size:8.5px!important;}
+          .admin-terminal-player-ops-footer button.is-danger{color:rgba(255,235,235,.96)!important;border-color:rgba(255,119,119,.38)!important;background:rgba(255,119,119,.10)!important;}
+          .admin-terminal-player-chat-thread{display:grid!important;gap:8px!important;max-height:128px!important;overflow:auto!important;padding:12px!important;border:1px solid rgba(0,212,255,.14)!important;background:rgba(2,10,20,.50)!important;}
+          .admin-terminal-player-chat-bubble{display:grid!important;gap:3px!important;max-width:84%!important;padding:8px 9px!important;border:1px solid rgba(0,212,255,.14)!important;background:rgba(0,212,255,.045)!important;}
+          .admin-terminal-player-chat-bubble.is-admin{justify-self:end!important;border-color:rgba(101,245,169,.18)!important;background:rgba(101,245,169,.055)!important;}
+          .admin-terminal-player-chat-bubble.is-player{justify-self:start!important;}
+          .admin-terminal-player-chat-bubble small{color:rgba(157,236,250,.76)!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:8px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important;}
+          .admin-terminal-player-chat-bubble p{margin:0!important;color:rgba(244,251,252,.88)!important;font-size:9px!important;line-height:1.22!important;}
+          @media(max-width:620px){.admin-terminal-modal-backdrop.is-player-ops-backdrop{padding:10px!important;}.admin-terminal-modal.is-player-ops-frame{width:calc(100vw - 20px)!important;height:calc(100vh - 20px)!important;}.admin-terminal-player-ops-modal{padding:16px!important;}.admin-terminal-player-ops-grid.is-two,.admin-terminal-player-ops-grid.is-three,.admin-terminal-player-ops-grid.is-four,.admin-terminal-player-ops-form-grid,.admin-terminal-player-ops-form-grid.is-two,.admin-terminal-player-ops-form-grid.is-three,.admin-terminal-player-ops-form-grid.is-four{grid-template-columns:1fr!important;}.admin-terminal-player-ops-head strong{font-size:20px!important;white-space:normal!important;}.admin-terminal-player-ops-footer{grid-template-columns:1fr!important;}.admin-terminal-player-chat-thread{max-height:150px!important;}}

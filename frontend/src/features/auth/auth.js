@@ -12,6 +12,7 @@ let playerDashboardResyncPromise = null;
 function init() {
   document.getElementById("playerForm")?.addEventListener("submit", handlePlayerLogin);
   document.getElementById("adminForm")?.addEventListener("submit", handleAdminLogin);
+  document.getElementById("forgotAdminAccessCode")?.addEventListener("click", requestAdminPasswordReset);
   document.getElementById("createForm")?.addEventListener("submit", handleStaffSignup);
   document.getElementById("backToAdminLogin")?.addEventListener("click", resetAdminLoginStep);
   document.getElementById("logoutButton")?.addEventListener("click", logout);
@@ -24,8 +25,19 @@ function init() {
   bindLoginModeToggle();
   initLoginClock();
   initLoginAudio();
-  setLoginMode("player");
+  const query = new URLSearchParams(window.location.search);
+  const requestedLoginMode = query.get("mode");
+  setLoginMode(LOGIN_MODES.has(requestedLoginMode) ? requestedLoginMode : "player");
   showLogin({ focus: false });
+
+  if (query.get("passwordReset") === "success") {
+    setLoginMode("admin");
+    showLoginMessage(
+      document.getElementById("adminMessage"),
+      "Access Code updated. Sign in with your new Access Code."
+    );
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 function bindLoginModeToggle() {
@@ -115,6 +127,71 @@ async function handlePlayerLogin(event) {
   }
 }
 
+async function requestAdminPasswordReset() {
+  const email = document.getElementById("adminEmail")?.value.trim() || "";
+  const message = document.getElementById("adminMessage");
+  const button = document.getElementById("forgotAdminAccessCode");
+
+  clearLoginMessage(message);
+
+  if (!email) {
+    return showLoginMessage(message, "Enter your Admin Email first.", "bad");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return showLoginMessage(message, "Enter a valid Admin Email.", "bad");
+  }
+
+  const constants = window.Econovaria?.core?.constants || {};
+  const supabaseUrl = String(constants.SUPABASE_URL || "").replace(/\/+$/, "");
+  const publishableKey = String(constants.SUPABASE_PUBLISHABLE_KEY || "").trim();
+
+  if (!supabaseUrl || !publishableKey) {
+    return showLoginMessage(message, "Password recovery is not configured.", "bad");
+  }
+
+  const redirectTo = new URL("auth/reset-password.html", document.baseURI).href;
+
+  if (button) button.disabled = true;
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: publishableKey,
+          Authorization: `Bearer ${publishableKey}`
+        },
+        body: JSON.stringify({ email })
+      }
+    );
+
+    let result = {};
+    try {
+      result = await response.json();
+    } catch (_) {}
+
+    if (!response.ok) {
+      return showLoginMessage(
+        message,
+        result?.msg || result?.message || result?.error_description || "The reset email could not be sent.",
+        "bad"
+      );
+    }
+
+    showLoginMessage(
+      message,
+      "If that administrator account exists, a password reset email has been sent."
+    );
+  } catch (_) {
+    showLoginMessage(message, "Could not connect to password recovery.", "bad");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function handleAdminLogin(event) {
   event.preventDefault();
 
@@ -147,6 +224,8 @@ async function handleAdminLogin(event) {
     }
 
     currentSession.authSource = "supabase-admin";
+    currentSession.refreshToken = signIn.refreshToken || "";
+    currentSession.user = signIn.user || null;
     showAdminGameSelection(bootstrap.activeGameSessions || []);
   } catch (err) {
     showLoginMessage(message, cleanErrorMessage(err.message || String(err)), "bad");
@@ -217,6 +296,8 @@ async function handleStaffSignup(event) {
     }
 
     currentSession.authSource = "supabase-admin";
+    currentSession.refreshToken = signIn.refreshToken || "";
+    currentSession.user = signIn.user || null;
     const createdGame = (currentSession.staffSession?.activeGameSessions || [])
       .find((session) => session.id === signup.activation.gameSessionId);
 
@@ -344,6 +425,37 @@ function showAdminGameSelection(gameSessions) {
   gamesStep.classList.remove("hidden");
 }
 
+function openAdminTerminal(gameSessionId) {
+  const accessToken = String(currentSession?.token || "").trim();
+
+  if (!accessToken) {
+    showLoginMessage(
+      document.getElementById("selectedGameMessage") ||
+        document.getElementById("adminMessage"),
+      "The administrator session is missing. Sign in again.",
+      "bad"
+    );
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    "econovaria.admin.auth.v1",
+    JSON.stringify({
+      accessToken,
+      refreshToken: currentSession?.refreshToken || "",
+      csrfToken: "",
+      user: currentSession?.user || null
+    })
+  );
+
+  window.sessionStorage.setItem(
+    "econovaria.admin.selected-game.v1",
+    String(gameSessionId || "")
+  );
+
+  window.location.assign(new URL("admin/", document.baseURI).href);
+}
+
 function selectAdminGameSession(gameSessionId) {
   const staffSession = currentSession?.staffSession;
   if (!staffSession) return;
@@ -358,8 +470,7 @@ function selectAdminGameSession(gameSessionId) {
   staffSession.selectedGameSessionId = selected.id;
   state.staffSession = staffSession;
   state.profile = createAdminProfileFromStaffSession(staffSession);
-  showApp("admin");
-  showGlobalStatus("ok", `${selected.name} opened.`);
+  openAdminTerminal(selected.id);
 }
 
 function resetAdminLoginStep() {
@@ -788,7 +899,8 @@ Object.assign(window.Econovaria.features.auth, {
   handleLogin,
   handlePlayerLogin,
   handleAdminLogin,
-  handleCreateGame,
+  handleCreateGame: handleStaffSignup,
+  handleStaffSignup,
   showApp,
   updateNavigationForRole,
   loadPlayerGameDashboardSnapshot,
