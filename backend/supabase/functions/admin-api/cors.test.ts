@@ -1,4 +1,4 @@
-import { corsHeaders } from "./common.ts";
+import { corsHeaders } from "./cors.ts";
 
 function assertEqual(actual: unknown, expected: unknown, message: string): void {
   if (actual !== expected) {
