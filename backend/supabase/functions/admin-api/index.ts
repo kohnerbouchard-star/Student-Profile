@@ -15,12 +15,16 @@ import {
   loadAttendance,
   loadAttendanceHistory,
   loadContracts,
-  loadLogs,
   loadMarket,
   loadPlayers,
   loadSettings,
   loadStore,
 } from "./readModels.ts";
+import {
+  loadLogsPage,
+  logsToCsv,
+  updateAuditLogFlag,
+} from "./logs.ts";
 
 function routePath(url) {
   const marker = "/admin-api";
@@ -38,6 +42,18 @@ function classroomContractPath(gameId, suffix = "") {
   return `/staff/game-sessions/${encodeURIComponent(gameId)}/contracts${suffix}`;
 }
 
+function csvResponse(request, csv, filename) {
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 async function loadContractSubmissions(service, gameId) {
   const result = await service
     .from("player_contract_progress")
@@ -46,6 +62,49 @@ async function loadContractSubmissions(service, gameId) {
     .order("updated_at", { ascending: false });
   if (result.error) throw result.error;
   return result.data || [];
+}
+
+async function loadContractRewardAudit(service, gameId, contractId = "") {
+  let progressQuery = service
+    .from("player_contract_progress")
+    .select("id,contract_id,player_id,status,reward_issued_at,updated_at")
+    .eq("game_session_id", gameId)
+    .order("updated_at", { ascending: false });
+  if (contractId) progressQuery = progressQuery.eq("contract_id", contractId);
+
+  const progressResult = await progressQuery;
+  if (progressResult.error) throw progressResult.error;
+  const progress = progressResult.data || [];
+  if (!progress.length) return [];
+
+  const ledgerResult = await service
+    .from("ledger_entries")
+    .select("id,player_id,amount,currency_code,entry_type,source_domain,source_action,source_id,created_at")
+    .eq("game_session_id", gameId)
+    .eq("source_domain", "contracts")
+    .eq("source_action", "contract_reward_cash")
+    .in("source_id", progress.map((row) => row.id))
+    .order("created_at", { ascending: false });
+  if (ledgerResult.error) throw ledgerResult.error;
+
+  const progressById = new Map(progress.map((row) => [row.id, row]));
+  return (ledgerResult.data || []).map((entry) => {
+    const row = progressById.get(entry.source_id);
+    return {
+      id: entry.id,
+      ledgerEntryId: entry.id,
+      contractId: row?.contract_id || contractId || null,
+      progressId: entry.source_id,
+      playerId: entry.player_id,
+      amount: number(entry.amount),
+      currencyCode: entry.currency_code,
+      entryType: entry.entry_type,
+      sourceDomain: entry.source_domain,
+      sourceAction: entry.source_action,
+      rewardIssuedAt: row?.reward_issued_at || entry.created_at,
+      createdAt: entry.created_at,
+    };
+  });
 }
 
 async function loadMarketChart(service, gameId, assetId) {
@@ -57,6 +116,7 @@ async function loadMarketChart(service, gameId, assetId) {
     .order("tick_index", { ascending: true })
     .limit(500);
   if (ticks.error) throw ticks.error;
+
   return (ticks.data || []).map((row) => {
     const close = number(row.price);
     const open = number(row.previous_price, close);
@@ -95,7 +155,14 @@ async function handleGlobalRoute(request, context, path) {
         session: {
           id: claims.id || context.staff.id,
           csrfToken: "",
-          expiresAt: null,
+          expiresAt: claims.exp ? new Date(Number(claims.exp) * 1000).toISOString() : null,
+        },
+        capabilities: {
+          notifications: false,
+          securityHistory: "current_session_only",
+          helpArticles: true,
+          auditLogFlags: true,
+          auditLogExport: true,
         },
       },
     });
@@ -123,6 +190,7 @@ async function handleGlobalRoute(request, context, path) {
   if (path === "/account/preferences" && request.method === "GET") {
     return json(request, 200, { data: { preferences: {} } });
   }
+
   if (path === "/notifications" && request.method === "GET") {
     return json(request, 200, {
       data: {
@@ -133,23 +201,52 @@ async function handleGlobalRoute(request, context, path) {
       },
     });
   }
+
   if (path.startsWith("/account/security") && request.method === "GET") {
+    const claims = context.user || {};
     return json(request, 200, {
       data: {
         security: {
           twoFactorEnabled: false,
-          sessions: [],
+          sessions: [{
+            id: claims.id || context.staff.id,
+            current: true,
+            userId: claims.id || null,
+            email: context.staff.email,
+            expiresAt: claims.exp ? new Date(Number(claims.exp) * 1000).toISOString() : null,
+          }],
           events: [],
-          implementationStatus: "not_configured",
+          implementationStatus: "current_session_only",
         },
       },
     });
   }
+
   if (path === "/help/admin-console" && request.method === "GET") {
     return json(request, 200, {
-      data: { articles: [], implementationStatus: "not_configured" },
+      data: {
+        articles: [
+          {
+            id: "admin-start",
+            title: "Administrator console basics",
+            summary: "Select a game, review the overview, and use the left navigation to manage the simulation.",
+          },
+          {
+            id: "attendance-scan",
+            title: "Attendance scanning",
+            summary: "Scan a player's access code. Duplicate attendance and duplicate rewards are rejected by the backend.",
+          },
+          {
+            id: "contract-rewards",
+            title: "Contract review and rewards",
+            summary: "Approve submitted work before issuing rewards. Reward issuance is idempotent.",
+          },
+        ],
+        implementationStatus: "available",
+      },
     });
   }
+
   if (path === "/auth/sign-out" && request.method === "POST") {
     return json(request, 200, { data: { signedOut: true } });
   }
@@ -180,12 +277,21 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
     ]);
     const leaderboard = [...players]
       .sort((a, b) => number(b.netWorth) - number(a.netWorth))
-      .map((player, index) => ({ ...player, rank: index + 1 }));
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1,
+        leaderboardBasis: "net_worth",
+      }));
+
     return json(request, 200, {
       data: {
         game: gameDto(game),
         leaderboard,
-        contracts: contracts.filter((item) => ["active", "scheduled", "draft"].includes(item.status)),
+        leaderboardBasis: "net_worth",
+        overallScoreStatus: "not_configured",
+        contracts: contracts.filter((item) =>
+          ["active", "scheduled", "draft"].includes(item.status)
+        ),
         notifications: [],
         notificationCount: 0,
         ...attendance,
@@ -216,7 +322,29 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
 
   if (suffix === "/contracts") {
     const contracts = await loadContracts(context.service, gameId);
-    return json(request, 200, { data: { contracts, assignments: contracts } });
+    return json(request, 200, {
+      data: { contracts, assignments: contracts },
+    });
+  }
+
+  if (suffix === "/contracts/reward-audit") {
+    const rewardAudit = await loadContractRewardAudit(context.service, gameId);
+    return json(request, 200, {
+      data: { rewardAudit, contractRewardAudit: rewardAudit },
+    });
+  }
+
+  const rewardAuditMatch = suffix.match(/^\/contracts\/([^/]+)\/reward-audit$/);
+  if (rewardAuditMatch) {
+    const contractId = decodeURIComponent(rewardAuditMatch[1]);
+    const rewardAudit = await loadContractRewardAudit(
+      context.service,
+      gameId,
+      contractId,
+    );
+    return json(request, 200, {
+      data: { contractId, rewardAudit, contractRewardAudit: rewardAudit },
+    });
   }
 
   const progressMatch = suffix.match(/^\/contracts\/([^/]+)\/progress$/);
@@ -241,20 +369,26 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
 
   if (suffix === "/store/items") {
     const storeItems = await loadStore(context.service, gameId);
-    return json(request, 200, { data: { storeItems, items: storeItems } });
+    return json(request, 200, {
+      data: { storeItems, items: storeItems },
+    });
   }
 
   if (suffix === "/market/assets") {
     const market = await loadMarket(context.service, gameId);
     return json(request, 200, {
-      data: { assets: market.assets, marketplaceSecurities: market.assets },
+      data: {
+        assets: market.assets,
+        marketplaceSecurities: market.assets,
+      },
     });
   }
 
   const profileMatch = suffix.match(/^\/market\/assets\/([^/]+)\/profile$/);
   if (profileMatch) {
     const market = await loadMarket(context.service, gameId);
-    const asset = market.assets.find((item) => String(item.id) === decodeURIComponent(profileMatch[1]));
+    const assetId = decodeURIComponent(profileMatch[1]);
+    const asset = market.assets.find((item) => String(item.id) === assetId);
     if (!asset) {
       return json(request, 404, {
         code: "asset_not_found",
@@ -274,10 +408,13 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
     return json(request, 200, { data: { candles, chart: candles } });
   }
 
-  const financialsMatch = suffix.match(/^\/market\/assets\/([^/]+)\/financials$/);
+  const financialsMatch = suffix.match(
+    /^\/market\/assets\/([^/]+)\/financials$/,
+  );
   if (financialsMatch) {
     const market = await loadMarket(context.service, gameId);
-    const asset = market.assets.find((item) => String(item.id) === decodeURIComponent(financialsMatch[1]));
+    const assetId = decodeURIComponent(financialsMatch[1]);
+    const asset = market.assets.find((item) => String(item.id) === assetId);
     if (!asset) {
       return json(request, 404, {
         code: "asset_not_found",
@@ -296,14 +433,20 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
   if (suffix === "/market/trades/recent") {
     const market = await loadMarket(context.service, gameId);
     return json(request, 200, {
-      data: { trades: market.trades, marketplaceTrades: market.trades },
+      data: {
+        trades: market.trades,
+        marketplaceTrades: market.trades,
+      },
     });
   }
 
   if (suffix === "/market/events") {
     const market = await loadMarket(context.service, gameId);
     return json(request, 200, {
-      data: { events: market.events, marketEvents: market.events },
+      data: {
+        events: market.events,
+        marketEvents: market.events,
+      },
     });
   }
 
@@ -314,9 +457,32 @@ async function handleGameReads(request, context, url, game, gameId, suffix) {
   }
 
   if (suffix === "/logs") {
-    const limit = number(url.searchParams.get("limit"), 200);
-    const auditLogs = await loadLogs(context.service, gameId, limit);
-    return json(request, 200, { data: { auditLogs, logs: auditLogs } });
+    return json(request, 200, {
+      data: await loadLogsPage(
+        context.service,
+        gameId,
+        context.staff.id,
+        url,
+      ),
+    });
+  }
+
+  if (suffix === "/logs/export") {
+    const exportUrl = new URL(url);
+    exportUrl.searchParams.set("page", "1");
+    exportUrl.searchParams.set("pageSize", "500");
+    const page = await loadLogsPage(
+      context.service,
+      gameId,
+      context.staff.id,
+      exportUrl,
+      { page: 1, pageSize: 500 },
+    );
+    return csvResponse(
+      request,
+      logsToCsv(page.logs),
+      `econovaria-audit-log-${gameId}.csv`,
+    );
   }
 
   return null;
@@ -341,14 +507,18 @@ async function handleGameWrites(request, context, gameId, suffix) {
     );
   }
 
-  const resetCodeMatch = suffix.match(/^\/players\/([^/]+)\/access-code\/reset$/);
+  const resetCodeMatch = suffix.match(
+    /^\/players\/([^/]+)\/access-code\/reset$/,
+  );
   if (resetCodeMatch && request.method === "POST") {
     return proxyClassroom(
       request,
       context,
       classroomGamePath(
         gameId,
-        `/players/${encodeURIComponent(decodeURIComponent(resetCodeMatch[1]))}/access-code/reset`,
+        `/players/${
+          encodeURIComponent(decodeURIComponent(resetCodeMatch[1]))
+        }/access-code/reset`,
       ),
       "POST",
     );
@@ -364,7 +534,12 @@ async function handleGameWrites(request, context, gameId, suffix) {
   }
 
   if (suffix === "/contracts" && request.method === "POST") {
-    return proxyClassroom(request, context, classroomContractPath(gameId), "POST");
+    return proxyClassroom(
+      request,
+      context,
+      classroomContractPath(gameId),
+      "POST",
+    );
   }
 
   const publishMatch = suffix.match(/^\/contracts\/([^/]+)\/publish$/);
@@ -380,27 +555,35 @@ async function handleGameWrites(request, context, gameId, suffix) {
     );
   }
 
-  const reviewMatch = suffix.match(/^\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/);
+  const reviewMatch = suffix.match(
+    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/,
+  );
   if (reviewMatch && request.method === "POST") {
     return proxyClassroom(
       request,
       context,
       classroomContractPath(
         gameId,
-        `/${encodeURIComponent(decodeURIComponent(reviewMatch[1]))}/progress/${encodeURIComponent(decodeURIComponent(reviewMatch[2]))}/review`,
+        `/${encodeURIComponent(decodeURIComponent(reviewMatch[1]))}/progress/${
+          encodeURIComponent(decodeURIComponent(reviewMatch[2]))
+        }/review`,
       ),
       "POST",
     );
   }
 
-  const rewardMatch = suffix.match(/^\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/);
+  const rewardMatch = suffix.match(
+    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/,
+  );
   if (rewardMatch && request.method === "POST") {
     return proxyClassroom(
       request,
       context,
       classroomContractPath(
         gameId,
-        `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${encodeURIComponent(decodeURIComponent(rewardMatch[2]))}/rewards/issue`,
+        `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${
+          encodeURIComponent(decodeURIComponent(rewardMatch[2]))
+        }/rewards/issue`,
       ),
       "POST",
     );
@@ -416,19 +599,27 @@ async function handleGameWrites(request, context, gameId, suffix) {
   }
 
   const storeItemMatch = suffix.match(/^\/store\/items\/([^/]+)$/);
-  if (storeItemMatch && ["PUT", "PATCH", "DELETE"].includes(request.method)) {
+  if (
+    storeItemMatch &&
+    ["PUT", "PATCH", "DELETE"].includes(request.method)
+  ) {
     return proxyClassroom(
       request,
       context,
       classroomGamePath(
         gameId,
-        `/store/items/${encodeURIComponent(decodeURIComponent(storeItemMatch[1]))}`,
+        `/store/items/${
+          encodeURIComponent(decodeURIComponent(storeItemMatch[1]))
+        }`,
       ),
       request.method,
     );
   }
 
-  if (suffix === "/settings" && ["PUT", "PATCH", "POST"].includes(request.method)) {
+  if (
+    suffix === "/settings" &&
+    ["PUT", "PATCH", "POST"].includes(request.method)
+  ) {
     return proxyClassroom(
       request,
       context,
@@ -437,12 +628,43 @@ async function handleGameWrites(request, context, gameId, suffix) {
     );
   }
 
+  const logFlagMatch = suffix.match(/^\/logs\/([^/]+)\/flag$/);
+  if (
+    logFlagMatch &&
+    ["POST", "PATCH", "DELETE"].includes(request.method)
+  ) {
+    const auditLogId = decodeURIComponent(logFlagMatch[1]);
+    const result = await updateAuditLogFlag(
+      context.service,
+      gameId,
+      auditLogId,
+      context.staff.id,
+      request,
+    );
+    if (!result.found) {
+      return json(request, 404, {
+        code: "audit_log_not_found",
+        message: "Audit-log event was not found for this game.",
+      });
+    }
+    return json(request, 200, {
+      data: {
+        auditLogId,
+        flag: result.flag,
+        flagged: result.flag?.status === "open",
+      },
+    });
+  }
+
   return null;
 }
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders(request) });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(request),
+    });
   }
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -485,10 +707,22 @@ Deno.serve(async (request) => {
       });
     }
 
-    const readResponse = await handleGameReads(request, context, url, game, gameId, suffix);
+    const readResponse = await handleGameReads(
+      request,
+      context,
+      url,
+      game,
+      gameId,
+      suffix,
+    );
     if (readResponse) return readResponse;
 
-    const writeResponse = await handleGameWrites(request, context, gameId, suffix);
+    const writeResponse = await handleGameWrites(
+      request,
+      context,
+      gameId,
+      suffix,
+    );
     if (writeResponse) return writeResponse;
 
     return json(request, 501, {
