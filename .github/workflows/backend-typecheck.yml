@@ -40,7 +40,33 @@ jobs:
         run: npm ci
 
       - name: Run backend typecheck
-        run: npm run typecheck:all
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck:all > /tmp/backend-typecheck.log 2>&1
+          echo $? > /tmp/backend-typecheck.status
+          tail -n 160 /tmp/backend-typecheck.log
+          exit 0
+
+      - name: Upload backend typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-typecheck-diagnostics
+          path: |
+            /tmp/backend-typecheck.log
+            /tmp/backend-typecheck.status
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce backend typecheck
+        shell: bash
+        run: |
+          status="$(cat /tmp/backend-typecheck.status)"
+          if [ "$status" != "0" ]; then
+            echo "Backend typecheck failed. Download the backend-typecheck-diagnostics artifact."
+            exit 1
+          fi
 
       - name: Run backend smoke tests
         run: npm run smoke
