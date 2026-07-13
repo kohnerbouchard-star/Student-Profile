@@ -29,11 +29,27 @@ jobs:
 
       - name: Typecheck admin API
         working-directory: backend
-        run: deno check --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/index.ts
+        shell: bash
+        run: |
+          set +e
+          deno check --config supabase/functions/admin-api/deno.json --no-lock \
+            supabase/functions/admin-api/index.ts \
+            > /tmp/admin-api-check.log 2>&1
+          status=$?
+          tail -n 120 /tmp/admin-api-check.log
+          exit $status
 
       - name: Run admin API tests
         working-directory: backend
-        run: deno test --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/*.test.ts
+        shell: bash
+        run: |
+          set +e
+          deno test --config supabase/functions/admin-api/deno.json --no-lock \
+            supabase/functions/admin-api/*.test.ts \
+            > /tmp/admin-api-test.log 2>&1
+          status=$?
+          tail -n 120 /tmp/admin-api-test.log
+          exit $status
 
       - name: Validate migration transaction boundaries
         run: |
