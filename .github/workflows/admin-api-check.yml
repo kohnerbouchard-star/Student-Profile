@@ -77,16 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: admin-api-runtime
-          path: |
-            backend/supabase/functions/admin-api/index.ts
-            backend/supabase/functions/admin-api/common.ts
-            backend/supabase/functions/admin-api/compatibilityOperations.ts
-            backend/supabase/functions/admin-api/contractRewards.ts
-            backend/supabase/functions/admin-api/logs.ts
-            backend/supabase/functions/admin-api/mutationAdapters.ts
-            backend/supabase/functions/admin-api/readModels.ts
-            backend/supabase/functions/admin-api/deno.json
-            backend/supabase/functions/admin-api/dynamicDatabaseRows.d.ts
+          path: backend/supabase/functions/admin-api/
           if-no-files-found: error
           retention-days: 7
 
@@ -98,6 +89,7 @@ jobs:
           expected = [
               Path('backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql'),
               Path('backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql'),
+              Path('backend/supabase/migrations/20260714224000_harden_admin_data_api_tables_v1.sql'),
           ]
           for path in expected:
               if not path.exists():
