@@ -7,6 +7,9 @@
   const LOCAL_API_PREFIX = "/api/admin";
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
+  const IDLE_SEED_FINGERPRINT_KEY = "econovaria.admin.idle-seed-fingerprint.v1";
+  const IDLE_ACTIVITY_KEY_PREFIX = "econovaria-admin:last-activity";
   const nativeFetch = window.fetch.bind(window);
 
   window.ECONOVARIA_ADMIN_API_BASE_URL = LOCAL_API_PREFIX;
@@ -45,9 +48,83 @@
     return Boolean(Number(claims.exp || 0) && Number(claims.exp) * 1000 <= Date.now() + 5000);
   }
 
+  function randomHexToken() {
+    const bytes = new Uint8Array(24);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  }
+
+  function ensureAdminActionToken() {
+    let token = "";
+    try {
+      token = String(window.sessionStorage.getItem(CSRF_TOKEN_KEY) || "").trim();
+      if (!token) {
+        token = randomHexToken();
+        window.sessionStorage.setItem(CSRF_TOKEN_KEY, token);
+      }
+    } catch (_) {
+      token = randomHexToken();
+    }
+
+    window.ECONOVARIA_CSRF_TOKEN = token;
+    const meta = document.querySelector('meta[name="econovaria-csrf-token"]');
+    if (meta) meta.content = token;
+    return token;
+  }
+
+  function hashIdleNamespace(value = "") {
+    const text = String(value || "anonymous");
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return Math.abs(hash >>> 0).toString(36);
+  }
+
+  function sessionFingerprint(session) {
+    const claims = parseJwt(session?.accessToken || "");
+    return String(
+      claims.session_id ||
+      claims.sid ||
+      `${claims.sub || session?.user?.id || "unknown"}:${claims.iat || "unknown"}`
+    );
+  }
+
+  function seedIdleStateForTransferredLogin(session) {
+    if (!session) return;
+    const fingerprint = sessionFingerprint(session);
+    let previousFingerprint = "";
+
+    try {
+      previousFingerprint = String(
+        window.sessionStorage.getItem(IDLE_SEED_FINGERPRINT_KEY) || ""
+      );
+    } catch (_) {}
+
+    if (previousFingerprint === fingerprint) return;
+
+    const initialKey = `${IDLE_ACTIVITY_KEY_PREFIX}:${hashIdleNamespace("anonymous")}`;
+    try {
+      window.localStorage.setItem(initialKey, String(Date.now()));
+      window.localStorage.removeItem(IDLE_ACTIVITY_KEY_PREFIX);
+      window.sessionStorage.setItem(IDLE_SEED_FINGERPRINT_KEY, fingerprint);
+    } catch (_) {}
+  }
+
+  function initializeAdminSecurityRuntime() {
+    const session = readStoredSession();
+    if (!session || sessionIsExpired(session)) return;
+    ensureAdminActionToken();
+    seedIdleStateForTransferredLogin(session);
+  }
+
   function clearTransferredSession() {
     window.sessionStorage.removeItem(SESSION_KEY);
     window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+    window.sessionStorage.removeItem(CSRF_TOKEN_KEY);
+    window.sessionStorage.removeItem(IDLE_SEED_FINGERPRINT_KEY);
+    window.ECONOVARIA_CSRF_TOKEN = "";
     window.currentSession = null;
     if (window.state) window.state.staffSession = null;
   }
@@ -228,6 +305,8 @@
     clearTransferredSession();
     redirectToMainLogin("session-required");
   }
+
+  initializeAdminSecurityRuntime();
 
   window.EconovariaAdminAuth = {
     attachTerminal(terminal) {
