@@ -10,6 +10,24 @@
     return;
   }
 
+  const renderShell = feature.renderShell;
+  feature.renderShell = function renderShellWithBootstrapLifecycle(...args) {
+    const html = renderShell.apply(this, args);
+    const model = feature.currentModel;
+
+    if (
+      feature.authState?.state === "loading" &&
+      model?.__sessionBootstrapPending === true
+    ) {
+      feature.currentModel = {
+        ...model,
+        __sessionBootstrapPending: false
+      };
+    }
+
+    return html;
+  };
+
   if (auth && typeof auth.attachTerminal === "function") {
     auth.attachTerminal({ mount, feature });
     return;
