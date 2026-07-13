@@ -17,7 +17,7 @@ function corsHeaders(request) {
   const allowedOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://kohnerbouchard-star.github.io";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-econovaria-game-id, x-client-info",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-econovaria-game-id, x-client-info, x-csrf-token, x-idempotency-key, x-econovaria-admin-action, x-requested-with, if-match",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -564,6 +564,15 @@ Deno.serve(async (request) => {
     if (suffix === "/logs" && request.method === "GET") {
       const auditLogs = await loadLogs(context.service, gameId);
       return json(request, 200, { data: { auditLogs, logs: auditLogs } });
+    }
+
+    if (suffix === "/join-code/reset" && request.method === "POST") {
+      return proxyClassroom(
+        request,
+        context,
+        `/games/${encodeURIComponent(gameId)}/join-code/reset`,
+        "POST",
+      );
     }
 
     const resetCodeMatch = suffix.match(/^\/players\/([^/]+)\/access-code\/reset$/);
