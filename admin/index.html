@@ -5,83 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="econovaria-admin-api-base" content="/api/admin" />
   <meta name="econovaria-csrf-token" content="" />
-  <meta name="econovaria-admin-reauth-url" content="./?reason=session-expired" />
+  <meta name="econovaria-admin-reauth-url" content="../?mode=admin&amp;reason=session-expired" />
   <meta name="econovaria-admin-asset-origins" content="" />
   <meta name="referrer" content="same-origin" />
   <title>Eco Novaria Administrator Console</title>
-  <link rel="stylesheet" href="./admin-auth.css" />
   <link rel="stylesheet" href="./css/page-shell.css" />
   <link rel="stylesheet" href="./css/admin-overview-terminal.css" data-admin-terminal-stylesheet />
   <link rel="stylesheet" href="./css/admin-overview-integrity.css" />
+  <style>
+    .admin-session-gate {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: rgba(210, 247, 255, 0.72);
+      background: #020914;
+      font: 700 11px/1.5 "JetBrains Mono", ui-monospace, monospace;
+      letter-spacing: 0.14em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .admin-session-gate.is-error {
+      color: #ff6976;
+    }
+  </style>
+  <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>
   <script defer src="./dist/admin-overview-terminal.js"></script>
   <script defer src="./dist/admin-overview-boot.js"></script>
 </head>
-<body class="admin-auth-active">
-  <section id="adminAuthRoot" class="admin-auth-root" aria-label="Eco Novaria administrator sign in">
-    <div class="admin-auth-grid">
-      <aside class="admin-auth-intro">
-        <span class="admin-auth-kicker">Econovaria control system</span>
-        <h1>Administrator Terminal</h1>
-        <p>Authenticate with your teacher account, select the active classroom economy, and open the v606 operations console.</p>
-        <div class="admin-auth-status-line" aria-label="System status">
-          <span><i></i> Supabase authentication connected</span>
-          <span><i></i> Classroom API available</span>
-          <span><i></i> Student application isolated</span>
-        </div>
-      </aside>
-      <main class="admin-auth-panel">
-        <div class="admin-auth-tabs" role="tablist" aria-label="Administrator access mode">
-          <button class="admin-auth-tab is-active" type="button" data-auth-mode="signin" role="tab">Sign in</button>
-          <button class="admin-auth-tab" type="button" data-auth-mode="create" role="tab">Create game</button>
-        </div>
-
-        <section class="admin-auth-pane is-active" data-pane="signin">
-          <span class="admin-auth-label">Verified staff access</span>
-          <h2>Open administrator console</h2>
-          <p>Use the email and Access Code associated with your Supabase staff account.</p>
-          <form id="adminSignInForm" class="admin-auth-form">
-            <label><span>Admin email</span><input name="email" type="email" autocomplete="username" required /></label>
-            <label><span>Access Code</span><input name="password" type="password" autocomplete="current-password" required /></label>
-            <button class="admin-auth-submit" type="submit">Verify access</button>
-          </form>
-          <button id="adminForgotAccessCode" class="admin-auth-link" type="button">Forgot Access Code?</button>
-          <p id="adminSignInMessage" class="admin-auth-message" hidden></p>
-        </section>
-
-        <section class="admin-auth-pane" data-pane="create">
-          <span class="admin-auth-label">License activation</span>
-          <h2>Create staff account and first game</h2>
-          <p>The purchase code is validated by the existing Supabase classroom backend.</p>
-          <form id="adminCreateForm" class="admin-auth-form">
-            <label><span>License / purchase code</span><input name="purchaseCode" autocomplete="off" required /></label>
-            <div class="admin-auth-two-col">
-              <label><span>Display name</span><input name="displayName" autocomplete="name" required /></label>
-              <label><span>Admin email</span><input name="email" type="email" autocomplete="email" required /></label>
-            </div>
-            <div class="admin-auth-two-col">
-              <label><span>Game name</span><input name="gameName" required /></label>
-              <label><span>Difficulty</span><select name="difficultyPreset" required><option value="">Select</option><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option><option value="insane">Insane</option></select></label>
-            </div>
-            <div class="admin-auth-two-col">
-              <label><span>Access Code</span><input name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
-              <label><span>Confirm Access Code</span><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password" required /></label>
-            </div>
-            <button class="admin-auth-submit" type="submit">Create account and game</button>
-          </form>
-          <p id="adminCreateMessage" class="admin-auth-message" hidden></p>
-        </section>
-
-        <section class="admin-auth-pane" data-pane="games">
-          <span class="admin-auth-label">Active economies</span>
-          <h2>Select a game</h2>
-          <p>Only active sessions owned by this staff account are shown.</p>
-          <div id="adminGameList" class="admin-auth-game-list"></div>
-          <button id="adminGameBack" class="admin-auth-back" type="button">Sign in with another account</button>
-        </section>
-      </main>
-    </div>
-  </section>
+<body>
+  <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite">
+    Opening administrator console…
+  </div>
   <main id="adminPreview" aria-label="Eco Novaria admin terminal" hidden></main>
 </body>
 </html>
