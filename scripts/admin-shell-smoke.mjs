@@ -55,6 +55,7 @@ for (const reference of scripts) {
 
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
+const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 
 assert(
   auth.includes("completeInitialBootstrapRender(feature)"),
@@ -80,6 +81,18 @@ assert(
 assert(
   auth.includes('headers.set("X-Econovaria-Game-Id", selectedGameId)'),
   "Forwarded admin requests must include the selected game ID.",
+);
+assert(
+  !gameCode.includes("MutationObserver"),
+  "Game-code wiring must not watch or rewrite the entire document.",
+);
+assert(
+  gameCode.includes('const RESET_ACTION = "reset-game-code"'),
+  "Game-code generation must use an explicit delegated terminal action.",
+);
+assert(
+  gameCode.includes("scheduleShareModalDecoration"),
+  "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
 console.log("Admin shell static smoke checks passed.");
