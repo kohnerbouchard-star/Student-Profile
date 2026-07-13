@@ -69,6 +69,24 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload validated admin API runtime
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-api-runtime
+          path: |
+            backend/supabase/functions/admin-api/index.ts
+            backend/supabase/functions/admin-api/common.ts
+            backend/supabase/functions/admin-api/compatibilityOperations.ts
+            backend/supabase/functions/admin-api/contractRewards.ts
+            backend/supabase/functions/admin-api/logs.ts
+            backend/supabase/functions/admin-api/mutationAdapters.ts
+            backend/supabase/functions/admin-api/readModels.ts
+            backend/supabase/functions/admin-api/deno.json
+            backend/supabase/functions/admin-api/dynamicDatabaseRows.d.ts
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Validate stabilization migration transaction boundaries
         run: |
           python3 - <<'PY'
