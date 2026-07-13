@@ -14,6 +14,9 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
 
+permissions:
+  contents: read
+
 jobs:
   admin-shell-smoke:
     runs-on: ubuntu-latest
