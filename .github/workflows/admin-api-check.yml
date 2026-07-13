@@ -69,15 +69,22 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Validate migration transaction boundaries
+      - name: Validate stabilization migration transaction boundaries
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          for path in Path('backend/supabase/migrations').glob('20260713*.sql'):
+
+          expected = [
+              Path('backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql'),
+              Path('backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql'),
+          ]
+          for path in expected:
+              if not path.exists():
+                  raise SystemExit(f'Missing stabilization migration: {path}')
               text = path.read_text().strip().lower()
               if not text.startswith('begin;') or not text.endswith('commit;'):
                   raise SystemExit(f'{path} must be transaction wrapped')
-          print('Migration transaction boundary checks passed.')
+          print('Stabilization migration transaction boundary checks passed.')
           PY
 
       - name: Enforce admin API checks
