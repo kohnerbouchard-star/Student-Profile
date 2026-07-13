@@ -16,4 +16,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract v606 request and action contracts
-        run: node scripts/admin-bundle-contract-audit.mjs
+        run: |
+          node scripts/admin-bundle-contract-audit.mjs \
+            | tee admin-bundle-contract-audit.json
+
+      - name: Upload bundle contract audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-bundle-contract-audit
+          path: admin-bundle-contract-audit.json
+          if-no-files-found: error
+          retention-days: 7
