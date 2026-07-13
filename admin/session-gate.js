@@ -3,8 +3,9 @@
 
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  let released = false;
   let redirecting = false;
-  let completed = false;
+  let mountTimeout = null;
 
   function readSession() {
     try {
@@ -28,6 +29,11 @@
     }
   }
 
+  function sessionIsExpired(session) {
+    const claims = parseJwt(session?.accessToken || "");
+    return Boolean(Number(claims.exp || 0) && Number(claims.exp) * 1000 <= Date.now() + 5000);
+  }
+
   function mainLoginUrl(reason) {
     const url = new URL("../", window.location.href);
     url.searchParams.set("mode", "admin");
@@ -46,25 +52,61 @@
     window.location.replace(mainLoginUrl(reason));
   }
 
-  function showConsoleWhenMounted() {
-    const mount = document.getElementById("adminPreview");
-    if (!mount || mount.hidden || !mount.childElementCount) return false;
-
-    completed = true;
+  function release() {
+    if (released) return;
+    released = true;
+    if (mountTimeout) window.clearTimeout(mountTimeout);
     document.getElementById("adminSessionGate")?.remove();
-    return true;
   }
 
+  function showError(message) {
+    if (released) return;
+    if (mountTimeout) window.clearTimeout(mountTimeout);
+
+    const gate = document.getElementById("adminSessionGate");
+    if (!gate) return;
+
+    gate.classList.add("is-error");
+    gate.replaceChildren();
+
+    const panel = document.createElement("div");
+    panel.className = "admin-session-gate__panel";
+
+    const text = document.createElement("p");
+    text.textContent = message || "The administrator console could not start.";
+
+    const actions = document.createElement("div");
+    actions.className = "admin-session-gate__actions";
+
+    const reload = document.createElement("button");
+    reload.type = "button";
+    reload.textContent = "Reload";
+    reload.addEventListener("click", () => window.location.reload());
+
+    const signIn = document.createElement("button");
+    signIn.type = "button";
+    signIn.textContent = "Return to sign in";
+    signIn.addEventListener("click", () => redirectToMainLogin("console-start-failed"));
+
+    actions.append(reload, signIn);
+    panel.append(text, actions);
+    gate.appendChild(panel);
+  }
+
+  window.EconovariaAdminSessionGate = {
+    release,
+    showError
+  };
+
   const session = readSession();
-  const selectedGameId = window.sessionStorage.getItem(SELECTED_GAME_KEY) || "";
+  const selectedGameId = String(window.sessionStorage.getItem(SELECTED_GAME_KEY) || "").trim();
 
   if (!session) {
     redirectToMainLogin("session-required");
     return;
   }
 
-  const claims = parseJwt(session.accessToken);
-  if (Number(claims.exp || 0) && Number(claims.exp) * 1000 <= Date.now() + 5000) {
+  if (sessionIsExpired(session)) {
     clearTransferredSession();
     redirectToMainLogin("session-expired");
     return;
@@ -76,19 +118,18 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    window.ECONOVARIA_ADMIN_REAUTH_URL = mainLoginUrl("session-required");
+    const mount = document.getElementById("adminPreview");
 
-    if (window.EconovariaAdminAuth) {
-      window.EconovariaAdminAuth.showSignIn = function showUnifiedAdminLogin() {
-        clearTransferredSession();
-        redirectToMainLogin("session-required");
-      };
+    if (mount && !mount.hidden && mount.childElementCount > 0) {
+      release();
+      return;
     }
 
-    if (showConsoleWhenMounted()) return;
-
     const observer = new MutationObserver(() => {
-      if (showConsoleWhenMounted()) observer.disconnect();
+      if (mount && !mount.hidden && mount.childElementCount > 0) {
+        observer.disconnect();
+        release();
+      }
     });
 
     observer.observe(document.documentElement, {
@@ -98,24 +139,9 @@
       attributeFilter: ["hidden"]
     });
 
-    const sessionWatch = window.setInterval(() => {
-      if (completed || redirecting) {
-        window.clearInterval(sessionWatch);
-        return;
-      }
-
-      if (!readSession()) {
-        window.clearInterval(sessionWatch);
-        observer.disconnect();
-        redirectToMainLogin("session-expired");
-      }
-    }, 250);
-
-    window.setTimeout(() => {
-      if (completed || redirecting || showConsoleWhenMounted()) return;
+    mountTimeout = window.setTimeout(() => {
       observer.disconnect();
-      window.clearInterval(sessionWatch);
-      redirectToMainLogin("bootstrap-failed");
-    }, 12000);
+      showError("The administrator console took too long to start. Reload this page or return to sign in.");
+    }, 10000);
   }, { once: true });
 })();
