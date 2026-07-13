@@ -1,18 +1,18 @@
-function number(value, fallback = 0) {
+function number(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function text(value, fallback = "") {
+function text(value: unknown, fallback = ""): string {
   const normalized = String(value ?? "").trim();
   return normalized || fallback;
 }
 
-function object(value) {
+function object(value: unknown): Record<string, any> {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-async function readJson(request) {
+async function readJson(request: Request): Promise<Record<string, any>> {
   try {
     return object(await request.json());
   } catch {
@@ -20,36 +20,36 @@ async function readJson(request) {
   }
 }
 
-function firstDefined(record, keys) {
+function firstDefined(record: Record<string, any>, keys: readonly string[]): any {
   for (const key of keys) {
     if (record[key] !== undefined) return record[key];
   }
   return undefined;
 }
 
-function optionalText(record, keys) {
+function optionalText(record: Record<string, any>, keys: readonly string[]): string | undefined {
   const value = firstDefined(record, keys);
   if (value === undefined || value === null) return undefined;
   const normalized = text(value);
   return normalized || undefined;
 }
 
-function optionalNumber(record, keys) {
+function optionalNumber(record: Record<string, any>, keys: readonly string[]): number | undefined {
   const value = firstDefined(record, keys);
   if (value === undefined || value === null || value === "") return undefined;
   const normalized = number(value, Number.NaN);
   return Number.isFinite(normalized) ? normalized : undefined;
 }
 
-function optionalInteger(record, keys) {
+function optionalInteger(record: Record<string, any>, keys: readonly string[]): number | undefined {
   const value = optionalNumber(record, keys);
   return value === undefined ? undefined : Math.max(0, Math.trunc(value));
 }
 
-export async function normalizeStoreMutation(request, method) {
+export async function normalizeStoreMutation(request: Request, method: string): Promise<any> {
   const source = object(await readJson(request));
   const body = object(source.item || source.storeItem || source.payload || source);
-  const normalized = {};
+  const normalized: Record<string, any> = {};
 
   const name = optionalText(body, ["name", "title", "itemName"]);
   const description = firstDefined(body, ["description", "details"]);
@@ -86,11 +86,11 @@ export async function normalizeStoreMutation(request, method) {
   return { method: method === "PUT" ? "PATCH" : method, body: normalized };
 }
 
-export async function normalizeSettingsMutation(request) {
+export async function normalizeSettingsMutation(request: Request): Promise<any> {
   const source = object(await readJson(request));
   const body = object(source.settings || source.payload || source);
-  const gameSettings = {};
-  const policySettings = {};
+  const gameSettings: Record<string, any> = {};
+  const policySettings: Record<string, any> = {};
 
   const difficultyPreset = optionalText(body, [
     "difficultyPreset",
@@ -146,7 +146,7 @@ export async function normalizeSettingsMutation(request) {
   return { gameSettings, policySettings };
 }
 
-export async function applyDifficultyPolicy(service, gameId, policySettings) {
+export async function applyDifficultyPolicy(service: any, gameId: string, policySettings: Record<string, any>): Promise<any> {
   if (!policySettings || Object.keys(policySettings).length === 0) return null;
 
   const existing = await service
@@ -159,7 +159,7 @@ export async function applyDifficultyPolicy(service, gameId, policySettings) {
   if (existing.error) throw existing.error;
   if (!existing.data) throw new Error("difficulty_policy_settings_not_found");
 
-  let patch;
+  let patch: Record<string, any>;
   if (policySettings.source === "preset") {
     const presetKey = text(policySettings.difficulty_preset).toLowerCase();
     const profile = await service
