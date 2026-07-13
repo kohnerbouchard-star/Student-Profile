@@ -1,6 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   applyDifficultyPolicy,
+  normalizeContractCreate,
+  normalizeContractReview,
   normalizeSettingsMutation,
   normalizeStoreMutation,
 } from "./mutationAdapters.ts";
@@ -158,6 +160,16 @@ function isSettingsMutationPath(path, method) {
     /^\/games\/[^/]+\/settings$/.test(String(path));
 }
 
+function isContractCreatePath(path, method) {
+  return method === "POST" &&
+    /^\/staff\/game-sessions\/[^/]+\/contracts$/.test(String(path));
+}
+
+function isContractReviewPath(path, method) {
+  return method === "POST" &&
+    /^\/staff\/game-sessions\/[^/]+\/contracts\/[^/]+\/progress\/[^/]+\/review$/.test(String(path));
+}
+
 function atomicContractRewardPath(path, method) {
   if (method !== "POST") return null;
   const match = String(path).match(
@@ -221,6 +233,16 @@ export async function proxyClassroom(
       return json(request, result.status, { error: result.error });
     }
     return json(request, result.status, result.body);
+  }
+
+  if (isContractCreatePath(path, method) && overrideBody === undefined) {
+    const body = await normalizeContractCreate(request);
+    return fetchClassroom(request, context, path, "POST", body);
+  }
+
+  if (isContractReviewPath(path, method) && overrideBody === undefined) {
+    const body = await normalizeContractReview(request);
+    return fetchClassroom(request, context, path, "POST", body);
   }
 
   if (isStoreMutationPath(path, method) && overrideBody === undefined) {
