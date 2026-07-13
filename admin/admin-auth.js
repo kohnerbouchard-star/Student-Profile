@@ -13,9 +13,13 @@
   const nativeFetch = window.fetch.bind(window);
 
   window.ECONOVARIA_ADMIN_API_BASE_URL = LOCAL_API_PREFIX;
-  window.ECONOVARIA_ADMIN_REAUTH_URL = new URL("../?mode=admin&reason=session-required", window.location.href).href;
+  window.ECONOVARIA_ADMIN_REAUTH_URL = new URL(
+    "../?mode=admin&reason=session-required",
+    window.location.href
+  ).href;
   window.ECONOVARIA_ADMIN_ALLOWED_ORIGINS = [window.location.origin];
-  window.ECONOVARIA_ADMIN_MOTION_BACKGROUND = window.ECONOVARIA_ADMIN_MOTION_BACKGROUND || "";
+  window.ECONOVARIA_ADMIN_MOTION_BACKGROUND =
+    window.ECONOVARIA_ADMIN_MOTION_BACKGROUND || "";
 
   function readStoredSession() {
     try {
@@ -45,13 +49,18 @@
 
   function sessionIsExpired(session) {
     const claims = parseJwt(session?.accessToken || "");
-    return Boolean(Number(claims.exp || 0) && Number(claims.exp) * 1000 <= Date.now() + 5000);
+    return Boolean(
+      Number(claims.exp || 0) &&
+      Number(claims.exp) * 1000 <= Date.now() + 5000
+    );
   }
 
   function randomHexToken() {
     const bytes = new Uint8Array(24);
     window.crypto.getRandomValues(bytes);
-    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+    return Array.from(bytes, (value) =>
+      value.toString(16).padStart(2, "0")
+    ).join("");
   }
 
   function ensureAdminActionToken() {
@@ -104,7 +113,8 @@
 
     if (previousFingerprint === fingerprint) return;
 
-    const initialKey = `${IDLE_ACTIVITY_KEY_PREFIX}:${hashIdleNamespace("anonymous")}`;
+    const initialKey =
+      `${IDLE_ACTIVITY_KEY_PREFIX}:${hashIdleNamespace("anonymous")}`;
     try {
       window.localStorage.setItem(initialKey, String(Date.now()));
       window.localStorage.removeItem(IDLE_ACTIVITY_KEY_PREFIX);
@@ -120,10 +130,12 @@
   }
 
   function clearTransferredSession() {
-    window.sessionStorage.removeItem(SESSION_KEY);
-    window.sessionStorage.removeItem(SELECTED_GAME_KEY);
-    window.sessionStorage.removeItem(CSRF_TOKEN_KEY);
-    window.sessionStorage.removeItem(IDLE_SEED_FINGERPRINT_KEY);
+    try {
+      window.sessionStorage.removeItem(SESSION_KEY);
+      window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+      window.sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      window.sessionStorage.removeItem(IDLE_SEED_FINGERPRINT_KEY);
+    } catch (_) {}
     window.ECONOVARIA_CSRF_TOKEN = "";
     window.currentSession = null;
     if (window.state) window.state.staffSession = null;
@@ -165,7 +177,8 @@
       staffSession: {
         staffId: claims.sub || session?.user?.id || "",
         staffEmail: claims.email || session?.user?.email || "",
-        staffDisplayName: claims.email || session?.user?.email || "Administrator",
+        staffDisplayName:
+          claims.email || session?.user?.email || "Administrator",
         staffRole: "game_admin",
         activeGameSessions: [],
         selectedGameSessionId: selectedGameId
@@ -187,7 +200,10 @@
 
     if (!session || sessionIsExpired(session)) {
       clearTransferredSession();
-      window.setTimeout(() => redirectToMainLogin(session ? "session-expired" : "session-required"), 0);
+      window.setTimeout(
+        () => redirectToMainLogin(session ? "session-expired" : "session-required"),
+        0
+      );
       return jsonResponse(401, {
         code: "auth_required",
         message: "Administrator sign-in is required."
@@ -227,7 +243,8 @@
     } catch (_) {
       return jsonResponse(503, {
         code: "admin_api_unreachable",
-        message: "Administrator data service could not be reached. Retry in a moment."
+        message:
+          "Administrator data service could not be reached. Retry in a moment."
       });
     }
 
@@ -236,7 +253,10 @@
       window.setTimeout(() => redirectToMainLogin("session-expired"), 250);
     }
 
-    if (localUrl.pathname === `${LOCAL_API_PREFIX}/auth/sign-out` && response.ok) {
+    if (
+      localUrl.pathname === `${LOCAL_API_PREFIX}/auth/sign-out` &&
+      response.ok
+    ) {
       try {
         await nativeFetch(`${SUPABASE_URL}/auth/v1/logout`, {
           method: "POST",
@@ -270,6 +290,19 @@
     return forwardAdminRequest(request, url);
   };
 
+  function completeInitialBootstrapRender(feature) {
+    const model = feature?.currentModel;
+    if (
+      feature?.authState?.state === "loading" &&
+      model?.__sessionBootstrapPending === true
+    ) {
+      feature.currentModel = {
+        ...model,
+        __sessionBootstrapPending: false
+      };
+    }
+  }
+
   function mountTerminal(terminal) {
     const session = readStoredSession();
     const selectedGameId = readSelectedGameId();
@@ -298,6 +331,7 @@
     syncLegacySessionBridge();
     mount.hidden = false;
     mount.innerHTML = feature.renderShell();
+    completeInitialBootstrapRender(feature);
     window.EconovariaAdminSessionGate?.release();
   }
 
@@ -311,7 +345,11 @@
   window.EconovariaAdminAuth = {
     attachTerminal(terminal) {
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => mountTerminal(terminal), { once: true });
+        document.addEventListener(
+          "DOMContentLoaded",
+          () => mountTerminal(terminal),
+          { once: true }
+        );
       } else {
         mountTerminal(terminal);
       }
