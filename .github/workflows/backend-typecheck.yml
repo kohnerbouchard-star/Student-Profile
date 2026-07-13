@@ -12,6 +12,9 @@ on:
       - "backend/**"
       - ".github/workflows/backend-typecheck.yml"
 
+permissions:
+  contents: read
+
 jobs:
   backend-typecheck:
     runs-on: ubuntu-latest
