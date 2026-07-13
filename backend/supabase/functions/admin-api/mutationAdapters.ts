@@ -1,4 +1,24 @@
-import { number, object, readJson, text } from "./common.ts";
+function number(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function text(value, fallback = "") {
+  const normalized = String(value ?? "").trim();
+  return normalized || fallback;
+}
+
+function object(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+async function readJson(request) {
+  try {
+    return object(await request.json());
+  } catch {
+    return {};
+  }
+}
 
 function firstDefined(record, keys) {
   for (const key of keys) {
@@ -51,7 +71,13 @@ export async function normalizeStoreMutation(request, method) {
   if (status !== undefined) normalized.status = status === "inactive" ? "disabled" : status;
   if (visibility !== undefined) normalized.visibility = visibility === "private" ? "hidden" : visibility;
   if (sortOrder !== undefined) normalized.sortOrder = sortOrder;
-  if (itemKey !== undefined && method === "POST") normalized.itemKey = itemKey.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  if (itemKey !== undefined && method === "POST") {
+    normalized.itemKey = itemKey
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 64);
+  }
 
   if (method === "DELETE") {
     return { method: "PATCH", body: { status: "archived", visibility: "hidden" } };
@@ -66,7 +92,12 @@ export async function normalizeSettingsMutation(request) {
   const gameSettings = {};
   const policySettings = {};
 
-  const difficultyPreset = optionalText(body, ["difficultyPreset", "difficulty", "preset", "difficultyBasePreset"]);
+  const difficultyPreset = optionalText(body, [
+    "difficultyPreset",
+    "difficulty",
+    "preset",
+    "difficultyBasePreset",
+  ]);
   const attendanceWindow = firstDefined(body, ["attendanceWindow", "attendance"]);
   const businessMarketWindow = firstDefined(body, ["businessMarketWindow", "businessMarket"]);
   const stockMarketWindow = firstDefined(body, ["stockMarketWindow", "stockMarket"]);
@@ -97,7 +128,9 @@ export async function normalizeSettingsMutation(request) {
 
   policyAliases.forEach((aliases, index) => {
     const value = optionalNumber(body, aliases);
-    if (value !== undefined) policySettings[policyColumns[index]] = Math.min(2, Math.max(0.5, value));
+    if (value !== undefined) {
+      policySettings[policyColumns[index]] = Math.min(2, Math.max(0.5, value));
+    }
   });
 
   if (Object.keys(policySettings).length > 0) {
@@ -106,7 +139,8 @@ export async function normalizeSettingsMutation(request) {
     policySettings.custom_label = optionalText(body, ["customLabel"]) || "Custom";
     policySettings.difficulty_policy_profile_id = null;
   } else if (difficultyPreset !== undefined) {
-    policySettings.difficulty_preset = difficultyPreset;
+    policySettings.difficulty_preset = difficultyPreset.toLowerCase();
+    policySettings.source = "preset";
   }
 
   return { gameSettings, policySettings };
@@ -117,16 +151,50 @@ export async function applyDifficultyPolicy(service, gameId, policySettings) {
 
   const existing = await service
     .from("game_difficulty_policy_settings")
-    .select("id,difficulty_policy_profile_id,difficulty_preset,custom_label,source,price_modifier,event_volatility_modifier,scarcity_modifier,income_modifier,trade_modifier,credit_modifier,status,metadata")
+    .select(
+      "id,difficulty_policy_profile_id,difficulty_preset,custom_label,source,price_modifier,event_volatility_modifier,scarcity_modifier,income_modifier,trade_modifier,credit_modifier,status,metadata",
+    )
     .eq("game_session_id", gameId)
     .maybeSingle();
   if (existing.error) throw existing.error;
   if (!existing.data) throw new Error("difficulty_policy_settings_not_found");
 
-  const patch = { ...policySettings };
-  if (patch.source !== "custom") {
-    delete patch.custom_label;
-    delete patch.difficulty_policy_profile_id;
+  let patch;
+  if (policySettings.source === "preset") {
+    const presetKey = text(policySettings.difficulty_preset).toLowerCase();
+    const profile = await service
+      .from("difficulty_policy_profiles")
+      .select(
+        "id,preset_key,label,price_modifier,event_volatility_modifier,scarcity_modifier,income_modifier,trade_modifier,credit_modifier,status",
+      )
+      .eq("preset_key", presetKey)
+      .eq("status", "active")
+      .maybeSingle();
+    if (profile.error) throw profile.error;
+    if (!profile.data) throw new Error("difficulty_policy_profile_not_found");
+
+    patch = {
+      difficulty_policy_profile_id: profile.data.id,
+      difficulty_preset: profile.data.preset_key,
+      custom_label: null,
+      source: "preset",
+      price_modifier: profile.data.price_modifier,
+      event_volatility_modifier: profile.data.event_volatility_modifier,
+      scarcity_modifier: profile.data.scarcity_modifier,
+      income_modifier: profile.data.income_modifier,
+      trade_modifier: profile.data.trade_modifier,
+      credit_modifier: profile.data.credit_modifier,
+      status: "active",
+    };
+  } else {
+    patch = {
+      ...policySettings,
+      difficulty_policy_profile_id: null,
+      difficulty_preset: "custom",
+      custom_label: text(policySettings.custom_label, "Custom"),
+      source: "custom",
+      status: "active",
+    };
   }
 
   const result = await service
