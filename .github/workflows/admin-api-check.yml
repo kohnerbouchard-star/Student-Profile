@@ -89,6 +89,7 @@ jobs:
           expected = [
               Path('backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql'),
               Path('backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql'),
+              Path('backend/supabase/migrations/20260713223000_complete_admin_control_surfaces_v1.sql'),
               Path('backend/supabase/migrations/20260714224000_harden_admin_data_api_tables_v1.sql'),
           ]
           for path in expected:
