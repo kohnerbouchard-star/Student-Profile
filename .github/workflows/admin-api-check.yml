@@ -35,21 +35,39 @@ jobs:
           deno check --config supabase/functions/admin-api/deno.json --no-lock \
             supabase/functions/admin-api/index.ts \
             > /tmp/admin-api-check.log 2>&1
-          status=$?
+          echo $? > /tmp/admin-api-check.status
           tail -n 120 /tmp/admin-api-check.log
-          exit $status
+          exit 0
 
       - name: Run admin API tests
         working-directory: backend
         shell: bash
         run: |
+          if [ "$(cat /tmp/admin-api-check.status)" != "0" ]; then
+            echo "Typecheck failed; tests were not run." > /tmp/admin-api-test.log
+            echo 1 > /tmp/admin-api-test.status
+            exit 0
+          fi
           set +e
           deno test --config supabase/functions/admin-api/deno.json --no-lock \
             supabase/functions/admin-api/*.test.ts \
             > /tmp/admin-api-test.log 2>&1
-          status=$?
+          echo $? > /tmp/admin-api-test.status
           tail -n 120 /tmp/admin-api-test.log
-          exit $status
+          exit 0
+
+      - name: Upload admin API diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-api-diagnostics
+          path: |
+            /tmp/admin-api-check.log
+            /tmp/admin-api-check.status
+            /tmp/admin-api-test.log
+            /tmp/admin-api-test.status
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Validate migration transaction boundaries
         run: |
@@ -61,3 +79,13 @@ jobs:
                   raise SystemExit(f'{path} must be transaction wrapped')
           print('Migration transaction boundary checks passed.')
           PY
+
+      - name: Enforce admin API checks
+        shell: bash
+        run: |
+          check_status="$(cat /tmp/admin-api-check.status)"
+          test_status="$(cat /tmp/admin-api-test.status)"
+          if [ "$check_status" != "0" ] || [ "$test_status" != "0" ]; then
+            echo "Admin API validation failed. Download the admin-api-diagnostics artifact."
+            exit 1
+          fi
