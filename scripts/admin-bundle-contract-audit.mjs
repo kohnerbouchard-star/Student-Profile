@@ -19,6 +19,25 @@ function normalizedRoute(value) {
   return String(value).split("?", 1)[0];
 }
 
+function contextsForTerms(terms, before = 1800, after = 2600) {
+  const contexts = [];
+  for (const term of terms) {
+    let index = source.indexOf(term);
+    while (index >= 0) {
+      contexts.push({
+        term,
+        sourceIndex: index,
+        context: source.slice(
+          Math.max(0, index - before),
+          Math.min(source.length, index + term.length + after),
+        ),
+      });
+      index = source.indexOf(term, index + term.length);
+    }
+  }
+  return contexts;
+}
+
 const endpointMatches = [...source.matchAll(/(["'`])(\/[^"'`\n]{2,180})\1/g)]
   .filter((match) =>
     /\b(?:api|games|account|session|notifications|help|auth)\b/i.test(match[2]) &&
@@ -101,12 +120,21 @@ const dispositionCounts = Object.values(routeManifest).reduce((counts, dispositi
   return counts;
 }, {});
 
+const gameCodeContexts = contextsForTerms([
+  "share-game-access",
+  "copy-game-code",
+  "share-current-game",
+  "data-admin-terminal-share-button",
+  "admin-terminal-share-modal-code",
+]);
+
 console.log(JSON.stringify({
   endpointFragments,
   endpointOccurrences,
   actionContracts,
   actionNames,
   requestMethods,
+  gameCodeContexts,
   routeCoverage: {
     visibleRouteCount: visibleRoutes.length,
     actionRouteCount: actionRoutes.length,
