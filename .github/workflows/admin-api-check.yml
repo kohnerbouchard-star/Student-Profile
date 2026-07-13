@@ -14,6 +14,9 @@ on:
       - "backend/supabase/migrations/**"
       - ".github/workflows/admin-api-check.yml"
 
+permissions:
+  contents: read
+
 jobs:
   admin-api-check:
     runs-on: ubuntu-latest
