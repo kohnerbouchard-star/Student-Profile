@@ -1,0 +1,19 @@
+name: Admin Bundle Contract Audit
+
+on:
+  pull_request:
+    paths:
+      - "admin/dist/admin-overview-terminal.js"
+      - "scripts/admin-bundle-contract-audit.mjs"
+      - ".github/workflows/admin-bundle-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract v606 request and action contracts
+        run: node scripts/admin-bundle-contract-audit.mjs
