@@ -8,10 +8,12 @@ import {
 } from "./mutationAdapters.ts";
 import { issueContractRewardsAtomically } from "./contractRewards.ts";
 import { handleCompatibilityOperation } from "./compatibilityOperations.ts";
+import { handleAttendancePlayerOperation } from "./attendancePlayerOperations.ts";
 
 export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
-export const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+export const SUPABASE_SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 export const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`;
 
 const ALLOWED_ORIGINS = new Set([
@@ -28,7 +30,8 @@ export function corsHeaders(request) {
     : "https://kohnerbouchard-star.github.io";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-econovaria-game-id, x-client-info, x-csrf-token, x-idempotency-key, x-econovaria-admin-action, x-requested-with, if-match, x-request-id",
+    "Access-Control-Allow-Headers":
+      "authorization, apikey, content-type, x-econovaria-game-id, x-client-info, x-csrf-token, x-idempotency-key, x-econovaria-admin-action, x-requested-with, if-match, x-request-id",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -57,7 +60,9 @@ export function text(value, fallback = "") {
 }
 
 export function object(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 export async function readJson(request) {
@@ -85,7 +90,13 @@ function bearerToken(request) {
 
 export async function resolveContext(request) {
   const token = bearerToken(request);
-  if (!token) return { ok: false, status: 401, message: "Administrator sign-in is required." };
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Administrator sign-in is required.",
+    };
+  }
 
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -98,7 +109,11 @@ export async function resolveContext(request) {
   const userResult = await authClient.auth.getUser(token);
   const user = userResult.data?.user;
   if (userResult.error || !user?.id) {
-    return { ok: false, status: 401, message: "Administrator session is invalid or expired." };
+    return {
+      ok: false,
+      status: 401,
+      message: "Administrator session is invalid or expired.",
+    };
   }
 
   const staffResult = await service
@@ -107,7 +122,11 @@ export async function resolveContext(request) {
     .eq("supabase_auth_user_id", user.id)
     .maybeSingle();
   if (staffResult.error || !staffResult.data) {
-    return { ok: false, status: 403, message: "This account is not registered as staff." };
+    return {
+      ok: false,
+      status: 403,
+      message: "This account is not registered as staff.",
+    };
   }
 
   const gamesResult = await service
@@ -116,10 +135,21 @@ export async function resolveContext(request) {
     .eq("owner_staff_user_id", staffResult.data.id)
     .order("created_at", { ascending: false });
   if (gamesResult.error) {
-    return { ok: false, status: 500, message: "Administrator games could not be loaded." };
+    return {
+      ok: false,
+      status: 500,
+      message: "Administrator games could not be loaded.",
+    };
   }
 
-  return { ok: true, token, user, staff: staffResult.data, games: gamesResult.data || [], service };
+  return {
+    ok: true,
+    token,
+    user,
+    staff: staffResult.data,
+    games: gamesResult.data || [],
+    service,
+  };
 }
 
 export function gameDto(game) {
@@ -137,13 +167,16 @@ export function gameDto(game) {
 }
 
 export function selectGame(context, request, fallbackId = "") {
-  const requested = fallbackId || request.headers.get("x-econovaria-game-id") || "";
+  const requested = fallbackId || request.headers.get("x-econovaria-game-id") ||
+    "";
   return context.games.find((game) => String(game.id) === String(requested)) ||
-    context.games.find((game) => game.status === "active") || context.games[0] || null;
+    context.games.find((game) => game.status === "active") ||
+    context.games[0] || null;
 }
 
 export function ensureOwnedGame(context, gameId) {
-  return context.games.find((game) => String(game.id) === String(gameId)) || null;
+  return context.games.find((game) => String(game.id) === String(gameId)) ||
+    null;
 }
 
 function gameSessionIdFromPath(path) {
@@ -174,7 +207,8 @@ function isContractCreatePath(path, method) {
 
 function isContractReviewPath(path, method) {
   return method === "POST" &&
-    /^\/staff\/game-sessions\/[^/]+\/contracts\/[^/]+\/progress\/[^/]+\/review$/.test(String(path));
+    /^\/staff\/game-sessions\/[^/]+\/contracts\/[^/]+\/progress\/[^/]+\/review$/
+      .test(String(path));
 }
 
 function atomicContractRewardPath(path, method) {
@@ -214,7 +248,8 @@ async function fetchClassroom(request, context, path, method, body) {
     status: response.status,
     headers: {
       ...corsHeaders(request),
-      "Content-Type": response.headers.get("content-type") || "application/json",
+      "Content-Type": response.headers.get("content-type") ||
+        "application/json",
       "Cache-Control": "no-store",
     },
   });
@@ -228,14 +263,27 @@ export async function proxyClassroom(
   overrideBody = undefined,
 ) {
   if (!["GET", "HEAD"].includes(method) && overrideBody === undefined) {
-    const compatibilityBody = await request.clone().json().catch(() => ({}));
-    const compatibility = await handleCompatibilityOperation(context.service, {
+    const operationBody = object(
+      await request.clone().json().catch(() => ({})),
+    );
+    const operationInput = {
       gameSessionId: gameSessionIdFromPath(path),
       staffUserId: context.staff.id,
       path,
       method,
-      body: object(compatibilityBody),
-    });
+      body: operationBody,
+    };
+    const attendancePlayer = await handleAttendancePlayerOperation(
+      context.service,
+      operationInput,
+    );
+    if (attendancePlayer.handled) {
+      return json(request, attendancePlayer.status, attendancePlayer.body);
+    }
+    const compatibility = await handleCompatibilityOperation(
+      context.service,
+      operationInput,
+    );
     if (compatibility.handled) {
       return json(request, compatibility.status, compatibility.body);
     }
@@ -268,7 +316,13 @@ export async function proxyClassroom(
 
   if (isStoreMutationPath(path, method) && overrideBody === undefined) {
     const normalized = await normalizeStoreMutation(request, method);
-    return fetchClassroom(request, context, path, normalized.method, normalized.body);
+    return fetchClassroom(
+      request,
+      context,
+      path,
+      normalized.method,
+      normalized.body,
+    );
   }
 
   if (isSettingsMutationPath(path, method) && overrideBody === undefined) {
@@ -305,8 +359,8 @@ export async function proxyClassroom(
   const body = ["GET", "HEAD"].includes(method)
     ? undefined
     : overrideBody !== undefined
-      ? overrideBody
-      : await request.clone().json().catch(() => ({}));
+    ? overrideBody
+    : await request.clone().json().catch(() => ({}));
 
   return fetchClassroom(request, context, path, method, body);
 }
