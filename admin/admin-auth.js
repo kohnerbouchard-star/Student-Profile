@@ -126,6 +126,7 @@
     }
 
     const headers = new Headers(request.headers);
+    headers.delete("x-econovaria-admin-read");
     headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
     headers.set("Authorization", `Bearer ${session.accessToken}`);
     headers.set("X-Econovaria-Game-Id", selectedGameId);
