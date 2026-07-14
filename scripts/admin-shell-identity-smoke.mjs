@@ -85,7 +85,7 @@ assert(playerCreateUx.includes('removeAttribute("required")'), "Blank credential
 assert(playerCreateUx.includes("Leave blank to auto-generate"), "Add Player does not explain automatic credential generation.");
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation modal is missing.");
 assert(playerCreateUx.includes("admin-terminal-modal-backdrop"), "Player confirmation does not use the v606 modal system.");
-assert(playerCreateUx.includes(`${LEGACY_DIALOG_PLACEHOLDER = "[data-admin-player-access-code-dialog]"}`), "Legacy credential overlay is not suppressed.");
+assert(playerCreateUx.includes("[data-admin-player-access-code-dialog]"), "Legacy credential overlay is not suppressed.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
 
 assert(terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'), "Delegated admin click handler is missing.");
