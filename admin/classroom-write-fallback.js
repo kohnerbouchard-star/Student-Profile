@@ -130,9 +130,9 @@
     const url = new URL(request.url, window.location.href);
     const canonical = await canonicalWrite(request, url);
 
-    if (!canonical) return delegatedFetch(input, init);
+    if (!canonical) return delegatedFetch(request);
 
-    const primary = await delegatedFetch(input, init);
+    const primary = await delegatedFetch(request);
     if (primary.ok || !retryStatuses.has(primary.status)) return primary;
 
     const session = storedSession();
