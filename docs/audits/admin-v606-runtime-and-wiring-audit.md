@@ -12,27 +12,15 @@
 
 ## Runtime consolidation completed
 
-- Removed the standalone sign-in, account creation, and game-selection implementation from `admin/admin-auth.js`.
-- Removed `admin/admin-api-base.js`, which was a second overlapping fetch wrapper.
-- `admin/admin-auth.js` is now the single runtime bridge for transferred session validation, shell mounting, authenticated forwarding, sign-out, and reauthentication redirects.
-- `admin/session-gate.js` validates only local handoff state and exposes explicit `release()` and `showError()` controls.
-- The gate no longer performs server bootstrap and no longer leaves an opaque blocking screen after a startup failure.
+- Removed overlapping standalone admin sign-in and proxy implementations.
+- `admin-auth.js` is the single authenticated `/api/admin` runtime bridge.
+- `admin/session-gate.js` validates local handoff state and no longer duplicates server bootstrap.
+- Header/body-stripping identity transports and unsafe DOM UUID replacement were removed.
+- The create adapter normalizes only create POSTs; non-create request bodies pass through untouched.
 
-## Current backend-for-frontend coverage
+## Data coverage
 
-The isolated `admin-api` currently serves real Supabase-backed reads for session bootstrap, overview, players, attendance, contracts, store, marketplace, settings, logs, and safe account/notification/help states.
-
-It proxies supported writes to `classroom-api` for player creation, player access-code reset, attendance scans, contract creation, store item mutations, and settings mutations.
-
-## Confirmed non-placeholder sources
-
-- Players: `players`, `account_balances`, `player_country_assignments`, `country_profiles`, `player_sessions`.
-- Attendance: `player_attendance_records`.
-- Contracts: `game_session_contracts`, `player_contract_progress`.
-- Store: `store_items`, `store_purchases`.
-- Marketplace: `game_session_stock_assets`, `stock_price_ticks`, `stock_trades`, `stock_market_events`.
-- Settings: `game_settings`, `game_difficulty_policy_settings`.
-- Logs: `audit_log`.
+Real Supabase-backed reads cover session bootstrap, overview, players, attendance, contracts, store, marketplace, settings, and logs. Supported player, attendance, contract, store, and settings mutations are proxied to trusted domain handlers.
 
 ## July 14, 2026 consistency audit
 
@@ -49,46 +37,37 @@ No unplanned generated-interface drift was found. These accepted files remain by
 
 Original interface SVGs, PNGs, and all five modal MP4 files remain at the paths expected by the bundle. Generic media fallback logic remains limited to content media.
 
-### Add Player inconsistencies found and repaired
+### Add Player inconsistencies repaired
 
-1. **Required-versus-generated contradiction**
-   - The v606 workflow described Player ID and Access Code as generated while the integration marked both inputs required.
-   - Both fields are now optional in Add Player.
-   - Blank values are populated immediately before submission using `crypto.getRandomValues`.
-   - Generated Player IDs use `PLR-XXXXXXXX`; generated Access Codes use `XXXX-XXXX`, excluding visually ambiguous characters.
-   - The backend still receives and validates the canonical nonblank identity contract.
+- Player ID / RFID card and Access Code are optional in Add Player.
+- Blank values are generated immediately before submission with `crypto.getRandomValues`.
+- Generated Player IDs use `PLR-XXXXXXXX`.
+- Generated Access Codes use `XXXX-XXXX`.
+- Ambiguous characters are excluded.
+- Manually entered values are preserved unchanged.
+- The authenticated request still carries the canonical nonblank identity contract expected by the backend.
 
-2. **Manual credential preservation**
-   - A manually entered Player ID or Access Code is sent unchanged.
-   - Each field can be generated independently when only one is blank.
+### Post-create confirmation repaired
 
-3. **Post-create credential UX**
-   - The previous custom inline-styled credential overlay was inconsistent with the v606 interface.
-   - It is suppressed and removed.
-   - Successful creation now opens a bounded, responsive v606-style `player-created-confirmation` modal.
-   - The modal shows the credentials once, distinguishes generated and custom values, supports copying, and requires explicit acknowledgement.
+- The previous custom inline-styled credential overlay is suppressed and removed.
+- Successful creation opens a bounded, responsive v606-style Player-created confirmation.
+- The confirmation shows credentials once, labels generated versus custom values, supports copying, and requires acknowledgement.
+- Existing-player identity changes remain in Edit Player Profile and never open the creation confirmation.
+- No additional fetch or XHR wrapper was introduced.
 
-4. **Existing-player isolation**
-   - Existing-player identity changes remain in Edit Player Profile.
-   - Those changes do not open the Player-created confirmation.
-   - No additional fetch or XHR wrapper was introduced.
+### Validation completed
 
-### Validation coverage
+The passing browser suite covers root player login, desktop/compact/narrow layouts, original assets and videos, all create workflows, blank and manual player credentials, confirmation acknowledgement, Edit Player Profile, Player-ID-only changes, and attendance. Backend Typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke are required to remain green.
 
-The browser suite verifies desktop, compact, and narrow layouts; original assets and videos; all create workflows; blank and manual player credentials; the Player-created confirmation; Edit Player Profile; Player-ID-only updates; player login; and attendance. Static and backend checks cover source contracts, API normalization, bundle contracts, and TypeScript.
+## Remaining intentional gaps
 
-## Remaining intentional gaps and simplifications
-
-1. **Game join code** — only a hash is stored; a secure reset-and-display flow is still required.
-2. **Net worth / overall score** — cash balance remains the temporary score and does not include all asset classes.
-3. **Attendance rewards issued today** — ledger aggregation from `ledger_entries` is not yet implemented.
-4. **Notifications, security history, and help articles** — safe empty states remain where no production service exists.
-5. **Contract write completeness** — advanced publish, review, reward, edit, and archive actions still require live verification.
-6. **Store and settings mutations** — each v606 action still requires live request-body verification against production.
-7. **Presence** — online status is session-row based rather than heartbeat based.
+1. Game join code lacks a secure reset-and-one-time-display UX.
+2. Net worth and overall score do not yet include all asset classes.
+3. Attendance rewards issued today lacks ledger aggregation.
+4. Notifications, security history, and help retain safe empty states where no production service exists.
+5. Advanced contract, store, and settings mutations need live page-by-page verification.
+6. Presence is session-row based rather than heartbeat based.
 
 ## Drift assessment
 
-The architecture remains a dedicated admin read model over existing Supabase domain tables with trusted writes delegated to `classroom-api`.
-
-Current differences from accepted v606 are intentional authentication/session integration, API compatibility, restored assets, player credential UX, confirmation layout, and validation coverage. Remaining work is feature completeness and metric accuracy, not duplicated authentication or proxy architecture.
+Current differences from accepted v606 are intentional authentication/session integration, API compatibility, restored assets, player credential UX, confirmation layout, and validation coverage. Remaining work is feature completeness and live production verification, not duplicated architecture or frontend drift.
