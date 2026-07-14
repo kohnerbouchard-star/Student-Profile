@@ -16,6 +16,8 @@ Original repository-owned assets are served from `admin/assets/` using the filen
 
 Generic media fallbacks apply only to uploaded/content media. They must not replace interface symbols or modal videos.
 
+The current branch has been cross-checked against v606 commit `2a1d223c3d986fbb75f8c0b87d93c53820ef2e35`. The generated terminal bundle, primary terminal CSS, page-shell CSS, and integrity CSS are byte-identical. Remaining differences are intentional authentication, API, asset-restoration, credential-wiring, and validation layers.
+
 ## Player credentials
 
 The existing **Edit Player Profile** popup is the only existing-player credential editing surface.
