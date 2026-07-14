@@ -16,10 +16,14 @@ function localAssetPath(reference) {
 }
 
 function extractFunction(source, name) {
-  const marker = `function ${name}(`;
-  const start = source.indexOf(marker);
+  const candidates = [`async function ${name}(`, `function ${name}(`];
+  let start = -1;
+  for (const marker of candidates) {
+    start = source.indexOf(marker);
+    if (start >= 0) break;
+  }
   if (start < 0) return `[missing function: ${name}]`;
-  const bodyStart = source.indexOf("{", start + marker.length);
+  const bodyStart = source.indexOf("{", start);
   if (bodyStart < 0) return `[missing body: ${name}]`;
   let depth = 0;
   let quote = "";
@@ -41,13 +45,9 @@ function extractFunction(source, name) {
       continue;
     }
     if (quote) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === "\\") {
-        escaped = true;
-      } else if (char === quote) {
-        quote = "";
-      }
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
       continue;
     }
     if (char === "/" && next === "/") {
@@ -129,47 +129,23 @@ const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "ut
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
+assert(auth.includes("completeInitialBootstrapRender(feature)"), "The one-time bootstrap lifecycle completion is missing from admin-auth.js.");
 assert(
-  auth.includes("completeInitialBootstrapRender(feature)"),
-  "The one-time bootstrap lifecycle completion is missing from admin-auth.js.",
-);
-assert(
-  auth.indexOf("mount.innerHTML = feature.renderShell();") <
-    auth.indexOf("completeInitialBootstrapRender(feature);"),
+  auth.indexOf("mount.innerHTML = feature.renderShell();") < auth.indexOf("completeInitialBootstrapRender(feature);"),
   "The bootstrap marker must be cleared only after the initial verification render.",
 );
-assert(
-  !boot.includes("feature.renderShell ="),
-  "admin-overview-boot.js must not monkey patch renderShell.",
-);
-assert(
-  auth.includes('headers.delete("x-econovaria-admin-read")'),
-  "The unused cross-origin admin read marker must be removed before forwarding.",
-);
-assert(
-  auth.includes('headers.set("Authorization", `Bearer ${session.accessToken}`)'),
-  "Forwarded admin requests must include the transferred bearer token.",
-);
-assert(
-  auth.includes('headers.set("X-Econovaria-Game-Id", selectedGameId)'),
-  "Forwarded admin requests must include the selected game ID.",
-);
-assert(
-  !gameCode.includes("MutationObserver"),
-  "Game-code wiring must not watch or rewrite the entire document.",
-);
-assert(
-  gameCode.includes('const RESET_ACTION = "reset-game-code"'),
-  "Game-code generation must use an explicit delegated terminal action.",
-);
-assert(
-  gameCode.includes("scheduleShareModalDecoration"),
-  "Game-code wiring must attach through the bounded share-panel lifecycle.",
-);
+assert(!boot.includes("feature.renderShell ="), "admin-overview-boot.js must not monkey patch renderShell.");
+assert(auth.includes('headers.delete("x-econovaria-admin-read")'), "The unused cross-origin admin read marker must be removed before forwarding.");
+assert(auth.includes('headers.set("Authorization", `Bearer ${session.accessToken}`)'), "Forwarded admin requests must include the transferred bearer token.");
+assert(auth.includes('headers.set("X-Econovaria-Game-Id", selectedGameId)'), "Forwarded admin requests must include the selected game ID.");
+assert(!gameCode.includes("MutationObserver"), "Game-code wiring must not watch or rewrite the entire document.");
+assert(gameCode.includes('const RESET_ACTION = "reset-game-code"'), "Game-code generation must use an explicit delegated terminal action.");
+assert(gameCode.includes("scheduleShareModalDecoration"), "Game-code wiring must attach through the bounded share-panel lifecycle.");
 
 console.log("ADMIN_INTERACTION_DIAGNOSTIC_BEGIN");
 for (const name of [
   "handleTerminalOverviewClick",
+  "renderAdminTerminalSectionFromButton",
   "renderAdminTerminalSectionFromButtonLegacyV604",
   "bindTerminalOverviewEvents",
   "bindTerminalClickEvents",
@@ -177,6 +153,7 @@ for (const name of [
   console.log(`\n--- FUNCTION ${name} ---\n${extractFunction(terminal, name)}`);
 }
 for (const term of [
+  "renderAdminTerminalSectionFromButton",
   '[data-admin-section]',
   '[data-admin-terminal-action]',
   "__sessionBootstrapPending",
@@ -185,5 +162,11 @@ for (const term of [
 ]) {
   console.log(`\n--- CONTEXT ${term} ---\n${contextsFor(terminal, term)}`);
 }
+console.log(`\n--- NAV SYMBOL COUNTS ---\n${JSON.stringify({
+  requestedNameOccurrences: terminal.split("renderAdminTerminalSectionFromButton").length - 1,
+  legacyNameOccurrences: terminal.split("renderAdminTerminalSectionFromButtonLegacyV604").length - 1,
+  requestedFunctionDefined: /(?:async\s+)?function\s+renderAdminTerminalSectionFromButton\s*\(/.test(terminal),
+  requestedVariableDefined: /(?:const|let|var)\s+renderAdminTerminalSectionFromButton\s*=/.test(terminal),
+}, null, 2)}`);
 console.log("ADMIN_INTERACTION_DIAGNOSTIC_END");
 console.log("Admin shell static smoke checks passed.");
