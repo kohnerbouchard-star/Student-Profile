@@ -20,6 +20,22 @@
     return String(value ?? "").trim();
   }
 
+  function unwrapResponsePayload(value) {
+    let current = record(value);
+    for (let depth = 0; depth < 4; depth += 1) {
+      const next = ["data", "payload", "result", "response"]
+        .map((key) => record(current[key]))
+        .find((candidate) => Object.keys(candidate).length > 0);
+      if (!next) break;
+      current = next;
+    }
+    return current;
+  }
+
+  if (typeof window.unwrapAdminTerminalResponsePayload !== "function") {
+    window.unwrapAdminTerminalResponsePayload = unwrapResponsePayload;
+  }
+
   function flattened(value) {
     const source = record(value);
     for (const key of ["payload", "data", "player", "scan"]) {
@@ -167,5 +183,6 @@
 
   window.EconovariaClassroomWriteFallback = {
     canonicalWrite,
+    unwrapResponsePayload,
   };
 })();
