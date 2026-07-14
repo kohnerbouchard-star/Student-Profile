@@ -25,6 +25,7 @@ const expectedScripts = [
   "./dist/admin-overview-terminal.js",
   "./create-action-adapter.js",
   "./classroom-write-fallback.js",
+  "./player-access-code-bridge.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
 ];
@@ -59,6 +60,7 @@ const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
 const createActionAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const classroomFallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
+const playerAccessCodeBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
@@ -136,6 +138,17 @@ assert(
   "Classroom fallback must preserve successful primary admin writes.",
 );
 assert(
+  playerAccessCodeBridge.includes("/access-code/reset") &&
+    playerAccessCodeBridge.includes("player_created_without_access_code") &&
+    playerAccessCodeBridge.includes("data-admin-player-access-code-dialog"),
+  "Player creation must issue and display a one-time access code when the create response omits one.",
+);
+assert(
+  playerAccessCodeBridge.includes('headers.delete("X-CSRF-Token")') &&
+    playerAccessCodeBridge.includes('headers.delete("X-Econovaria-CSRF")'),
+  "Player access-code reset must strip admin-only CORS headers.",
+);
+assert(
   terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'),
   "The delegated admin click handler is not bound.",
 );
@@ -168,4 +181,4 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
-console.log("Admin shell interaction, create-action, classroom fallback, and authorization smoke checks passed.");
+console.log("Admin shell interaction, create-action, classroom fallback, player access-code, and authorization smoke checks passed.");
