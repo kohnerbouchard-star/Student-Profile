@@ -9,6 +9,8 @@ on:
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
+      - "frontend/src/features/contracts/**"
+      - "frontend/src/styles/screens/contracts.css"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
@@ -17,6 +19,7 @@ on:
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -35,6 +38,8 @@ on:
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
+      - "frontend/src/features/contracts/**"
+      - "frontend/src/styles/screens/contracts.css"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
@@ -43,6 +48,7 @@ on:
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -103,6 +109,9 @@ jobs:
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs
+
+      - name: Exercise student contracts workspace
+        run: node scripts/player-contracts-workspace-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
