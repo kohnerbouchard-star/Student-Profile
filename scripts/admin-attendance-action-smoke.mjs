@@ -5,7 +5,6 @@ const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admi
 const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-const PLAYER_ID = "00000000-0000-4000-8000-000000000003";
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 function base64Url(value) {
@@ -75,42 +74,13 @@ const common = {
   },
 };
 
-function bootstrapResponse() {
-  return {
-    data: {
-      admin: {
-        id: ADMIN_ID,
-        accountId: ADMIN_ID,
-        displayName: "Smoke Test Administrator",
-        email: "admin@example.test",
-        role: "game_admin",
-        roles: ["game_admin"],
-      },
-      activeGame: game,
-      games: [game],
-      permissions: ["*"],
-      roles: ["game_admin"],
-      adminRole: "game_admin",
-      csrfToken: "",
-      session: {
-        id: ADMIN_ID,
-        csrfToken: "",
-        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-      },
-      capabilities: {},
-    },
-  };
-}
-
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await context.newPage();
 const errors = [];
-const consoleMessages = [];
 const writes = [];
 
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
+page.on("pageerror", (error) => errors.push(error.stack || error.message));
 
 await page.addInitScript(({ accessToken, gameId, adminId }) => {
   sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
@@ -142,15 +112,41 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
       status: 404,
       contentType: "application/json",
       headers: { "access-control-allow-origin": "*" },
-      body: JSON.stringify({ error: { code: "route_not_found", message: "Use classroom route." } }),
+      body: JSON.stringify({ error: { code: "route_not_found" } }),
     });
     return;
   }
+  const body = pathname.endsWith("/session/bootstrap")
+    ? {
+        data: {
+          admin: {
+            id: ADMIN_ID,
+            accountId: ADMIN_ID,
+            displayName: "Smoke Test Administrator",
+            email: "admin@example.test",
+            role: "game_admin",
+            roles: ["game_admin"],
+          },
+          activeGame: game,
+          games: [game],
+          permissions: ["*"],
+          roles: ["game_admin"],
+          adminRole: "game_admin",
+          csrfToken: "",
+          session: {
+            id: ADMIN_ID,
+            csrfToken: "",
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          },
+          capabilities: {},
+        },
+      }
+    : { data: common };
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(pathname.endsWith("/session/bootstrap") ? bootstrapResponse() : { data: common }),
+    body: JSON.stringify(body),
   });
 });
 
@@ -177,7 +173,12 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
     body: JSON.stringify({
       ok: true,
       gameSession: { id: GAME_ID, name: game.name, status: "active" },
-      player: { id: PLAYER_ID, displayName: "Attendance Smoke Player", rosterLabel: "ATT-001", status: "active" },
+      player: {
+        id: "00000000-0000-4000-8000-000000000003",
+        displayName: "Attendance Smoke Player",
+        rosterLabel: "ATT-001",
+        status: "active",
+      },
       attendance: {
         id: "00000000-0000-4000-8000-000000000004",
         status: "present",
@@ -194,41 +195,49 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
-  await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click({ timeout: 5000 });
-  await page.waitForSelector('.admin-terminal-modal:visible', { timeout: 5000 });
-  await page.locator('[data-admin-terminal-set-mode="manual"]').click({ timeout: 5000 });
-  const manualPanel = page.locator('[data-admin-terminal-manual-panel]');
-  await manualPanel.waitFor({ state: "visible", timeout: 5000 });
-  await manualPanel.locator('[data-admin-terminal-manual-scan-input]').fill("PLAYER-CODE-123");
-  await manualPanel.locator('[data-admin-terminal-action="submit-attendance-scan"]').click({ timeout: 5000 });
-  await page.waitForTimeout(800);
+  await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
+  await page.waitForSelector(".admin-terminal-modal:visible", { timeout: 5000 });
+  await page.locator('[data-admin-terminal-set-mode="manual"]').click();
+  const panel = page.locator("[data-admin-terminal-manual-panel]");
+  await panel.waitFor({ state: "visible", timeout: 5000 });
+  await panel.locator("[data-admin-terminal-manual-scan-input]").fill("PLAYER-CODE-123");
+  await panel.locator('[data-admin-terminal-action="submit-attendance-scan"]').click();
+  await page.waitForFunction(() => {
+    const state = document.querySelector("[data-admin-terminal-scanner-state]")?.textContent || "";
+    return /confirmed/i.test(state);
+  }, null, { timeout: 5000 });
 
   const result = await page.evaluate(() => ({
-    player: document.querySelector('[data-admin-terminal-last-scan-player]')?.textContent?.trim() || "",
-    status: document.querySelector('[data-admin-terminal-last-scan-status]')?.textContent?.trim() || "",
-    resultHidden: document.querySelector('[data-admin-terminal-last-scan-result]')?.hasAttribute("hidden") ?? true,
-    emptyHidden: document.querySelector('[data-admin-terminal-last-scan-empty]')?.hasAttribute("hidden") ?? false,
-    scannerState: document.querySelector('[data-admin-terminal-scanner-state]')?.textContent?.trim() || "",
+    player: document.querySelector("[data-admin-terminal-last-scan-player]")?.textContent?.trim() || "",
+    status: document.querySelector("[data-admin-terminal-last-scan-status]")?.textContent?.trim() || "",
+    resultHidden: document.querySelector("[data-admin-terminal-last-scan-result]")?.hasAttribute("hidden") ?? true,
+    emptyHidden: document.querySelector("[data-admin-terminal-last-scan-empty]")?.hasAttribute("hidden") ?? false,
+    scannerState: document.querySelector("[data-admin-terminal-scanner-state]")?.textContent?.trim() || "",
   }));
 
-  writeFileSync(`${ARTIFACT_DIR}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors, consoleMessages }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/attendance-action.png`, fullPage: true });
   writeFileSync(`${ARTIFACT_DIR}/attendance-action.html`, await page.content());
 
   if (errors.length) throw new Error(errors[0]);
-  if (!writes.some((write) => write.service === "admin-api")) {
-    throw new Error("Attendance submit emitted no primary admin-api request.");
+  if (writes.filter((write) => write.service === "admin-api").length !== 1) {
+    throw new Error(`Expected one admin attendance attempt: ${JSON.stringify(writes)}.`);
   }
-  const classroomWrite = writes.find((write) => write.service === "classroom-api");
-  if (!classroomWrite) throw new Error("Attendance submit emitted no classroom-api fallback request.");
-  if (!classroomWrite.pathname.endsWith(`/games/${GAME_ID}/attendance/scan`)) {
-    throw new Error(`Attendance fallback used unexpected path ${classroomWrite.pathname}.`);
+  const classroomWrites = writes.filter((write) => write.service === "classroom-api");
+  if (classroomWrites.length !== 1) {
+    throw new Error(`Expected one classroom attendance retry: ${JSON.stringify(writes)}.`);
   }
-  if (classroomWrite.body?.playerId !== "PLAYER-CODE-123") {
-    throw new Error(`Attendance fallback sent unexpected body ${JSON.stringify(classroomWrite.body)}.`);
+  if (!classroomWrites[0].pathname.endsWith(`/games/${GAME_ID}/attendance/scan`)) {
+    throw new Error(`Attendance retry used unexpected path ${classroomWrites[0].pathname}.`);
   }
-  if (result.resultHidden || result.player !== "Attendance Smoke Player") {
-    throw new Error(`Attendance success did not update the scanner result: ${JSON.stringify(result)}.`);
+  if (classroomWrites[0].body?.playerId !== "PLAYER-CODE-123") {
+    throw new Error(`Attendance retry sent unexpected body ${JSON.stringify(classroomWrites[0].body)}.`);
+  }
+  if (result.resultHidden || !result.emptyHidden || !/confirmed/i.test(result.scannerState)) {
+    throw new Error(`Attendance result did not reach confirmed visible state: ${JSON.stringify(result)}.`);
+  }
+  if (!result.player || !result.status) {
+    throw new Error(`Attendance result omitted player or status: ${JSON.stringify(result)}.`);
   }
   console.log("Admin attendance scanner submission smoke passed.");
 } catch (error) {
