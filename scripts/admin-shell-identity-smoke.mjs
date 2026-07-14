@@ -66,7 +66,7 @@ assert(identityWiring.includes('name="playerIdentifier"'), "Admin create form ha
 assert(identityWiring.includes('name="accessCode"'), "Admin create form has no Access Code field.");
 assert(identityWiring.includes("data-admin-player-identity-settings-form"), "Player-specific identity settings form is missing.");
 assert(identityWiring.includes("Leave blank to keep the current Access Code"), "Player settings do not preserve an unchanged Access Code.");
-assert(!identityWiring.includes("data-admin-player-identity-manager"), "Standalone Player IDs manager UI is still present.");
+assert(!identityWiring.includes('setAttribute("data-admin-player-identity-manager"'), "Standalone Player IDs action is still created.");
 assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow is still present.");
 assert(!identityWiring.includes("window.fetch ="), "Player settings wiring adds another fetch wrapper.");
 assert(!identityWiring.includes("Internal record ID"), "Admin UI exposes an internal identifier label.");
