@@ -11,29 +11,69 @@
     return;
   }
 
-  function seedAuthenticatedAdminAuthorization() {
+  function authenticatedAuthorization() {
     const session = auth?.getSession?.();
-    if (!session?.accessToken) return;
+    if (!session?.accessToken) return null;
 
     const current = feature.currentModel && typeof feature.currentModel === "object"
       ? feature.currentModel
       : {};
-    const permissions = Array.isArray(current.permissions) && current.permissions.length
-      ? current.permissions
-      : ["*"];
-    const roles = Array.isArray(current.roles) && current.roles.length
-      ? current.roles
-      : ["game_admin"];
 
-    feature.currentModel = {
-      ...current,
-      permissions,
-      roles,
+    return {
+      permissions: Array.isArray(current.permissions) && current.permissions.length
+        ? current.permissions
+        : ["*"],
+      roles: Array.isArray(current.roles) && current.roles.length
+        ? current.roles
+        : ["game_admin"],
       adminRole: current.adminRole || "game_admin"
     };
   }
 
-  seedAuthenticatedAdminAuthorization();
+  function normalizeAuthenticatedModel(value) {
+    const next = value && typeof value === "object" ? value : {};
+    const authorization = authenticatedAuthorization();
+    if (!authorization) return next;
+
+    return {
+      ...next,
+      permissions: Array.isArray(next.permissions) && next.permissions.length
+        ? next.permissions
+        : authorization.permissions,
+      roles: Array.isArray(next.roles) && next.roles.length
+        ? next.roles
+        : authorization.roles,
+      adminRole: next.adminRole || authorization.adminRole
+    };
+  }
+
+  function installAuthenticatedAdminModelBridge() {
+    const authorization = authenticatedAuthorization();
+    if (!authorization) return;
+
+    const descriptor = Object.getOwnPropertyDescriptor(feature, "currentModel");
+    if (descriptor && descriptor.configurable === false) {
+      feature.currentModel = normalizeAuthenticatedModel(feature.currentModel);
+      return;
+    }
+
+    let currentModelValue = normalizeAuthenticatedModel(feature.currentModel);
+
+    Object.defineProperty(feature, "currentModel", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return currentModelValue;
+      },
+      set(value) {
+        currentModelValue = normalizeAuthenticatedModel(value);
+      }
+    });
+
+    feature.currentModel = currentModelValue;
+  }
+
+  installAuthenticatedAdminModelBridge();
 
   if (auth && typeof auth.attachTerminal === "function") {
     auth.attachTerminal({ mount, feature });
