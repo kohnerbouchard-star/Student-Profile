@@ -6,7 +6,6 @@ const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smok
 const GAME_ID = "00000000-0000-4000-8000-000000000801";
 const ADMIN_ID = "00000000-0000-4000-8000-000000000802";
 const STORE_ITEM_ID = "00000000-0000-4000-8000-000000000803";
-const CONTRACT_ID = "00000000-0000-4000-8000-000000000804";
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 function base64Url(value) {
@@ -58,29 +57,6 @@ const storeItem = {
   stock: 25,
   status: "active",
   visibility: "visible",
-};
-
-const contract = {
-  id: CONTRACT_ID,
-  contractId: CONTRACT_ID,
-  gameSessionId: GAME_ID,
-  contractKey: "contract-wiring-audit",
-  title: "Contract Wiring Audit",
-  description: "Verify complete contract persistence.",
-  instructions: "Complete all attached work.",
-  category: "advanced",
-  status: "scheduled",
-  visibility: "targeted",
-  targetingPayload: { countryCodes: ["NORTHREACH", "YRETHIA"] },
-  requirementsPayload: { manualText: "Submit the attached quiz and written response." },
-  rewardPayload: {
-    cash: { amount: 75, accountType: "cash", currencyCode: "NRC" },
-    items: [{ storeItemId: STORE_ITEM_ID, quantity: 2 }],
-  },
-  completionMode: "manual_review",
-  publishedAt: "2027-01-15T10:30:00.000Z",
-  deadlineAt: "2027-01-20T17:00:00.000Z",
-  metadata: {},
 };
 
 const common = {
@@ -167,16 +143,6 @@ function bootstrapResponse() {
   };
 }
 
-function responseFor(pathname, method) {
-  if (pathname.endsWith("/session/bootstrap")) return bootstrapResponse();
-  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/contracts`)) {
-    return { data: { created: true, contract } };
-  }
-  if (pathname.includes("/contracts")) return { data: { ...common, contracts: [contract] } };
-  if (pathname.includes("/store")) return { data: { ...common, store: [storeItem], storeItems: [storeItem] } };
-  return { data: common };
-}
-
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await context.newPage();
@@ -231,11 +197,17 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
     writeRequests.push({ method, pathname, body });
   }
 
+  const response = pathname.endsWith("/session/bootstrap")
+    ? bootstrapResponse()
+    : pathname.includes("/store")
+      ? { data: { ...common, store: [storeItem], storeItems: [storeItem] } }
+      : { data: common };
+
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(responseFor(pathname, method)),
+    body: JSON.stringify(response),
   });
 });
 
@@ -282,9 +254,7 @@ async function attachQuiz(form) {
   await builder.locator("[data-admin-terminal-contract-quiz-template]").selectOption("evidence_check");
   await builder.locator("[data-admin-terminal-contract-quiz-grading-mode]").selectOption("graded");
   await builder.locator('[data-admin-terminal-action="apply-contract-quiz-template"]').click();
-  await page.waitForTimeout(200);
-  const questions = builder.locator("[data-admin-terminal-contract-quiz-question-list] > *");
-  assert(await questions.count() > 0, "The quiz template created no questions.");
+  assert(await builder.locator("[data-admin-terminal-contract-quiz-question-list] > *").count() > 0, "The quiz template created no questions.");
   await builder.locator('[data-admin-terminal-action="save-contract-material-builder"]').click();
   await builder.waitFor({ state: "hidden", timeout: 5000 });
 }
@@ -293,7 +263,6 @@ async function addRewards(form) {
   const cashRow = form.locator("[data-admin-terminal-reward-stage-cash]");
   await cashRow.locator("[data-admin-terminal-stage-cash]").fill("75");
   await cashRow.locator('[data-admin-terminal-action="confirm-staged-reward"]').click();
-
   await form.locator('[data-admin-terminal-action="stage-item-reward"]').click();
   const itemRow = form.locator("[data-admin-terminal-reward-stage-item]");
   await itemRow.locator("[data-admin-terminal-stage-item]").selectOption(STORE_ITEM_ID);
@@ -312,7 +281,7 @@ async function scheduleContract(form) {
   await picker.waitFor({ state: "hidden", timeout: 5000 });
 }
 
-function findRewardItems(payload) {
+function rewardItems(payload) {
   return array(payload.itemRewards).length
     ? array(payload.itemRewards)
     : array(object(payload.rewards).items).length
@@ -320,16 +289,12 @@ function findRewardItems(payload) {
       : array(object(payload.rewardPayload).items);
 }
 
-function findCashReward(payload) {
-  const rewardPayload = object(payload.rewardPayload);
-  const rewards = object(payload.rewards);
-  return object(rewardPayload.cash).amount
-    ? object(rewardPayload.cash)
-    : object(rewards.cash).amount
-      ? object(rewards.cash)
-      : payload.cashRewardAmount || payload.rewardCash || payload.cashAmount
-        ? { amount: payload.cashRewardAmount || payload.rewardCash || payload.cashAmount }
-        : {};
+function cashReward(payload) {
+  const canonical = object(object(payload.rewardPayload).cash);
+  if (canonical.amount) return canonical;
+  const legacy = object(object(payload.rewards).cash);
+  if (legacy.amount) return legacy;
+  return { amount: payload.cashRewardAmount || payload.rewardCash || payload.cashAmount };
 }
 
 try {
@@ -342,6 +307,9 @@ try {
   await form.locator('[name="quantity"]').fill("5");
   await form.locator('[name="quantityScope"]').selectOption("per_location");
   await form.locator('[name="reviewType"]').selectOption("teacher");
+
+  const advanced = form.locator("details.admin-terminal-contract-advanced-v495");
+  await advanced.evaluate((node) => { node.open = true; });
   await form.locator('[name="difficulty"]').selectOption("Advanced");
   await form.locator('[name="reviewNote"]').fill("Use the rubric and verify the attached quiz.");
 
@@ -354,8 +322,8 @@ try {
   await attachQuiz(form);
   await addRewards(form);
   await scheduleContract(form);
-
   await capture("contract-before-submit");
+
   const startIndex = writeRequests.length;
   await form.locator('[data-admin-terminal-action="create-contract"]').click();
   const write = await waitForWrite(startIndex);
@@ -367,8 +335,8 @@ try {
   const payload = object(requestBody.payload || requestBody.contract || requestBody);
   const materials = array(payload.materials);
   const submissionRequirements = array(payload.submissionRequirements);
-  const itemRewards = findRewardItems(payload);
-  const cashReward = findCashReward(payload);
+  const items = rewardItems(payload);
+  const cash = cashReward(payload);
   const targeting = object(payload.targeting || payload.targetingPayload);
 
   assert(payload.title === "Contract Wiring Audit", "Contract title was not preserved.");
@@ -377,10 +345,10 @@ try {
   assert(materials.some((item) => String(item?.type || item?.kind).toLowerCase() === "link"), "Link material was not serialized.");
   assert(materials.some((item) => String(item?.type || item?.kind).toLowerCase() === "quiz"), "Quiz material was not serialized.");
   assert(submissionRequirements.length > 0 || object(payload.submissionRequirement).required === true, "Submission requirement was not serialized.");
-  assert(Number(cashReward.amount) === 75, `Expected cash reward 75, received ${cashReward.amount ?? "none"}.`);
-  assert(itemRewards.length === 1, `Expected one item reward, received ${itemRewards.length}.`);
-  assert(String(itemRewards[0]?.storeItemId || itemRewards[0]?.itemUuid || itemRewards[0]?.id) === STORE_ITEM_ID, "Item reward did not use the Store item UUID.");
-  assert(Number(itemRewards[0]?.quantity) === 2, "Item reward quantity was not preserved.");
+  assert(Number(cash.amount) === 75, `Expected cash reward 75, received ${cash.amount ?? "none"}.`);
+  assert(items.length === 1, `Expected one item reward, received ${items.length}.`);
+  assert(String(items[0]?.storeItemId || items[0]?.itemUuid || items[0]?.id) === STORE_ITEM_ID, "Item reward did not use the Store item UUID.");
+  assert(Number(items[0]?.quantity) === 2, "Item reward quantity was not preserved.");
   assert(array(targeting.countryCodes).includes("NORTHREACH") && array(targeting.countryCodes).includes("YRETHIA"), "Country targeting was not preserved.");
   assert(payload.status === "scheduled", `Expected scheduled status, received ${payload.status}.`);
   assert(Boolean(payload.scheduledAt || payload.postAt || payload.publishedAt), "Scheduled post time was not serialized.");
