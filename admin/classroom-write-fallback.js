@@ -78,7 +78,6 @@
         "fullName",
         "username",
       ]));
-      if (!displayName) return null;
       const rosterLabel = text(first(source, [
         "rosterLabel",
         "roster",
@@ -86,11 +85,31 @@
         "studentLabel",
         "classLabel",
       ]));
+      const playerIdentifier = text(first(source, [
+        "playerIdentifier",
+        "playerId",
+        "rfidCardId",
+        "rfidId",
+        "cardId",
+        "externalPlayerId",
+      ]));
+      const accessCode = text(first(source, [
+        "accessCode",
+        "studentCode",
+        "playerAccessCode",
+        "pin",
+      ]));
+      if (!displayName || !playerIdentifier || !accessCode) return null;
       const gameId = decodeURIComponent(playerMatch[1]);
       return {
         gameId,
         path: `/games/${encodeURIComponent(gameId)}/players`,
-        body: { displayName, rosterLabel: rosterLabel || null },
+        body: {
+          displayName,
+          rosterLabel: rosterLabel || null,
+          playerIdentifier,
+          accessCode,
+        },
       };
     }
 
