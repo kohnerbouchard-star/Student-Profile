@@ -129,6 +129,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
+const actionResults = [];
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => {
@@ -185,7 +186,7 @@ async function loadOverview() {
   await page.waitForTimeout(500);
 }
 
-async function assertCreateActionOpensModal(action) {
+async function inspectCreateAction(action) {
   await loadOverview();
   const locator = page.locator(`[data-admin-terminal-action="${action}"]`).first();
   await locator.waitFor({ state: "visible", timeout: 10_000 });
@@ -197,38 +198,53 @@ async function assertCreateActionOpensModal(action) {
     className: node.className,
   }));
   console.log("CREATE_ACTION_INITIAL", JSON.stringify({ action, state }));
-  if (state.disabled) {
-    throw new Error(`${action} is disabled: ${state.title || "no reason provided"}`);
-  }
 
   const errorCountBefore = errors.length;
-  await locator.click({ timeout: 5000 });
-  await page.waitForTimeout(500);
+  if (!state.disabled) {
+    await locator.click({ timeout: 5000 });
+    await page.waitForTimeout(500);
+  }
 
   const visibleModals = page.locator(
     '.admin-terminal-modal-backdrop:visible, .admin-terminal-modal:visible, [role="dialog"]:visible',
   );
   const modalCount = await visibleModals.count();
   const modalText = modalCount
-    ? (await visibleModals.last().innerText()).replace(/\s+/g, " ").slice(0, 800)
+    ? (await visibleModals.last().innerText()).replace(/\s+/g, " ").slice(0, 1200)
     : "";
-  console.log("CREATE_ACTION_RESULT", JSON.stringify({ action, modalCount, modalText }));
+  const newErrors = errors.slice(errorCountBefore);
+  const result = { action, state, modalCount, modalText, newErrors };
+  actionResults.push(result);
+  console.log("CREATE_ACTION_RESULT", JSON.stringify(result));
   await capture(`create-${action}`);
-
-  if (errors.length > errorCountBefore) {
-    throw new Error(`Runtime error after clicking ${action}: ${errors[errorCountBefore]}`);
-  }
-  if (modalCount === 0) {
-    throw new Error(`${action} did not open a visible create modal.`);
-  }
 }
 
 try {
   for (const action of ["add-player", "add-contract", "add-store-item"]) {
-    await assertCreateActionOpensModal(action);
+    await inspectCreateAction(action);
   }
+
+  writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
+    actionResults,
+    errors,
+    consoleMessages,
+  }, null, 2));
+
+  const failed = actionResults.filter((result) => result.state.disabled || result.modalCount === 0);
+  if (failed.length) {
+    throw new Error(`Create workflows failed to open: ${failed.map((result) => result.action).join(", ")}`);
+  }
+  if (errors.length) {
+    throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
+  }
+
   console.log("Admin create action modal smoke passed.");
 } catch (error) {
+  writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
+    actionResults,
+    errors,
+    consoleMessages,
+  }, null, 2));
   await capture("admin-create-actions-failure");
   console.error(error.stack || error.message || String(error));
   console.error("BROWSER_ERRORS", JSON.stringify(errors, null, 2));
