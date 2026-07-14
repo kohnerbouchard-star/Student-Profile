@@ -20,6 +20,7 @@ const expectedScripts = [
   "./create-action-adapter.js",
   "./player-access-code-bridge.js",
   "./player-create-lifecycle.js",
+  "./player-drawer-wiring.js",
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
@@ -45,6 +46,7 @@ const fallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"),
 const createAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const credentialBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
 const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle.js"), "utf8");
+const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
@@ -65,6 +67,19 @@ assert(credentialBridge.includes("`${LOCAL_API_PREFIX}/games/"), "Existing-playe
 assert(credentialBridge.includes("showCredentialDialog"), "Edit Player Profile cannot suppress the create-only credential dialog.");
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
+assert(!createLifecycle.includes("markExpandedPlayerDetail"), "Create lifecycle still mutates the player drawer.");
+assert(!createLifecycle.includes("mountExpandedPlayerSettings"), "Create lifecycle still mounts removed inline player settings.");
+
+assert(drawerWiring.includes("admin-terminal-player-drawer-tabs-v301"), "Original v606 player drawer shell is not restored.");
+assert(drawerWiring.includes("data-admin-terminal-player-drawer"), "Player drawer is missing the original delegated-event boundary.");
+assert(drawerWiring.includes("select-player-drawer-tab"), "Player drawer tabs are not wired to the original delegated action.");
+for (const label of ["Overview", "Bank Accounts", "Assets", "Liabilities", "Inventory", "Logs"]) {
+  assert(drawerWiring.includes(`\"${label}\"`), `Player drawer is missing the ${label} tab.`);
+}
+assert(drawerWiring.includes("data-admin-player-drawer-authoritative"), "Restored player drawer is not marked as authoritative-data only.");
+assert(!drawerWiring.includes("Math.random"), "Player drawer generates synthetic data.");
+assert(!drawerWiring.includes("window.fetch ="), "Player drawer adds another fetch wrapper.");
+
 assert(identityWiring.includes('name="playerIdentifier"'), "Admin create form has no Player ID field.");
 assert(identityWiring.includes('name="accessCode"'), "Admin create form has no Access Code field.");
 assert(identityWiring.includes("player-settings-editor"), "Edit Player Profile is not the identity editing surface.");
@@ -90,6 +105,7 @@ assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds anothe
 
 assert(terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'), "Delegated admin click handler is missing.");
 assert(terminal.includes("function applyAdminTerminalPermissionGating(root = document)"), "Admin permission gating is missing.");
+assert(terminal.includes('actionName === "select-player-drawer-tab"'), "Original player drawer tab action was removed from the v606 bundle.");
 
 for (const asset of [
   "assets/icons/rfid-card.svg",
@@ -105,4 +121,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Edit Player Profile, generated Add Player credentials, confirmation UX, and original-video admin shell contract passed.");
+console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, and original-video admin shell contract passed.");
