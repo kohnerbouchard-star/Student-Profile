@@ -3,9 +3,15 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
 const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
+const VIEWPORT_VALUE = process.env.ADMIN_SMOKE_VIEWPORT || "1440x1000";
+const [viewportWidth, viewportHeight] = VIEWPORT_VALUE.split("x").map(Number);
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 mkdirSync(ARTIFACT_DIR, { recursive: true });
+
+if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) {
+  throw new Error(`Invalid ADMIN_SMOKE_VIEWPORT: ${VIEWPORT_VALUE}`);
+}
 
 function base64Url(value) {
   return Buffer.from(JSON.stringify(value)).toString("base64")
@@ -124,7 +130,9 @@ function responseFor(pathname) {
 }
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const context = await browser.newContext({
+  viewport: { width: viewportWidth, height: viewportHeight },
+});
 const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
@@ -171,6 +179,20 @@ async function capture(name) {
   writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
 }
 
+async function assertNoHorizontalOverflow(section) {
+  const overflow = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    bodyWidth: document.body.scrollWidth,
+  }));
+  if (overflow.documentWidth > overflow.viewportWidth + 2) {
+    throw new Error(
+      `${section} overflows horizontally at ${VIEWPORT_VALUE}: ` +
+      `${overflow.documentWidth}px document / ${overflow.viewportWidth}px viewport`,
+    );
+  }
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
@@ -201,11 +223,14 @@ try {
   const disabled = nav.filter((item) => item.disabled);
   if (disabled.length) throw new Error(`Navigation controls are disabled: ${disabled.map((item) => item.section || item.label).join(", ")}`);
 
+  await assertNoHorizontalOverflow("initial shell");
+
   for (const item of nav) {
     const locator = page.locator(`[data-admin-section="${item.section}"]`).first();
     await locator.click({ timeout: 5000 });
     await page.waitForTimeout(250);
     if (errors.length) throw new Error(`Runtime error after clicking ${item.section}: ${errors[0]}`);
+    await assertNoHorizontalOverflow(item.section || item.label);
   }
 
   const actionCount = await page.locator(
@@ -214,7 +239,7 @@ try {
   if (actionCount === 0) throw new Error("No enabled delegated action controls were rendered.");
 
   await capture("admin-browser-smoke-pass");
-  console.log("Admin browser interaction smoke passed.");
+  console.log(`Admin browser interaction smoke passed at ${VIEWPORT_VALUE}.`);
 } catch (error) {
   await capture("admin-browser-smoke-failure");
   console.error(error.stack || error.message || String(error));
