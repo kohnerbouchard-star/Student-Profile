@@ -2,6 +2,7 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
+  const IDENTITY_ROUTE_MARKER = "/access-code/reset";
   const IDENTITY_ROUTE = /^https:\/\/cgiukdjwicykrmtkhudh\.supabase\.co\/functions\/v1\/classroom-api\/games\/[^/]+\/players\/[^/]+\/access-code\/reset$/;
 
   function headerEntries(headers) {
@@ -63,5 +64,6 @@
 
   window.EconovariaPlayerIdentityTransport = {
     directIdentityRequest,
+    route: IDENTITY_ROUTE_MARKER,
   };
 })();
