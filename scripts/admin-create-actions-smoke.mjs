@@ -42,7 +42,7 @@ const player = {
   countryName: "Northreach",
   cashBalance: 0,
   netWorth: 0,
-  currencyCode: "ECO",
+  currencyCode: "NRC",
 };
 
 const contract = {
@@ -51,7 +51,7 @@ const contract = {
   title: "Browser Smoke Contract",
   description: "Browser smoke objective",
   instructions: "Complete the browser smoke assignment.",
-  status: "published",
+  status: "active",
   visibility: "active",
 };
 
@@ -64,11 +64,11 @@ const storeItem = {
   description: "Browser smoke store item.",
   category: "material",
   price: 25,
-  currencyCode: "ECO",
+  currencyCode: "XAL",
   stockQuantity: 10,
   stock: 10,
   status: "active",
-  visibility: "all",
+  visibility: "visible",
 };
 
 const common = {
@@ -183,15 +183,14 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
-const actionResults = [];
 const writeRequests = [];
+const actionResults = [];
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => {
-  consoleMessages.push(`${message.type()}: ${message.text()}`);
-});
+page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
 page.on("requestfailed", (request) => {
   const url = request.url();
+  if (url.endsWith("/favicon.ico")) return;
   if (url.includes("window.ECONOVARIA_ADMIN_MOTION_BACKGROUND")) return;
   errors.push(`requestfailed: ${request.method()} ${url} ${request.failure()?.errorText || ""}`);
 });
@@ -222,7 +221,7 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
   }
 
   const pathname = new URL(request.url()).pathname;
-  if (!["GET", "HEAD"].includes(method)) {
+  if (!['GET', 'HEAD'].includes(method)) {
     let body = null;
     try {
       body = request.postDataJSON();
@@ -253,26 +252,26 @@ async function loadOverview() {
   await page.waitForTimeout(500);
 }
 
-async function waitForWrite(startIndex, timeoutMs = 5000) {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    if (writeRequests.length > startIndex) return writeRequests.slice(startIndex);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  return [];
-}
-
 async function openCreateAction(action) {
   await loadOverview();
-  const locator = page.locator(`[data-admin-terminal-action="${action}"]`).first();
-  await locator.waitFor({ state: "visible", timeout: 10_000 });
-  const disabled = await locator.evaluate((node) =>
+  const control = page.locator(`[data-admin-terminal-action="${action}"]`).first();
+  await control.waitFor({ state: "visible", timeout: 10_000 });
+  const disabled = await control.evaluate((node) =>
     "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true"
   );
   if (disabled) throw new Error(`${action} is disabled.`);
-  await locator.click({ timeout: 5000 });
+  await control.click({ timeout: 5000 });
   await page.waitForSelector(".admin-terminal-modal:visible", { timeout: 5000 });
   await page.waitForTimeout(250);
+}
+
+async function waitForWrite(startIndex, timeoutMs = 5000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (writeRequests.length > startIndex) return writeRequests.at(-1);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
 }
 
 async function submitPlayer() {
@@ -285,9 +284,9 @@ async function submitPlayer() {
   await form.locator('[name="notes"]').fill("Browser create workflow smoke.");
   const startIndex = writeRequests.length;
   await form.locator('[data-admin-terminal-action="create-player"]').click();
-  const writes = await waitForWrite(startIndex);
+  const write = await waitForWrite(startIndex);
   await capture("submit-create-player");
-  return { action: "create-player", writes };
+  return { action: "create-player", write };
 }
 
 async function submitContract() {
@@ -299,9 +298,9 @@ async function submitContract() {
   await form.locator('[name="evidence"]').fill("Submit a short response.");
   const startIndex = writeRequests.length;
   await form.locator('[data-admin-terminal-action="create-contract"]').click();
-  const writes = await waitForWrite(startIndex);
+  const write = await waitForWrite(startIndex);
   await capture("submit-create-contract");
-  return { action: "create-contract", writes };
+  return { action: "create-contract", write };
 }
 
 async function submitStoreItem() {
@@ -309,22 +308,64 @@ async function submitStoreItem() {
   const form = page.locator("[data-admin-terminal-store-form]");
   await form.locator('[name="itemName"]').fill("Browser Smoke Item");
   await form.locator('[name="description"]').fill("Browser smoke store item.");
-  await form.locator('[name="category"]').selectOption({ index: 0 });
-  await form.locator('[name="itemType"]').selectOption({ index: 0 });
-  await form.locator('[name="status"]').selectOption("active");
+  await form.locator('[name="category"]').selectOption("Material");
+  await form.locator('[name="itemType"]').selectOption("One-time use");
+  await form.locator('[name="status"]').selectOption("Active");
   await form.locator('[name="price"]').fill("25");
+  await form.locator('[name="stockMode"]').selectOption("Limited");
+  await form.locator('[name="stockQuantity"]').waitFor({ state: "visible", timeout: 5000 });
   await form.locator('[name="stockQuantity"]').fill("10");
+  await form.locator('[name="visibility"]').selectOption("All players");
   const startIndex = writeRequests.length;
   await form.locator('[data-admin-terminal-action="save-store-item"]').click();
-  const writes = await waitForWrite(startIndex);
+  const write = await waitForWrite(startIndex);
   await capture("submit-create-store-item");
-  return { action: "save-store-item", writes };
+  return { action: "save-store-item", write };
+}
+
+function assertWrite(result, expectedPathSuffix, expectedAction) {
+  if (!result.write) throw new Error(`${result.action} sent no API request.`);
+  if (result.write.method !== "POST") {
+    throw new Error(`${result.action} used ${result.write.method} instead of POST.`);
+  }
+  if (!result.write.pathname.endsWith(expectedPathSuffix)) {
+    throw new Error(`${result.action} used unexpected path ${result.write.pathname}.`);
+  }
+  if (result.write.body?.action !== expectedAction) {
+    throw new Error(`${result.action} sent action ${result.write.body?.action || "missing"}.`);
+  }
+  return result.write.body?.payload || {};
 }
 
 try {
-  actionResults.push(await submitPlayer());
-  actionResults.push(await submitContract());
-  actionResults.push(await submitStoreItem());
+  const playerResult = await submitPlayer();
+  const contractResult = await submitContract();
+  const storeResult = await submitStoreItem();
+  actionResults.push(playerResult, contractResult, storeResult);
+
+  const playerPayload = assertWrite(playerResult, `/games/${GAME_ID}/players`, "create-player");
+  if (playerPayload.displayName !== "Browser Smoke Player" || playerPayload.startingLocation !== "NORTHREACH") {
+    throw new Error(`Player create payload was not normalized correctly: ${JSON.stringify(playerPayload)}`);
+  }
+
+  const contractPayload = assertWrite(contractResult, `/games/${GAME_ID}/contracts`, "create-contract");
+  if (contractPayload.title !== "Browser Smoke Contract" || contractPayload.publishNow !== true) {
+    throw new Error(`Contract create payload was not normalized correctly: ${JSON.stringify(contractPayload)}`);
+  }
+
+  const storePayload = assertWrite(storeResult, `/games/${GAME_ID}/store/items`, "save-store-item");
+  if (
+    storePayload.name !== "Browser Smoke Item" ||
+    storePayload.category !== "material" ||
+    storePayload.status !== "active" ||
+    storePayload.price !== 25 ||
+    storePayload.stockQuantity !== 10 ||
+    storePayload.visibility !== "visible"
+  ) {
+    throw new Error(`Store create payload was not normalized correctly: ${JSON.stringify(storePayload)}`);
+  }
+
+  if (errors.length) throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
 
   writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
     actionResults,
@@ -332,13 +373,6 @@ try {
     errors,
     consoleMessages,
   }, null, 2));
-
-  const missingWrites = actionResults.filter((result) => result.writes.length === 0);
-  if (missingWrites.length) {
-    throw new Error(`Create submit handlers sent no API request: ${missingWrites.map((result) => result.action).join(", ")}`);
-  }
-  if (errors.length) throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
-
   console.log("Admin create submissions smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
