@@ -297,9 +297,8 @@
   }, true);
 
   window.addEventListener("econovaria:player-access-code-issued", (event) => {
-    const form = document.querySelector(FORM_SELECTOR);
     const context = lastCreateContext;
-    if (!form || !context) return;
+    if (!context) return;
     const detail = event?.detail || {};
     lastCreateContext = null;
     window.setTimeout(() => {
