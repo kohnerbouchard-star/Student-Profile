@@ -4,7 +4,6 @@
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const LOCAL_API_PREFIX = "/api/admin";
   const PROFILE_MODAL_SELECTOR = '[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]';
-  const STYLE_ID = "econovaria-player-profile-identity-style";
   const LEGACY_SELECTOR = [
     "[data-admin-player-identity-manager]",
     "[data-admin-player-identity-manager-dialog]",
@@ -190,43 +189,6 @@
 
   function removeLegacyIdentityUi(root = document) {
     root.querySelectorAll?.(LEGACY_SELECTOR).forEach((element) => element.remove());
-  }
-
-  function ensureStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      [data-admin-player-create-credential-field] { min-width: 0; }
-      [data-admin-player-profile-field-help] {
-        display: block;
-        margin-top: 3px;
-        color: rgba(190,205,207,.68) !important;
-        font-size: 8px !important;
-        line-height: 1.35 !important;
-        letter-spacing: 0 !important;
-        text-transform: none !important;
-      }
-      [data-admin-player-profile-save-status] {
-        grid-column: 1 / -1;
-        min-height: 18px;
-        padding: 7px 9px;
-        border: 1px solid rgba(0,212,255,.14);
-        background: rgba(0,212,255,.035);
-        color: rgba(233,251,255,.72);
-        font-size: 9px;
-        line-height: 1.35;
-      }
-      [data-admin-player-profile-save-status][data-tone="success"] {
-        border-color: rgba(120,240,180,.32);
-        color: #78f0b4;
-      }
-      [data-admin-player-profile-save-status][data-tone="error"] {
-        border-color: rgba(255,105,118,.34);
-        color: #ff6976;
-      }
-    `;
-    document.head.append(style);
   }
 
   function createCredentialInput(kind) {
@@ -530,7 +492,6 @@
 
   function decorateProfileModal(root = document) {
     removeLegacyIdentityUi(root);
-    ensureStyles();
     const modal = visibleProfileModal(root) || visibleProfileModal(document);
     if (!modal || modal.hasAttribute("data-admin-player-profile-identity-editor")) return;
 
@@ -638,7 +599,6 @@
   }
 
   cachePlayers(modelPlayers());
-  ensureStyles();
 
   const observerRoot = document.body || document.documentElement;
   if (observerRoot && typeof MutationObserver === "function") {
