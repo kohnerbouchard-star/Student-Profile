@@ -61,11 +61,14 @@ assert(
   JSON.stringify(scriptSources) === JSON.stringify(expectedScripts),
   `Admin script order drifted: ${JSON.stringify(scriptSources)}.`,
 );
+assert(!/<style(?:\s|>)/i.test(html), "Admin entrypoint contains an inline style block.");
 
 for (const requiredStyle of [
   "./css/page-shell.css",
   "./css/admin-overview-terminal.css",
   "./css/admin-overview-integrity.css",
+  "./css/session-gate.css",
+  "./css/player-runtime-integration.css",
   "./css/player-create-confirmation.css",
 ]) {
   assert(styleSources.includes(requiredStyle), `Missing required admin stylesheet ${requiredStyle}.`);
@@ -114,6 +117,7 @@ assert(
 );
 assert(!identity.includes("openIdentityManager"), "Removed standalone identity workflow returned.");
 assert(!identity.includes("window.fetch ="), "Player identity wiring adds a network wrapper.");
+assert(!identity.includes('createElement("style")'), "Player identity wiring injects runtime CSS.");
 
 const lifecycle = readText("admin/player-create-lifecycle.js");
 assert(!lifecycle.includes("markExpandedPlayerDetail"), "Add Player lifecycle still mutates expanded player drawers.");
@@ -121,20 +125,36 @@ assert(!lifecycle.includes("mountExpandedPlayerSettings"), "Add Player lifecycle
 
 const createUx = readText("admin/player-create-ux.js");
 assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network wrapper.");
+assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
 assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
 
-const confirmationCss = readText("admin/css/player-create-confirmation.css");
-for (const forbidden of [
-  /(^|[},\s])body\s*\{/m,
-  /(^|[},\s])html\s*\{/m,
-  /\.admin-terminal-shell\s*\{/m,
-  /\[data-admin-section\]\s*\{/m,
+for (const path of [
+  "admin/css/session-gate.css",
+  "admin/css/player-runtime-integration.css",
+  "admin/css/player-create-confirmation.css",
 ]) {
-  assert(!forbidden.test(confirmationCss), "Player-created confirmation CSS contains an unscoped global selector.");
+  const source = readText(path);
+  for (const forbidden of [
+    /(^|[},\s])body\s*\{/m,
+    /(^|[},\s])html\s*\{/m,
+    /\.admin-terminal-shell\s*\{/m,
+    /\[data-admin-section\]\s*\{/m,
+  ]) {
+    assert(!forbidden.test(source), `${path} contains an unscoped global selector.`);
+  }
 }
+
+const integrationCss = readText("admin/css/player-runtime-integration.css");
+assert(
+  integrationCss.includes("[data-admin-player-profile-save-status]") &&
+    integrationCss.includes("[data-admin-player-created-confirmation]"),
+  "External player integration stylesheet is incomplete.",
+);
+
+const confirmationCss = readText("admin/css/player-create-confirmation.css");
 assert(
   confirmationCss.includes("[data-admin-player-created-confirmation]"),
   "Player-created confirmation CSS is not bounded to its modal.",
 );
 
-console.log("Accepted v606 core files and post-merge visual scope boundaries passed.");
+console.log("Accepted v606 core files, external styling, and post-merge visual scope boundaries passed.");
