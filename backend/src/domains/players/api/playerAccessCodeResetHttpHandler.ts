@@ -55,10 +55,15 @@ interface ResetPlayerAccessCodeSuccessBody {
     readonly status: string;
   };
   readonly accessCode: {
-    readonly studentCode: string;
-    readonly status: "active";
+    readonly studentCode: string | null;
+    readonly status: "active" | "unchanged";
     readonly createdAt: string | null;
   };
+}
+
+interface EdgeQueryErrorLike {
+  readonly message?: string;
+  readonly code?: string;
 }
 
 export async function handleResetPlayerAccessCodeRequest(
@@ -90,7 +95,7 @@ export async function handleResetPlayerAccessCodeRequest(
       missingMessage: "A verified Supabase Auth user is required to manage player identity credentials.",
     });
 
-    if (!staffResult.ok) {
+    if ("status" in staffResult) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
@@ -149,53 +154,58 @@ export async function handleResetPlayerAccessCodeRequest(
     }
 
     const normalizedPlayerIdentifier = normalizePlayerIdentifier(playerIdentifier);
-    const accessCode = normalizeStudentCode(requested.accessCode ?? generateStudentCode());
-    const accessCodeHash = await sha256Hex(accessCode);
+    let accessCode: string | null = null;
+    let credentialCreatedAt: string | null = null;
+    let credentialStatus: "active" | "unchanged" = "unchanged";
 
-    const updateResponse = await staffResult.serviceClient.rpc(
-      "set_player_identity_and_access_code",
-      {
-        p_game_session_id: gameSessionId,
-        p_player_id: playerId,
-        p_player_identifier: playerIdentifier.trim(),
-        p_player_identifier_normalized: normalizedPlayerIdentifier,
-        p_access_code_hash: accessCodeHash,
-      },
-    );
+    if (requested.accessCode) {
+      accessCode = normalizeStudentCode(requested.accessCode);
+      const accessCodeHash = await sha256Hex(accessCode);
+      const updateResponse = await staffResult.serviceClient.rpc(
+        "set_player_identity_and_access_code",
+        {
+          p_game_session_id: gameSessionId,
+          p_player_id: playerId,
+          p_player_identifier: playerIdentifier.trim(),
+          p_player_identifier_normalized: normalizedPlayerIdentifier,
+          p_access_code_hash: accessCodeHash,
+        },
+      );
 
-    if (updateResponse.error) {
-      const message = updateResponse.error.message ?? "";
-      if (message.includes("PLAYER_IDENTIFIER_CONFLICT")) {
-        return jsonError(409, {
-          code: "player_identifier_conflict",
-          message: "That Player ID is already assigned to an active player in this game.",
-          retryable: false,
-        });
+      if (updateResponse.error) {
+        return identityWriteError(updateResponse.error);
       }
-      if (message.includes("PLAYER_ACCESS_CODE_CONFLICT")) {
-        return jsonError(409, {
-          code: "player_access_code_conflict",
-          message: "That Access Code is already assigned to an active player in this game.",
-          retryable: false,
-        });
+
+      const row = Array.isArray(updateResponse.data)
+        ? updateResponse.data[0]
+        : updateResponse.data;
+      credentialCreatedAt = row?.credential_created_at ?? null;
+      credentialStatus = "active";
+    } else {
+      const identifierUpdate = await staffResult.serviceClient
+        .from("players")
+        .update({
+          player_identifier: playerIdentifier.trim(),
+          player_identifier_normalized: normalizedPlayerIdentifier,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("game_session_id", gameSessionId)
+        .eq("id", playerId)
+        .select("id")
+        .maybeSingle();
+
+      if (identifierUpdate.error) {
+        return identityWriteError(identifierUpdate.error);
       }
-      if (message.includes("PLAYER_NOT_FOUND")) {
+
+      if (!identifierUpdate.data?.id) {
         return jsonError(404, {
           code: "player_not_found",
           message: "Player was not found for this game session.",
           retryable: false,
         });
       }
-      return jsonError(500, {
-        code: "player_identity_update_failed",
-        message: "Player identity credentials could not be updated.",
-        retryable: false,
-      });
     }
-
-    const row = Array.isArray(updateResponse.data)
-      ? updateResponse.data[0]
-      : updateResponse.data;
 
     return jsonResponse<ResetPlayerAccessCodeSuccessBody>(200, {
       ok: true,
@@ -208,8 +218,8 @@ export async function handleResetPlayerAccessCodeRequest(
       },
       accessCode: {
         studentCode: accessCode,
-        status: "active",
-        createdAt: row?.credential_created_at ?? null,
+        status: credentialStatus,
+        createdAt: credentialCreatedAt,
       },
     });
   } catch (error) {
@@ -227,6 +237,40 @@ export async function handleResetPlayerAccessCodeRequest(
       retryable: false,
     });
   }
+}
+
+function identityWriteError(error: EdgeQueryErrorLike): Response {
+  const message = error.message ?? "";
+  if (
+    error.code === "23505" ||
+    message.includes("PLAYER_IDENTIFIER_CONFLICT") ||
+    message.includes("player_identifier_normalized")
+  ) {
+    return jsonError(409, {
+      code: "player_identifier_conflict",
+      message: "That Player ID is already assigned to an active player in this game.",
+      retryable: false,
+    });
+  }
+  if (message.includes("PLAYER_ACCESS_CODE_CONFLICT")) {
+    return jsonError(409, {
+      code: "player_access_code_conflict",
+      message: "That Access Code is already assigned to an active player in this game.",
+      retryable: false,
+    });
+  }
+  if (message.includes("PLAYER_NOT_FOUND")) {
+    return jsonError(404, {
+      code: "player_not_found",
+      message: "Player was not found for this game session.",
+      retryable: false,
+    });
+  }
+  return jsonError(500, {
+    code: "player_identity_update_failed",
+    message: "Player identity credentials could not be updated.",
+    retryable: false,
+  });
 }
 
 async function readIdentityWriteBody(request: Request): Promise<IdentityWriteBody> {
@@ -252,7 +296,11 @@ async function readIdentityWriteBody(request: Request): Promise<IdentityWriteBod
     );
   }
 
-  const source = isRecord(value.payload) ? { ...value, ...value.payload } : value;
+  const input = value as Record<string, unknown>;
+  const payload = isRecord(input.payload)
+    ? input.payload as Record<string, unknown>
+    : null;
+  const source = payload ? { ...input, ...payload } : input;
   const rawIdentifier = source.playerIdentifier ?? source.playerId ??
     source.rfidCardId ?? source.rfidId ?? source.cardId ?? source.externalPlayerId;
   const rawAccessCode = source.accessCode ?? source.studentCode ??
@@ -268,13 +316,4 @@ async function readIdentityWriteBody(request: Request): Promise<IdentityWriteBod
       ? null
       : String(rawAccessCode).trim(),
   };
-}
-
-function generateStudentCode(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-
-  return [...bytes]
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join("");
 }
