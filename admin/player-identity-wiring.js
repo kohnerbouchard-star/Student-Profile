@@ -121,8 +121,7 @@
   }
 
   function updateModelPlayer(playerId, identifier) {
-    const currentFeature = feature();
-    const model = currentFeature?.currentModel;
+    const model = feature()?.currentModel;
     if (model) {
       for (const key of ["players", "roster", "playerRoster"]) {
         if (!Array.isArray(model[key])) continue;
@@ -160,6 +159,7 @@
     label.className = identifier
       ? "admin-terminal-field is-player-identifier"
       : "admin-terminal-field is-player-access-code";
+    label.setAttribute("data-admin-player-create-credential-field", kind);
     label.innerHTML = identifier
       ? [
           "<span>Player ID / RFID card</span>",
@@ -177,6 +177,7 @@
     const candidates = [...form.querySelectorAll(
       "label, fieldset, article, section, li, .admin-terminal-field, .admin-terminal-player-setting, .admin-terminal-player-settings-field, div",
     )].filter((element) => {
+      if (element.matches("[data-admin-player-create-credential-field]")) return false;
       if (element.querySelector("input, select, textarea, button")) return false;
       const content = normalizedText(element.textContent);
       const generated =
@@ -200,6 +201,44 @@
     return candidates[0] || null;
   }
 
+  function fallbackInsertionAnchor(form) {
+    const notes = form.querySelector('[name="notes"]');
+    if (notes) {
+      return notes.closest("label, .admin-terminal-field, fieldset, article, section, div") || notes;
+    }
+    const actions = form.querySelector(
+      '[data-admin-terminal-action="create-player"], button[type="submit"], .admin-terminal-modal-actions',
+    );
+    return actions?.closest("div, footer") || actions || null;
+  }
+
+  function insertCredentialField(form, kind) {
+    const field = createCredentialInput(kind);
+    const tile = generatedCredentialTile(form, kind);
+    if (tile) {
+      tile.replaceWith(field);
+      return field;
+    }
+
+    const anchor = fallbackInsertionAnchor(form);
+    if (anchor?.parentElement) {
+      anchor.insertAdjacentElement("beforebegin", field);
+    } else {
+      form.append(field);
+    }
+    return field;
+  }
+
+  function removeRemainingGeneratedCredentialTiles(form) {
+    for (const kind of ["identifier", "accessCode"]) {
+      let tile = generatedCredentialTile(form, kind);
+      while (tile) {
+        tile.remove();
+        tile = generatedCredentialTile(form, kind);
+      }
+    }
+  }
+
   function updateCreateFormHelper(form) {
     const preferred = form.querySelector(".admin-terminal-player-settings-head small");
     if (preferred) {
@@ -217,32 +256,39 @@
     }
   }
 
-  function decorateCreateForm(root = document) {
-    const form = root.querySelector?.("[data-admin-terminal-player-form]");
-    if (!form || form.dataset.playerIdentityConfigured === "true") return;
+  function configureCreateForm(form) {
+    if (!(form instanceof Element) || form.dataset.playerIdentityConfigured === "true") return;
 
     let identifierInput = form.querySelector('[name="playerIdentifier"]');
     let accessCodeInput = form.querySelector('[name="accessCode"]');
 
     if (!identifierInput) {
-      const tile = generatedCredentialTile(form, "identifier");
-      if (tile) tile.replaceWith(createCredentialInput("identifier"));
+      insertCredentialField(form, "identifier");
       identifierInput = form.querySelector('[name="playerIdentifier"]');
     }
-
     if (!accessCodeInput) {
-      const tile = generatedCredentialTile(form, "accessCode");
-      if (tile) tile.replaceWith(createCredentialInput("accessCode"));
+      insertCredentialField(form, "accessCode");
       accessCodeInput = form.querySelector('[name="accessCode"]');
     }
 
-    updateCreateFormHelper(form);
+    if (!identifierInput || !accessCodeInput) return;
 
-    if (identifierInput && accessCodeInput) {
-      identifierInput.required = true;
-      accessCodeInput.required = true;
-      form.dataset.playerIdentityConfigured = "true";
+    identifierInput.required = true;
+    identifierInput.disabled = false;
+    accessCodeInput.required = true;
+    accessCodeInput.disabled = false;
+    removeRemainingGeneratedCredentialTiles(form);
+    updateCreateFormHelper(form);
+    form.dataset.playerIdentityConfigured = "true";
+  }
+
+  function decorateCreateForm(root = document) {
+    const forms = [];
+    if (root instanceof Element && root.matches("[data-admin-terminal-player-form]")) {
+      forms.push(root);
     }
+    forms.push(...(root.querySelectorAll?.("[data-admin-terminal-player-form]") || []));
+    [...new Set(forms)].forEach(configureCreateForm);
   }
 
   function ensureStyles() {
@@ -250,6 +296,9 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
+      [data-admin-player-create-credential-field] {
+        min-width: 0;
+      }
       ${SETTINGS_SELECTOR} {
         margin: 18px 0 0;
         padding: 18px;
