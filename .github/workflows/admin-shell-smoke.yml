@@ -14,6 +14,7 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-player-identity-smoke.mjs"
@@ -35,6 +36,7 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-player-identity-smoke.mjs"
@@ -111,6 +113,9 @@ jobs:
 
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
+
+      - name: Exercise generated player credentials and confirmation UX
+        run: node scripts/admin-player-create-ux-smoke.mjs
 
       - name: Exercise RFID player identity management
         run: node scripts/admin-player-identity-smoke.mjs
