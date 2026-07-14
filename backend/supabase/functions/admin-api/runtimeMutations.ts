@@ -5,6 +5,15 @@ interface NormalizedRuntimeMutation {
   readonly body: Record<string, unknown>;
 }
 
+type RuntimeMutationResult =
+  | { readonly ok: true; readonly mutation: NormalizedRuntimeMutation }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly code: string;
+      readonly message: string;
+    };
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -41,15 +50,7 @@ export function normalizeRuntimeMutation(
   suffix: string,
   method: string,
   value: unknown,
-):
-  | { readonly ok: true; readonly mutation: NormalizedRuntimeMutation }
-  | {
-      readonly ok: false;
-      readonly status: number;
-      readonly code: string;
-      readonly message: string;
-    }
-  | null {
+): RuntimeMutationResult | null {
   if (method !== "POST") return null;
 
   if (suffix === "/players") {
@@ -154,7 +155,7 @@ export async function handleRuntimeMutation(
   );
 
   if (!normalized) return null;
-  if (!normalized.ok) {
+  if ("status" in normalized) {
     return json(request, normalized.status, {
       code: normalized.code,
       message: normalized.message,
