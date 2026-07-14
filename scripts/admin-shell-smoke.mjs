@@ -23,6 +23,7 @@ const expectedScripts = [
   "./session-gate.js",
   "./admin-auth.js",
   "./dist/admin-overview-terminal.js",
+  "./create-action-adapter.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
 ];
@@ -55,6 +56,7 @@ for (const reference of scripts) {
 
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
+const createActionAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
@@ -109,6 +111,18 @@ assert(
   "Forwarded admin requests must include the selected game ID.",
 );
 assert(
+  createActionAdapter.includes('source.action === "create-player"') &&
+    createActionAdapter.includes('source.action === "create-contract"') &&
+    createActionAdapter.includes('source.action === "save-store-item"'),
+  "Create-action form payload normalization is incomplete.",
+);
+assert(
+  createActionAdapter.includes('displayName: formValue(form, "displayName")') &&
+    createActionAdapter.includes('title,') &&
+    createActionAdapter.includes('name: itemName'),
+  "Create-action adapter must preserve entered player, contract, and store fields.",
+);
+assert(
   terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'),
   "The delegated admin click handler is not bound.",
 );
@@ -141,4 +155,4 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
-console.log("Admin shell interaction and authorization smoke checks passed.");
+console.log("Admin shell interaction, create-action, and authorization smoke checks passed.");
