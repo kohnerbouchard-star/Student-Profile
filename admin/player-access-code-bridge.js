@@ -105,15 +105,19 @@
     return headers;
   }
 
-  function emitAccessCode(detail) {
+  function dispatchCredentialEvent(name, detail) {
     if (typeof window.CustomEvent === "function") {
-      window.dispatchEvent(new CustomEvent("econovaria:player-access-code-issued", { detail }));
+      window.dispatchEvent(new CustomEvent(name, { detail }));
     }
-    renderAccessCodeDialog(detail);
+  }
+
+  function emitAccessCode(detail, options = {}) {
+    dispatchCredentialEvent("econovaria:player-access-code-issued", detail);
+    if (options.showDialog !== false) renderAccessCodeDialog(detail);
   }
 
   function renderAccessCodeDialog(detail) {
-    if (typeof document === "undefined" || !document.body) return;
+    if (typeof document === "undefined" || !document.body || !detail.studentCode) return;
 
     document.querySelector("[data-admin-player-access-code-dialog]")?.remove();
 
@@ -271,23 +275,27 @@
     const accessToken = text(session.accessToken);
     const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
 
-    if (!gameId || !playerId || !playerIdentifier || !accessCode) {
-      throw new Error("Player, Player ID, and Access Code are required.");
+    if (!gameId || !playerId || !playerIdentifier) {
+      throw new Error("Player and Player ID / RFID card are required.");
     }
     if (!accessToken || (selectedGameId && selectedGameId !== gameId)) {
       throw new Error("Sign in again before changing player credentials.");
     }
 
+    const payload = { playerIdentifier };
+    if (accessCode) payload.accessCode = accessCode;
+
     const response = await delegatedFetch(
-      `${CLASSROOM_API_BASE}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
       {
         method: "POST",
-        headers: classroomHeaders(null, accessToken, gameId),
-        body: JSON.stringify({ playerIdentifier, accessCode }),
-        credentials: "omit",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        credentials: "same-origin",
         cache: "no-store",
-        redirect: "follow",
-        referrerPolicy: "no-referrer",
       },
     );
     const body = await responseJson(response);
@@ -299,12 +307,17 @@
     const player = playerFrom(body);
     const studentCode = accessCodeFrom(body) || accessCode;
     const savedIdentifier = playerIdentifierFrom(body) || playerIdentifier;
-    emitAccessCode({
+    const detail = {
       playerId,
       displayName: text(player.displayName || player.name || input?.displayName),
       playerIdentifier: savedIdentifier,
       studentCode,
-    });
+    };
+
+    dispatchCredentialEvent("econovaria:player-identity-updated", detail);
+    if (studentCode) {
+      emitAccessCode(detail, { showDialog: input?.showCredentialDialog !== false });
+    }
     return body;
   }
 
