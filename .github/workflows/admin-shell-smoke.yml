@@ -8,6 +8,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
+      - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
+      - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
 
 permissions:
@@ -80,6 +82,9 @@ jobs:
 
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
+
+      - name: Exercise attendance scanner action
+        run: node scripts/admin-attendance-action-smoke.mjs
 
       - name: Upload browser diagnostics
         if: always()
