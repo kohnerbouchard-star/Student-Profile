@@ -8,11 +8,21 @@
     return window.Econovaria?.features?.contracts || null;
   }
 
+  function activeSession() {
+    try {
+      return currentSession || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function hasPlayerSession() {
+    const session = activeSession();
     return Boolean(
-      window.currentSession?.token &&
-      window.currentSession?.gameSessionId &&
-      window.currentSession?.role === "STUDENT"
+      session &&
+      session.token &&
+      session.gameSessionId &&
+      session.role === "STUDENT"
     );
   }
 
@@ -22,14 +32,15 @@
 
     refreshPromise = (async () => {
       const contractsFeature = feature();
-      if (!contractsFeature?.applyDashboardContracts) return null;
+      const session = activeSession();
+      if (!contractsFeature?.applyDashboardContracts || !session) return null;
       const { publishableKey } = getSupabaseConfig();
       const result = await callSupabaseJsonRoute(
-        `/players/me/contracts?gameSessionId=${encodeURIComponent(currentSession.gameSessionId)}`,
+        `/players/me/contracts?gameSessionId=${encodeURIComponent(session.gameSessionId)}`,
         {
           method: "GET",
           token: publishableKey,
-          playerSessionToken: currentSession.token,
+          playerSessionToken: session.token,
           fallbackCode: "player_contracts_load_failed",
           fallbackMessage: "Contracts could not be loaded.",
         },
