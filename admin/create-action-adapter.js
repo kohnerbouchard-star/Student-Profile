@@ -3,6 +3,18 @@
 
   const LOCAL_API_PREFIX = "/api/admin";
   const delegatedFetch = window.fetch.bind(window);
+  const COUNTRY_CURRENCIES = {
+    NORTHREACH: "NRC",
+    YRETHIA: "YRC",
+    THALORIS: "THD",
+    SOLVEND: "SLV",
+    ELDORAN: "ELD",
+    VALERION: "VAL",
+    LUMENOR: "LUM",
+    SYNDALIS: "SYN",
+    XALVORIA: "XAL",
+    DRAVENLOK: "DRV"
+  };
 
   function text(value) {
     return String(value ?? "").trim();
@@ -32,6 +44,49 @@
         value !== undefined && value !== null && value !== ""
       )
     );
+  }
+
+  function slug(value, fallback = "general") {
+    const normalized = text(value)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 64);
+    return normalized || fallback;
+  }
+
+  function normalizedStoreStatus(value) {
+    const normalized = text(value).toLowerCase();
+    if (normalized === "active") return "active";
+    if (normalized === "archived") return "archived";
+    return "disabled";
+  }
+
+  function normalizedStoreVisibility(value) {
+    const normalized = text(value).toLowerCase();
+    return ["all players", "visible", "public"].includes(normalized)
+      ? "visible"
+      : "hidden";
+  }
+
+  function preferredStoreCurrency() {
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
+    const candidates = [
+      ...(Array.isArray(model.storeItems) ? model.storeItems : []),
+      ...(Array.isArray(model.store) ? model.store : []),
+      ...(Array.isArray(model.items) ? model.items : [])
+    ];
+    const existing = candidates
+      .map((item) => text(item?.currencyCode || item?.currency_code).toUpperCase())
+      .find((value) => Object.values(COUNTRY_CURRENCIES).includes(value));
+    if (existing) return existing;
+
+    const game = model.activeGame || model.game || {};
+    const explicit = text(game.currencyCode || game.currency_code).toUpperCase();
+    if (Object.values(COUNTRY_CURRENCIES).includes(explicit)) return explicit;
+
+    const countryCode = text(game.countryCode || game.country_code).toUpperCase();
+    return COUNTRY_CURRENCIES[countryCode] || "XAL";
   }
 
   async function readJson(request) {
@@ -124,34 +179,26 @@
     if (!form) return source;
 
     const itemName = formValue(form, "itemName");
+    const rawCategory = formValue(form, "category");
+    const rawStatus = formValue(form, "status") || "Active";
+    const rawVisibility = formValue(form, "visibility") || "All players";
+    const stockQuantity = numberOrUndefined(formValue(form, "stockQuantity"));
+
     return {
       ...source,
       payload: compact({
         ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
+        itemKey: slug(itemName, `custom_item_${crypto.randomUUID().slice(0, 8)}`),
         itemName,
         name: itemName,
         description: formValue(form, "description"),
-        category: formValue(form, "category"),
-        itemType: formValue(form, "itemType"),
-        status: formValue(form, "status") || "active",
+        category: slug(rawCategory, "general").slice(0, 32),
+        status: normalizedStoreStatus(rawStatus),
         price: numberOrUndefined(formValue(form, "price")),
-        currencyCode: "ECO",
-        pricingMode: formValue(form, "pricingMode"),
-        stockMode: formValue(form, "stockMode"),
-        stockQuantity: numberOrUndefined(formValue(form, "stockQuantity")),
-        restock: formValue(form, "restock"),
-        visibility: formValue(form, "visibility"),
-        fulfillment: formValue(form, "fulfillment"),
-        usage: formValue(form, "usage"),
-        existingImageUrl: formValue(form, "existingImageUrl") || null,
-        metadata: compact({
-          itemType: formValue(form, "itemType"),
-          pricingMode: formValue(form, "pricingMode"),
-          stockMode: formValue(form, "stockMode"),
-          restock: formValue(form, "restock"),
-          fulfillment: formValue(form, "fulfillment"),
-          usage: formValue(form, "usage")
-        })
+        currencyCode: preferredStoreCurrency(),
+        stockQuantity: stockQuantity === undefined ? 0 : Math.max(0, Math.trunc(stockQuantity)),
+        visibility: normalizedStoreVisibility(rawVisibility),
+        sortOrder: 0
       })
     };
   }
