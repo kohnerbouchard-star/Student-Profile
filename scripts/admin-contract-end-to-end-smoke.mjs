@@ -174,13 +174,15 @@ try {
   await attachLink(form);
   await attachQuiz(form);
   await addRewards(form);
-  await schedule(form);
   await capture("contract-before-submit");
 
   const start = writes.length;
-  await form.locator('[data-admin-terminal-action="create-contract"]').click();
+  await schedule(form);
   const write = await waitForWrite(start);
-  assert(write, "Contract editor sent no create request.");
+  assert(write, "Schedule post sent no contract create request.");
+  await page.waitForTimeout(750);
+  assert(writes.length === start + 1, `Expected one contract create request, received ${writes.length - start}.`);
+
   const requestBody = object(write.body);
   const payload = object(requestBody.payload || requestBody.contract || requestBody);
   const materials = array(payload.materials);
