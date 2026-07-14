@@ -150,6 +150,9 @@
     headers.set("Content-Type", "application/json");
     headers.set("X-Econovaria-Game-Id", canonical.gameId);
     headers.delete("Content-Length");
+    headers.delete("X-CSRF-Token");
+    headers.delete("X-Econovaria-CSRF");
+    headers.delete("X-Econovaria-Admin-Read");
 
     return delegatedFetch(`${CLASSROOM_API_BASE}${canonical.path}`, {
       method: "POST",
