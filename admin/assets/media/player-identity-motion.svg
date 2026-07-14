@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Player identity network</title>
+  <desc id="desc">Animated classroom identity card and network illustration</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06111f"/>
+      <stop offset="1" stop-color="#0b2940"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#69faff" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#69faff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <rect width="960" height="540" rx="32" fill="url(#bg)"/>
+  <circle cx="700" cy="170" r="220" fill="url(#glow)" filter="url(#soft)">
+    <animate attributeName="r" values="190;230;190" dur="7s" repeatCount="indefinite"/>
+  </circle>
+  <g fill="none" stroke="#69faff" stroke-opacity=".26" stroke-width="2">
+    <path d="M0 90h960M0 180h960M0 270h960M0 360h960M0 450h960"/>
+    <path d="M120 0v540M240 0v540M360 0v540M480 0v540M600 0v540M720 0v540M840 0v540"/>
+  </g>
+  <g transform="translate(170 115)">
+    <rect width="420" height="310" rx="28" fill="#071b2a" stroke="#ff6700" stroke-width="4"/>
+    <circle cx="112" cy="118" r="58" fill="#0c3046" stroke="#69faff" stroke-width="4"/>
+    <path d="M45 242c16-55 43-82 81-82s65 27 81 82" fill="none" stroke="#69faff" stroke-width="5" stroke-linecap="round"/>
+    <g fill="#e9fbff">
+      <rect x="230" y="76" width="142" height="18" rx="9" opacity=".92"/>
+      <rect x="230" y="116" width="110" height="13" rx="6" opacity=".55"/>
+      <rect x="230" y="151" width="155" height="13" rx="6" opacity=".38"/>
+    </g>
+    <g transform="translate(258 211)" fill="none" stroke="#ff6700" stroke-width="6" stroke-linecap="round">
+      <path d="M0 29c16-16 42-16 58 0"/>
+      <path d="M-18 12c26-26 68-26 94 0" opacity=".72"/>
+      <path d="M-36-5c36-36 94-36 130 0" opacity=".42"/>
+    </g>
+  </g>
+  <g fill="#69faff">
+    <circle cx="700" cy="142" r="8"><animate attributeName="opacity" values=".2;1;.2" dur="2.4s" repeatCount="indefinite"/></circle>
+    <circle cx="790" cy="238" r="6"><animate attributeName="opacity" values="1;.2;1" dur="3.1s" repeatCount="indefinite"/></circle>
+    <circle cx="715" cy="345" r="7"><animate attributeName="opacity" values=".3;1;.3" dur="2.8s" repeatCount="indefinite"/></circle>
+  </g>
+  <path d="M590 265c75-90 145-130 245-126M590 300c88 62 158 72 252 42" fill="none" stroke="#69faff" stroke-width="3" stroke-dasharray="12 14" stroke-opacity=".62">
+    <animate attributeName="stroke-dashoffset" values="0;-52" dur="4s" repeatCount="indefinite"/>
+  </path>
+</svg>
