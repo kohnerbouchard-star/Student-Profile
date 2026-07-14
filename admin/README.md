@@ -1,11 +1,33 @@
-# Eco Novaria admin frontend replacement
+# Econovaria Admin Runtime
 
-This directory is the v606 administrator frontend integrated into the Student-Profile repository.
+The `/admin/` runtime hosts the accepted v606 Admin Overview Terminal bundle inside the authenticated application shell.
 
-- `/index.html` remains the existing student/player frontend.
-- `/admin/index.html` owns staff sign-in, Create Game, game selection, and the v606 admin terminal.
-- The frontend authenticates through Supabase Auth and uses the existing `classroom-api` Edge Function.
-- A browser-side compatibility bridge maps the v606 session bootstrap and currently available Student-Profile admin routes. Unimplemented v606 routes fail closed with HTTP 501 rather than using demo data.
-- The fixed 15-minute v606 admin inactivity policy remains enabled.
+## Visual baseline
 
-The embedded asset form is intentional: the GitHub connector used for this replacement can write UTF-8 repository files but cannot upload binary media. All required images and one shared motion background are embedded as data URIs so the repository build remains self-contained.
+The generated terminal bundle and its primary CSS remain the accepted v606 files. Runtime wiring must not redesign or replace their UI.
+
+Original repository-owned assets are served from `admin/assets/` using the filenames expected by the bundle. This includes the player-action, bank, holdings, Google Classroom, and ten-country currency SVGs; CSV/export and mask PNGs; and the original modal videos:
+
+- SCI-ID card: `assets/videos/id-background.mp4`
+- Add Player: `assets/videos/player-background.mp4`
+- Add Contract: `assets/videos/contract-background.mp4`
+- Add Store Item: `assets/videos/store-background.mp4`
+- Attendance Scanner: `assets/videos/scanner-background.mp4`
+
+Generic media fallbacks apply only to uploaded/content media. They must not replace interface symbols or modal videos.
+
+## Player credentials
+
+The existing **Edit Player Profile** popup is the only existing-player credential editing surface.
+
+- Player ID / RFID card is editable there.
+- New Access Code is optional; leaving it blank preserves the current Access Code.
+- Existing Access Codes cannot be displayed because only secure hashes are stored.
+- The internal player UUID remains hidden and immutable and is used only as the backend route target.
+- No Overview Player IDs button, standalone credential manager, or separate inline identity panel is permitted.
+
+Add Player continues to require Player ID / RFID card and Access Code at creation time.
+
+## Runtime rule
+
+Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wrapper layers. Non-create requests must pass through the create-action adapter without consuming their `Request` bodies.
