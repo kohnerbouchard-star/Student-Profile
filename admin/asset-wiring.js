@@ -1,7 +1,6 @@
 (function initEconovariaAdminAssetWiring() {
   "use strict";
 
-  const PLAYER_IDENTITY_MOTION = "./assets/media/player-identity-motion.svg";
   const MEDIA_PLACEHOLDER = "./assets/icons/media-placeholder.svg";
 
   const ORIGINAL_CURRENCY_ICONS = {
@@ -23,6 +22,14 @@
     "player-settings": "./assets/icons/player-settings.svg",
     "message-player": "./assets/icons/message-player.svg",
   };
+
+  const ORIGINAL_MODAL_VIDEOS = [
+    { selector: ".admin-terminal-sci-id-video", source: "./assets/videos/id-background.mp4" },
+    { selector: ".admin-terminal-player-video", source: "./assets/videos/player-background.mp4" },
+    { selector: ".admin-terminal-contract-video", source: "./assets/videos/contract-background.mp4" },
+    { selector: ".admin-terminal-store-video", source: "./assets/videos/store-background.mp4" },
+    { selector: ".admin-terminal-scanner-video", source: "./assets/videos/scanner-background.mp4" },
+  ];
 
   function text(value) {
     return String(value ?? "").trim();
@@ -60,25 +67,49 @@
     });
   }
 
-  function replaceBrokenMotionMedia(root = document) {
-    root.querySelectorAll?.("video").forEach((video) => {
-      const source = video.querySelector("source");
-      const sourceValue = text(source?.getAttribute("src"));
-      if (
-        sourceValue !== "window.ECONOVARIA_ADMIN_MOTION_BACKGROUND" &&
-        !sourceValue.includes("ECONOVARIA_ADMIN_MOTION_BACKGROUND")
-      ) {
-        return;
-      }
+  function videoDefinitionFor(element) {
+    return ORIGINAL_MODAL_VIDEOS.find(({ selector }) => element.matches?.(selector)) || null;
+  }
 
-      const image = document.createElement("img");
-      image.src = PLAYER_IDENTITY_MOTION;
-      image.alt = "Player identity and RFID card illustration";
-      image.loading = "eager";
-      image.decoding = "async";
-      image.className = video.className;
-      image.style.cssText = `${video.style.cssText};width:100%;height:100%;object-fit:cover;display:block`;
-      video.replaceWith(image);
+  function configureVideo(video, sourceValue) {
+    video.autoplay = true;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.setAttribute("aria-hidden", "true");
+    video.removeAttribute("poster");
+
+    let source = video.querySelector("source");
+    if (!source) {
+      source = document.createElement("source");
+      video.append(source);
+    }
+    source.type = "video/mp4";
+    if (source.getAttribute("src") !== sourceValue) {
+      source.setAttribute("src", sourceValue);
+      try {
+        video.load();
+      } catch (_) {}
+    }
+  }
+
+  function restoreOriginalModalVideos(root = document) {
+    for (const definition of ORIGINAL_MODAL_VIDEOS) {
+      root.querySelectorAll?.(`img${definition.selector}`).forEach((image) => {
+        const video = document.createElement("video");
+        video.className = image.className;
+        video.style.cssText = image.style.cssText;
+        image.replaceWith(video);
+        configureVideo(video, definition.source);
+      });
+    }
+
+    root.querySelectorAll?.("video").forEach((video) => {
+      const definition = videoDefinitionFor(video);
+      if (!definition) return;
+      configureVideo(video, definition.source);
     });
   }
 
@@ -120,7 +151,7 @@
   function reconcile(root = document) {
     restoreOriginalCurrencySymbols(root);
     restoreOriginalPlayerActionIcons(root);
-    replaceBrokenMotionMedia(root);
+    restoreOriginalModalVideos(root);
     installMediaFallbacks(root);
   }
 
@@ -137,7 +168,8 @@
     reconcile,
     restoreOriginalCurrencySymbols,
     restoreOriginalPlayerActionIcons,
-    PLAYER_IDENTITY_MOTION,
+    restoreOriginalModalVideos,
+    ORIGINAL_MODAL_VIDEOS,
     MEDIA_PLACEHOLDER,
   };
 })();
