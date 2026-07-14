@@ -186,9 +186,7 @@
 
   function fallbackInsertionAnchor(form) {
     const notes = form.querySelector('[name="notes"]');
-    if (notes) {
-      return notes.closest("label, .admin-terminal-field, fieldset, article, section, div") || notes;
-    }
+    if (notes) return notes.closest("label, .admin-terminal-field, fieldset, article, section, div") || notes;
     const actions = form.querySelector(
       '[data-admin-terminal-action="create-player"], button[type="submit"], .admin-terminal-modal-actions',
     );
@@ -227,14 +225,11 @@
       const content = normalizedText(element.textContent);
       return content.includes("player id") && content.includes("access code") && content.includes("generated");
     });
-    if (helper) {
-      helper.textContent = "Set the RFID-facing Player ID and Access Code now. The UUID remains backend-only.";
-    }
+    if (helper) helper.textContent = "Set the RFID-facing Player ID and Access Code now. The UUID remains backend-only.";
   }
 
   function configureCreateForm(form) {
     if (!(form instanceof Element) || form.dataset.playerIdentityConfigured === "true") return;
-
     let identifierInput = form.querySelector('[name="playerIdentifier"]');
     let accessCodeInput = form.querySelector('[name="accessCode"]');
     if (!identifierInput) {
@@ -246,7 +241,6 @@
       accessCodeInput = form.querySelector('[name="accessCode"]');
     }
     if (!identifierInput || !accessCodeInput) return;
-
     identifierInput.required = true;
     identifierInput.disabled = false;
     accessCodeInput.required = true;
@@ -286,12 +280,7 @@
       }
       ${SETTINGS_SELECTOR} .player-identity-settings__icon { width: 32px; height: 32px; flex: 0 0 auto; }
       ${SETTINGS_SELECTOR} h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.25; }
-      ${SETTINGS_SELECTOR} p {
-        margin: 0;
-        color: rgba(233,251,255,.66);
-        font-size: 12px;
-        line-height: 1.5;
-      }
+      ${SETTINGS_SELECTOR} p { margin: 0; color: rgba(233,251,255,.66); font-size: 12px; line-height: 1.5; }
       ${SETTINGS_SELECTOR} form { display: grid; gap: 14px; }
       ${SETTINGS_SELECTOR} .player-identity-settings__grid {
         display: grid;
@@ -319,11 +308,7 @@
         outline: 2px solid rgba(105,250,255,.14);
         outline-offset: 1px;
       }
-      ${SETTINGS_SELECTOR} small {
-        color: rgba(233,251,255,.54);
-        font-size: 11px;
-        line-height: 1.45;
-      }
+      ${SETTINGS_SELECTOR} small { color: rgba(233,251,255,.54); font-size: 11px; line-height: 1.45; }
       ${SETTINGS_SELECTOR} .player-identity-settings__footer {
         display: flex;
         flex-wrap: wrap;
@@ -331,11 +316,7 @@
         justify-content: space-between;
         gap: 12px;
       }
-      ${SETTINGS_SELECTOR} [role="status"] {
-        min-height: 18px;
-        color: rgba(233,251,255,.68);
-        font-size: 12px;
-      }
+      ${SETTINGS_SELECTOR} [role="status"] { min-height: 18px; color: rgba(233,251,255,.68); font-size: 12px; }
       ${SETTINGS_SELECTOR} button[type="submit"] {
         min-height: 40px;
         padding: 0 15px;
@@ -390,7 +371,6 @@
     const form = document.createElement("form");
     form.setAttribute("data-admin-player-identity-settings-form", "");
     form.noValidate = true;
-
     const grid = document.createElement("div");
     grid.className = "player-identity-settings__grid";
     grid.innerHTML = [
@@ -412,7 +392,6 @@
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
     status.textContent = rosterLabel(player) ? `Roster label: ${rosterLabel(player)}` : "Ready to save.";
-
     const save = document.createElement("button");
     save.type = "submit";
     save.textContent = "Save sign-in settings";
@@ -426,7 +405,6 @@
       const identifier = text(form.elements.playerIdentifier.value);
       const accessCode = text(form.elements.accessCode.value);
       const bridge = window.EconovariaPlayerAccessCodeBridge;
-
       if (!gameId || !playerId || !identifier) {
         status.textContent = "Player ID / RFID card is required.";
         status.style.color = "#ff6976";
@@ -437,12 +415,10 @@
         status.style.color = "#ff6976";
         return;
       }
-
       save.disabled = true;
       save.textContent = "Saving…";
       status.textContent = accessCode ? "Saving Player ID and new Access Code…" : "Saving Player ID…";
       status.style.color = "rgba(233,251,255,.68)";
-
       try {
         await bridge.updatePlayerIdentity({
           gameId,
@@ -466,16 +442,13 @@
         save.textContent = "Save sign-in settings";
       }
     });
-
     return section;
   }
 
   function playersSectionActive() {
     const currentFeature = feature();
     const active = text(
-      currentFeature?.activeSection ||
-      currentFeature?.currentSection ||
-      currentFeature?.selectedSection,
+      currentFeature?.activeSection || currentFeature?.currentSection || currentFeature?.selectedSection,
     ).toLowerCase();
     if (active === "players") return true;
     const nav = document.querySelector('[data-admin-section="Players"]');
@@ -487,43 +460,41 @@
     ));
   }
 
-  function elementHaystack(element) {
-    const parts = [];
-    let node = element;
-    let depth = 0;
-    while (node && node !== document.body && depth < 9) {
-      if (node instanceof Element) {
-        parts.push(node.textContent || "");
-        for (const name of [
-          "data-player-id",
-          "data-player-uuid",
-          "data-admin-player-id",
-          "data-id",
-          "value",
-          "href",
-          "aria-label",
-          "title",
-        ]) parts.push(node.getAttribute(name) || "");
-      }
-      node = node.parentElement;
-      depth += 1;
-    }
-    return normalizedText(parts.join(" "));
+  function directPlayerId(element) {
+    const owner = element?.closest?.("[data-player-id], [data-player-rank]");
+    return text(owner?.getAttribute("data-player-id") || owner?.getAttribute("data-player-rank"));
   }
 
   function playerFromElement(element) {
     if (!(element instanceof Element)) return null;
-    const haystack = elementHaystack(element);
-    const players = allPlayers();
-    for (const player of players) {
+    const directId = directPlayerId(element);
+    if (directId) {
+      const direct = allPlayers().find((player) => playerUuid(player) === directId);
+      if (direct) return direct;
+    }
+    const parts = [];
+    let node = element;
+    let depth = 0;
+    while (node && node !== document.body && depth < 10) {
+      if (node instanceof Element) {
+        parts.push(node.textContent || "");
+        for (const name of ["data-player-id", "data-player-rank", "data-id", "value", "href", "aria-label", "title"]) {
+          parts.push(node.getAttribute(name) || "");
+        }
+      }
+      node = node.parentElement;
+      depth += 1;
+    }
+    const haystack = normalizedText(parts.join(" "));
+    for (const player of allPlayers()) {
       const id = playerUuid(player).toLowerCase();
       if (id && haystack.includes(id)) return player;
     }
-    for (const player of players) {
+    for (const player of allPlayers()) {
       const identifier = playerIdentifier(player).toLowerCase();
       if (identifier && haystack.includes(identifier)) return player;
     }
-    const nameMatches = players.filter((player) => {
+    const nameMatches = allPlayers().filter((player) => {
       const name = playerName(player).toLowerCase();
       return name.length >= 3 && haystack.includes(name);
     });
@@ -541,35 +512,45 @@
   function detailHostFor(player) {
     const name = playerName(player).toLowerCase();
     const identifier = playerIdentifier(player).toLowerCase();
+    const row = document.querySelector(
+      `.admin-terminal-player-row[data-player-id="${playerUuid(player)}"], [data-player-id="${playerUuid(player)}"].admin-terminal-player-row`,
+    );
+    const expandedDetail = row?.querySelector(
+      ".admin-terminal-player-accordion-detail, .admin-terminal-player-dossier-v296, [aria-label$=' player details']",
+    );
+    if (expandedDetail && isVisible(expandedDetail)) {
+      return { mode: "container", element: expandedDetail };
+    }
+
     const selectors = [
       "[data-admin-terminal-player-detail]",
       "[data-admin-player-detail]",
       "[data-admin-terminal-player-settings]",
       "[data-admin-player-settings]",
+      ".admin-terminal-player-accordion-detail",
+      ".admin-terminal-player-dossier-v296",
+      '[aria-label$=" player details"]',
       '[role="dialog"]',
       ".admin-terminal-modal",
       ".admin-terminal-drawer",
       ".admin-terminal-detail",
       ".admin-terminal-side-panel",
     ].join(",");
-
     const candidates = [...document.querySelectorAll(selectors)]
       .filter(isVisible)
       .filter((element) => !element.matches("[data-admin-player-access-code-dialog]"))
       .filter((element) => !element.querySelector(SETTINGS_SELECTOR));
-
     for (const candidate of candidates.reverse()) {
       const content = normalizedText(candidate.textContent);
       if ((name && content.includes(name)) || (identifier && content.includes(identifier))) {
         return { mode: "container", element: candidate };
       }
     }
-
     if (selectedPlayerElement?.isConnected) {
-      const row = selectedPlayerElement.closest(
+      const selectedRow = selectedPlayerElement.closest(
         "tr, [role='row'], article, li, .admin-terminal-player-row, .admin-terminal-card, .admin-terminal-table-row",
       );
-      if (row) return { mode: row.tagName === "TR" ? "table-row" : "after", element: row };
+      if (selectedRow) return { mode: selectedRow.tagName === "TR" ? "table-row" : "after", element: selectedRow };
     }
     return null;
   }
@@ -598,17 +579,14 @@
     ensureStyles();
     const player = selectedPlayer();
     if (!player) return;
-
     const playerId = playerUuid(player);
     const existing = [...document.querySelectorAll(SETTINGS_SELECTOR)]
       .find((element) => element.getAttribute("data-player-id") === playerId);
     if (existing?.isConnected) return;
-
     clearIdentitySettings();
     const host = detailHostFor(player);
     if (!host) return;
     const settings = createIdentitySettings(player);
-
     if (host.mode === "table-row") {
       const row = document.createElement("tr");
       row.setAttribute("data-admin-player-identity-settings-row", "");
@@ -635,8 +613,20 @@
     selectedPlayerElement = sourceElement instanceof Element ? sourceElement : null;
     window.requestAnimationFrame(() => {
       decoratePlayerDetail();
-      window.setTimeout(decoratePlayerDetail, 160);
+      window.setTimeout(decoratePlayerDetail, 100);
+      window.setTimeout(decoratePlayerDetail, 250);
     });
+  }
+
+  async function selectPlayerById(playerId, sourceElement) {
+    if (!playerId) return;
+    let player = allPlayers().find((item) => playerUuid(item) === playerId);
+    if (!player) {
+      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+      const players = await loadPlayers(gameId);
+      player = players.find((item) => playerUuid(item) === playerId);
+    }
+    if (player) selectPlayer(player, sourceElement);
   }
 
   function decorate(root = document) {
@@ -648,6 +638,7 @@
   function scheduleDecorate() {
     window.setTimeout(() => decorate(document), 0);
     window.setTimeout(() => decorate(document), 80);
+    window.setTimeout(() => decorate(document), 220);
   }
 
   function handleDocumentClick(event) {
@@ -668,22 +659,24 @@
       void loadPlayers(gameId).then(() => window.setTimeout(decoratePlayerDetail, 100));
     }
 
-    if (!playersSectionActive() &&
-        !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) return;
+    if (!playersSectionActive() && !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) return;
 
+    const playerId = directPlayerId(target);
+    if (playerId) {
+      void selectPlayerById(playerId, target);
+      return;
+    }
     const player = playerFromElement(target);
     if (player) selectPlayer(player, target);
   }
 
   cachePlayers(modelPlayers());
   ensureStyles();
-
   const observerRoot = document.body || document.documentElement;
   if (observerRoot && typeof MutationObserver === "function") {
     const observer = new MutationObserver(() => decorate(document));
     observer.observe(observerRoot, { childList: true, subtree: true });
   }
-
   document.addEventListener("click", handleDocumentClick, true);
   window.addEventListener("load", () => decorate(document), { once: true });
   decorate(document);
@@ -693,5 +686,6 @@
     decoratePlayerDetail,
     loadPlayers,
     selectPlayer,
+    selectPlayerById,
   };
 })();
