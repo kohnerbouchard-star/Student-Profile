@@ -78,6 +78,38 @@ export function normalizeRuntimeMutation(
       "studentLabel",
       "classLabel",
     ]));
+    const playerIdentifier = text(firstDefined(payload, [
+      "playerIdentifier",
+      "playerId",
+      "rfidCardId",
+      "rfidId",
+      "cardId",
+      "externalPlayerId",
+    ]));
+    const accessCode = text(firstDefined(payload, [
+      "accessCode",
+      "studentCode",
+      "playerAccessCode",
+      "pin",
+    ]));
+
+    if (!playerIdentifier) {
+      return {
+        ok: false,
+        status: 400,
+        code: "player_identifier_required",
+        message: "A Player ID / RFID card value is required.",
+      };
+    }
+
+    if (!accessCode) {
+      return {
+        ok: false,
+        status: 400,
+        code: "player_access_code_required",
+        message: "An Access Code is required.",
+      };
+    }
 
     return {
       ok: true,
@@ -86,6 +118,8 @@ export function normalizeRuntimeMutation(
         body: {
           displayName,
           rosterLabel: rosterLabel || null,
+          playerIdentifier,
+          accessCode,
         },
       },
     };
