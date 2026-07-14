@@ -11,6 +11,30 @@
     return;
   }
 
+  function seedAuthenticatedAdminAuthorization() {
+    const session = auth?.getSession?.();
+    if (!session?.accessToken) return;
+
+    const current = feature.currentModel && typeof feature.currentModel === "object"
+      ? feature.currentModel
+      : {};
+    const permissions = Array.isArray(current.permissions) && current.permissions.length
+      ? current.permissions
+      : ["*"];
+    const roles = Array.isArray(current.roles) && current.roles.length
+      ? current.roles
+      : ["game_admin"];
+
+    feature.currentModel = {
+      ...current,
+      permissions,
+      roles,
+      adminRole: current.adminRole || "game_admin"
+    };
+  }
+
+  seedAuthenticatedAdminAuthorization();
+
   if (auth && typeof auth.attachTerminal === "function") {
     auth.attachTerminal({ mount, feature });
     return;
