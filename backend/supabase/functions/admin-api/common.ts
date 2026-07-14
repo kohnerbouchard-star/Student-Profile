@@ -12,10 +12,20 @@ import { handleAttendancePlayerOperation } from "./attendancePlayerOperations.ts
 import { corsHeaders } from "./cors.ts";
 
 export { corsHeaders };
-export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
-export const SUPABASE_SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+function environmentValue(name: string): string {
+  try {
+    return Deno.env.get(name) || "";
+  } catch {
+    return "";
+  }
+}
+
+export const SUPABASE_URL = environmentValue("SUPABASE_URL");
+export const SUPABASE_ANON_KEY = environmentValue("SUPABASE_ANON_KEY");
+export const SUPABASE_SERVICE_ROLE_KEY = environmentValue(
+  "SUPABASE_SERVICE_ROLE_KEY",
+);
 export const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`;
 
 export function json(request, status, body) {
