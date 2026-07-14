@@ -1,0 +1,112 @@
+name: Admin API Check
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/supabase/migrations/**"
+      - ".github/workflows/admin-api-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/supabase/migrations/**"
+      - ".github/workflows/admin-api-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  admin-api-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck admin API
+        working-directory: backend
+        shell: bash
+        run: |
+          set +e
+          deno check --config supabase/functions/admin-api/deno.json --no-lock \
+            supabase/functions/admin-api/index.ts \
+            > /tmp/admin-api-check.log 2>&1
+          echo $? > /tmp/admin-api-check.status
+          tail -n 120 /tmp/admin-api-check.log
+          exit 0
+
+      - name: Run admin API tests
+        working-directory: backend
+        shell: bash
+        run: |
+          if [ "$(cat /tmp/admin-api-check.status)" != "0" ]; then
+            echo "Typecheck failed; tests were not run." > /tmp/admin-api-test.log
+            echo 1 > /tmp/admin-api-test.status
+            exit 0
+          fi
+          set +e
+          deno test --config supabase/functions/admin-api/deno.json --no-lock \
+            supabase/functions/admin-api/*.test.ts \
+            > /tmp/admin-api-test.log 2>&1
+          echo $? > /tmp/admin-api-test.status
+          tail -n 120 /tmp/admin-api-test.log
+          exit 0
+
+      - name: Upload admin API diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-api-diagnostics
+          path: |
+            /tmp/admin-api-check.log
+            /tmp/admin-api-check.status
+            /tmp/admin-api-test.log
+            /tmp/admin-api-test.status
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload validated admin API runtime
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-api-runtime
+          path: backend/supabase/functions/admin-api/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Validate stabilization migration transaction boundaries
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          expected = [
+              Path('backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql'),
+              Path('backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql'),
+              Path('backend/supabase/migrations/20260713223000_complete_admin_control_surfaces_v1.sql'),
+              Path('backend/supabase/migrations/20260714224000_harden_admin_data_api_tables_v1.sql'),
+          ]
+          for path in expected:
+              if not path.exists():
+                  raise SystemExit(f'Missing stabilization migration: {path}')
+              text = path.read_text().strip().lower()
+              if not text.startswith('begin;') or not text.endswith('commit;'):
+                  raise SystemExit(f'{path} must be transaction wrapped')
+          print('Stabilization migration transaction boundary checks passed.')
+          PY
+
+      - name: Enforce admin API checks
+        shell: bash
+        run: |
+          check_status="$(cat /tmp/admin-api-check.status)"
+          test_status="$(cat /tmp/admin-api-test.status)"
+          if [ "$check_status" != "0" ] || [ "$test_status" != "0" ]; then
+            echo "Admin API validation failed. Download the admin-api-diagnostics artifact."
+            exit 1
+          fi

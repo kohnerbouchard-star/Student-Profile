@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --no-lock src/smoke/classroomApiSmokeTest.ts",
+    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --no-lock src/smoke/classroomApiSmokeTest.ts && npm run test:admin-api",
+    "test:admin-api": "deno test --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:edge": "deno check --no-lock supabase/functions/classroom-api/index.ts",
-    "typecheck:all": "npm run typecheck && npm run typecheck:edge"
+    "typecheck:admin-edge": "deno check --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/index.ts",
+    "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:admin-edge"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

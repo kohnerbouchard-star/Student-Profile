@@ -1,0 +1,70 @@
+name: Admin Shell Smoke
+
+on:
+  pull_request:
+    paths:
+      - "admin/**"
+      - "scripts/admin-shell-smoke.mjs"
+      - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-create-actions-smoke.mjs"
+      - ".github/workflows/admin-shell-smoke.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "admin/**"
+      - "scripts/admin-shell-smoke.mjs"
+      - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-create-actions-smoke.mjs"
+      - ".github/workflows/admin-shell-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  admin-shell-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate admin shell source contracts
+        run: node scripts/admin-shell-smoke.mjs
+
+      - name: Install browser smoke runtime
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start static preview
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-smoke-server.log 2>&1 &
+          echo $! > /tmp/admin-smoke-server.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/admin/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-smoke-server.log
+          exit 1
+
+      - name: Click every admin navigation item
+        run: node scripts/admin-browser-smoke.mjs
+
+      - name: Open every admin create workflow
+        run: node scripts/admin-create-actions-smoke.mjs
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-browser-smoke-${{ github.sha }}
+          path: admin-browser-smoke-artifacts/
+          if-no-files-found: warn
