@@ -16,6 +16,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-contract-end-to-end-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -41,6 +42,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-contract-end-to-end-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -125,6 +127,9 @@ jobs:
 
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
+
+      - name: Exercise complete contract create payload
+        run: node scripts/admin-contract-end-to-end-smoke.mjs
 
       - name: Exercise generated player credentials and confirmation UX
         run: node scripts/admin-player-create-ux-smoke.mjs
