@@ -3,26 +3,25 @@
 
   const PLAYER_IDENTITY_MOTION = "./assets/media/player-identity-motion.svg";
   const MEDIA_PLACEHOLDER = "./assets/icons/media-placeholder.svg";
-  const CURRENCY_ASSET_BASE = "../frontend/src/assets/currency-symbols";
 
-  const CURRENCY_SYMBOLS = {
-    NRC: "saturn.svg",
-    YRC: "neptune.svg",
-    THD: "arsenic.svg",
-    SLV: "jupiter.svg",
-    ELD: "alumen.svg",
-    VAL: "gold.svg",
-    LUM: "lapis_lazuli.svg",
-    SYN: "alcali.svg",
-    XAL: "lead.svg",
-    DRV: "ferrum.svg",
+  const ORIGINAL_CURRENCY_ICONS = {
+    NRC: "./assets/icons/currency-saturn.svg",
+    YRC: "./assets/icons/currency-neptune.svg",
+    THD: "./assets/icons/currency-arsenic.svg",
+    SLV: "./assets/icons/currency-jupiter.svg",
+    ELD: "./assets/icons/currency-alumen.svg",
+    VAL: "./assets/icons/currency-gold.svg",
+    LUM: "./assets/icons/currency-lapis_lazuli.svg",
+    SYN: "./assets/icons/currency-alcali.svg",
+    XAL: "./assets/icons/currency-lead.svg",
+    DRV: "./assets/icons/currency-ferrum.svg",
   };
 
-  const PLAYER_ACTION_ICONS = {
-    "open-player-profile": "./assets/icons/player-actions/id-card.svg",
-    "adjust-player-balance": "./assets/icons/player-actions/adjust-balance.svg",
-    "player-settings": "./assets/icons/player-actions/settings.svg",
-    "message-player": "./assets/icons/player-actions/message.svg",
+  const ORIGINAL_PLAYER_ACTION_ICONS = {
+    "open-player-profile": "./assets/icons/player-id.svg",
+    "adjust-player-balance": "./assets/icons/adjust-balance.svg",
+    "player-settings": "./assets/icons/player-settings.svg",
+    "message-player": "./assets/icons/message-player.svg",
   };
 
   function text(value) {
@@ -32,37 +31,32 @@
   function resetFallbackState(image) {
     image.removeAttribute("data-admin-asset-fallback-applied");
     image.removeAttribute("data-admin-asset-original-src");
+    image.removeAttribute("data-admin-asset-fallback-bound");
     if (image.alt === "Media unavailable") image.alt = "";
   }
 
-  function setUiImageSource(image, source) {
+  function restoreUiImage(image, source) {
     if (!source) return;
     resetFallbackState(image);
     image.setAttribute("aria-hidden", "true");
     image.setAttribute("loading", "lazy");
+    image.style.removeProperty("filter");
     if (image.getAttribute("src") !== source) image.setAttribute("src", source);
   }
 
-  function repairCurrencySymbols(root = document) {
+  function restoreOriginalCurrencySymbols(root = document) {
     root.querySelectorAll?.("img.admin-terminal-bank-currency-symbol").forEach((image) => {
       const amount = image.closest(".admin-terminal-currency-single-amount");
       const code = text(amount?.querySelector("i")?.textContent).toUpperCase();
-      const asset = CURRENCY_SYMBOLS[code];
-      if (!asset) return;
-
-      setUiImageSource(image, `${CURRENCY_ASSET_BASE}/${asset}`);
-      image.style.filter = "brightness(0) saturate(100%) invert(87%) sepia(31%) saturate(2006%) hue-rotate(131deg) brightness(104%) contrast(101%)";
+      restoreUiImage(image, ORIGINAL_CURRENCY_ICONS[code]);
     });
   }
 
-  function repairPlayerActionIcons(root = document) {
+  function restoreOriginalPlayerActionIcons(root = document) {
     root.querySelectorAll?.("button[data-admin-terminal-action] img").forEach((image) => {
       const button = image.closest("button[data-admin-terminal-action]");
       const action = text(button?.getAttribute("data-admin-terminal-action"));
-      const asset = PLAYER_ACTION_ICONS[action];
-      if (!asset) return;
-      setUiImageSource(image, asset);
-      image.style.filter = "none";
+      restoreUiImage(image, ORIGINAL_PLAYER_ACTION_ICONS[action]);
     });
   }
 
@@ -89,10 +83,10 @@
   }
 
   function isUiSymbolImage(image) {
-    if (image.matches(".admin-terminal-bank-currency-symbol")) return true;
+    if (image.matches(".admin-terminal-bank-currency-symbol, .admin-terminal-bank-account-svg")) return true;
     if (image.closest("button[data-admin-terminal-action]")) return true;
     const source = text(image.getAttribute("src"));
-    return source.includes("/currency-symbols/") || source.includes("/icons/player-actions/");
+    return /\/assets\/icons\/(?:currency-|player-|adjust-balance|message-player|bank-)/i.test(source);
   }
 
   function isContentMediaImage(image) {
@@ -124,8 +118,8 @@
   }
 
   function reconcile(root = document) {
-    repairCurrencySymbols(root);
-    repairPlayerActionIcons(root);
+    restoreOriginalCurrencySymbols(root);
+    restoreOriginalPlayerActionIcons(root);
     replaceBrokenMotionMedia(root);
     installMediaFallbacks(root);
   }
@@ -141,8 +135,8 @@
 
   window.EconovariaAdminAssetWiring = {
     reconcile,
-    repairCurrencySymbols,
-    repairPlayerActionIcons,
+    restoreOriginalCurrencySymbols,
+    restoreOriginalPlayerActionIcons,
     PLAYER_IDENTITY_MOTION,
     MEDIA_PLACEHOLDER,
   };
