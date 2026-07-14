@@ -19,6 +19,7 @@ const expectedScripts = [
   "./classroom-write-fallback.js",
   "./create-action-adapter.js",
   "./player-access-code-bridge.js",
+  "./player-create-lifecycle.js",
   "./player-identity-wiring.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
@@ -42,6 +43,7 @@ const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
 const fallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
 const createAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const credentialBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
+const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
@@ -55,6 +57,8 @@ assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Cre
 assert(fallback.includes('"playerIdentifier"') && fallback.includes('"accessCode"'), "Fallback omits identity credentials.");
 assert(credentialBridge.includes("updatePlayerIdentity"), "Existing-player identity write bridge is missing.");
 assert(credentialBridge.includes("data-admin-player-identifier-value"), "Credential dialog omits Player ID.");
+assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
+assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
 assert(identityWiring.includes('name="playerIdentifier"'), "Admin create form has no Player ID field.");
 assert(identityWiring.includes('name="accessCode"'), "Admin create form has no Access Code field.");
 assert(identityWiring.includes("RFID/card Player ID"), "Admin UI does not explain the RFID identity contract.");
