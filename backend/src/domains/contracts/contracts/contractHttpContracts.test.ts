@@ -1,6 +1,10 @@
 import { toPlayerContractDto, toStaffContractDto } from "./contractHttpContracts.ts";
 import type { GameSessionContractRecord } from "./contractRepositoryContracts.ts";
 
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
