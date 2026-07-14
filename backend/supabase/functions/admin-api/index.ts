@@ -11,6 +11,7 @@ import {
 } from "./common.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
+import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 
 function routePath(url: URL): string {
@@ -213,6 +214,14 @@ Deno.serve(async (request: Request) => {
       suffix,
     );
     if (readResponse) return readResponse;
+
+    const runtimeMutationResponse = await handleRuntimeMutation(
+      request,
+      context,
+      gameId,
+      suffix,
+    );
+    if (runtimeMutationResponse) return runtimeMutationResponse;
 
     const writeResponse = await handleGameWrite(
       request,
