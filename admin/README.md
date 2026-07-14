@@ -36,10 +36,8 @@ A successful create closes the editor and opens a bounded, responsive v606-style
 
 Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wrapper layers. Non-create requests must pass through the create-action adapter without consuming their `Request` bodies. Player creation UX may prepare form values, but it must not intercept or replace the network transport.
 
-## Validation
+## Validation and known gaps
 
-The branch browser suite covers desktop, compact, and narrow layouts; all create workflows; blank and manual player credentials; the Player-created confirmation; Edit Player Profile; player login; and attendance. Backend typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke must all remain green before merge.
-
-## Known product gaps
+The browser suite covers desktop, compact, and narrow layouts; all create workflows; blank and manual player credentials; the Player-created confirmation; Edit Player Profile; player login; and attendance. Backend Typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke must remain green.
 
 The broader audit identified incomplete game-code reset UX, partial net-worth scoring, missing attendance reward-ledger aggregation, safe empty notification/help states, advanced contract/store/settings mutations that still need live verification, and session-based rather than heartbeat-based presence. These are existing feature-completeness gaps, not visual or architectural regressions introduced by this branch.
