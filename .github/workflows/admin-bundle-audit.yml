@@ -8,6 +8,15 @@ on:
       - "scripts/admin-bundle-contract-audit.mjs"
       - "scripts/admin-visible-route-manifest.json"
       - ".github/workflows/admin-bundle-audit.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "admin/dist/admin-overview-terminal.js"
+      - "backend/supabase/functions/admin-api/**"
+      - "scripts/admin-bundle-contract-audit.mjs"
+      - "scripts/admin-visible-route-manifest.json"
+      - ".github/workflows/admin-bundle-audit.yml"
   workflow_dispatch:
 
 permissions:
