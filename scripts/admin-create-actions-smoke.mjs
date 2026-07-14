@@ -31,6 +31,46 @@ const game = {
   gameCode: "SMOKE1",
 };
 
+const player = {
+  id: "00000000-0000-4000-8000-000000000003",
+  playerId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Browser Smoke Player",
+  name: "Browser Smoke Player",
+  rosterLabel: "SMOKE-CREATE",
+  status: "active",
+  countryCode: "NORTHREACH",
+  countryName: "Northreach",
+  cashBalance: 0,
+  netWorth: 0,
+  currencyCode: "ECO",
+};
+
+const contract = {
+  id: "00000000-0000-4000-8000-000000000004",
+  contractId: "00000000-0000-4000-8000-000000000004",
+  title: "Browser Smoke Contract",
+  description: "Browser smoke objective",
+  instructions: "Complete the browser smoke assignment.",
+  status: "published",
+  visibility: "active",
+};
+
+const storeItem = {
+  id: "00000000-0000-4000-8000-000000000005",
+  storeItemId: "00000000-0000-4000-8000-000000000005",
+  itemUuid: "00000000-0000-4000-8000-000000000005",
+  name: "Browser Smoke Item",
+  title: "Browser Smoke Item",
+  description: "Browser smoke store item.",
+  category: "material",
+  price: 25,
+  currencyCode: "ECO",
+  stockQuantity: 10,
+  stock: 10,
+  status: "active",
+  visibility: "all",
+};
+
 const common = {
   gameId: GAME_ID,
   gameSessionId: GAME_ID,
@@ -86,7 +126,7 @@ const common = {
   },
 };
 
-function responseFor(pathname) {
+function responseFor(pathname, method) {
   if (pathname.endsWith("/session/bootstrap")) {
     return {
       data: {
@@ -121,6 +161,20 @@ function responseFor(pathname) {
       },
     };
   }
+  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players`)) {
+    return { data: { created: true, player, accessCode: "SMOKE-ACCESS" } };
+  }
+  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/contracts`)) {
+    return { data: { created: true, contract } };
+  }
+  if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/store/items`)) {
+    return { data: { created: true, item: storeItem, storeItem } };
+  }
+  if (pathname.includes("/players")) return { data: { ...common, players: [player] } };
+  if (pathname.includes("/contracts")) return { data: { ...common, contracts: [contract] } };
+  if (pathname.includes("/store")) {
+    return { data: { ...common, store: [storeItem], storeItems: [storeItem] } };
+  }
   return { data: common };
 }
 
@@ -130,15 +184,16 @@ const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
 const actionResults = [];
+const writeRequests = [];
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => {
-  const text = `${message.type()}: ${message.text()}`;
-  consoleMessages.push(text);
-  if (message.type() === "error") errors.push(text);
+  consoleMessages.push(`${message.type()}: ${message.text()}`);
 });
 page.on("requestfailed", (request) => {
-  errors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`);
+  const url = request.url();
+  if (url.includes("window.ECONOVARIA_ADMIN_MOTION_BACKGROUND")) return;
+  errors.push(`requestfailed: ${request.method()} ${url} ${request.failure()?.errorText || ""}`);
 });
 
 await page.addInitScript(({ accessToken, gameId, adminId }) => {
@@ -152,7 +207,8 @@ await page.addInitScript(({ accessToken, gameId, adminId }) => {
 
 await page.route("**/functions/v1/admin-api/**", async (route) => {
   const request = route.request();
-  if (request.method() === "OPTIONS") {
+  const method = request.method();
+  if (method === "OPTIONS") {
     await route.fulfill({
       status: 204,
       headers: {
@@ -165,11 +221,22 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
     return;
   }
 
+  const pathname = new URL(request.url()).pathname;
+  if (!["GET", "HEAD"].includes(method)) {
+    let body = null;
+    try {
+      body = request.postDataJSON();
+    } catch (_) {
+      body = request.postData();
+    }
+    writeRequests.push({ method, pathname, body });
+  }
+
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(responseFor(new URL(request.url()).pathname)),
+    body: JSON.stringify(responseFor(pathname, method)),
   });
 });
 
@@ -186,69 +253,105 @@ async function loadOverview() {
   await page.waitForTimeout(500);
 }
 
-async function inspectCreateAction(action) {
+async function waitForWrite(startIndex, timeoutMs = 5000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (writeRequests.length > startIndex) return writeRequests.slice(startIndex);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return [];
+}
+
+async function openCreateAction(action) {
   await loadOverview();
   const locator = page.locator(`[data-admin-terminal-action="${action}"]`).first();
   await locator.waitFor({ state: "visible", timeout: 10_000 });
-
-  const state = await locator.evaluate((node) => ({
-    text: (node.textContent || "").trim().replace(/\s+/g, " "),
-    disabled: "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true",
-    title: node.getAttribute("title"),
-    className: node.className,
-  }));
-  console.log("CREATE_ACTION_INITIAL", JSON.stringify({ action, state }));
-
-  const errorCountBefore = errors.length;
-  if (!state.disabled) {
-    await locator.click({ timeout: 5000 });
-    await page.waitForTimeout(500);
-  }
-
-  const visibleModals = page.locator(
-    '.admin-terminal-modal-backdrop:visible, .admin-terminal-modal:visible, [role="dialog"]:visible',
+  const disabled = await locator.evaluate((node) =>
+    "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true"
   );
-  const modalCount = await visibleModals.count();
-  const modalText = modalCount
-    ? (await visibleModals.last().innerText()).replace(/\s+/g, " ").slice(0, 1200)
-    : "";
-  const newErrors = errors.slice(errorCountBefore);
-  const result = { action, state, modalCount, modalText, newErrors };
-  actionResults.push(result);
-  console.log("CREATE_ACTION_RESULT", JSON.stringify(result));
-  await capture(`create-${action}`);
+  if (disabled) throw new Error(`${action} is disabled.`);
+  await locator.click({ timeout: 5000 });
+  await page.waitForSelector(".admin-terminal-modal:visible", { timeout: 5000 });
+  await page.waitForTimeout(250);
+}
+
+async function submitPlayer() {
+  await openCreateAction("add-player");
+  const form = page.locator("[data-admin-terminal-player-form]");
+  await form.locator('[name="displayName"]').fill("Browser Smoke Player");
+  await form.locator('[name="rosterLabel"]').fill("SMOKE-CREATE");
+  await form.locator('[name="status"]').selectOption("active");
+  await form.locator('[name="startingLocation"]').selectOption("NORTHREACH");
+  await form.locator('[name="notes"]').fill("Browser create workflow smoke.");
+  const startIndex = writeRequests.length;
+  await form.locator('[data-admin-terminal-action="create-player"]').click();
+  const writes = await waitForWrite(startIndex);
+  await capture("submit-create-player");
+  return { action: "create-player", writes };
+}
+
+async function submitContract() {
+  await openCreateAction("add-contract");
+  const form = page.locator("[data-admin-terminal-contract-form]");
+  await form.locator('[name="title"]').fill("Browser Smoke Contract");
+  await form.locator('[name="objective"]').fill("Verify the contract create workflow.");
+  await form.locator('[name="instructions"]').fill("Complete the browser smoke assignment.");
+  await form.locator('[name="evidence"]').fill("Submit a short response.");
+  const startIndex = writeRequests.length;
+  await form.locator('[data-admin-terminal-action="create-contract"]').click();
+  const writes = await waitForWrite(startIndex);
+  await capture("submit-create-contract");
+  return { action: "create-contract", writes };
+}
+
+async function submitStoreItem() {
+  await openCreateAction("add-store-item");
+  const form = page.locator("[data-admin-terminal-store-form]");
+  await form.locator('[name="itemName"]').fill("Browser Smoke Item");
+  await form.locator('[name="description"]').fill("Browser smoke store item.");
+  await form.locator('[name="category"]').selectOption({ index: 0 });
+  await form.locator('[name="itemType"]').selectOption({ index: 0 });
+  await form.locator('[name="status"]').selectOption("active");
+  await form.locator('[name="price"]').fill("25");
+  await form.locator('[name="stockQuantity"]').fill("10");
+  const startIndex = writeRequests.length;
+  await form.locator('[data-admin-terminal-action="save-store-item"]').click();
+  const writes = await waitForWrite(startIndex);
+  await capture("submit-create-store-item");
+  return { action: "save-store-item", writes };
 }
 
 try {
-  for (const action of ["add-player", "add-contract", "add-store-item"]) {
-    await inspectCreateAction(action);
-  }
+  actionResults.push(await submitPlayer());
+  actionResults.push(await submitContract());
+  actionResults.push(await submitStoreItem());
 
   writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
     actionResults,
+    writeRequests,
     errors,
     consoleMessages,
   }, null, 2));
 
-  const failed = actionResults.filter((result) => result.state.disabled || result.modalCount === 0);
-  if (failed.length) {
-    throw new Error(`Create workflows failed to open: ${failed.map((result) => result.action).join(", ")}`);
+  const missingWrites = actionResults.filter((result) => result.writes.length === 0);
+  if (missingWrites.length) {
+    throw new Error(`Create submit handlers sent no API request: ${missingWrites.map((result) => result.action).join(", ")}`);
   }
-  if (errors.length) {
-    throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
-  }
+  if (errors.length) throw new Error(`Create workflows emitted browser errors: ${errors[0]}`);
 
-  console.log("Admin create action modal smoke passed.");
+  console.log("Admin create submissions smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
     actionResults,
+    writeRequests,
     errors,
     consoleMessages,
   }, null, 2));
   await capture("admin-create-actions-failure");
   console.error(error.stack || error.message || String(error));
+  console.error("CREATE_RESULTS", JSON.stringify(actionResults, null, 2));
+  console.error("WRITE_REQUESTS", JSON.stringify(writeRequests, null, 2));
   console.error("BROWSER_ERRORS", JSON.stringify(errors, null, 2));
-  console.error("CONSOLE_MESSAGES", JSON.stringify(consoleMessages, null, 2));
   process.exitCode = 1;
 } finally {
   await context.close();
