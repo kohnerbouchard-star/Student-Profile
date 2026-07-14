@@ -18,6 +18,14 @@ function base64Url(value) {
     .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
+function slug(value) {
+  return String(value || "page")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "page";
+}
+
 const now = Math.floor(Date.now() / 1000);
 const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
   sub: ADMIN_ID,
@@ -136,6 +144,7 @@ const context = await browser.newContext({
 const page = await context.newPage();
 const errors = [];
 const consoleMessages = [];
+const pageSummaries = [];
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => {
@@ -144,7 +153,11 @@ page.on("console", (message) => {
   if (message.type() === "error") errors.push(text);
 });
 page.on("requestfailed", (request) => {
-  errors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`);
+  const url = request.url();
+  const failure = request.failure()?.errorText || "";
+  if (url.endsWith("/favicon.ico")) return;
+  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
+  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
 });
 
 await page.addInitScript(({ accessToken, gameId, adminId }) => {
@@ -193,6 +206,62 @@ async function assertNoHorizontalOverflow(section) {
   }
 }
 
+async function inspectCurrentPage(item) {
+  return page.evaluate(({ section, label, viewport }) => {
+    function visible(element) {
+      if (!(element instanceof Element) || element.hidden) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    }
+
+    const headings = [...document.querySelectorAll("h1, h2, h3")]
+      .filter(visible)
+      .map((node) => (node.textContent || "").trim().replace(/\s+/g, " "))
+      .filter(Boolean);
+    const visibleModals = [...document.querySelectorAll("[data-admin-terminal-modal-backdrop]")]
+      .filter(visible).length;
+    const uiFallbacks = [...document.querySelectorAll('img[src*="media-placeholder.svg"]')]
+      .filter((image) => image.closest(
+        "button, nav, [role='tab'], .admin-terminal-topbar, .admin-terminal-player-row, .admin-terminal-side-nav",
+      )).length;
+    const playerOnlyMarkers = document.querySelectorAll([
+      "[data-admin-player-profile-identity-editor]",
+      "[data-admin-player-created-confirmation]",
+      "[data-admin-terminal-player-drawer]",
+      "[data-admin-player-create-credential-field]",
+    ].join(",")).length;
+    const styleIds = [...document.querySelectorAll("style[id]")]
+      .map((style) => style.id)
+      .filter(Boolean)
+      .sort();
+    const activeNav = [...document.querySelectorAll("[data-admin-section]")].find((node) =>
+      node.getAttribute("aria-current") === "page" ||
+      node.getAttribute("aria-selected") === "true" ||
+      node.classList.contains("active") ||
+      node.classList.contains("is-active")
+    );
+
+    return {
+      section,
+      label,
+      viewport,
+      headings,
+      visibleModals,
+      uiFallbacks,
+      playerOnlyMarkers,
+      styleIds,
+      activeSection: activeNav?.getAttribute("data-admin-section") || "",
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  }, {
+    section: item.section,
+    label: item.label,
+    viewport: VIEWPORT_VALUE,
+  });
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
@@ -228,10 +297,32 @@ try {
   for (const item of nav) {
     const locator = page.locator(`[data-admin-section="${item.section}"]`).first();
     await locator.click({ timeout: 5000 });
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(300);
     if (errors.length) throw new Error(`Runtime error after clicking ${item.section}: ${errors[0]}`);
     await assertNoHorizontalOverflow(item.section || item.label);
+
+    const summary = await inspectCurrentPage(item);
+    pageSummaries.push(summary);
+    if (summary.visibleModals !== 0) {
+      throw new Error(`${item.section} left ${summary.visibleModals} unexpected modal(s) open.`);
+    }
+    if (summary.uiFallbacks !== 0) {
+      throw new Error(`${item.section} rendered ${summary.uiFallbacks} generic fallback image(s) in UI chrome.`);
+    }
+    if (item.section !== "Players" && summary.playerOnlyMarkers !== 0) {
+      throw new Error(`${item.section} contains ${summary.playerOnlyMarkers} player-only runtime marker(s).`);
+    }
+    if (!summary.headings.length) {
+      throw new Error(`${item.section} rendered no visible page heading.`);
+    }
+
+    await capture(`page-${slug(item.section || item.label)}-${slug(VIEWPORT_VALUE)}`);
   }
+
+  writeFileSync(
+    `${ARTIFACT_DIR}/page-diff-summary.json`,
+    JSON.stringify({ viewport: VIEWPORT_VALUE, pages: pageSummaries }, null, 2),
+  );
 
   const actionCount = await page.locator(
     "button[data-admin-terminal-action]:not([disabled]), [role=button][data-admin-terminal-action]:not([aria-disabled=true])",
@@ -239,8 +330,12 @@ try {
   if (actionCount === 0) throw new Error("No enabled delegated action controls were rendered.");
 
   await capture("admin-browser-smoke-pass");
-  console.log(`Admin browser interaction smoke passed at ${VIEWPORT_VALUE}.`);
+  console.log(`Admin browser interaction and full-page drift smoke passed at ${VIEWPORT_VALUE}.`);
 } catch (error) {
+  writeFileSync(
+    `${ARTIFACT_DIR}/page-diff-summary.json`,
+    JSON.stringify({ viewport: VIEWPORT_VALUE, pages: pageSummaries, failure: error.message }, null, 2),
+  );
   await capture("admin-browser-smoke-failure");
   console.error(error.stack || error.message || String(error));
   console.error("BROWSER_ERRORS", JSON.stringify(errors, null, 2));
