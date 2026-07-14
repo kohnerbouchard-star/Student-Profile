@@ -8,6 +8,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
+      - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
+      - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
 
@@ -43,6 +45,9 @@ jobs:
 
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
+
+      - name: Validate player access code issuance
+        run: node scripts/admin-player-access-code-smoke.mjs
 
       - name: Install browser smoke runtime
         run: |
