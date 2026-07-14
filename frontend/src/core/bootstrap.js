@@ -1,6 +1,8 @@
 window.Econovaria = window.Econovaria || {};
 window.Econovaria.core = window.Econovaria.core || {};
 
+let contractsFeaturePromise = null;
+
 function configurePlayerIdentityLogin() {
   const form = document.getElementById("playerForm");
   const playerIdentifierInput = document.getElementById("playerId");
@@ -126,7 +128,55 @@ async function handlePlayerIdentityLogin(event) {
   }
 }
 
-function init() {
+function loadContractsFeatureAssets() {
+  if (contractsFeaturePromise) return contractsFeaturePromise;
+
+  contractsFeaturePromise = new Promise((resolve) => {
+    const stylesheetHref = new URL(
+      "frontend/src/styles/screens/contracts.css",
+      document.baseURI,
+    ).href;
+    const scriptSrc = new URL(
+      "frontend/src/features/contracts/contracts.js",
+      document.baseURI,
+    ).href;
+
+    if (!document.querySelector(`link[href="${stylesheetHref}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = stylesheetHref;
+      link.dataset.econovariaContractsStyles = "";
+      document.head.append(link);
+    }
+
+    if (window.Econovaria?.features?.contracts?.renderContracts) {
+      resolve(true);
+      return;
+    }
+
+    const existing = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      existing.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = scriptSrc;
+    script.dataset.econovariaContractsFeature = "";
+    script.addEventListener("load", () => resolve(true), { once: true });
+    script.addEventListener("error", () => {
+      console.error("[Econovaria bootstrap] Contracts feature could not be loaded.");
+      resolve(false);
+    }, { once: true });
+    document.head.append(script);
+  });
+
+  return contractsFeaturePromise;
+}
+
+async function init() {
+  await loadContractsFeatureAssets();
   configurePlayerIdentityLogin();
 
   const auth = window.Econovaria?.features?.auth;
@@ -149,13 +199,14 @@ function init() {
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init, { once: true });
+  document.addEventListener("DOMContentLoaded", () => void init(), { once: true });
 } else {
-  init();
+  void init();
 }
 
 window.Econovaria.core.bootstrap = {
   init,
   configurePlayerIdentityLogin,
   handlePlayerIdentityLogin,
+  loadContractsFeatureAssets,
 };
