@@ -21,6 +21,7 @@ const expectedScripts = [
   "./player-access-code-bridge.js",
   "./player-create-lifecycle.js",
   "./player-identity-wiring.js",
+  "./player-create-ux.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
 ];
@@ -45,6 +46,7 @@ const createAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"
 const credentialBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
 const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
+const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
@@ -76,6 +78,16 @@ assert(!identityWiring.includes('setAttribute("data-admin-player-identity-manage
 assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow is still present.");
 assert(!identityWiring.includes("window.fetch ="), "Player settings wiring adds another fetch wrapper.");
 assert(!identityWiring.includes("Internal record ID"), "Admin UI exposes an internal identifier label.");
+
+assert(playerCreateUx.includes("generatePlayerIdentifier"), "Automatic Player ID generation is missing.");
+assert(playerCreateUx.includes("generateAccessCode"), "Automatic Access Code generation is missing.");
+assert(playerCreateUx.includes('removeAttribute("required")'), "Blank credential fields are still blocked by required validation.");
+assert(playerCreateUx.includes("Leave blank to auto-generate"), "Add Player does not explain automatic credential generation.");
+assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation modal is missing.");
+assert(playerCreateUx.includes("admin-terminal-modal-backdrop"), "Player confirmation does not use the v606 modal system.");
+assert(playerCreateUx.includes(`${LEGACY_DIALOG_PLACEHOLDER = "[data-admin-player-access-code-dialog]"}`), "Legacy credential overlay is not suppressed.");
+assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
+
 assert(terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'), "Delegated admin click handler is missing.");
 assert(terminal.includes("function applyAdminTerminalPermissionGating(root = document)"), "Admin permission gating is missing.");
 
@@ -93,4 +105,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Edit Player Profile identity and original-video admin shell contract passed.");
+console.log("Edit Player Profile, generated Add Player credentials, confirmation UX, and original-video admin shell contract passed.");
