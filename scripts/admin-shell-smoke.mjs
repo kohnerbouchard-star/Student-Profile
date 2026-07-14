@@ -146,27 +146,24 @@ console.log("ADMIN_INTERACTION_DIAGNOSTIC_BEGIN");
 for (const name of [
   "handleTerminalOverviewClick",
   "renderAdminTerminalSectionFromButton",
-  "renderAdminTerminalSectionFromButtonLegacyV604",
+  "canAdminTerminalAccessArea",
+  "canAdminTerminalPerformAction",
+  "applyAdminTerminalPermissionGating",
+  "getAdminTerminalPermissionState",
+  "normalizeAdminTerminalBootstrapPayload",
   "bindTerminalOverviewEvents",
-  "bindTerminalClickEvents",
 ]) {
   console.log(`\n--- FUNCTION ${name} ---\n${extractFunction(terminal, name)}`);
 }
 for (const term of [
-  "renderAdminTerminalSectionFromButton",
-  '[data-admin-section]',
-  '[data-admin-terminal-action]',
-  "__sessionBootstrapPending",
-  "sessionLocked",
-  "authState",
+  "permissions",
+  "permissionAreas",
+  "canAdminTerminalAccessArea",
+  "canAdminTerminalPerformAction",
+  "applyAdminTerminalPermissionGating",
+  "staffSession",
 ]) {
   console.log(`\n--- CONTEXT ${term} ---\n${contextsFor(terminal, term)}`);
 }
-console.log(`\n--- NAV SYMBOL COUNTS ---\n${JSON.stringify({
-  requestedNameOccurrences: terminal.split("renderAdminTerminalSectionFromButton").length - 1,
-  legacyNameOccurrences: terminal.split("renderAdminTerminalSectionFromButtonLegacyV604").length - 1,
-  requestedFunctionDefined: /(?:async\s+)?function\s+renderAdminTerminalSectionFromButton\s*\(/.test(terminal),
-  requestedVariableDefined: /(?:const|let|var)\s+renderAdminTerminalSectionFromButton\s*=/.test(terminal),
-}, null, 2)}`);
 console.log("ADMIN_INTERACTION_DIAGNOSTIC_END");
 console.log("Admin shell static smoke checks passed.");
