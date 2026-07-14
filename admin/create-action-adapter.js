@@ -112,17 +112,23 @@
   function playerPayload(source) {
     const form = document.querySelector("[data-admin-terminal-player-form]");
     if (!form) return source;
+
+    const canonical = compact({
+      displayName: formValue(form, "displayName"),
+      rosterLabel: formValue(form, "rosterLabel") || null,
+      playerIdentifier: formValue(form, "playerIdentifier"),
+      accessCode: formValue(form, "accessCode"),
+      status: formValue(form, "status") || "active",
+      startingLocation: formValue(form, "startingLocation") || "random",
+      notes: formValue(form, "notes") || null
+    });
+
     return {
       ...source,
+      ...canonical,
       payload: compact({
         ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
-        displayName: formValue(form, "displayName"),
-        rosterLabel: formValue(form, "rosterLabel") || null,
-        playerIdentifier: formValue(form, "playerIdentifier"),
-        accessCode: formValue(form, "accessCode"),
-        status: formValue(form, "status") || "active",
-        startingLocation: formValue(form, "startingLocation") || "random",
-        notes: formValue(form, "notes") || null
+        ...canonical
       })
     };
   }
