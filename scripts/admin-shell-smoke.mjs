@@ -24,6 +24,7 @@ const expectedScripts = [
   "./admin-auth.js",
   "./dist/admin-overview-terminal.js",
   "./create-action-adapter.js",
+  "./classroom-write-fallback.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
 ];
@@ -57,6 +58,7 @@ for (const reference of scripts) {
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
 const createActionAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
+const classroomFallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
@@ -118,9 +120,19 @@ assert(
 );
 assert(
   createActionAdapter.includes('displayName: formValue(form, "displayName")') &&
-    createActionAdapter.includes('title,') &&
-    createActionAdapter.includes('name: itemName'),
+    createActionAdapter.includes("title,") &&
+    createActionAdapter.includes("name: itemName"),
   "Create-action adapter must preserve entered player, contract, and store fields.",
+);
+assert(
+  classroomFallback.includes('retryStatuses = new Set([400, 404, 501])') &&
+    classroomFallback.includes('/attendance/(?:scan|scans)') &&
+    classroomFallback.includes('/functions/v1/classroom-api'),
+  "Canonical classroom write fallback is missing or unbounded.",
+);
+assert(
+  classroomFallback.includes("if (primary.ok || !retryStatuses.has(primary.status)) return primary;"),
+  "Classroom fallback must preserve successful primary admin writes.",
 );
 assert(
   terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'),
@@ -155,4 +167,4 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
-console.log("Admin shell interaction, create-action, and authorization smoke checks passed.");
+console.log("Admin shell interaction, create-action, classroom fallback, and authorization smoke checks passed.");
