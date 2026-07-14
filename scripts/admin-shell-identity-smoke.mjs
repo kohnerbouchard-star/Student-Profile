@@ -50,7 +50,8 @@ const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.j
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
 assert(boot.includes("function installAuthenticatedAdminModelBridge()"), "Authenticated model bridge is missing.");
 assert(boot.includes('Object.defineProperty(feature, "currentModel"'), "Authorization metadata is not preserved across model replacement.");
-assert(assetWiring.includes("player-identity-motion.svg"), "Local player identity illustration is not wired.");
+assert(assetWiring.includes("ORIGINAL_MODAL_VIDEOS"), "Original admin modal video map is not wired.");
+assert(!assetWiring.includes("replaceBrokenMotionMedia"), "Modal videos are still replaced with the generic identity illustration.");
 assert(assetWiring.includes("media-placeholder.svg"), "Local media fallback is not wired.");
 assert(createAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")'), "Create adapter omits Player ID.");
 assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Create adapter omits Access Code.");
@@ -59,13 +60,18 @@ assert(!html.includes("player-identity-transport.js"), "Header-stripping identit
 assert(!html.includes("player-identity-roster-transport.js"), "Unsafe roster DOM replacement transport is still loaded.");
 assert(credentialBridge.includes("updatePlayerIdentity"), "Existing-player identity write bridge is missing.");
 assert(credentialBridge.includes("`${LOCAL_API_PREFIX}/games/"), "Existing-player identity updates do not use the authenticated local admin route.");
-assert(credentialBridge.includes("showCredentialDialog"), "Inline player settings cannot suppress the create-only credential dialog.");
+assert(credentialBridge.includes("showCredentialDialog"), "Edit Player Profile cannot suppress the create-only credential dialog.");
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
 assert(identityWiring.includes('name="playerIdentifier"'), "Admin create form has no Player ID field.");
 assert(identityWiring.includes('name="accessCode"'), "Admin create form has no Access Code field.");
-assert(identityWiring.includes("data-admin-player-identity-settings-form"), "Player-specific identity settings form is missing.");
-assert(identityWiring.includes("Leave blank to keep the current Access Code"), "Player settings do not preserve an unchanged Access Code.");
+assert(identityWiring.includes("player-settings-editor"), "Edit Player Profile is not the identity editing surface.");
+assert(identityWiring.includes("data-admin-player-profile-identity-editor"), "Edit Player Profile is not marked as identity-aware.");
+assert(identityWiring.includes("confirm-player-settings-save"), "Edit Player Profile save action is not wired.");
+assert(identityWiring.includes("Player ID / RFID card"), "Edit Player Profile does not expose the configurable RFID value.");
+assert(identityWiring.includes("Leave blank to keep the current Access Code"), "Edit Player Profile does not preserve an unchanged Access Code.");
+assert(identityWiring.includes("showCredentialDialog: false"), "Edit Player Profile still opens a second credential popup.");
+assert(!identityWiring.includes("data-admin-player-identity-settings-form"), "Removed inline player identity form is still present.");
 assert(!identityWiring.includes('setAttribute("data-admin-player-identity-manager"'), "Standalone Player IDs action is still created.");
 assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow is still present.");
 assert(!identityWiring.includes("window.fetch ="), "Player settings wiring adds another fetch wrapper.");
@@ -76,11 +82,15 @@ assert(terminal.includes("function applyAdminTerminalPermissionGating(root = doc
 for (const asset of [
   "assets/icons/rfid-card.svg",
   "assets/icons/media-placeholder.svg",
-  "assets/media/player-identity-motion.svg",
+  "assets/videos/id-background.mp4",
+  "assets/videos/player-background.mp4",
+  "assets/videos/scanner-background.mp4",
+  "assets/videos/contract-background.mp4",
+  "assets/videos/store-background.mp4",
   "window.ECONOVARIA_ADMIN_MOTION_BACKGROUND",
 ]) {
   const path = resolve(adminRoot, asset);
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Player-specific identity admin shell contract passed.");
+console.log("Edit Player Profile identity and original-video admin shell contract passed.");
