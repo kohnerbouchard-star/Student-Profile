@@ -1,4 +1,4 @@
-import { normalizeRuntimeMutation } from "./runtimeMutations.ts";
+import { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
