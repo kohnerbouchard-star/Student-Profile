@@ -11,6 +11,7 @@ on:
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
+      - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
@@ -34,6 +35,7 @@ on:
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
+      - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
@@ -67,6 +69,9 @@ jobs:
 
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
+
+      - name: Validate accepted v606 drift boundaries
+        run: node scripts/admin-v606-full-drift-audit.mjs
 
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
