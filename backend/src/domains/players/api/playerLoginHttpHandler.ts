@@ -16,6 +16,7 @@ import {
 } from "../../../platform/supabase/edgeParsing.ts";
 import { normalizeJoinCode } from "../../game-sessions/api/gameJoinCodeHttpHelpers.ts";
 import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
+import { normalizePlayerIdentifier } from "../domain/playerIdentifiers.ts";
 
 interface PlayerLoginDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -23,7 +24,8 @@ interface PlayerLoginDependencies {
 
 interface PlayerLoginRequestBody {
   readonly gameJoinCode: string;
-  readonly studentCode: string;
+  readonly playerIdentifier: string;
+  readonly accessCode: string;
 }
 
 interface PlayerLoginSuccessBody {
@@ -37,6 +39,7 @@ interface PlayerLoginSuccessBody {
     readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
+    readonly playerIdentifier: string;
     readonly status: string;
   };
   readonly session: {
@@ -71,7 +74,12 @@ export async function handlePlayerLoginRequest(
 
     const body = await readPlayerLoginRequestBody(request);
     const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(body.gameJoinCode));
-    const studentCodeHash = await sha256Hex(normalizeStudentCode(body.studentCode));
+    const playerIdentifierNormalized = normalizePlayerIdentifier(
+      body.playerIdentifier,
+    );
+    const accessCodeHash = await sha256Hex(
+      normalizeStudentCode(body.accessCode),
+    );
     const serviceClient = dependencies.createServiceClient(envResult.value);
 
     const gameResponse = await serviceClient
@@ -101,11 +109,40 @@ export async function handlePlayerLoginRequest(
       return invalidPlayerLoginResponse();
     }
 
+    const playerResponse = await serviceClient
+      .from("players")
+      .select("id,display_name,roster_label,player_identifier,status")
+      .eq("game_session_id", gameSession.id)
+      .eq("player_identifier_normalized", playerIdentifierNormalized)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (playerResponse.error) {
+      return jsonError(500, {
+        code: "player_login_failed",
+        message: "Player login failed.",
+        retryable: false,
+      });
+    }
+
+    const player = playerResponse.data as {
+      readonly id: string;
+      readonly display_name: string;
+      readonly roster_label: string | null;
+      readonly player_identifier: string;
+      readonly status: string;
+    } | null;
+
+    if (!player?.id || player.status !== "active") {
+      return invalidPlayerLoginResponse();
+    }
+
     const credentialResponse = await serviceClient
       .from("player_access_credentials")
       .select("id,player_id,status")
       .eq("game_session_id", gameSession.id)
-      .eq("normalized_student_code_hash", studentCodeHash)
+      .eq("player_id", player.id)
+      .eq("normalized_student_code_hash", accessCodeHash)
       .eq("status", "active")
       .maybeSingle();
 
@@ -123,33 +160,7 @@ export async function handlePlayerLoginRequest(
       readonly status: string;
     } | null;
 
-    if (!credential?.player_id) {
-      return invalidPlayerLoginResponse();
-    }
-
-    const playerResponse = await serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status")
-      .eq("game_session_id", gameSession.id)
-      .eq("id", credential.player_id)
-      .maybeSingle();
-
-    if (playerResponse.error) {
-      return jsonError(500, {
-        code: "player_login_failed",
-        message: "Player login failed.",
-        retryable: false,
-      });
-    }
-
-    const player = playerResponse.data as {
-      readonly id: string;
-      readonly display_name: string;
-      readonly roster_label: string | null;
-      readonly status: string;
-    } | null;
-
-    if (!player?.id || player.status !== "active") {
+    if (!credential?.player_id || credential.player_id !== player.id) {
       return invalidPlayerLoginResponse();
     }
 
@@ -174,6 +185,7 @@ export async function handlePlayerLoginRequest(
         id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
+        playerIdentifier: player.player_identifier,
         status: player.status,
       },
       session: {
@@ -199,7 +211,7 @@ export async function handlePlayerLoginRequest(
   }
 }
 
-async function readPlayerLoginRequestBody(
+export async function readPlayerLoginRequestBody(
   request: Request,
 ): Promise<PlayerLoginRequestBody> {
   let value: unknown;
@@ -224,14 +236,20 @@ async function readPlayerLoginRequestBody(
 
   return {
     gameJoinCode: parseRequiredText(
-      value.gameJoinCode,
+      value.gameJoinCode ?? value.gameCode ?? value.sessionCode,
       "game_join_code_required",
       "gameJoinCode is required.",
     ),
-    studentCode: parseRequiredText(
-      value.studentCode,
-      "student_code_required",
-      "studentCode is required.",
+    playerIdentifier: parseRequiredText(
+      value.playerIdentifier ?? value.playerId ?? value.rfidCardId ??
+        value.rfidId ?? value.cardId ?? value.externalPlayerId,
+      "player_identifier_required",
+      "playerIdentifier is required.",
+    ),
+    accessCode: parseRequiredText(
+      value.accessCode ?? value.studentCode ?? value.playerAccessCode ?? value.pin,
+      "player_access_code_required",
+      "accessCode is required.",
     ),
   };
 }
@@ -239,7 +257,7 @@ async function readPlayerLoginRequestBody(
 function invalidPlayerLoginResponse(): Response {
   return jsonError(401, {
     code: "invalid_player_login",
-    message: "Game join code or student code is invalid.",
+    message: "Game Code, Player ID, or Access Code is invalid.",
     retryable: false,
   });
 }

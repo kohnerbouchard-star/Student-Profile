@@ -190,9 +190,10 @@ page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.m
 page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
 page.on("requestfailed", (request) => {
   const url = request.url();
+  const failure = request.failure()?.errorText || "";
   if (url.endsWith("/favicon.ico")) return;
-  if (url.includes("window.ECONOVARIA_ADMIN_MOTION_BACKGROUND")) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${request.failure()?.errorText || ""}`);
+  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
+  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
 });
 
 await page.addInitScript(({ accessToken, gameId, adminId }) => {
@@ -221,7 +222,7 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
   }
 
   const pathname = new URL(request.url()).pathname;
-  if (!['GET', 'HEAD'].includes(method)) {
+  if (!["GET", "HEAD"].includes(method)) {
     let body = null;
     try {
       body = request.postDataJSON();
@@ -265,6 +266,28 @@ async function openCreateAction(action) {
   await page.waitForTimeout(250);
 }
 
+async function assertOriginalModalVideo(selector, expectedPath) {
+  const imageReplacement = page.locator(`.admin-terminal-modal:visible img${selector}`);
+  if (await imageReplacement.count()) {
+    throw new Error(`${selector} was replaced with an image instead of the original video.`);
+  }
+  const video = page.locator(`.admin-terminal-modal:visible video${selector}`).first();
+  await video.waitFor({ state: "visible", timeout: 5000 });
+  const source = await video.locator("source").getAttribute("src");
+  if (!String(source || "").endsWith(expectedPath)) {
+    throw new Error(`${selector} used ${source || "no source"} instead of ${expectedPath}.`);
+  }
+  const state = await video.evaluate((node) => ({
+    autoplay: node.autoplay,
+    muted: node.muted,
+    loop: node.loop,
+    playsInline: node.playsInline,
+  }));
+  if (!state.autoplay || !state.muted || !state.loop || !state.playsInline) {
+    throw new Error(`${selector} lost required playback attributes: ${JSON.stringify(state)}.`);
+  }
+}
+
 async function waitForWrite(startIndex, timeoutMs = 5000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
@@ -276,6 +299,7 @@ async function waitForWrite(startIndex, timeoutMs = 5000) {
 
 async function submitPlayer() {
   await openCreateAction("add-player");
+  await assertOriginalModalVideo(".admin-terminal-player-video", "/assets/videos/player-background.mp4");
   const form = page.locator("[data-admin-terminal-player-form]");
   await form.locator('[name="displayName"]').fill("Browser Smoke Player");
   await form.locator('[name="rosterLabel"]').fill("SMOKE-CREATE");
@@ -291,6 +315,7 @@ async function submitPlayer() {
 
 async function submitContract() {
   await openCreateAction("add-contract");
+  await assertOriginalModalVideo(".admin-terminal-contract-video", "/assets/videos/contract-background.mp4");
   const form = page.locator("[data-admin-terminal-contract-form]");
   await form.locator('[name="title"]').fill("Browser Smoke Contract");
   await form.locator('[name="objective"]').fill("Verify the contract create workflow.");
@@ -305,6 +330,7 @@ async function submitContract() {
 
 async function submitStoreItem() {
   await openCreateAction("add-store-item");
+  await assertOriginalModalVideo(".admin-terminal-store-video", "/assets/videos/store-background.mp4");
   const form = page.locator("[data-admin-terminal-store-form]");
   await form.locator('[name="itemName"]').fill("Browser Smoke Item");
   await form.locator('[name="description"]').fill("Browser smoke store item.");
@@ -373,7 +399,7 @@ try {
     errors,
     consoleMessages,
   }, null, 2));
-  console.log("Admin create submissions smoke passed.");
+  console.log("Admin create submissions and original modal videos smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/create-actions-runtime.json`, JSON.stringify({
     actionResults,

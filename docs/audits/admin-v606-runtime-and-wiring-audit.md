@@ -12,85 +12,64 @@
 
 ## Runtime consolidation completed
 
-- Removed the standalone sign-in, account creation, and game-selection implementation from `admin/admin-auth.js`.
-- Removed `admin/admin-api-base.js`, which was a second overlapping fetch wrapper.
-- `admin/admin-auth.js` is now the single runtime bridge for:
-  - reading the transferred session;
-  - checking expiry;
-  - reading the selected game ID;
-  - mounting the v606 shell;
-  - attaching auth and game headers;
-  - forwarding `/api/admin/...` to `admin-api`;
-  - sign-out and reauthentication redirects.
-- `admin/session-gate.js` now validates only local handoff state and exposes explicit `release()` and `showError()` controls.
-- The gate no longer performs server bootstrap and no longer leaves an opaque blocking screen after a startup failure.
+- Removed overlapping standalone admin sign-in and proxy implementations.
+- `admin-auth.js` is the single authenticated `/api/admin` runtime bridge.
+- `admin/session-gate.js` validates local handoff state and no longer duplicates server bootstrap.
+- Header/body-stripping identity transports and unsafe DOM UUID replacement were removed.
+- The create adapter normalizes only create POSTs; non-create request bodies pass through untouched.
 
-## Current backend-for-frontend coverage
+## Data coverage
 
-The isolated `admin-api` currently serves real Supabase-backed reads for:
+Real Supabase-backed reads cover session bootstrap, overview, players, attendance, contracts, store, marketplace, settings, and logs. Supported player, attendance, contract, store, and settings mutations are proxied to trusted domain handlers.
 
-- session bootstrap and game list;
-- overview/dashboard;
-- players and leaderboard inputs;
-- attendance for the current day;
-- contracts and contract progress;
-- store items and purchase aggregates;
-- marketplace assets, charts, fundamentals, trades, and market events;
-- settings;
-- audit logs;
-- account profile stubs, notifications empty state, and help empty state.
+## July 14, 2026 consistency audit
 
-It proxies supported writes to `classroom-api` for:
+The branch was compared with accepted v606 commit `2a1d223c3d986fbb75f8c0b87d93c53820ef2e35` and the complete PR file inventory.
 
-- player creation;
-- player access-code reset;
-- attendance scans;
-- contract creation;
-- store item mutations;
-- settings mutations.
+### Visual and asset drift
 
-## Confirmed non-placeholder sources
+No unplanned generated-interface drift was found. These accepted files remain byte-identical:
 
-- Players: `players`, `account_balances`, `player_country_assignments`, `country_profiles`, `player_sessions`.
-- Attendance: `player_attendance_records`.
-- Contracts: `game_session_contracts`, `player_contract_progress`.
-- Store: `store_items`, `store_purchases`.
-- Marketplace: `game_session_stock_assets`, `stock_price_ticks`, `stock_trades`, `stock_market_events`.
-- Settings: `game_settings`, `game_difficulty_policy_settings`.
-- Logs: `audit_log`.
+- `admin/dist/admin-overview-terminal.js`
+- `admin/css/admin-overview-terminal.css`
+- `admin/css/page-shell.css`
+- `admin/css/admin-overview-integrity.css`
 
-## Remaining intentional gaps and simplifications
+Original interface SVGs, PNGs, and all five modal MP4 files remain at the paths expected by the bundle. Generic media fallback logic remains limited to content media.
 
-1. **Game join code**
-   - Only a hash is stored, so the plaintext code remains blank.
-   - A separate secure reset-and-display flow is still required.
+### Add Player inconsistencies repaired
 
-2. **Net worth / overall score**
-   - The current leaderboard uses cash balance as the temporary score and net-worth value.
-   - It does not yet include stock holdings, inventory valuation, or other asset classes.
+- Player ID / RFID card and Access Code are optional in Add Player.
+- Blank values are generated immediately before submission with `crypto.getRandomValues`.
+- Generated Player IDs use `PLR-XXXXXXXX`.
+- Generated Access Codes use `XXXX-XXXX`.
+- Ambiguous characters are excluded.
+- Manually entered values are preserved unchanged.
+- The authenticated request still carries the canonical nonblank identity contract expected by the backend.
 
-3. **Attendance rewards issued today**
-   - The attendance read model currently returns an empty attendance ledger.
-   - Reward ledger aggregation should be added from `ledger_entries`.
+### Post-create confirmation repaired
 
-4. **Notifications, security history, and help articles**
-   - These endpoints return safe empty states because no corresponding production schema/service has been implemented.
+- The previous custom inline-styled credential overlay is suppressed and removed.
+- Successful creation opens a bounded, responsive v606-style Player-created confirmation.
+- The confirmation shows credentials once, labels generated versus custom values, supports copying, and requires acknowledgement.
+- Existing-player identity changes remain in Edit Player Profile and never open the creation confirmation.
+- No additional fetch or XHR wrapper was introduced.
 
-5. **Contract write completeness**
-   - Basic contract creation is proxied.
-   - Publish, progress review, reward issuance, editing, and archival must be verified against the exact v606 actions.
+### Validation completed
 
-6. **Store and settings mutations**
-   - Routes are proxied, but each v606 action still requires live contract testing to confirm request-body compatibility.
+The passing browser suite covers root player login, desktop/compact/narrow layouts, original assets and videos, all create workflows, blank and manual player credentials, confirmation acknowledgement, Edit Player Profile, Player-ID-only changes, and attendance. Backend Typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke are required to remain green.
 
-7. **Presence**
-   - A player is marked online when an active `player_sessions` row exists.
-   - This is not yet a heartbeat-based presence model.
+## Remaining intentional gaps
+
+1. Game join code lacks a secure reset-and-one-time-display UX.
+2. Net worth and overall score do not yet include all asset classes.
+3. Attendance rewards issued today lacks ledger aggregation.
+4. Notifications, security history, and help retain safe empty states where no production service exists.
+5. Advanced contract, store, and settings mutations need live page-by-page verification.
+6. Presence is session-row based rather than heartbeat based.
 
 ## Drift assessment
 
-The data direction is correct: a dedicated admin read model over the existing Supabase domain tables, with trusted writes delegated to `classroom-api`.
+Current differences from accepted v606 are intentional authentication/session integration, API compatibility, restored assets, player credential UX, confirmation layout, and validation coverage. Remaining work is feature completeness and live production verification, not duplicated architecture or frontend drift.
 
-The runtime had drifted because the removed standalone login logic and two fetch adapters remained active simultaneously. This branch removes that drift.
-
-The remaining gaps are feature completeness and metric accuracy, not architectural duplication. They should be addressed incrementally after live page-by-page testing rather than by adding another authentication or proxy layer.
+Automated checks validate the branch implementation, but production persistence and real-device behavior remain unverified until the current functions are deployed and the create, confirmation, login, settings, attendance, icon, and video flows are exercised against the live project.

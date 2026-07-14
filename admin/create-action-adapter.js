@@ -112,15 +112,23 @@
   function playerPayload(source) {
     const form = document.querySelector("[data-admin-terminal-player-form]");
     if (!form) return source;
+
+    const canonical = compact({
+      displayName: formValue(form, "displayName"),
+      rosterLabel: formValue(form, "rosterLabel") || null,
+      playerIdentifier: formValue(form, "playerIdentifier"),
+      accessCode: formValue(form, "accessCode"),
+      status: formValue(form, "status") || "active",
+      startingLocation: formValue(form, "startingLocation") || "random",
+      notes: formValue(form, "notes") || null
+    });
+
     return {
       ...source,
+      ...canonical,
       payload: compact({
         ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
-        displayName: formValue(form, "displayName"),
-        rosterLabel: formValue(form, "rosterLabel") || null,
-        status: formValue(form, "status") || "active",
-        startingLocation: formValue(form, "startingLocation") || "random",
-        notes: formValue(form, "notes") || null
+        ...canonical
       })
     };
   }
@@ -137,9 +145,7 @@
     const postSetting = formValue(form, "postSetting") || "now";
     const postAt = formValue(form, "postAt");
     const locations = checkedValues(form);
-    const normalizedLocations = locations.includes("all")
-      ? ["all"]
-      : locations;
+    const normalizedLocations = locations.includes("all") ? ["all"] : locations;
 
     return {
       ...source,
@@ -204,18 +210,22 @@
   }
 
   window.fetch = async function econovariaCreateActionFetch(input, init) {
-    const request = input instanceof Request
-      ? new Request(input, init)
-      : new Request(new URL(String(input), window.location.href).href, init);
-    const url = new URL(request.url, window.location.href);
+    const rawUrl = input instanceof Request
+      ? input.url
+      : new URL(String(input), window.location.href).href;
+    const method = text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase() || "GET";
+    const url = new URL(rawUrl, window.location.href);
 
     if (
-      request.method !== "POST" ||
+      method !== "POST" ||
       !url.pathname.startsWith(`${LOCAL_API_PREFIX}/games/`)
     ) {
       return delegatedFetch(input, init);
     }
 
+    const request = input instanceof Request
+      ? new Request(input, init)
+      : new Request(rawUrl, init);
     const source = await readJson(request);
     let normalized = source;
 

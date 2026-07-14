@@ -1,0 +1,418 @@
+(function initEconovariaPlayerAccessCodeBridge() {
+  "use strict";
+
+  const SUPABASE_URL = "https://cgiukdjwicykrmtkhudh.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
+  const CLASSROOM_API_BASE = `${SUPABASE_URL}/functions/v1/classroom-api`;
+  const LOCAL_API_PREFIX = "/api/admin";
+  const SESSION_KEY = "econovaria.admin.auth.v1";
+  const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const delegatedFetch = window.fetch.bind(window);
+
+  function record(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+  }
+
+  function text(value) {
+    return String(value ?? "").trim();
+  }
+
+  function storedSession() {
+    try {
+      return record(JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null"));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  async function responseJson(response) {
+    try {
+      return record(await response.clone().json());
+    } catch (_) {
+      return {};
+    }
+  }
+
+  async function requestJson(request) {
+    try {
+      return record(await request.clone().json());
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function flattenedResponse(value) {
+    const source = record(value);
+    const data = record(source.data);
+    const payload = record(source.payload);
+    return { ...source, ...data, ...payload };
+  }
+
+  function playerFrom(value) {
+    const source = flattenedResponse(value);
+    return record(source.player || source.createdPlayer);
+  }
+
+  function accessCodeFrom(value) {
+    const source = flattenedResponse(value);
+    const accessCode = source.accessCode;
+    if (typeof accessCode === "string") return text(accessCode);
+    const codeRecord = record(accessCode);
+    return text(
+      codeRecord.studentCode ||
+      codeRecord.accessCode ||
+      codeRecord.code ||
+      source.studentCode ||
+      source.generatedAccessCode,
+    );
+  }
+
+  function playerIdentifierFrom(value) {
+    const source = flattenedResponse(value);
+    const player = playerFrom(value);
+    return text(
+      player.playerIdentifier ||
+      player.player_identifier ||
+      source.playerIdentifier ||
+      source.playerId ||
+      source.rfidCardId ||
+      source.rfidId ||
+      source.cardId,
+    );
+  }
+
+  function createContext(request, url) {
+    if (request.method !== "POST" || !url.pathname.startsWith(LOCAL_API_PREFIX)) {
+      return null;
+    }
+    const match = url.pathname.match(/^\/api\/admin\/games\/([^/]+)\/players$/);
+    if (!match) return null;
+    return { gameId: decodeURIComponent(match[1]) };
+  }
+
+  function classroomHeaders(request, accessToken, gameId) {
+    const headers = new Headers(request?.headers || {});
+    headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
+    headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("Content-Type", "application/json");
+    headers.set("X-Econovaria-Game-Id", gameId);
+    headers.delete("Content-Length");
+    headers.delete("X-CSRF-Token");
+    headers.delete("X-Econovaria-CSRF");
+    headers.delete("X-Econovaria-Admin-Read");
+    return headers;
+  }
+
+  function dispatchCredentialEvent(name, detail) {
+    if (typeof window.CustomEvent === "function") {
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    }
+  }
+
+  function emitAccessCode(detail, options = {}) {
+    dispatchCredentialEvent("econovaria:player-access-code-issued", detail);
+    if (options.showDialog !== false) renderAccessCodeDialog(detail);
+  }
+
+  function renderAccessCodeDialog(detail) {
+    if (typeof document === "undefined" || !document.body || !detail.studentCode) return;
+
+    document.querySelector("[data-admin-player-access-code-dialog]")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.setAttribute("data-admin-player-access-code-dialog", "");
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "adminPlayerAccessCodeTitle");
+    overlay.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "z-index:12000",
+      "display:grid",
+      "place-items:center",
+      "padding:24px",
+      "background:rgba(1,7,14,.78)",
+      "backdrop-filter:blur(8px)",
+    ].join(";");
+
+    const panel = document.createElement("section");
+    panel.style.cssText = [
+      "width:min(500px,100%)",
+      "border:1px solid rgba(255,103,0,.7)",
+      "background:#071421",
+      "color:#e9fbff",
+      "padding:24px",
+      "box-shadow:0 24px 80px rgba(0,0,0,.5)",
+      "font-family:Inter,Arial,sans-serif",
+    ].join(";");
+
+    const title = document.createElement("h2");
+    title.id = "adminPlayerAccessCodeTitle";
+    title.textContent = "Player credentials saved";
+    title.style.cssText = "margin:0 0 8px;font-size:20px";
+
+    const description = document.createElement("p");
+    description.textContent = `${detail.displayName || "Player"} signs in with the Player ID and Access Code below.`;
+    description.style.cssText = "margin:0 0 18px;color:rgba(233,251,255,.72);line-height:1.5";
+
+    const identifierLabel = document.createElement("small");
+    identifierLabel.textContent = "PLAYER ID / RFID";
+    identifierLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
+
+    const identifier = document.createElement("strong");
+    identifier.setAttribute("data-admin-player-identifier-value", "");
+    identifier.textContent = detail.playerIdentifier || "—";
+    identifier.style.cssText = [
+      "display:block",
+      "padding:13px",
+      "border:1px solid rgba(255,103,0,.42)",
+      "background:#020b12",
+      "font:800 18px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace",
+      "letter-spacing:.08em",
+      "text-align:center",
+      "user-select:all",
+      "margin-bottom:14px",
+    ].join(";");
+
+    const codeLabel = document.createElement("small");
+    codeLabel.textContent = "ACCESS CODE";
+    codeLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
+
+    const code = document.createElement("strong");
+    code.setAttribute("data-admin-player-access-code-value", "");
+    code.textContent = detail.studentCode;
+    code.style.cssText = [
+      "display:block",
+      "padding:18px",
+      "border:1px solid rgba(105,250,255,.45)",
+      "background:#020b12",
+      "font:800 28px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace",
+      "letter-spacing:.16em",
+      "text-align:center",
+      "user-select:all",
+    ].join(";");
+
+    const warning = document.createElement("p");
+    warning.textContent = "Copy the Access Code now. Only its secure hash is stored in the database.";
+    warning.style.cssText = "margin:14px 0 18px;color:rgba(233,251,255,.62);font-size:13px;line-height:1.5";
+
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;justify-content:flex-end;gap:10px";
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.textContent = "Copy credentials";
+    copy.style.cssText = "min-height:40px;padding:0 16px;border:1px solid rgba(105,250,255,.55);background:#0b2333;color:#e9fbff;cursor:pointer";
+    copy.addEventListener("click", async () => {
+      const value = `Player ID: ${detail.playerIdentifier || ""}\nAccess Code: ${detail.studentCode}`;
+      try {
+        await navigator.clipboard.writeText(value);
+        copy.textContent = "Copied";
+      } catch (_) {
+        code.focus?.();
+      }
+    });
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "Close";
+    close.style.cssText = "min-height:40px;padding:0 16px;border:1px solid rgba(255,103,0,.65);background:#ff6700;color:#071421;font-weight:800;cursor:pointer";
+    close.addEventListener("click", () => overlay.remove());
+
+    actions.append(copy, close);
+    panel.append(
+      title,
+      description,
+      identifierLabel,
+      identifier,
+      codeLabel,
+      code,
+      warning,
+      actions,
+    );
+    overlay.append(panel);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) overlay.remove();
+    });
+    document.body.append(overlay);
+    close.focus();
+  }
+
+  function mergedResponse(primary, primaryBody, resetBody) {
+    const source = flattenedResponse(primaryBody);
+    const reset = flattenedResponse(resetBody);
+    const player = playerFrom(resetBody);
+    const accessCode = record(reset.accessCode);
+    const body = {
+      ...source,
+      ok: true,
+      player: Object.keys(player).length ? player : playerFrom(primaryBody),
+      accessCode,
+      data: {
+        ...record(source.data),
+        player: Object.keys(player).length ? player : playerFrom(primaryBody),
+        accessCode,
+      },
+    };
+    const headers = new Headers(primary.headers);
+    headers.set("Content-Type", "application/json");
+    headers.set("Cache-Control", "no-store");
+    return new Response(JSON.stringify(body), {
+      status: primary.status,
+      statusText: primary.statusText,
+      headers,
+    });
+  }
+
+  async function updatePlayerIdentity(input) {
+    const gameId = text(input?.gameId);
+    const playerId = text(input?.playerId);
+    const playerIdentifier = text(input?.playerIdentifier);
+    const accessCode = text(input?.accessCode);
+    const session = storedSession();
+    const accessToken = text(session.accessToken);
+    const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+
+    if (!gameId || !playerId || !playerIdentifier) {
+      throw new Error("Player and Player ID / RFID card are required.");
+    }
+    if (!accessToken || (selectedGameId && selectedGameId !== gameId)) {
+      throw new Error("Sign in again before changing player credentials.");
+    }
+
+    const payload = { playerIdentifier };
+    if (accessCode) payload.accessCode = accessCode;
+
+    const response = await delegatedFetch(
+      `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        credentials: "same-origin",
+        cache: "no-store",
+      },
+    );
+    const body = await responseJson(response);
+    if (!response.ok || body.ok === false) {
+      const error = record(body.error);
+      throw new Error(text(error.message || body.message) || "Player credentials could not be updated.");
+    }
+
+    const player = playerFrom(body);
+    const studentCode = accessCodeFrom(body) || accessCode;
+    const savedIdentifier = playerIdentifierFrom(body) || playerIdentifier;
+    const detail = {
+      playerId,
+      displayName: text(player.displayName || player.name || input?.displayName),
+      playerIdentifier: savedIdentifier,
+      studentCode,
+    };
+
+    dispatchCredentialEvent("econovaria:player-identity-updated", detail);
+    if (studentCode) {
+      emitAccessCode(detail, { showDialog: input?.showCredentialDialog !== false });
+    }
+    return body;
+  }
+
+  window.fetch = async function econovariaPlayerAccessCodeFetch(input, init) {
+    const rawUrl = input instanceof Request
+      ? input.url
+      : new URL(String(input), window.location.href).href;
+    const request = input instanceof Request
+      ? new Request(input, init)
+      : new Request(rawUrl, init);
+    const url = new URL(request.url, window.location.href);
+    const context = createContext(request, url);
+
+    if (!context) return delegatedFetch(request);
+
+    const requestedBody = flattenedResponse(await requestJson(request));
+    const requestedIdentifier = playerIdentifierFrom(requestedBody);
+    const requestedAccessCode = accessCodeFrom(requestedBody);
+    const primary = await delegatedFetch(request);
+    if (!primary.ok) return primary;
+
+    const primaryBody = await responseJson(primary);
+    const primaryPlayer = playerFrom(primaryBody);
+    const existingCode = accessCodeFrom(primaryBody);
+    const existingIdentifier = playerIdentifierFrom(primaryBody) || requestedIdentifier;
+
+    if (existingCode) {
+      emitAccessCode({
+        playerId: text(primaryPlayer.id || primaryPlayer.playerId),
+        displayName: text(primaryPlayer.displayName || primaryPlayer.name),
+        playerIdentifier: existingIdentifier,
+        studentCode: existingCode,
+      });
+      return primary;
+    }
+
+    const playerId = text(primaryPlayer.id || primaryPlayer.playerId);
+    const session = storedSession();
+    const accessToken = text(session.accessToken);
+    const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+
+    if (
+      !playerId ||
+      !requestedIdentifier ||
+      !requestedAccessCode ||
+      !accessToken ||
+      (selectedGameId && selectedGameId !== context.gameId)
+    ) {
+      return primary;
+    }
+
+    const resetResponse = await delegatedFetch(
+      `${CLASSROOM_API_BASE}/games/${encodeURIComponent(context.gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      {
+        method: "POST",
+        headers: classroomHeaders(request, accessToken, context.gameId),
+        body: JSON.stringify({
+          playerIdentifier: requestedIdentifier,
+          accessCode: requestedAccessCode,
+          reason: "player_created_without_identity_credentials",
+        }),
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+      },
+    );
+
+    if (!resetResponse.ok) return primary;
+
+    const resetBody = await responseJson(resetResponse);
+    const studentCode = accessCodeFrom(resetBody);
+    const resetPlayer = playerFrom(resetBody);
+
+    if (!studentCode) return primary;
+
+    emitAccessCode({
+      playerId,
+      displayName: text(
+        resetPlayer.displayName ||
+        resetPlayer.name ||
+        primaryPlayer.displayName ||
+        primaryPlayer.name,
+      ),
+      playerIdentifier: playerIdentifierFrom(resetBody) || requestedIdentifier,
+      studentCode,
+    });
+
+    return mergedResponse(primary, primaryBody, resetBody);
+  };
+
+  window.EconovariaPlayerAccessCodeBridge = {
+    accessCodeFrom,
+    playerFrom,
+    playerIdentifierFrom,
+    updatePlayerIdentity,
+  };
+})();

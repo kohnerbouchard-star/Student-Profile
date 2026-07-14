@@ -10,11 +10,14 @@ import {
   readOwnedGameSession,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   isRecord,
   parseOptionalText,
   parseRequiredText,
 } from "../../../platform/supabase/edgeParsing.ts";
+import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
+import { normalizePlayerIdentifier } from "../domain/playerIdentifiers.ts";
 
 interface PlayerRosterDependencies {
   readonly resolveStaffForRequest: (
@@ -52,6 +55,7 @@ interface PlayerRosterBody {
     readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
+    readonly playerIdentifier: string | null;
     readonly status: string;
     readonly hasActiveAccessCode: boolean;
     readonly createdAt: string;
@@ -63,6 +67,7 @@ interface PlayerRosterRow {
   readonly id: string;
   readonly display_name: string;
   readonly roster_label: string | null;
+  readonly player_identifier: string | null;
   readonly status: string;
   readonly created_at: string;
   readonly updated_at: string;
@@ -75,12 +80,15 @@ interface ActivePlayerCredentialRow {
 export interface CreatePlayerRequestBody {
   readonly displayName: string;
   readonly rosterLabel: string | null;
+  readonly playerIdentifier: string;
+  readonly accessCode: string;
 }
 
-interface CreatePlayerWithCountryAssignmentRpcRow {
+interface CreatePlayerWithIdentityRpcRow {
   readonly player_id: string;
   readonly display_name: string;
   readonly roster_label: string | null;
+  readonly player_identifier: string;
   readonly player_status: string;
   readonly player_created_at: string;
   readonly player_updated_at: string;
@@ -89,6 +97,7 @@ interface CreatePlayerWithCountryAssignmentRpcRow {
   readonly country_code: string;
   readonly country_name: string;
   readonly assigned_at: string;
+  readonly credential_created_at: string;
 }
 
 interface CreatePlayerSuccessBody {
@@ -97,9 +106,15 @@ interface CreatePlayerSuccessBody {
     readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
+    readonly playerIdentifier: string;
     readonly status: string;
     readonly createdAt: string;
     readonly updatedAt: string;
+  };
+  readonly accessCode: {
+    readonly studentCode: string;
+    readonly status: "active";
+    readonly createdAt: string;
   };
 }
 
@@ -147,15 +162,23 @@ export async function handlePlayerRosterRequest(
 
     if (request.method === "POST") {
       const body = await readCreatePlayerRequestBody(request);
+      const normalizedPlayerIdentifier = normalizePlayerIdentifier(
+        body.playerIdentifier,
+      );
+      const normalizedAccessCode = normalizeStudentCode(body.accessCode);
+      const accessCodeHash = await sha256Hex(normalizedAccessCode);
 
       const createResponse = await staffResult.serviceClient.rpc<
-        CreatePlayerWithCountryAssignmentRpcRow[]
+        CreatePlayerWithIdentityRpcRow[]
       >(
-        "create_player_with_balanced_country_assignment",
+        "create_player_with_identity_and_credential",
         {
           p_game_session_id: gameSessionId,
           p_display_name: body.displayName,
           p_roster_label: body.rosterLabel,
+          p_player_identifier: body.playerIdentifier.trim(),
+          p_player_identifier_normalized: normalizedPlayerIdentifier,
+          p_access_code_hash: accessCodeHash,
           p_assignment_metadata: {
             route: "staff.players.create",
             requestedByStaffUserId: staffResult.staff.id,
@@ -164,6 +187,24 @@ export async function handlePlayerRosterRequest(
       );
 
       if (createResponse.error || !createResponse.data?.[0]?.player_id) {
+        const message = createResponse.error?.message ?? "";
+
+        if (message.includes("PLAYER_IDENTIFIER_CONFLICT")) {
+          return jsonError(409, {
+            code: "player_identifier_conflict",
+            message: "That Player ID is already assigned to an active player in this game.",
+            retryable: false,
+          });
+        }
+
+        if (message.includes("PLAYER_ACCESS_CODE_CONFLICT")) {
+          return jsonError(409, {
+            code: "player_access_code_conflict",
+            message: "That Access Code is already assigned to an active player in this game.",
+            retryable: false,
+          });
+        }
+
         return jsonError(500, {
           code: "player_create_failed",
           message: "Player could not be created.",
@@ -179,16 +220,24 @@ export async function handlePlayerRosterRequest(
           id: player.player_id,
           displayName: player.display_name,
           rosterLabel: player.roster_label ?? null,
+          playerIdentifier: player.player_identifier,
           status: player.player_status,
           createdAt: player.player_created_at,
           updatedAt: player.player_updated_at,
+        },
+        accessCode: {
+          studentCode: normalizedAccessCode,
+          status: "active",
+          createdAt: player.credential_created_at,
         },
       });
     }
 
     const playersResponse = await staffResult.serviceClient
       .from("players")
-      .select("id,display_name,roster_label,status,created_at,updated_at")
+      .select(
+        "id,display_name,roster_label,player_identifier,status,created_at,updated_at",
+      )
       .eq("game_session_id", gameSessionId)
       .order("created_at", { ascending: true });
 
@@ -240,6 +289,7 @@ export async function handlePlayerRosterRequest(
         id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
+        playerIdentifier: player.player_identifier ?? null,
         status: player.status,
         hasActiveAccessCode: activeCredentialPlayerIds.has(player.id),
         createdAt: player.created_at,
@@ -328,6 +378,28 @@ export async function readCreatePlayerRequestBody(
         "studentLabel",
         "classLabel",
       ]),
+    ),
+    playerIdentifier: parseRequiredText(
+      firstDefined(payload, [
+        "playerIdentifier",
+        "playerId",
+        "rfidCardId",
+        "rfidId",
+        "cardId",
+        "externalPlayerId",
+      ]),
+      "player_identifier_required",
+      "playerIdentifier is required.",
+    ),
+    accessCode: parseRequiredText(
+      firstDefined(payload, [
+        "accessCode",
+        "studentCode",
+        "playerAccessCode",
+        "pin",
+      ]),
+      "player_access_code_required",
+      "accessCode is required.",
     ),
   };
 }

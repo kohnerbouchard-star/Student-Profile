@@ -18,6 +18,7 @@ import {
   readValidTimeZone,
 } from "../../../platform/supabase/edgeTime.ts";
 import { normalizeStudentCode } from "../../players/domain/playerAccessCodes.ts";
+import { normalizePlayerIdentifier } from "../../players/domain/playerIdentifiers.ts";
 import {
   mapAttendanceClockInRpcError,
   readPlayerAttendanceClockInRpcRow,
@@ -44,6 +45,14 @@ export interface StaffAttendanceScanHttpHandlerDependencies {
   >;
 }
 
+interface AttendancePlayerRow {
+  readonly id: string;
+  readonly display_name: string;
+  readonly roster_label: string | null;
+  readonly player_identifier: string | null;
+  readonly status: string;
+}
+
 export interface StaffAttendanceScanSuccessBody {
   readonly ok: true;
   readonly gameSession: {
@@ -55,6 +64,7 @@ export interface StaffAttendanceScanSuccessBody {
     readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
+    readonly playerIdentifier: string | null;
     readonly status: string;
   };
   readonly attendance: {
@@ -115,58 +125,22 @@ export async function handleStaffAttendanceScanRequest(
     }
 
     const body = await readStaffAttendanceScanRequestBody(request);
-    const playerIdHash = await sha256Hex(normalizeStudentCode(body.playerId));
+    const scannedValue = body.playerId;
+    const normalizedIdentifier = normalizePlayerIdentifier(scannedValue);
 
-    const credentialResponse = await staffResult.serviceClient
-      .from("player_access_credentials")
-      .select("player_id,status")
-      .eq("game_session_id", gameSessionId)
-      .eq("normalized_student_code_hash", playerIdHash)
-      .eq("status", "active")
-      .maybeSingle();
+    let player = await readPlayerByIdentifier(
+      staffResult.serviceClient,
+      gameSessionId,
+      normalizedIdentifier,
+    );
 
-    if (credentialResponse.error) {
-      return jsonError(500, {
-        code: "attendance_scan_failed",
-        message: "Attendance scan failed.",
-        retryable: false,
-      });
+    if (!player) {
+      player = await readPlayerByLegacyAccessCode(
+        staffResult.serviceClient,
+        gameSessionId,
+        scannedValue,
+      );
     }
-
-    const credential = credentialResponse.data as {
-      readonly player_id: string;
-      readonly status: string;
-    } | null;
-
-    if (!credential?.player_id) {
-      return jsonError(404, {
-        code: "player_not_found",
-        message: "Player ID was not found for this game.",
-        retryable: false,
-      });
-    }
-
-    const playerResponse = await staffResult.serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status")
-      .eq("game_session_id", gameSessionId)
-      .eq("id", credential.player_id)
-      .maybeSingle();
-
-    if (playerResponse.error) {
-      return jsonError(500, {
-        code: "attendance_scan_failed",
-        message: "Attendance scan failed.",
-        retryable: false,
-      });
-    }
-
-    const player = playerResponse.data as {
-      readonly id: string;
-      readonly display_name: string;
-      readonly roster_label: string | null;
-      readonly status: string;
-    } | null;
 
     if (!player?.id || player.status !== "active") {
       return jsonError(404, {
@@ -255,6 +229,7 @@ export async function handleStaffAttendanceScanRequest(
         id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
+        playerIdentifier: player.player_identifier ?? null,
         status: player.status,
       },
       attendance: {
@@ -286,4 +261,73 @@ export async function handleStaffAttendanceScanRequest(
       retryable: false,
     });
   }
+}
+
+async function readPlayerByIdentifier(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  normalizedIdentifier: string,
+): Promise<AttendancePlayerRow | null> {
+  const response = await serviceClient
+    .from("players")
+    .select("id,display_name,roster_label,player_identifier,status")
+    .eq("game_session_id", gameSessionId)
+    .eq("player_identifier_normalized", normalizedIdentifier)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (response.error) {
+    throw new EdgeActivationError(
+      "attendance_scan_failed",
+      "Attendance scan failed.",
+      500,
+    );
+  }
+
+  return (response.data as AttendancePlayerRow | null) ?? null;
+}
+
+async function readPlayerByLegacyAccessCode(
+  serviceClient: EdgeSupabaseClient,
+  gameSessionId: string,
+  scannedValue: string,
+): Promise<AttendancePlayerRow | null> {
+  const accessCodeHash = await sha256Hex(normalizeStudentCode(scannedValue));
+  const credentialResponse = await serviceClient
+    .from("player_access_credentials")
+    .select("player_id,status")
+    .eq("game_session_id", gameSessionId)
+    .eq("normalized_student_code_hash", accessCodeHash)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (credentialResponse.error) {
+    throw new EdgeActivationError(
+      "attendance_scan_failed",
+      "Attendance scan failed.",
+      500,
+    );
+  }
+
+  const playerId = (credentialResponse.data as {
+    readonly player_id?: unknown;
+  } | null)?.player_id;
+  if (typeof playerId !== "string" || !playerId) return null;
+
+  const playerResponse = await serviceClient
+    .from("players")
+    .select("id,display_name,roster_label,player_identifier,status")
+    .eq("game_session_id", gameSessionId)
+    .eq("id", playerId)
+    .maybeSingle();
+
+  if (playerResponse.error) {
+    throw new EdgeActivationError(
+      "attendance_scan_failed",
+      "Attendance scan failed.",
+      500,
+    );
+  }
+
+  return (playerResponse.data as AttendancePlayerRow | null) ?? null;
 }
