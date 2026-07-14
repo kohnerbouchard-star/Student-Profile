@@ -6,6 +6,7 @@ on:
       - "admin/**"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-create-actions-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
   push:
     branches:
@@ -14,6 +15,7 @@ on:
       - "admin/**"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-create-actions-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
 
 permissions:
@@ -55,6 +57,9 @@ jobs:
 
       - name: Click every admin navigation item
         run: node scripts/admin-browser-smoke.mjs
+
+      - name: Open every admin create workflow
+        run: node scripts/admin-create-actions-smoke.mjs
 
       - name: Upload browser diagnostics
         if: always()
