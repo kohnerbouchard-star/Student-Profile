@@ -197,6 +197,18 @@ try {
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
   await page.waitForSelector(".admin-terminal-modal:visible", { timeout: 5000 });
+
+  const replacedScanner = page.locator(".admin-terminal-modal:visible img.admin-terminal-scanner-video");
+  if (await replacedScanner.count()) {
+    throw new Error("Attendance scanner video was replaced with an image.");
+  }
+  const scannerVideo = page.locator(".admin-terminal-modal:visible video.admin-terminal-scanner-video").first();
+  await scannerVideo.waitFor({ state: "visible", timeout: 5000 });
+  const scannerSource = await scannerVideo.locator("source").getAttribute("src");
+  if (!String(scannerSource || "").endsWith("/assets/videos/scanner-background.mp4")) {
+    throw new Error(`Attendance scanner used ${scannerSource || "no source"} instead of scanner-background.mp4.`);
+  }
+
   await page.locator('[data-admin-terminal-set-mode="manual"]').click();
   const panel = page.locator("[data-admin-terminal-manual-panel]");
   await panel.waitFor({ state: "visible", timeout: 5000 });
@@ -213,6 +225,7 @@ try {
     resultHidden: document.querySelector("[data-admin-terminal-last-scan-result]")?.hasAttribute("hidden") ?? true,
     emptyHidden: document.querySelector("[data-admin-terminal-last-scan-empty]")?.hasAttribute("hidden") ?? false,
     scannerState: document.querySelector("[data-admin-terminal-scanner-state]")?.textContent?.trim() || "",
+    scannerSource,
   }));
 
   writeFileSync(`${ARTIFACT_DIR}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors }, null, 2));
@@ -239,7 +252,7 @@ try {
   if (!result.player || !result.status) {
     throw new Error(`Attendance result omitted player or status: ${JSON.stringify(result)}.`);
   }
-  console.log("Admin attendance scanner submission smoke passed.");
+  console.log("Admin attendance scanner submission and original video smoke passed.");
 } catch (error) {
   console.error(error.stack || error.message || String(error));
   console.error("ATTENDANCE_WRITES", JSON.stringify(writes, null, 2));
