@@ -15,10 +15,75 @@ function localAssetPath(reference) {
   return resolve(adminRoot, reference.slice(2));
 }
 
-function sourceContext(source, term, before = 800, after = 1800) {
-  const index = source.indexOf(term);
-  if (index < 0) return `[missing: ${term}]`;
-  return source.slice(Math.max(0, index - before), Math.min(source.length, index + term.length + after));
+function extractFunction(source, name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  if (start < 0) return `[missing function: ${name}]`;
+  const bodyStart = source.indexOf("{", start + marker.length);
+  if (bodyStart < 0) return `[missing body: ${name}]`;
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1] || "";
+    if (lineComment) {
+      if (char === "\n") lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (char === "*" && next === "/") {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "/" && next === "/") {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  return `[unterminated function: ${name}]`;
+}
+
+function contextsFor(source, term, before = 1200, after = 5000) {
+  const output = [];
+  let index = source.indexOf(term);
+  while (index >= 0) {
+    output.push(source.slice(
+      Math.max(0, index - before),
+      Math.min(source.length, index + term.length + after),
+    ));
+    index = source.indexOf(term, index + term.length);
+  }
+  return output.length ? output.join("\n\n===== NEXT OCCURRENCE =====\n\n") : `[missing: ${term}]`;
 }
 
 const html = readFileSync(indexPath, "utf8");
@@ -103,17 +168,22 @@ assert(
 );
 
 console.log("ADMIN_INTERACTION_DIAGNOSTIC_BEGIN");
-for (const term of [
-  'document.addEventListener("click"',
-  "data-admin-section",
-  "dataset.adminSection",
-  "adminOverviewTerminal =",
-  "renderShell:",
-  "bind",
-  "attach",
+for (const name of [
+  "handleTerminalOverviewClick",
+  "renderAdminTerminalSectionFromButtonLegacyV604",
+  "bindTerminalOverviewEvents",
+  "bindTerminalClickEvents",
 ]) {
-  console.log(`\n--- ${term} ---\n${sourceContext(terminal, term)}`);
+  console.log(`\n--- FUNCTION ${name} ---\n${extractFunction(terminal, name)}`);
 }
-console.log(`\n--- terminal tail ---\n${terminal.slice(-12000)}`);
+for (const term of [
+  '[data-admin-section]',
+  '[data-admin-terminal-action]',
+  "__sessionBootstrapPending",
+  "sessionLocked",
+  "authState",
+]) {
+  console.log(`\n--- CONTEXT ${term} ---\n${contextsFor(terminal, term)}`);
+}
 console.log("ADMIN_INTERACTION_DIAGNOSTIC_END");
 console.log("Admin shell static smoke checks passed.");
