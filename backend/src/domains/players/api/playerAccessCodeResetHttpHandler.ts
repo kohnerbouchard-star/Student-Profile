@@ -11,6 +11,7 @@ import {
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
+import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
 
 interface PlayerAccessCodeResetDependencies {
@@ -44,6 +45,7 @@ interface ResetPlayerAccessCodeSuccessBody {
     readonly id: string;
     readonly displayName: string;
     readonly rosterLabel: string | null;
+    readonly playerIdentifier: string | null;
     readonly status: string;
   };
   readonly accessCode: {
@@ -62,7 +64,7 @@ export async function handleResetPlayerAccessCodeRequest(
   if (request.method !== "POST") {
     return jsonError(405, {
       code: "method_not_allowed",
-      message: "Use POST to reset a player access code.",
+      message: "Use POST to set a player access code.",
       retryable: false,
     });
   }
@@ -98,7 +100,7 @@ export async function handleResetPlayerAccessCodeRequest(
 
     const playerResponse = await staffResult.serviceClient
       .from("players")
-      .select("id,display_name,roster_label,status")
+      .select("id,display_name,roster_label,player_identifier,status")
       .eq("game_session_id", gameSessionId)
       .eq("id", playerId)
       .maybeSingle();
@@ -106,7 +108,7 @@ export async function handleResetPlayerAccessCodeRequest(
     if (playerResponse.error) {
       return jsonError(500, {
         code: "access_code_reset_failed",
-        message: "Player access code could not be reset.",
+        message: "Player Access Code could not be updated.",
         retryable: false,
       });
     }
@@ -124,10 +126,12 @@ export async function handleResetPlayerAccessCodeRequest(
     if (player.status !== "active") {
       return jsonError(409, {
         code: "player_not_active",
-        message: "Only active players can receive an access code.",
+        message: "Only active players can receive an Access Code.",
         retryable: false,
       });
     }
+
+    const requestedCode = await readRequestedAccessCode(request);
 
     const revokeResponse = await staffResult.serviceClient
       .from("player_access_credentials")
@@ -142,7 +146,7 @@ export async function handleResetPlayerAccessCodeRequest(
     if (revokeResponse.error) {
       return jsonError(500, {
         code: "access_code_reset_failed",
-        message: "Player access code could not be reset.",
+        message: "Player Access Code could not be updated.",
         retryable: false,
       });
     }
@@ -151,6 +155,7 @@ export async function handleResetPlayerAccessCodeRequest(
       staffResult.serviceClient,
       gameSessionId,
       playerId,
+      requestedCode,
     );
 
     if (!credentialResult.ok) {
@@ -163,6 +168,7 @@ export async function handleResetPlayerAccessCodeRequest(
         id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
+        playerIdentifier: player.player_identifier ?? null,
         status: player.status,
       },
       accessCode: {
@@ -182,10 +188,41 @@ export async function handleResetPlayerAccessCodeRequest(
 
     return jsonError(500, {
       code: "access_code_reset_failed",
-      message: "Player access code could not be reset.",
+      message: "Player Access Code could not be updated.",
       retryable: false,
     });
   }
+}
+
+async function readRequestedAccessCode(request: Request): Promise<string | null> {
+  let value: unknown;
+
+  try {
+    const raw = await request.text();
+    if (!raw.trim()) return null;
+    value = JSON.parse(raw);
+  } catch {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  if (!isRecord(value)) {
+    throw new EdgeActivationError(
+      "invalid_request_body",
+      "Request body must be a JSON object.",
+      400,
+    );
+  }
+
+  const candidate = value.accessCode ?? value.studentCode ?? value.playerAccessCode ?? value.pin;
+  if (candidate === undefined || candidate === null || String(candidate).trim() === "") {
+    return null;
+  }
+
+  return normalizeStudentCode(String(candidate));
 }
 
 function generateStudentCode(): string {
@@ -197,10 +234,11 @@ function generateStudentCode(): string {
     .join("");
 }
 
-async function createPlayerAccessCredential(
+export async function createPlayerAccessCredential(
   serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   playerId: string,
+  requestedCode: string | null = null,
 ): Promise<
   | {
       readonly ok: true;
@@ -213,9 +251,11 @@ async function createPlayerAccessCredential(
       readonly error: EdgeErrorBody["error"];
     }
 > {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const studentCode = generateStudentCode();
-    const credentialHash = await sha256Hex(normalizeStudentCode(studentCode));
+  const maxAttempts = requestedCode ? 1 : 5;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const studentCode = normalizeStudentCode(requestedCode ?? generateStudentCode());
+    const credentialHash = await sha256Hex(studentCode);
 
     const credentialResponse = await serviceClient
       .from("player_access_credentials")
@@ -244,7 +284,19 @@ async function createPlayerAccessCredential(
         status: 500,
         error: {
           code: "access_code_reset_failed",
-          message: "Player access code could not be reset.",
+          message: "Player Access Code could not be updated.",
+          retryable: false,
+        },
+      };
+    }
+
+    if (requestedCode) {
+      return {
+        ok: false,
+        status: 409,
+        error: {
+          code: "player_access_code_conflict",
+          message: "That Access Code is already assigned to an active player in this game.",
           retryable: false,
         },
       };
@@ -256,7 +308,7 @@ async function createPlayerAccessCredential(
     status: 409,
     error: {
       code: "access_code_generation_conflict",
-      message: "A unique player access code could not be generated.",
+      message: "A unique player Access Code could not be generated.",
       retryable: true,
     },
   };
