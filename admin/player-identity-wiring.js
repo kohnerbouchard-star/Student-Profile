@@ -14,6 +14,7 @@
 
   const playerCache = new Map();
   const modalPlayers = new WeakMap();
+  const pendingPlayerLoads = new Set();
   let selectedPlayerId = "";
   let selectedPlayerElement = null;
 
@@ -85,7 +86,8 @@
 
   function modelPlayers() {
     const model = feature()?.currentModel || {};
-    return uniquePlayers([model.players, model.roster, model.playerRoster].find(Array.isArray) || []);
+    const arrays = [model.players, model.roster, model.playerRoster].filter(Array.isArray);
+    return uniquePlayers(arrays.flat());
   }
 
   function responsePlayers(value) {
@@ -93,7 +95,7 @@
     const data = record(source.data);
     const payload = record(source.payload);
     const nestedData = record(data.data);
-    return uniquePlayers([
+    const arrays = [
       source.players,
       source.roster,
       source.playerRoster,
@@ -106,7 +108,8 @@
       nestedData.players,
       nestedData.roster,
       nestedData.playerRoster,
-    ].find(Array.isArray) || []);
+    ].filter(Array.isArray);
+    return uniquePlayers(arrays.flat());
   }
 
   function cachePlayers(players) {
@@ -326,10 +329,8 @@
   }
 
   function directPlayerId(element) {
-    const uuidOwner = element?.closest?.("[data-player-id]");
-    const uuid = text(uuidOwner?.getAttribute("data-player-id"));
-    if (uuid) return uuid;
-    return "";
+    const owner = element?.closest?.("[data-player-id]");
+    return text(owner?.getAttribute("data-player-id"));
   }
 
   function playerFromElement(element) {
@@ -340,8 +341,7 @@
       if (direct) return direct;
     }
 
-    const rankOwner = element.closest("[data-player-rank]");
-    const rank = text(rankOwner?.getAttribute("data-player-rank"));
+    const rank = text(element.closest("[data-player-rank]")?.getAttribute("data-player-rank"));
     if (rank) {
       const rankMatches = allPlayers().filter((player) => playerRank(player) === rank);
       if (rankMatches.length === 1) return rankMatches[0];
@@ -387,6 +387,8 @@
 
   async function selectPlayerById(playerId, sourceElement) {
     if (!playerId) return;
+    selectedPlayerId = playerId;
+    selectedPlayerElement = sourceElement instanceof Element ? sourceElement : selectedPlayerElement;
     let player = allPlayers().find((item) => playerUuid(item) === playerId);
     if (!player) {
       const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
@@ -394,6 +396,7 @@
       player = players.find((item) => playerUuid(item) === playerId);
     }
     if (player) selectPlayer(player, sourceElement);
+    else scheduleDecorate();
   }
 
   function selectedPlayer() {
@@ -402,13 +405,49 @@
   }
 
   function profileModal(root = document) {
-    const modals = [...(root.querySelectorAll?.(PROFILE_MODAL_SELECTOR) || [])];
-    return modals.reverse().find((modal) => modal.isConnected) || null;
+    const candidates = [];
+    if (root instanceof Element && root.matches(PROFILE_MODAL_SELECTOR)) candidates.push(root);
+    candidates.push(...(root.querySelectorAll?.(PROFILE_MODAL_SELECTOR) || []));
+    return candidates.reverse().find((modal) => modal.isConnected) || null;
+  }
+
+  function modalPlayerId(modal) {
+    const fromSelection = selectedPlayerId || directPlayerId(selectedPlayerElement);
+    if (fromSelection) return fromSelection;
+    const content = text(modal?.textContent);
+    const uuid = content.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i)?.[0];
+    return text(uuid);
+  }
+
+  function requestPlayerForModal(modal, playerId) {
+    if (!playerId || pendingPlayerLoads.has(playerId)) return;
+    pendingPlayerLoads.add(playerId);
+    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    void loadPlayers(gameId).then((players) => {
+      pendingPlayerLoads.delete(playerId);
+      const player = players.find((item) => playerUuid(item) === playerId);
+      if (player) {
+        selectedPlayerId = playerId;
+        cachePlayers([player]);
+      }
+      if (modal?.isConnected) decorateProfileModal(modal);
+    });
+  }
+
+  function resolveModalPlayer(modal) {
+    const current = selectedPlayer();
+    if (current) return current;
+    const id = modalPlayerId(modal);
+    if (!id) return null;
+    selectedPlayerId = id;
+    const cached = allPlayers().find((player) => playerUuid(player) === id);
+    if (cached) return cached;
+    requestPlayerForModal(modal, id);
+    return null;
   }
 
   function fieldByCaption(modal, caption) {
-    const labels = [...modal.querySelectorAll("label")];
-    return labels.find((label) => {
+    return [...modal.querySelectorAll("label")].find((label) => {
       const heading = label.querySelector(":scope > span");
       return normalizedText(heading?.textContent) === normalizedText(caption);
     }) || null;
@@ -431,9 +470,7 @@
     if (!(select instanceof HTMLSelectElement)) return;
     const target = normalizedText(value);
     const option = [...select.options].find((item) => {
-      const optionValue = normalizedText(item.value);
-      const optionText = normalizedText(item.textContent);
-      return optionValue === target || optionText === target;
+      return normalizedText(item.value) === target || normalizedText(item.textContent) === target;
     });
     if (option) select.value = option.value;
   }
@@ -453,6 +490,13 @@
       if (value) value.textContent = playerIdentifier(player) || "Not set";
       const description = idPanel.querySelector("p");
       if (description) description.textContent = "Configurable RFID/card-facing identifier. The internal UUID remains hidden and immutable.";
+    }
+    const accessPanel = panels.find((panel) => normalizedText(panel.querySelector("span")?.textContent) === "access code");
+    if (accessPanel) {
+      const value = accessPanel.querySelector("strong");
+      if (value) value.textContent = "Protected · not displayed";
+      const description = accessPanel.querySelector("p");
+      if (description) description.textContent = "Enter a replacement below only when the Access Code should change.";
     }
   }
 
@@ -489,10 +533,9 @@
       save.disabled = true;
       save.textContent = "Saving…";
     }
-    setProfileStatus(
-      modal,
-      accessCode ? "Saving player profile, Player ID, and new Access Code…" : "Saving player profile and Player ID…",
-    );
+    setProfileStatus(modal, accessCode
+      ? "Saving player profile, Player ID, and new Access Code…"
+      : "Saving player profile and Player ID…");
 
     try {
       const profileResponse = await window.fetch(
@@ -501,10 +544,7 @@
           method: "PATCH",
           credentials: "same-origin",
           cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
           body: JSON.stringify({
             settings: {
               displayName,
@@ -517,8 +557,7 @@
       );
       const profileBody = await profileResponse.clone().json().catch(() => ({}));
       if (!profileResponse.ok || profileBody?.ok === false) {
-        const message = text(profileBody?.error?.message || profileBody?.message) || "Player profile settings could not be saved.";
-        throw new Error(message);
+        throw new Error(text(profileBody?.error?.message || profileBody?.message) || "Player profile settings could not be saved.");
       }
 
       await bridge.updatePlayerIdentity({
@@ -530,28 +569,14 @@
         showCredentialDialog: false,
       });
 
-      updateModelPlayer(playerId, {
-        displayName,
-        playerIdentifier: identifier,
-        status,
-        countryAssignment,
-      });
+      updateModelPlayer(playerId, { displayName, playerIdentifier: identifier, status, countryAssignment });
       if (accessCodeInput) accessCodeInput.value = "";
-      const updated = playerCache.get(playerId) || player;
-      updateProfileSummary(modal, updated);
-      setProfileStatus(
-        modal,
-        accessCode
-          ? "Player profile, Player ID, and Access Code saved."
-          : "Player profile and Player ID saved. The current Access Code was not changed.",
-        "success",
-      );
+      updateProfileSummary(modal, playerCache.get(playerId) || player);
+      setProfileStatus(modal, accessCode
+        ? "Player profile, Player ID, and Access Code saved."
+        : "Player profile and Player ID saved. The current Access Code was not changed.", "success");
     } catch (error) {
-      setProfileStatus(
-        modal,
-        error?.message || "Player profile settings could not be saved.",
-        "error",
-      );
+      setProfileStatus(modal, error?.message || "Player profile settings could not be saved.", "error");
     } finally {
       if (save) {
         save.disabled = false;
@@ -564,9 +589,9 @@
     removeLegacyIdentityUi(root);
     ensureStyles();
     const modal = profileModal(root) || profileModal(document);
-    const player = selectedPlayer();
-    if (!modal || !player) return;
-    if (modal.hasAttribute("data-admin-player-profile-identity-editor")) return;
+    if (!modal || modal.hasAttribute("data-admin-player-profile-identity-editor")) return;
+    const player = resolveModalPlayer(modal);
+    if (!player) return;
 
     const nameLabel = fieldByCaption(modal, "Player name");
     const idLabel = fieldByCaption(modal, "Player ID");
@@ -659,6 +684,7 @@
     window.setTimeout(() => decorate(document), 0);
     window.setTimeout(() => decorate(document), 80);
     window.setTimeout(() => decorate(document), 220);
+    window.setTimeout(() => decorate(document), 500);
   }
 
   function handleDocumentClick(event) {
@@ -673,7 +699,7 @@
         removeLegacyIdentityUi();
       } else {
         const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
-        void loadPlayers(gameId);
+        void loadPlayers(gameId).then(scheduleDecorate);
       }
       scheduleDecorate();
       return;
@@ -681,12 +707,12 @@
 
     const settingsAction = target.closest('[data-admin-terminal-action="player-settings"]');
     if (settingsAction) {
+      const directId = directPlayerId(settingsAction);
+      selectedPlayerId = directId || selectedPlayerId;
+      selectedPlayerElement = settingsAction;
       const player = playerFromElement(settingsAction);
       if (player) selectPlayer(player, settingsAction);
-      else {
-        const playerId = directPlayerId(settingsAction);
-        if (playerId) void selectPlayerById(playerId, settingsAction);
-      }
+      else if (directId) void selectPlayerById(directId, settingsAction);
       scheduleDecorate();
       return;
     }
@@ -698,6 +724,7 @@
 
     const player = playerFromElement(target);
     if (player) {
+      selectedPlayerId = playerUuid(player) || selectedPlayerId;
       selectedPlayerElement = target;
       cachePlayers([player]);
     }
