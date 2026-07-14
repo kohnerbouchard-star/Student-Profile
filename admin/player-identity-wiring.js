@@ -3,10 +3,17 @@
 
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const LOCAL_API_PREFIX = "/api/admin";
-  const STYLE_ID = "econovaria-player-identity-settings-style";
-  const SETTINGS_SELECTOR = "[data-admin-player-identity-settings]";
+  const STYLE_ID = "econovaria-player-profile-identity-style";
+  const PROFILE_MODAL_SELECTOR = '[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]';
+  const LEGACY_IDENTITY_SELECTOR = [
+    "[data-admin-player-identity-manager]",
+    "[data-admin-player-identity-manager-dialog]",
+    "[data-admin-player-identity-settings]",
+    "[data-admin-player-identity-settings-row]",
+  ].join(",");
 
   const playerCache = new Map();
+  const modalPlayers = new WeakMap();
   let selectedPlayerId = "";
   let selectedPlayerElement = null;
 
@@ -46,6 +53,24 @@
       player?.rfidId ||
       player?.externalPlayerId,
     );
+  }
+
+  function playerStatus(player) {
+    return text(player?.status || player?.session?.label || "active").toLowerCase();
+  }
+
+  function playerCountry(player) {
+    return text(
+      player?.countryName ||
+      player?.country_name ||
+      player?.location ||
+      player?.countryCode ||
+      player?.country_code,
+    );
+  }
+
+  function playerRank(player) {
+    return text(player?.rank || player?.playerRank || player?.player_rank);
   }
 
   function uniquePlayers(players) {
@@ -116,32 +141,38 @@
     }
   }
 
-  function updateModelPlayer(playerId, identifier) {
+  function updateModelPlayer(playerId, updates) {
+    const next = record(updates);
     const model = feature()?.currentModel;
     if (model) {
       for (const key of ["players", "roster", "playerRoster"]) {
         if (!Array.isArray(model[key])) continue;
-        model[key] = model[key].map((player) =>
-          playerUuid(player) === playerId
-            ? { ...player, playerIdentifier: identifier, player_identifier: identifier }
-            : player
-        );
+        model[key] = model[key].map((player) => {
+          if (playerUuid(player) !== playerId) return player;
+          return {
+            ...player,
+            ...(next.displayName ? { displayName: next.displayName, display_name: next.displayName, name: next.displayName } : {}),
+            ...(next.playerIdentifier ? { playerIdentifier: next.playerIdentifier, player_identifier: next.playerIdentifier } : {}),
+            ...(next.status ? { status: next.status } : {}),
+            ...(next.countryAssignment ? { countryName: next.countryAssignment, location: next.countryAssignment } : {}),
+          };
+        });
       }
     }
     const cached = playerCache.get(playerId);
     if (cached) {
       playerCache.set(playerId, {
         ...cached,
-        playerIdentifier: identifier,
-        player_identifier: identifier,
+        ...(next.displayName ? { displayName: next.displayName, display_name: next.displayName, name: next.displayName } : {}),
+        ...(next.playerIdentifier ? { playerIdentifier: next.playerIdentifier, player_identifier: next.playerIdentifier } : {}),
+        ...(next.status ? { status: next.status } : {}),
+        ...(next.countryAssignment ? { countryName: next.countryAssignment, location: next.countryAssignment } : {}),
       });
     }
   }
 
   function removeLegacyIdentityUi(root = document) {
-    root.querySelectorAll?.(
-      "[data-admin-player-identity-manager], [data-admin-player-identity-manager-dialog]",
-    ).forEach((element) => element.remove());
+    root.querySelectorAll?.(LEGACY_IDENTITY_SELECTOR).forEach((element) => element.remove());
   }
 
   function createCredentialInput(kind) {
@@ -263,206 +294,42 @@
     style.id = STYLE_ID;
     style.textContent = `
       [data-admin-player-create-credential-field] { min-width: 0; }
-      ${SETTINGS_SELECTOR} {
-        margin: 18px 0 0;
-        padding: 18px;
-        border: 1px solid rgba(105,250,255,.28);
-        background: rgba(2,11,18,.76);
-        color: #e9fbff;
-        box-shadow: inset 3px 0 0 #ff6700;
+      [data-admin-player-profile-field-help] {
+        display: block;
+        margin-top: 2px;
+        color: rgba(190,205,207,.68) !important;
+        font-size: 8px !important;
+        line-height: 1.3 !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
       }
-      ${SETTINGS_SELECTOR}, ${SETTINGS_SELECTOR} * { box-sizing: border-box; }
-      ${SETTINGS_SELECTOR} .player-identity-settings__head {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 16px;
+      [data-admin-player-profile-save-status] {
+        grid-column: 1 / -1;
+        min-height: 18px;
+        padding: 7px 9px;
+        border: 1px solid rgba(0,212,255,.14);
+        background: rgba(0,212,255,.035);
+        color: rgba(233,251,255,.72);
+        font-size: 9px;
+        line-height: 1.35;
       }
-      ${SETTINGS_SELECTOR} .player-identity-settings__icon { width: 32px; height: 32px; flex: 0 0 auto; }
-      ${SETTINGS_SELECTOR} h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.25; }
-      ${SETTINGS_SELECTOR} p { margin: 0; color: rgba(233,251,255,.66); font-size: 12px; line-height: 1.5; }
-      ${SETTINGS_SELECTOR} form { display: grid; gap: 14px; }
-      ${SETTINGS_SELECTOR} .player-identity-settings__grid {
-        display: grid;
-        grid-template-columns: repeat(2,minmax(0,1fr));
-        gap: 12px;
+      [data-admin-player-profile-save-status][data-tone="success"] {
+        border-color: rgba(120,240,180,.32);
+        color: #78f0b4;
       }
-      ${SETTINGS_SELECTOR} label { display: grid; gap: 6px; min-width: 0; }
-      ${SETTINGS_SELECTOR} label > span {
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-      }
-      ${SETTINGS_SELECTOR} input {
-        width: 100%;
-        min-height: 42px;
-        border: 1px solid rgba(105,250,255,.28);
-        background: #020b12;
-        color: #e9fbff;
-        padding: 0 12px;
-        font: inherit;
-      }
-      ${SETTINGS_SELECTOR} input:focus {
-        border-color: #69faff;
-        outline: 2px solid rgba(105,250,255,.14);
-        outline-offset: 1px;
-      }
-      ${SETTINGS_SELECTOR} small { color: rgba(233,251,255,.54); font-size: 11px; line-height: 1.45; }
-      ${SETTINGS_SELECTOR} .player-identity-settings__footer {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
-      ${SETTINGS_SELECTOR} [role="status"] { min-height: 18px; color: rgba(233,251,255,.68); font-size: 12px; }
-      ${SETTINGS_SELECTOR} button[type="submit"] {
-        min-height: 40px;
-        padding: 0 15px;
-        border: 1px solid #ff6700;
-        background: #ff6700;
-        color: #071421;
-        font: inherit;
-        font-weight: 800;
-        cursor: pointer;
-      }
-      ${SETTINGS_SELECTOR} button[disabled] { cursor: wait; opacity: .64; }
-      tr[data-admin-player-identity-settings-row] > td { padding: 0 12px 16px; border: 0; }
-      @media (max-width:760px) {
-        ${SETTINGS_SELECTOR} .player-identity-settings__grid { grid-template-columns: 1fr; }
-        ${SETTINGS_SELECTOR} .player-identity-settings__footer { align-items: stretch; }
-        ${SETTINGS_SELECTOR} button[type="submit"] { width: 100%; }
+      [data-admin-player-profile-save-status][data-tone="error"] {
+        border-color: rgba(255,105,118,.34);
+        color: #ff6976;
       }
     `;
     document.head.append(style);
   }
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function escapeAttribute(value) {
-    return escapeHtml(value).replaceAll("`", "&#096;");
-  }
-
-  function createIdentitySettings(player) {
-    const playerId = playerUuid(player);
-    const section = document.createElement("section");
-    section.setAttribute("data-admin-player-identity-settings", "");
-    section.setAttribute("data-player-id", playerId);
-    section.setAttribute("aria-label", `${playerName(player)} sign-in settings`);
-
-    const header = document.createElement("div");
-    header.className = "player-identity-settings__head";
-    header.innerHTML = [
-      '<img class="player-identity-settings__icon" src="./assets/icons/rfid-card.svg" alt="">',
-      "<div>",
-      `<h3>Player sign-in — ${escapeHtml(playerName(player))}</h3>`,
-      "<p>Change this player’s RFID-facing Player ID or set a new Access Code. The internal UUID stays hidden and cannot be edited.</p>",
-      "</div>",
-    ].join("");
-
-    const form = document.createElement("form");
-    form.setAttribute("data-admin-player-identity-settings-form", "");
-    form.noValidate = true;
-    const grid = document.createElement("div");
-    grid.className = "player-identity-settings__grid";
-    grid.innerHTML = [
-      "<label>",
-      "<span>Player ID / RFID card</span>",
-      `<input type="text" name="playerIdentifier" autocomplete="off" required placeholder="Scan RFID card or enter Player ID" value="${escapeAttribute(playerIdentifier(player))}">`,
-      "<small>This is the identifier shown in the roster and used by RFID cards.</small>",
-      "</label>",
-      "<label>",
-      "<span>New Access Code</span>",
-      '<input type="password" name="accessCode" autocomplete="new-password" placeholder="Enter a replacement Access Code">',
-      "<small>Leave blank to keep the current Access Code. Existing codes cannot be revealed because only their secure hashes are stored.</small>",
-      "</label>",
-    ].join("");
-
-    const footer = document.createElement("div");
-    footer.className = "player-identity-settings__footer";
-    const status = document.createElement("div");
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    status.textContent = rosterLabel(player) ? `Roster label: ${rosterLabel(player)}` : "Ready to save.";
-    const save = document.createElement("button");
-    save.type = "submit";
-    save.textContent = "Save sign-in settings";
-    footer.append(status, save);
-    form.append(grid, footer);
-    section.append(header, form);
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
-      const identifier = text(form.elements.playerIdentifier.value);
-      const accessCode = text(form.elements.accessCode.value);
-      const bridge = window.EconovariaPlayerAccessCodeBridge;
-      if (!gameId || !playerId || !identifier) {
-        status.textContent = "Player ID / RFID card is required.";
-        status.style.color = "#ff6976";
-        return;
-      }
-      if (!bridge || typeof bridge.updatePlayerIdentity !== "function") {
-        status.textContent = "Player credential service is not available.";
-        status.style.color = "#ff6976";
-        return;
-      }
-      save.disabled = true;
-      save.textContent = "Saving…";
-      status.textContent = accessCode ? "Saving Player ID and new Access Code…" : "Saving Player ID…";
-      status.style.color = "rgba(233,251,255,.68)";
-      try {
-        await bridge.updatePlayerIdentity({
-          gameId,
-          playerId,
-          displayName: playerName(player),
-          playerIdentifier: identifier,
-          accessCode,
-          showCredentialDialog: false,
-        });
-        updateModelPlayer(playerId, identifier);
-        form.elements.accessCode.value = "";
-        status.textContent = accessCode
-          ? "Player ID and Access Code saved."
-          : "Player ID saved. The current Access Code was not changed.";
-        status.style.color = "#78f0b4";
-      } catch (error) {
-        status.textContent = error?.message || "Player sign-in settings could not be saved.";
-        status.style.color = "#ff6976";
-      } finally {
-        save.disabled = false;
-        save.textContent = "Save sign-in settings";
-      }
-    });
-    return section;
-  }
-
-  function playersSectionActive() {
-    const currentFeature = feature();
-    const active = text(
-      currentFeature?.activeSection || currentFeature?.currentSection || currentFeature?.selectedSection,
-    ).toLowerCase();
-    if (active === "players") return true;
-    const nav = document.querySelector('[data-admin-section="Players"]');
-    return Boolean(nav && (
-      nav.getAttribute("aria-current") === "page" ||
-      nav.getAttribute("aria-pressed") === "true" ||
-      nav.classList.contains("active") ||
-      nav.classList.contains("is-active")
-    ));
-  }
-
   function directPlayerId(element) {
-    const owner = element?.closest?.("[data-player-id], [data-player-rank]");
-    return text(owner?.getAttribute("data-player-id") || owner?.getAttribute("data-player-rank"));
+    const uuidOwner = element?.closest?.("[data-player-id]");
+    const uuid = text(uuidOwner?.getAttribute("data-player-id"));
+    if (uuid) return uuid;
+    return "";
   }
 
   function playerFromElement(element) {
@@ -472,6 +339,14 @@
       const direct = allPlayers().find((player) => playerUuid(player) === directId);
       if (direct) return direct;
     }
+
+    const rankOwner = element.closest("[data-player-rank]");
+    const rank = text(rankOwner?.getAttribute("data-player-rank"));
+    if (rank) {
+      const rankMatches = allPlayers().filter((player) => playerRank(player) === rank);
+      if (rankMatches.length === 1) return rankMatches[0];
+    }
+
     const parts = [];
     let node = element;
     let depth = 0;
@@ -501,121 +376,13 @@
     return nameMatches.length === 1 ? nameMatches[0] : null;
   }
 
-  function isVisible(element) {
-    if (!(element instanceof Element) || element.hidden) return false;
-    const style = window.getComputedStyle?.(element);
-    if (style?.display === "none" || style?.visibility === "hidden") return false;
-    const rect = element.getBoundingClientRect?.();
-    return !rect || rect.width > 0 || rect.height > 0;
-  }
-
-  function detailHostFor(player) {
-    const name = playerName(player).toLowerCase();
-    const identifier = playerIdentifier(player).toLowerCase();
-    const row = document.querySelector(
-      `.admin-terminal-player-row[data-player-id="${playerUuid(player)}"], [data-player-id="${playerUuid(player)}"].admin-terminal-player-row`,
-    );
-    const expandedDetail = row?.querySelector(
-      ".admin-terminal-player-accordion-detail, .admin-terminal-player-dossier-v296, [aria-label$=' player details']",
-    );
-    if (expandedDetail && isVisible(expandedDetail)) {
-      return { mode: "container", element: expandedDetail };
-    }
-
-    const selectors = [
-      "[data-admin-terminal-player-detail]",
-      "[data-admin-player-detail]",
-      "[data-admin-terminal-player-settings]",
-      "[data-admin-player-settings]",
-      ".admin-terminal-player-accordion-detail",
-      ".admin-terminal-player-dossier-v296",
-      '[aria-label$=" player details"]',
-      '[role="dialog"]',
-      ".admin-terminal-modal",
-      ".admin-terminal-drawer",
-      ".admin-terminal-detail",
-      ".admin-terminal-side-panel",
-    ].join(",");
-    const candidates = [...document.querySelectorAll(selectors)]
-      .filter(isVisible)
-      .filter((element) => !element.matches("[data-admin-player-access-code-dialog]"))
-      .filter((element) => !element.querySelector(SETTINGS_SELECTOR));
-    for (const candidate of candidates.reverse()) {
-      const content = normalizedText(candidate.textContent);
-      if ((name && content.includes(name)) || (identifier && content.includes(identifier))) {
-        return { mode: "container", element: candidate };
-      }
-    }
-    if (selectedPlayerElement?.isConnected) {
-      const selectedRow = selectedPlayerElement.closest(
-        "tr, [role='row'], article, li, .admin-terminal-player-row, .admin-terminal-card, .admin-terminal-table-row",
-      );
-      if (selectedRow) return { mode: selectedRow.tagName === "TR" ? "table-row" : "after", element: selectedRow };
-    }
-    return null;
-  }
-
-  function insertionTarget(host) {
-    const preferred = host.querySelector?.(
-      ".admin-terminal-modal-body, .admin-terminal-drawer-body, .admin-terminal-detail-body, .admin-terminal-panel-body, [data-admin-player-detail-body]",
-    );
-    if (preferred && preferred.tagName !== "FORM") return preferred;
-    if (host.tagName !== "FORM") return host;
-    return host.parentElement || host;
-  }
-
-  function clearIdentitySettings() {
-    document.querySelectorAll(SETTINGS_SELECTOR).forEach((element) => element.remove());
-    document.querySelectorAll("[data-admin-player-identity-settings-row]").forEach((element) => element.remove());
-  }
-
-  function selectedPlayer() {
-    cachePlayers(modelPlayers());
-    return playerCache.get(selectedPlayerId) || null;
-  }
-
-  function decoratePlayerDetail() {
-    removeLegacyIdentityUi();
-    ensureStyles();
-    const player = selectedPlayer();
-    if (!player) return;
-    const playerId = playerUuid(player);
-    const existing = [...document.querySelectorAll(SETTINGS_SELECTOR)]
-      .find((element) => element.getAttribute("data-player-id") === playerId);
-    if (existing?.isConnected) return;
-    clearIdentitySettings();
-    const host = detailHostFor(player);
-    if (!host) return;
-    const settings = createIdentitySettings(player);
-    if (host.mode === "table-row") {
-      const row = document.createElement("tr");
-      row.setAttribute("data-admin-player-identity-settings-row", "");
-      row.setAttribute("data-player-id", playerId);
-      const cell = document.createElement("td");
-      cell.colSpan = Math.max(1, host.element.children.length || 1);
-      cell.append(settings);
-      row.append(cell);
-      host.element.insertAdjacentElement("afterend", row);
-      return;
-    }
-    if (host.mode === "after") {
-      host.element.insertAdjacentElement("afterend", settings);
-      return;
-    }
-    insertionTarget(host.element).append(settings);
-  }
-
   function selectPlayer(player, sourceElement = null) {
     const id = playerUuid(player);
     if (!id) return;
     cachePlayers([player]);
     selectedPlayerId = id;
     selectedPlayerElement = sourceElement instanceof Element ? sourceElement : null;
-    window.requestAnimationFrame(() => {
-      decoratePlayerDetail();
-      window.setTimeout(decoratePlayerDetail, 100);
-      window.setTimeout(decoratePlayerDetail, 250);
-    });
+    scheduleDecorate();
   }
 
   async function selectPlayerById(playerId, sourceElement) {
@@ -629,10 +396,263 @@
     if (player) selectPlayer(player, sourceElement);
   }
 
+  function selectedPlayer() {
+    cachePlayers(modelPlayers());
+    return playerCache.get(selectedPlayerId) || null;
+  }
+
+  function profileModal(root = document) {
+    const modals = [...(root.querySelectorAll?.(PROFILE_MODAL_SELECTOR) || [])];
+    return modals.reverse().find((modal) => modal.isConnected) || null;
+  }
+
+  function fieldByCaption(modal, caption) {
+    const labels = [...modal.querySelectorAll("label")];
+    return labels.find((label) => {
+      const heading = label.querySelector(":scope > span");
+      return normalizedText(heading?.textContent) === normalizedText(caption);
+    }) || null;
+  }
+
+  function fieldControl(label) {
+    return label?.querySelector("input, select, textarea") || null;
+  }
+
+  function addFieldHelp(label, message) {
+    if (!label) return;
+    label.querySelector("[data-admin-player-profile-field-help]")?.remove();
+    const helper = document.createElement("small");
+    helper.setAttribute("data-admin-player-profile-field-help", "");
+    helper.textContent = message;
+    label.append(helper);
+  }
+
+  function setSelectValue(select, value) {
+    if (!(select instanceof HTMLSelectElement)) return;
+    const target = normalizedText(value);
+    const option = [...select.options].find((item) => {
+      const optionValue = normalizedText(item.value);
+      const optionText = normalizedText(item.textContent);
+      return optionValue === target || optionText === target;
+    });
+    if (option) select.value = option.value;
+  }
+
+  function setProfileStatus(modal, message, tone = "neutral") {
+    const status = modal.querySelector("[data-admin-player-profile-save-status]");
+    if (!status) return;
+    status.textContent = message;
+    status.setAttribute("data-tone", tone);
+  }
+
+  function updateProfileSummary(modal, player) {
+    const panels = [...modal.querySelectorAll(".admin-terminal-player-ops-panel")];
+    const idPanel = panels.find((panel) => normalizedText(panel.querySelector("span")?.textContent) === "player id");
+    if (idPanel) {
+      const value = idPanel.querySelector("strong");
+      if (value) value.textContent = playerIdentifier(player) || "Not set";
+      const description = idPanel.querySelector("p");
+      if (description) description.textContent = "Configurable RFID/card-facing identifier. The internal UUID remains hidden and immutable.";
+    }
+  }
+
+  async function saveProfileSettings(modal, player) {
+    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    const playerId = playerUuid(player);
+    const nameInput = fieldControl(fieldByCaption(modal, "Player name"));
+    const identifierInput = fieldControl(fieldByCaption(modal, "Player ID / RFID card"));
+    const accessCodeInput = fieldControl(fieldByCaption(modal, "New Access Code"));
+    const statusInput = fieldControl(fieldByCaption(modal, "Player status"));
+    const countryInput = fieldControl(fieldByCaption(modal, "Country assignment"));
+    const noteInput = fieldControl(fieldByCaption(modal, "Admin note"));
+    const save = modal.querySelector('[data-admin-terminal-action="confirm-player-settings-save"]');
+
+    const displayName = text(nameInput?.value) || playerName(player);
+    const identifier = text(identifierInput?.value);
+    const accessCode = text(accessCodeInput?.value);
+    const status = text(statusInput?.value).toLowerCase() || playerStatus(player);
+    const countryAssignment = text(countryInput?.value) || playerCountry(player);
+    const adminNote = text(noteInput?.value);
+    const bridge = window.EconovariaPlayerAccessCodeBridge;
+
+    if (!gameId || !playerId || !identifier) {
+      setProfileStatus(modal, "Player ID / RFID card is required.", "error");
+      identifierInput?.focus?.();
+      return;
+    }
+    if (!bridge || typeof bridge.updatePlayerIdentity !== "function") {
+      setProfileStatus(modal, "Player credential service is not available.", "error");
+      return;
+    }
+
+    if (save) {
+      save.disabled = true;
+      save.textContent = "Saving…";
+    }
+    setProfileStatus(
+      modal,
+      accessCode ? "Saving player profile, Player ID, and new Access Code…" : "Saving player profile and Player ID…",
+    );
+
+    try {
+      const profileResponse = await window.fetch(
+        `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/settings`,
+        {
+          method: "PATCH",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            settings: {
+              displayName,
+              status,
+              countryAssignment,
+              adminNote: adminNote || null,
+            },
+          }),
+        },
+      );
+      const profileBody = await profileResponse.clone().json().catch(() => ({}));
+      if (!profileResponse.ok || profileBody?.ok === false) {
+        const message = text(profileBody?.error?.message || profileBody?.message) || "Player profile settings could not be saved.";
+        throw new Error(message);
+      }
+
+      await bridge.updatePlayerIdentity({
+        gameId,
+        playerId,
+        displayName,
+        playerIdentifier: identifier,
+        accessCode,
+        showCredentialDialog: false,
+      });
+
+      updateModelPlayer(playerId, {
+        displayName,
+        playerIdentifier: identifier,
+        status,
+        countryAssignment,
+      });
+      if (accessCodeInput) accessCodeInput.value = "";
+      const updated = playerCache.get(playerId) || player;
+      updateProfileSummary(modal, updated);
+      setProfileStatus(
+        modal,
+        accessCode
+          ? "Player profile, Player ID, and Access Code saved."
+          : "Player profile and Player ID saved. The current Access Code was not changed.",
+        "success",
+      );
+    } catch (error) {
+      setProfileStatus(
+        modal,
+        error?.message || "Player profile settings could not be saved.",
+        "error",
+      );
+    } finally {
+      if (save) {
+        save.disabled = false;
+        save.textContent = "Save settings";
+      }
+    }
+  }
+
+  function decorateProfileModal(root = document) {
+    removeLegacyIdentityUi(root);
+    ensureStyles();
+    const modal = profileModal(root) || profileModal(document);
+    const player = selectedPlayer();
+    if (!modal || !player) return;
+    if (modal.hasAttribute("data-admin-player-profile-identity-editor")) return;
+
+    const nameLabel = fieldByCaption(modal, "Player name");
+    const idLabel = fieldByCaption(modal, "Player ID");
+    const accessLabel = fieldByCaption(modal, "Access code");
+    const statusLabel = fieldByCaption(modal, "Player status");
+    const countryLabel = fieldByCaption(modal, "Country assignment");
+    const noteLabel = fieldByCaption(modal, "Admin note");
+    const nameInput = fieldControl(nameLabel);
+    const idInput = fieldControl(idLabel);
+    const accessInput = fieldControl(accessLabel);
+    const statusInput = fieldControl(statusLabel);
+    const countryInput = fieldControl(countryLabel);
+    const noteInput = fieldControl(noteLabel);
+
+    if (!idLabel || !idInput || !accessLabel || !accessInput) return;
+
+    modal.setAttribute("data-admin-player-profile-identity-editor", "");
+    modalPlayers.set(modal, player);
+
+    if (nameInput) {
+      nameInput.name = "displayName";
+      nameInput.value = playerName(player);
+      nameInput.autocomplete = "off";
+    }
+
+    const idHeading = idLabel.querySelector(":scope > span");
+    if (idHeading) idHeading.textContent = "Player ID / RFID card";
+    idInput.name = "playerIdentifier";
+    idInput.type = "text";
+    idInput.value = playerIdentifier(player);
+    idInput.required = true;
+    idInput.autocomplete = "off";
+    idInput.placeholder = "Scan RFID card or enter Player ID";
+    addFieldHelp(idLabel, "This is the configurable sign-in/RFID value. The internal UUID is not shown and cannot be edited.");
+
+    const accessHeading = accessLabel.querySelector(":scope > span");
+    if (accessHeading) accessHeading.textContent = "New Access Code";
+    accessInput.name = "accessCode";
+    accessInput.type = "password";
+    accessInput.value = "";
+    accessInput.required = false;
+    accessInput.autocomplete = "new-password";
+    accessInput.placeholder = "Leave blank to keep the current Access Code";
+    addFieldHelp(accessLabel, "Existing Access Codes cannot be displayed because only secure hashes are stored.");
+
+    if (statusInput) {
+      statusInput.name = "status";
+      setSelectValue(statusInput, playerStatus(player));
+    }
+    if (countryInput) {
+      countryInput.name = "countryAssignment";
+      countryInput.value = playerCountry(player);
+    }
+    if (noteInput) noteInput.name = "adminNote";
+
+    updateProfileSummary(modal, player);
+
+    const footer = modal.querySelector(".admin-terminal-player-ops-footer");
+    if (footer && !footer.querySelector("[data-admin-player-profile-save-status]")) {
+      const status = document.createElement("div");
+      status.setAttribute("data-admin-player-profile-save-status", "");
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      status.textContent = rosterLabel(player) ? `Roster label: ${rosterLabel(player)}. Ready to save.` : "Ready to save.";
+      footer.prepend(status);
+    }
+
+    if (modal.dataset.playerProfileSaveBound !== "true") {
+      modal.dataset.playerProfileSaveBound = "true";
+      modal.addEventListener("click", (event) => {
+        const action = event.target instanceof Element
+          ? event.target.closest('[data-admin-terminal-action="confirm-player-settings-save"]')
+          : null;
+        if (!action || !modal.contains(action)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        void saveProfileSettings(modal, modalPlayers.get(modal) || player);
+      }, true);
+    }
+  }
+
   function decorate(root = document) {
     removeLegacyIdentityUi(root);
     decorateCreateForm(root);
-    decoratePlayerDetail();
+    decorateProfileModal(root);
   }
 
   function scheduleDecorate() {
@@ -644,30 +664,44 @@
   function handleDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    scheduleDecorate();
-    if (target.closest(SETTINGS_SELECTOR)) return;
 
     const nav = target.closest("[data-admin-section]");
     if (nav) {
       if (nav.getAttribute("data-admin-section") !== "Players") {
         selectedPlayerId = "";
         selectedPlayerElement = null;
-        clearIdentitySettings();
-        return;
+        removeLegacyIdentityUi();
+      } else {
+        const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+        void loadPlayers(gameId);
       }
-      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
-      void loadPlayers(gameId).then(() => window.setTimeout(decoratePlayerDetail, 100));
-    }
-
-    if (!playersSectionActive() && !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) return;
-
-    const playerId = directPlayerId(target);
-    if (playerId) {
-      void selectPlayerById(playerId, target);
+      scheduleDecorate();
       return;
     }
+
+    const settingsAction = target.closest('[data-admin-terminal-action="player-settings"]');
+    if (settingsAction) {
+      const player = playerFromElement(settingsAction);
+      if (player) selectPlayer(player, settingsAction);
+      else {
+        const playerId = directPlayerId(settingsAction);
+        if (playerId) void selectPlayerById(playerId, settingsAction);
+      }
+      scheduleDecorate();
+      return;
+    }
+
+    if (target.closest(PROFILE_MODAL_SELECTOR)) {
+      scheduleDecorate();
+      return;
+    }
+
     const player = playerFromElement(target);
-    if (player) selectPlayer(player, target);
+    if (player) {
+      selectedPlayerElement = target;
+      cachePlayers([player]);
+    }
+    scheduleDecorate();
   }
 
   cachePlayers(modelPlayers());
@@ -683,7 +717,7 @@
 
   window.EconovariaPlayerIdentityWiring = {
     decorateCreateForm,
-    decoratePlayerDetail,
+    decorateProfileModal,
     loadPlayers,
     selectPlayer,
     selectPlayerById,
