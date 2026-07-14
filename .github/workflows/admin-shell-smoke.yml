@@ -20,6 +20,7 @@ on:
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
       - "scripts/admin-contract-review-source-audit.mjs"
+      - "scripts/admin-contract-review-smoke.mjs"
       - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -50,6 +51,7 @@ on:
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
       - "scripts/admin-contract-review-source-audit.mjs"
+      - "scripts/admin-contract-review-smoke.mjs"
       - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -144,6 +146,9 @@ jobs:
 
       - name: Exercise complete contract create payload
         run: node scripts/admin-contract-end-to-end-smoke.mjs
+
+      - name: Exercise accepted admin contract review flow
+        run: node scripts/admin-contract-review-smoke.mjs
 
       - name: Exercise generated player credentials and confirmation UX
         run: node scripts/admin-player-create-ux-smoke.mjs
