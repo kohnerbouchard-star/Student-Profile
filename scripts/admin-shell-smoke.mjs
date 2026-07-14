@@ -125,9 +125,10 @@ assert(
   "Create-action adapter must preserve entered player, contract, and store fields.",
 );
 assert(
-  classroomFallback.includes('retryStatuses = new Set([400, 404, 501])') &&
-    classroomFallback.includes('/attendance/(?:scan|scans)') &&
-    classroomFallback.includes('/functions/v1/classroom-api'),
+  classroomFallback.includes("const retryStatuses = new Set([400, 404, 501]);") &&
+    classroomFallback.includes("const attendanceMatch = url.pathname.match(") &&
+    classroomFallback.includes("CLASSROOM_API_BASE") &&
+    classroomFallback.includes("/attendance/scan"),
   "Canonical classroom write fallback is missing or unbounded.",
 );
 assert(
