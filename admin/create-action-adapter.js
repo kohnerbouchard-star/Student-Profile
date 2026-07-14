@@ -118,6 +118,8 @@
         ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
         displayName: formValue(form, "displayName"),
         rosterLabel: formValue(form, "rosterLabel") || null,
+        playerIdentifier: formValue(form, "playerIdentifier"),
+        accessCode: formValue(form, "accessCode"),
         status: formValue(form, "status") || "active",
         startingLocation: formValue(form, "startingLocation") || "random",
         notes: formValue(form, "notes") || null
