@@ -31,4 +31,16 @@ jobs:
           node-version: "22"
 
       - name: Validate admin shell assets and runtime order
-        run: node scripts/admin-shell-smoke.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-shell-smoke.mjs | tee admin-interaction-diagnostic.log
+
+      - name: Upload admin interaction diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-interaction-diagnostic
+          path: admin-interaction-diagnostic.log
+          if-no-files-found: error
+          retention-days: 2
