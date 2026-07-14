@@ -110,11 +110,6 @@
     observer.observe(mount, { childList: true, subtree: true });
   }
 
-  window.addEventListener("load", () => {
-    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
-    if (gameId) void directRoster(gameId);
-  }, { once: true });
-
   window.EconovariaPlayerIdentityRosterTransport = {
     directRoster,
     identifiers,
