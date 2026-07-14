@@ -182,11 +182,28 @@ if (!assetWiring.includes("ORIGINAL_CURRENCY_ICONS")) {
 if (!assetWiring.includes("ORIGINAL_PLAYER_ACTION_ICONS")) {
   failures.push("admin/asset-wiring.js does not preserve the original player quick-action icon map.");
 }
+if (!assetWiring.includes("ORIGINAL_MODAL_VIDEOS")) {
+  failures.push("admin/asset-wiring.js does not preserve the original modal video map.");
+}
+for (const source of [
+  "./assets/videos/id-background.mp4",
+  "./assets/videos/player-background.mp4",
+  "./assets/videos/scanner-background.mp4",
+  "./assets/videos/contract-background.mp4",
+  "./assets/videos/store-background.mp4",
+]) {
+  if (!assetWiring.includes(source)) {
+    failures.push(`admin/asset-wiring.js is missing original modal video mapping ${source}.`);
+  }
+}
 if (assetWiring.includes("assets/icons/player-actions/")) {
   failures.push("admin/asset-wiring.js still references the non-original replacement player icon set.");
 }
 if (assetWiring.includes("../frontend/src/assets/currency-symbols")) {
   failures.push("admin/asset-wiring.js still redirects currency icons outside the original admin asset tree.");
+}
+if (assetWiring.includes("replaceBrokenMotionMedia") || assetWiring.includes("PLAYER_IDENTITY_MOTION")) {
+  failures.push("admin/asset-wiring.js still replaces original modal videos with the generic identity illustration.");
 }
 if (!assetWiring.includes("if (!isContentMediaImage(image)) return;")) {
   failures.push("admin/asset-wiring.js still applies the generic media placeholder to every UI image.");
