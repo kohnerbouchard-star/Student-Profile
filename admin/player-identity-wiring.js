@@ -6,12 +6,16 @@
   const STYLE_ID = "econovaria-player-identity-settings-style";
   const SETTINGS_SELECTOR = "[data-admin-player-identity-settings]";
 
+  const playerCache = new Map();
   let selectedPlayerId = "";
   let selectedPlayerElement = null;
-  const playerCache = new Map();
 
   function text(value) {
     return String(value ?? "").trim();
+  }
+
+  function normalizedText(value) {
+    return text(value).replace(/\s+/g, " ").toLowerCase();
   }
 
   function record(value) {
@@ -46,9 +50,9 @@
     );
   }
 
-  function uniquePlayers(candidates) {
+  function uniquePlayers(players) {
     const seen = new Set();
-    return (Array.isArray(candidates) ? candidates : []).filter((player) => {
+    return (Array.isArray(players) ? players : []).filter((player) => {
       const id = playerUuid(player);
       if (!id || seen.has(id)) return false;
       seen.add(id);
@@ -58,9 +62,9 @@
 
   function modelPlayers() {
     const model = feature()?.currentModel || {};
-    const candidates = [model.players, model.roster, model.playerRoster]
-      .find(Array.isArray) || [];
-    return uniquePlayers(candidates);
+    return uniquePlayers(
+      [model.players, model.roster, model.playerRoster].find(Array.isArray) || [],
+    );
   }
 
   function responsePlayers(value) {
@@ -68,7 +72,7 @@
     const data = record(source.data);
     const payload = record(source.payload);
     const nestedData = record(data.data);
-    const candidates = [
+    return uniquePlayers([
       source.players,
       source.roster,
       source.playerRoster,
@@ -81,8 +85,7 @@
       nestedData.players,
       nestedData.roster,
       nestedData.playerRoster,
-    ].find(Array.isArray) || [];
-    return uniquePlayers(candidates);
+    ].find(Array.isArray) || []);
   }
 
   function cachePlayers(players) {
@@ -98,7 +101,6 @@
 
   async function loadPlayers(gameId) {
     if (!gameId) return allPlayers();
-
     try {
       const response = await window.fetch(
         `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players`,
@@ -118,26 +120,22 @@
     }
   }
 
-  function selectedPlayer() {
-    cachePlayers(modelPlayers());
-    return playerCache.get(selectedPlayerId) || null;
-  }
-
   function updateModelPlayer(playerId, identifier) {
     const currentFeature = feature();
     const model = currentFeature?.currentModel;
-    if (!model) return;
-
-    for (const key of ["players", "roster", "playerRoster"]) {
-      if (!Array.isArray(model[key])) continue;
-      model[key] = model[key].map((player) => {
-        if (playerUuid(player) !== playerId) return player;
-        return {
-          ...player,
-          playerIdentifier: identifier,
-          player_identifier: identifier,
-        };
-      });
+    if (model) {
+      for (const key of ["players", "roster", "playerRoster"]) {
+        if (!Array.isArray(model[key])) continue;
+        model[key] = model[key].map((player) =>
+          playerUuid(player) === playerId
+            ? {
+                ...player,
+                playerIdentifier: identifier,
+                player_identifier: identifier,
+              }
+            : player
+        );
+      }
     }
 
     const cached = playerCache.get(playerId);
@@ -150,6 +148,103 @@
     }
   }
 
+  function removeLegacyIdentityUi(root = document) {
+    root.querySelectorAll?.(
+      "[data-admin-player-identity-manager], [data-admin-player-identity-manager-dialog]",
+    ).forEach((element) => element.remove());
+  }
+
+  function createCredentialInput(kind) {
+    const identifier = kind === "identifier";
+    const label = document.createElement("label");
+    label.className = identifier
+      ? "admin-terminal-field is-player-identifier"
+      : "admin-terminal-field is-player-access-code";
+    label.innerHTML = identifier
+      ? [
+          "<span>Player ID / RFID card</span>",
+          '<input type="text" name="playerIdentifier" data-admin-terminal-player-identifier autocomplete="off" placeholder="Scan RFID card or enter Player ID" required>',
+        ].join("")
+      : [
+          "<span>Access Code</span>",
+          '<input type="password" name="accessCode" data-admin-terminal-player-access-code autocomplete="new-password" placeholder="Set player Access Code" required>',
+        ].join("");
+    return label;
+  }
+
+  function generatedCredentialTile(form, kind) {
+    const identifier = kind === "identifier";
+    const candidates = [...form.querySelectorAll(
+      "label, fieldset, article, section, li, .admin-terminal-field, .admin-terminal-player-setting, .admin-terminal-player-settings-field, div",
+    )].filter((element) => {
+      if (element.querySelector("input, select, textarea, button")) return false;
+      const content = normalizedText(element.textContent);
+      const generated =
+        content.includes("generated securely after create") ||
+        content.includes("generated after create") ||
+        content.includes("generated securely");
+      if (!generated) return false;
+      if (identifier) {
+        return content.includes("player id") && !content.includes("access code");
+      }
+      return content.includes("access code");
+    });
+
+    candidates.sort((left, right) => {
+      const leftText = normalizedText(left.textContent);
+      const rightText = normalizedText(right.textContent);
+      const leftPenalty = leftText.includes("player id") && leftText.includes("access code") ? 10000 : 0;
+      const rightPenalty = rightText.includes("player id") && rightText.includes("access code") ? 10000 : 0;
+      return leftText.length + leftPenalty - (rightText.length + rightPenalty);
+    });
+    return candidates[0] || null;
+  }
+
+  function updateCreateFormHelper(form) {
+    const preferred = form.querySelector(".admin-terminal-player-settings-head small");
+    if (preferred) {
+      preferred.textContent = "Player ID is the configurable RFID/card value. The UUID remains backend-only.";
+      return;
+    }
+
+    const helper = [...form.querySelectorAll("small, p")].find((element) => {
+      const content = normalizedText(element.textContent);
+      return content.includes("player id") && content.includes("access code") &&
+        content.includes("generated");
+    });
+    if (helper) {
+      helper.textContent = "Set the RFID-facing Player ID and Access Code now. The UUID remains backend-only.";
+    }
+  }
+
+  function decorateCreateForm(root = document) {
+    const form = root.querySelector?.("[data-admin-terminal-player-form]");
+    if (!form || form.dataset.playerIdentityConfigured === "true") return;
+
+    let identifierInput = form.querySelector('[name="playerIdentifier"]');
+    let accessCodeInput = form.querySelector('[name="accessCode"]');
+
+    if (!identifierInput) {
+      const tile = generatedCredentialTile(form, "identifier");
+      if (tile) tile.replaceWith(createCredentialInput("identifier"));
+      identifierInput = form.querySelector('[name="playerIdentifier"]');
+    }
+
+    if (!accessCodeInput) {
+      const tile = generatedCredentialTile(form, "accessCode");
+      if (tile) tile.replaceWith(createCredentialInput("accessCode"));
+      accessCodeInput = form.querySelector('[name="accessCode"]');
+    }
+
+    updateCreateFormHelper(form);
+
+    if (identifierInput && accessCodeInput) {
+      identifierInput.required = true;
+      accessCodeInput.required = true;
+      form.dataset.playerIdentityConfigured = "true";
+    }
+  }
+
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
@@ -158,12 +253,12 @@
       ${SETTINGS_SELECTOR} {
         margin: 18px 0 0;
         padding: 18px;
-        border: 1px solid rgba(105, 250, 255, .28);
-        background: rgba(2, 11, 18, .76);
+        border: 1px solid rgba(105,250,255,.28);
+        background: rgba(2,11,18,.76);
         color: #e9fbff;
         box-shadow: inset 3px 0 0 #ff6700;
       }
-      ${SETTINGS_SELECTOR} * { box-sizing: border-box; }
+      ${SETTINGS_SELECTOR}, ${SETTINGS_SELECTOR} * { box-sizing: border-box; }
       ${SETTINGS_SELECTOR} .player-identity-settings__head {
         display: flex;
         align-items: flex-start;
@@ -174,33 +269,21 @@
         width: 32px;
         height: 32px;
         flex: 0 0 auto;
-        color: #69faff;
       }
-      ${SETTINGS_SELECTOR} h3 {
-        margin: 0 0 4px;
-        font-size: 16px;
-        line-height: 1.25;
-      }
+      ${SETTINGS_SELECTOR} h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.25; }
       ${SETTINGS_SELECTOR} p {
         margin: 0;
-        color: rgba(233, 251, 255, .66);
+        color: rgba(233,251,255,.66);
         font-size: 12px;
         line-height: 1.5;
       }
-      ${SETTINGS_SELECTOR} form {
-        display: grid;
-        gap: 14px;
-      }
+      ${SETTINGS_SELECTOR} form { display: grid; gap: 14px; }
       ${SETTINGS_SELECTOR} .player-identity-settings__grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2,minmax(0,1fr));
         gap: 12px;
       }
-      ${SETTINGS_SELECTOR} label {
-        display: grid;
-        gap: 6px;
-        min-width: 0;
-      }
+      ${SETTINGS_SELECTOR} label { display: grid; gap: 6px; min-width: 0; }
       ${SETTINGS_SELECTOR} label > span {
         font-size: 11px;
         font-weight: 800;
@@ -210,7 +293,7 @@
       ${SETTINGS_SELECTOR} input {
         width: 100%;
         min-height: 42px;
-        border: 1px solid rgba(105, 250, 255, .28);
+        border: 1px solid rgba(105,250,255,.28);
         background: #020b12;
         color: #e9fbff;
         padding: 0 12px;
@@ -218,11 +301,11 @@
       }
       ${SETTINGS_SELECTOR} input:focus {
         border-color: #69faff;
-        outline: 2px solid rgba(105, 250, 255, .14);
+        outline: 2px solid rgba(105,250,255,.14);
         outline-offset: 1px;
       }
       ${SETTINGS_SELECTOR} small {
-        color: rgba(233, 251, 255, .54);
+        color: rgba(233,251,255,.54);
         font-size: 11px;
         line-height: 1.45;
       }
@@ -235,7 +318,7 @@
       }
       ${SETTINGS_SELECTOR} [role="status"] {
         min-height: 18px;
-        color: rgba(233, 251, 255, .68);
+        color: rgba(233,251,255,.68);
         font-size: 12px;
       }
       ${SETTINGS_SELECTOR} button[type="submit"] {
@@ -248,15 +331,12 @@
         font-weight: 800;
         cursor: pointer;
       }
-      ${SETTINGS_SELECTOR} button[disabled] {
-        cursor: wait;
-        opacity: .64;
-      }
+      ${SETTINGS_SELECTOR} button[disabled] { cursor: wait; opacity: .64; }
       tr[data-admin-player-identity-settings-row] > td {
         padding: 0 12px 16px;
         border: 0;
       }
-      @media (max-width: 760px) {
+      @media (max-width:760px) {
         ${SETTINGS_SELECTOR} .player-identity-settings__grid { grid-template-columns: 1fr; }
         ${SETTINGS_SELECTOR} .player-identity-settings__footer { align-items: stretch; }
         ${SETTINGS_SELECTOR} button[type="submit"] { width: 100%; }
@@ -265,177 +345,17 @@
     document.head.append(style);
   }
 
-  function removeLegacyIdentityUi(root = document) {
-    root.querySelectorAll?.(
-      "[data-admin-player-identity-manager], [data-admin-player-identity-manager-dialog]",
-    ).forEach((element) => element.remove());
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function decorateCreateForm(root = document) {
-    const form = root.querySelector?.("[data-admin-terminal-player-form]");
-    if (!form || form.dataset.playerIdentityConfigured === "true") return;
-
-    const grid = form.querySelector(".admin-terminal-player-grid.is-settings");
-    if (!grid) return;
-
-    const fields = [...grid.children];
-    const generatedPlayerId = fields.find((node) =>
-      node.textContent?.trim().startsWith("Player ID")
-    );
-    const generatedAccessCode = fields.find((node) =>
-      node.textContent?.trim().toLowerCase().startsWith("access code")
-    );
-
-    if (generatedPlayerId) {
-      const label = document.createElement("label");
-      label.className = "admin-terminal-field is-player-identifier";
-      label.innerHTML = [
-        "<span>Player ID / RFID card</span>",
-        '<input type="text" name="playerIdentifier" data-admin-terminal-player-identifier autocomplete="off" placeholder="Scan RFID card or enter Player ID" required>',
-      ].join("");
-      generatedPlayerId.replaceWith(label);
-    }
-
-    if (generatedAccessCode) {
-      const label = document.createElement("label");
-      label.className = "admin-terminal-field is-player-access-code";
-      label.innerHTML = [
-        "<span>Access Code</span>",
-        '<input type="password" name="accessCode" data-admin-terminal-player-access-code autocomplete="new-password" placeholder="Set player Access Code" required>',
-      ].join("");
-      generatedAccessCode.replaceWith(label);
-    }
-
-    const helper = form.querySelector(".admin-terminal-player-settings-head small");
-    if (helper) {
-      helper.textContent = "Player ID is the configurable RFID/card value. The UUID remains backend-only.";
-    }
-
-    form.dataset.playerIdentityConfigured = "true";
-  }
-
-  function playersSectionActive() {
-    const currentFeature = feature();
-    const active = text(
-      currentFeature?.activeSection ||
-      currentFeature?.currentSection ||
-      currentFeature?.selectedSection,
-    ).toLowerCase();
-    if (active === "players") return true;
-
-    const nav = document.querySelector('[data-admin-section="Players"]');
-    return Boolean(
-      nav && (
-        nav.getAttribute("aria-current") === "page" ||
-        nav.getAttribute("aria-pressed") === "true" ||
-        nav.classList.contains("active") ||
-        nav.classList.contains("is-active")
-      )
-    );
-  }
-
-  function elementHaystack(element) {
-    const parts = [];
-    let node = element;
-    let depth = 0;
-    while (node && node !== document.body && depth < 9) {
-      if (node instanceof Element) {
-        parts.push(node.textContent || "");
-        for (const name of [
-          "data-player-id",
-          "data-player-uuid",
-          "data-admin-player-id",
-          "data-id",
-          "value",
-          "href",
-          "aria-label",
-          "title",
-        ]) {
-          parts.push(node.getAttribute(name) || "");
-        }
-      }
-      node = node.parentElement;
-      depth += 1;
-    }
-    return parts.join(" ").toLowerCase();
-  }
-
-  function playerFromElement(element) {
-    if (!(element instanceof Element)) return null;
-    const haystack = elementHaystack(element);
-    const players = allPlayers();
-
-    for (const player of players) {
-      const id = playerUuid(player).toLowerCase();
-      if (id && haystack.includes(id)) return player;
-    }
-
-    for (const player of players) {
-      const identifier = playerIdentifier(player).toLowerCase();
-      if (identifier && haystack.includes(identifier)) return player;
-    }
-
-    const nameMatches = players.filter((player) => {
-      const name = playerName(player).toLowerCase();
-      return name.length >= 3 && haystack.includes(name);
-    });
-    return nameMatches.length === 1 ? nameMatches[0] : null;
-  }
-
-  function isVisible(element) {
-    if (!(element instanceof Element) || element.hidden) return false;
-    const style = window.getComputedStyle?.(element);
-    if (style?.display === "none" || style?.visibility === "hidden") return false;
-    const rect = element.getBoundingClientRect?.();
-    return !rect || rect.width > 0 || rect.height > 0;
-  }
-
-  function detailHostFor(player) {
-    const name = playerName(player).toLowerCase();
-    const identifier = playerIdentifier(player).toLowerCase();
-    const selectors = [
-      '[data-admin-terminal-player-detail]',
-      '[data-admin-player-detail]',
-      '[data-admin-terminal-player-settings]',
-      '[data-admin-player-settings]',
-      '[role="dialog"]',
-      '.admin-terminal-modal',
-      '.admin-terminal-drawer',
-      '.admin-terminal-detail',
-      '.admin-terminal-side-panel',
-    ].join(",");
-
-    const candidates = [...document.querySelectorAll(selectors)]
-      .filter(isVisible)
-      .filter((element) => !element.matches("[data-admin-player-access-code-dialog]"))
-      .filter((element) => !element.querySelector(SETTINGS_SELECTOR));
-
-    for (const candidate of candidates.reverse()) {
-      const content = text(candidate.textContent).toLowerCase();
-      if ((name && content.includes(name)) || (identifier && content.includes(identifier))) {
-        return { mode: "container", element: candidate };
-      }
-    }
-
-    if (selectedPlayerElement?.isConnected) {
-      const row = selectedPlayerElement.closest(
-        "tr, [role='row'], article, li, .admin-terminal-player-row, .admin-terminal-card, .admin-terminal-table-row",
-      );
-      if (row) {
-        return { mode: row.tagName === "TR" ? "table-row" : "after", element: row };
-      }
-    }
-
-    return null;
-  }
-
-  function insertionTarget(host) {
-    const preferred = host.querySelector?.(
-      ".admin-terminal-modal-body, .admin-terminal-drawer-body, .admin-terminal-detail-body, .admin-terminal-panel-body, [data-admin-player-detail-body]",
-    );
-    if (preferred && preferred.tagName !== "FORM") return preferred;
-    if (host.tagName !== "FORM") return host;
-    return host.parentElement || host;
+  function escapeAttribute(value) {
+    return escapeHtml(value).replaceAll("`", "&#096;");
   }
 
   function createIdentitySettings(player) {
@@ -542,17 +462,124 @@
     return section;
   }
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  function playersSectionActive() {
+    const currentFeature = feature();
+    const active = text(
+      currentFeature?.activeSection ||
+      currentFeature?.currentSection ||
+      currentFeature?.selectedSection,
+    ).toLowerCase();
+    if (active === "players") return true;
+
+    const nav = document.querySelector('[data-admin-section="Players"]');
+    return Boolean(nav && (
+      nav.getAttribute("aria-current") === "page" ||
+      nav.getAttribute("aria-pressed") === "true" ||
+      nav.classList.contains("active") ||
+      nav.classList.contains("is-active")
+    ));
   }
 
-  function escapeAttribute(value) {
-    return escapeHtml(value).replaceAll("`", "&#096;");
+  function elementHaystack(element) {
+    const parts = [];
+    let node = element;
+    let depth = 0;
+    while (node && node !== document.body && depth < 9) {
+      if (node instanceof Element) {
+        parts.push(node.textContent || "");
+        for (const name of [
+          "data-player-id",
+          "data-player-uuid",
+          "data-admin-player-id",
+          "data-id",
+          "value",
+          "href",
+          "aria-label",
+          "title",
+        ]) {
+          parts.push(node.getAttribute(name) || "");
+        }
+      }
+      node = node.parentElement;
+      depth += 1;
+    }
+    return normalizedText(parts.join(" "));
+  }
+
+  function playerFromElement(element) {
+    if (!(element instanceof Element)) return null;
+    const haystack = elementHaystack(element);
+    const players = allPlayers();
+
+    for (const player of players) {
+      const id = playerUuid(player).toLowerCase();
+      if (id && haystack.includes(id)) return player;
+    }
+    for (const player of players) {
+      const identifier = playerIdentifier(player).toLowerCase();
+      if (identifier && haystack.includes(identifier)) return player;
+    }
+
+    const nameMatches = players.filter((player) => {
+      const name = playerName(player).toLowerCase();
+      return name.length >= 3 && haystack.includes(name);
+    });
+    return nameMatches.length === 1 ? nameMatches[0] : null;
+  }
+
+  function isVisible(element) {
+    if (!(element instanceof Element) || element.hidden) return false;
+    const style = window.getComputedStyle?.(element);
+    if (style?.display === "none" || style?.visibility === "hidden") return false;
+    const rect = element.getBoundingClientRect?.();
+    return !rect || rect.width > 0 || rect.height > 0;
+  }
+
+  function detailHostFor(player) {
+    const name = playerName(player).toLowerCase();
+    const identifier = playerIdentifier(player).toLowerCase();
+    const selectors = [
+      "[data-admin-terminal-player-detail]",
+      "[data-admin-player-detail]",
+      "[data-admin-terminal-player-settings]",
+      "[data-admin-player-settings]",
+      '[role="dialog"]',
+      ".admin-terminal-modal",
+      ".admin-terminal-drawer",
+      ".admin-terminal-detail",
+      ".admin-terminal-side-panel",
+    ].join(",");
+
+    const candidates = [...document.querySelectorAll(selectors)]
+      .filter(isVisible)
+      .filter((element) => !element.matches("[data-admin-player-access-code-dialog]"))
+      .filter((element) => !element.querySelector(SETTINGS_SELECTOR));
+
+    for (const candidate of candidates.reverse()) {
+      const content = normalizedText(candidate.textContent);
+      if ((name && content.includes(name)) || (identifier && content.includes(identifier))) {
+        return { mode: "container", element: candidate };
+      }
+    }
+
+    if (selectedPlayerElement?.isConnected) {
+      const row = selectedPlayerElement.closest(
+        "tr, [role='row'], article, li, .admin-terminal-player-row, .admin-terminal-card, .admin-terminal-table-row",
+      );
+      if (row) {
+        return { mode: row.tagName === "TR" ? "table-row" : "after", element: row };
+      }
+    }
+    return null;
+  }
+
+  function insertionTarget(host) {
+    const preferred = host.querySelector?.(
+      ".admin-terminal-modal-body, .admin-terminal-drawer-body, .admin-terminal-detail-body, .admin-terminal-panel-body, [data-admin-player-detail-body]",
+    );
+    if (preferred && preferred.tagName !== "FORM") return preferred;
+    if (host.tagName !== "FORM") return host;
+    return host.parentElement || host;
   }
 
   function clearIdentitySettings() {
@@ -561,17 +588,20 @@
       .forEach((element) => element.remove());
   }
 
+  function selectedPlayer() {
+    cachePlayers(modelPlayers());
+    return playerCache.get(selectedPlayerId) || null;
+  }
+
   function decoratePlayerDetail() {
     removeLegacyIdentityUi();
     ensureStyles();
-
     const player = selectedPlayer();
     if (!player) return;
 
     const playerId = playerUuid(player);
-    const existing = document.querySelector(
-      `${SETTINGS_SELECTOR}[data-player-id="${CSS.escape(playerId)}"]`,
-    );
+    const existing = [...document.querySelectorAll(SETTINGS_SELECTOR)]
+      .find((element) => element.getAttribute("data-player-id") === playerId);
     if (existing?.isConnected) return;
 
     clearIdentitySettings();
@@ -584,8 +614,7 @@
       row.setAttribute("data-admin-player-identity-settings-row", "");
       row.setAttribute("data-player-id", playerId);
       const cell = document.createElement("td");
-      const columnCount = Math.max(1, host.element.children.length || 1);
-      cell.colSpan = columnCount;
+      cell.colSpan = Math.max(1, host.element.children.length || 1);
       cell.append(settings);
       row.append(cell);
       host.element.insertAdjacentElement("afterend", row);
@@ -614,8 +643,7 @@
 
   function handleDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
-    if (!target) return;
-    if (target.closest(SETTINGS_SELECTOR)) return;
+    if (!target || target.closest(SETTINGS_SELECTOR)) return;
 
     const nav = target.closest("[data-admin-section]");
     if (nav) {
@@ -629,7 +657,8 @@
       void loadPlayers(gameId).then(() => window.setTimeout(decoratePlayerDetail, 100));
     }
 
-    if (!playersSectionActive() && !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) {
+    if (!playersSectionActive() &&
+        !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) {
       return;
     }
 
