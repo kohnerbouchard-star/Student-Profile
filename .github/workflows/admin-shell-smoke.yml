@@ -19,6 +19,7 @@ on:
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/admin-contract-review-source-audit.mjs"
       - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -48,6 +49,7 @@ on:
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/admin-contract-review-source-audit.mjs"
       - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -82,6 +84,9 @@ jobs:
 
       - name: Validate accepted v606 drift boundaries
         run: node scripts/admin-v606-full-drift-audit.mjs
+
+      - name: Audit accepted admin review actions
+        run: node scripts/admin-contract-review-source-audit.mjs
 
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
