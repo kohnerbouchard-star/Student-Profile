@@ -7,7 +7,8 @@ import {
 import { dirname, extname, relative, resolve } from "node:path";
 
 const root = process.cwd();
-const sourceRoots = [resolve(root, "index.html"), resolve(root, "admin")];
+const adminRoot = resolve(root, "admin");
+const sourceRoots = [resolve(root, "index.html"), adminRoot];
 const sourceExtensions = new Set([".html", ".css", ".js", ".mjs"]);
 const mediaExtensions = new Set([
   ".png",
@@ -73,8 +74,14 @@ function referencesFrom(source) {
 
 function resolveReference(sourcePath, reference) {
   if (reference === "window.ECONOVARIA_ADMIN_MOTION_BACKGROUND") {
-    return resolve(root, "admin", reference);
+    return resolve(adminRoot, reference);
   }
+
+  const extension = extname(sourcePath).toLowerCase();
+  if ([".js", ".mjs"].includes(extension) && sourcePath.startsWith(`${adminRoot}/`)) {
+    return resolve(adminRoot, reference);
+  }
+
   return resolve(dirname(sourcePath), reference);
 }
 
