@@ -128,22 +128,24 @@ const requiredAssets = [
   "assets/sci-fi-cinematic-background.mp3",
   "admin/assets/icons/rfid-card.svg",
   "admin/assets/icons/media-placeholder.svg",
-  "admin/assets/icons/player-actions/id-card.svg",
-  "admin/assets/icons/player-actions/adjust-balance.svg",
-  "admin/assets/icons/player-actions/settings.svg",
-  "admin/assets/icons/player-actions/message.svg",
+  "admin/assets/icons/player-id.svg",
+  "admin/assets/icons/adjust-balance.svg",
+  "admin/assets/icons/player-settings.svg",
+  "admin/assets/icons/message-player.svg",
+  "admin/assets/icons/bank-checking.svg",
+  "admin/assets/icons/bank-savings.svg",
+  "admin/assets/icons/currency-saturn.svg",
+  "admin/assets/icons/currency-neptune.svg",
+  "admin/assets/icons/currency-arsenic.svg",
+  "admin/assets/icons/currency-jupiter.svg",
+  "admin/assets/icons/currency-alumen.svg",
+  "admin/assets/icons/currency-gold.svg",
+  "admin/assets/icons/currency-lapis_lazuli.svg",
+  "admin/assets/icons/currency-alcali.svg",
+  "admin/assets/icons/currency-lead.svg",
+  "admin/assets/icons/currency-ferrum.svg",
   "admin/assets/media/player-identity-motion.svg",
   "admin/window.ECONOVARIA_ADMIN_MOTION_BACKGROUND",
-  "frontend/src/assets/currency-symbols/saturn.svg",
-  "frontend/src/assets/currency-symbols/neptune.svg",
-  "frontend/src/assets/currency-symbols/arsenic.svg",
-  "frontend/src/assets/currency-symbols/jupiter.svg",
-  "frontend/src/assets/currency-symbols/alumen.svg",
-  "frontend/src/assets/currency-symbols/gold.svg",
-  "frontend/src/assets/currency-symbols/lapis_lazuli.svg",
-  "frontend/src/assets/currency-symbols/alcali.svg",
-  "frontend/src/assets/currency-symbols/lead.svg",
-  "frontend/src/assets/currency-symbols/ferrum.svg",
   "favicon.ico",
 ];
 
@@ -160,11 +162,17 @@ for (const relativePath of requiredAssets) {
 }
 
 const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
-if (!assetWiring.includes("repairCurrencySymbols")) {
-  failures.push("admin/asset-wiring.js does not repair currency symbol paths for the /admin/ base URL.");
+if (!assetWiring.includes("ORIGINAL_CURRENCY_ICONS")) {
+  failures.push("admin/asset-wiring.js does not preserve the original admin currency icon map.");
 }
-if (!assetWiring.includes("PLAYER_ACTION_ICONS")) {
-  failures.push("admin/asset-wiring.js does not map player-row actions to repository-owned icons.");
+if (!assetWiring.includes("ORIGINAL_PLAYER_ACTION_ICONS")) {
+  failures.push("admin/asset-wiring.js does not preserve the original player quick-action icon map.");
+}
+if (assetWiring.includes("assets/icons/player-actions/")) {
+  failures.push("admin/asset-wiring.js still references the non-original replacement player icon set.");
+}
+if (assetWiring.includes("../frontend/src/assets/currency-symbols")) {
+  failures.push("admin/asset-wiring.js still redirects currency icons outside the original admin asset tree.");
 }
 if (!assetWiring.includes("if (!isContentMediaImage(image)) return;")) {
   failures.push("admin/asset-wiring.js still applies the generic media placeholder to every UI image.");
