@@ -191,6 +191,24 @@ function isContractReviewPath(path, method) {
       .test(String(path));
 }
 
+function isLegacyContractDecisionRequest(request) {
+  try {
+    return /\/games\/[^/]+\/contract-submissions\/[^/]+\/decision$/.test(
+      new URL(request.url).pathname,
+    );
+  } catch {
+    return false;
+  }
+}
+
+function contractRewardPathFromReview(path) {
+  const match = String(path).match(
+    /^\/staff\/game-sessions\/([^/]+)\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/,
+  );
+  if (!match) return "";
+  return `/staff/game-sessions/${match[1]}/contracts/${match[2]}/progress/${match[3]}/rewards/issue`;
+}
+
 function atomicContractRewardPath(path, method) {
   if (method !== "POST") return null;
   const match = String(path).match(
@@ -291,7 +309,52 @@ export async function proxyClassroom(
 
   if (isContractReviewPath(path, method) && overrideBody === undefined) {
     const body = await normalizeContractReview(request);
-    return fetchClassroom(request, context, path, "POST", body);
+    const reviewResponse = await fetchClassroom(
+      request,
+      context,
+      path,
+      "POST",
+      body,
+    );
+
+    if (
+      !reviewResponse.ok ||
+      body.action !== "approve" ||
+      !isLegacyContractDecisionRequest(request)
+    ) {
+      return reviewResponse;
+    }
+
+    const rewardPath = contractRewardPathFromReview(path);
+    if (!rewardPath) return reviewResponse;
+
+    const rewardResponse = await proxyClassroom(
+      request,
+      context,
+      rewardPath,
+      "POST",
+      {},
+    );
+    if (!rewardResponse.ok) return rewardResponse;
+
+    const reviewBody = object(
+      await reviewResponse.clone().json().catch(() => ({})),
+    );
+    const rewardBody = object(
+      await rewardResponse.clone().json().catch(() => ({})),
+    );
+
+    return json(request, 200, {
+      data: {
+        reviewed: true,
+        rewardIssued: rewardBody.rewardIssued === true,
+        alreadyIssued: rewardBody.alreadyIssued === true,
+        progress: rewardBody.progress || reviewBody.progress || null,
+        rewardResult: rewardBody.rewardResult || {},
+      },
+      review: reviewBody,
+      reward: rewardBody,
+    });
   }
 
   if (isStoreMutationPath(path, method) && overrideBody === undefined) {
