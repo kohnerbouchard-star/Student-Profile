@@ -2,26 +2,80 @@
   "use strict";
 
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const LOCAL_API_PREFIX = "/api/admin";
 
   function text(value) {
     return String(value ?? "").trim();
+  }
+
+  function record(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
   }
 
   function feature() {
     return window.Econovaria?.features?.adminOverviewTerminal || null;
   }
 
-  function modelPlayers() {
-    const model = feature()?.currentModel || {};
-    const candidates = [model.players, model.roster, model.playerRoster]
-      .find(Array.isArray) || [];
+  function uniquePlayers(candidates) {
     const seen = new Set();
-    return candidates.filter((player) => {
-      const id = text(player?.id || player?.playerId || player?.player_id);
+    return (Array.isArray(candidates) ? candidates : []).filter((player) => {
+      const id = playerUuid(player);
       if (!id || seen.has(id)) return false;
       seen.add(id);
       return true;
     });
+  }
+
+  function modelPlayers() {
+    const model = feature()?.currentModel || {};
+    const candidates = [model.players, model.roster, model.playerRoster]
+      .find(Array.isArray) || [];
+    return uniquePlayers(candidates);
+  }
+
+  function responsePlayers(value) {
+    const source = record(value);
+    const data = record(source.data);
+    const payload = record(source.payload);
+    const nestedData = record(data.data);
+    const candidates = [
+      source.players,
+      source.roster,
+      source.playerRoster,
+      data.players,
+      data.roster,
+      data.playerRoster,
+      payload.players,
+      payload.roster,
+      payload.playerRoster,
+      nestedData.players,
+      nestedData.roster,
+      nestedData.playerRoster,
+    ].find(Array.isArray) || [];
+    return uniquePlayers(candidates);
+  }
+
+  async function loadPlayers(gameId) {
+    if (!gameId) return modelPlayers();
+
+    try {
+      const response = await window.fetch(
+        `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players?include=identity,credentials`,
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok) return modelPlayers();
+      const players = responsePlayers(await response.json());
+      return players.length ? players : modelPlayers();
+    } catch (_) {
+      return modelPlayers();
+    }
   }
 
   function playerUuid(player) {
@@ -103,7 +157,7 @@
       '<span class="admin-terminal-action-copy"><strong>Player IDs</strong><small>RFID + Access Codes</small></span>',
       '<span class="admin-terminal-action-arrow" aria-hidden="true">↗</span>',
     ].join("");
-    button.addEventListener("click", openIdentityManager);
+    button.addEventListener("click", () => void openIdentityManager());
     addPlayer.insertAdjacentElement("afterend", button);
   }
 
@@ -135,9 +189,10 @@
     }
   }
 
-  function openIdentityManager() {
+  async function openIdentityManager() {
     document.querySelector("[data-admin-player-identity-manager-dialog]")?.remove();
-    const players = modelPlayers();
+    const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    let players = [];
 
     const overlay = document.createElement("div");
     overlay.setAttribute("data-admin-player-identity-manager-dialog", "");
@@ -164,11 +219,9 @@
     selectLabel.innerHTML = '<span style="font-size:12px;font-weight:800;letter-spacing:.08em">PLAYER</span>';
     const select = document.createElement("select");
     select.required = true;
+    select.disabled = true;
     select.style.cssText = "min-height:44px;border:1px solid rgba(105,250,255,.28);background:#020b12;color:#e9fbff;padding:0 12px";
-    select.append(new Option(players.length ? "Select player" : "No players available", ""));
-    for (const player of players) {
-      select.append(new Option(optionLabel(player), playerUuid(player)));
-    }
+    select.append(new Option("Loading players…", ""));
     selectLabel.append(select);
 
     const identifierLabel = document.createElement("label");
@@ -187,6 +240,7 @@
 
     const message = document.createElement("p");
     message.setAttribute("role", "status");
+    message.textContent = "Loading players…";
     message.style.cssText = "min-height:20px;margin:0;color:rgba(233,251,255,.7);font-size:13px";
 
     const actions = document.createElement("div");
@@ -198,6 +252,7 @@
     cancel.addEventListener("click", () => overlay.remove());
     const save = document.createElement("button");
     save.type = "submit";
+    save.disabled = true;
     save.textContent = "Save credentials";
     save.style.cssText = "min-height:40px;padding:0 15px;border:1px solid #ff6700;background:#ff6700;color:#071421;font-weight:800;cursor:pointer";
     actions.append(cancel, save);
@@ -211,7 +266,6 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const gameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
       const player = players.find((candidate) => playerUuid(candidate) === select.value);
       const identifier = text(form.elements.playerIdentifier.value);
       const accessCode = text(form.elements.accessCode.value);
@@ -260,6 +314,21 @@
     });
     document.body.append(overlay);
     select.focus();
+
+    players = await loadPlayers(gameId);
+    if (!document.body.contains(overlay)) return;
+
+    select.replaceChildren();
+    select.append(new Option(players.length ? "Select player" : "No players available", ""));
+    for (const player of players) {
+      select.append(new Option(optionLabel(player), playerUuid(player)));
+    }
+    select.disabled = players.length === 0;
+    save.disabled = players.length === 0;
+    message.textContent = players.length
+      ? `${players.length} player${players.length === 1 ? "" : "s"} loaded.`
+      : "No players are available in this game.";
+    message.style.color = players.length ? "rgba(233,251,255,.7)" : "#ff6976";
   }
 
   function decorate(root = document) {
@@ -279,6 +348,7 @@
 
   window.EconovariaPlayerIdentityWiring = {
     decorateCreateForm,
+    loadPlayers,
     openIdentityManager,
   };
 })();
