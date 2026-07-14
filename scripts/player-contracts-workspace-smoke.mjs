@@ -7,8 +7,6 @@ const GAME_ID = "00000000-0000-4000-8000-000000000901";
 const PLAYER_UUID = "00000000-0000-4000-8000-000000000902";
 const CONTRACT_ID = "00000000-0000-4000-8000-000000000903";
 const PLAYER_IDENTIFIER = "RFID:CONTRACT-01";
-const ACCESS_CODE = "WORK-4826";
-const GAME_CODE = "WORK01";
 const SESSION_TOKEN = "ps_contract_workspace_session_token";
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
@@ -20,21 +18,16 @@ const submissions = [];
 let submittedProgress = null;
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => {
-  if (message.type() === "error") errors.push(`console: ${message.text()}`);
-});
+page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 page.on("requestfailed", (request) => {
   if (request.url().includes("cdn.jsdelivr.net")) return;
   errors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`);
 });
-
-await page.route("https://cdn.jsdelivr.net/**", async (route) => {
-  await route.fulfill({
-    status: 200,
-    contentType: "application/javascript",
-    body: "window.supabase = window.supabase || {};",
-  });
-});
+await page.route("https://cdn.jsdelivr.net/**", (route) => route.fulfill({
+  status: 200,
+  contentType: "application/javascript",
+  body: "window.supabase = window.supabase || {};",
+}));
 
 function contractDto() {
   return {
@@ -62,28 +55,14 @@ function contractDto() {
     metadata: {
       difficulty: "Advanced",
       materials: [
-        {
-          type: "link",
-          typeLabel: "External link",
-          title: "Market evidence guide",
-          url: "https://example.test/market-evidence",
-          questions: [],
-        },
+        { type: "link", typeLabel: "External link", title: "Market evidence guide", url: "https://example.test/market-evidence", questions: [] },
         {
           type: "quiz",
           typeLabel: "Quiz",
           title: "Evidence check",
           questions: [
-            {
-              prompt: "Name the first source you used.",
-              questionType: "short_answer",
-              required: true,
-            },
-            {
-              prompt: "Explain how the evidence supports your conclusion.",
-              questionType: "paragraph",
-              required: true,
-            },
+            { prompt: "Name the first source you used.", questionType: "short_answer", required: true },
+            { prompt: "Explain how the evidence supports your conclusion.", questionType: "paragraph", required: true },
           ],
         },
       ],
@@ -97,14 +76,7 @@ function contractDto() {
 function dashboardResponse() {
   return {
     ok: true,
-    gameSession: {
-      id: GAME_ID,
-      name: "Contract Workspace Game",
-      status: "active",
-      marketStatus: "open",
-      currentTick: 1,
-      updatedAt: "2026-07-15T08:00:00.000Z",
-    },
+    gameSession: { id: GAME_ID, name: "Contract Workspace Game", status: "active", marketStatus: "open", currentTick: 1, updatedAt: "2026-07-15T08:00:00.000Z" },
     me: {
       playerId: PLAYER_UUID,
       displayName: "Contract Smoke Player",
@@ -116,13 +88,7 @@ function dashboardResponse() {
       store: { currencyCode: "NRC", listings: [], inventory: [], recentPurchases: [] },
       contracts: { available: [contractDto()], progress: submittedProgress ? [submittedProgress] : [] },
     },
-    public: {
-      leaderboard: [],
-      players: [],
-      market: { stocks: [], news: [] },
-      contracts: [contractDto()],
-      storeListings: [],
-    },
+    public: { leaderboard: [], players: [], market: { stocks: [], news: [] }, contracts: [contractDto()], storeListings: [] },
     unseenCutscenes: [],
     realtime: { publicChannel: `game:${GAME_ID}:public`, lastSequence: null, events: [] },
   };
@@ -131,70 +97,44 @@ function dashboardResponse() {
 await page.route("**/functions/v1/classroom-api/**", async (route) => {
   const request = route.request();
   const pathname = new URL(request.url()).pathname;
+  const headers = { "access-control-allow-origin": "*", "cache-control": "no-store" };
 
   if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers": "authorization, apikey, content-type, x-player-session-token",
-        "access-control-allow-methods": "GET,POST,OPTIONS",
-      },
-      body: "",
-    });
+    await route.fulfill({ status: 204, headers: { ...headers, "access-control-allow-headers": "authorization, apikey, content-type, x-player-session-token", "access-control-allow-methods": "GET,POST,OPTIONS" }, body: "" });
     return;
   }
 
   if (request.method() === "POST" && pathname.endsWith("/players/login")) {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({
-        ok: true,
-        gameSession: { id: GAME_ID, name: "Contract Workspace Game", status: "active" },
-        player: { id: PLAYER_UUID, displayName: "Contract Smoke Player", rosterLabel: "GRADE-10-01", playerIdentifier: PLAYER_IDENTIFIER, status: "active" },
-        session: { token: SESSION_TOKEN, status: "active", expiresAt: new Date(Date.now() + 43_200_000).toISOString() },
-      }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify({
+      ok: true,
+      gameSession: { id: GAME_ID, name: "Contract Workspace Game", status: "active" },
+      player: { id: PLAYER_UUID, displayName: "Contract Smoke Player", rosterLabel: "GRADE-10-01", playerIdentifier: PLAYER_IDENTIFIER, status: "active" },
+      session: { token: SESSION_TOKEN, status: "active", expiresAt: new Date(Date.now() + 43_200_000).toISOString() },
+    }) });
     return;
   }
 
   if (request.method() === "GET" && pathname.endsWith("/players/me")) {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({
-        ok: true,
-        gameSession: { id: GAME_ID, name: "Contract Workspace Game", status: "active" },
-        player: { id: PLAYER_UUID, displayName: "Contract Smoke Player", rosterLabel: "GRADE-10-01", playerIdentifier: PLAYER_IDENTIFIER, status: "active" },
-        availableActions: [],
-        balances: [{ accountType: "cash", currencyCode: "NRC", balance: 1000 }],
-        inventory: [],
-        holdings: [],
-      }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify({
+      ok: true,
+      gameSession: { id: GAME_ID, name: "Contract Workspace Game", status: "active" },
+      player: { id: PLAYER_UUID, displayName: "Contract Smoke Player", rosterLabel: "GRADE-10-01", playerIdentifier: PLAYER_IDENTIFIER, status: "active" },
+      availableActions: [],
+      balances: [{ accountType: "cash", currencyCode: "NRC", balance: 1000 }],
+      inventory: [],
+      holdings: [],
+    }) });
     return;
   }
 
   if (request.method() === "GET" && pathname.endsWith("/players/me/game/dashboard")) {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify(dashboardResponse()),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify(dashboardResponse()) });
     return;
   }
 
   if (request.method() === "POST" && pathname.endsWith(`/players/me/contracts/${CONTRACT_ID}/submit`)) {
     const body = request.postDataJSON();
-    submissions.push({
-      body,
-      playerSessionToken: request.headers()["x-player-session-token"] || "",
-      authorization: request.headers().authorization || "",
-    });
+    submissions.push({ body, playerSessionToken: request.headers()["x-player-session-token"] || "" });
     submittedProgress = {
       progressId: "00000000-0000-4000-8000-000000000905",
       gameSessionId: GAME_ID,
@@ -209,70 +149,49 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
       createdAt: "2026-07-15T09:00:00.000Z",
       updatedAt: "2026-07-15T09:00:00.000Z",
     };
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({ ok: true, contract: contractDto(), progress: submittedProgress }),
-    });
+    await route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify({ ok: true, contract: contractDto(), progress: submittedProgress }) });
     return;
   }
 
-  await route.fulfill({
-    status: 404,
-    contentType: "application/json",
-    headers: { "access-control-allow-origin": "*" },
-    body: JSON.stringify({ ok: false, error: { code: "route_not_found", message: pathname } }),
-  });
+  await route.fulfill({ status: 404, contentType: "application/json", headers, body: JSON.stringify({ ok: false, error: { code: "route_not_found", message: pathname } }) });
 });
 
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#playerForm", { timeout: 15_000 });
-  await page.locator("#gameCode").fill(GAME_CODE);
+  await page.locator("#gameCode").fill("WORK01");
   await page.locator("#playerId").fill(PLAYER_IDENTIFIER);
-  await page.locator("#playerAccessCode").fill(ACCESS_CODE);
+  await page.locator("#playerAccessCode").fill("WORK-4826");
   await page.locator("#playerForm button[type='submit']").click();
   await page.waitForFunction(() => document.getElementById("appShell")?.classList.contains("hidden") === false, null, { timeout: 10_000 });
 
   const contractsNav = page.locator('[data-view="contracts"]');
   await contractsNav.waitFor({ state: "visible", timeout: 8000 });
   await contractsNav.click();
-  await page.waitForSelector('#contracts.view.active [data-contract-id="' + CONTRACT_ID + '"]', { timeout: 8000 });
+  const card = page.locator(`article.contract-card[data-contract-id="${CONTRACT_ID}"]`);
+  await card.waitFor({ state: "visible", timeout: 8000 });
 
-  const cardText = await page.locator(`[data-contract-id="${CONTRACT_ID}"]`).innerText();
+  const cardText = await card.innerText();
   if (!cardText.includes("Market Evidence Contract") || !cardText.includes("NRC 75") || !cardText.includes("2× Research Pass")) {
     throw new Error(`Contract card omitted core details: ${cardText}`);
   }
-  if (/correct answer|limited resources/i.test(cardText)) {
-    throw new Error("Player contract UI exposed an answer key.");
-  }
+  if (/correct answer|limited resources/i.test(cardText)) throw new Error("Player contract UI exposed an answer key.");
 
-  const form = page.locator(`[data-contract-submit-form][data-contract-id="${CONTRACT_ID}"]`);
+  const form = card.locator("[data-contract-submit-form]");
   await form.locator('[name="writtenResponse"]').fill("The evidence indicates the market decision is justified.");
   await form.locator('[name="answer-1-0"]').fill("Market evidence guide");
   await form.locator('[name="answer-1-1"]').fill("The guide supports the conclusion by comparing costs and incentives.");
   await form.locator('button[type="submit"]').click();
-  await page.waitForFunction(() => document.querySelector('[data-contract-id="' + CONTRACT_ID + '"]')?.textContent?.includes("Submitted"), null, { timeout: 10_000 });
+  await page.waitForFunction((contractId) => document.querySelector(`article.contract-card[data-contract-id="${contractId}"]`)?.textContent?.includes("Submitted"), CONTRACT_ID, { timeout: 10_000 });
 
-  if (submissions.length !== 1) {
-    throw new Error(`Expected one contract submission, received ${submissions.length}.`);
-  }
+  if (submissions.length !== 1) throw new Error(`Expected one contract submission, received ${submissions.length}.`);
   const submission = submissions[0];
-  if (submission.playerSessionToken !== SESSION_TOKEN) {
-    throw new Error("Contract submission omitted the authenticated player session token.");
-  }
-  if (submission.body.gameSessionId !== GAME_ID || !submission.body.evidencePayload) {
-    throw new Error(`Contract submission used the wrong body: ${JSON.stringify(submission.body)}.`);
-  }
+  if (submission.playerSessionToken !== SESSION_TOKEN) throw new Error("Contract submission omitted the authenticated player session token.");
+  if (submission.body.gameSessionId !== GAME_ID || !submission.body.evidencePayload) throw new Error(`Wrong submission body: ${JSON.stringify(submission.body)}.`);
   for (const forbidden of ["playerId", "playerIds", "playerSessionId", "sessionId"]) {
-    if (forbidden in submission.body || forbidden in submission.body.evidencePayload) {
-      throw new Error(`Contract submission exposed client-supplied identity field ${forbidden}.`);
-    }
+    if (forbidden in submission.body || forbidden in submission.body.evidencePayload) throw new Error(`Client-supplied identity field ${forbidden} was sent.`);
   }
-  if (submission.body.evidencePayload.answers.length !== 2) {
-    throw new Error("Quiz answers were not serialized.");
-  }
+  if (submission.body.evidencePayload.answers.length !== 2) throw new Error("Quiz answers were not serialized.");
 
   writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, errors }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-contracts-workspace.png`, fullPage: true });
