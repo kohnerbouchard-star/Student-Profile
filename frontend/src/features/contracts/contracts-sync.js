@@ -1,8 +1,10 @@
 (function initEconovariaPlayerContractsSync() {
   "use strict";
 
+  const NAV_REFRESH_WINDOW_MS = 1500;
   let refreshPromise = null;
   let dashboardWrapped = false;
+  let lastRefreshAt = 0;
 
   function feature() {
     return window.Econovaria?.features?.contracts || null;
@@ -26,9 +28,11 @@
     );
   }
 
-  async function refreshPlayerContracts() {
+  async function refreshPlayerContracts(options = {}) {
+    const force = options.force === true;
     if (!hasPlayerSession()) return null;
     if (refreshPromise) return refreshPromise;
+    if (!force && Date.now() - lastRefreshAt < NAV_REFRESH_WINDOW_MS) return null;
 
     refreshPromise = (async () => {
       const contractsFeature = feature();
@@ -61,6 +65,7 @@
         },
       });
       contractsFeature.renderContracts?.();
+      lastRefreshAt = Date.now();
       return result;
     })().catch((error) => {
       console.error("[Econovaria contracts] Contract refresh failed.", error);
@@ -83,7 +88,7 @@
     const original = window.loadPlayerGameDashboardSnapshot;
     window.loadPlayerGameDashboardSnapshot = async function contractsAwareDashboardRefresh(...args) {
       const result = await original.apply(this, args);
-      await refreshPlayerContracts();
+      await refreshPlayerContracts({ force: true });
       return result;
     };
     dashboardWrapped = true;
