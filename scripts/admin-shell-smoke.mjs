@@ -15,6 +15,12 @@ function localAssetPath(reference) {
   return resolve(adminRoot, reference.slice(2));
 }
 
+function sourceContext(source, term, before = 800, after = 1800) {
+  const index = source.indexOf(term);
+  if (index < 0) return `[missing: ${term}]`;
+  return source.slice(Math.max(0, index - before), Math.min(source.length, index + term.length + after));
+}
+
 const html = readFileSync(indexPath, "utf8");
 const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
 const styles = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((match) => match[1]);
@@ -56,6 +62,7 @@ for (const reference of scripts) {
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
+const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
 assert(
   auth.includes("completeInitialBootstrapRender(feature)"),
@@ -95,4 +102,18 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
+console.log("ADMIN_INTERACTION_DIAGNOSTIC_BEGIN");
+for (const term of [
+  'document.addEventListener("click"',
+  "data-admin-section",
+  "dataset.adminSection",
+  "adminOverviewTerminal =",
+  "renderShell:",
+  "bind",
+  "attach",
+]) {
+  console.log(`\n--- ${term} ---\n${sourceContext(terminal, term)}`);
+}
+console.log(`\n--- terminal tail ---\n${terminal.slice(-12000)}`);
+console.log("ADMIN_INTERACTION_DIAGNOSTIC_END");
 console.log("Admin shell static smoke checks passed.");
