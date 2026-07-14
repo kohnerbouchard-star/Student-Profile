@@ -109,7 +109,12 @@ const successfulPrimary = await windowObject.fetch(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       action: "create-player",
-      payload: { displayName: "No Retry Player", rosterLabel: "NO-RETRY" },
+      payload: {
+        displayName: "No Retry Player",
+        rosterLabel: "NO-RETRY",
+        playerIdentifier: "RFID:NO-RETRY",
+        accessCode: "NO-RETRY-4826",
+      },
     }),
   }),
 );
@@ -128,6 +133,8 @@ const playerResponse = await windowObject.fetch(
       payload: {
         displayName: "Fallback Player",
         rosterLabel: "FALLBACK-001",
+        playerIdentifier: "RFID:FALLBACK-001",
+        accessCode: "FALLBACK-5937",
         startingLocation: "NORTHREACH",
       },
     }),
@@ -143,8 +150,12 @@ assert(
 assert(calls[1].method === "POST", "Player fallback did not use POST.");
 assert(calls[1].body.displayName === "Fallback Player", "Player display name was not normalized.");
 assert(calls[1].body.rosterLabel === "FALLBACK-001", "Player roster label was not normalized.");
+assert(calls[1].body.playerIdentifier === "RFID:FALLBACK-001", "RFID Player ID was not normalized.");
+assert(calls[1].body.accessCode === "FALLBACK-5937", "Access Code was not normalized.");
 assert(calls[1].headers.authorization === `Bearer ${ACCESS_TOKEN}`, "Player fallback omitted authorization.");
 assert(Boolean(calls[1].headers.apikey), "Player fallback omitted the publishable API key.");
+assert(!("x-csrf-token" in calls[1].headers), "Player fallback forwarded x-csrf-token.");
+assert(!("x-econovaria-csrf" in calls[1].headers), "Player fallback forwarded x-econovaria-csrf.");
 
 calls.length = 0;
 primaryStatus = 404;
@@ -154,7 +165,7 @@ const attendanceResponse = await windowObject.fetch(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       action: "scan-attendance",
-      payload: { scannedCode: "PLAYER-CODE-123", timezone: "Asia/Seoul" },
+      payload: { scannedCode: "RFID:PLAYER-123", timezone: "Asia/Seoul" },
     }),
   }),
 );
@@ -164,7 +175,7 @@ assert(
   calls[1].url.endsWith(`/functions/v1/classroom-api/games/${GAME_ID}/attendance/scan`),
   `Attendance fallback used an unexpected URL: ${calls[1].url}`,
 );
-assert(calls[1].body.playerId === "PLAYER-CODE-123", "Attendance code was not normalized.");
+assert(calls[1].body.playerId === "RFID:PLAYER-123", "Attendance Player ID was not normalized.");
 assert(calls[1].body.deviceTimezone === "Asia/Seoul", "Attendance timezone was not normalized.");
 
-console.log("Admin classroom write fallback smoke passed.");
+console.log("Admin classroom write fallback identity smoke passed.");
