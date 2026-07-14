@@ -72,21 +72,29 @@ assert(
   "admin-overview-boot.js must not monkey patch renderShell.",
 );
 assert(
-  boot.includes("function seedAuthenticatedAdminAuthorization()"),
-  "Authenticated authorization must be seeded before the protected shell renders.",
+  boot.includes("function installAuthenticatedAdminModelBridge()"),
+  "The authenticated model bridge is missing.",
 );
 assert(
-  boot.includes('if (!session?.accessToken) return;'),
-  "Authorization seeding must require a transferred authenticated session.",
+  boot.includes('Object.defineProperty(feature, "currentModel"'),
+  "Model replacement must preserve authenticated authorization fields.",
 );
 assert(
-  boot.includes('permissions') && boot.includes('["*"]'),
-  "The authenticated owner console must receive its initial wildcard UI capability.",
+  boot.includes('permissions: Array.isArray(next.permissions)') && boot.includes('["*"]'),
+  "The model bridge must preserve or restore administrator permissions.",
 );
 assert(
-  boot.indexOf("seedAuthenticatedAdminAuthorization();") <
+  boot.includes('roles: Array.isArray(next.roles)') && boot.includes('["game_admin"]'),
+  "The model bridge must preserve or restore administrator roles.",
+);
+assert(
+  boot.includes("adminRole: next.adminRole || authorization.adminRole"),
+  "The model bridge must preserve the active administrator role.",
+);
+assert(
+  boot.indexOf("installAuthenticatedAdminModelBridge();") <
     boot.indexOf("auth.attachTerminal({ mount, feature });"),
-  "Authorization must be seeded before auth mounts and permission-gates the shell.",
+  "The authorization bridge must be installed before auth mounts the terminal.",
 );
 assert(
   auth.includes('headers.delete("x-econovaria-admin-read")'),
