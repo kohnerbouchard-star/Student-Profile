@@ -14,7 +14,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
-      - "scripts/admin-account-pages-smoke.mjs"
+      - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -39,7 +39,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
-      - "scripts/admin-account-pages-smoke.mjs"
+      - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
@@ -121,7 +121,7 @@ jobs:
         run: node scripts/admin-browser-smoke.mjs
 
       - name: Audit v606 account surfaces
-        run: node scripts/admin-account-pages-smoke.mjs
+        run: node scripts/admin-account-surfaces-smoke.mjs
 
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
