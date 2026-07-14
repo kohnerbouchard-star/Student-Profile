@@ -219,14 +219,14 @@ try {
     return /confirmed/i.test(state);
   }, null, { timeout: 5000 });
 
-  const result = await page.evaluate(() => ({
+  const browserResult = await page.evaluate(() => ({
     player: document.querySelector("[data-admin-terminal-last-scan-player]")?.textContent?.trim() || "",
     status: document.querySelector("[data-admin-terminal-last-scan-status]")?.textContent?.trim() || "",
     resultHidden: document.querySelector("[data-admin-terminal-last-scan-result]")?.hasAttribute("hidden") ?? true,
     emptyHidden: document.querySelector("[data-admin-terminal-last-scan-empty]")?.hasAttribute("hidden") ?? false,
     scannerState: document.querySelector("[data-admin-terminal-scanner-state]")?.textContent?.trim() || "",
-    scannerSource,
   }));
+  const result = { ...browserResult, scannerSource };
 
   writeFileSync(`${ARTIFACT_DIR}/attendance-action-runtime.json`, JSON.stringify({ result, writes, errors }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/attendance-action.png`, fullPage: true });
