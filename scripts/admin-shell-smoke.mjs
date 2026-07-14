@@ -23,6 +23,7 @@ const expectedScripts = [
   "./session-gate.js",
   "./admin-auth.js",
   "./dist/admin-overview-terminal.js",
+  "./asset-wiring.js",
   "./create-action-adapter.js",
   "./classroom-write-fallback.js",
   "./player-access-code-bridge.js",
@@ -59,6 +60,7 @@ for (const reference of scripts) {
 
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
+const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
 const createActionAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const classroomFallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
 const playerAccessCodeBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
@@ -117,6 +119,12 @@ assert(
   "Forwarded admin requests must include the selected game ID.",
 );
 assert(
+  assetWiring.includes("player-identity-motion.svg") &&
+    assetWiring.includes("media-placeholder.svg") &&
+    assetWiring.includes("replaceBrokenMotionMedia"),
+  "Repository-owned media fallback wiring is incomplete.",
+);
+assert(
   createActionAdapter.includes('source.action === "create-player"') &&
     createActionAdapter.includes('source.action === "create-contract"') &&
     createActionAdapter.includes('source.action === "save-store-item"'),
@@ -164,8 +172,10 @@ assert(
   "The admin player UI must expose writable RFID and Access Code fields without exposing UUIDs.",
 );
 assert(
-  existsSync(resolve(adminRoot, "assets/icons/rfid-card.svg")),
-  "The repository-owned RFID icon is missing.",
+  existsSync(resolve(adminRoot, "assets/icons/rfid-card.svg")) &&
+    existsSync(resolve(adminRoot, "assets/icons/media-placeholder.svg")) &&
+    existsSync(resolve(adminRoot, "assets/media/player-identity-motion.svg")),
+  "One or more repository-owned admin assets are missing.",
 );
 assert(
   terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'),
@@ -200,4 +210,4 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
-console.log("Admin shell, RFID identity, create-action, classroom fallback, and authorization smoke checks passed.");
+console.log("Admin shell, assets, RFID identity, create-action, classroom fallback, and authorization smoke checks passed.");
