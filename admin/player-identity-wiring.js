@@ -19,9 +19,7 @@
   }
 
   function record(value) {
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? value
-      : {};
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
   }
 
   function feature() {
@@ -62,9 +60,7 @@
 
   function modelPlayers() {
     const model = feature()?.currentModel || {};
-    return uniquePlayers(
-      [model.players, model.roster, model.playerRoster].find(Array.isArray) || [],
-    );
+    return uniquePlayers([model.players, model.roster, model.playerRoster].find(Array.isArray) || []);
   }
 
   function responsePlayers(value) {
@@ -127,16 +123,11 @@
         if (!Array.isArray(model[key])) continue;
         model[key] = model[key].map((player) =>
           playerUuid(player) === playerId
-            ? {
-                ...player,
-                playerIdentifier: identifier,
-                player_identifier: identifier,
-              }
+            ? { ...player, playerIdentifier: identifier, player_identifier: identifier }
             : player
         );
       }
     }
-
     const cached = playerCache.get(playerId);
     if (cached) {
       playerCache.set(playerId, {
@@ -185,19 +176,11 @@
         content.includes("generated after create") ||
         content.includes("generated securely");
       if (!generated) return false;
-      if (identifier) {
-        return content.includes("player id") && !content.includes("access code");
-      }
-      return content.includes("access code");
+      return identifier
+        ? content.includes("player id") && !content.includes("access code")
+        : content.includes("access code");
     });
-
-    candidates.sort((left, right) => {
-      const leftText = normalizedText(left.textContent);
-      const rightText = normalizedText(right.textContent);
-      const leftPenalty = leftText.includes("player id") && leftText.includes("access code") ? 10000 : 0;
-      const rightPenalty = rightText.includes("player id") && rightText.includes("access code") ? 10000 : 0;
-      return leftText.length + leftPenalty - (rightText.length + rightPenalty);
-    });
+    candidates.sort((left, right) => normalizedText(left.textContent).length - normalizedText(right.textContent).length);
     return candidates[0] || null;
   }
 
@@ -217,16 +200,11 @@
     const tile = generatedCredentialTile(form, kind);
     if (tile) {
       tile.replaceWith(field);
-      return field;
+      return;
     }
-
     const anchor = fallbackInsertionAnchor(form);
-    if (anchor?.parentElement) {
-      anchor.insertAdjacentElement("beforebegin", field);
-    } else {
-      form.append(field);
-    }
-    return field;
+    if (anchor?.parentElement) anchor.insertAdjacentElement("beforebegin", field);
+    else form.append(field);
   }
 
   function removeRemainingGeneratedCredentialTiles(form) {
@@ -245,11 +223,9 @@
       preferred.textContent = "Player ID is the configurable RFID/card value. The UUID remains backend-only.";
       return;
     }
-
     const helper = [...form.querySelectorAll("small, p")].find((element) => {
       const content = normalizedText(element.textContent);
-      return content.includes("player id") && content.includes("access code") &&
-        content.includes("generated");
+      return content.includes("player id") && content.includes("access code") && content.includes("generated");
     });
     if (helper) {
       helper.textContent = "Set the RFID-facing Player ID and Access Code now. The UUID remains backend-only.";
@@ -261,7 +237,6 @@
 
     let identifierInput = form.querySelector('[name="playerIdentifier"]');
     let accessCodeInput = form.querySelector('[name="accessCode"]');
-
     if (!identifierInput) {
       insertCredentialField(form, "identifier");
       identifierInput = form.querySelector('[name="playerIdentifier"]');
@@ -270,7 +245,6 @@
       insertCredentialField(form, "accessCode");
       accessCodeInput = form.querySelector('[name="accessCode"]');
     }
-
     if (!identifierInput || !accessCodeInput) return;
 
     identifierInput.required = true;
@@ -284,9 +258,7 @@
 
   function decorateCreateForm(root = document) {
     const forms = [];
-    if (root instanceof Element && root.matches("[data-admin-terminal-player-form]")) {
-      forms.push(root);
-    }
+    if (root instanceof Element && root.matches("[data-admin-terminal-player-form]")) forms.push(root);
     forms.push(...(root.querySelectorAll?.("[data-admin-terminal-player-form]") || []));
     [...new Set(forms)].forEach(configureCreateForm);
   }
@@ -296,9 +268,7 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      [data-admin-player-create-credential-field] {
-        min-width: 0;
-      }
+      [data-admin-player-create-credential-field] { min-width: 0; }
       ${SETTINGS_SELECTOR} {
         margin: 18px 0 0;
         padding: 18px;
@@ -314,11 +284,7 @@
         gap: 12px;
         margin-bottom: 16px;
       }
-      ${SETTINGS_SELECTOR} .player-identity-settings__icon {
-        width: 32px;
-        height: 32px;
-        flex: 0 0 auto;
-      }
+      ${SETTINGS_SELECTOR} .player-identity-settings__icon { width: 32px; height: 32px; flex: 0 0 auto; }
       ${SETTINGS_SELECTOR} h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.25; }
       ${SETTINGS_SELECTOR} p {
         margin: 0;
@@ -381,10 +347,7 @@
         cursor: pointer;
       }
       ${SETTINGS_SELECTOR} button[disabled] { cursor: wait; opacity: .64; }
-      tr[data-admin-player-identity-settings-row] > td {
-        padding: 0 12px 16px;
-        border: 0;
-      }
+      tr[data-admin-player-identity-settings-row] > td { padding: 0 12px 16px; border: 0; }
       @media (max-width:760px) {
         ${SETTINGS_SELECTOR} .player-identity-settings__grid { grid-template-columns: 1fr; }
         ${SETTINGS_SELECTOR} .player-identity-settings__footer { align-items: stretch; }
@@ -448,9 +411,7 @@
     const status = document.createElement("div");
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
-    status.textContent = rosterLabel(player)
-      ? `Roster label: ${rosterLabel(player)}`
-      : "Ready to save.";
+    status.textContent = rosterLabel(player) ? `Roster label: ${rosterLabel(player)}` : "Ready to save.";
 
     const save = document.createElement("button");
     save.type = "submit";
@@ -479,9 +440,7 @@
 
       save.disabled = true;
       save.textContent = "Saving…";
-      status.textContent = accessCode
-        ? "Saving Player ID and new Access Code…"
-        : "Saving Player ID…";
+      status.textContent = accessCode ? "Saving Player ID and new Access Code…" : "Saving Player ID…";
       status.style.color = "rgba(233,251,255,.68)";
 
       try {
@@ -519,7 +478,6 @@
       currentFeature?.selectedSection,
     ).toLowerCase();
     if (active === "players") return true;
-
     const nav = document.querySelector('[data-admin-section="Players"]');
     return Boolean(nav && (
       nav.getAttribute("aria-current") === "page" ||
@@ -545,9 +503,7 @@
           "href",
           "aria-label",
           "title",
-        ]) {
-          parts.push(node.getAttribute(name) || "");
-        }
+        ]) parts.push(node.getAttribute(name) || "");
       }
       node = node.parentElement;
       depth += 1;
@@ -559,7 +515,6 @@
     if (!(element instanceof Element)) return null;
     const haystack = elementHaystack(element);
     const players = allPlayers();
-
     for (const player of players) {
       const id = playerUuid(player).toLowerCase();
       if (id && haystack.includes(id)) return player;
@@ -568,7 +523,6 @@
       const identifier = playerIdentifier(player).toLowerCase();
       if (identifier && haystack.includes(identifier)) return player;
     }
-
     const nameMatches = players.filter((player) => {
       const name = playerName(player).toLowerCase();
       return name.length >= 3 && haystack.includes(name);
@@ -615,9 +569,7 @@
       const row = selectedPlayerElement.closest(
         "tr, [role='row'], article, li, .admin-terminal-player-row, .admin-terminal-card, .admin-terminal-table-row",
       );
-      if (row) {
-        return { mode: row.tagName === "TR" ? "table-row" : "after", element: row };
-      }
+      if (row) return { mode: row.tagName === "TR" ? "table-row" : "after", element: row };
     }
     return null;
   }
@@ -633,8 +585,7 @@
 
   function clearIdentitySettings() {
     document.querySelectorAll(SETTINGS_SELECTOR).forEach((element) => element.remove());
-    document.querySelectorAll("[data-admin-player-identity-settings-row]")
-      .forEach((element) => element.remove());
+    document.querySelectorAll("[data-admin-player-identity-settings-row]").forEach((element) => element.remove());
   }
 
   function selectedPlayer() {
@@ -669,12 +620,10 @@
       host.element.insertAdjacentElement("afterend", row);
       return;
     }
-
     if (host.mode === "after") {
       host.element.insertAdjacentElement("afterend", settings);
       return;
     }
-
     insertionTarget(host.element).append(settings);
   }
 
@@ -690,9 +639,22 @@
     });
   }
 
+  function decorate(root = document) {
+    removeLegacyIdentityUi(root);
+    decorateCreateForm(root);
+    decoratePlayerDetail();
+  }
+
+  function scheduleDecorate() {
+    window.setTimeout(() => decorate(document), 0);
+    window.setTimeout(() => decorate(document), 80);
+  }
+
   function handleDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
-    if (!target || target.closest(SETTINGS_SELECTOR)) return;
+    if (!target) return;
+    scheduleDecorate();
+    if (target.closest(SETTINGS_SELECTOR)) return;
 
     const nav = target.closest("[data-admin-section]");
     if (nav) {
@@ -707,27 +669,19 @@
     }
 
     if (!playersSectionActive() &&
-        !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) {
-      return;
-    }
+        !target.closest("[role='dialog'], .admin-terminal-modal, .admin-terminal-drawer")) return;
 
     const player = playerFromElement(target);
     if (player) selectPlayer(player, target);
   }
 
-  function decorate(root = document) {
-    removeLegacyIdentityUi(root);
-    decorateCreateForm(root);
-    decoratePlayerDetail();
-  }
-
   cachePlayers(modelPlayers());
   ensureStyles();
 
-  const mount = document.getElementById("adminPreview");
-  if (mount && typeof MutationObserver === "function") {
-    const observer = new MutationObserver(() => decorate(mount));
-    observer.observe(mount, { childList: true, subtree: true });
+  const observerRoot = document.body || document.documentElement;
+  if (observerRoot && typeof MutationObserver === "function") {
+    const observer = new MutationObserver(() => decorate(document));
+    observer.observe(observerRoot, { childList: true, subtree: true });
   }
 
   document.addEventListener("click", handleDocumentClick, true);
