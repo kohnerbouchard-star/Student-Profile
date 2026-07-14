@@ -55,7 +55,22 @@ jobs:
           cat /tmp/admin-smoke-server.log
           exit 1
 
-      - name: Click every admin navigation item
+      - name: Audit desktop navigation and layout
+        env:
+          ADMIN_SMOKE_VIEWPORT: 1440x1000
+          ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/desktop
+        run: node scripts/admin-browser-smoke.mjs
+
+      - name: Audit compact desktop navigation and layout
+        env:
+          ADMIN_SMOKE_VIEWPORT: 1024x768
+          ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/compact
+        run: node scripts/admin-browser-smoke.mjs
+
+      - name: Audit narrow-window navigation and layout
+        env:
+          ADMIN_SMOKE_VIEWPORT: 768x900
+          ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/narrow
         run: node scripts/admin-browser-smoke.mjs
 
       - name: Open every admin create workflow
