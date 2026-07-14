@@ -71,3 +71,5 @@ The passing browser suite covers root player login, desktop/compact/narrow layou
 ## Drift assessment
 
 Current differences from accepted v606 are intentional authentication/session integration, API compatibility, restored assets, player credential UX, confirmation layout, and validation coverage. Remaining work is feature completeness and live production verification, not duplicated architecture or frontend drift.
+
+Automated checks validate the branch implementation, but production persistence and real-device behavior remain unverified until the current functions are deployed and the create, confirmation, login, settings, attendance, icon, and video flows are exercised against the live project.
