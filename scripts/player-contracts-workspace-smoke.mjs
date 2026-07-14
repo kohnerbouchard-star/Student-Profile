@@ -21,7 +21,9 @@ let submittedProgress = null;
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 page.on("requestfailed", (request) => {
-  if (request.url().includes("cdn.jsdelivr.net")) return;
+  try {
+    if (new URL(request.url()).hostname === "cdn.jsdelivr.net") return;
+  } catch (_) {}
   errors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`);
 });
 await page.route("https://cdn.jsdelivr.net/**", (route) => route.fulfill({
