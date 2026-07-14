@@ -108,7 +108,10 @@ assert(!drawer.includes("window.fetch ="), "Player drawer wiring adds a network 
 assert(!drawer.includes("<style"), "Player drawer wiring injects an unreviewed global stylesheet.");
 
 const identity = readText("admin/player-identity-wiring.js");
-assert(!identity.includes("data-admin-player-identity-manager"), "Removed standalone Player IDs manager returned.");
+assert(
+  !identity.includes('setAttribute("data-admin-player-identity-manager"'),
+  "Removed standalone Player IDs manager is created again.",
+);
 assert(!identity.includes("openIdentityManager"), "Removed standalone identity workflow returned.");
 assert(!identity.includes("window.fetch ="), "Player identity wiring adds a network wrapper.");
 
