@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - "admin/**"
+      - "assets/**"
+      - "favicon.ico"
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
+      - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
@@ -22,10 +25,13 @@ on:
       - main
     paths:
       - "admin/**"
+      - "assets/**"
+      - "favicon.ico"
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
+      - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
@@ -51,6 +57,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Validate repository-owned assets
+        run: node scripts/asset-reference-audit.mjs
 
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
