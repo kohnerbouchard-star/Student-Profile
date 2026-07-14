@@ -40,6 +40,14 @@ function responseFor(pathname) {
     netWorth: 1000,
     currencyCode: "ECO",
   };
+  const game = {
+    id: GAME_ID,
+    gameSessionId: GAME_ID,
+    title: "Browser Smoke Game",
+    name: "Browser Smoke Game",
+    status: "active",
+    gameCode: "SMOKE1",
+  };
   const settings = {
     difficultyPreset: "moderate",
     backendDifficultyPreset: "moderate",
@@ -60,22 +68,8 @@ function responseFor(pathname) {
     permissions: ["*"],
     roles: ["game_admin"],
     adminRole: "game_admin",
-    game: {
-      id: GAME_ID,
-      gameSessionId: GAME_ID,
-      title: "Browser Smoke Game",
-      name: "Browser Smoke Game",
-      status: "active",
-      gameCode: "SMOKE1",
-    },
-    activeGame: {
-      id: GAME_ID,
-      gameSessionId: GAME_ID,
-      title: "Browser Smoke Game",
-      name: "Browser Smoke Game",
-      status: "active",
-      gameCode: "SMOKE1",
-    },
+    game,
+    activeGame: game,
     players: [player],
     attendance: [],
     attendanceRows: [],
@@ -110,7 +104,39 @@ function responseFor(pathname) {
     },
   };
 
-  if (pathname.endsWith("/session/bootstrap")) return { data: common };
+  if (pathname.endsWith("/session/bootstrap")) {
+    return {
+      data: {
+        admin: {
+          id: "00000000-0000-4000-8000-000000000002",
+          accountId: "00000000-0000-4000-8000-000000000002",
+          displayName: "Smoke Test Administrator",
+          email: "admin@example.test",
+          role: "game_admin",
+          roles: ["game_admin"],
+        },
+        activeGame: game,
+        games: [game],
+        permissions: ["*"],
+        roles: ["game_admin"],
+        csrfToken: "",
+        session: {
+          id: "00000000-0000-4000-8000-000000000002",
+          csrfToken: "",
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        },
+        capabilities: {
+          notifications: false,
+          securityHistory: "current_session_only",
+          helpArticles: true,
+          auditLogFlags: true,
+          auditLogExport: true,
+          overallScore: false,
+          marketplaceAdminTrading: false,
+        },
+      },
+    };
+  }
   if (pathname.includes("/players")) return { data: { ...common, players: [player] } };
   if (pathname.includes("/attendance/history")) {
     return { data: { ...common, rows: [], records: [], attendanceHistory: [], pagination: { page: 1, pageSize: 25, total: 0, totalPages: 1 } } };
