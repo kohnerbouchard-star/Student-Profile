@@ -124,17 +124,23 @@
             <form id="playerForm" class="form-stack">
               <label>
                 <span>Game / Session Code</span>
-                <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" />
+                <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" required />
               </label>
 
               <label>
-                <span>Player ID</span>
-                <input id="playerId" autocomplete="off" placeholder="Enter Player ID" />
+                <span>Player ID / RFID Card</span>
+                <input id="playerId" autocomplete="off" placeholder="Scan RFID card or enter Player ID" required />
               </label>
 
-              <label class="disabled-field">
-                <span>Access Code <em>Future feature</em></span>
-                <input id="playerAccessCode" type="password" placeholder="Disabled for this release" disabled aria-disabled="true" />
+              <label>
+                <span>Access Code</span>
+                <input
+                  id="playerAccessCode"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Enter Access Code"
+                  required
+                />
               </label>
 
               <div id="playerMessage" class="login-message status-message hidden"></div>
