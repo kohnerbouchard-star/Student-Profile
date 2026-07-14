@@ -7,6 +7,7 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
 
 permissions:
@@ -36,6 +38,9 @@ jobs:
 
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
+
+      - name: Validate classroom write fallback
+        run: node scripts/admin-classroom-write-fallback-smoke.mjs
 
       - name: Install browser smoke runtime
         run: |
