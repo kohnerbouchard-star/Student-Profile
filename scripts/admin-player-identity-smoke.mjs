@@ -165,6 +165,7 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
   const request = route.request();
   const pathname = new URL(request.url()).pathname;
   const method = request.method();
+
   if (method === "OPTIONS") {
     await route.fulfill({
       status: 204,
@@ -186,8 +187,16 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
       body = {};
     }
   }
+
   const payload = flattenedBody(body);
-  const write = { service: "admin-api", pathname, method, headers: request.headers(), body, payload };
+  const write = {
+    service: "admin-api",
+    pathname,
+    method,
+    headers: request.headers(),
+    body,
+    payload,
+  };
 
   if (method === "POST" && pathname.endsWith(`/games/${GAME_ID}/players`)) {
     writes.push(write);
@@ -292,19 +301,30 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
     status: 404,
     contentType: "application/json",
     headers: { "access-control-allow-origin": "*" },
-    body: JSON.stringify({ error: { code: "unexpected_direct_route", message: "Existing-player identity settings must use admin-api." } }),
+    body: JSON.stringify({
+      error: {
+        code: "unexpected_direct_route",
+        message: "Existing-player identity settings must use admin-api.",
+      },
+    }),
   });
 });
 
-async function closeCredentialDialog() {
-  const dialog = page.locator("[data-admin-player-access-code-dialog]");
-  await dialog.waitFor({ state: "visible", timeout: 8000 });
-  await dialog.locator("button", { hasText: "Close" }).click();
-  await dialog.waitFor({ state: "detached", timeout: 5000 });
+async function closeCreatedPlayerConfirmation() {
+  const confirmation = page.locator("[data-admin-player-created-confirmation]");
+  await confirmation.waitFor({ state: "visible", timeout: 8000 });
+  await confirmation.locator("[data-admin-player-created-done]").click();
+  await confirmation.waitFor({ state: "detached", timeout: 5000 });
 }
 
 async function saveDiagnostics(name, extra = {}) {
-  writeFileSync(`${ARTIFACT_DIR}/${name}.json`, JSON.stringify({ phase, writes, errors, consoleMessages, ...extra }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/${name}.json`, JSON.stringify({
+    phase,
+    writes,
+    errors,
+    consoleMessages,
+    ...extra,
+  }, null, 2));
   writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
   await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
 }
@@ -333,25 +353,34 @@ try {
   await createForm.locator('[data-admin-terminal-action="create-player"]').click();
 
   phase = "verifying created credentials";
-  await page.waitForSelector("[data-admin-player-access-code-dialog]", { timeout: 8000 });
-  const createdCredentials = await page.evaluate(() => ({
-    playerIdentifier: document.querySelector("[data-admin-player-identifier-value]")?.textContent?.trim() || "",
-    accessCode: document.querySelector("[data-admin-player-access-code-value]")?.textContent?.trim() || "",
-  }));
-  const createWrite = writes.find((write) => write.service === "admin-api" && write.pathname.endsWith(`/games/${GAME_ID}/players`));
+  const confirmation = page.locator("[data-admin-player-created-confirmation]");
+  await confirmation.waitFor({ state: "visible", timeout: 8000 });
+  const createdCredentials = {
+    playerIdentifier: await confirmation.locator("[data-admin-player-created-identifier]").textContent(),
+    accessCode: await confirmation.locator("[data-admin-player-created-access-code]").textContent(),
+  };
+  createdCredentials.playerIdentifier = createdCredentials.playerIdentifier?.trim() || "";
+  createdCredentials.accessCode = createdCredentials.accessCode?.trim() || "";
+
+  const createWrite = writes.find((write) =>
+    write.service === "admin-api" && write.pathname.endsWith(`/games/${GAME_ID}/players`)
+  );
   assert(createWrite, "Player create emitted no authenticated admin-api request.");
   assert(
-    createWrite.payload.playerIdentifier === CREATE_IDENTIFIER && createWrite.payload.accessCode === CREATE_ACCESS_CODE,
+    createWrite.payload.playerIdentifier === CREATE_IDENTIFIER &&
+      createWrite.payload.accessCode === CREATE_ACCESS_CODE,
     `Player create sent the wrong identity payload: ${JSON.stringify(createWrite.body)}.`,
   );
   assert(!("id" in createWrite.payload) && !("uuid" in createWrite.payload), "Player create exposed an editable UUID.");
   assert(String(createWrite.headers.authorization || "").startsWith("Bearer "), "Player create omitted Authorization.");
   assert(createWrite.headers["x-econovaria-game-id"] === GAME_ID, "Player create omitted the game header.");
   assert(
-    createdCredentials.playerIdentifier === CREATE_IDENTIFIER && createdCredentials.accessCode === CREATE_ACCESS_CODE,
+    createdCredentials.playerIdentifier === CREATE_IDENTIFIER &&
+      createdCredentials.accessCode === CREATE_ACCESS_CODE,
     `Created credentials were not displayed correctly: ${JSON.stringify(createdCredentials)}.`,
   );
-  await closeCredentialDialog();
+  assert(await page.locator("[data-admin-player-access-code-dialog]").count() === 0, "Legacy credential overlay returned.");
+  await closeCreatedPlayerConfirmation();
 
   phase = "opening Players section";
   await page.locator('[data-admin-section="Players"]').first().click();
@@ -385,7 +414,8 @@ try {
     `Edit Player Profile showed a generated ID instead of ${existingPlayer.playerIdentifier}.`,
   );
   assert(
-    await accessCodeInput.getAttribute("type") === "password" && await accessCodeInput.inputValue() === "",
+    await accessCodeInput.getAttribute("type") === "password" &&
+      await accessCodeInput.inputValue() === "",
     "Edit Player Profile exposed or prefilled an Access Code.",
   );
   assert(!(await profile.textContent()).includes(PLAYER_UUID), "Edit Player Profile exposed the backend UUID.");
@@ -397,6 +427,7 @@ try {
   await profile.getByText("Player profile, Player ID, and Access Code saved.", { exact: true })
     .waitFor({ state: "visible", timeout: 8000 });
   assert(await profile.isVisible(), "Edit Player Profile closed after saving credentials.");
+  assert(await page.locator("[data-admin-player-created-confirmation]").count() === 0, "A Player-created confirmation opened during an existing-player update.");
   assert(await page.locator("[data-admin-player-access-code-dialog]").count() === 0, "A second credential popup opened.");
 
   phase = "saving Player ID without rotating Access Code";
@@ -408,25 +439,35 @@ try {
 
   phase = "verifying authenticated profile and identity writes";
   const profileWrites = writes.filter((write) =>
-    write.service === "admin-api" && write.method === "PATCH" &&
+    write.service === "admin-api" &&
+    write.method === "PATCH" &&
     write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/settings`)
   );
   assert(profileWrites.length === 2, `Expected two profile settings writes, received ${profileWrites.length}.`);
   for (const write of profileWrites) {
-    assert(write.body?.settings?.displayName === existingPlayer.displayName, `Profile settings were incomplete: ${JSON.stringify(write.body)}.`);
-    assert(!("id" in (write.body?.settings || {})) && !("uuid" in (write.body?.settings || {})), "Profile settings exposed UUID fields.");
+    assert(
+      write.body?.settings?.displayName === existingPlayer.displayName,
+      `Profile settings were incomplete: ${JSON.stringify(write.body)}.`,
+    );
+    assert(
+      !("id" in (write.body?.settings || {})) && !("uuid" in (write.body?.settings || {})),
+      "Profile settings exposed UUID fields.",
+    );
   }
 
   const identityWrites = writes.filter((write) =>
-    write.service === "admin-api" && write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
+    write.service === "admin-api" &&
+    write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
   );
   assert(identityWrites.length === 2, `Expected two credential writes, received ${identityWrites.length}.`);
   assert(
-    identityWrites[0].payload.playerIdentifier === UPDATE_IDENTIFIER && identityWrites[0].payload.accessCode === UPDATE_ACCESS_CODE,
+    identityWrites[0].payload.playerIdentifier === UPDATE_IDENTIFIER &&
+      identityWrites[0].payload.accessCode === UPDATE_ACCESS_CODE,
     `Credential update sent the wrong payload: ${JSON.stringify(identityWrites[0].body)}.`,
   );
   assert(
-    identityWrites[1].payload.playerIdentifier === ID_ONLY_IDENTIFIER && !Object.hasOwn(identityWrites[1].payload, "accessCode"),
+    identityWrites[1].payload.playerIdentifier === ID_ONLY_IDENTIFIER &&
+      !Object.hasOwn(identityWrites[1].payload, "accessCode"),
     `Player-ID-only update reset the Access Code: ${JSON.stringify(identityWrites[1].body)}.`,
   );
 
@@ -435,16 +476,24 @@ try {
     assert(write.headers["x-econovaria-game-id"] === GAME_ID, "A profile write omitted the game header.");
   }
   assert(
-    writes.filter((write) => write.service === "classroom-api" && write.pathname.includes("/access-code/reset")).length === 0,
+    writes.filter((write) =>
+      write.service === "classroom-api" && write.pathname.includes("/access-code/reset")
+    ).length === 0,
     "Edit Player Profile bypassed admin-api.",
   );
   assert(errors.length === 0, errors[0] || "Unexpected browser error.");
 
   phase = "passed";
-  await saveDiagnostics("admin-player-identity", { createdCredentials, profileWrites, identityWrites });
-  console.log("Admin Edit Player Profile identity and Access Code smoke passed.");
+  await saveDiagnostics("admin-player-identity", {
+    createdCredentials,
+    profileWrites,
+    identityWrites,
+  });
+  console.log("Admin Edit Player Profile identity, Player-created confirmation, and Access Code smoke passed.");
 } catch (error) {
-  await saveDiagnostics("admin-player-identity-failure", { failure: error.stack || error.message || String(error) });
+  await saveDiagnostics("admin-player-identity-failure", {
+    failure: error.stack || error.message || String(error),
+  });
   console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
 } finally {
