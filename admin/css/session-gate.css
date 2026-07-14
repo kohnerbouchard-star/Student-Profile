@@ -1,0 +1,55 @@
+.admin-session-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: rgba(210, 247, 255, 0.72);
+  background: #020914;
+  font: 700 11px/1.5 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.admin-session-gate.is-error {
+  color: #ff6976;
+}
+
+.admin-session-gate__panel {
+  width: min(460px, 100%);
+  padding: 24px;
+  border: 1px solid rgba(255, 105, 118, 0.34);
+  background: rgba(5, 17, 31, 0.94);
+}
+
+.admin-session-gate__panel p {
+  margin: 0;
+}
+
+.admin-session-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.admin-session-gate__actions button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(210, 247, 255, 0.28);
+  color: #d2f7ff;
+  background: rgba(11, 31, 50, 0.92);
+  font: inherit;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-session-gate__actions button:hover,
+.admin-session-gate__actions button:focus-visible {
+  border-color: rgba(255, 103, 0, 0.8);
+  outline: none;
+}

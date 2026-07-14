@@ -11,13 +11,16 @@ on:
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
+      - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-player-identity-smoke.mjs"
+      - "scripts/admin-player-drawer-smoke.mjs"
       - "scripts/player-login-identity-smoke.mjs"
       - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
@@ -33,13 +36,16 @@ on:
       - "frontend/src/features/auth/**"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
+      - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
       - "scripts/admin-player-identity-smoke.mjs"
+      - "scripts/admin-player-drawer-smoke.mjs"
       - "scripts/player-login-identity-smoke.mjs"
       - "scripts/admin-attendance-action-smoke.mjs"
       - ".github/workflows/admin-shell-smoke.yml"
@@ -65,6 +71,9 @@ jobs:
 
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
+
+      - name: Validate accepted v606 drift boundaries
+        run: node scripts/admin-v606-full-drift-audit.mjs
 
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
@@ -111,6 +120,9 @@ jobs:
           ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/narrow
         run: node scripts/admin-browser-smoke.mjs
 
+      - name: Audit all six v606 account surfaces
+        run: node scripts/admin-account-surfaces-smoke.mjs
+
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
 
@@ -119,6 +131,9 @@ jobs:
 
       - name: Exercise RFID player identity management
         run: node scripts/admin-player-identity-smoke.mjs
+
+      - name: Exercise original player drawer contract
+        run: node scripts/admin-player-drawer-smoke.mjs
 
       - name: Exercise attendance scanner action
         run: node scripts/admin-attendance-action-smoke.mjs
