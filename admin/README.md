@@ -16,7 +16,7 @@ Original repository-owned assets are served from `admin/assets/` using the filen
 
 Generic media fallbacks apply only to uploaded/content media. They must not replace interface symbols or modal videos.
 
-The current branch has been cross-checked against v606 commit `2a1d223c3d986fbb75f8c0b87d93c53820ef2e35`. The generated terminal bundle, primary terminal CSS, page-shell CSS, and integrity CSS are byte-identical. Remaining differences are intentional authentication, API, asset-restoration, credential-wiring, and validation layers.
+The current branch has been cross-checked against v606 commit `2a1d223c3d986fbb75f8c0b87d93c53820ef2e35`. The generated terminal bundle, primary terminal CSS, page-shell CSS, and integrity CSS are byte-identical. Remaining differences are intentional authentication, API, asset-restoration, credential-wiring, confirmation-layout, and validation layers.
 
 ## Player credentials
 
@@ -28,8 +28,14 @@ The existing **Edit Player Profile** popup is the only existing-player credentia
 - The internal player UUID remains hidden and immutable and is used only as the backend route target.
 - No Overview Player IDs button, standalone credential manager, or separate inline identity panel is permitted.
 
-In **Add Player**, Player ID / RFID card and Access Code are optional inputs. A blank field is generated with browser cryptographic randomness before the authenticated create request is sent. A successful create closes the editor and opens a v606-styled **Player created** confirmation showing the credentials once. The old inline-styled credential overlay is suppressed.
+In **Add Player**, Player ID / RFID card and Access Code are optional inputs. A blank field is generated with browser cryptographic randomness immediately before the authenticated create request is sent. Manually entered credentials are preserved unchanged.
+
+A successful create closes the editor and opens a bounded, responsive v606-style **Player created** confirmation. It displays the Player ID and Access Code once, identifies generated versus custom values, supports copying, and requires explicit acknowledgement. The old inline-styled credential overlay is suppressed and removed.
 
 ## Runtime rule
 
 Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wrapper layers. Non-create requests must pass through the create-action adapter without consuming their `Request` bodies. Player creation UX may prepare form values, but it must not intercept or replace the network transport.
+
+## Validation
+
+The branch browser suite covers desktop, compact, and narrow layouts; all create workflows; blank and manual player credentials; the Player-created confirmation; Edit Player Profile; player login; and attendance. Backend typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke must all remain green before merge.
