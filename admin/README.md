@@ -28,8 +28,8 @@ The existing **Edit Player Profile** popup is the only existing-player credentia
 - The internal player UUID remains hidden and immutable and is used only as the backend route target.
 - No Overview Player IDs button, standalone credential manager, or separate inline identity panel is permitted.
 
-Add Player continues to require Player ID / RFID card and Access Code at creation time.
+In **Add Player**, Player ID / RFID card and Access Code are optional inputs. A blank field is generated with browser cryptographic randomness before the authenticated create request is sent. A successful create closes the editor and opens a v606-styled **Player created** confirmation showing the credentials once. The old inline-styled credential overlay is suppressed.
 
 ## Runtime rule
 
-Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wrapper layers. Non-create requests must pass through the create-action adapter without consuming their `Request` bodies.
+Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wrapper layers. Non-create requests must pass through the create-action adapter without consuming their `Request` bodies. Player creation UX may prepare form values, but it must not intercept or replace the network transport.
