@@ -23,13 +23,30 @@ comment on column public.players.player_identifier is
 comment on column public.players.player_identifier_normalized is
   'Normalized lookup value for player_identifier. Written only by trusted server code.';
 
-update public.players
+-- Only reuse an existing roster label when it is unique among active players
+-- in that game. Ambiguous labels remain unconfigured and must be set by staff.
+with unique_active_roster_labels as (
+  select
+    game_session_id,
+    upper(regexp_replace(roster_label, '\s+', '', 'g')) as normalized_label
+  from public.players
+  where status = 'active'
+    and roster_label is not null
+    and length(btrim(roster_label)) > 0
+  group by
+    game_session_id,
+    upper(regexp_replace(roster_label, '\s+', '', 'g'))
+  having count(*) = 1
+)
+update public.players p
 set
-  player_identifier = roster_label,
-  player_identifier_normalized = upper(regexp_replace(roster_label, '\s+', '', 'g'))
-where player_identifier is null
-  and roster_label is not null
-  and length(btrim(roster_label)) > 0;
+  player_identifier = p.roster_label,
+  player_identifier_normalized = u.normalized_label
+from unique_active_roster_labels u
+where p.game_session_id = u.game_session_id
+  and p.status = 'active'
+  and p.player_identifier is null
+  and upper(regexp_replace(p.roster_label, '\s+', '', 'g')) = u.normalized_label;
 
 create unique index if not exists players_active_identifier_unique_idx
 on public.players (game_session_id, player_identifier_normalized)
