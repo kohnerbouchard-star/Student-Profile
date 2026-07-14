@@ -26,6 +26,7 @@ const expectedScripts = [
   "./create-action-adapter.js",
   "./classroom-write-fallback.js",
   "./player-access-code-bridge.js",
+  "./player-identity-wiring.js",
   "./game-code-wiring.js",
   "./dist/admin-overview-boot.js",
 ];
@@ -61,6 +62,7 @@ const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "ut
 const createActionAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const classroomFallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
 const playerAccessCodeBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
+const playerIdentityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const gameCode = readFileSync(resolve(adminRoot, "game-code-wiring.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
@@ -122,16 +124,20 @@ assert(
 );
 assert(
   createActionAdapter.includes('displayName: formValue(form, "displayName")') &&
+    createActionAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")') &&
+    createActionAdapter.includes('accessCode: formValue(form, "accessCode")') &&
     createActionAdapter.includes("title,") &&
     createActionAdapter.includes("name: itemName"),
-  "Create-action adapter must preserve entered player, contract, and store fields.",
+  "Create-action adapter must preserve player identity, contract, and store fields.",
 );
 assert(
   classroomFallback.includes("const retryStatuses = new Set([400, 404, 501]);") &&
+    classroomFallback.includes('"playerIdentifier"') &&
+    classroomFallback.includes('"accessCode"') &&
     classroomFallback.includes("const attendanceMatch = url.pathname.match(") &&
     classroomFallback.includes("CLASSROOM_API_BASE") &&
     classroomFallback.includes("/attendance/scan"),
-  "Canonical classroom write fallback is missing or unbounded.",
+  "Canonical classroom write fallback is missing identity fields or is unbounded.",
 );
 assert(
   classroomFallback.includes("if (primary.ok || !retryStatuses.has(primary.status)) return primary;"),
@@ -139,14 +145,27 @@ assert(
 );
 assert(
   playerAccessCodeBridge.includes("/access-code/reset") &&
-    playerAccessCodeBridge.includes("player_created_without_access_code") &&
-    playerAccessCodeBridge.includes("data-admin-player-access-code-dialog"),
-  "Player creation must issue and display a one-time access code when the create response omits one.",
+    playerAccessCodeBridge.includes("player_created_without_identity_credentials") &&
+    playerAccessCodeBridge.includes("data-admin-player-access-code-dialog") &&
+    playerAccessCodeBridge.includes("updatePlayerIdentity"),
+  "Player identity creation and update wiring is incomplete.",
 );
 assert(
   playerAccessCodeBridge.includes('headers.delete("X-CSRF-Token")') &&
     playerAccessCodeBridge.includes('headers.delete("X-Econovaria-CSRF")'),
-  "Player access-code reset must strip admin-only CORS headers.",
+  "Player identity writes must strip admin-only CORS headers.",
+);
+assert(
+  playerIdentityWiring.includes('name="playerIdentifier"') &&
+    playerIdentityWiring.includes('name="accessCode"') &&
+    playerIdentityWiring.includes("RFID/card Player ID") &&
+    playerIdentityWiring.includes("updatePlayerIdentity") &&
+    !playerIdentityWiring.includes("Internal record ID"),
+  "The admin player UI must expose writable RFID and Access Code fields without exposing UUIDs.",
+);
+assert(
+  existsSync(resolve(adminRoot, "assets/icons/rfid-card.svg")),
+  "The repository-owned RFID icon is missing.",
 );
 assert(
   terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'),
@@ -181,4 +200,4 @@ assert(
   "Game-code wiring must attach through the bounded share-panel lifecycle.",
 );
 
-console.log("Admin shell interaction, create-action, classroom fallback, player access-code, and authorization smoke checks passed.");
+console.log("Admin shell, RFID identity, create-action, classroom fallback, and authorization smoke checks passed.");
