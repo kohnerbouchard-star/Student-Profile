@@ -9,11 +9,6 @@ export type PlayerRosterRoute =
       readonly kind: "resetAccessCode";
       readonly gameSessionId: string;
       readonly playerId: string;
-    }
-  | {
-      readonly kind: "identity";
-      readonly gameSessionId: string;
-      readonly playerId: string;
     };
 
 export function readPlayerRosterRoutePath(
@@ -45,29 +40,18 @@ export function readPlayerRosterRoutePath(
   }
 
   const playerId = segments[gamesIndex + 3];
-  if (!playerId || !isUuid(playerId)) return null;
-
-  const actionSegment = segments[gamesIndex + 4];
-  const finalSegment = segments[gamesIndex + 5];
+  const accessCodeSegment = segments[gamesIndex + 4];
+  const resetSegment = segments[gamesIndex + 5];
 
   if (
-    actionSegment === "access-code" &&
-    finalSegment === "reset" &&
+    playerId &&
+    isUuid(playerId) &&
+    accessCodeSegment === "access-code" &&
+    resetSegment === "reset" &&
     gamesIndex + 6 === segments.length
   ) {
     return {
       kind: "resetAccessCode",
-      gameSessionId,
-      playerId,
-    };
-  }
-
-  if (
-    actionSegment === "identity" &&
-    gamesIndex + 5 === segments.length
-  ) {
-    return {
-      kind: "identity",
       gameSessionId,
       playerId,
     };
