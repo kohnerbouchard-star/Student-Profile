@@ -39,3 +39,7 @@ Use the authenticated `/api/admin` transport. Do not add additional fetch/XHR wr
 ## Validation
 
 The branch browser suite covers desktop, compact, and narrow layouts; all create workflows; blank and manual player credentials; the Player-created confirmation; Edit Player Profile; player login; and attendance. Backend typecheck, Admin API Check, Admin Bundle Contract Audit, and Admin Shell Smoke must all remain green before merge.
+
+## Known product gaps
+
+The broader audit identified incomplete game-code reset UX, partial net-worth scoring, missing attendance reward-ledger aggregation, safe empty notification/help states, advanced contract/store/settings mutations that still need live verification, and session-based rather than heartbeat-based presence. These are existing feature-completeness gaps, not visual or architectural regressions introduced by this branch.
