@@ -128,16 +128,45 @@ async function handlePlayerIdentityLogin(event) {
   }
 }
 
+function loadScriptOnce(src, dataAttribute) {
+  return new Promise((resolve) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") {
+        resolve(true);
+        return;
+      }
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      existing.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.dataset[dataAttribute] = "";
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve(true);
+    }, { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+    document.head.append(script);
+  });
+}
+
 function loadContractsFeatureAssets() {
   if (contractsFeaturePromise) return contractsFeaturePromise;
 
-  contractsFeaturePromise = new Promise((resolve) => {
+  contractsFeaturePromise = (async () => {
     const stylesheetHref = new URL(
       "frontend/src/styles/screens/contracts.css",
       document.baseURI,
     ).href;
-    const scriptSrc = new URL(
+    const featureSrc = new URL(
       "frontend/src/features/contracts/contracts.js",
+      document.baseURI,
+    ).href;
+    const syncSrc = new URL(
+      "frontend/src/features/contracts/contracts-sync.js",
       document.baseURI,
     ).href;
 
@@ -149,28 +178,27 @@ function loadContractsFeatureAssets() {
       document.head.append(link);
     }
 
-    if (window.Econovaria?.features?.contracts?.renderContracts) {
-      resolve(true);
-      return;
+    if (!window.Econovaria?.features?.contracts?.renderContracts) {
+      const featureLoaded = await loadScriptOnce(
+        featureSrc,
+        "econovariaContractsFeature",
+      );
+      if (!featureLoaded) {
+        console.error("[Econovaria bootstrap] Contracts feature could not be loaded.");
+        return false;
+      }
     }
 
-    const existing = document.querySelector(`script[src="${scriptSrc}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve(true), { once: true });
-      existing.addEventListener("error", () => resolve(false), { once: true });
-      return;
+    const syncLoaded = await loadScriptOnce(
+      syncSrc,
+      "econovariaContractsSync",
+    );
+    if (!syncLoaded) {
+      console.error("[Econovaria bootstrap] Contracts synchronization could not be loaded.");
+      return false;
     }
-
-    const script = document.createElement("script");
-    script.src = scriptSrc;
-    script.dataset.econovariaContractsFeature = "";
-    script.addEventListener("load", () => resolve(true), { once: true });
-    script.addEventListener("error", () => {
-      console.error("[Econovaria bootstrap] Contracts feature could not be loaded.");
-      resolve(false);
-    }, { once: true });
-    document.head.append(script);
-  });
+    return true;
+  })();
 
   return contractsFeaturePromise;
 }
