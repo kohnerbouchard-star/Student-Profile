@@ -15,6 +15,7 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 900 
 const page = await context.newPage();
 const errors = [];
 const submissions = [];
+const contractLoads = [];
 let submittedProgress = null;
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
@@ -86,9 +87,9 @@ function dashboardResponse() {
       cash: { balances: [{ accountType: "cash", currencyCode: "NRC", balance: 1000 }], primaryCurrencyCode: "NRC", totalBalance: 1000 },
       stocks: { portfolio: { marketValue: 0, costBasis: 0, unrealizedGainLoss: 0 }, holdings: [], orders: [], trades: [] },
       store: { currencyCode: "NRC", listings: [], inventory: [], recentPurchases: [] },
-      contracts: { available: [contractDto()], progress: submittedProgress ? [submittedProgress] : [] },
+      contracts: { available: [], progress: [] },
     },
-    public: { leaderboard: [], players: [], market: { stocks: [], news: [] }, contracts: [contractDto()], storeListings: [] },
+    public: { leaderboard: [], players: [], market: { stocks: [], news: [] }, contracts: [], storeListings: [] },
     unseenCutscenes: [],
     realtime: { publicChannel: `game:${GAME_ID}:public`, lastSequence: null, events: [] },
   };
@@ -96,7 +97,8 @@ function dashboardResponse() {
 
 await page.route("**/functions/v1/classroom-api/**", async (route) => {
   const request = route.request();
-  const pathname = new URL(request.url()).pathname;
+  const url = new URL(request.url());
+  const pathname = url.pathname;
   const headers = { "access-control-allow-origin": "*", "cache-control": "no-store" };
 
   if (request.method() === "OPTIONS") {
@@ -129,6 +131,24 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
 
   if (request.method() === "GET" && pathname.endsWith("/players/me/game/dashboard")) {
     await route.fulfill({ status: 200, contentType: "application/json", headers, body: JSON.stringify(dashboardResponse()) });
+    return;
+  }
+
+  if (request.method() === "GET" && pathname.endsWith("/players/me/contracts")) {
+    contractLoads.push({
+      gameSessionId: url.searchParams.get("gameSessionId"),
+      playerSessionToken: request.headers()["x-player-session-token"] || "",
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers,
+      body: JSON.stringify({
+        ok: true,
+        contracts: [contractDto()],
+        progress: submittedProgress ? [submittedProgress] : [],
+      }),
+    });
     return;
   }
 
@@ -171,6 +191,11 @@ try {
   const card = page.locator(`article.contract-card[data-contract-id="${CONTRACT_ID}"]`);
   await card.waitFor({ state: "visible", timeout: 8000 });
 
+  if (!contractLoads.length) throw new Error("Contracts workspace did not call the authoritative player contracts route.");
+  if (contractLoads.some((load) => load.gameSessionId !== GAME_ID || load.playerSessionToken !== SESSION_TOKEN)) {
+    throw new Error(`Authoritative contract load used the wrong scope or session: ${JSON.stringify(contractLoads)}.`);
+  }
+
   const cardText = await card.innerText();
   if (!cardText.includes("Market Evidence Contract") || !cardText.includes("NRC 75") || !cardText.includes("2× Research Pass")) {
     throw new Error(`Contract card omitted core details: ${cardText}`);
@@ -193,12 +218,12 @@ try {
   }
   if (submission.body.evidencePayload.answers.length !== 2) throw new Error("Quiz answers were not serialized.");
 
-  writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, errors }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, contractLoads, errors }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-contracts-workspace.png`, fullPage: true });
   if (errors.length) throw new Error(errors[0]);
   console.log("Student Contracts workspace and authenticated submission smoke passed.");
 } catch (error) {
-  writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, errors, failure: error.message }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, contractLoads, errors, failure: error.message }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-contracts-workspace-failure.png`, fullPage: true });
   console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
