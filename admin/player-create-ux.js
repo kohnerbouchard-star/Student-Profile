@@ -5,7 +5,6 @@
   const CREATE_ACTION_SELECTOR = '[data-admin-terminal-action="create-player"]';
   const LEGACY_DIALOG_SELECTOR = "[data-admin-player-access-code-dialog]";
   const CONFIRMATION_SELECTOR = "[data-admin-player-created-confirmation]";
-  const STYLE_ID = "econovaria-player-create-ux-style";
   const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let lastCreateContext = null;
 
@@ -97,52 +96,6 @@
       generatedAccessCode,
     };
     return lastCreateContext;
-  }
-
-  function ensureStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      ${LEGACY_DIALOG_SELECTOR} { display: none !important; }
-      [data-admin-player-create-auto-help] {
-        display:block;margin-top:4px;color:rgba(190,205,207,.68)!important;
-        font-size:8px!important;line-height:1.35!important;letter-spacing:0!important;text-transform:none!important;
-      }
-      .admin-terminal-player-created-modal { width:min(720px,calc(100vw - 32px)); }
-      .admin-terminal-player-created-summary { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
-      .admin-terminal-player-created-credential {
-        min-width:0;padding:16px;border:1px solid rgba(0,212,255,.24);background:rgba(0,212,255,.045);
-      }
-      .admin-terminal-player-created-credential span,
-      .admin-terminal-player-created-credential small {
-        display:block;color:rgba(210,247,255,.58);font:800 9px/1.35 "JetBrains Mono",ui-monospace,monospace;
-        letter-spacing:.12em;text-transform:uppercase;
-      }
-      .admin-terminal-player-created-credential strong {
-        display:block;overflow-wrap:anywhere;margin:10px 0 8px;color:#e9fbff;
-        font:800 20px/1.2 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.08em;user-select:all;
-      }
-      .admin-terminal-player-created-warning {
-        margin:14px 0 0;padding:11px 13px;border:1px solid rgba(255,103,0,.3);
-        background:rgba(255,103,0,.055);color:rgba(233,251,255,.72);font-size:11px;line-height:1.5;
-      }
-      .admin-terminal-player-created-actions { display:flex;justify-content:flex-end;gap:10px;padding:0 20px 20px; }
-      .admin-terminal-player-created-actions button {
-        min-height:42px;padding:0 16px;border:1px solid rgba(0,212,255,.34);color:#d2f7ff;
-        background:rgba(8,29,45,.94);cursor:pointer;font:800 10px/1.2 "JetBrains Mono",ui-monospace,monospace;
-        letter-spacing:.08em;text-transform:uppercase;
-      }
-      .admin-terminal-player-created-actions [data-admin-player-created-done] {
-        border-color:rgba(255,103,0,.72);color:#071421;background:#ff6700;
-      }
-      @media (max-width:720px) {
-        .admin-terminal-player-created-summary { grid-template-columns:1fr; }
-        .admin-terminal-player-created-actions { flex-direction:column; }
-        .admin-terminal-player-created-actions button { width:100%; }
-      }
-    `;
-    document.head.append(style);
   }
 
   function removeLegacyDialog() {
@@ -267,7 +220,6 @@
     [...new Set(forms)].forEach(configureCreateForm);
   }
 
-  ensureStyles();
   configureWithin();
 
   if (document.body && typeof MutationObserver === "function") {
