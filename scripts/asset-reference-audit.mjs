@@ -39,7 +39,7 @@ function walk(path) {
 function normalizeReference(raw) {
   return String(raw || "")
     .trim()
-    .replace(/^['"]|['"]$/g, "")
+    .replace(/^[\'"]|[\'"]$/g, "")
     .split("#")[0]
     .split("?")[0];
 }
@@ -128,8 +128,22 @@ const requiredAssets = [
   "assets/sci-fi-cinematic-background.mp3",
   "admin/assets/icons/rfid-card.svg",
   "admin/assets/icons/media-placeholder.svg",
+  "admin/assets/icons/player-actions/id-card.svg",
+  "admin/assets/icons/player-actions/adjust-balance.svg",
+  "admin/assets/icons/player-actions/settings.svg",
+  "admin/assets/icons/player-actions/message.svg",
   "admin/assets/media/player-identity-motion.svg",
   "admin/window.ECONOVARIA_ADMIN_MOTION_BACKGROUND",
+  "frontend/src/assets/currency-symbols/saturn.svg",
+  "frontend/src/assets/currency-symbols/neptune.svg",
+  "frontend/src/assets/currency-symbols/arsenic.svg",
+  "frontend/src/assets/currency-symbols/jupiter.svg",
+  "frontend/src/assets/currency-symbols/alumen.svg",
+  "frontend/src/assets/currency-symbols/gold.svg",
+  "frontend/src/assets/currency-symbols/lapis_lazuli.svg",
+  "frontend/src/assets/currency-symbols/alcali.svg",
+  "frontend/src/assets/currency-symbols/lead.svg",
+  "frontend/src/assets/currency-symbols/ferrum.svg",
   "favicon.ico",
 ];
 
@@ -143,6 +157,17 @@ for (const relativePath of requiredAssets) {
       extension: extname(target).toLowerCase() || "extensionless",
     });
   }
+}
+
+const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
+if (!assetWiring.includes("repairCurrencySymbols")) {
+  failures.push("admin/asset-wiring.js does not repair currency symbol paths for the /admin/ base URL.");
+}
+if (!assetWiring.includes("PLAYER_ACTION_ICONS")) {
+  failures.push("admin/asset-wiring.js does not map player-row actions to repository-owned icons.");
+}
+if (!assetWiring.includes("if (!isContentMediaImage(image)) return;")) {
+  failures.push("admin/asset-wiring.js still applies the generic media placeholder to every UI image.");
 }
 
 if (failures.length) {
