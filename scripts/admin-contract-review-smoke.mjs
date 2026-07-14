@@ -143,7 +143,12 @@ try {
   await page.locator('[data-admin-section="Assignments"]').first().click();
   await page.waitForTimeout(800);
 
-  const review = page.locator('[data-admin-terminal-action="review-contract-submissions"]').first();
+  const focus = page.locator(`[data-admin-terminal-action="focus-contract"][data-contract-id="${CONTRACT_ID}"]`).first();
+  await focus.waitFor({ state: "visible", timeout: 8000 });
+  await focus.click();
+  await page.waitForTimeout(300);
+
+  const review = page.locator(`[data-admin-terminal-action="review-contract-submissions"][data-contract-id="${CONTRACT_ID}"]`).filter({ visible: true }).first();
   await review.waitFor({ state: "visible", timeout: 8000 });
   await review.click();
   const modal = page.locator(".admin-terminal-contract-submissions-modal-v470").first();
