@@ -35,10 +35,19 @@
     }
   }
 
+  async function requestJson(request) {
+    try {
+      return record(await request.clone().json());
+    } catch (_) {
+      return {};
+    }
+  }
+
   function flattenedResponse(value) {
     const source = record(value);
     const data = record(source.data);
-    return { ...source, ...data };
+    const payload = record(source.payload);
+    return { ...source, ...data, ...payload };
   }
 
   function playerFrom(value) {
@@ -60,6 +69,20 @@
     );
   }
 
+  function playerIdentifierFrom(value) {
+    const source = flattenedResponse(value);
+    const player = playerFrom(value);
+    return text(
+      player.playerIdentifier ||
+      player.player_identifier ||
+      source.playerIdentifier ||
+      source.playerId ||
+      source.rfidCardId ||
+      source.rfidId ||
+      source.cardId,
+    );
+  }
+
   function createContext(request, url) {
     if (request.method !== "POST" || !url.pathname.startsWith(LOCAL_API_PREFIX)) {
       return null;
@@ -70,7 +93,7 @@
   }
 
   function classroomHeaders(request, accessToken, gameId) {
-    const headers = new Headers(request.headers);
+    const headers = new Headers(request?.headers || {});
     headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
     headers.set("Authorization", `Bearer ${accessToken}`);
     headers.set("Content-Type", "application/json");
@@ -112,7 +135,7 @@
 
     const panel = document.createElement("section");
     panel.style.cssText = [
-      "width:min(460px,100%)",
+      "width:min(500px,100%)",
       "border:1px solid rgba(255,103,0,.7)",
       "background:#071421",
       "color:#e9fbff",
@@ -123,12 +146,35 @@
 
     const title = document.createElement("h2");
     title.id = "adminPlayerAccessCodeTitle";
-    title.textContent = "Player access code created";
+    title.textContent = "Player credentials saved";
     title.style.cssText = "margin:0 0 8px;font-size:20px";
 
     const description = document.createElement("p");
-    description.textContent = `${detail.displayName || "Player"} can use this code to sign in and scan attendance.`;
+    description.textContent = `${detail.displayName || "Player"} signs in with the Player ID and Access Code below.`;
     description.style.cssText = "margin:0 0 18px;color:rgba(233,251,255,.72);line-height:1.5";
+
+    const identifierLabel = document.createElement("small");
+    identifierLabel.textContent = "PLAYER ID / RFID";
+    identifierLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
+
+    const identifier = document.createElement("strong");
+    identifier.setAttribute("data-admin-player-identifier-value", "");
+    identifier.textContent = detail.playerIdentifier || "—";
+    identifier.style.cssText = [
+      "display:block",
+      "padding:13px",
+      "border:1px solid rgba(255,103,0,.42)",
+      "background:#020b12",
+      "font:800 18px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace",
+      "letter-spacing:.08em",
+      "text-align:center",
+      "user-select:all",
+      "margin-bottom:14px",
+    ].join(";");
+
+    const codeLabel = document.createElement("small");
+    codeLabel.textContent = "ACCESS CODE";
+    codeLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
 
     const code = document.createElement("strong");
     code.setAttribute("data-admin-player-access-code-value", "");
@@ -145,7 +191,7 @@
     ].join(";");
 
     const warning = document.createElement("p");
-    warning.textContent = "Copy this code now. Only its secure hash is stored in the database.";
+    warning.textContent = "Copy the Access Code now. Only its secure hash is stored in the database.";
     warning.style.cssText = "margin:14px 0 18px;color:rgba(233,251,255,.62);font-size:13px;line-height:1.5";
 
     const actions = document.createElement("div");
@@ -153,11 +199,12 @@
 
     const copy = document.createElement("button");
     copy.type = "button";
-    copy.textContent = "Copy code";
+    copy.textContent = "Copy credentials";
     copy.style.cssText = "min-height:40px;padding:0 16px;border:1px solid rgba(105,250,255,.55);background:#0b2333;color:#e9fbff;cursor:pointer";
     copy.addEventListener("click", async () => {
+      const value = `Player ID: ${detail.playerIdentifier || ""}\nAccess Code: ${detail.studentCode}`;
       try {
-        await navigator.clipboard.writeText(detail.studentCode);
+        await navigator.clipboard.writeText(value);
         copy.textContent = "Copied";
       } catch (_) {
         code.focus?.();
@@ -171,7 +218,16 @@
     close.addEventListener("click", () => overlay.remove());
 
     actions.append(copy, close);
-    panel.append(title, description, code, warning, actions);
+    panel.append(
+      title,
+      description,
+      identifierLabel,
+      identifier,
+      codeLabel,
+      code,
+      warning,
+      actions,
+    );
     overlay.append(panel);
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) overlay.remove();
@@ -206,6 +262,52 @@
     });
   }
 
+  async function updatePlayerIdentity(input) {
+    const gameId = text(input?.gameId);
+    const playerId = text(input?.playerId);
+    const playerIdentifier = text(input?.playerIdentifier);
+    const accessCode = text(input?.accessCode);
+    const session = storedSession();
+    const accessToken = text(session.accessToken);
+    const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+
+    if (!gameId || !playerId || !playerIdentifier || !accessCode) {
+      throw new Error("Player, Player ID, and Access Code are required.");
+    }
+    if (!accessToken || (selectedGameId && selectedGameId !== gameId)) {
+      throw new Error("Sign in again before changing player credentials.");
+    }
+
+    const response = await delegatedFetch(
+      `${CLASSROOM_API_BASE}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      {
+        method: "POST",
+        headers: classroomHeaders(null, accessToken, gameId),
+        body: JSON.stringify({ playerIdentifier, accessCode }),
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+      },
+    );
+    const body = await responseJson(response);
+    if (!response.ok || body.ok === false) {
+      const error = record(body.error);
+      throw new Error(text(error.message || body.message) || "Player credentials could not be updated.");
+    }
+
+    const player = playerFrom(body);
+    const studentCode = accessCodeFrom(body) || accessCode;
+    const savedIdentifier = playerIdentifierFrom(body) || playerIdentifier;
+    emitAccessCode({
+      playerId,
+      displayName: text(player.displayName || player.name || input?.displayName),
+      playerIdentifier: savedIdentifier,
+      studentCode,
+    });
+    return body;
+  }
+
   window.fetch = async function econovariaPlayerAccessCodeFetch(input, init) {
     const rawUrl = input instanceof Request
       ? input.url
@@ -218,17 +320,22 @@
 
     if (!context) return delegatedFetch(request);
 
+    const requestedBody = flattenedResponse(await requestJson(request));
+    const requestedIdentifier = playerIdentifierFrom(requestedBody);
+    const requestedAccessCode = accessCodeFrom(requestedBody);
     const primary = await delegatedFetch(request);
     if (!primary.ok) return primary;
 
     const primaryBody = await responseJson(primary);
     const primaryPlayer = playerFrom(primaryBody);
     const existingCode = accessCodeFrom(primaryBody);
+    const existingIdentifier = playerIdentifierFrom(primaryBody) || requestedIdentifier;
 
     if (existingCode) {
       emitAccessCode({
         playerId: text(primaryPlayer.id || primaryPlayer.playerId),
         displayName: text(primaryPlayer.displayName || primaryPlayer.name),
+        playerIdentifier: existingIdentifier,
         studentCode: existingCode,
       });
       return primary;
@@ -239,7 +346,13 @@
     const accessToken = text(session.accessToken);
     const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
 
-    if (!playerId || !accessToken || (selectedGameId && selectedGameId !== context.gameId)) {
+    if (
+      !playerId ||
+      !requestedIdentifier ||
+      !requestedAccessCode ||
+      !accessToken ||
+      (selectedGameId && selectedGameId !== context.gameId)
+    ) {
       return primary;
     }
 
@@ -248,7 +361,11 @@
       {
         method: "POST",
         headers: classroomHeaders(request, accessToken, context.gameId),
-        body: JSON.stringify({ reason: "player_created_without_access_code" }),
+        body: JSON.stringify({
+          playerIdentifier: requestedIdentifier,
+          accessCode: requestedAccessCode,
+          reason: "player_created_without_identity_credentials",
+        }),
         credentials: "omit",
         cache: "no-store",
         redirect: "follow",
@@ -266,7 +383,13 @@
 
     emitAccessCode({
       playerId,
-      displayName: text(resetPlayer.displayName || resetPlayer.name || primaryPlayer.displayName || primaryPlayer.name),
+      displayName: text(
+        resetPlayer.displayName ||
+        resetPlayer.name ||
+        primaryPlayer.displayName ||
+        primaryPlayer.name,
+      ),
+      playerIdentifier: playerIdentifierFrom(resetBody) || requestedIdentifier,
       studentCode,
     });
 
@@ -276,5 +399,7 @@
   window.EconovariaPlayerAccessCodeBridge = {
     accessCodeFrom,
     playerFrom,
+    playerIdentifierFrom,
+    updatePlayerIdentity,
   };
 })();
