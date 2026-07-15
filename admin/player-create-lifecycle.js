@@ -1,6 +1,12 @@
 (function initEconovariaPlayerCreateLifecycle() {
   "use strict";
 
+  const CREATE_FORM_BY_ACTION = new Map([
+    ["create-contract", "[data-admin-terminal-contract-form]"],
+    ["create-player", "[data-admin-terminal-player-form]"],
+    ["save-store-item", "[data-admin-terminal-store-form]"],
+  ]);
+
   function closeOpenPlayerCreateModal() {
     const form = document.querySelector("[data-admin-terminal-player-form]");
     if (!form) return false;
@@ -40,6 +46,23 @@
     });
   }
 
+  function guardDelegatedCreateAction(event, target) {
+    const button = target?.closest("button[data-admin-terminal-action]");
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    const action = String(button.dataset.adminTerminalAction || "").trim();
+    const selector = CREATE_FORM_BY_ACTION.get(action);
+    if (!selector) return;
+
+    const form = button.closest(selector) || document.querySelector(selector);
+    const validator = window.EconovariaAdminInteractionQuality?.validateForm;
+    if (!(form instanceof HTMLFormElement) || typeof validator !== "function") return;
+    if (validator(form)) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
   window.addEventListener("econovaria:player-access-code-issued", () => {
     closeOpenPlayerCreateModal();
   });
@@ -61,6 +84,7 @@
 
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
+    guardDelegatedCreateAction(event, target);
     if (target?.closest('[data-admin-terminal-action="add-player"]')) {
       scheduleCreateFormDecoration();
     }
@@ -69,5 +93,6 @@
   window.EconovariaPlayerCreateLifecycle = {
     closeOpenPlayerCreateModal,
     decoratePlayerCreateForm,
+    guardDelegatedCreateAction,
   };
 })();
