@@ -54,6 +54,7 @@ const expectedScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./admin-stabilization.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -70,6 +71,7 @@ for (const requiredStyle of [
   "./css/session-gate.css",
   "./css/player-runtime-integration.css",
   "./css/player-create-confirmation.css",
+  "./css/admin-stabilization.css",
 ]) {
   assert(styleSources.includes(requiredStyle), `Missing required admin stylesheet ${requiredStyle}.`);
 }
@@ -93,6 +95,11 @@ const scopedRuntimeFiles = {
     "ORIGINAL_CURRENCY_ICONS",
     "ORIGINAL_PLAYER_ACTION_ICONS",
     "ORIGINAL_MODAL_VIDEOS",
+  ],
+  "admin/admin-stabilization.js": [
+    "reconcileKnownButtons",
+    "reconcileNumericFormatting",
+    "admin-terminal-ui-icon",
   ],
 };
 
@@ -128,10 +135,16 @@ assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network 
 assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
 assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
 
+const stabilization = readText("admin/admin-stabilization.js");
+assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a network wrapper.");
+assert(!stabilization.includes('createElement("style")'), "Admin stabilization injects runtime CSS.");
+assert(!stabilization.includes("document.body.innerHTML"), "Admin stabilization replaces the document body.");
+
 for (const path of [
   "admin/css/session-gate.css",
   "admin/css/player-runtime-integration.css",
   "admin/css/player-create-confirmation.css",
+  "admin/css/admin-stabilization.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [
@@ -157,4 +170,8 @@ assert(
   "Player-created confirmation CSS is not bounded to its modal.",
 );
 
-console.log("Accepted v606 core files, external styling, and post-merge visual scope boundaries passed.");
+const stabilizationCss = readText("admin/css/admin-stabilization.css");
+assert(stabilizationCss.includes("#adminPreview"), "Admin stabilization CSS is not bounded to the admin root.");
+assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Contract modal stabilization is missing.");
+
+console.log("Accepted v606 core files, external styling, and scoped admin stabilization boundaries passed.");
