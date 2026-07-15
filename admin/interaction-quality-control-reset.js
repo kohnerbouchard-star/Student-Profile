@@ -4,12 +4,16 @@
   function restoreCompletedControl(button) {
     if (!(button instanceof HTMLButtonElement)) return;
     const state = String(button.dataset.adminQolState || "").trim();
-    if (!['success', 'error'].includes(state)) return;
+    if (!["success", "error"].includes(state)) return;
     if (button.dataset.adminQolOriginalDisabled === "true") return;
 
-    button.disabled = false;
-    button.removeAttribute("disabled");
-    button.setAttribute("aria-disabled", "false");
+    if (button.disabled || button.hasAttribute("disabled")) {
+      button.disabled = false;
+      button.removeAttribute("disabled");
+    }
+    if (button.getAttribute("aria-disabled") === "true") {
+      button.setAttribute("aria-disabled", "false");
+    }
   }
 
   function reconcile(root = document) {
