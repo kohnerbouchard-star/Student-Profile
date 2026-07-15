@@ -55,6 +55,7 @@ const expectedScripts = [
   "./player-create-ux.js",
   "./game-code-wiring.js",
   "./admin-stabilization.js",
+  "./interaction-quality.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -73,6 +74,7 @@ const expectedStyles = [
   "./css/player-create-confirmation.css",
   "./css/admin-stabilization.css",
   "./css/admin-stabilization-visual-finish.css",
+  "./css/interaction-quality.css",
 ];
 
 for (const requiredStyle of expectedStyles) {
@@ -109,6 +111,13 @@ const scopedRuntimeFiles = {
     "admin-terminal-ui-icon",
     "admin-terminal-export-history-button-v601",
     "admin-terminal-logs-export-icon",
+  ],
+  "admin/interaction-quality.js": [
+    "validateForm",
+    "setScannerProcessing",
+    "setScannerCompleted",
+    "setScannerError",
+    "admin-qol-page-skeleton",
   ],
 };
 
@@ -171,6 +180,7 @@ for (const path of [
   "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css",
   "admin/css/admin-stabilization-visual-finish.css",
+  "admin/css/interaction-quality.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [
@@ -219,4 +229,29 @@ assert(
   "Final visual corrections contain a blanket page-shell selector.",
 );
 
-console.log("Accepted v606 core files, text/icon integrity, external styling, and scoped admin stabilization boundaries passed.");
+const interactionQuality = readText("admin/interaction-quality.js");
+assert(
+  interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"),
+  "Interaction quality does not observe final admin request outcomes.",
+);
+assert(
+  interactionQuality.includes('aria-invalid') && interactionQuality.includes("admin-qol-field-error"),
+  "Field-level validation feedback is incomplete.",
+);
+assert(
+  interactionQuality.includes('"Scanning"') &&
+    interactionQuality.includes('"Completed"') &&
+    interactionQuality.includes('"Scan failed"'),
+  "Scanner processing, completion, or error copy is missing.",
+);
+
+const interactionQualityCss = readText("admin/css/interaction-quality.css");
+assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Page skeleton CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error CSS is missing.");
+assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing CSS is missing.");
+assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality contains a blanket page-shell reset.");
+assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
+assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
+
+console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, and scoped admin stabilization boundaries passed.");
