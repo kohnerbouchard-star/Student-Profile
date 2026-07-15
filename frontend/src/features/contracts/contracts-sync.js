@@ -5,6 +5,7 @@
   const evidenceDrafts = new Map();
   let refreshPromise = null;
   let dashboardWrapped = false;
+  let contractStateGuardInstalled = false;
   let lastRefreshAt = 0;
   let restoreQueued = false;
 
@@ -88,6 +89,72 @@
     queueMicrotask(restoreAllDrafts);
   }
 
+  function contractState() {
+    try {
+      const current = state?.contracts;
+      return current && typeof current === "object"
+        ? current
+        : { available: [], progress: [] };
+    } catch (_) {
+      return { available: [], progress: [] };
+    }
+  }
+
+  function object(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+  }
+
+  function installContractStateGuard() {
+    if (contractStateGuardInstalled) return;
+    const contractsFeature = feature();
+    const original = contractsFeature?.applyDashboardContracts;
+    if (typeof original !== "function") return;
+    if (original.__contractsStateGuard === true) {
+      contractStateGuardInstalled = true;
+      return;
+    }
+
+    function guardedApplyDashboardContracts(dashboard) {
+      const source = object(dashboard);
+      const me = object(source.me);
+      const incoming = object(me.contracts);
+      const current = contractState();
+      const authoritative = source.__contractsAuthoritative === true;
+      const currentAvailable = Array.isArray(current.available) ? current.available : [];
+      const currentProgress = Array.isArray(current.progress) ? current.progress : [];
+      const incomingAvailable = Array.isArray(incoming.available) ? incoming.available : [];
+      const incomingProgress = Array.isArray(incoming.progress) ? incoming.progress : [];
+
+      if (authoritative) {
+        return original.call(this, dashboard);
+      }
+
+      const mergedDashboard = {
+        ...source,
+        me: {
+          ...me,
+          contracts: {
+            available: incomingAvailable.length > 0
+              ? incomingAvailable
+              : currentAvailable,
+            progress: incomingProgress.length > 0
+              ? incomingProgress
+              : currentProgress,
+          },
+        },
+      };
+
+      return original.call(this, mergedDashboard);
+    }
+
+    guardedApplyDashboardContracts.__contractsStateGuard = true;
+    guardedApplyDashboardContracts.__contractsStateGuardOriginal = original;
+    contractsFeature.applyDashboardContracts = guardedApplyDashboardContracts;
+    contractStateGuardInstalled = true;
+  }
+
   async function refreshPlayerContracts(options = {}) {
     const force = options.force === true;
     if (!hasPlayerSession()) return null;
@@ -95,6 +162,7 @@
     if (!force && Date.now() - lastRefreshAt < NAV_REFRESH_WINDOW_MS) return null;
 
     refreshPromise = (async () => {
+      installContractStateGuard();
       const contractsFeature = feature();
       const session = activeSession();
       if (!contractsFeature?.applyDashboardContracts || !session) return null;
@@ -117,6 +185,7 @@
       }
 
       contractsFeature.applyDashboardContracts({
+        __contractsAuthoritative: true,
         me: {
           contracts: {
             available: Array.isArray(result.contracts) ? result.contracts : [],
@@ -141,6 +210,7 @@
   }
 
   function wrapDashboardRefresh() {
+    installContractStateGuard();
     if (dashboardWrapped || typeof window.loadPlayerGameDashboardSnapshot !== "function") {
       return;
     }
@@ -196,12 +266,14 @@
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
+  installContractStateGuard();
   removePrivateNavigationListener();
   wrapDashboardRefresh();
   window.addEventListener("load", wrapDashboardRefresh, { once: true });
 
   window.Econovaria.features.contracts.refreshPlayerContracts = refreshPlayerContracts;
   window.Econovaria.features.contracts.wrapDashboardRefresh = wrapDashboardRefresh;
+  window.Econovaria.features.contracts.installContractStateGuard = installContractStateGuard;
   window.Econovaria.features.contracts.captureEvidenceDraft = captureDraft;
   window.Econovaria.features.contracts.restoreEvidenceDrafts = restoreAllDrafts;
 })();
