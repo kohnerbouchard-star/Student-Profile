@@ -9,6 +9,10 @@
     ["›", "chevron-right"],
     ["↗", "external"],
     ["＋", "plus"],
+    ["↻", "history"],
+    ["⇩", "download"],
+    ["←", "arrow-left"],
+    ["→", "arrow-right"],
   ]);
 
   const ICON_PATHS = {
@@ -19,6 +23,10 @@
     "chevron-up": '<path d="m7 14 5-5 5 5"/>',
     "chevron-left": '<path d="m15 18-6-6 6-6"/>',
     "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+    history: '<path d="M4 4v6h6"/><path d="M5.3 15a8 8 0 1 0 .7-8.2L4 10"/>',
+    download: '<path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/>',
+    "arrow-left": '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+    "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
   };
 
   let reconcileQueued = false;
@@ -121,9 +129,20 @@
       ["close-contract-schedule-picker", "Close schedule picker", "close"],
       ["contract-schedule-prev-month", "Previous month", "chevron-left"],
       ["contract-schedule-next-month", "Next month", "chevron-right"],
+      ["attendance-ledger-prev-day", "Previous day", "arrow-left"],
+      ["attendance-ledger-next-day", "Next day", "arrow-right"],
     ];
     for (const [action, label, iconName] of iconOnlyActions) {
       root.querySelectorAll?.(`[data-admin-terminal-action="${action}"]`)
+        .forEach((button) => setButtonContent(button, label, iconName, { iconOnly: true }));
+    }
+
+    const iconOnlySelectors = [
+      [".admin-terminal-export-history-button-v601", "Open export history", "history"],
+      [".admin-terminal-logs-export-icon", "Export logs", "download"],
+    ];
+    for (const [selector, label, iconName] of iconOnlySelectors) {
+      root.querySelectorAll?.(selector)
         .forEach((button) => setButtonContent(button, label, iconName, { iconOnly: true }));
     }
 
