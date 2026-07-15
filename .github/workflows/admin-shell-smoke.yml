@@ -16,6 +16,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -47,6 +48,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -119,6 +121,9 @@ jobs:
 
       - name: Exercise student contracts workspace
         run: node scripts/player-contracts-workspace-smoke.mjs
+
+      - name: Audit admin stabilization boundaries
+        run: node scripts/admin-stabilization-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
