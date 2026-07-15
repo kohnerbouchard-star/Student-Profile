@@ -204,6 +204,20 @@ try {
   }
   if (/correct answer|limited resources/i.test(cardText)) throw new Error("Player contract UI exposed an answer key.");
 
+  await page.evaluate(() => {
+    window.Econovaria.features.contracts.applyDashboardContracts({
+      me: { contracts: { available: [], progress: [] } },
+    });
+  });
+  await page.waitForTimeout(100);
+  if (!(await card.isVisible())) {
+    throw new Error("A stale empty dashboard snapshot erased the authoritative contract card.");
+  }
+  const persistentCardText = await card.innerText();
+  if (!persistentCardText.includes("Market Evidence Contract")) {
+    throw new Error(`Contract card did not persist after stale snapshot: ${persistentCardText}`);
+  }
+
   const form = card.locator("[data-contract-submit-form]");
   await form.locator('[name="writtenResponse"]').fill("The evidence indicates the market decision is justified.");
   await form.locator('[name="answer-1-0"]').fill("Market evidence guide");
@@ -223,7 +237,7 @@ try {
   writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, contractLoads, errors }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-contracts-workspace.png`, fullPage: true });
   if (errors.length) throw new Error(errors[0]);
-  console.log("Student Contracts workspace and authenticated submission smoke passed.");
+  console.log("Student Contracts workspace, persistent display, and authenticated submission smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/player-contracts-runtime.json`, JSON.stringify({ submissions, contractLoads, errors, failure: error.message }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-contracts-workspace-failure.png`, fullPage: true });
