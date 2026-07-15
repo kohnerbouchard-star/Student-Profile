@@ -8,6 +8,7 @@ const ADMIN_ID = "00000000-0000-4000-8000-000000001002";
 const CONTRACT_ID = "00000000-0000-4000-8000-000000001003";
 const PROGRESS_ID = "00000000-0000-4000-8000-000000001004";
 const PLAYER_ID = "00000000-0000-4000-8000-000000001005";
+const CONTRACT_TITLE = "Market Evidence Review";
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const base64Url = (value) => Buffer.from(JSON.stringify(value)).toString("base64")
@@ -21,7 +22,7 @@ const game = { id: GAME_ID, gameSessionId: GAME_ID, title: "Review Audit Game", 
 const contract = {
   id: CONTRACT_ID,
   contractId: CONTRACT_ID,
-  title: "Market Evidence Review",
+  title: CONTRACT_TITLE,
   description: "Review the submitted market analysis.",
   instructions: "Submit evidence and complete the quiz.",
   category: "analysis",
@@ -143,12 +144,16 @@ try {
   await page.locator('[data-admin-section="Assignments"]').first().click();
   await page.waitForTimeout(800);
 
-  const focus = page.locator(`[data-admin-terminal-action="focus-contract"][data-contract-id="${CONTRACT_ID}"]`).first();
+  const focus = page.locator(
+    `[data-admin-terminal-action="focus-contract"][data-contract-title="${CONTRACT_TITLE}"]`,
+  ).first();
   await focus.waitFor({ state: "visible", timeout: 8000 });
   await focus.click();
   await page.waitForTimeout(300);
 
-  const review = page.locator(`[data-admin-terminal-action="review-contract-submissions"][data-contract-id="${CONTRACT_ID}"]`).filter({ visible: true }).first();
+  const review = page.locator(
+    `[data-admin-terminal-action="review-contract-submissions"][data-contract-id="${CONTRACT_ID}"]:visible`,
+  ).first();
   await review.waitFor({ state: "visible", timeout: 8000 });
   await review.click();
   const modal = page.locator(".admin-terminal-contract-submissions-modal-v470").first();
@@ -179,11 +184,13 @@ try {
   }
 
   writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-runtime.json`, JSON.stringify({ writes, errors, modalText }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/admin-contract-review.html`, await page.content());
   await page.screenshot({ path: `${ARTIFACT_DIR}/admin-contract-review.png`, fullPage: true });
   if (errors.length) throw new Error(errors[0]);
   console.log("Accepted admin contract review flow passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-runtime.json`, JSON.stringify({ writes, errors, failure: error.message }, null, 2));
+  writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-failure.html`, await page.content());
   await page.screenshot({ path: `${ARTIFACT_DIR}/admin-contract-review-failure.png`, fullPage: true });
   console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
