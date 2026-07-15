@@ -1,0 +1,349 @@
+/* Admin-only stabilization layer.
+   Loaded after the accepted v606 stylesheet so layout corrections remain isolated
+   from the future student-shell redesign. */
+
+#adminPreview,
+#adminPreview *,
+.admin-terminal-modal-backdrop,
+.admin-terminal-modal-backdrop * {
+  box-sizing: border-box;
+}
+
+.admin-terminal-ui-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  vertical-align: -0.12em;
+}
+
+button[data-admin-stabilized-icon="true"] {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+button[data-admin-stabilized-icon="true"] > .admin-terminal-ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.admin-terminal-action-arrow .admin-terminal-ui-icon,
+.admin-terminal-share-arrow .admin-terminal-ui-icon,
+.admin-terminal-side-code-compact .admin-terminal-ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.admin-terminal-hud-close b,
+.admin-terminal-location-toggle b,
+.admin-terminal-contract-submit-menu-toggle-v557,
+[data-admin-terminal-action="contract-schedule-prev-month"],
+[data-admin-terminal-action="contract-schedule-next-month"] {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.admin-terminal-hud-close b .admin-terminal-ui-icon,
+.admin-terminal-location-toggle b .admin-terminal-ui-icon,
+.admin-terminal-contract-submit-menu-toggle-v557 .admin-terminal-ui-icon,
+[data-admin-terminal-action="contract-schedule-prev-month"] .admin-terminal-ui-icon,
+[data-admin-terminal-action="contract-schedule-next-month"] .admin-terminal-ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.admin-terminal-contract-advanced-v495 summary {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+}
+
+.admin-terminal-contract-advanced-v495 summary::after {
+  content: none !important;
+  display: none !important;
+}
+
+.admin-terminal-contract-advanced-v495 summary .admin-terminal-ui-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.admin-terminal-modal-backdrop {
+  padding: clamp(12px, 2vw, 24px) !important;
+}
+
+.admin-terminal-modal input,
+.admin-terminal-modal textarea,
+.admin-terminal-modal select,
+.admin-terminal-modal button {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-terminal-modal label,
+.admin-terminal-modal .admin-terminal-field,
+.admin-terminal-modal .admin-terminal-contract-grid,
+.admin-terminal-modal .admin-terminal-contract-writing-v494,
+.admin-terminal-modal .admin-terminal-contract-writing-v495,
+.admin-terminal-modal .admin-terminal-contract-advanced-v495,
+.admin-terminal-modal .admin-terminal-reward-stage,
+.admin-terminal-modal .admin-terminal-selected-rewards {
+  min-width: 0;
+}
+
+.admin-terminal-modal input,
+.admin-terminal-modal textarea,
+.admin-terminal-modal select {
+  line-height: 1.35;
+}
+
+.admin-terminal-modal textarea {
+  overflow: auto;
+}
+
+.admin-terminal-modal select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2374e2ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.65rem center !important;
+  background-size: 0.9rem 0.9rem !important;
+}
+
+.admin-terminal-modal.is-contract-modal {
+  width: min(1280px, calc(100vw - 32px)) !important;
+  height: min(900px, calc(100vh - 32px)) !important;
+  max-height: calc(100vh - 32px) !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-container {
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  padding: 24px 30px 22px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-topbar {
+  min-height: 44px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-form {
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 380px) !important;
+  gap: 16px !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-main,
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-reward {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 212, 255, 0.34) rgba(2, 10, 20, 0.42) !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-reward {
+  grid-template-rows: auto auto minmax(72px, 1fr) auto !important;
+  align-content: start !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-field {
+  gap: 7px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-field span,
+.admin-terminal-modal.is-contract-modal .admin-terminal-selected-rewards > span,
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-preview span {
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-field input,
+.admin-terminal-modal.is-contract-modal .admin-terminal-field select {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding-left: 11px !important;
+  font-size: 13px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-field.is-title input {
+  height: 46px !important;
+  min-height: 46px !important;
+  font-size: 17px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-field textarea {
+  min-height: 92px !important;
+  height: auto !important;
+  padding: 11px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.admin-terminal-modal.is-contract-modal textarea[data-admin-terminal-contract-instructions] {
+  min-height: 126px !important;
+}
+
+.admin-terminal-modal.is-contract-modal textarea[data-admin-terminal-contract-evidence] {
+  min-height: 96px !important;
+}
+
+.admin-terminal-modal.is-contract-modal textarea[data-admin-terminal-contract-review-note] {
+  min-height: 72px !important;
+}
+
+.admin-terminal-contract-writing-v494,
+.admin-terminal-contract-writing-v495,
+.admin-terminal-contract-advanced-v495 {
+  gap: 12px !important;
+  padding: 13px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid {
+  gap: 10px !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid.is-four {
+  grid-template-columns: minmax(170px, 1fr) minmax(94px, 0.42fr) minmax(150px, 0.72fr) minmax(170px, 0.82fr) !important;
+}
+
+.admin-terminal-reward-add-top {
+  gap: 10px !important;
+}
+
+.admin-terminal-reward-add-top button,
+.admin-terminal-contract-actions button {
+  min-height: 40px !important;
+  padding: 0.55rem 0.75rem !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.admin-terminal-reward-stage {
+  min-height: 88px !important;
+  padding: 12px !important;
+}
+
+.admin-terminal-reward-stage-row,
+.admin-terminal-reward-stage-row.is-cash,
+.admin-terminal-reward-stage-row.is-item {
+  grid-template-columns: minmax(0, 1fr) minmax(68px, 88px) minmax(64px, 76px) !important;
+  gap: 9px !important;
+}
+
+.admin-terminal-reward-stage-row input,
+.admin-terminal-reward-stage-row select,
+.admin-terminal-reward-stage-row button {
+  height: 36px !important;
+  min-height: 36px !important;
+}
+
+.admin-terminal-selected-rewards {
+  overflow: visible !important;
+}
+
+.admin-terminal-contract-reward-list {
+  max-height: 150px !important;
+  overflow: auto !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-preview {
+  position: relative !important;
+  z-index: 4 !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  min-height: 68px !important;
+  max-height: none !important;
+  padding: 10px 12px !important;
+  gap: 4px !important;
+  overflow: hidden !important;
+}
+
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-preview strong,
+.admin-terminal-modal.is-contract-modal .admin-terminal-contract-preview small {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.admin-terminal-contract-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) !important;
+  gap: 10px !important;
+}
+
+.admin-terminal-contract-submit-menu-toggle-v557 {
+  min-width: 42px !important;
+  width: 42px !important;
+  padding: 0 !important;
+}
+
+.admin-terminal-currency-number,
+.admin-terminal-currency-single-amount > b {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@media (max-width: 1080px) {
+  .admin-terminal-modal.is-contract-modal {
+    width: min(96vw, 1280px) !important;
+    height: min(92vh, 900px) !important;
+  }
+
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-container {
+    grid-template-rows: auto auto auto !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-form,
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid,
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid.is-four,
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid.is-review-v495,
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-grid.is-advanced-v495 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-main,
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-reward {
+    overflow: visible !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-terminal-modal-backdrop {
+    padding: 8px !important;
+  }
+
+  .admin-terminal-modal.is-contract-modal {
+    width: calc(100vw - 16px) !important;
+    height: calc(100vh - 16px) !important;
+    max-height: calc(100vh - 16px) !important;
+  }
+
+  .admin-terminal-modal.is-contract-modal .admin-terminal-contract-container {
+    padding: 18px 16px !important;
+  }
+
+  .admin-terminal-contract-actions,
+  .admin-terminal-reward-stage-row,
+  .admin-terminal-reward-stage-row.is-cash,
+  .admin-terminal-reward-stage-row.is-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-terminal-contract-submit-menu-toggle-v557 {
+    width: 100% !important;
+  }
+}
