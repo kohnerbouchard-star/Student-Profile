@@ -32,8 +32,16 @@
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("focusable", "false");
     svg.classList.add("admin-terminal-ui-icon");
+    svg.dataset.adminIconName = name;
     svg.innerHTML = ICON_PATHS[name] || ICON_PATHS.external;
     return svg;
+  }
+
+  function ensureIcon(container, name) {
+    if (!(container instanceof Element)) return;
+    const current = container.querySelector(":scope > .admin-terminal-ui-icon");
+    if (current?.dataset.adminIconName === name && container.childElementCount === 1) return;
+    container.replaceChildren(icon(name));
   }
 
   function labelNode(value) {
@@ -44,6 +52,7 @@
 
   function setButtonContent(button, label, iconName, options = {}) {
     if (!(button instanceof HTMLButtonElement)) return;
+    if (button.dataset.adminStabilizedIcon === "true") return;
     const normalizedLabel = text(label);
     button.replaceChildren();
     if (options.iconOnly !== true && normalizedLabel) {
@@ -93,10 +102,7 @@
     ];
     for (const [action, label, iconName] of labeledActions) {
       root.querySelectorAll?.(`[data-admin-terminal-action="${action}"]`)
-        .forEach((button) => {
-          if (button.dataset.adminStabilizedIcon === "true") return;
-          setButtonContent(button, label, iconName);
-        });
+        .forEach((button) => setButtonContent(button, label, iconName));
     }
 
     const iconOnlyActions = [
@@ -108,10 +114,7 @@
     ];
     for (const [action, label, iconName] of iconOnlyActions) {
       root.querySelectorAll?.(`[data-admin-terminal-action="${action}"]`)
-        .forEach((button) => {
-          if (button.dataset.adminStabilizedIcon === "true") return;
-          setButtonContent(button, label, iconName, { iconOnly: true });
-        });
+        .forEach((button) => setButtonContent(button, label, iconName, { iconOnly: true }));
     }
 
     root.querySelectorAll?.(".admin-terminal-location-toggle")
@@ -119,23 +122,35 @@
         const strong = button.querySelector("strong");
         const badge = button.querySelector("b") || document.createElement("b");
         if (strong) strong.textContent = text(strong.textContent).replace(/[⌄⌃]+$/u, "").trim();
-        badge.replaceChildren(icon(
+        ensureIcon(
+          badge,
           button.getAttribute("aria-expanded") === "true" ? "chevron-up" : "chevron-down",
-        ));
+        );
         badge.dataset.adminStabilizedIcon = "true";
         if (!badge.parentElement) button.append(badge);
       });
 
+    root.querySelectorAll?.(".admin-terminal-player-chevron")
+      .forEach((chevron) => {
+        const button = chevron.closest("button[aria-expanded]");
+        ensureIcon(
+          chevron,
+          button?.getAttribute("aria-expanded") === "true" ? "chevron-up" : "chevron-down",
+        );
+        chevron.dataset.adminStabilizedIcon = "true";
+      });
+
     root.querySelectorAll?.(".admin-terminal-contract-advanced-v495 summary")
       .forEach((summary) => {
+        const name = summary.parentElement?.open ? "chevron-up" : "chevron-down";
         const existing = summary.querySelector(":scope > .admin-terminal-ui-icon");
+        if (existing?.dataset.adminIconName === name) return;
         existing?.remove();
-        summary.append(icon(summary.parentElement?.open ? "chevron-up" : "chevron-down"));
+        summary.append(icon(name));
       });
 
     root.querySelectorAll?.(".admin-terminal-drawer-action")
       .forEach((button) => {
-        if (button.dataset.adminStabilizedIcon === "true") return;
         const label = text(button.textContent).replace(/[↗]+$/u, "").trim() || "View more";
         setButtonContent(button, label, "external", { iconAfter: true });
       });
