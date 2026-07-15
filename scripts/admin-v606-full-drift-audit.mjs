@@ -64,7 +64,7 @@ assert(
 );
 assert(!/<style(?:\s|>)/i.test(html), "Admin entrypoint contains an inline style block.");
 
-for (const requiredStyle of [
+const expectedStyles = [
   "./css/page-shell.css",
   "./css/admin-overview-terminal.css",
   "./css/admin-overview-integrity.css",
@@ -72,9 +72,16 @@ for (const requiredStyle of [
   "./css/player-runtime-integration.css",
   "./css/player-create-confirmation.css",
   "./css/admin-stabilization.css",
-]) {
+  "./css/admin-stabilization-visual-finish.css",
+];
+
+for (const requiredStyle of expectedStyles) {
   assert(styleSources.includes(requiredStyle), `Missing required admin stylesheet ${requiredStyle}.`);
 }
+assert(
+  JSON.stringify(styleSources) === JSON.stringify(expectedStyles),
+  `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`,
+);
 
 const scopedRuntimeFiles = {
   "admin/player-drawer-wiring.js": [
@@ -100,6 +107,8 @@ const scopedRuntimeFiles = {
     "reconcileKnownButtons",
     "reconcileNumericFormatting",
     "admin-terminal-ui-icon",
+    "admin-terminal-export-history-button-v601",
+    "admin-terminal-logs-export-icon",
   ],
 };
 
@@ -140,11 +149,28 @@ assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a ne
 assert(!stabilization.includes('createElement("style")'), "Admin stabilization injects runtime CSS.");
 assert(!stabilization.includes("document.body.innerHTML"), "Admin stabilization replaces the document body.");
 
+for (const [glyph, iconName] of [
+  ["↻", "history"],
+  ["⇩", "download"],
+  ["←", "arrow-left"],
+  ["→", "arrow-right"],
+]) {
+  assert(
+    stabilization.includes(`["${glyph}", "${iconName}"]`),
+    `Admin stabilization does not replace the raw ${glyph} control glyph.`,
+  );
+  assert(
+    stabilization.includes(`${iconName}:`) || stabilization.includes(`"${iconName}":`),
+    `Admin stabilization is missing the ${iconName} SVG path.`,
+  );
+}
+
 for (const path of [
   "admin/css/session-gate.css",
   "admin/css/player-runtime-integration.css",
   "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css",
+  "admin/css/admin-stabilization-visual-finish.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [
@@ -171,7 +197,26 @@ assert(
 );
 
 const stabilizationCss = readText("admin/css/admin-stabilization.css");
-assert(stabilizationCss.includes("#adminPreview"), "Admin stabilization CSS is not bounded to the admin root.");
+assert(stabilizationCss.includes(".admin-terminal-modal-backdrop"), "Admin modal stabilization is missing.");
 assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Contract modal stabilization is missing.");
+assert(
+  !/#adminPreview\s*,[\s\S]{0,80}#adminPreview\s+\*/m.test(stabilizationCss) &&
+    !/#adminPreview\s+\*\s*\{/m.test(stabilizationCss),
+  "Admin stabilization applies a blanket box-sizing reset to the accepted page shell.",
+);
+assert(
+  /\.admin-terminal-modal-backdrop\s*,\s*\.admin-terminal-modal-backdrop\s+\*\s*\{[\s\S]*?box-sizing:\s*border-box/m.test(stabilizationCss),
+  "Modal-only border-box containment is missing.",
+);
 
-console.log("Accepted v606 core files, external styling, and scoped admin stabilization boundaries passed.");
+const visualFinishCss = readText("admin/css/admin-stabilization-visual-finish.css");
+assert(
+  visualFinishCss.includes("#adminPreview .admin-terminal-clickable-row::after"),
+  "Clickable-row SVG affordance correction is missing.",
+);
+assert(
+  !visualFinishCss.includes("#adminPreview *"),
+  "Final visual corrections contain a blanket page-shell selector.",
+);
+
+console.log("Accepted v606 core files, text/icon integrity, external styling, and scoped admin stabilization boundaries passed.");
