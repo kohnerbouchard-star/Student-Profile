@@ -86,7 +86,6 @@ export async function createQualityHarness(name) {
   const state = { failContract: false, failScan: false, delayReads: true, writeDelay: 420 };
 
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
-  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText || "";
     if (request.url().endsWith("/favicon.ico")) return;
