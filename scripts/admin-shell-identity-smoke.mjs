@@ -99,7 +99,7 @@ assert(identityWiring.includes("Leave blank to keep the current Access Code"), "
 assert(identityWiring.includes("showCredentialDialog: false"), "Edit Player Profile still opens a second credential popup.");
 assert(!identityWiring.includes("data-admin-player-identity-settings-form"), "Removed inline player identity form is still present.");
 assert(!identityWiring.includes('setAttribute("data-admin-player-identity-manager"'), "Standalone Player IDs action is still created.");
-assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow is still present.");
+assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow returned.");
 assert(!identityWiring.includes("window.fetch ="), "Player settings wiring adds another fetch wrapper.");
 assert(!identityWiring.includes("Internal record ID"), "Admin UI exposes an internal identifier label.");
 
@@ -126,7 +126,9 @@ assert(interactionQuality.includes("setScannerError"), "Scanner error state is m
 assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton runtime is missing.");
 assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Admin request-state observer is missing.");
 assert(interactionControlReset.includes("restoreCompletedControl"), "Completed actions do not restore their controls.");
-assert(interactionControlReset.includes('button.setAttribute("aria-disabled", "false")'), "Completed controls do not restore accessibility state.");
+assert(interactionControlReset.includes('removeAttribute("aria-disabled")'), "Completed controls do not clear stale disabled semantics.");
+assert(interactionControlReset.includes("setScannerReady"), "Scanner does not restore its Ready state.");
+assert(interactionControlReset.includes("Scan a player code. The result appears here."), "Scanner idle guidance drifted.");
 assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error styling is missing.");
 assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing styling is missing.");
 assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton styling is missing.");
