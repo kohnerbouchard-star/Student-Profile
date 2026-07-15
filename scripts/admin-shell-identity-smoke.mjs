@@ -26,6 +26,7 @@ const expectedScripts = [
   "./game-code-wiring.js",
   "./admin-stabilization.js",
   "./interaction-quality.js",
+  "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -53,6 +54,7 @@ const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.j
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
 const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
+const interactionControlReset = readFileSync(resolve(adminRoot, "interaction-quality-control-reset.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
 const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
@@ -73,6 +75,7 @@ assert(credentialBridge.includes("`${LOCAL_API_PREFIX}/games/"), "Existing-playe
 assert(credentialBridge.includes("showCredentialDialog"), "Edit Player Profile cannot suppress the create-only credential dialog.");
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
+assert(createLifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions do not enforce form validation.");
 assert(!createLifecycle.includes("markExpandedPlayerDetail"), "Create lifecycle still mutates the player drawer.");
 assert(!createLifecycle.includes("mountExpandedPlayerSettings"), "Create lifecycle still mounts removed inline settings.");
 
@@ -122,6 +125,8 @@ assert(interactionQuality.includes("setScannerCompleted"), "Scanner completed st
 assert(interactionQuality.includes("setScannerError"), "Scanner error state is missing.");
 assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton runtime is missing.");
 assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Admin request-state observer is missing.");
+assert(interactionControlReset.includes("restoreCompletedControl"), "Completed actions do not restore their controls.");
+assert(interactionControlReset.includes('button.setAttribute("aria-disabled", "false")'), "Completed controls do not restore accessibility state.");
 assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error styling is missing.");
 assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing styling is missing.");
 assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton styling is missing.");
@@ -147,4 +152,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, admin wiring, validation, request states, skeleton loading, and scanner lifecycle contract passed.");
+console.log("Original v606 shell, admin wiring, validation, request states, skeleton loading, scanner lifecycle, and completed-control restoration passed.");
