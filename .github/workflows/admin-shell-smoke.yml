@@ -17,6 +17,9 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
+      - "scripts/admin-quality-smoke-fixture.mjs"
+      - "scripts/admin-contract-validation-smoke.mjs"
+      - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -49,6 +52,9 @@ on:
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
+      - "scripts/admin-quality-smoke-fixture.mjs"
+      - "scripts/admin-contract-validation-smoke.mjs"
+      - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -114,7 +120,7 @@ jobs:
             sleep 1
           done
           cat /tmp/admin-smoke-server.log
-          exit 1
+          false
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs
@@ -124,6 +130,12 @@ jobs:
 
       - name: Audit admin stabilization boundaries
         run: node scripts/admin-stabilization-smoke.mjs
+
+      - name: Audit contract validation and button states
+        run: node scripts/admin-contract-validation-smoke.mjs
+
+      - name: Audit verification skeleton and scanner lifecycle
+        run: node scripts/admin-loading-scanner-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
