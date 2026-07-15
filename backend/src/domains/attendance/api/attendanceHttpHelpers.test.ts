@@ -1,10 +1,37 @@
 import {
+  readPlayerAttendanceWindowConfig,
   readStaffAttendanceScanRequestBody,
 } from "./attendanceHttpHelpers.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
+
+Deno.test("attendance window defaults present scans to one ECO reward", () => {
+  assertEquals(readPlayerAttendanceWindowConfig({}), {
+    timezone: "Asia/Seoul",
+    lateCutoffMinutes: null,
+    presentRewardAmount: 1,
+    lateRewardAmount: 0,
+    currencyCode: "ECO",
+  });
+});
+
+Deno.test("attendance window preserves explicit reward values including zero", () => {
+  assertEquals(readPlayerAttendanceWindowConfig({
+    timezone: "America/Los_Angeles",
+    lateCutoff: "09:15",
+    presentRewardAmount: 0,
+    lateRewardAmount: 0.5,
+    currencyCode: "eco",
+  }), {
+    timezone: "America/Los_Angeles",
+    lateCutoffMinutes: 555,
+    presentRewardAmount: 0,
+    lateRewardAmount: 0.5,
+    currencyCode: "ECO",
+  });
+});
 
 Deno.test("attendance scan parser accepts the canonical contract", async () => {
   const result = await readStaffAttendanceScanRequestBody(jsonRequest({
