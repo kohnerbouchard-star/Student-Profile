@@ -8,6 +8,7 @@
     ["‹", "chevron-left"],
     ["›", "chevron-right"],
     ["↗", "external"],
+    ["＋", "plus"],
   ]);
 
   const ICON_PATHS = {
@@ -24,6 +25,12 @@
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
+  }
+
+  function humanizeAction(value) {
+    const normalized = text(value).replace(/[_-]+/g, " ");
+    if (!normalized) return "Admin action";
+    return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
   }
 
   function icon(name) {
@@ -95,6 +102,9 @@
         button.dataset.adminStabilizedIcon = "true";
       });
 
+    root.querySelectorAll?.(".admin-terminal-contracts-add-v466")
+      .forEach((button) => setButtonContent(button, "Add Contract", "plus"));
+
     const labeledActions = [
       ["stage-cash-reward", "Cash", "plus"],
       ["stage-item-reward", "Item", "plus"],
@@ -161,6 +171,10 @@
       .forEach((button) => {
         if (button.dataset.adminStabilizedIcon === "true") return;
         const value = text(button.textContent);
+        if (value.startsWith("＋")) {
+          setButtonContent(button, value.replace(/^＋\s*/u, "") || "Add", "plus");
+          return;
+        }
         const iconName = GLYPH_ONLY.get(value);
         if (!iconName) return;
         setButtonContent(
@@ -168,6 +182,26 @@
           button.getAttribute("aria-label") || iconName,
           iconName,
           { iconOnly: true },
+        );
+      });
+  }
+
+  function reconcileAccessibleNames(root) {
+    root.querySelectorAll?.("button")
+      .forEach((button) => {
+        const label = text(
+          button.getAttribute("aria-label") ||
+          button.getAttribute("title") ||
+          button.innerText,
+        );
+        if (label) return;
+        button.setAttribute(
+          "aria-label",
+          humanizeAction(
+            button.getAttribute("data-admin-terminal-action") ||
+            button.getAttribute("name") ||
+            button.id,
+          ),
         );
       });
   }
@@ -217,6 +251,7 @@
   function reconcile(root = document) {
     reconcileKnownButtons(root);
     reconcileResidualGlyphButtons(root);
+    reconcileAccessibleNames(root);
     reconcileNumericFormatting(root);
   }
 
