@@ -24,6 +24,7 @@ const expectedScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./admin-stabilization.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -49,6 +50,8 @@ const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle
 const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
+const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
+const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
@@ -74,7 +77,7 @@ assert(drawerWiring.includes("admin-terminal-player-drawer-tabs-v301"), "Origina
 assert(drawerWiring.includes("data-admin-terminal-player-drawer"), "Player drawer is missing the original delegated-event boundary.");
 assert(drawerWiring.includes("select-player-drawer-tab"), "Player drawer tabs are not wired to the original delegated action.");
 for (const label of ["Overview", "Bank Accounts", "Assets", "Liabilities", "Inventory", "Logs"]) {
-  assert(drawerWiring.includes(`\"${label}\"`), `Player drawer is missing the ${label} tab.`);
+  assert(drawerWiring.includes(`"${label}"`), `Player drawer is missing the ${label} tab.`);
 }
 assert(drawerWiring.includes("data-admin-player-drawer-authoritative"), "Restored player drawer is not marked as authoritative-data only.");
 assert(!drawerWiring.includes("Math.random"), "Player drawer generates synthetic data.");
@@ -103,6 +106,13 @@ assert(playerCreateUx.includes("admin-terminal-modal-backdrop"), "Player confirm
 assert(playerCreateUx.includes("[data-admin-player-access-code-dialog]"), "Legacy credential overlay is not suppressed.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
 
+assert(stabilization.includes("reconcileKnownButtons"), "Admin glyph reconciliation is missing.");
+assert(stabilization.includes("reconcileNumericFormatting"), "Admin numeric-format reconciliation is missing.");
+assert(stabilization.includes("admin-terminal-ui-icon"), "Admin stabilization does not use inline SVG icons.");
+assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Contract modal stabilization rules are missing.");
+assert(stabilizationCss.includes("box-sizing: border-box"), "Admin box-model stabilization is missing.");
+assert(html.includes("./css/admin-stabilization.css"), "Admin stabilization stylesheet is not loaded.");
+
 assert(terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'), "Delegated admin click handler is missing.");
 assert(terminal.includes("function applyAdminTerminalPermissionGating(root = document)"), "Admin permission gating is missing.");
 assert(terminal.includes('actionName === "select-player-drawer-tab"'), "Original player drawer tab action was removed from the v606 bundle.");
@@ -121,4 +131,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, and original-video admin shell contract passed.");
+console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, original-video shell, and final admin stabilization contract passed.");
