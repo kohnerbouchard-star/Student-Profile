@@ -25,6 +25,7 @@ const expectedScripts = [
   "./player-create-ux.js",
   "./game-code-wiring.js",
   "./admin-stabilization.js",
+  "./interaction-quality.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -51,7 +52,9 @@ const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"),
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
+const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
+const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
@@ -71,7 +74,7 @@ assert(credentialBridge.includes("showCredentialDialog"), "Edit Player Profile c
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
 assert(!createLifecycle.includes("markExpandedPlayerDetail"), "Create lifecycle still mutates the player drawer.");
-assert(!createLifecycle.includes("mountExpandedPlayerSettings"), "Create lifecycle still mounts removed inline player settings.");
+assert(!createLifecycle.includes("mountExpandedPlayerSettings"), "Create lifecycle still mounts removed inline settings.");
 
 assert(drawerWiring.includes("admin-terminal-player-drawer-tabs-v301"), "Original v606 player drawer shell is not restored.");
 assert(drawerWiring.includes("data-admin-terminal-player-drawer"), "Player drawer is missing the original delegated-event boundary.");
@@ -113,6 +116,19 @@ assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Co
 assert(stabilizationCss.includes("box-sizing: border-box"), "Admin box-model stabilization is missing.");
 assert(html.includes("./css/admin-stabilization.css"), "Admin stabilization stylesheet is not loaded.");
 
+assert(interactionQuality.includes("validateForm"), "Admin field validation is missing.");
+assert(interactionQuality.includes("setScannerProcessing"), "Scanner processing state is missing.");
+assert(interactionQuality.includes("setScannerCompleted"), "Scanner completed state is missing.");
+assert(interactionQuality.includes("setScannerError"), "Scanner error state is missing.");
+assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton runtime is missing.");
+assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Admin request-state observer is missing.");
+assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error styling is missing.");
+assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing styling is missing.");
+assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton styling is missing.");
+assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
+assert(!html.includes("Opening administrator console"), "Legacy verification copy is still visible.");
+assert(html.includes("./css/interaction-quality.css"), "Interaction quality stylesheet is not loaded.");
+
 assert(terminal.includes('document.addEventListener("click", handleTerminalOverviewClick)'), "Delegated admin click handler is missing.");
 assert(terminal.includes("function applyAdminTerminalPermissionGating(root = document)"), "Admin permission gating is missing.");
 assert(terminal.includes('actionName === "select-player-drawer-tab"'), "Original player drawer tab action was removed from the v606 bundle.");
@@ -131,4 +147,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, original-video shell, and final admin stabilization contract passed.");
+console.log("Original v606 shell, admin wiring, validation, request states, skeleton loading, and scanner lifecycle contract passed.");
