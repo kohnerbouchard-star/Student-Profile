@@ -5,6 +5,7 @@ const { page, state, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 const buttonPresentations = [];
 const timing = {};
+let identityPresentation = null;
 
 async function waitForScannerState(expected, timeout = 5000) {
   await page.waitForFunction((value) => {
@@ -31,6 +32,39 @@ async function assertScannerButtonFits(button, expectedLabel) {
   if (presentation.statusText !== expectedLabel) fail(`Scanner action label drifted: ${JSON.stringify(presentation)}.`);
   if (presentation.statusScrollWidth > presentation.statusClientWidth + 1 || !presentation.contained) {
     fail(`Scanner action label is clipped: ${JSON.stringify(presentation)}.`);
+  }
+}
+
+async function assertPlayerIdentityHierarchy(scanner) {
+  await page.waitForFunction(() => {
+    const name = document.querySelector("[data-admin-terminal-last-scan-player]")?.textContent?.trim();
+    const playerId = document.querySelector("[data-admin-terminal-last-scan-player-id]")?.textContent?.trim();
+    return name === "Quality Player" && playerId === "Player ID: QUALITY-01";
+  }, null, { timeout: 3000 });
+
+  identityPresentation = await scanner.evaluate((root) => {
+    const name = root.querySelector("[data-admin-terminal-last-scan-player]");
+    const playerId = root.querySelector("[data-admin-terminal-last-scan-player-id]");
+    const time = root.querySelector("[data-admin-terminal-last-scan-time]");
+    const nameStyle = name ? getComputedStyle(name) : null;
+    const idStyle = playerId ? getComputedStyle(playerId) : null;
+    return {
+      name: name?.textContent?.trim() || "",
+      playerId: playerId?.textContent?.trim() || "",
+      time: time?.textContent?.trim() || "",
+      nameFontSize: Number.parseFloat(nameStyle?.fontSize || "0"),
+      idFontSize: Number.parseFloat(idStyle?.fontSize || "0"),
+      nameSource: name?.getAttribute("data-admin-scanner-identity-source") || "",
+    };
+  });
+
+  if (identityPresentation.name !== "Quality Player") fail(`Scanner did not prioritize display name: ${JSON.stringify(identityPresentation)}.`);
+  if (identityPresentation.playerId !== "Player ID: QUALITY-01") fail(`Scanner did not show the player ID beneath the name: ${JSON.stringify(identityPresentation)}.`);
+  if (identityPresentation.nameFontSize < identityPresentation.idFontSize * 1.8) {
+    fail(`Scanner name is not materially larger than the ID: ${JSON.stringify(identityPresentation)}.`);
+  }
+  if (identityPresentation.nameSource !== "attendance-response") {
+    fail(`Scanner identity did not come from the attendance response: ${JSON.stringify(identityPresentation)}.`);
   }
 }
 
@@ -89,6 +123,7 @@ try {
   await waitForScannerState("Completed");
   const completedAt = Date.now();
   await assertScannerButtonFits(button, "Completed");
+  await assertPlayerIdentityHierarchy(scanner);
   await capture("completed");
   await waitForRapidRearm(input, button, completedAt, "successRearmMs");
   await assertReadyScanner(scanner, input);
@@ -106,11 +141,11 @@ try {
   await capture("error-ready");
 
   if (errors.length) fail(errors[0]);
-  await finish({ passed: true, buttonPresentations, timing });
-  console.log("Verification skeleton, rapid scanner rearm, and automatic refresh passed.");
+  await finish({ passed: true, buttonPresentations, timing, identityPresentation });
+  console.log("Verification skeleton, scanner identity hierarchy, rapid rearm, and automatic refresh passed.");
 } catch (error) {
   await capture("failure").catch(() => {});
-  await finish({ passed: false, failure: error.stack || error.message || String(error), buttonPresentations, timing });
+  await finish({ passed: false, failure: error.stack || error.message || String(error), buttonPresentations, timing, identityPresentation });
   console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
 }
