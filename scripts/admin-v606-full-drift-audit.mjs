@@ -122,8 +122,9 @@ const scopedRuntimeFiles = {
   ],
   "admin/interaction-quality-control-reset.js": [
     "restoreCompletedControl",
-    "aria-disabled",
-    "data-admin-qol-state",
+    "setScannerReady",
+    "removeAttribute(\"aria-disabled\")",
+    "Scan a player code. The result appears here.",
   ],
 };
 
@@ -242,7 +243,7 @@ assert(
   "Interaction quality does not observe final admin request outcomes.",
 );
 assert(
-  interactionQuality.includes('aria-invalid') && interactionQuality.includes("admin-qol-field-error"),
+  interactionQuality.includes("aria-invalid") && interactionQuality.includes("admin-qol-field-error"),
   "Field-level validation feedback is incomplete.",
 );
 assert(
@@ -255,8 +256,9 @@ assert(
 const interactionControlReset = readText("admin/interaction-quality-control-reset.js");
 assert(
   interactionControlReset.includes("restoreCompletedControl") &&
-    interactionControlReset.includes('button.setAttribute("aria-disabled", "false")'),
-  "Completed actions do not restore accessible controls.",
+    interactionControlReset.includes('removeAttribute("aria-disabled")') &&
+    interactionControlReset.includes("setScannerReady"),
+  "Completed actions or scanner idle recovery are incomplete.",
 );
 
 const interactionQualityCss = readText("admin/css/interaction-quality.css");
@@ -268,4 +270,4 @@ assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality 
 assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, completed-control restoration, and scoped admin stabilization boundaries passed.");
+console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, scanner recovery, completed-control restoration, and scoped admin stabilization boundaries passed.");
