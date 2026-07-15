@@ -8,6 +8,10 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function rowCount(rows: readonly unknown[]): number {
+  return rows.length;
+}
+
 function responseRow(tableName: string): Record<string, unknown> {
   if (tableName === "game_session_contracts") {
     return {
@@ -140,9 +144,9 @@ Deno.test("legacy accepted contract decision reviews then issues atomic rewards"
     const firstBody = await firstResponse.json();
 
     assert(firstResponse.status === 200, `Expected 200, received ${firstResponse.status}.`);
-    assert(classroomCalls.length === 1, `Expected one canonical review call, received ${classroomCalls.length}.`);
+    assert(rowCount(classroomCalls) === 1, `Expected one canonical review call, received ${rowCount(classroomCalls)}.`);
     assert((classroomCalls[0].body as Record<string, unknown>).action === "approve", "Legacy accept was not normalized to approve.");
-    assert(service.rpcCalls.length === 1, `Expected one atomic reward RPC, received ${service.rpcCalls.length}.`);
+    assert(rowCount(service.rpcCalls) === 1, `Expected one atomic reward RPC, received ${rowCount(service.rpcCalls)}.`);
     assert(service.rpcCalls[0].name === "issue_contract_rewards_atomic_v1", "Wrong reward RPC was called.");
     assert(service.rpcCalls[0].args.p_request_id === "review-request-1", "Reward RPC did not receive the request id.");
     assert(firstBody.data?.reviewed === true, "Combined decision response omitted reviewed state.");
@@ -158,8 +162,8 @@ Deno.test("legacy accepted contract decision reviews then issues atomic rewards"
     const secondBody = await secondResponse.json();
 
     assert(secondResponse.status === 200, `Expected repeated approval to return 200, received ${secondResponse.status}.`);
-    assert(classroomCalls.length === 2, `Expected repeated approval to perform one review call, received ${classroomCalls.length}.`);
-    assert(service.rpcCalls.length === 2, `Expected repeated approval to consult the atomic reward RPC, received ${service.rpcCalls.length}.`);
+    assert(rowCount(classroomCalls) === 2, `Expected repeated approval to perform one review call, received ${rowCount(classroomCalls)}.`);
+    assert(rowCount(service.rpcCalls) === 2, `Expected repeated approval to consult the atomic reward RPC, received ${rowCount(service.rpcCalls)}.`);
     assert(service.rpcCalls[1].args.p_request_id === "review-request-1", "Repeated reward RPC changed the idempotency request id.");
     assert(secondBody.data?.reviewed === true, "Repeated approval omitted reviewed state.");
     assert(secondBody.data?.rewardIssued === false, "Repeated approval reported a duplicate reward issuance.");
@@ -198,7 +202,7 @@ Deno.test("legacy rejected contract decision never issues rewards", async () => 
     );
 
     assert(response.status === 200, `Expected 200, received ${response.status}.`);
-    assert(service.rpcCalls.length === 0, "Rejected decision issued rewards.");
+    assert(rowCount(service.rpcCalls) === 0, "Rejected decision issued rewards.");
   } finally {
     globalThis.fetch = originalFetch;
   }
