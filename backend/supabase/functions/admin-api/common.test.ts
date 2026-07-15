@@ -50,10 +50,10 @@ function responseRow(tableName: string): Record<string, unknown> {
 }
 
 function createService() {
-  const rpcCalls: Array<{ name: string; args: unknown }> = [];
+  const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
   return {
     rpcCalls,
-    async rpc(name: string, args: unknown) {
+    async rpc(name: string, args: Record<string, unknown>) {
       rpcCalls.push({ name, args });
       return {
         data: [{
@@ -90,6 +90,23 @@ function context(service: ReturnType<typeof createService>) {
   };
 }
 
+function acceptedDecisionRequest(requestId: string): Request {
+  return new Request(
+    "https://example.test/functions/v1/admin-api/games/game-1/contract-submissions/progress-1/decision",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": requestId,
+      },
+      body: JSON.stringify({
+        action: "contract-submission-confirm-decision",
+        payload: { decision: "accepted", feedback: "Approved." },
+      }),
+    },
+  );
+}
+
 Deno.test("legacy accepted contract decision reviews then issues atomic rewards", async () => {
   const originalFetch = globalThis.fetch;
   const classroomCalls: Array<{ url: string; body: unknown }> = [];
@@ -114,33 +131,39 @@ Deno.test("legacy accepted contract decision reviews then issues atomic rewards"
   };
 
   try {
-    const request = new Request(
-      "https://example.test/functions/v1/admin-api/games/game-1/contract-submissions/progress-1/decision",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-request-id": "review-request-1",
-        },
-        body: JSON.stringify({ decision: "accept", feedback: "Approved." }),
-      },
-    );
-    const response = await proxyClassroom(
-      request,
+    const firstResponse = await proxyClassroom(
+      acceptedDecisionRequest("review-request-1"),
       context(service),
       "/staff/game-sessions/game-1/contracts/contract-1/progress/progress-1/review",
       "POST",
     );
-    const body = await response.json();
+    const firstBody = await firstResponse.json();
 
-    assert(response.status === 200, `Expected 200, received ${response.status}.`);
+    assert(firstResponse.status === 200, `Expected 200, received ${firstResponse.status}.`);
     assert(classroomCalls.length === 1, `Expected one canonical review call, received ${classroomCalls.length}.`);
     assert((classroomCalls[0].body as Record<string, unknown>).action === "approve", "Legacy accept was not normalized to approve.");
     assert(service.rpcCalls.length === 1, `Expected one atomic reward RPC, received ${service.rpcCalls.length}.`);
     assert(service.rpcCalls[0].name === "issue_contract_rewards_atomic_v1", "Wrong reward RPC was called.");
-    assert(body.data?.reviewed === true, "Combined decision response omitted reviewed state.");
-    assert(body.data?.rewardIssued === true, "Combined decision response omitted reward issuance.");
-    assert(body.data?.alreadyIssued === false, "First reward issue was incorrectly marked as already issued.");
+    assert(service.rpcCalls[0].args.p_request_id === "review-request-1", "Reward RPC did not receive the request id.");
+    assert(firstBody.data?.reviewed === true, "Combined decision response omitted reviewed state.");
+    assert(firstBody.data?.rewardIssued === true, "Combined decision response omitted reward issuance.");
+    assert(firstBody.data?.alreadyIssued === false, "First reward issue was incorrectly marked as already issued.");
+
+    const secondResponse = await proxyClassroom(
+      acceptedDecisionRequest("review-request-1"),
+      context(service),
+      "/staff/game-sessions/game-1/contracts/contract-1/progress/progress-1/review",
+      "POST",
+    );
+    const secondBody = await secondResponse.json();
+
+    assert(secondResponse.status === 200, `Expected repeated approval to return 200, received ${secondResponse.status}.`);
+    assert(classroomCalls.length === 2, `Expected repeated approval to perform one review call, received ${classroomCalls.length}.`);
+    assert(service.rpcCalls.length === 2, `Expected repeated approval to consult the atomic reward RPC, received ${service.rpcCalls.length}.`);
+    assert(service.rpcCalls[1].args.p_request_id === "review-request-1", "Repeated reward RPC changed the idempotency request id.");
+    assert(secondBody.data?.reviewed === true, "Repeated approval omitted reviewed state.");
+    assert(secondBody.data?.rewardIssued === false, "Repeated approval reported a duplicate reward issuance.");
+    assert(secondBody.data?.alreadyIssued === true, "Repeated approval was not marked as already issued.");
   } finally {
     globalThis.fetch = originalFetch;
   }
