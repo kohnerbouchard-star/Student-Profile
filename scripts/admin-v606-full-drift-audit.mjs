@@ -56,6 +56,7 @@ const expectedScripts = [
   "./game-code-wiring.js",
   "./admin-stabilization.js",
   "./interaction-quality.js",
+  "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -119,6 +120,11 @@ const scopedRuntimeFiles = {
     "setScannerError",
     "admin-qol-page-skeleton",
   ],
+  "admin/interaction-quality-control-reset.js": [
+    "restoreCompletedControl",
+    "aria-disabled",
+    "data-admin-qol-state",
+  ],
 };
 
 for (const [path, requiredTokens] of Object.entries(scopedRuntimeFiles)) {
@@ -147,6 +153,7 @@ assert(!identity.includes('createElement("style")'), "Player identity wiring inj
 const lifecycle = readText("admin/player-create-lifecycle.js");
 assert(!lifecycle.includes("markExpandedPlayerDetail"), "Add Player lifecycle still mutates expanded player drawers.");
 assert(!lifecycle.includes("mountExpandedPlayerSettings"), "Add Player lifecycle still mounts removed inline settings.");
+assert(lifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions bypass field validation.");
 
 const createUx = readText("admin/player-create-ux.js");
 assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network wrapper.");
@@ -245,6 +252,13 @@ assert(
   "Scanner processing, completion, or error copy is missing.",
 );
 
+const interactionControlReset = readText("admin/interaction-quality-control-reset.js");
+assert(
+  interactionControlReset.includes("restoreCompletedControl") &&
+    interactionControlReset.includes('button.setAttribute("aria-disabled", "false")'),
+  "Completed actions do not restore accessible controls.",
+);
+
 const interactionQualityCss = readText("admin/css/interaction-quality.css");
 assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton CSS is missing.");
 assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Page skeleton CSS is missing.");
@@ -254,4 +268,4 @@ assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality 
 assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, and scoped admin stabilization boundaries passed.");
+console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, completed-control restoration, and scoped admin stabilization boundaries passed.");
