@@ -12,10 +12,15 @@
 }
 
 .admin-terminal-modal.is-store-modal .admin-terminal-store-grid.is-pricing-v479 {
-  grid-template-columns: minmax(130px, 0.72fr) minmax(190px, 1fr) minmax(280px, 1.45fr) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.admin-terminal-modal.is-store-modal .admin-terminal-store-grid.is-pricing-v479 > label:has(> select[name="stockMode"]) {
+  grid-column: 1 / -1 !important;
 }
 
 .admin-terminal-modal.is-store-modal select[name="stockMode"] {
+  width: 100% !important;
   font-size: 14px !important;
   letter-spacing: -0.01em !important;
 }
