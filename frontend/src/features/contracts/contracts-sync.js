@@ -94,12 +94,24 @@
     dashboardWrapped = true;
   }
 
+  function removePrivateNavigationListener() {
+    const button = document.querySelector('.nav [data-view="contracts"]');
+    if (!button || button.dataset.contractsNavigationNormalized === "true") return;
+    const replacement = button.cloneNode(true);
+    replacement.dataset.contractsNavigationNormalized = "true";
+    button.replaceWith(replacement);
+  }
+
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest('[data-view="contracts"]')) return;
-    window.setTimeout(() => void refreshPlayerContracts(), 0);
+    window.setTimeout(async () => {
+      await refreshPlayerContracts();
+      feature()?.renderContracts?.();
+    }, 0);
   }, true);
 
+  removePrivateNavigationListener();
   wrapDashboardRefresh();
   window.addEventListener("load", wrapDashboardRefresh, { once: true });
 
