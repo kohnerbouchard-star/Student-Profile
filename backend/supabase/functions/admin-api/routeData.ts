@@ -31,6 +31,8 @@ function evidenceText(value: unknown, depth = 0): string {
     "written_response",
     "submissionText",
     "submission_text",
+    "submissionUrl",
+    "submission_url",
     "link",
     "url",
     "answers",
@@ -44,11 +46,32 @@ function evidenceText(value: unknown, depth = 0): string {
 
   return Object.entries(record)
     .map(([key, item]) => {
-      const text = evidenceText(item, depth + 1);
-      return text ? `${key}: ${text}` : "";
+      const nestedText = evidenceText(item, depth + 1);
+      return nestedText ? `${key}: ${nestedText}` : "";
     })
     .filter(Boolean)
     .join(" · ");
+}
+
+function submissionMessage(
+  contractTitle: string,
+  progressId: string,
+  resultPayload: Record<string, unknown>,
+): string {
+  const existing = evidenceText(
+    resultPayload.message ??
+      resultPayload.feedback ??
+      resultPayload.reviewFeedback ??
+      resultPayload.review_feedback,
+  );
+  if (existing) return existing;
+
+  return [
+    `Re: ${contractTitle || "Contract"}`,
+    "",
+    "This message is linked to your contract submission.",
+    progressId ? `Submission: ${progressId}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 export async function loadContractSubmissions(
@@ -92,6 +115,10 @@ export async function loadContractSubmissions(
       resultPayload.previousStatus ?? resultPayload.previous_status,
     ) || "—";
     const currentStatus = String(row.status || "—");
+    const playerName = player.display_name || "Player";
+    const country = player.country_code || row.country_code || "—";
+    const contractTitle = contract.title || "Contract";
+
     return {
       ...row,
       id: row.id,
@@ -99,22 +126,26 @@ export async function loadContractSubmissions(
       submissionId: row.id,
       gameSessionId: row.game_session_id,
       contractId: row.contract_id,
-      contractTitle: contract.title || "Contract",
+      contractTitle,
       contractStatus: contract.status || null,
       rewardPayload: contract.reward_payload || {},
       completionMode: contract.completion_mode || null,
       deadlineAt: contract.deadline_at || null,
       playerId: row.player_id,
-      playerName: player.display_name || "Player",
-      displayName: player.display_name || "Player",
+      player: playerName,
+      playerName,
+      displayName: playerName,
       rosterLabel: player.roster_label || null,
       playerIdentifier: player.player_identifier || null,
       playerStatus: player.status || null,
+      country,
+      countryCode: country === "—" ? null : country,
       status: row.status,
       summary: evidence,
       evidence,
       before: previousStatus,
       after: currentStatus,
+      message: submissionMessage(contractTitle, String(row.id || ""), resultPayload),
       evidencePayload,
       resultPayload,
       submittedAt: row.submitted_at || null,
