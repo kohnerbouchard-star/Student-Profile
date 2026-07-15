@@ -38,6 +38,7 @@ const contract = {
   rewardIssuedCount: 0,
   progressCount: 1,
 };
+const submissionEvidence = "The evidence supports the recommendation. · Name the source.: Market evidence guide · Explain the conclusion.: Costs and incentives support it.";
 const submission = {
   id: PROGRESS_ID,
   progressId: PROGRESS_ID,
@@ -52,6 +53,10 @@ const submission = {
   countryCode: "NORTHREACH",
   country: "Northreach",
   status: "submitted",
+  summary: submissionEvidence,
+  evidence: submissionEvidence,
+  before: "—",
+  after: "submitted",
   evidencePayload: {
     writtenResponse: "The evidence supports the recommendation.",
     answers: [
@@ -130,7 +135,7 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
       reviewed: true,
       rewardIssued: true,
       alreadyIssued: false,
-      progress: { ...submission, status: "completed", completedAt: "2026-07-15T10:00:00.000Z", rewardIssuedAt: "2026-07-15T10:00:00.000Z" },
+      progress: { ...submission, status: "completed", after: "completed", completedAt: "2026-07-15T10:00:00.000Z", rewardIssuedAt: "2026-07-15T10:00:00.000Z" },
       rewardResult: { status: "applied" },
     },
   };
