@@ -93,6 +93,38 @@
     return playerId;
   }
 
+  function formatScanTimestamp(payload) {
+    const source = payload && typeof payload === "object" ? payload : {};
+    const attendance = source.attendance || source.data?.attendance;
+    const rawTimestamp = attendance?.clockedInAt || attendance?.clocked_in_at;
+    const timestamp = new Date(rawTimestamp || Date.now());
+    if (Number.isNaN(timestamp.getTime())) return "";
+
+    const requestedTimeZone = text(attendance?.timezone) || "Asia/Seoul";
+    const options = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: requestedTimeZone,
+    };
+
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", options).formatToParts(timestamp);
+      const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return `${values.year}-${values.month}-${values.day} · ${values.hour}:${values.minute}`;
+    } catch (_) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        ...options,
+        timeZone: "Asia/Seoul",
+      }).formatToParts(timestamp);
+      const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return `${values.year}-${values.month}-${values.day} · ${values.hour}:${values.minute}`;
+    }
+  }
+
   function presentPlayerIdentity(payload, fallbackCode) {
     const source = payload && typeof payload === "object" ? payload : {};
     const player = source.player || source.data?.player;
@@ -101,6 +133,7 @@
     const playerIdentifier = text(
       player.playerIdentifier || player.player_identifier || player.rosterLabel || player.roster_label || fallbackCode,
     );
+    const compactTimestamp = formatScanTimestamp(source);
     if (!displayName) return;
 
     window.setTimeout(() => {
@@ -112,7 +145,11 @@
       if (playerId) {
         playerId.textContent = playerIdentifier ? `Player ID: ${playerIdentifier}` : "Player ID unavailable";
       }
-      if (current.time) current.time.classList.add("admin-terminal-last-scan-time-secondary");
+      if (current.time) {
+        current.time.textContent = compactTimestamp;
+        current.time.classList.add("admin-terminal-last-scan-time-secondary");
+        current.time.setAttribute("datetime", text(source.attendance?.clockedInAt || source.data?.attendance?.clockedInAt));
+      }
     }, 0);
   }
 
@@ -143,6 +180,10 @@
         delete current.player.dataset.adminScannerIdentitySource;
       }
       if (current.playerId) current.playerId.textContent = "";
+      if (current.time) {
+        current.time.textContent = "";
+        current.time.removeAttribute("datetime");
+      }
       if (current.result) current.result.hidden = true;
       if (current.empty) {
         current.empty.hidden = false;
@@ -229,5 +270,6 @@
     schedule,
     prepareNextCard,
     presentPlayerIdentity,
+    formatScanTimestamp,
   };
 })();
