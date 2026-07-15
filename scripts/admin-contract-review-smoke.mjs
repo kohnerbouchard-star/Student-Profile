@@ -177,7 +177,13 @@ try {
   const decisionWrites = writes.filter((write) => write.pathname.endsWith(`/games/${GAME_ID}/contract-submissions/${PROGRESS_ID}/decision`));
   if (decisionWrites.length !== 1) throw new Error(`Expected one decision write, received ${decisionWrites.length}. Writes: ${JSON.stringify(writes)}`);
   const write = decisionWrites[0];
-  const rawDecision = String(write.body?.decision || write.body?.action || write.body?.status || "").toLowerCase();
+  const rawDecision = String(
+    write.body?.payload?.decision ||
+      write.body?.decision ||
+      write.body?.action ||
+      write.body?.status ||
+      "",
+  ).toLowerCase();
   if (!["accept", "accepted", "approve", "approved"].includes(rawDecision)) {
     throw new Error(`Accept action sent unexpected body: ${JSON.stringify(write.body)}`);
   }
