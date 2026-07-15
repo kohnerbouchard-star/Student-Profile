@@ -48,9 +48,12 @@ async function waitForRapidRearm(input, button, startedAt, key) {
 
 async function assertReadyScanner(scanner, input) {
   await waitForScannerState("Ready", 3500);
-  const copy = await scanner.innerText();
-  if (!copy.includes("Scan a player code. The result appears here.")) fail("Ready guidance was not restored.");
-  if (!copy.includes("Listening") || !copy.includes("Auto-submit is active.")) fail("Listening state was not restored.");
+  const emptyCopy = await scanner.locator("[data-admin-terminal-last-scan-empty]").textContent() || "";
+  const autoCopy = await scanner.locator("[data-admin-terminal-auto-panel]").textContent() || "";
+  const manualCopy = await scanner.locator("[data-admin-terminal-manual-panel]").textContent() || "";
+  if (!emptyCopy.includes("Scan a player code. The result appears here.")) fail("Ready guidance was not restored.");
+  if (!autoCopy.includes("Listening") || !autoCopy.includes("Auto-submit is active.")) fail("Listening state was not restored.");
+  if (!manualCopy.includes("Manual entry") || !manualCopy.includes("Fallback mode")) fail("Manual fallback state was not restored.");
   if (await input.inputValue() !== "") fail("Scanner input was not cleared on refresh.");
   if (await scanner.locator("[data-admin-terminal-last-scan-result]").isVisible()) fail("Prior scan result remained visible after refresh.");
 }
@@ -96,7 +99,7 @@ try {
   await button.click();
   await waitForScannerState("Error");
   const errorAt = Date.now();
-  if (!(await scanner.innerText()).includes("Player code was not found")) fail("Scanner did not surface the backend error.");
+  if (!(await scanner.textContent()).includes("Player code was not found")) fail("Scanner did not surface the backend error.");
   await capture("error");
   await waitForRapidRearm(input, button, errorAt, "errorRearmMs");
   await assertReadyScanner(scanner, input);
