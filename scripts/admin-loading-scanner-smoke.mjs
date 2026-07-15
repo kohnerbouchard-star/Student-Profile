@@ -4,6 +4,13 @@ const h = await createQualityHarness("loading-scanner");
 const { page, state, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 
+async function waitForScannerState(expected) {
+  await page.waitForFunction((value) => {
+    const state = document.querySelector("[data-admin-terminal-scanner-state]")?.textContent || "";
+    return state.trim().toLowerCase() === String(value).toLowerCase();
+  }, expected, { timeout: 5000 });
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
   await page.waitForSelector("#adminSessionGate .admin-session-skeleton", { timeout: 5000 });
@@ -20,17 +27,14 @@ try {
   const button = scanner.locator('[data-admin-terminal-action="submit-attendance-scan"]');
 
   await button.click();
-  await page.waitForTimeout(120);
+  await waitForScannerState("Error");
   if (await input.getAttribute("aria-invalid") !== "true") fail("Blank scan was not marked invalid.");
-  if (!/error/i.test(await scanner.locator("[data-admin-terminal-scanner-state]").innerText())) fail("Blank scan did not show an error state.");
 
   await input.fill("QUALITY-01");
   await button.click();
-  await page.waitForTimeout(90);
-  if (!/scanning/i.test(await scanner.locator("[data-admin-terminal-scanner-state]").innerText())) fail("Scanner did not show Scanning.");
+  await waitForScannerState("Scanning");
   await capture("processing");
-  await page.waitForTimeout(900);
-  if (!/completed/i.test(await scanner.locator("[data-admin-terminal-scanner-state]").innerText())) fail("Scanner did not show Completed.");
+  await waitForScannerState("Completed");
   await capture("completed");
   await page.waitForFunction(() => {
     const button = document.querySelector('[data-admin-terminal-action="submit-attendance-scan"]');
@@ -40,8 +44,7 @@ try {
   state.failScan = true;
   await input.fill("UNKNOWN");
   await button.click();
-  await page.waitForTimeout(900);
-  if (!/error/i.test(await scanner.locator("[data-admin-terminal-scanner-state]").innerText())) fail("Failed scan did not show Error.");
+  await waitForScannerState("Error");
   if (!(await scanner.innerText()).includes("Player code was not found")) fail("Scanner did not surface the backend error.");
   await capture("error");
   if (errors.length) fail(errors[0]);
