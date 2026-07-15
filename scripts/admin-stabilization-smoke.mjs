@@ -94,9 +94,15 @@ async function audit(name) {
 
     for (const button of [...document.querySelectorAll("button")].filter(visible)) {
       const label = String(button.getAttribute("aria-label") || button.title || button.innerText || "").replace(/\s+/g, " ").trim();
-      if (!label) issues.push("visible unnamed button");
-      if (/[↗×⌄⌃‹›]/u.test(button.innerText || "")) issues.push(`text glyph remains in ${label}`);
+      if (!label) issues.push(`visible unnamed button: ${button.outerHTML.slice(0, 200)}`);
+      if (/[↗×⌄⌃‹›＋]/u.test(button.innerText || "")) issues.push(`text glyph remains in ${label}`);
       if (getComputedStyle(button).pointerEvents === "none" && !button.disabled && button.getAttribute("aria-disabled") !== "true") issues.push(`enabled button is inert: ${label}`);
+    }
+
+    for (const row of [...document.querySelectorAll(".admin-terminal-clickable-row")].filter(visible)) {
+      const pseudo = getComputedStyle(row, "::after");
+      if (/[↗×⌄⌃‹›＋]/u.test(pseudo.content || "")) issues.push("clickable row still uses a text pseudo-glyph");
+      if ((pseudo.content === '""' || pseudo.content === "none") && pseudo.backgroundImage === "none") issues.push("clickable row has no hover affordance icon");
     }
 
     for (const form of [...document.querySelectorAll("form")].filter(visible)) {
@@ -109,6 +115,11 @@ async function audit(name) {
         if (controls[i].contains(controls[j]) || controls[j].contains(controls[i])) continue;
         if (overlap(controls[i].getBoundingClientRect(), controls[j].getBoundingClientRect())) issues.push(`overlapping controls ${controls[i].name || controls[i].tagName}/${controls[j].name || controls[j].tagName}`);
       }
+    }
+
+    const stockMode = document.querySelector('select[name="stockMode"]');
+    if (stockMode && visible(stockMode) && stockMode.getBoundingClientRect().width < 280) {
+      issues.push(`stock mode control is too narrow for its selected value: ${stockMode.getBoundingClientRect().width}`);
     }
 
     const modal = document.querySelector(".admin-terminal-modal");
