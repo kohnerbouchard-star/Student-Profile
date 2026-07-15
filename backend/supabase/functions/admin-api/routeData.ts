@@ -5,13 +5,61 @@ export async function loadContractSubmissions(
   gameId: string,
   contractId = "",
 ): Promise<any[]> {
-  let query = service.from("player_contract_progress").select("*")
+  let progressQuery = service.from("player_contract_progress").select("*")
     .eq("game_session_id", gameId)
     .order("updated_at", { ascending: false });
-  if (contractId) query = query.eq("contract_id", contractId);
-  const result = await query;
-  if (result.error) throw result.error;
-  return result.data || [];
+  if (contractId) progressQuery = progressQuery.eq("contract_id", contractId);
+
+  const [progressResult, playersResult, contractsResult] = await Promise.all([
+    progressQuery,
+    service.from("players")
+      .select("id,display_name,roster_label,player_identifier,status")
+      .eq("game_session_id", gameId),
+    service.from("game_session_contracts")
+      .select("id,title,status,reward_payload,completion_mode,deadline_at")
+      .eq("game_session_id", gameId),
+  ]);
+
+  if (progressResult.error) throw progressResult.error;
+  if (playersResult.error) throw playersResult.error;
+  if (contractsResult.error) throw contractsResult.error;
+
+  const players = new Map<string, any>(
+    (playersResult.data || []).map((row: any) => [String(row.id), row]),
+  );
+  const contracts = new Map<string, any>(
+    (contractsResult.data || []).map((row: any) => [String(row.id), row]),
+  );
+
+  return (progressResult.data || []).map((row: any) => {
+    const player = players.get(String(row.player_id)) || {};
+    const contract = contracts.get(String(row.contract_id)) || {};
+    return {
+      ...row,
+      id: row.id,
+      progressId: row.id,
+      gameSessionId: row.game_session_id,
+      contractId: row.contract_id,
+      contractTitle: contract.title || "Contract",
+      contractStatus: contract.status || null,
+      rewardPayload: contract.reward_payload || {},
+      completionMode: contract.completion_mode || null,
+      deadlineAt: contract.deadline_at || null,
+      playerId: row.player_id,
+      playerName: player.display_name || "Player",
+      rosterLabel: player.roster_label || null,
+      playerIdentifier: player.player_identifier || null,
+      playerStatus: player.status || null,
+      status: row.status,
+      evidencePayload: row.evidence_payload || {},
+      resultPayload: row.result_payload || {},
+      submittedAt: row.submitted_at || null,
+      completedAt: row.completed_at || null,
+      rewardIssuedAt: row.reward_issued_at || null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  });
 }
 
 export async function loadContractRewardAudit(
