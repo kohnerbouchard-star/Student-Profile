@@ -2,8 +2,8 @@
    Loaded after the accepted v606 stylesheet so layout corrections remain isolated
    from the future student-shell redesign. */
 
-#adminPreview,
-#adminPreview *,
+/* Preserve the accepted page-shell box model. Border-box is limited to modal
+   workspaces where fixed-height form controls require it for containment. */
 .admin-terminal-modal-backdrop,
 .admin-terminal-modal-backdrop * {
   box-sizing: border-box;
@@ -24,20 +24,26 @@
   vertical-align: -0.12em;
 }
 
-button[data-admin-stabilized-icon="true"] {
+#adminPreview button[data-admin-stabilized-icon="true"],
+.admin-terminal-modal-backdrop button[data-admin-stabilized-icon="true"] {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
 }
 
-button[data-admin-stabilized-icon="true"] > .admin-terminal-ui-icon {
+#adminPreview button[data-admin-stabilized-icon="true"] > .admin-terminal-ui-icon,
+.admin-terminal-modal-backdrop button[data-admin-stabilized-icon="true"] > .admin-terminal-ui-icon {
   width: 1rem;
   height: 1rem;
 }
 
 .admin-terminal-action-arrow .admin-terminal-ui-icon,
 .admin-terminal-share-arrow .admin-terminal-ui-icon,
-.admin-terminal-side-code-compact .admin-terminal-ui-icon {
+.admin-terminal-side-code-compact .admin-terminal-ui-icon,
+.admin-terminal-export-history-button-v601 .admin-terminal-ui-icon,
+.admin-terminal-logs-export-icon .admin-terminal-ui-icon,
+[data-admin-terminal-action="attendance-ledger-prev-day"] .admin-terminal-ui-icon,
+[data-admin-terminal-action="attendance-ledger-next-day"] .admin-terminal-ui-icon {
   width: 1rem;
   height: 1rem;
 }
