@@ -5,6 +5,7 @@
   const SUCCESS_RESET_MS = 1200;
   const ERROR_RESET_MS = 2000;
   const jobs = new WeakMap();
+  const delegatedFetch = window.fetch.bind(window);
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -19,6 +20,8 @@
       empty: consoleElement.querySelector("[data-admin-terminal-last-scan-empty]"),
       result: consoleElement.querySelector("[data-admin-terminal-last-scan-result]"),
       player: consoleElement.querySelector("[data-admin-terminal-last-scan-player]"),
+      playerId: consoleElement.querySelector("[data-admin-terminal-last-scan-player-id]"),
+      time: consoleElement.querySelector("[data-admin-terminal-last-scan-time]"),
       autoPanel: consoleElement.querySelector("[data-admin-terminal-auto-panel]"),
       manualPanel: consoleElement.querySelector("[data-admin-terminal-manual-panel]"),
       manualInput: consoleElement.querySelector("[data-admin-terminal-manual-scan-input]"),
@@ -80,6 +83,49 @@
     window.requestAnimationFrame(() => activeInput(elements() || current)?.focus({ preventScroll: true }));
   }
 
+  function ensurePlayerIdLine(current) {
+    if (!current?.player) return null;
+    if (current.playerId?.isConnected) return current.playerId;
+    const playerId = document.createElement("small");
+    playerId.dataset.adminTerminalLastScanPlayerId = "";
+    playerId.className = "admin-terminal-last-scan-player-id";
+    current.player.insertAdjacentElement("afterend", playerId);
+    return playerId;
+  }
+
+  function presentPlayerIdentity(payload, fallbackCode) {
+    const source = payload && typeof payload === "object" ? payload : {};
+    const player = source.player || source.data?.player;
+    if (!player || typeof player !== "object") return;
+    const displayName = text(player.displayName || player.display_name);
+    const playerIdentifier = text(
+      player.playerIdentifier || player.player_identifier || player.rosterLabel || player.roster_label || fallbackCode,
+    );
+    if (!displayName) return;
+
+    window.setTimeout(() => {
+      const current = elements();
+      if (!current?.player) return;
+      current.player.textContent = displayName;
+      current.player.dataset.adminScannerIdentitySource = "attendance-response";
+      const playerId = ensurePlayerIdLine(current);
+      if (playerId) {
+        playerId.textContent = playerIdentifier ? `Player ID: ${playerIdentifier}` : "Player ID unavailable";
+      }
+      if (current.time) current.time.classList.add("admin-terminal-last-scan-time-secondary");
+    }, 0);
+  }
+
+  function attendanceScanRequest(input, init) {
+    try {
+      const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
+      const method = text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+      return method === "POST" && /\/attendance\/(?:scan|scans)$/.test(url.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
   function setReady(options = {}) {
     const current = elements();
     if (!current) return;
@@ -92,7 +138,11 @@
     prepareNextCard(current);
 
     if (options.clearResult !== false) {
-      if (current.player) current.player.textContent = "—";
+      if (current.player) {
+        current.player.textContent = "—";
+        delete current.player.dataset.adminScannerIdentitySource;
+      }
+      if (current.playerId) current.playerId.textContent = "";
       if (current.result) current.result.hidden = true;
       if (current.empty) {
         current.empty.hidden = false;
@@ -152,6 +202,19 @@
     if (["completed", "error"].includes(state)) setReady({ clearResult: false });
   }, true);
 
+  window.fetch = async function econovariaScannerIdentityFetch(input, init) {
+    const isAttendanceScan = attendanceScanRequest(input, init);
+    const current = isAttendanceScan ? elements() : null;
+    const fallbackCode = isAttendanceScan ? text(activeInput(current)?.value) : "";
+    const response = await delegatedFetch(input, init);
+    if (isAttendanceScan && response.ok) {
+      response.clone().json()
+        .then((payload) => presentPlayerIdentity(payload, fallbackCode))
+        .catch(() => {});
+    }
+    return response;
+  };
+
   new MutationObserver(() => window.requestAnimationFrame(reconcile)).observe(document.body, {
     subtree: true,
     childList: true,
@@ -161,5 +224,10 @@
   });
 
   reconcile();
-  window.EconovariaScannerAutoRefresh = { setReady, schedule, prepareNextCard };
+  window.EconovariaScannerAutoRefresh = {
+    setReady,
+    schedule,
+    prepareNextCard,
+    presentPlayerIdentity,
+  };
 })();
