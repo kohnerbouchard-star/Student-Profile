@@ -1,0 +1,27 @@
+/* Final visual corrections discovered during artifact review. */
+
+#adminPreview .admin-terminal-clickable-row::after {
+  content: "" !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  font-size: 0 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2362e5ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 5h5v5M19 5l-9 9'/%3E%3Cpath d='M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+}
+
+.admin-terminal-modal.is-store-modal .admin-terminal-store-grid.is-pricing-v479 {
+  grid-template-columns: minmax(130px, 0.72fr) minmax(190px, 1fr) minmax(280px, 1.45fr) !important;
+}
+
+.admin-terminal-modal.is-store-modal select[name="stockMode"] {
+  font-size: 14px !important;
+  letter-spacing: -0.01em !important;
+}
+
+@media (max-width: 980px) {
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-grid.is-pricing-v479 {
+    grid-template-columns: 1fr !important;
+  }
+}
