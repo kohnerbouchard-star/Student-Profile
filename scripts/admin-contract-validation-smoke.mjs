@@ -28,10 +28,22 @@ try {
   if (await submit.getAttribute("data-admin-qol-state") !== "loading") fail("Contract button did not show processing.");
   await page.waitForTimeout(520);
   if (await submit.getAttribute("data-admin-qol-state") !== "success") fail("Contract button did not show completion.");
+  const buttonPresentation = await submit.evaluate((button) => {
+    const status = button.querySelector(":scope > .admin-qol-button-status");
+    return {
+      buttonTextIndent: Number.parseFloat(getComputedStyle(button).textIndent || "0"),
+      statusTextIndent: status ? Number.parseFloat(getComputedStyle(status).textIndent || "0") : null,
+      statusText: status?.textContent?.trim() || "",
+    };
+  });
+  if (buttonPresentation.buttonTextIndent > -1000) fail(`Original button label is still visible: ${JSON.stringify(buttonPresentation)}.`);
+  if (buttonPresentation.statusTextIndent !== 0 || buttonPresentation.statusText !== "Contract posted") {
+    fail(`Completion label is not isolated correctly: ${JSON.stringify(buttonPresentation)}.`);
+  }
   if (errors.length) fail(errors[0]);
   await capture("completed");
-  await finish({ passed: true });
-  console.log("Contract validation and button states passed.");
+  await finish({ passed: true, buttonPresentation });
+  console.log("Contract validation and non-overlapping button states passed.");
 } catch (error) {
   await capture("failure").catch(() => {});
   await finish({ passed: false, failure: error.stack || error.message || String(error) });
