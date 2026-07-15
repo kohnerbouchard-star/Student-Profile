@@ -32,6 +32,10 @@ try {
   await page.waitForTimeout(900);
   if (!/completed/i.test(await scanner.locator("[data-admin-terminal-scanner-state]").innerText())) fail("Scanner did not show Completed.");
   await capture("completed");
+  await page.waitForFunction(() => {
+    const button = document.querySelector('[data-admin-terminal-action="submit-attendance-scan"]');
+    return button instanceof HTMLButtonElement && !button.disabled && button.getAttribute("aria-disabled") !== "true";
+  }, null, { timeout: 5000 });
 
   state.failScan = true;
   await input.fill("UNKNOWN");
