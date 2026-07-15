@@ -39,7 +39,10 @@ async function assertPlayerIdentityHierarchy(scanner) {
   await page.waitForFunction(() => {
     const name = document.querySelector("[data-admin-terminal-last-scan-player]")?.textContent?.trim();
     const playerId = document.querySelector("[data-admin-terminal-last-scan-player-id]")?.textContent?.trim();
-    return name === "Quality Player" && playerId === "Player ID: QUALITY-01";
+    const timestamp = document.querySelector("[data-admin-terminal-last-scan-time]")?.textContent?.trim();
+    return name === "Quality Player" &&
+      playerId === "Player ID: QUALITY-01" &&
+      timestamp === "2026-07-16 · 08:42";
   }, null, { timeout: 3000 });
 
   identityPresentation = await scanner.evaluate((root) => {
@@ -48,10 +51,15 @@ async function assertPlayerIdentityHierarchy(scanner) {
     const time = root.querySelector("[data-admin-terminal-last-scan-time]");
     const nameStyle = name ? getComputedStyle(name) : null;
     const idStyle = playerId ? getComputedStyle(playerId) : null;
+    const timeStyle = time ? getComputedStyle(time) : null;
     return {
       name: name?.textContent?.trim() || "",
       playerId: playerId?.textContent?.trim() || "",
       time: time?.textContent?.trim() || "",
+      timeDateTime: time?.getAttribute("datetime") || "",
+      timeWhiteSpace: timeStyle?.whiteSpace || "",
+      timeClientWidth: time?.clientWidth || 0,
+      timeScrollWidth: time?.scrollWidth || 0,
       nameFontSize: Number.parseFloat(nameStyle?.fontSize || "0"),
       idFontSize: Number.parseFloat(idStyle?.fontSize || "0"),
       nameSource: name?.getAttribute("data-admin-scanner-identity-source") || "",
@@ -65,6 +73,16 @@ async function assertPlayerIdentityHierarchy(scanner) {
   }
   if (identityPresentation.nameSource !== "attendance-response") {
     fail(`Scanner identity did not come from the attendance response: ${JSON.stringify(identityPresentation)}.`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2} · \d{2}:\d{2}$/.test(identityPresentation.time)) {
+    fail(`Scanner timestamp is not compact 24-hour format: ${JSON.stringify(identityPresentation)}.`);
+  }
+  if (identityPresentation.time !== "2026-07-16 · 08:42") {
+    fail(`Scanner timestamp did not use the attendance timezone: ${JSON.stringify(identityPresentation)}.`);
+  }
+  if (identityPresentation.timeWhiteSpace !== "nowrap" ||
+      identityPresentation.timeScrollWidth > identityPresentation.timeClientWidth + 1) {
+    fail(`Scanner timestamp can overflow its result block: ${JSON.stringify(identityPresentation)}.`);
   }
 }
 
@@ -142,7 +160,7 @@ try {
 
   if (errors.length) fail(errors[0]);
   await finish({ passed: true, buttonPresentations, timing, identityPresentation });
-  console.log("Verification skeleton, scanner identity hierarchy, rapid rearm, and automatic refresh passed.");
+  console.log("Verification skeleton, rewarded scanner response, compact timestamp, rapid rearm, and automatic refresh passed.");
 } catch (error) {
   await capture("failure").catch(() => {});
   await finish({ passed: false, failure: error.stack || error.message || String(error), buttonPresentations, timing, identityPresentation });
