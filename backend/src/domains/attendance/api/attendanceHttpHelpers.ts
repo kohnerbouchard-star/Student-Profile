@@ -158,6 +158,9 @@ export interface PlayerAttendanceWindowConfig {
   readonly currencyCode: string;
 }
 
+const DEFAULT_PRESENT_REWARD_AMOUNT = 1;
+const DEFAULT_LATE_REWARD_AMOUNT = 0;
+
 export function readPlayerAttendanceWindowConfig(
   value: unknown,
 ): PlayerAttendanceWindowConfig {
@@ -165,10 +168,10 @@ export function readPlayerAttendanceWindowConfig(
   const timezone = readValidTimeZone(attendanceWindow.timezone, "Asia/Seoul");
   const lateCutoffMinutes = readOptionalTimeMinutes(attendanceWindow.lateCutoff);
   const presentRewardAmount = readOptionalNonNegativeAmount(
-    attendanceWindow.presentRewardAmount,
+    attendanceWindow.presentRewardAmount ?? DEFAULT_PRESENT_REWARD_AMOUNT,
   );
   const lateRewardAmount = readOptionalNonNegativeAmount(
-    attendanceWindow.lateRewardAmount,
+    attendanceWindow.lateRewardAmount ?? DEFAULT_LATE_REWARD_AMOUNT,
   );
   const currencyCode = normalizeCurrencyCode(
     parseOptionalText(attendanceWindow.currencyCode) ?? "ECO",
