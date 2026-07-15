@@ -182,9 +182,25 @@ export async function createQualityHarness(name) {
       headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
       body: JSON.stringify({
         ok: true,
-        player: { id: "00000000-0000-4000-8000-000000000003", displayName: "Quality Player", rosterLabel: "QUALITY-01", status: "active" },
-        attendance: { status: "present", attendanceDate: "2026-07-15", clockedInAt: new Date().toISOString(), wasCreated: true, timezone: "Asia/Seoul" },
-        reward: { amount: 1, currencyCode: "XAL", ledgerEntryId: null },
+        player: {
+          id: "00000000-0000-4000-8000-000000000003",
+          displayName: "Quality Player",
+          playerIdentifier: "QUALITY-01",
+          rosterLabel: "Quality roster label",
+          status: "active",
+        },
+        attendance: {
+          status: "present",
+          attendanceDate: "2026-07-16",
+          clockedInAt: "2026-07-15T23:42:00.000Z",
+          wasCreated: true,
+          timezone: "Asia/Seoul",
+        },
+        reward: {
+          amount: 1,
+          currencyCode: "ECO",
+          ledgerEntryId: "00000000-0000-4000-8000-000000000005",
+        },
       }),
     });
   });
