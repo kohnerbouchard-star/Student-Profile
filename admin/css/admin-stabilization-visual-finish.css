@@ -10,6 +10,16 @@
   text-indent: 0 !important;
 }
 
+.admin-terminal-modal-backdrop .admin-terminal-scanner-input-row > input {
+  min-width: 0 !important;
+}
+
+.admin-terminal-modal-backdrop .admin-terminal-scanner-input-row > button[data-admin-terminal-action="submit-attendance-scan"] {
+  flex: 0 0 116px !important;
+  width: 116px !important;
+  min-width: 116px !important;
+}
+
 #adminPreview .admin-terminal-clickable-row::after {
   content: "" !important;
   width: 1rem !important;
