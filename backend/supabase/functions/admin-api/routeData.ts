@@ -1,5 +1,56 @@
 import { number } from "./common.ts";
 
+function evidenceText(value: unknown, depth = 0): string {
+  if (value === null || value === undefined || depth > 4) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => evidenceText(item, depth + 1))
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  const prompt = evidenceText(
+    record.prompt ?? record.question ?? record.label ?? record.title,
+    depth + 1,
+  );
+  const answer = evidenceText(
+    record.answer ?? record.response ?? record.value ?? record.text,
+    depth + 1,
+  );
+  if (prompt && answer) return `${prompt}: ${answer}`;
+  if (answer) return answer;
+
+  const priorityKeys = [
+    "writtenResponse",
+    "written_response",
+    "submissionText",
+    "submission_text",
+    "link",
+    "url",
+    "answers",
+    "responses",
+    "files",
+  ];
+  const priority = priorityKeys
+    .map((key) => evidenceText(record[key], depth + 1))
+    .filter(Boolean);
+  if (priority.length) return priority.join(" · ");
+
+  return Object.entries(record)
+    .map(([key, item]) => {
+      const text = evidenceText(item, depth + 1);
+      return text ? `${key}: ${text}` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export async function loadContractSubmissions(
   service: any,
   gameId: string,
@@ -34,10 +85,18 @@ export async function loadContractSubmissions(
   return (progressResult.data || []).map((row: any) => {
     const player = players.get(String(row.player_id)) || {};
     const contract = contracts.get(String(row.contract_id)) || {};
+    const evidencePayload = row.evidence_payload || {};
+    const resultPayload = row.result_payload || {};
+    const evidence = evidenceText(evidencePayload) || "Submission received";
+    const previousStatus = evidenceText(
+      resultPayload.previousStatus ?? resultPayload.previous_status,
+    ) || "—";
+    const currentStatus = String(row.status || "—");
     return {
       ...row,
       id: row.id,
       progressId: row.id,
+      submissionId: row.id,
       gameSessionId: row.game_session_id,
       contractId: row.contract_id,
       contractTitle: contract.title || "Contract",
@@ -47,12 +106,17 @@ export async function loadContractSubmissions(
       deadlineAt: contract.deadline_at || null,
       playerId: row.player_id,
       playerName: player.display_name || "Player",
+      displayName: player.display_name || "Player",
       rosterLabel: player.roster_label || null,
       playerIdentifier: player.player_identifier || null,
       playerStatus: player.status || null,
       status: row.status,
-      evidencePayload: row.evidence_payload || {},
-      resultPayload: row.result_payload || {},
+      summary: evidence,
+      evidence,
+      before: previousStatus,
+      after: currentStatus,
+      evidencePayload,
+      resultPayload,
       submittedAt: row.submitted_at || null,
       completedAt: row.completed_at || null,
       rewardIssuedAt: row.reward_issued_at || null,
