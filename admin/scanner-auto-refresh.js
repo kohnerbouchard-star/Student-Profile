@@ -46,7 +46,15 @@
     if (!(input instanceof HTMLInputElement)) return;
     input.removeAttribute("aria-invalid");
     const errorId = input.dataset.adminQolErrorId;
-    if (errorId) document.getElementById(errorId)?.remove();
+    if (errorId) {
+      document.getElementById(errorId)?.remove();
+      const describedBy = text(input.getAttribute("aria-describedby"))
+        .split(" ")
+        .filter((value) => value && value !== errorId)
+        .join(" ");
+      if (describedBy) input.setAttribute("aria-describedby", describedBy);
+      else input.removeAttribute("aria-describedby");
+    }
     delete input.dataset.adminQolErrorId;
     input.closest(".admin-terminal-field, label")?.classList.remove("is-invalid");
   }
@@ -63,8 +71,8 @@
       input.value = "";
       clearInputError(input);
     }
-    if (current.submit instanceof HTMLButtonElement &&
-        current.submit.dataset.adminQolOriginalDisabled !== "true") {
+    if (current.submit instanceof HTMLButtonElement) {
+      delete current.submit.dataset.adminQolOriginalDisabled;
       current.submit.disabled = false;
       current.submit.removeAttribute("disabled");
       current.submit.removeAttribute("aria-disabled");
