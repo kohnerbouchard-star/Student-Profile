@@ -5,7 +5,8 @@ const { page, state, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 
 try {
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
+  await page.waitForSelector("#adminSessionGate .admin-session-skeleton", { timeout: 5000 });
   if (await page.locator("#adminSessionGate .admin-session-skeleton").count() !== 1) fail("Verification skeleton is missing.");
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15000 });
   await page.waitForTimeout(60);
