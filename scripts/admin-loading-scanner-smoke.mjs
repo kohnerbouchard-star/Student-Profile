@@ -11,7 +11,7 @@ try {
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15000 });
   await page.waitForTimeout(60);
   if (await page.locator(".admin-qol-page-skeleton:not([hidden])").count() !== 1) fail("Initial page skeleton is missing.");
-  await page.waitForSelector(".admin-qol-page-skeleton[hidden]", { timeout: 5000 });
+  await page.locator(".admin-qol-page-skeleton").waitFor({ state: "hidden", timeout: 5000 });
 
   await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
   await page.waitForSelector("[data-admin-terminal-scanner-console]", { timeout: 5000 });
