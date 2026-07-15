@@ -25,6 +25,41 @@
   letter-spacing: -0.01em !important;
 }
 
+@media (min-width: 981px) {
+  .admin-terminal-modal.is-store-modal {
+    height: min(900px, calc(100vh - 32px)) !important;
+    max-height: calc(100vh - 32px) !important;
+  }
+
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-container {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-form {
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-main,
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-preview {
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0, 212, 255, 0.34) rgba(2, 10, 20, 0.42) !important;
+  }
+
+  .admin-terminal-modal.is-store-modal .admin-terminal-store-form-footer-v558 {
+    grid-column: 1 / -1 !important;
+  }
+}
+
 @media (max-width: 980px) {
   .admin-terminal-modal.is-store-modal .admin-terminal-store-grid.is-pricing-v479 {
     grid-template-columns: 1fr !important;
