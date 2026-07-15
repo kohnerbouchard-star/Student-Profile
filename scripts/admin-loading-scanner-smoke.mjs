@@ -4,12 +4,13 @@ const h = await createQualityHarness("loading-scanner");
 const { page, state, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 const buttonPresentations = [];
+const timing = {};
 
-async function waitForScannerState(expected) {
+async function waitForScannerState(expected, timeout = 5000) {
   await page.waitForFunction((value) => {
     const state = document.querySelector("[data-admin-terminal-scanner-state]")?.textContent || "";
     return state.trim().toLowerCase() === String(value).toLowerCase();
-  }, expected, { timeout: 5000 });
+  }, expected, { timeout });
 }
 
 async function assertScannerButtonFits(button, expectedLabel) {
@@ -33,6 +34,27 @@ async function assertScannerButtonFits(button, expectedLabel) {
   }
 }
 
+async function waitForRapidRearm(input, button, startedAt, key) {
+  await page.waitForFunction(() => {
+    const input = document.querySelector("[data-admin-terminal-manual-scan-input]");
+    const button = document.querySelector('[data-admin-terminal-action="submit-attendance-scan"]');
+    return input instanceof HTMLInputElement && button instanceof HTMLButtonElement &&
+      input.value === "" && document.activeElement === input &&
+      !button.disabled && button.getAttribute("aria-disabled") !== "true";
+  }, null, { timeout: 1200 });
+  timing[key] = Date.now() - startedAt;
+  if (timing[key] > 850) fail(`Scanner rearm was too slow: ${key}=${timing[key]}ms.`);
+}
+
+async function assertReadyScanner(scanner, input) {
+  await waitForScannerState("Ready", 3500);
+  const copy = await scanner.innerText();
+  if (!copy.includes("Scan a player code. The result appears here.")) fail("Ready guidance was not restored.");
+  if (!copy.includes("Listening") || !copy.includes("Auto-submit is active.")) fail("Listening state was not restored.");
+  if (await input.inputValue() !== "") fail("Scanner input was not cleared on refresh.");
+  if (await scanner.locator("[data-admin-terminal-last-scan-result]").isVisible()) fail("Prior scan result remained visible after refresh.");
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
   await page.waitForSelector("#adminSessionGate .admin-session-skeleton", { timeout: 5000 });
@@ -51,32 +73,41 @@ try {
   await button.click();
   await waitForScannerState("Error");
   if (await input.getAttribute("aria-invalid") !== "true") fail("Blank scan was not marked invalid.");
+  await assertReadyScanner(scanner, input);
 
   await input.fill("QUALITY-01");
+  const submittedAt = Date.now();
   await button.click();
   await waitForScannerState("Scanning");
+  timing.scanningDisplayedMs = Date.now() - submittedAt;
+  if (timing.scanningDisplayedMs > 300) fail(`Scanning state appeared too slowly: ${timing.scanningDisplayedMs}ms.`);
   await assertScannerButtonFits(button, "Scanning…");
   await capture("processing");
   await waitForScannerState("Completed");
+  const completedAt = Date.now();
   await assertScannerButtonFits(button, "Completed");
   await capture("completed");
-  await page.waitForFunction(() => {
-    const button = document.querySelector('[data-admin-terminal-action="submit-attendance-scan"]');
-    return button instanceof HTMLButtonElement && !button.disabled && button.getAttribute("aria-disabled") !== "true";
-  }, null, { timeout: 5000 });
+  await waitForRapidRearm(input, button, completedAt, "successRearmMs");
+  await assertReadyScanner(scanner, input);
+  await capture("success-ready");
 
   state.failScan = true;
   await input.fill("UNKNOWN");
   await button.click();
   await waitForScannerState("Error");
+  const errorAt = Date.now();
   if (!(await scanner.innerText()).includes("Player code was not found")) fail("Scanner did not surface the backend error.");
   await capture("error");
+  await waitForRapidRearm(input, button, errorAt, "errorRearmMs");
+  await assertReadyScanner(scanner, input);
+  await capture("error-ready");
+
   if (errors.length) fail(errors[0]);
-  await finish({ passed: true, buttonPresentations });
-  console.log("Verification skeleton and scanner lifecycle passed without clipped action states.");
+  await finish({ passed: true, buttonPresentations, timing });
+  console.log("Verification skeleton, rapid scanner rearm, and automatic refresh passed.");
 } catch (error) {
   await capture("failure").catch(() => {});
-  await finish({ passed: false, failure: error.stack || error.message || String(error), buttonPresentations });
+  await finish({ passed: false, failure: error.stack || error.message || String(error), buttonPresentations, timing });
   console.error(error.stack || error.message || String(error));
   process.exitCode = 1;
 }
