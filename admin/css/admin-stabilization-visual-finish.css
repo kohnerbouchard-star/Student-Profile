@@ -1,10 +1,12 @@
 /* Final visual corrections discovered during artifact review. */
 
-#adminPreview button[data-admin-qol-state] {
+#adminPreview button[data-admin-qol-state],
+.admin-terminal-modal-backdrop button[data-admin-qol-state] {
   text-indent: -9999px !important;
 }
 
-#adminPreview button[data-admin-qol-state] > .admin-qol-button-status {
+#adminPreview button[data-admin-qol-state] > .admin-qol-button-status,
+.admin-terminal-modal-backdrop button[data-admin-qol-state] > .admin-qol-button-status {
   text-indent: 0 !important;
 }
 
