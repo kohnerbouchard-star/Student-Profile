@@ -1,5 +1,13 @@
 /* Final visual corrections discovered during artifact review. */
 
+#adminPreview button[data-admin-qol-state] {
+  text-indent: -9999px !important;
+}
+
+#adminPreview button[data-admin-qol-state] > .admin-qol-button-status {
+  text-indent: 0 !important;
+}
+
 #adminPreview .admin-terminal-clickable-row::after {
   content: "" !important;
   width: 1rem !important;
