@@ -2,9 +2,20 @@
   "use strict";
 
   const SELECTOR = '[data-admin-terminal-action="save-settings"]';
+  const STYLE_ID = "econovaria-settings-final-polish-style";
   let queued = false;
 
+  function ensureStylesheet() {
+    if (document.getElementById(STYLE_ID)) return;
+    const link = document.createElement("link");
+    link.id = STYLE_ID;
+    link.rel = "stylesheet";
+    link.href = "./css/settings-final-polish.css";
+    document.head.append(link);
+  }
+
   function reconcile() {
+    ensureStylesheet();
     const button = document.querySelector(SELECTOR);
     if (!(button instanceof HTMLButtonElement)) return;
 
