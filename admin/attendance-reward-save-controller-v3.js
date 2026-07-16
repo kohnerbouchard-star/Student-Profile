@@ -4,6 +4,8 @@
   const delegatedFetch = window.fetch.bind(window);
   let saveFlight = null;
   let reconcileQueued = false;
+  let baselineGameId = "";
+  let baselineCoreSettings = null;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -45,6 +47,33 @@
     );
   }
 
+  function sameValue(left, right) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
+  function captureCoreBaseline() {
+    const gameId = selectedGameId();
+    if (!gameId) return;
+    if (baselineGameId && baselineGameId !== gameId) {
+      baselineGameId = "";
+      baselineCoreSettings = null;
+    }
+    if (baselineCoreSettings) return;
+    const current = readCoreSettings();
+    if (!Object.keys(current).length) return;
+    baselineGameId = gameId;
+    baselineCoreSettings = current;
+  }
+
+  function changedCoreSettings() {
+    captureCoreBaseline();
+    if (!baselineCoreSettings || baselineGameId !== selectedGameId()) return {};
+    const current = readCoreSettings();
+    return Object.fromEntries(
+      Object.entries(current).filter(([key, value]) => !sameValue(value, baselineCoreSettings[key])),
+    );
+  }
+
   function field(name) {
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
@@ -52,7 +81,8 @@
   function attendanceDirty() {
     const card = document.querySelector("[data-admin-attendance-reward-settings]");
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
-    return card?.getAttribute("data-attendance-reward-dirty") === "true" ||
+    return window.EconovariaAttendanceRewardSettings?.isDirty?.() === true ||
+      card?.getAttribute("data-attendance-reward-dirty") === "true" ||
       button?.getAttribute("data-attendance-reward-dirty") === "true";
   }
 
@@ -78,10 +108,16 @@
     const root = object(payload);
     const data = object(root.data);
     const settings = object(root.settings || data.settings || data);
-    return object(
-      settings.attendanceWindow || settings.attendance_window ||
-      object(settings.settings).attendanceWindow,
-    );
+    const attendanceWindow = settings.attendanceWindow || settings.attendance_window ||
+      object(settings.settings).attendanceWindow;
+    return attendanceWindow && typeof attendanceWindow === "object" && !Array.isArray(attendanceWindow)
+      ? object(attendanceWindow)
+      : null;
+  }
+
+  function persistedAttendanceWindow() {
+    const value = window.EconovariaAttendanceRewardSettings?.getPersistedWindow?.();
+    return value && typeof value === "object" && !Array.isArray(value) ? object(value) : null;
   }
 
   function draftAttendanceWindow(existing) {
@@ -115,6 +151,7 @@
   }
 
   function keepDirtyButtonAvailable() {
+    captureCoreBaseline();
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty() || saveFlight) return;
     button.disabled = false;
@@ -131,6 +168,11 @@
     reconcileQueued = true;
     window.requestAnimationFrame(() => {
       reconcileQueued = false;
+      const gameId = selectedGameId();
+      if (baselineGameId && gameId && baselineGameId !== gameId) {
+        baselineGameId = "";
+        baselineCoreSettings = null;
+      }
       keepDirtyButtonAvailable();
     });
   }
@@ -146,10 +188,18 @@
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         { method: "GET", headers: { "Accept": "application/json" } },
       );
-      const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : {};
-      const attendanceWindow = draftAttendanceWindow(readAttendanceFromPayload(settingsPayload));
+      if (!settingsResponse.ok) {
+        throw new Error(`Game settings could not be read before saving (${settingsResponse.status}).`);
+      }
+      const settingsPayload = await settingsResponse.json();
+      const existingAttendance = readAttendanceFromPayload(settingsPayload) || persistedAttendanceWindow();
+      if (!existingAttendance) {
+        throw new Error("Current attendance settings could not be verified before saving.");
+      }
+      const attendanceWindow = draftAttendanceWindow(existingAttendance);
+      const coreChanges = changedCoreSettings();
       const body = {
-        ...readCoreSettings(),
+        ...coreChanges,
         attendanceWindow,
       };
       const response = await delegatedFetch(
@@ -164,15 +214,24 @@
         const payload = await response.clone().json().catch(() => ({}));
         throw new Error(text(payload.message || payload.error?.message) || "Game settings could not be saved.");
       }
-      return { response, attendanceWindow, body };
+      return { response, attendanceWindow, body, gameId };
     })();
 
     try {
       const result = await saveFlight;
+      baselineGameId = result.gameId;
+      baselineCoreSettings = readCoreSettings();
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
+      button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
+      document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
+        detail: {
+          gameId: result.gameId,
+          attendanceWindow: result.attendanceWindow,
+        },
+      }));
       setButtonState(button, "completed", "Game settings saved");
       window.setTimeout(() => {
         button.removeAttribute("data-admin-terminal-api-state");
@@ -207,12 +266,19 @@
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ["disabled", "aria-disabled", "data-attendance-reward-dirty", "data-admin-terminal-api-state"],
+    attributeFilter: [
+      "disabled",
+      "aria-disabled",
+      "data-attendance-reward-dirty",
+      "data-attendance-reward-loaded",
+      "data-admin-terminal-api-state",
+    ],
   });
 
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
     readCoreSettings,
+    changedCoreSettings,
   };
   scheduleReconcile();
 })();
