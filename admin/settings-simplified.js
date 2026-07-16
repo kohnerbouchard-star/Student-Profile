@@ -10,7 +10,6 @@
     baseline: "",
     baselineValues: new Map(),
     reconcileQueued: false,
-    baselineTimer: 0,
     savedTimer: 0,
     savedUntil: 0,
   };
@@ -423,15 +422,10 @@
     else setText(status, "No unsaved changes");
   }
 
-  function scheduleBaseline(page) {
+  function initializeBaseline(page) {
     const attendance = page.querySelector('[data-admin-attendance-reward-settings][data-attendance-reward-loaded="true"]');
     if (!attendance || state.baseline || attendanceDirty()) return;
-    window.clearTimeout(state.baselineTimer);
-    state.baselineTimer = window.setTimeout(() => {
-      if (page !== settingsPage() || attendanceDirty()) return;
-      captureBaseline(page);
-      scheduleReconcile();
-    }, 140);
+    captureBaseline(page);
   }
 
   function resetForPage(page) {
@@ -442,7 +436,7 @@
     state.baseline = "";
     state.baselineValues = new Map();
     state.savedUntil = 0;
-    window.clearTimeout(state.baselineTimer);
+    page.removeAttribute("data-settings-ux-baseline-ready");
     window.clearTimeout(state.savedTimer);
   }
 
@@ -460,7 +454,7 @@
     ensureConfigurationSummary(page, cards);
     ensureCustomDisclosure(page, cards);
     const saveArea = ensureSaveBar(page);
-    scheduleBaseline(page);
+    initializeBaseline(page);
     renderSaveState(page, saveArea);
 
     page.dataset.settingsSimplifiedReady = "true";
