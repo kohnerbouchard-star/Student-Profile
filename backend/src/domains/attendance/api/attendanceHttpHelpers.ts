@@ -150,12 +150,16 @@ export interface StaffAttendanceScanRequestBody {
   readonly deviceTimezone: string | null;
 }
 
+export type AttendanceRewardCurrencyMode = "player_country" | "fixed";
+
 export interface PlayerAttendanceWindowConfig {
   readonly timezone: string;
   readonly lateCutoffMinutes: number | null;
   readonly presentRewardAmount: number;
   readonly lateRewardAmount: number;
   readonly currencyCode: string;
+  readonly currencyMode: AttendanceRewardCurrencyMode;
+  readonly applyDifficultyIncomeModifier: boolean;
 }
 
 const DEFAULT_PRESENT_REWARD_AMOUNT = 1;
@@ -176,6 +180,13 @@ export function readPlayerAttendanceWindowConfig(
   const currencyCode = normalizeCurrencyCode(
     parseOptionalText(attendanceWindow.currencyCode) ?? "ECO",
   );
+  const currencyMode = readAttendanceRewardCurrencyMode(
+    attendanceWindow.currencyMode,
+  );
+  const applyDifficultyIncomeModifier = readOptionalBoolean(
+    attendanceWindow.applyDifficultyIncomeModifier,
+    true,
+  );
 
   return {
     timezone,
@@ -183,7 +194,25 @@ export function readPlayerAttendanceWindowConfig(
     presentRewardAmount,
     lateRewardAmount,
     currencyCode,
+    currencyMode,
+    applyDifficultyIncomeModifier,
   };
+}
+
+function readAttendanceRewardCurrencyMode(
+  value: unknown,
+): AttendanceRewardCurrencyMode {
+  return parseOptionalText(value)?.trim().toLowerCase() === "fixed"
+    ? "fixed"
+    : "player_country";
+}
+
+function readOptionalBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return fallback;
 }
 
 function firstDefined(
