@@ -2,10 +2,10 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
+  const coreDirtyKeys = new Set();
+  let dirtyGameId = "";
   let saveFlight = null;
   let reconcileQueued = false;
-  let baselineGameId = "";
-  let baselineCoreSettings = null;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -29,6 +29,12 @@
     );
   }
 
+  function resetDirtyKeysForGame(gameId) {
+    if (!gameId || dirtyGameId === gameId) return;
+    dirtyGameId = gameId;
+    coreDirtyKeys.clear();
+  }
+
   function controlValue(control) {
     if (control instanceof HTMLInputElement && ["checkbox", "radio"].includes(control.type)) {
       return control.checked;
@@ -47,30 +53,13 @@
     );
   }
 
-  function sameValue(left, right) {
-    return JSON.stringify(left) === JSON.stringify(right);
-  }
-
-  function captureCoreBaseline() {
-    const gameId = selectedGameId();
-    if (!gameId) return;
-    if (baselineGameId && baselineGameId !== gameId) {
-      baselineGameId = "";
-      baselineCoreSettings = null;
-    }
-    if (baselineCoreSettings) return;
-    const current = readCoreSettings();
-    if (!Object.keys(current).length) return;
-    baselineGameId = gameId;
-    baselineCoreSettings = current;
-  }
-
   function changedCoreSettings() {
-    captureCoreBaseline();
-    if (!baselineCoreSettings || baselineGameId !== selectedGameId()) return {};
+    resetDirtyKeysForGame(selectedGameId());
     const current = readCoreSettings();
     return Object.fromEntries(
-      Object.entries(current).filter(([key, value]) => !sameValue(value, baselineCoreSettings[key])),
+      [...coreDirtyKeys]
+        .filter((key) => Object.prototype.hasOwnProperty.call(current, key))
+        .map((key) => [key, current[key]]),
     );
   }
 
@@ -151,7 +140,7 @@
   }
 
   function keepDirtyButtonAvailable() {
-    captureCoreBaseline();
+    resetDirtyKeysForGame(selectedGameId());
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty() || saveFlight) return;
     button.disabled = false;
@@ -168,11 +157,6 @@
     reconcileQueued = true;
     window.requestAnimationFrame(() => {
       reconcileQueued = false;
-      const gameId = selectedGameId();
-      if (baselineGameId && gameId && baselineGameId !== gameId) {
-        baselineGameId = "";
-        baselineCoreSettings = null;
-      }
       keepDirtyButtonAvailable();
     });
   }
@@ -182,6 +166,7 @@
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
 
+    resetDirtyKeysForGame(gameId);
     setButtonState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
       const settingsResponse = await delegatedFetch(
@@ -198,10 +183,7 @@
       }
       const attendanceWindow = draftAttendanceWindow(existingAttendance);
       const coreChanges = changedCoreSettings();
-      const body = {
-        ...coreChanges,
-        attendanceWindow,
-      };
+      const body = { ...coreChanges, attendanceWindow };
       const response = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         {
@@ -219,8 +201,7 @@
 
     try {
       const result = await saveFlight;
-      baselineGameId = result.gameId;
-      baselineCoreSettings = readCoreSettings();
+      coreDirtyKeys.clear();
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
@@ -247,6 +228,19 @@
       saveFlight = null;
     }
   }
+
+  function recordCoreUserEdit(event) {
+    const control = event.target instanceof Element
+      ? event.target.closest("[data-game-setting-key]")
+      : null;
+    const key = control?.getAttribute("data-game-setting-key");
+    if (!key) return;
+    resetDirtyKeysForGame(selectedGameId());
+    coreDirtyKeys.add(key);
+  }
+
+  document.addEventListener("input", recordCoreUserEdit, true);
+  document.addEventListener("change", recordCoreUserEdit, true);
 
   document.addEventListener("click", (event) => {
     const button = event.target instanceof Element
