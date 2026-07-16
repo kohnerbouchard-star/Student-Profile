@@ -16,6 +16,10 @@ interface DifficultyPolicyRow {
   readonly income_modifier: number | string;
 }
 
+interface DifficultyProfileRow {
+  readonly income_modifier: number | string;
+}
+
 interface CountryEconomicSnapshotRow {
   readonly exchange_rate_index: number | string;
   readonly snapshot_sequence: number | string;
@@ -39,10 +43,15 @@ export async function resolveAttendanceRewardPolicy(
     readonly playerId: string;
     readonly configuredBaseAmount: number;
     readonly attendanceConfig: PlayerAttendanceWindowConfig;
+    readonly difficultyPreset?: string | null;
   },
 ): Promise<AttendanceRewardPolicyResolution> {
   const incomeModifier = input.attendanceConfig.applyDifficultyIncomeModifier
-    ? await readIncomeModifier(serviceClient, input.gameSessionId)
+    ? await readIncomeModifier(
+      serviceClient,
+      input.gameSessionId,
+      input.difficultyPreset,
+    )
     : 1;
 
   if (input.attendanceConfig.currencyMode === "fixed") {
@@ -99,6 +108,16 @@ export function calculateAttendanceRewardAmount(
   );
 }
 
+export function selectAttendanceIncomeModifier(
+  activePolicyValue: unknown,
+  presetProfileValue: unknown,
+): number {
+  const active = optionalNumber(activePolicyValue);
+  if (active !== null) return boundedMultiplier(active);
+  const preset = optionalNumber(presetProfileValue);
+  return boundedMultiplier(preset ?? 1);
+}
+
 function buildResolution(input: {
   readonly configuredBaseAmount: number;
   readonly baseCurrencyCode: string;
@@ -127,6 +146,7 @@ function buildResolution(input: {
 async function readIncomeModifier(
   serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
+  difficultyPreset: string | null | undefined,
 ): Promise<number> {
   const response = await serviceClient
     .from("game_difficulty_policy_settings")
@@ -137,7 +157,22 @@ async function readIncomeModifier(
 
   if (response.error) throw policyReadFailed();
   const row = response.data as DifficultyPolicyRow | null;
-  return boundedMultiplier(number(row?.income_modifier, 1));
+  const activeValue = optionalNumber(row?.income_modifier);
+  if (activeValue !== null) return selectAttendanceIncomeModifier(activeValue, null);
+
+  const presetKey = String(difficultyPreset ?? "").trim().toLowerCase();
+  if (!presetKey || presetKey === "custom") return 1;
+
+  const profileResponse = await serviceClient
+    .from("difficulty_policy_profiles")
+    .select("income_modifier")
+    .eq("preset_key", presetKey)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (profileResponse.error) throw policyReadFailed();
+  const profile = profileResponse.data as DifficultyProfileRow | null;
+  return selectAttendanceIncomeModifier(null, profile?.income_modifier);
 }
 
 async function readPlayerCountry(
@@ -211,6 +246,12 @@ function policyReadFailed(): EdgeActivationError {
 function number(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function nonNegative(value: number, fallback: number): number {
