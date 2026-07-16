@@ -21,6 +21,7 @@ on:
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
+      - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -57,6 +58,7 @@ on:
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
+      - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -141,6 +143,9 @@ jobs:
 
       - name: Audit attendance reward settings and local currency
         run: node scripts/admin-attendance-reward-settings-smoke.mjs
+
+      - name: Keep custom Settings open during edits
+        run: node scripts/admin-settings-disclosure-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
