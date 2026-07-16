@@ -154,6 +154,7 @@
     if (saveFlight) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
+    const restoreDisabled = button.dataset.attendanceRewardWasDisabled === "true";
 
     setButtonState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
@@ -192,6 +193,7 @@
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-core-pending");
+      button.removeAttribute("data-attendance-reward-was-disabled");
       button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
       document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
@@ -201,10 +203,21 @@
         },
       }));
       setButtonState(button, "completed", "Game settings saved");
+      if (restoreDisabled) {
+        button.disabled = true;
+        button.setAttribute("aria-disabled", "true");
+      }
       window.setTimeout(() => {
+        if (button.dataset.attendanceRewardDirty === "true") return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
-        button.disabled = false;
+        if (restoreDisabled) {
+          button.disabled = true;
+          button.setAttribute("aria-disabled", "true");
+        } else {
+          button.disabled = false;
+          button.removeAttribute("aria-disabled");
+        }
       }, 900);
       return result;
     } catch (error) {
