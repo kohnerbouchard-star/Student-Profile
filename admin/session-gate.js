@@ -3,9 +3,12 @@
 
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const MINIMUM_GATE_VISIBLE_MS = 120;
+  const initializedAt = performance.now();
   let released = false;
   let redirecting = false;
   let mountTimeout = null;
+  let releaseTimeout = null;
 
   function readSession() {
     try {
@@ -56,12 +59,20 @@
     if (released) return;
     released = true;
     if (mountTimeout) window.clearTimeout(mountTimeout);
-    document.getElementById("adminSessionGate")?.remove();
+    const remainingVisibleMs = Math.max(
+      0,
+      MINIMUM_GATE_VISIBLE_MS - (performance.now() - initializedAt),
+    );
+    releaseTimeout = window.setTimeout(() => {
+      document.getElementById("adminSessionGate")?.remove();
+      releaseTimeout = null;
+    }, remainingVisibleMs);
   }
 
   function showError(message) {
     if (released) return;
     if (mountTimeout) window.clearTimeout(mountTimeout);
+    if (releaseTimeout) window.clearTimeout(releaseTimeout);
 
     const gate = document.getElementById("adminSessionGate");
     if (!gate) return;
