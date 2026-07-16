@@ -137,6 +137,32 @@
     setText(card.querySelector(":scope > header > strong"), description);
   }
 
+  function ensureAttendanceExample(grid, attendance, page) {
+    const legacyFormula = attendance.querySelector("[data-attendance-reward-formula]");
+    if (legacyFormula instanceof HTMLElement) {
+      legacyFormula.removeAttribute("data-attendance-reward-formula");
+      legacyFormula.dataset.settingsLegacyAttendanceFormula = "true";
+      legacyFormula.hidden = true;
+      legacyFormula.style.display = "none";
+    }
+
+    let formula = grid.querySelector("[data-settings-attendance-example]");
+    if (!(formula instanceof HTMLElement)) {
+      formula = document.createElement("footer");
+      formula.className =
+        "admin-terminal-attendance-reward-formula admin-terminal-settings-attendance-example";
+      formula.dataset.attendanceRewardFormula = "";
+      formula.dataset.settingsAttendanceExample = "true";
+      formula.setAttribute("aria-live", "polite");
+      formula.innerHTML = "<strong>Example payout</strong><span></span>";
+    }
+    if (formula.previousElementSibling !== attendance) {
+      attendance.insertAdjacentElement("afterend", formula);
+    }
+    setText(formula.querySelector("strong"), "Example payout");
+    setText(formula.querySelector("span"), attendanceRuleText(page));
+  }
+
   function putCardsInLinearOrder(page) {
     const grid = page.querySelector(".admin-terminal-settings-tuning-grid");
     const money = page.querySelector(".admin-terminal-settings-tuning-card.is-money");
@@ -181,9 +207,7 @@
     setText(lateHelp, "Set this to 0.00 when late arrivals should not receive a reward.");
 
     forceAutomaticAttendancePolicy(attendance);
-    const formula = attendance.querySelector("[data-attendance-reward-formula]");
-    setText(formula?.querySelector("strong"), "Example payout");
-    setText(formula?.querySelector("span"), attendanceRuleText(page));
+    ensureAttendanceExample(grid, attendance, page);
 
     return { grid, money, attendance, events, safety };
   }
@@ -387,11 +411,22 @@
     if (button instanceof HTMLButtonElement) setText(button, "Save changes");
 
     let status = panel.querySelector("[data-settings-save-status]");
-    if (!(status instanceof HTMLElement)) {
-      status = panel.querySelector("small") || document.createElement("small");
-      status.dataset.settingsSaveStatus = "true";
-      if (!status.parentElement) panel.prepend(status);
+    if (status instanceof HTMLElement && status.tagName === "SMALL") {
+      const replacement = document.createElement("span");
+      replacement.dataset.settingsSaveStatus = "true";
+      replacement.textContent = text(status.textContent) || "No unsaved changes";
+      status.replaceWith(replacement);
+      status = replacement;
     }
+    for (const legacy of panel.querySelectorAll(":scope > small")) legacy.remove();
+    if (!(status instanceof HTMLElement)) {
+      status = document.createElement("span");
+      status.dataset.settingsSaveStatus = "true";
+      panel.prepend(status);
+    }
+    status.style.color = "var(--settings-muted)";
+    status.style.fontSize = "12px";
+    status.style.lineHeight = "1.45";
     return { panel, button, status };
   }
 
