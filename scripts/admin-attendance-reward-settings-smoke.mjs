@@ -33,6 +33,13 @@ async function switchFixtureGame(gameId) {
   gameId, { timeout: 10_000 });
 }
 
+function rectanglesOverlap(left, right) {
+  return left.left < right.right - 0.5 &&
+    left.right > right.left + 0.5 &&
+    left.top < right.bottom - 0.5 &&
+    left.bottom > right.top + 0.5;
+}
+
 try {
   await page.route("**/functions/v1/admin-api/**", async (route) => {
     const request = route.request();
@@ -187,6 +194,55 @@ try {
     throw new Error(`Saved attendance state was not acknowledged: ${JSON.stringify(savedComparison)}`);
   }
 
+  const comparisonBounds = await page.evaluate(() => {
+    const row = document.querySelector("[data-attendance-reward-preview]");
+    const description = row?.querySelector(":scope > div small");
+    const current = row?.querySelector("[data-attendance-current]");
+    const arrow = row?.querySelector(":scope > i");
+    const changed = row?.querySelector("[data-attendance-changed]");
+    const parentCurrent = current?.parentElement;
+    const parentChanged = changed?.parentElement;
+    const rect = (element) => {
+      const value = element?.getBoundingClientRect();
+      return value
+        ? { left: value.left, right: value.right, top: value.top, bottom: value.bottom }
+        : null;
+    };
+    return {
+      row: rect(row),
+      description: rect(description),
+      current: rect(current),
+      arrow: rect(arrow),
+      changed: rect(changed),
+      currentContained: Boolean(
+        current && parentCurrent &&
+        current.getBoundingClientRect().left >= parentCurrent.getBoundingClientRect().left - 0.5 &&
+        current.getBoundingClientRect().right <= parentCurrent.getBoundingClientRect().right + 0.5 &&
+        parentCurrent.scrollWidth <= parentCurrent.clientWidth + 1
+      ),
+      changedContained: Boolean(
+        changed && parentChanged &&
+        changed.getBoundingClientRect().left >= parentChanged.getBoundingClientRect().left - 0.5 &&
+        changed.getBoundingClientRect().right <= parentChanged.getBoundingClientRect().right + 0.5 &&
+        parentChanged.scrollWidth <= parentChanged.clientWidth + 1
+      ),
+    };
+  });
+  if (
+    !comparisonBounds.row ||
+    !comparisonBounds.description ||
+    !comparisonBounds.current ||
+    !comparisonBounds.arrow ||
+    !comparisonBounds.changed ||
+    !comparisonBounds.currentContained ||
+    !comparisonBounds.changedContained ||
+    rectanglesOverlap(comparisonBounds.description, comparisonBounds.current) ||
+    rectanglesOverlap(comparisonBounds.current, comparisonBounds.arrow) ||
+    rectanglesOverlap(comparisonBounds.arrow, comparisonBounds.changed)
+  ) {
+    throw new Error(`Attendance comparison columns overlap or overflow: ${JSON.stringify(comparisonBounds)}`);
+  }
+
   await capture("attendance-reward-settings");
 
   rejectSettingsRead = true;
@@ -260,6 +316,7 @@ try {
     attendanceWindow,
     formula,
     savedComparison,
+    comparisonBounds,
     secondGameState,
     reward,
     errors,
@@ -267,7 +324,16 @@ try {
 
   if (errors.length) throw new Error(errors[0]);
   console.log("Attendance reward settings and player-country currency smoke passed.");
-  await finish({ initialPolicy, settingsBody, attendanceWindow, formula, savedComparison, secondGameState, reward });
+  await finish({
+    initialPolicy,
+    settingsBody,
+    attendanceWindow,
+    formula,
+    savedComparison,
+    comparisonBounds,
+    secondGameState,
+    reward,
+  });
 } catch (error) {
   await capture("attendance-reward-failure").catch(() => {});
   await finish({ failure: error.stack || error.message || String(error) });
