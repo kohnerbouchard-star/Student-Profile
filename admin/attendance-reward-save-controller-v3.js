@@ -2,6 +2,8 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
+  const coreDirtyKeys = new Set();
+  let dirtyGameId = "";
   let saveFlight = null;
   let reconcileQueued = false;
 
@@ -25,6 +27,14 @@
       model.activeGame?.id || model.selectedGame?.id ||
       window.sessionStorage.getItem("econovaria.admin.selected-game.v1"),
     );
+  }
+
+  function resetDirtyKeysForGame(gameId) {
+    if (!gameId || dirtyGameId === gameId) return;
+    dirtyGameId = gameId;
+    coreDirtyKeys.clear();
+    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    button?.removeAttribute("data-attendance-reward-core-pending");
   }
 
   function readCoreSettings() {
@@ -60,9 +70,9 @@
       button?.getAttribute("data-attendance-reward-dirty") === "true";
   }
 
-  function combinedCoreSavePending(button) {
-    return button instanceof HTMLButtonElement &&
-      button.dataset.attendanceRewardCorePending === "true";
+  function combinedCoreSavePending() {
+    resetDirtyKeysForGame(selectedGameId());
+    return coreDirtyKeys.size > 0;
   }
 
   function validateAttendance() {
@@ -130,6 +140,7 @@
   }
 
   function keepDirtyButtonAvailable() {
+    resetDirtyKeysForGame(selectedGameId());
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty() || saveFlight) return;
     button.disabled = false;
@@ -154,7 +165,6 @@
     if (saveFlight) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
-    const restoreDisabled = button.dataset.attendanceRewardWasDisabled === "true";
 
     setButtonState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
@@ -193,31 +203,22 @@
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-core-pending");
-      button.removeAttribute("data-attendance-reward-was-disabled");
       button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
       document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
         detail: {
           gameId: result.gameId,
           attendanceWindow: result.attendanceWindow,
+          combined: false,
         },
       }));
       setButtonState(button, "completed", "Game settings saved");
-      if (restoreDisabled) {
-        button.disabled = true;
-        button.setAttribute("aria-disabled", "true");
-      }
       window.setTimeout(() => {
         if (button.dataset.attendanceRewardDirty === "true") return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
-        if (restoreDisabled) {
-          button.disabled = true;
-          button.setAttribute("aria-disabled", "true");
-        } else {
-          button.disabled = false;
-          button.removeAttribute("aria-disabled");
-        }
+        button.disabled = false;
+        button.removeAttribute("aria-disabled");
       }, 900);
       return result;
     } catch (error) {
@@ -229,6 +230,34 @@
     }
   }
 
+  function markTrustedCoreEdit(event) {
+    if (!event.isTrusted) return;
+    const control = event.target instanceof Element
+      ? event.target.closest("[data-game-setting-key]")
+      : null;
+    const key = control?.getAttribute("data-game-setting-key");
+    if (!key) return;
+    resetDirtyKeysForGame(selectedGameId());
+    coreDirtyKeys.add(key);
+    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    if (button instanceof HTMLButtonElement) {
+      button.dataset.attendanceRewardCorePending = "true";
+    }
+  }
+
+  for (const eventName of ["pointerdown", "keydown", "input", "change"]) {
+    document.addEventListener(eventName, markTrustedCoreEdit, true);
+  }
+
+  document.addEventListener("econovaria:attendance-reward-saved", (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    if (detail?.combined === true) {
+      coreDirtyKeys.clear();
+      document.querySelector('[data-admin-terminal-action="save-settings"]')
+        ?.removeAttribute("data-attendance-reward-core-pending");
+    }
+  });
+
   document.addEventListener("click", (event) => {
     const button = event.target instanceof Element
       ? event.target.closest('[data-admin-terminal-action="save-settings"]')
@@ -239,7 +268,7 @@
       event.stopImmediatePropagation();
       return;
     }
-    if (combinedCoreSavePending(button)) return;
+    if (combinedCoreSavePending()) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     button.dataset.attendanceRewardDirectSave = "true";
