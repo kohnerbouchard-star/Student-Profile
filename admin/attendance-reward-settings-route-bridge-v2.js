@@ -21,6 +21,10 @@
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
 
+  function saveButton() {
+    return document.querySelector('[data-admin-terminal-action="save-settings"]');
+  }
+
   function absoluteUrl(input) {
     return input instanceof Request
       ? input.url
@@ -136,14 +140,29 @@
   }
 
   function markSettingsDirty() {
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    const button = saveButton();
     if (!(button instanceof HTMLButtonElement)) return;
+    if (!button.hasAttribute("data-attendance-reward-core-pending")) {
+      const corePending = !button.disabled && button.getAttribute("aria-disabled") !== "true";
+      button.dataset.attendanceRewardCorePending = corePending ? "true" : "false";
+    }
     button.disabled = false;
     button.removeAttribute("disabled");
     button.removeAttribute("aria-disabled");
     button.removeAttribute("data-admin-terminal-api-state");
     button.dataset.attendanceRewardDirty = "true";
     button.classList.add("is-dirty");
+  }
+
+  function acknowledgeCombinedSave(gameId, attendanceWindow) {
+    const button = saveButton();
+    if (!(button instanceof HTMLButtonElement) || button.dataset.attendanceRewardCorePending !== "true") return;
+    button.removeAttribute("data-attendance-reward-core-pending");
+    button.removeAttribute("data-attendance-reward-dirty");
+    button.classList.remove("is-dirty");
+    document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
+      detail: { gameId, attendanceWindow },
+    }));
   }
 
   window.fetch = async function econovariaAttendanceRewardSettingsRouteFetch(input, init) {
@@ -166,7 +185,10 @@
       if (activeGameId && activeGameId !== gameId) return delegatedFetch(input, init);
       const augmented = await augmentedFetchArguments(input, init, gameId);
       const response = await delegatedFetch(augmented.url, augmented.init);
-      if (response.ok) cachedAttendanceWindows.set(gameId, { ...augmented.attendanceWindow });
+      if (response.ok) {
+        cachedAttendanceWindows.set(gameId, { ...augmented.attendanceWindow });
+        acknowledgeCombinedSave(gameId, augmented.attendanceWindow);
+      }
       return response;
     }
 
