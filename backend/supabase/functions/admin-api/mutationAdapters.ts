@@ -296,6 +296,46 @@ export async function normalizeSettingsMutation(request: Request): Promise<any> 
   return { gameSettings, policySettings };
 }
 
+async function readDifficultyProfile(service: any, presetKey: string): Promise<Record<string, any>> {
+  const profile = await service
+    .from("difficulty_policy_profiles")
+    .select(
+      "id,preset_key,label,price_modifier,event_volatility_modifier,scarcity_modifier,income_modifier,trade_modifier,credit_modifier,status",
+    )
+    .eq("preset_key", presetKey)
+    .eq("status", "active")
+    .maybeSingle();
+  if (profile.error) throw profile.error;
+  if (!profile.data) throw new Error("difficulty_policy_profile_not_found");
+  return profile.data;
+}
+
+async function readDifficultyBaseline(service: any, gameId: string): Promise<Record<string, any>> {
+  const settings = await service
+    .from("game_settings")
+    .select("difficulty_preset")
+    .eq("game_session_id", gameId)
+    .maybeSingle();
+  if (settings.error) throw settings.error;
+  const requestedPreset = text(settings.data?.difficulty_preset, "standard").toLowerCase();
+  const presetKey = !requestedPreset || requestedPreset === "custom" ? "standard" : requestedPreset;
+  const profile = await readDifficultyProfile(service, presetKey);
+  return {
+    difficulty_policy_profile_id: profile.id,
+    difficulty_preset: profile.preset_key,
+    custom_label: null,
+    source: "preset",
+    price_modifier: profile.price_modifier,
+    event_volatility_modifier: profile.event_volatility_modifier,
+    scarcity_modifier: profile.scarcity_modifier,
+    income_modifier: profile.income_modifier,
+    trade_modifier: profile.trade_modifier,
+    credit_modifier: profile.credit_modifier,
+    status: "active",
+    metadata: {},
+  };
+}
+
 export async function applyDifficultyPolicy(service: any, gameId: string, policySettings: Record<string, any>): Promise<any> {
   if (!policySettings || Object.keys(policySettings).length === 0) return null;
 
@@ -307,38 +347,33 @@ export async function applyDifficultyPolicy(service: any, gameId: string, policy
     .eq("game_session_id", gameId)
     .maybeSingle();
   if (existing.error) throw existing.error;
-  if (!existing.data) throw new Error("difficulty_policy_settings_not_found");
 
+  const baseline = existing.data || await readDifficultyBaseline(service, gameId);
   let patch: Record<string, any>;
   if (policySettings.source === "preset") {
     const presetKey = text(policySettings.difficulty_preset).toLowerCase();
-    const profile = await service
-      .from("difficulty_policy_profiles")
-      .select(
-        "id,preset_key,label,price_modifier,event_volatility_modifier,scarcity_modifier,income_modifier,trade_modifier,credit_modifier,status",
-      )
-      .eq("preset_key", presetKey)
-      .eq("status", "active")
-      .maybeSingle();
-    if (profile.error) throw profile.error;
-    if (!profile.data) throw new Error("difficulty_policy_profile_not_found");
-
+    const profile = await readDifficultyProfile(service, presetKey);
     patch = {
-      difficulty_policy_profile_id: profile.data.id,
-      difficulty_preset: profile.data.preset_key,
+      difficulty_policy_profile_id: profile.id,
+      difficulty_preset: profile.preset_key,
       custom_label: null,
       source: "preset",
-      price_modifier: profile.data.price_modifier,
-      event_volatility_modifier: profile.data.event_volatility_modifier,
-      scarcity_modifier: profile.data.scarcity_modifier,
-      income_modifier: profile.data.income_modifier,
-      trade_modifier: profile.data.trade_modifier,
-      credit_modifier: profile.data.credit_modifier,
+      price_modifier: profile.price_modifier,
+      event_volatility_modifier: profile.event_volatility_modifier,
+      scarcity_modifier: profile.scarcity_modifier,
+      income_modifier: profile.income_modifier,
+      trade_modifier: profile.trade_modifier,
+      credit_modifier: profile.credit_modifier,
       status: "active",
     };
   } else {
     patch = {
-      ...policySettings,
+      price_modifier: policySettings.price_modifier ?? baseline.price_modifier,
+      event_volatility_modifier: policySettings.event_volatility_modifier ?? baseline.event_volatility_modifier,
+      scarcity_modifier: policySettings.scarcity_modifier ?? baseline.scarcity_modifier,
+      income_modifier: policySettings.income_modifier ?? baseline.income_modifier,
+      trade_modifier: policySettings.trade_modifier ?? baseline.trade_modifier,
+      credit_modifier: policySettings.credit_modifier ?? baseline.credit_modifier,
       difficulty_policy_profile_id: null,
       difficulty_preset: "custom",
       custom_label: text(policySettings.custom_label, "Custom"),
@@ -347,10 +382,24 @@ export async function applyDifficultyPolicy(service: any, gameId: string, policy
     };
   }
 
+  if (existing.data) {
+    const result = await service
+      .from("game_difficulty_policy_settings")
+      .update(patch)
+      .eq("game_session_id", gameId)
+      .select("*")
+      .maybeSingle();
+    if (result.error) throw result.error;
+    return result.data;
+  }
+
   const result = await service
     .from("game_difficulty_policy_settings")
-    .update(patch)
-    .eq("game_session_id", gameId)
+    .insert({
+      game_session_id: gameId,
+      ...patch,
+      metadata: object(baseline.metadata),
+    })
     .select("*")
     .maybeSingle();
   if (result.error) throw result.error;
