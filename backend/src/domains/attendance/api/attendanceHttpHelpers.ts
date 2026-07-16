@@ -185,7 +185,7 @@ export function readPlayerAttendanceWindowConfig(
   );
   const applyDifficultyIncomeModifier = readOptionalBoolean(
     attendanceWindow.applyDifficultyIncomeModifier,
-    true,
+    false,
   );
 
   return {
@@ -202,9 +202,9 @@ export function readPlayerAttendanceWindowConfig(
 function readAttendanceRewardCurrencyMode(
   value: unknown,
 ): AttendanceRewardCurrencyMode {
-  return parseOptionalText(value)?.trim().toLowerCase() === "fixed"
-    ? "fixed"
-    : "player_country";
+  return parseOptionalText(value)?.trim().toLowerCase() === "player_country"
+    ? "player_country"
+    : "fixed";
 }
 
 function readOptionalBoolean(value: unknown, fallback: boolean): boolean {
