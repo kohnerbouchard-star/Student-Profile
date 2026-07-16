@@ -1,0 +1,407 @@
+/* Simplified Settings workspace: presets, three clear groups, one save action. */
+
+.admin-terminal-settings-page.is-settings-simplified {
+  --settings-panel: rgba(4, 17, 31, 0.82);
+  --settings-panel-soft: rgba(7, 25, 43, 0.66);
+  --settings-line: rgba(116, 226, 255, 0.15);
+  --settings-line-strong: rgba(116, 226, 255, 0.28);
+  --settings-muted: rgba(214, 242, 249, 0.62);
+  padding-bottom: 88px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  padding: 18px;
+  border: 1px solid var(--settings-line);
+  background: linear-gradient(180deg, rgba(8, 28, 48, 0.72), rgba(3, 14, 27, 0.72));
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip > div:first-child {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 4px 8px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip > div:first-child > span,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header span,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card > header > span {
+  color: #74e2ff;
+  font: 900 10px/1.2 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip > div:first-child > strong {
+  color: #ffffff;
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip > div:first-child > small,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header small {
+  color: var(--settings-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset {
+  min-width: 0;
+  min-height: 104px;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid rgba(116, 226, 255, 0.13);
+  background: rgba(2, 13, 25, 0.72);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset:hover,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset:focus-visible {
+  border-color: rgba(116, 226, 255, 0.38);
+  background: rgba(10, 41, 65, 0.72);
+  outline: none;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset.is-selected,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset[aria-pressed="true"] {
+  border-color: rgba(74, 222, 128, 0.48);
+  background: linear-gradient(180deg, rgba(74, 222, 128, 0.09), rgba(4, 23, 32, 0.8));
+  box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.08);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset > span {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset > strong {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset > small {
+  margin-top: 7px;
+  color: var(--settings-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-layout {
+  display: block !important;
+  margin-top: 16px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--settings-line);
+  background: rgba(2, 13, 25, 0.7);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid var(--settings-line);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel > header h3 {
+  margin: 4px 0 5px;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel > header p {
+  max-width: 680px;
+  color: var(--settings-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel > header > strong {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 165, 0, 0.26);
+  color: #ffc45c;
+  background: rgba(255, 165, 0, 0.07);
+  font: 900 10px/1 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-economy-group {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid var(--settings-line-strong);
+  background: linear-gradient(180deg, rgba(7, 27, 46, 0.68), rgba(2, 13, 25, 0.72));
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 17px 18px;
+  border-bottom: 1px solid var(--settings-line);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header strong {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header small {
+  max-width: 360px;
+  text-align: right;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-economy-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 14px;
+  padding: 14px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--settings-line);
+  background: var(--settings-panel);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-economy-group .admin-terminal-settings-tuning-card {
+  border-color: rgba(116, 226, 255, 0.12);
+  background: rgba(2, 14, 27, 0.78);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card > header {
+  padding: 15px 16px 13px;
+  border-bottom: 1px solid rgba(116, 226, 255, 0.11);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card > header > strong {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list.is-economy-controls,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card.is-events .admin-terminal-settings-change-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-attendance-reward-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-tile {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(116, 226, 255, 0.1);
+  background: var(--settings-panel-soft);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-tile[hidden] {
+  display: none !important;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > span {
+  color: rgba(214, 242, 249, 0.86);
+  font: 900 10px/1.2 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > input,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid rgba(116, 226, 255, 0.22);
+  color: #ffffff;
+  background: rgba(1, 11, 22, 0.82);
+  font: 800 14px/1 var(--admin-terminal-font-shell, system-ui, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > input:focus,
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > select:focus {
+  border-color: rgba(116, 226, 255, 0.62);
+  box-shadow: 0 0 0 2px rgba(116, 226, 255, 0.1);
+  outline: none;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-field > small {
+  min-height: 34px;
+  color: var(--settings-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-attendance-reward-formula {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid rgba(116, 226, 255, 0.11);
+  background: rgba(74, 222, 128, 0.035);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-attendance-reward-formula strong {
+  color: #83f4a8;
+  font: 900 10px/1.2 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-attendance-reward-formula span {
+  color: rgba(233, 251, 255, 0.78);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-detail-panel {
+  display: none !important;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  align-items: center;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(116, 226, 255, 0.28);
+  background: rgba(2, 15, 28, 0.96);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(12px);
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar > button {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 12px;
+}
+
+.admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar > small {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--settings-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1120px) {
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-control-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-economy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list.is-economy-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset-tabs,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-economy-group {
+    grid-column: auto;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list.is-economy-controls,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card.is-events .admin-terminal-settings-change-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-group-header small {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-preset-tabs,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-change-list.is-economy-controls,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-tuning-card.is-events .admin-terminal-settings-change-list,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-attendance-reward-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-main-panel > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar > button,
+  .admin-terminal-settings-page.is-settings-simplified .admin-terminal-settings-save-bar > small {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-terminal-settings-page.is-settings-simplified * {
+    scroll-behavior: auto !important;
+  }
+}
