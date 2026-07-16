@@ -143,9 +143,7 @@
     const button = saveButton();
     if (!(button instanceof HTMLButtonElement)) return;
     if (!button.hasAttribute("data-attendance-reward-core-pending")) {
-      const wasDisabled = button.disabled || button.getAttribute("aria-disabled") === "true";
-      button.dataset.attendanceRewardWasDisabled = wasDisabled ? "true" : "false";
-      button.dataset.attendanceRewardCorePending = wasDisabled ? "false" : "true";
+      button.dataset.attendanceRewardCorePending = "false";
     }
     button.disabled = false;
     button.removeAttribute("disabled");
@@ -159,11 +157,10 @@
     const button = saveButton();
     if (!(button instanceof HTMLButtonElement) || button.dataset.attendanceRewardCorePending !== "true") return;
     button.removeAttribute("data-attendance-reward-core-pending");
-    button.removeAttribute("data-attendance-reward-was-disabled");
     button.removeAttribute("data-attendance-reward-dirty");
     button.classList.remove("is-dirty");
     document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
-      detail: { gameId, attendanceWindow },
+      detail: { gameId, attendanceWindow, combined: true },
     }));
   }
 
