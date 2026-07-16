@@ -59,10 +59,10 @@
       presentRewardAmount: Math.max(0, number(value.presentRewardAmount, 1)),
       lateRewardAmount: Math.max(0, number(value.lateRewardAmount, 0)),
       currencyCode: (text(value.currencyCode) || "ECO").toUpperCase(),
-      currencyMode: text(value.currencyMode).toLowerCase() === "fixed"
-        ? "fixed"
-        : "player_country",
-      applyDifficultyIncomeModifier: value.applyDifficultyIncomeModifier !== false,
+      currencyMode: text(value.currencyMode).toLowerCase() === "player_country"
+        ? "player_country"
+        : "fixed",
+      applyDifficultyIncomeModifier: value.applyDifficultyIncomeModifier === true,
     };
   }
 
