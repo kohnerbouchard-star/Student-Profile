@@ -1,10 +1,58 @@
 import { writeFileSync } from "node:fs";
 import { createQualityHarness, BASE_URL, GAME_ID } from "./admin-quality-smoke-fixture.mjs";
 
+const SECOND_GAME_ID = "00000000-0000-4000-8000-000000000099";
 const harness = await createQualityHarness("attendance-reward-settings");
 const { page, writes, errors, capture, finish } = harness;
+let rejectSettingsRead = false;
+
+async function switchFixtureGame(gameId) {
+  await page.evaluate((nextGameId) => {
+    sessionStorage.setItem("econovaria.admin.selected-game.v1", nextGameId);
+    const terminal = window.Econovaria?.features?.adminOverviewTerminal;
+    const current = terminal?.currentModel || {};
+    if (terminal) {
+      terminal.currentModel = {
+        ...current,
+        gameId: nextGameId,
+        activeGameId: nextGameId,
+        selectedGameSessionId: nextGameId,
+        activeGame: { ...(current.activeGame || {}), id: nextGameId },
+        selectedGame: { ...(current.selectedGame || {}), id: nextGameId },
+      };
+    }
+    const marker = document.createElement("i");
+    marker.hidden = true;
+    marker.dataset.attendanceRewardGameSwitch = nextGameId;
+    document.body.append(marker);
+    marker.remove();
+  }, gameId);
+  await page.waitForFunction((expectedGameId) =>
+    window.EconovariaAttendanceRewardSettings?.getGameId?.() === expectedGameId &&
+    window.EconovariaAttendanceRewardSettings?.isLoaded?.() === true,
+  gameId, { timeout: 10_000 });
+}
 
 try {
+  await page.route("**/functions/v1/admin-api/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (
+      rejectSettingsRead &&
+      request.method() === "GET" &&
+      path.endsWith(`/games/${GAME_ID}/settings`)
+    ) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
+        body: JSON.stringify({ message: "Settings temporarily unavailable." }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+
   await page.route("**/functions/v1/classroom-api/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") {
@@ -100,8 +148,64 @@ try {
     throw new Error(`Attendance settings payload was incomplete: ${JSON.stringify(settingsBody)}`);
   }
 
+  const difficultyKeys = [
+    "difficultyPreset",
+    "difficulty",
+    "priceMultiplier",
+    "incomeMultiplier",
+    "shockFrequency",
+    "shockSeverity",
+    "tradeMultiplier",
+    "recoverySupport",
+  ];
+  const leakedDifficultyKeys = difficultyKeys.filter((key) => Object.hasOwn(bodyRoot, key));
+  if (leakedDifficultyKeys.length) {
+    throw new Error(`Attendance-only save leaked difficulty settings: ${leakedDifficultyKeys.join(", ")}`);
+  }
+
+  await page.waitForFunction(() =>
+    window.EconovariaAttendanceRewardSettings?.isDirty?.() === false,
+  null, { timeout: 5_000 });
+  const savedComparison = await page.evaluate(() => ({
+    current: document.querySelector("[data-attendance-current]")?.textContent?.trim() || "",
+    changed: document.querySelector("[data-attendance-changed]")?.textContent?.trim() || "",
+    cardDirty: document.querySelector("[data-admin-attendance-reward-settings]")
+      ?.getAttribute("data-attendance-reward-dirty") || "",
+  }));
+  if (!savedComparison.current || savedComparison.current !== savedComparison.changed || savedComparison.cardDirty) {
+    throw new Error(`Saved attendance state was not acknowledged: ${JSON.stringify(savedComparison)}`);
+  }
+
   await capture("attendance-reward-settings");
 
+  rejectSettingsRead = true;
+  await present.fill("3.00");
+  const patchCountBeforeFailedSave = writes.filter((entry) =>
+    entry.method === "PATCH" && entry.path.endsWith(`/games/${GAME_ID}/settings`)
+  ).length;
+  await page.locator('[data-admin-terminal-action="save-settings"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-admin-terminal-action="save-settings"]')
+      ?.getAttribute("data-admin-terminal-api-state") === "error",
+  null, { timeout: 10_000 });
+  const patchCountAfterFailedSave = writes.filter((entry) =>
+    entry.method === "PATCH" && entry.path.endsWith(`/games/${GAME_ID}/settings`)
+  ).length;
+  if (patchCountAfterFailedSave !== patchCountBeforeFailedSave) {
+    throw new Error("A settings PATCH was emitted after the authoritative settings read failed.");
+  }
+
+  rejectSettingsRead = false;
+  await switchFixtureGame(SECOND_GAME_ID);
+  const secondGameState = await page.evaluate(() => ({
+    value: document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || "",
+    dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
+  }));
+  if (secondGameState.value === "3.00" || secondGameState.dirty) {
+    throw new Error(`Attendance draft leaked into another game: ${JSON.stringify(secondGameState)}`);
+  }
+
+  await switchFixtureGame(GAME_ID);
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
   await page.locator('[data-admin-terminal-set-mode="manual"]').click();
@@ -127,13 +231,15 @@ try {
     settingsBody,
     attendanceWindow,
     formula,
+    savedComparison,
+    secondGameState,
     reward,
     errors,
   }, null, 2));
 
   if (errors.length) throw new Error(errors[0]);
   console.log("Attendance reward settings and player-country currency smoke passed.");
-  await finish({ settingsBody, attendanceWindow, formula, reward });
+  await finish({ settingsBody, attendanceWindow, formula, savedComparison, secondGameState, reward });
 } catch (error) {
   await capture("attendance-reward-failure").catch(() => {});
   await finish({ failure: error.stack || error.message || String(error) });
