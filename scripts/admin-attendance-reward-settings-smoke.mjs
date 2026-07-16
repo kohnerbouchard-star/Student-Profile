@@ -106,12 +106,23 @@ try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.waitForSelector("[data-admin-attendance-reward-settings]", { timeout: 10_000 });
+  await page.waitForSelector("[data-admin-attendance-reward-settings][data-attendance-reward-loaded='true']", {
+    timeout: 10_000,
+  });
 
   const present = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
   const late = page.locator('[data-attendance-reward-field="lateRewardAmount"]');
   const currencyMode = page.locator('[data-attendance-reward-field="currencyMode"]');
   const difficulty = page.locator('[data-attendance-reward-field="applyDifficultyIncomeModifier"]');
+
+  const initialPolicy = await page.evaluate(() => ({
+    currencyMode: document.querySelector('[data-attendance-reward-field="currencyMode"]')?.value || "",
+    difficulty: document.querySelector('[data-attendance-reward-field="applyDifficultyIncomeModifier"]')?.value || "",
+    dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
+  }));
+  if (initialPolicy.currencyMode !== "fixed" || initialPolicy.difficulty !== "false" || initialPolicy.dirty) {
+    throw new Error(`Legacy attendance settings did not remain opt-in: ${JSON.stringify(initialPolicy)}`);
+  }
 
   await present.fill("2.50");
   await late.fill("0.50");
@@ -197,12 +208,28 @@ try {
 
   rejectSettingsRead = false;
   await switchFixtureGame(SECOND_GAME_ID);
-  const secondGameState = await page.evaluate(() => ({
-    value: document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || "",
-    dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
-  }));
-  if (secondGameState.value === "3.00" || secondGameState.dirty) {
-    throw new Error(`Attendance draft leaked into another game: ${JSON.stringify(secondGameState)}`);
+  const secondGameState = await page.evaluate(() => {
+    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    return {
+      value: document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || "",
+      currencyMode: document.querySelector('[data-attendance-reward-field="currencyMode"]')?.value || "",
+      difficulty: document.querySelector('[data-attendance-reward-field="applyDifficultyIncomeModifier"]')?.value || "",
+      dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
+      buttonDirty: button?.getAttribute("data-attendance-reward-dirty") || "",
+      buttonError: button?.getAttribute("data-attendance-reward-error") || "",
+      corePending: button?.getAttribute("data-attendance-reward-core-pending") || "",
+    };
+  });
+  if (
+    secondGameState.value === "3.00" ||
+    secondGameState.currencyMode !== "fixed" ||
+    secondGameState.difficulty !== "false" ||
+    secondGameState.dirty ||
+    secondGameState.buttonDirty ||
+    secondGameState.buttonError ||
+    secondGameState.corePending
+  ) {
+    throw new Error(`Attendance state leaked into another game: ${JSON.stringify(secondGameState)}`);
   }
 
   await switchFixtureGame(GAME_ID);
@@ -228,6 +255,7 @@ try {
 
   await capture("attendance-local-currency-scan");
   writeFileSync(`${harness.dir}/attendance-reward-runtime.json`, JSON.stringify({
+    initialPolicy,
     settingsBody,
     attendanceWindow,
     formula,
@@ -239,7 +267,7 @@ try {
 
   if (errors.length) throw new Error(errors[0]);
   console.log("Attendance reward settings and player-country currency smoke passed.");
-  await finish({ settingsBody, attendanceWindow, formula, savedComparison, secondGameState, reward });
+  await finish({ initialPolicy, settingsBody, attendanceWindow, formula, savedComparison, secondGameState, reward });
 } catch (error) {
   await capture("attendance-reward-failure").catch(() => {});
   await finish({ failure: error.stack || error.message || String(error) });
