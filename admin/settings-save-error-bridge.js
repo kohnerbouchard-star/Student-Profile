@@ -4,11 +4,15 @@
   const SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const PAGE_SELECTOR = ".admin-terminal-settings-page";
   const DISCLOSURE_SELECTOR = "[data-settings-custom-toggle]";
+  const NUMERIC_EDITOR_SELECTOR =
+    `${PAGE_SELECTOR}.is-custom-settings-open ` +
+    ".admin-terminal-settings-tuning-grid input[type=\"number\"]";
   const STYLE_ID = "econovaria-settings-final-polish-style";
   let queued = false;
   let observedPage = null;
   let disclosureOpen = false;
   let disclosureGameId = "";
+  const deferredNumericControls = new WeakSet();
 
   function text(value) {
     return String(value ?? "").trim();
@@ -100,6 +104,34 @@
       reconcile();
     });
   }
+
+  function isActiveNumericEditor(target) {
+    return target instanceof HTMLInputElement &&
+      target.matches(NUMERIC_EDITOR_SELECTOR) &&
+      document.activeElement === target;
+  }
+
+  function deferNumericEvent(event) {
+    const target = event.target;
+    if (!isActiveNumericEditor(target)) return;
+    deferredNumericControls.add(target);
+    event.stopImmediatePropagation();
+  }
+
+  window.addEventListener("input", deferNumericEvent, true);
+  window.addEventListener("change", deferNumericEvent, true);
+
+  window.addEventListener("focusout", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !deferredNumericControls.has(target)) return;
+    deferredNumericControls.delete(target);
+    window.queueMicrotask(() => {
+      if (!target.isConnected) return;
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+      schedule();
+    });
+  }, true);
 
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
