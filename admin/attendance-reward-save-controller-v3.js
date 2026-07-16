@@ -2,8 +2,6 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
-  const coreDirtyKeys = new Set();
-  let dirtyGameId = "";
   let saveFlight = null;
   let reconcileQueued = false;
 
@@ -29,37 +27,24 @@
     );
   }
 
-  function resetDirtyKeysForGame(gameId) {
-    if (!gameId || dirtyGameId === gameId) return;
-    dirtyGameId = gameId;
-    coreDirtyKeys.clear();
-  }
-
-  function controlValue(control) {
-    if (control instanceof HTMLInputElement && ["checkbox", "radio"].includes(control.type)) {
-      return control.checked;
-    }
-    return control instanceof HTMLInputElement || control instanceof HTMLSelectElement ||
-        control instanceof HTMLTextAreaElement
-      ? control.value
-      : "";
-  }
-
   function readCoreSettings() {
     return Object.fromEntries(
       [...document.querySelectorAll("[data-game-setting-key]")]
-        .map((control) => [control.getAttribute("data-game-setting-key"), controlValue(control)])
+        .map((control) => {
+          const key = control.getAttribute("data-game-setting-key");
+          let value = "";
+          if (control instanceof HTMLInputElement && ["checkbox", "radio"].includes(control.type)) {
+            value = control.checked;
+          } else if (
+            control instanceof HTMLInputElement ||
+            control instanceof HTMLSelectElement ||
+            control instanceof HTMLTextAreaElement
+          ) {
+            value = control.value;
+          }
+          return [key, value];
+        })
         .filter(([key]) => Boolean(key)),
-    );
-  }
-
-  function changedCoreSettings() {
-    resetDirtyKeysForGame(selectedGameId());
-    const current = readCoreSettings();
-    return Object.fromEntries(
-      [...coreDirtyKeys]
-        .filter((key) => Object.prototype.hasOwnProperty.call(current, key))
-        .map((key) => [key, current[key]]),
     );
   }
 
@@ -73,6 +58,11 @@
     return window.EconovariaAttendanceRewardSettings?.isDirty?.() === true ||
       card?.getAttribute("data-attendance-reward-dirty") === "true" ||
       button?.getAttribute("data-attendance-reward-dirty") === "true";
+  }
+
+  function combinedCoreSavePending(button) {
+    return button instanceof HTMLButtonElement &&
+      button.dataset.attendanceRewardCorePending === "true";
   }
 
   function validateAttendance() {
@@ -140,7 +130,6 @@
   }
 
   function keepDirtyButtonAvailable() {
-    resetDirtyKeysForGame(selectedGameId());
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty() || saveFlight) return;
     button.disabled = false;
@@ -161,12 +150,11 @@
     });
   }
 
-  async function saveAttendanceAndDifficulty(button) {
+  async function saveAttendanceOnly(button) {
     if (saveFlight) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
 
-    resetDirtyKeysForGame(gameId);
     setButtonState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
       const settingsResponse = await delegatedFetch(
@@ -182,8 +170,7 @@
         throw new Error("Current attendance settings could not be verified before saving.");
       }
       const attendanceWindow = draftAttendanceWindow(existingAttendance);
-      const coreChanges = changedCoreSettings();
-      const body = { ...coreChanges, attendanceWindow };
+      const body = { attendanceWindow };
       const response = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         {
@@ -201,10 +188,10 @@
 
     try {
       const result = await saveFlight;
-      coreDirtyKeys.clear();
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
+      button.removeAttribute("data-attendance-reward-core-pending");
       button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
       document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
@@ -229,29 +216,21 @@
     }
   }
 
-  function recordCoreUserEdit(event) {
-    const control = event.target instanceof Element
-      ? event.target.closest("[data-game-setting-key]")
-      : null;
-    const key = control?.getAttribute("data-game-setting-key");
-    if (!key) return;
-    resetDirtyKeysForGame(selectedGameId());
-    coreDirtyKeys.add(key);
-  }
-
-  document.addEventListener("input", recordCoreUserEdit, true);
-  document.addEventListener("change", recordCoreUserEdit, true);
-
   document.addEventListener("click", (event) => {
     const button = event.target instanceof Element
       ? event.target.closest('[data-admin-terminal-action="save-settings"]')
       : null;
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty()) return;
+    if (!validateAttendance()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (combinedCoreSavePending(button)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     button.dataset.attendanceRewardDirectSave = "true";
-    if (!validateAttendance()) return;
-    void saveAttendanceAndDifficulty(button).catch((error) => {
+    void saveAttendanceOnly(button).catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));
     });
   }, true);
@@ -272,7 +251,7 @@
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
     readCoreSettings,
-    changedCoreSettings,
+    combinedCoreSavePending,
   };
   scheduleReconcile();
 })();
