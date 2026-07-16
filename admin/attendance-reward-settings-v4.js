@@ -105,7 +105,7 @@
       <article class="admin-terminal-settings-tuning-card is-attendance" data-admin-attendance-reward-settings>
         <header>
           <span>Attendance Rewards</span>
-          <strong>Base credits · local payout</strong>
+          <strong>Base credits · configurable payout</strong>
         </header>
         <div class="admin-terminal-settings-change-list admin-terminal-attendance-reward-grid">
           <article class="admin-terminal-settings-change-tile">
@@ -180,6 +180,17 @@
       `${difficulty.toFixed(2)}× difficulty → ${destination}`;
   }
 
+  function compactSummary(config) {
+    const difficulty = config.applyDifficultyIncomeModifier
+      ? `${incomeModifier().toFixed(2)}× income`
+      : "no difficulty";
+    const destination = config.currencyMode === "player_country"
+      ? "local currency"
+      : `fixed ${config.currencyCode}`;
+    return `${config.presentRewardAmount.toFixed(2)} / ${config.lateRewardAmount.toFixed(2)} ${config.currencyCode} · ` +
+      `${difficulty} · ${destination}`;
+  }
+
   function ensurePreviewRow() {
     const list = document.querySelector(".admin-terminal-settings-current-list");
     if (!list || list.querySelector("[data-attendance-reward-preview]")) return;
@@ -187,7 +198,7 @@
     row.className = "admin-terminal-settings-current-row is-active is-attendance";
     row.dataset.attendanceRewardPreview = "";
     row.innerHTML = `
-      <div><strong>Attendance</strong><small>Base reward converted to player currency.</small></div>
+      <div><strong>Attendance</strong><small>Reward amount and payout policy.</small></div>
       <span><em>Current</em><b data-attendance-current>—</b></span>
       <i aria-hidden="true">→</i>
       <span><em>Changed</em><b data-attendance-changed>—</b></span>`;
@@ -203,11 +214,11 @@
     else card.removeAttribute("data-attendance-reward-load-error");
     if (state.dirty) card.dataset.attendanceRewardDirty = "true";
     else card.removeAttribute("data-attendance-reward-dirty");
-    const currentSummary = summary(normalizedWindow(state.attendanceWindow));
-    const changedSummary = summary(state.dirty ? activeDraft() : readDomDraft());
-    setText(card.querySelector("[data-attendance-reward-formula] span"), changedSummary);
-    setText(document.querySelector("[data-attendance-current]"), currentSummary);
-    setText(document.querySelector("[data-attendance-changed]"), changedSummary);
+    const current = normalizedWindow(state.attendanceWindow);
+    const changed = state.dirty ? activeDraft() : readDomDraft();
+    setText(card.querySelector("[data-attendance-reward-formula] span"), summary(changed));
+    setText(document.querySelector("[data-attendance-current]"), compactSummary(current));
+    setText(document.querySelector("[data-attendance-changed]"), compactSummary(changed));
     const footerCopy = document.querySelector(".admin-terminal-settings-save-panel-v543 small");
     setText(footerCopy, "This button persists the approved difficulty and attendance reward settings.");
   }
