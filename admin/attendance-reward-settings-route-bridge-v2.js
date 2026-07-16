@@ -21,6 +21,12 @@
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
 
+  function requestFrom(input, init) {
+    if (input instanceof Request) return input;
+    const absoluteUrl = new URL(String(input), window.location.href).href;
+    return new Request(absoluteUrl, init);
+  }
+
   function settingsUrl(request) {
     try {
       const url = new URL(request.url, window.location.href);
@@ -93,12 +99,12 @@
   }
 
   window.fetch = async function econovariaAttendanceRewardSettingsRouteFetch(input, init) {
-    const request = input instanceof Request ? input : new Request(input, init);
+    const request = requestFrom(input, init);
     const method = request.method.toUpperCase();
     const isSettings = settingsUrl(request);
 
     if (isSettings && ["GET", "HEAD"].includes(method)) {
-      const response = await delegatedFetch(input, init);
+      const response = await delegatedFetch(request);
       if (response.ok) response.clone().json().then(rememberSettings).catch(() => {});
       return response;
     }
@@ -113,7 +119,7 @@
       return response;
     }
 
-    return delegatedFetch(input, init);
+    return delegatedFetch(request);
   };
 
   document.addEventListener("input", (event) => {
