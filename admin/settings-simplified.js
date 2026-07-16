@@ -18,15 +18,6 @@
     return String(value ?? "").replace(/\s+/g, " ").trim();
   }
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
   function setText(element, value) {
     if (element && element.textContent !== value) element.textContent = value;
   }
@@ -100,16 +91,12 @@
     const late = Number(
       page.querySelector('[data-attendance-reward-field="lateRewardAmount"]')?.value || 0,
     );
-    const incomeText = Number.isFinite(income) ? income.toFixed(2) : "1.00";
-    const presentText = Number.isFinite(present) ? present.toFixed(2) : "0.00";
-    const lateText = Number.isFinite(late) ? late.toFixed(2) : "0.00";
-    const presentPayout = Number.isFinite(present * income)
-      ? (present * income).toFixed(2)
-      : "0.00";
-    const latePayout = Number.isFinite(late * income)
-      ? (late * income).toFixed(2)
-      : "0.00";
-    return `Present ${presentText} × ${incomeText} = ${presentPayout}; late ${lateText} × ${incomeText} = ${latePayout}, before the player-country exchange rate.`;
+    const safeIncome = Number.isFinite(income) ? income : 1;
+    const safePresent = Number.isFinite(present) ? present : 0;
+    const safeLate = Number.isFinite(late) ? late : 0;
+    return `Present ${safePresent.toFixed(2)} × ${safeIncome.toFixed(2)} = ${(safePresent * safeIncome).toFixed(2)}; ` +
+      `late ${safeLate.toFixed(2)} × ${safeIncome.toFixed(2)} = ${(safeLate * safeIncome).toFixed(2)}, ` +
+      "before the player-country exchange rate.";
   }
 
   function rewritePageCopy(page) {
@@ -156,11 +143,21 @@
       formula.setAttribute("aria-live", "polite");
       formula.innerHTML = "<strong>Example payout</strong><span></span>";
     }
-    if (formula.previousElementSibling !== attendance) {
-      attendance.insertAdjacentElement("afterend", formula);
-    }
+
     setText(formula.querySelector("strong"), "Example payout");
     setText(formula.querySelector("span"), attendanceRuleText(page));
+    return formula;
+  }
+
+  function placeInStableOrder(parent, nodes) {
+    let cursor = parent.firstElementChild;
+    for (const node of nodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.parentElement !== parent || node !== cursor) {
+        parent.insertBefore(node, cursor);
+      }
+      cursor = node.nextElementSibling;
+    }
   }
 
   function putCardsInLinearOrder(page) {
@@ -173,19 +170,6 @@
         !(attendance instanceof HTMLElement) || !(events instanceof HTMLElement) ||
         !(safety instanceof HTMLElement)) {
       return null;
-    }
-
-    const group = page.querySelector("[data-settings-economy-group]");
-    const desired = [money, attendance, events, safety];
-    for (const card of desired) {
-      if (card.parentElement !== grid) grid.append(card);
-    }
-    group?.remove();
-
-    let reference = grid.firstElementChild;
-    for (const card of desired) {
-      if (card !== reference) grid.insertBefore(card, reference);
-      reference = card.nextElementSibling;
     }
 
     rewriteSection(money, "Economy", "Prices, earnings, and taxation");
@@ -207,9 +191,15 @@
     setText(lateHelp, "Set this to 0.00 when late arrivals should not receive a reward.");
 
     forceAutomaticAttendancePolicy(attendance);
-    ensureAttendanceExample(grid, attendance, page);
+    const formula = ensureAttendanceExample(grid, attendance, page);
+    placeInStableOrder(grid, [money, attendance, formula, events, safety]);
 
-    return { grid, money, attendance, events, safety };
+    const group = page.querySelector("[data-settings-economy-group]");
+    if (group instanceof HTMLElement && !group.contains(money) && !group.contains(attendance)) {
+      group.remove();
+    }
+
+    return { grid, money, attendance, events, safety, formula };
   }
 
   function controlValue(control) {
@@ -248,27 +238,28 @@
       summary.className = "admin-terminal-settings-config-summary";
       summary.dataset.settingsConfigSummary = "true";
       summary.setAttribute("aria-live", "polite");
+      summary.innerHTML = `
+        <header>
+          <div><span>Current configuration</span><strong>Review the active rules before editing</strong></div>
+          <small>Preset values update immediately; they are not permanent until saved.</small>
+        </header>
+        <div class="admin-terminal-settings-summary-list">
+          <div data-settings-summary="economy"><strong>Economy</strong><span>—</span></div>
+          <div data-settings-summary="attendance"><strong>Attendance</strong><span>—</span></div>
+          <div data-settings-summary="events"><strong>Events</strong><span>—</span></div>
+          <div data-settings-summary="recovery"><strong>Recovery</strong><span>—</span></div>
+        </div>`;
       strip.append(summary);
     }
 
-    const groups = [
-      ["Economy", cardSummary(cards.money)],
-      ["Attendance", cardSummary(cards.attendance)],
-      ["Events", cardSummary(cards.events)],
-      ["Recovery", cardSummary(cards.safety)],
-    ];
-    const markup = `
-      <header>
-        <div><span>Current configuration</span><strong>Review the active rules before editing</strong></div>
-        <small>Preset values update immediately; they are not permanent until saved.</small>
-      </header>
-      <div class="admin-terminal-settings-summary-list">
-        ${groups.map(([label, values]) => `
-          <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(values.join(" · ") || "—")}</span></div>`).join("")}
-      </div>`;
-    if (summary.dataset.summaryMarkup !== markup) {
-      summary.innerHTML = markup;
-      summary.dataset.summaryMarkup = markup;
+    const values = {
+      economy: cardSummary(cards.money),
+      attendance: cardSummary(cards.attendance),
+      events: cardSummary(cards.events),
+      recovery: cardSummary(cards.safety),
+    };
+    for (const [key, items] of Object.entries(values)) {
+      setText(summary.querySelector(`[data-settings-summary="${key}"] > span`), items.join(" · ") || "—");
     }
   }
 
@@ -424,9 +415,6 @@
       status.dataset.settingsSaveStatus = "true";
       panel.prepend(status);
     }
-    status.style.color = "var(--settings-muted)";
-    status.style.fontSize = "12px";
-    status.style.lineHeight = "1.45";
     return { panel, button, status };
   }
 
@@ -458,8 +446,11 @@
   }
 
   function initializeBaseline(page) {
+    const attendanceApi = window.EconovariaAttendanceRewardSettings;
+    if (!attendanceApi || state.baseline || attendanceApi.isDirty?.() === true) return;
+    if (attendanceApi.getGameId?.() !== state.gameId || attendanceApi.isLoaded?.() !== true) return;
     const attendance = page.querySelector('[data-admin-attendance-reward-settings][data-attendance-reward-loaded="true"]');
-    if (!attendance || state.baseline || attendanceDirty()) return;
+    if (!attendance) return;
     captureBaseline(page);
   }
 
@@ -528,7 +519,15 @@
 
   const root = document.body || document.documentElement;
   if (root && typeof MutationObserver === "function") {
-    new MutationObserver(scheduleReconcile).observe(root, {
+    const observer = new MutationObserver((mutations) => {
+      const relevant = mutations.some((mutation) => {
+        if (mutation.type === "attributes") return true;
+        return [...mutation.addedNodes, ...mutation.removedNodes]
+          .some((node) => node instanceof Element);
+      });
+      if (relevant) scheduleReconcile();
+    });
+    observer.observe(root, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -538,7 +537,6 @@
         "data-admin-terminal-api-state",
         "aria-busy",
         "aria-pressed",
-        "class",
       ],
     });
   }
