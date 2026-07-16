@@ -7,13 +7,15 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("attendance window defaults present scans to one ECO reward", () => {
+Deno.test("attendance window defaults to local currency and difficulty-adjusted rewards", () => {
   assertEquals(readPlayerAttendanceWindowConfig({}), {
     timezone: "Asia/Seoul",
     lateCutoffMinutes: null,
     presentRewardAmount: 1,
     lateRewardAmount: 0,
     currencyCode: "ECO",
+    currencyMode: "player_country",
+    applyDifficultyIncomeModifier: true,
   });
 });
 
@@ -24,12 +26,16 @@ Deno.test("attendance window preserves explicit reward values including zero", (
     presentRewardAmount: 0,
     lateRewardAmount: 0.5,
     currencyCode: "eco",
+    currencyMode: "fixed",
+    applyDifficultyIncomeModifier: false,
   }), {
     timezone: "America/Los_Angeles",
     lateCutoffMinutes: 555,
     presentRewardAmount: 0,
     lateRewardAmount: 0.5,
     currencyCode: "ECO",
+    currencyMode: "fixed",
+    applyDifficultyIncomeModifier: false,
   });
 });
 
