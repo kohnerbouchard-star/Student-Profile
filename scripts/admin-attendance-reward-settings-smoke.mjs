@@ -29,11 +29,13 @@ async function switchFixtureGame(gameId) {
   }, gameId);
   await page.waitForFunction((expectedGameId) =>
     window.EconovariaAttendanceRewardSettings?.getGameId?.() === expectedGameId &&
-    window.EconovariaAttendanceRewardSettings?.isLoaded?.() === true,
+    window.EconovariaAttendanceRewardSettings?.isLoaded?.() === true &&
+    document.querySelector(".admin-terminal-settings-page")
+      ?.getAttribute("data-settings-simplified-ready") === "true",
   gameId, { timeout: 10_000 });
 }
 
-function rectanglesOverlap(left, right) {
+function overlap(left, right) {
   return left.left < right.right - 0.5 &&
     left.right > right.left + 0.5 &&
     left.top < right.bottom - 0.5 &&
@@ -113,32 +115,72 @@ try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.waitForSelector("[data-admin-attendance-reward-settings][data-attendance-reward-loaded='true']", {
-    timeout: 10_000,
+  await page.waitForSelector(
+    ".admin-terminal-settings-page[data-settings-simplified-ready='true'] " +
+      "[data-admin-attendance-reward-settings][data-attendance-reward-loaded='true']",
+    { timeout: 10_000 },
+  );
+
+  const simplifiedLayout = await page.evaluate(() => {
+    const pageRoot = document.querySelector(".admin-terminal-settings-page");
+    const detail = pageRoot?.querySelector(".admin-terminal-settings-detail-panel");
+    const group = pageRoot?.querySelector("[data-settings-economy-group]");
+    const money = group?.querySelector(".admin-terminal-settings-tuning-card.is-money");
+    const attendance = group?.querySelector("[data-admin-attendance-reward-settings]");
+    const saveBar = pageRoot?.querySelector(".admin-terminal-settings-save-bar");
+    const currency = attendance?.querySelector('[data-attendance-reward-field="currencyMode"]');
+    const difficulty = attendance?.querySelector(
+      '[data-attendance-reward-field="applyDifficultyIncomeModifier"]',
+    );
+    const rect = (element) => {
+      const value = element?.getBoundingClientRect();
+      return value
+        ? { left: value.left, right: value.right, top: value.top, bottom: value.bottom }
+        : null;
+    };
+    return {
+      pageReady: pageRoot?.getAttribute("data-settings-simplified-ready") || "",
+      detailHidden: Boolean(detail?.hidden || getComputedStyle(detail).display === "none"),
+      economyGroup: Boolean(group),
+      saveBarParentIsPage: saveBar?.parentElement === pageRoot,
+      money: rect(money),
+      attendance: rect(attendance),
+      currencyValue: currency?.value || "",
+      difficultyValue: difficulty?.value || "",
+      currencyHidden: Boolean(currency?.closest(".admin-terminal-settings-change-tile")?.hidden),
+      difficultyHidden: Boolean(difficulty?.closest(".admin-terminal-settings-change-tile")?.hidden),
+      visibleAttendanceControls: attendance
+        ? [...attendance.querySelectorAll(".admin-terminal-settings-change-tile")]
+          .filter((tile) => !tile.hidden).length
+        : 0,
+    };
   });
+
+  if (
+    simplifiedLayout.pageReady !== "true" ||
+    !simplifiedLayout.detailHidden ||
+    !simplifiedLayout.economyGroup ||
+    !simplifiedLayout.saveBarParentIsPage ||
+    !simplifiedLayout.money ||
+    !simplifiedLayout.attendance ||
+    overlap(simplifiedLayout.money, simplifiedLayout.attendance) ||
+    simplifiedLayout.currencyValue !== "player_country" ||
+    simplifiedLayout.difficultyValue !== "true" ||
+    !simplifiedLayout.currencyHidden ||
+    !simplifiedLayout.difficultyHidden ||
+    simplifiedLayout.visibleAttendanceControls !== 2
+  ) {
+    throw new Error(`Simplified Settings layout or automatic policy failed: ${JSON.stringify(simplifiedLayout)}`);
+  }
 
   const present = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
   const late = page.locator('[data-attendance-reward-field="lateRewardAmount"]');
-  const currencyMode = page.locator('[data-attendance-reward-field="currencyMode"]');
-  const difficulty = page.locator('[data-attendance-reward-field="applyDifficultyIncomeModifier"]');
-
-  const initialPolicy = await page.evaluate(() => ({
-    currencyMode: document.querySelector('[data-attendance-reward-field="currencyMode"]')?.value || "",
-    difficulty: document.querySelector('[data-attendance-reward-field="applyDifficultyIncomeModifier"]')?.value || "",
-    dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
-  }));
-  if (initialPolicy.currencyMode !== "fixed" || initialPolicy.difficulty !== "false" || initialPolicy.dirty) {
-    throw new Error(`Legacy attendance settings did not remain opt-in: ${JSON.stringify(initialPolicy)}`);
-  }
-
   await present.fill("2.50");
   await late.fill("0.50");
-  await currencyMode.selectOption("player_country");
-  await difficulty.selectOption("true");
 
   const formula = await page.locator("[data-attendance-reward-formula]").innerText();
-  if (!/2\.50 ECO present/i.test(formula) || !/player country currency/i.test(formula)) {
-    throw new Error(`Attendance reward formula did not update: ${formula}`);
+  if (!/2\.50 present/i.test(formula) || !/income modifier/i.test(formula) || !/player country currency/i.test(formula)) {
+    throw new Error(`Automatic attendance reward rule did not update: ${formula}`);
   }
 
   await page.locator('[data-admin-terminal-action="save-settings"]').click();
@@ -163,7 +205,7 @@ try {
     attendanceWindow?.applyDifficultyIncomeModifier !== true ||
     attendanceWindow?.currencyCode !== "ECO"
   ) {
-    throw new Error(`Attendance settings payload was incomplete: ${JSON.stringify(settingsBody)}`);
+    throw new Error(`Automatic attendance policy payload was incomplete: ${JSON.stringify(settingsBody)}`);
   }
 
   const difficultyKeys = [
@@ -184,63 +226,13 @@ try {
   await page.waitForFunction(() =>
     window.EconovariaAttendanceRewardSettings?.isDirty?.() === false,
   null, { timeout: 5_000 });
-  const savedComparison = await page.evaluate(() => ({
-    current: document.querySelector("[data-attendance-current]")?.textContent?.trim() || "",
-    changed: document.querySelector("[data-attendance-changed]")?.textContent?.trim() || "",
+  const savedState = await page.evaluate(() => ({
     cardDirty: document.querySelector("[data-admin-attendance-reward-settings]")
       ?.getAttribute("data-attendance-reward-dirty") || "",
+    formula: document.querySelector("[data-attendance-reward-formula]")?.textContent?.trim() || "",
   }));
-  if (!savedComparison.current || savedComparison.current !== savedComparison.changed || savedComparison.cardDirty) {
-    throw new Error(`Saved attendance state was not acknowledged: ${JSON.stringify(savedComparison)}`);
-  }
-
-  const comparisonBounds = await page.evaluate(() => {
-    const row = document.querySelector("[data-attendance-reward-preview]");
-    const description = row?.querySelector(":scope > div small");
-    const current = row?.querySelector("[data-attendance-current]");
-    const arrow = row?.querySelector(":scope > i");
-    const changed = row?.querySelector("[data-attendance-changed]");
-    const parentCurrent = current?.parentElement;
-    const parentChanged = changed?.parentElement;
-    const rect = (element) => {
-      const value = element?.getBoundingClientRect();
-      return value
-        ? { left: value.left, right: value.right, top: value.top, bottom: value.bottom }
-        : null;
-    };
-    return {
-      row: rect(row),
-      description: rect(description),
-      current: rect(current),
-      arrow: rect(arrow),
-      changed: rect(changed),
-      currentContained: Boolean(
-        current && parentCurrent &&
-        current.getBoundingClientRect().left >= parentCurrent.getBoundingClientRect().left - 0.5 &&
-        current.getBoundingClientRect().right <= parentCurrent.getBoundingClientRect().right + 0.5 &&
-        parentCurrent.scrollWidth <= parentCurrent.clientWidth + 1
-      ),
-      changedContained: Boolean(
-        changed && parentChanged &&
-        changed.getBoundingClientRect().left >= parentChanged.getBoundingClientRect().left - 0.5 &&
-        changed.getBoundingClientRect().right <= parentChanged.getBoundingClientRect().right + 0.5 &&
-        parentChanged.scrollWidth <= parentChanged.clientWidth + 1
-      ),
-    };
-  });
-  if (
-    !comparisonBounds.row ||
-    !comparisonBounds.description ||
-    !comparisonBounds.current ||
-    !comparisonBounds.arrow ||
-    !comparisonBounds.changed ||
-    !comparisonBounds.currentContained ||
-    !comparisonBounds.changedContained ||
-    rectanglesOverlap(comparisonBounds.description, comparisonBounds.current) ||
-    rectanglesOverlap(comparisonBounds.current, comparisonBounds.arrow) ||
-    rectanglesOverlap(comparisonBounds.arrow, comparisonBounds.changed)
-  ) {
-    throw new Error(`Attendance comparison columns overlap or overflow: ${JSON.stringify(comparisonBounds)}`);
+  if (savedState.cardDirty || !/Income Modifier/i.test(savedState.formula)) {
+    throw new Error(`Saved attendance state was not acknowledged: ${JSON.stringify(savedState)}`);
   }
 
   await capture("attendance-reward-settings");
@@ -269,21 +261,26 @@ try {
     return {
       value: document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || "",
       currencyMode: document.querySelector('[data-attendance-reward-field="currencyMode"]')?.value || "",
-      difficulty: document.querySelector('[data-attendance-reward-field="applyDifficultyIncomeModifier"]')?.value || "",
+      difficulty: document.querySelector(
+        '[data-attendance-reward-field="applyDifficultyIncomeModifier"]',
+      )?.value || "",
       dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
       buttonDirty: button?.getAttribute("data-attendance-reward-dirty") || "",
       buttonError: button?.getAttribute("data-attendance-reward-error") || "",
       corePending: button?.getAttribute("data-attendance-reward-core-pending") || "",
+      simplified: document.querySelector(".admin-terminal-settings-page")
+        ?.getAttribute("data-settings-simplified-ready") || "",
     };
   });
   if (
     secondGameState.value === "3.00" ||
-    secondGameState.currencyMode !== "fixed" ||
-    secondGameState.difficulty !== "false" ||
+    secondGameState.currencyMode !== "player_country" ||
+    secondGameState.difficulty !== "true" ||
     secondGameState.dirty ||
     secondGameState.buttonDirty ||
     secondGameState.buttonError ||
-    secondGameState.corePending
+    secondGameState.corePending ||
+    secondGameState.simplified !== "true"
   ) {
     throw new Error(`Attendance state leaked into another game: ${JSON.stringify(secondGameState)}`);
   }
@@ -311,26 +308,24 @@ try {
 
   await capture("attendance-local-currency-scan");
   writeFileSync(`${harness.dir}/attendance-reward-runtime.json`, JSON.stringify({
-    initialPolicy,
+    simplifiedLayout,
     settingsBody,
     attendanceWindow,
     formula,
-    savedComparison,
-    comparisonBounds,
+    savedState,
     secondGameState,
     reward,
     errors,
   }, null, 2));
 
   if (errors.length) throw new Error(errors[0]);
-  console.log("Attendance reward settings and player-country currency smoke passed.");
+  console.log("Simplified Settings and automatic attendance reward policy smoke passed.");
   await finish({
-    initialPolicy,
+    simplifiedLayout,
     settingsBody,
     attendanceWindow,
     formula,
-    savedComparison,
-    comparisonBounds,
+    savedState,
     secondGameState,
     reward,
   });
