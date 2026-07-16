@@ -10,6 +10,8 @@
     dirty: false,
     loaded: false,
     loading: false,
+    loadError: false,
+    loadSequence: 0,
     renderQueued: false,
   };
   const delegatedFetch = window.fetch.bind(window);
@@ -25,6 +27,15 @@
   function number(value, fallback) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function setText(element, value) {
@@ -61,6 +72,24 @@
       : state.attendanceWindow);
   }
 
+  function clearRenderedState() {
+    document.querySelector(CARD_SELECTOR)?.remove();
+    document.querySelector("[data-attendance-reward-preview]")?.remove();
+  }
+
+  function prepareGameState(gameId) {
+    if (!gameId || state.gameId === gameId) return;
+    state.loadSequence += 1;
+    state.gameId = gameId;
+    state.attendanceWindow = {};
+    state.draftAttendanceWindow = null;
+    state.dirty = false;
+    state.loaded = false;
+    state.loading = false;
+    state.loadError = false;
+    clearRenderedState();
+  }
+
   function ensureStylesheet() {
     if (document.getElementById(STYLE_ID)) return;
     const link = document.createElement("link");
@@ -71,6 +100,7 @@
   }
 
   function cardMarkup(config) {
+    const currencyCode = escapeHtml(config.currencyCode);
     return `
       <article class="admin-terminal-settings-tuning-card is-attendance" data-admin-attendance-reward-settings>
         <header>
@@ -109,7 +139,7 @@
               <span>Payout currency</span>
               <select data-attendance-reward-field="currencyMode">
                 <option value="player_country"${config.currencyMode === "player_country" ? " selected" : ""}>Player country currency</option>
-                <option value="fixed"${config.currencyMode === "fixed" ? " selected" : ""}>Fixed ${config.currencyCode}</option>
+                <option value="fixed"${config.currencyMode === "fixed" ? " selected" : ""}>Fixed ${currencyCode}</option>
               </select>
               <small>Local mode uses the player's active country and current exchange index.</small>
             </label>
@@ -168,7 +198,11 @@
     const card = document.querySelector(CARD_SELECTOR);
     if (!card) return;
     if (state.loaded) card.dataset.attendanceRewardLoaded = "true";
+    else card.removeAttribute("data-attendance-reward-loaded");
+    if (state.loadError) card.dataset.attendanceRewardLoadError = "true";
+    else card.removeAttribute("data-attendance-reward-load-error");
     if (state.dirty) card.dataset.attendanceRewardDirty = "true";
+    else card.removeAttribute("data-attendance-reward-dirty");
     const currentSummary = summary(normalizedWindow(state.attendanceWindow));
     const changedSummary = summary(state.dirty ? activeDraft() : readDomDraft());
     setText(card.querySelector("[data-attendance-reward-formula] span"), changedSummary);
@@ -202,6 +236,8 @@
     window.requestAnimationFrame(() => {
       state.renderQueued = false;
       if (document.querySelector(".admin-terminal-settings-main-panel")) {
+        const gameId = selectedGameId();
+        prepareGameState(gameId);
         ensureCard();
         void loadSettings();
       }
@@ -249,16 +285,19 @@
 
   async function loadSettings() {
     const gameId = selectedGameId();
-    if (!gameId || state.loading || (state.loaded && state.gameId === gameId)) return;
+    prepareGameState(gameId);
+    if (!gameId || state.loading || state.loaded) return;
+    const sequence = ++state.loadSequence;
     state.loading = true;
-    state.gameId = gameId;
+    state.loadError = false;
     try {
       const response = await delegatedFetch(`/api/admin/games/${encodeURIComponent(gameId)}/settings`, {
         method: "GET",
         headers: { "Accept": "application/json" },
       });
-      if (!response.ok) return;
+      if (!response.ok) throw new Error(`settings_read_${response.status}`);
       const payload = await response.json();
+      if (sequence !== state.loadSequence || selectedGameId() !== gameId) return;
       const root = object(payload);
       const data = object(root.data);
       const settings = object(root.settings || data.settings || data);
@@ -268,16 +307,30 @@
       state.loaded = true;
       if (!state.dirty) {
         state.draftAttendanceWindow = null;
-        document.querySelector(CARD_SELECTOR)?.remove();
-        document.querySelector("[data-attendance-reward-preview]")?.remove();
+        clearRenderedState();
       }
     } catch (_) {
+      if (sequence !== state.loadSequence || selectedGameId() !== gameId) return;
       state.attendanceWindow = normalizedWindow(state.attendanceWindow);
       state.loaded = true;
+      state.loadError = true;
     } finally {
-      state.loading = false;
+      if (sequence === state.loadSequence) state.loading = false;
       scheduleRender();
     }
+  }
+
+  function acknowledgeSaved(detail) {
+    const gameId = text(detail?.gameId);
+    if (!gameId || gameId !== state.gameId) return;
+    state.attendanceWindow = normalizedWindow(detail.attendanceWindow);
+    state.draftAttendanceWindow = null;
+    state.dirty = false;
+    state.loaded = true;
+    state.loadError = false;
+    const card = document.querySelector(CARD_SELECTOR);
+    card?.removeAttribute("data-attendance-reward-dirty");
+    renderValues();
   }
 
   document.addEventListener("click", (event) => {
@@ -297,10 +350,22 @@
     }
   }, true);
 
+  document.addEventListener("econovaria:attendance-reward-saved", (event) => {
+    acknowledgeSaved(event instanceof CustomEvent ? event.detail : null);
+  });
+
   new MutationObserver(scheduleRender).observe(document.body, {
     subtree: true,
     childList: true,
   });
+
+  window.EconovariaAttendanceRewardSettings = {
+    getGameId: () => state.gameId,
+    getPersistedWindow: () => ({ ...normalizedWindow(state.attendanceWindow) }),
+    getDraftWindow: () => ({ ...activeDraft() }),
+    isDirty: () => state.dirty,
+    isLoaded: () => state.loaded,
+  };
 
   scheduleRender();
 })();
