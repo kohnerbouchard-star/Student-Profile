@@ -27,11 +27,14 @@ async function switchFixtureGame(gameId) {
     document.body.append(marker);
     marker.remove();
   }, gameId);
+
   await page.waitForFunction((expectedGameId) =>
     window.EconovariaAttendanceRewardSettings?.getGameId?.() === expectedGameId &&
     window.EconovariaAttendanceRewardSettings?.isLoaded?.() === true &&
     document.querySelector(".admin-terminal-settings-page")
-      ?.getAttribute("data-settings-simplified-ready") === "true",
+      ?.getAttribute("data-settings-ux-ready") === "true" &&
+    document.querySelector(".admin-terminal-settings-page")
+      ?.getAttribute("data-settings-ux-baseline-ready") === "true",
   gameId, { timeout: 10_000 });
 }
 
@@ -116,18 +119,20 @@ try {
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.waitForSelector(
-    ".admin-terminal-settings-page[data-settings-simplified-ready='true'] " +
+    ".admin-terminal-settings-page[data-settings-ux-ready='true'][data-settings-ux-baseline-ready='true'] " +
       "[data-admin-attendance-reward-settings][data-attendance-reward-loaded='true']",
     { timeout: 10_000 },
   );
 
-  const simplifiedLayout = await page.evaluate(() => {
+  const presetFirstLayout = await page.evaluate(() => {
     const pageRoot = document.querySelector(".admin-terminal-settings-page");
-    const detail = pageRoot?.querySelector(".admin-terminal-settings-detail-panel");
-    const group = pageRoot?.querySelector("[data-settings-economy-group]");
-    const money = group?.querySelector(".admin-terminal-settings-tuning-card.is-money");
-    const attendance = group?.querySelector("[data-admin-attendance-reward-settings]");
+    const grid = pageRoot?.querySelector(".admin-terminal-settings-tuning-grid");
+    const cards = grid ? [...grid.querySelectorAll(":scope > .admin-terminal-settings-tuning-card")] : [];
+    const money = pageRoot?.querySelector(".admin-terminal-settings-tuning-card.is-money");
+    const attendance = pageRoot?.querySelector("[data-admin-attendance-reward-settings]");
     const saveBar = pageRoot?.querySelector(".admin-terminal-settings-save-bar");
+    const toggle = pageRoot?.querySelector("[data-settings-custom-toggle]");
+    const summary = pageRoot?.querySelector("[data-settings-config-summary]");
     const currency = attendance?.querySelector('[data-attendance-reward-field="currencyMode"]');
     const difficulty = attendance?.querySelector(
       '[data-attendance-reward-field="applyDifficultyIncomeModifier"]',
@@ -139,10 +144,18 @@ try {
         : null;
     };
     return {
-      pageReady: pageRoot?.getAttribute("data-settings-simplified-ready") || "",
-      detailHidden: Boolean(detail?.hidden || getComputedStyle(detail).display === "none"),
-      economyGroup: Boolean(group),
-      saveBarParentIsPage: saveBar?.parentElement === pageRoot,
+      ready: pageRoot?.getAttribute("data-settings-ux-ready") || "",
+      collapsed: !pageRoot?.classList.contains("is-custom-settings-open"),
+      gridDisplay: grid ? getComputedStyle(grid).display : "",
+      summaryText: summary?.textContent?.replace(/\s+/g, " ").trim() || "",
+      summaryRows: summary?.querySelectorAll(".admin-terminal-settings-summary-list > div").length || 0,
+      toggleText: toggle?.textContent?.trim() || "",
+      toggleExpanded: toggle?.getAttribute("aria-expanded") || "",
+      saveBarHidden: Boolean(saveBar?.hidden || getComputedStyle(saveBar).display === "none"),
+      sectionCount: cards.length,
+      sectionClasses: cards.map((card) => card.className),
+      economyGroupExists: Boolean(pageRoot?.querySelector("[data-settings-economy-group]")),
+      segmentedCount: pageRoot?.querySelectorAll("[data-settings-segmented]").length || 0,
       money: rect(money),
       attendance: rect(attendance),
       currencyValue: currency?.value || "",
@@ -157,20 +170,55 @@ try {
   });
 
   if (
-    simplifiedLayout.pageReady !== "true" ||
-    !simplifiedLayout.detailHidden ||
-    !simplifiedLayout.economyGroup ||
-    !simplifiedLayout.saveBarParentIsPage ||
-    !simplifiedLayout.money ||
-    !simplifiedLayout.attendance ||
-    overlap(simplifiedLayout.money, simplifiedLayout.attendance) ||
-    simplifiedLayout.currencyValue !== "player_country" ||
-    simplifiedLayout.difficultyValue !== "true" ||
-    !simplifiedLayout.currencyHidden ||
-    !simplifiedLayout.difficultyHidden ||
-    simplifiedLayout.visibleAttendanceControls !== 2
+    presetFirstLayout.ready !== "true" ||
+    !presetFirstLayout.collapsed ||
+    presetFirstLayout.gridDisplay !== "none" ||
+    presetFirstLayout.summaryRows !== 4 ||
+    !/Current configuration/i.test(presetFirstLayout.summaryText) ||
+    !/Economy/i.test(presetFirstLayout.summaryText) ||
+    !/Attendance/i.test(presetFirstLayout.summaryText) ||
+    !/Edit custom settings/i.test(presetFirstLayout.toggleText) ||
+    presetFirstLayout.toggleExpanded !== "false" ||
+    !presetFirstLayout.saveBarHidden ||
+    presetFirstLayout.sectionCount !== 4 ||
+    presetFirstLayout.economyGroupExists ||
+    presetFirstLayout.segmentedCount < 5 ||
+    presetFirstLayout.currencyValue !== "player_country" ||
+    presetFirstLayout.difficultyValue !== "true" ||
+    !presetFirstLayout.currencyHidden ||
+    !presetFirstLayout.difficultyHidden ||
+    presetFirstLayout.visibleAttendanceControls !== 2
   ) {
-    throw new Error(`Simplified Settings layout or automatic policy failed: ${JSON.stringify(simplifiedLayout)}`);
+    throw new Error(`Preset-first Settings layout failed: ${JSON.stringify(presetFirstLayout)}`);
+  }
+
+  await page.locator("[data-settings-custom-toggle]").click();
+  await page.waitForFunction(() =>
+    document.querySelector(".admin-terminal-settings-page")?.classList.contains("is-custom-settings-open") &&
+    getComputedStyle(document.querySelector(".admin-terminal-settings-tuning-grid")).display !== "none",
+  null, { timeout: 5_000 });
+
+  const expandedLayout = await page.evaluate(() => {
+    const pageRoot = document.querySelector(".admin-terminal-settings-page");
+    const money = pageRoot?.querySelector(".admin-terminal-settings-tuning-card.is-money")?.getBoundingClientRect();
+    const attendance = pageRoot?.querySelector("[data-admin-attendance-reward-settings]")?.getBoundingClientRect();
+    return {
+      expanded: pageRoot?.classList.contains("is-custom-settings-open") || false,
+      toggleText: pageRoot?.querySelector("[data-settings-custom-toggle]")?.textContent?.trim() || "",
+      money: money ? { left: money.left, right: money.right, top: money.top, bottom: money.bottom } : null,
+      attendance: attendance
+        ? { left: attendance.left, right: attendance.right, top: attendance.top, bottom: attendance.bottom }
+        : null,
+    };
+  });
+  if (
+    !expandedLayout.expanded ||
+    !/Hide custom settings/i.test(expandedLayout.toggleText) ||
+    !expandedLayout.money ||
+    !expandedLayout.attendance ||
+    overlap(expandedLayout.money, expandedLayout.attendance)
+  ) {
+    throw new Error(`Expanded Settings layout failed: ${JSON.stringify(expandedLayout)}`);
   }
 
   const present = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
@@ -178,9 +226,25 @@ try {
   await present.fill("2.50");
   await late.fill("0.50");
 
+  await page.waitForFunction(() => {
+    const pageRoot = document.querySelector(".admin-terminal-settings-page");
+    const bar = pageRoot?.querySelector(".admin-terminal-settings-save-bar");
+    const button = bar?.querySelector('[data-admin-terminal-action="save-settings"]');
+    return pageRoot?.classList.contains("has-unsaved-settings") &&
+      bar && !bar.hidden && button && !button.disabled;
+  }, null, { timeout: 5_000 });
+
   const formula = await page.locator("[data-attendance-reward-formula]").innerText();
-  if (!/2\.50 present/i.test(formula) || !/income modifier/i.test(formula) || !/player country currency/i.test(formula)) {
-    throw new Error(`Automatic attendance reward rule did not update: ${formula}`);
+  const summaryAfterChange = await page.locator("[data-settings-config-summary]").innerText();
+  const saveStatus = await page.locator("[data-settings-save-status]").innerText();
+  if (
+    !/Present 2\.50/i.test(formula) ||
+    !/0\.75/i.test(formula) ||
+    !/player-country exchange rate/i.test(formula) ||
+    !/Present reward 2\.50/i.test(summaryAfterChange) ||
+    !/unsaved/i.test(saveStatus)
+  ) {
+    throw new Error(`Settings change feedback failed: ${JSON.stringify({ formula, summaryAfterChange, saveStatus })}`);
   }
 
   await page.locator('[data-admin-terminal-action="save-settings"]').click();
@@ -224,15 +288,24 @@ try {
   }
 
   await page.waitForFunction(() =>
-    window.EconovariaAttendanceRewardSettings?.isDirty?.() === false,
+    window.EconovariaAttendanceRewardSettings?.isDirty?.() === false &&
+    window.EconovariaSimplifiedSettings?.isDirty?.() === false,
   null, { timeout: 5_000 });
+
   const savedState = await page.evaluate(() => ({
     cardDirty: document.querySelector("[data-admin-attendance-reward-settings]")
       ?.getAttribute("data-attendance-reward-dirty") || "",
     formula: document.querySelector("[data-attendance-reward-formula]")?.textContent?.trim() || "",
+    saveStatus: document.querySelector("[data-settings-save-status]")?.textContent?.trim() || "",
+    saveBarVisible: !document.querySelector(".admin-terminal-settings-save-bar")?.hidden,
   }));
-  if (savedState.cardDirty || !/Income Modifier/i.test(savedState.formula)) {
-    throw new Error(`Saved attendance state was not acknowledged: ${JSON.stringify(savedState)}`);
+  if (
+    savedState.cardDirty ||
+    !/Example payout/i.test(savedState.formula) ||
+    !/Settings saved/i.test(savedState.saveStatus) ||
+    !savedState.saveBarVisible
+  ) {
+    throw new Error(`Saved Settings state was not acknowledged: ${JSON.stringify(savedState)}`);
   }
 
   await capture("attendance-reward-settings");
@@ -254,10 +327,16 @@ try {
     throw new Error("A settings PATCH was emitted after the authoritative settings read failed.");
   }
 
+  const failedStatus = await page.locator("[data-settings-save-status]").innerText();
+  if (!/not saved/i.test(failedStatus)) {
+    throw new Error(`Failed save did not remain visible and actionable: ${failedStatus}`);
+  }
+
   rejectSettingsRead = false;
   await switchFixtureGame(SECOND_GAME_ID);
   const secondGameState = await page.evaluate(() => {
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    const saveBar = document.querySelector(".admin-terminal-settings-save-bar");
     return {
       value: document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || "",
       currencyMode: document.querySelector('[data-attendance-reward-field="currencyMode"]')?.value || "",
@@ -265,11 +344,15 @@ try {
         '[data-attendance-reward-field="applyDifficultyIncomeModifier"]',
       )?.value || "",
       dirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
+      uxDirty: window.EconovariaSimplifiedSettings?.isDirty?.() === true,
       buttonDirty: button?.getAttribute("data-attendance-reward-dirty") || "",
       buttonError: button?.getAttribute("data-attendance-reward-error") || "",
       corePending: button?.getAttribute("data-attendance-reward-core-pending") || "",
-      simplified: document.querySelector(".admin-terminal-settings-page")
-        ?.getAttribute("data-settings-simplified-ready") || "",
+      ready: document.querySelector(".admin-terminal-settings-page")
+        ?.getAttribute("data-settings-ux-ready") || "",
+      baselineReady: document.querySelector(".admin-terminal-settings-page")
+        ?.getAttribute("data-settings-ux-baseline-ready") || "",
+      saveBarHidden: Boolean(saveBar?.hidden || getComputedStyle(saveBar).display === "none"),
     };
   });
   if (
@@ -277,12 +360,15 @@ try {
     secondGameState.currencyMode !== "player_country" ||
     secondGameState.difficulty !== "true" ||
     secondGameState.dirty ||
+    secondGameState.uxDirty ||
     secondGameState.buttonDirty ||
     secondGameState.buttonError ||
     secondGameState.corePending ||
-    secondGameState.simplified !== "true"
+    secondGameState.ready !== "true" ||
+    secondGameState.baselineReady !== "true" ||
+    !secondGameState.saveBarHidden
   ) {
-    throw new Error(`Attendance state leaked into another game: ${JSON.stringify(secondGameState)}`);
+    throw new Error(`Settings state leaked into another game: ${JSON.stringify(secondGameState)}`);
   }
 
   await switchFixtureGame(GAME_ID);
@@ -308,24 +394,32 @@ try {
 
   await capture("attendance-local-currency-scan");
   writeFileSync(`${harness.dir}/attendance-reward-runtime.json`, JSON.stringify({
-    simplifiedLayout,
+    presetFirstLayout,
+    expandedLayout,
     settingsBody,
     attendanceWindow,
     formula,
+    summaryAfterChange,
+    saveStatus,
     savedState,
+    failedStatus,
     secondGameState,
     reward,
     errors,
   }, null, 2));
 
   if (errors.length) throw new Error(errors[0]);
-  console.log("Simplified Settings and automatic attendance reward policy smoke passed.");
+  console.log("Preset-first Settings UX and automatic attendance reward policy smoke passed.");
   await finish({
-    simplifiedLayout,
+    presetFirstLayout,
+    expandedLayout,
     settingsBody,
     attendanceWindow,
     formula,
+    summaryAfterChange,
+    saveStatus,
     savedState,
+    failedStatus,
     secondGameState,
     reward,
   });
