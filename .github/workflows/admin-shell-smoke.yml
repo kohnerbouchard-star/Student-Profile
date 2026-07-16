@@ -20,6 +20,7 @@ on:
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -55,6 +56,7 @@ on:
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-contract-end-to-end-smoke.mjs"
@@ -136,6 +138,9 @@ jobs:
 
       - name: Audit verification skeleton and scanner lifecycle
         run: node scripts/admin-loading-scanner-smoke.mjs
+
+      - name: Audit attendance reward settings and local currency
+        run: node scripts/admin-attendance-reward-settings-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
