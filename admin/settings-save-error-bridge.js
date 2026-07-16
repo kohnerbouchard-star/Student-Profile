@@ -10,12 +10,17 @@
 
     const attendanceError = String(button.dataset.attendanceRewardError || "").trim();
     const currentState = button.getAttribute("data-admin-terminal-api-state") || "";
+    let changed = false;
 
     if (attendanceError && currentState !== "error") {
       button.setAttribute("data-admin-terminal-api-state", "error");
+      changed = true;
     } else if (!attendanceError && currentState === "error") {
       button.removeAttribute("data-admin-terminal-api-state");
+      changed = true;
     }
+
+    if (changed) window.EconovariaSimplifiedSettings?.reconcile?.();
   }
 
   function schedule() {
