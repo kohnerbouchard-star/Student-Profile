@@ -2,7 +2,7 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
-  let cachedAttendanceWindow = {};
+  const cachedAttendanceWindows = new Map();
 
   function text(value) {
     return String(value ?? "").trim();
@@ -31,17 +31,30 @@
     return text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase() || "GET";
   }
 
-  function settingsUrl(input) {
+  function settingsGameId(input) {
     try {
-      return /\/api\/admin\/games\/[^/]+\/settings(?:\/difficulty)?$/.test(
-        new URL(absoluteUrl(input)).pathname,
+      const match = new URL(absoluteUrl(input)).pathname.match(
+        /\/api\/admin\/games\/([^/]+)\/settings(?:\/difficulty)?$/,
       );
+      return match ? decodeURIComponent(match[1]) : "";
     } catch (_) {
-      return false;
+      return "";
     }
   }
 
-  function currentAttendanceWindow() {
+  function activeSettingsGameId() {
+    const moduleGameId = text(window.EconovariaAttendanceRewardSettings?.getGameId?.());
+    if (moduleGameId) return moduleGameId;
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
+    return text(
+      model.gameId || model.activeGameId || model.selectedGameSessionId ||
+      model.activeGame?.id || model.selectedGame?.id ||
+      window.sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+    );
+  }
+
+  function currentAttendanceWindow(gameId) {
+    const cachedAttendanceWindow = object(cachedAttendanceWindows.get(gameId));
     const fixedOption = field("currencyMode")?.querySelector('option[value="fixed"]')?.textContent || "";
     const currencyCode = (text(fixedOption).match(/\b[A-Z]{3,8}\b/)?.[0] ||
       text(cachedAttendanceWindow.currencyCode) || "ECO").toUpperCase();
@@ -63,29 +76,34 @@
     };
   }
 
-  function rememberSettings(payload) {
+  function rememberSettings(payload, gameId) {
     const root = object(payload);
     const data = object(root.data);
     const settings = object(root.settings || data.settings || data);
     const attendanceWindow = settings.attendanceWindow || settings.attendance_window ||
       object(settings.settings).attendanceWindow;
     if (attendanceWindow && typeof attendanceWindow === "object" && !Array.isArray(attendanceWindow)) {
-      cachedAttendanceWindow = { ...object(attendanceWindow) };
+      cachedAttendanceWindows.set(gameId, { ...object(attendanceWindow) });
     }
   }
 
   async function requestJson(input, init) {
-    if (init?.body != null) {
-      if (typeof init.body === "string") return object(JSON.parse(init.body));
-      return object(init.body);
+    try {
+      if (init?.body != null) {
+        if (typeof init.body === "string") return object(JSON.parse(init.body));
+        if (init.body instanceof URLSearchParams) return Object.fromEntries(init.body.entries());
+        return object(init.body);
+      }
+      if (!(input instanceof Request)) return {};
+      return object(await input.clone().json());
+    } catch (_) {
+      return {};
     }
-    if (!(input instanceof Request)) return {};
-    return object(await input.clone().json());
   }
 
-  async function augmentedFetchArguments(input, init) {
+  async function augmentedFetchArguments(input, init, gameId) {
     const source = await requestJson(input, init);
-    const attendanceWindow = currentAttendanceWindow();
+    const attendanceWindow = currentAttendanceWindow(gameId);
     let body;
 
     if (source.settings && typeof source.settings === "object" && !Array.isArray(source.settings)) {
@@ -100,6 +118,7 @@
     headers.set("Content-Type", "application/json");
 
     return {
+      attendanceWindow,
       url: absoluteUrl(input),
       init: {
         method: requestMethod(input, init),
@@ -128,13 +147,14 @@
   }
 
   window.fetch = async function econovariaAttendanceRewardSettingsRouteFetch(input, init) {
-    if (!settingsUrl(input)) return delegatedFetch(input, init);
+    const gameId = settingsGameId(input);
+    if (!gameId) return delegatedFetch(input, init);
 
     const method = requestMethod(input, init);
 
     if (["GET", "HEAD"].includes(method)) {
       const response = await delegatedFetch(input, init);
-      if (response.ok) response.clone().json().then(rememberSettings).catch(() => {});
+      if (response.ok) response.clone().json().then((payload) => rememberSettings(payload, gameId)).catch(() => {});
       return response;
     }
 
@@ -142,9 +162,11 @@
       ["POST", "PUT", "PATCH"].includes(method) &&
       document.querySelector("[data-admin-attendance-reward-settings]")
     ) {
-      const augmented = await augmentedFetchArguments(input, init);
+      const activeGameId = activeSettingsGameId();
+      if (activeGameId && activeGameId !== gameId) return delegatedFetch(input, init);
+      const augmented = await augmentedFetchArguments(input, init, gameId);
       const response = await delegatedFetch(augmented.url, augmented.init);
-      if (response.ok) cachedAttendanceWindow = currentAttendanceWindow();
+      if (response.ok) cachedAttendanceWindows.set(gameId, { ...augmented.attendanceWindow });
       return response;
     }
 
