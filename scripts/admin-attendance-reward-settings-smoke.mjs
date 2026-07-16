@@ -118,11 +118,13 @@ try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.waitForSelector(
-    ".admin-terminal-settings-page[data-settings-ux-ready='true'][data-settings-ux-baseline-ready='true'] " +
-      "[data-admin-attendance-reward-settings][data-attendance-reward-loaded='true']",
-    { timeout: 10_000 },
-  );
+  await page.waitForFunction(() => {
+    const root = document.querySelector(".admin-terminal-settings-page");
+    const attendance = root?.querySelector("[data-admin-attendance-reward-settings]");
+    return root?.getAttribute("data-settings-ux-ready") === "true" &&
+      root?.getAttribute("data-settings-ux-baseline-ready") === "true" &&
+      attendance?.getAttribute("data-attendance-reward-loaded") === "true";
+  }, null, { timeout: 10_000 });
 
   const presetFirstLayout = await page.evaluate(() => {
     const pageRoot = document.querySelector(".admin-terminal-settings-page");
