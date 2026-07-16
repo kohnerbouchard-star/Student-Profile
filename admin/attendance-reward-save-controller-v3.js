@@ -29,12 +29,30 @@
     );
   }
 
+  function clearAttendanceButtonState() {
+    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    if (!(button instanceof HTMLButtonElement)) return;
+    const attendanceOwnedState = button.hasAttribute("data-attendance-reward-dirty") ||
+      button.hasAttribute("data-attendance-reward-error") ||
+      button.hasAttribute("data-attendance-reward-status") ||
+      button.hasAttribute("data-attendance-reward-direct-save");
+    button.removeAttribute("data-attendance-reward-core-pending");
+    button.removeAttribute("data-attendance-reward-dirty");
+    button.removeAttribute("data-attendance-reward-error");
+    button.removeAttribute("data-attendance-reward-status");
+    button.removeAttribute("data-attendance-reward-direct-save");
+    if (attendanceOwnedState) {
+      button.removeAttribute("data-admin-terminal-api-state");
+      button.removeAttribute("aria-busy");
+      button.classList.remove("is-dirty");
+    }
+  }
+
   function resetDirtyKeysForGame(gameId) {
     if (!gameId || dirtyGameId === gameId) return;
+    if (dirtyGameId) clearAttendanceButtonState();
     dirtyGameId = gameId;
     coreDirtyKeys.clear();
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
-    button?.removeAttribute("data-attendance-reward-core-pending");
   }
 
   function readCoreSettings() {
@@ -203,6 +221,7 @@
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-core-pending");
+      button.removeAttribute("data-attendance-reward-error");
       button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
       document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
@@ -217,6 +236,7 @@
         if (button.dataset.attendanceRewardDirty === "true") return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
+        button.removeAttribute("data-attendance-reward-direct-save");
         button.disabled = false;
         button.removeAttribute("aria-disabled");
       }, 900);
@@ -245,9 +265,8 @@
     }
   }
 
-  for (const eventName of ["pointerdown", "keydown", "input", "change"]) {
-    document.addEventListener(eventName, markTrustedCoreEdit, true);
-  }
+  document.addEventListener("input", markTrustedCoreEdit, true);
+  document.addEventListener("change", markTrustedCoreEdit, true);
 
   document.addEventListener("econovaria:attendance-reward-saved", (event) => {
     const detail = event instanceof CustomEvent ? event.detail : null;
