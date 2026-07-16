@@ -2,8 +2,6 @@
   "use strict";
 
   const delegatedFetch = window.fetch.bind(window);
-  let coreSnapshot = null;
-  let snapshotGameId = "";
   let saveFlight = null;
   let reconcileQueued = false;
 
@@ -47,16 +45,6 @@
     );
   }
 
-  function hasCanonicalCoreControls(value = readCoreSettings()) {
-    return Object.prototype.hasOwnProperty.call(value, "difficultyBasePreset") &&
-      Object.prototype.hasOwnProperty.call(value, "incomeMultiplier") &&
-      Object.keys(value).length >= 5;
-  }
-
-  function stable(value) {
-    return JSON.stringify(Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))));
-  }
-
   function field(name) {
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
@@ -66,26 +54,6 @@
     const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     return card?.getAttribute("data-attendance-reward-dirty") === "true" ||
       button?.getAttribute("data-attendance-reward-dirty") === "true";
-  }
-
-  function rememberCoreSnapshot() {
-    const gameId = selectedGameId();
-    if (!gameId || !document.querySelector(".admin-terminal-settings-main-panel")) return;
-    const current = readCoreSettings();
-    if (!hasCanonicalCoreControls(current)) return;
-    if (attendanceDirty() && coreSnapshot && snapshotGameId === gameId) return;
-    coreSnapshot = current;
-    snapshotGameId = gameId;
-  }
-
-  function coreSettingsChanged() {
-    const current = readCoreSettings();
-    if (!hasCanonicalCoreControls(coreSnapshot || {})) {
-      coreSnapshot = current;
-      snapshotGameId = selectedGameId();
-      return false;
-    }
-    return stable(current) !== stable(coreSnapshot || {});
   }
 
   function validateAttendance() {
@@ -163,17 +131,16 @@
     reconcileQueued = true;
     window.requestAnimationFrame(() => {
       reconcileQueued = false;
-      rememberCoreSnapshot();
       keepDirtyButtonAvailable();
     });
   }
 
-  async function saveAttendance(button) {
+  async function saveAttendanceAndDifficulty(button) {
     if (saveFlight) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
 
-    setButtonState(button, "processing", "Saving attendance rewards");
+    setButtonState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
       const settingsResponse = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
@@ -181,19 +148,23 @@
       );
       const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : {};
       const attendanceWindow = draftAttendanceWindow(readAttendanceFromPayload(settingsPayload));
+      const body = {
+        ...readCoreSettings(),
+        attendanceWindow,
+      };
       const response = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({ attendanceWindow }),
+          body: JSON.stringify(body),
         },
       );
       if (!response.ok) {
         const payload = await response.clone().json().catch(() => ({}));
-        throw new Error(text(payload.message || payload.error?.message) || "Attendance reward settings could not be saved.");
+        throw new Error(text(payload.message || payload.error?.message) || "Game settings could not be saved.");
       }
-      return { response, attendanceWindow };
+      return { response, attendanceWindow, body };
     })();
 
     try {
@@ -201,7 +172,8 @@
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-dirty");
-      setButtonState(button, "completed", "Attendance rewards saved");
+      button.dataset.attendanceRewardDirectSave = "true";
+      setButtonState(button, "completed", "Game settings saved");
       window.setTimeout(() => {
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
@@ -209,7 +181,8 @@
       }, 900);
       return result;
     } catch (error) {
-      setButtonState(button, "error", "Attendance rewards not saved");
+      button.dataset.attendanceRewardError = error instanceof Error ? error.message : String(error);
+      setButtonState(button, "error", "Game settings not saved");
       throw error;
     } finally {
       saveFlight = null;
@@ -221,14 +194,11 @@
       ? event.target.closest('[data-admin-terminal-action="save-settings"]')
       : null;
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty()) return;
-    const coreChanged = coreSettingsChanged();
-    button.dataset.attendanceRewardCoreChanged = String(coreChanged);
-    if (coreChanged) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     button.dataset.attendanceRewardDirectSave = "true";
     if (!validateAttendance()) return;
-    void saveAttendance(button).catch((error) => {
+    void saveAttendanceAndDifficulty(button).catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));
     });
   }, true);
@@ -242,8 +212,7 @@
 
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
-    coreSettingsChanged,
-    rememberCoreSnapshot,
+    readCoreSettings,
   };
   scheduleReconcile();
 })();
