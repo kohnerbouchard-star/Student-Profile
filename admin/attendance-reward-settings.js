@@ -1,0 +1,324 @@
+(function initEconovariaAttendanceRewardSettings() {
+  "use strict";
+
+  const STYLE_ID = "econovaria-attendance-reward-settings-style";
+  const CARD_SELECTOR = "[data-admin-attendance-reward-settings]";
+  const state = {
+    gameId: "",
+    attendanceWindow: {},
+    loaded: false,
+    loading: false,
+  };
+  const delegatedFetch = window.fetch.bind(window);
+
+  function text(value) {
+    return String(value ?? "").trim();
+  }
+
+  function object(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function number(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function selectedGameId() {
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || {};
+    return text(
+      model.gameId || model.activeGameId || model.selectedGameSessionId ||
+      model.activeGame?.id || model.selectedGame?.id ||
+      window.sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+    );
+  }
+
+  function ensureStylesheet() {
+    if (document.getElementById(STYLE_ID)) return;
+    const link = document.createElement("link");
+    link.id = STYLE_ID;
+    link.rel = "stylesheet";
+    link.href = "./css/attendance-reward-settings.css";
+    document.head.append(link);
+  }
+
+  function normalizedWindow(source) {
+    const value = object(source);
+    return {
+      ...value,
+      timezone: text(value.timezone) || "Asia/Seoul",
+      presentRewardAmount: Math.max(0, number(value.presentRewardAmount, 1)),
+      lateRewardAmount: Math.max(0, number(value.lateRewardAmount, 0)),
+      currencyCode: (text(value.currencyCode) || "ECO").toUpperCase(),
+      currencyMode: text(value.currencyMode).toLowerCase() === "fixed"
+        ? "fixed"
+        : "player_country",
+      applyDifficultyIncomeModifier: value.applyDifficultyIncomeModifier !== false,
+    };
+  }
+
+  function cardMarkup(config) {
+    return `
+      <article class="admin-terminal-settings-tuning-card is-attendance" data-admin-attendance-reward-settings>
+        <header>
+          <span>Attendance Rewards</span>
+          <strong>Base credits · local payout</strong>
+        </header>
+        <div class="admin-terminal-settings-change-list admin-terminal-attendance-reward-grid">
+          <article class="admin-terminal-settings-change-tile">
+            <label class="admin-terminal-settings-field">
+              <span>Present reward</span>
+              <input type="number" min="0" max="1000" step="0.01" inputmode="decimal"
+                data-attendance-reward-field="presentRewardAmount" value="${config.presentRewardAmount.toFixed(2)}" />
+              <small>Base Credits before difficulty and country conversion.</small>
+            </label>
+          </article>
+          <article class="admin-terminal-settings-change-tile">
+            <label class="admin-terminal-settings-field">
+              <span>Late reward</span>
+              <input type="number" min="0" max="1000" step="0.01" inputmode="decimal"
+                data-attendance-reward-field="lateRewardAmount" value="${config.lateRewardAmount.toFixed(2)}" />
+              <small>Set to 0.00 when late arrivals should not earn a reward.</small>
+            </label>
+          </article>
+          <article class="admin-terminal-settings-change-tile">
+            <label class="admin-terminal-settings-field">
+              <span>Difficulty adjustment</span>
+              <select data-attendance-reward-field="applyDifficultyIncomeModifier">
+                <option value="true"${config.applyDifficultyIncomeModifier ? " selected" : ""}>Use income modifier</option>
+                <option value="false"${config.applyDifficultyIncomeModifier ? "" : " selected"}>Do not adjust</option>
+              </select>
+              <small>The selected difficulty's bounded income modifier is shown below.</small>
+            </label>
+          </article>
+          <article class="admin-terminal-settings-change-tile">
+            <label class="admin-terminal-settings-field">
+              <span>Payout currency</span>
+              <select data-attendance-reward-field="currencyMode">
+                <option value="player_country"${config.currencyMode === "player_country" ? " selected" : ""}>Player country currency</option>
+                <option value="fixed"${config.currencyMode === "fixed" ? " selected" : ""}>Fixed ${config.currencyCode}</option>
+              </select>
+              <small>Local mode uses the player's active country and current exchange index.</small>
+            </label>
+          </article>
+        </div>
+        <footer class="admin-terminal-attendance-reward-formula" data-attendance-reward-formula aria-live="polite"></footer>
+      </article>`;
+  }
+
+  function ensureCard() {
+    ensureStylesheet();
+    const grid = document.querySelector(".admin-terminal-settings-tuning-grid");
+    if (!grid) return null;
+    let card = grid.querySelector(CARD_SELECTOR);
+    if (!card) {
+      const moneyCard = grid.querySelector(".admin-terminal-settings-tuning-card.is-money");
+      const template = document.createElement("template");
+      template.innerHTML = cardMarkup(normalizedWindow(state.attendanceWindow)).trim();
+      card = template.content.firstElementChild;
+      if (moneyCard?.nextSibling) grid.insertBefore(card, moneyCard.nextSibling);
+      else grid.prepend(card);
+      card.addEventListener("input", handleFieldChange);
+      card.addEventListener("change", handleFieldChange);
+    }
+    ensurePreviewRow();
+    updateFormula();
+    return card;
+  }
+
+  function ensurePreviewRow() {
+    const list = document.querySelector(".admin-terminal-settings-current-list");
+    if (!list || list.querySelector("[data-attendance-reward-preview]")) return;
+    const row = document.createElement("article");
+    row.className = "admin-terminal-settings-current-row is-active is-attendance";
+    row.dataset.attendanceRewardPreview = "";
+    row.innerHTML = `
+      <div><strong>Attendance</strong><small>Base reward converted to player currency.</small></div>
+      <span><em>Current</em><b data-attendance-current>—</b></span>
+      <i aria-hidden="true">→</i>
+      <span><em>Changed</em><b data-attendance-changed>—</b></span>`;
+    list.append(row);
+    const footerCopy = document.querySelector(".admin-terminal-settings-save-panel-v543 small");
+    if (footerCopy) {
+      footerCopy.textContent = "This button persists the approved difficulty and attendance reward settings.";
+    }
+  }
+
+  function field(name) {
+    return document.querySelector(`[data-attendance-reward-field="${name}"]`);
+  }
+
+  function draftWindow() {
+    const current = normalizedWindow(state.attendanceWindow);
+    return {
+      ...current,
+      presentRewardAmount: Math.max(0, number(field("presentRewardAmount")?.value, current.presentRewardAmount)),
+      lateRewardAmount: Math.max(0, number(field("lateRewardAmount")?.value, current.lateRewardAmount)),
+      currencyMode: field("currencyMode")?.value === "fixed" ? "fixed" : "player_country",
+      applyDifficultyIncomeModifier: field("applyDifficultyIncomeModifier")?.value !== "false",
+      currencyCode: current.currencyCode,
+    };
+  }
+
+  function incomeModifier() {
+    return number(document.querySelector('[data-game-setting-key="incomeMultiplier"]')?.value, 1);
+  }
+
+  function summary(config) {
+    const difficulty = config.applyDifficultyIncomeModifier ? incomeModifier() : 1;
+    const destination = config.currencyMode === "player_country"
+      ? "player country currency × current country exchange index"
+      : config.currencyCode;
+    return `${config.presentRewardAmount.toFixed(2)} ${config.currencyCode} present · ` +
+      `${config.lateRewardAmount.toFixed(2)} ${config.currencyCode} late · ` +
+      `${difficulty.toFixed(2)}× difficulty → ${destination}`;
+  }
+
+  function updateFormula() {
+    const card = document.querySelector(CARD_SELECTOR);
+    if (!card) return;
+    const draft = draftWindow();
+    const formula = card.querySelector("[data-attendance-reward-formula]");
+    if (formula) {
+      formula.innerHTML = `<strong>Applied at scan time</strong><span>${summary(draft)}</span>`;
+    }
+    const current = document.querySelector("[data-attendance-current]");
+    const changed = document.querySelector("[data-attendance-changed]");
+    if (current) current.textContent = summary(normalizedWindow(state.attendanceWindow));
+    if (changed) changed.textContent = summary(draft);
+  }
+
+  function clearValidation(input) {
+    if (!(input instanceof HTMLInputElement)) return;
+    input.removeAttribute("aria-invalid");
+    input.closest(".admin-terminal-settings-change-tile")?.classList.remove("is-invalid");
+    input.parentElement?.querySelector(".admin-terminal-attendance-field-error")?.remove();
+  }
+
+  function validate() {
+    let valid = true;
+    let focused = false;
+    for (const name of ["presentRewardAmount", "lateRewardAmount"]) {
+      const input = field(name);
+      if (!(input instanceof HTMLInputElement)) continue;
+      clearValidation(input);
+      const value = Number(input.value);
+      if (!Number.isFinite(value) || value < 0 || value > 1000) {
+        valid = false;
+        input.setAttribute("aria-invalid", "true");
+        input.closest(".admin-terminal-settings-change-tile")?.classList.add("is-invalid");
+        const error = document.createElement("small");
+        error.className = "admin-terminal-attendance-field-error";
+        error.textContent = "Enter an amount from 0.00 to 1000.00.";
+        input.insertAdjacentElement("afterend", error);
+        if (!focused) {
+          focused = true;
+          input.focus({ preventScroll: false });
+        }
+      }
+    }
+    return valid;
+  }
+
+  function handleFieldChange(event) {
+    if (event.target instanceof HTMLInputElement) clearValidation(event.target);
+    updateFormula();
+  }
+
+  async function loadSettings() {
+    const gameId = selectedGameId();
+    if (!gameId || state.loading || (state.loaded && state.gameId === gameId)) return;
+    state.loading = true;
+    state.gameId = gameId;
+    try {
+      const response = await delegatedFetch(`/api/admin/games/${encodeURIComponent(gameId)}/settings`, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const root = object(payload);
+      const data = object(root.data);
+      const settings = object(root.settings || data.settings || data);
+      state.attendanceWindow = normalizedWindow(
+        settings.attendanceWindow || settings.attendance_window || object(settings.settings)?.attendanceWindow,
+      );
+      state.loaded = true;
+      document.querySelector(CARD_SELECTOR)?.remove();
+      document.querySelector("[data-attendance-reward-preview]")?.remove();
+      ensureCard();
+    } catch (_) {
+      state.attendanceWindow = normalizedWindow(state.attendanceWindow);
+      state.loaded = true;
+    } finally {
+      state.loading = false;
+      ensureCard();
+    }
+  }
+
+  function isSettingsPatch(request) {
+    try {
+      const url = new URL(request.url, window.location.href);
+      return request.method.toUpperCase() === "PATCH" &&
+        /\/api\/admin\/games\/[^/]+\/settings$/.test(url.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function augmentedSettingsRequest(request) {
+    const source = object(await request.clone().json());
+    const attendanceWindow = draftWindow();
+    let body;
+    if (source.settings && typeof source.settings === "object" && !Array.isArray(source.settings)) {
+      body = { ...source, settings: { ...object(source.settings), attendanceWindow } };
+    } else if (source.payload && typeof source.payload === "object" && !Array.isArray(source.payload)) {
+      body = { ...source, payload: { ...object(source.payload), attendanceWindow } };
+    } else {
+      body = { ...source, attendanceWindow };
+    }
+    const headers = new Headers(request.headers);
+    headers.set("Content-Type", "application/json");
+    return new Request(request, { headers, body: JSON.stringify(body) });
+  }
+
+  window.fetch = async function econovariaAttendanceRewardSettingsFetch(input, init) {
+    const request = input instanceof Request ? input : new Request(input, init);
+    if (!isSettingsPatch(request)) return delegatedFetch(input, init);
+    const outgoing = await augmentedSettingsRequest(request);
+    const response = await delegatedFetch(outgoing);
+    if (response.ok) {
+      state.attendanceWindow = draftWindow();
+      state.loaded = true;
+      window.requestAnimationFrame(updateFormula);
+    }
+    return response;
+  };
+
+  document.addEventListener("click", (event) => {
+    const save = event.target instanceof Element
+      ? event.target.closest('[data-admin-terminal-action="save-settings"]')
+      : null;
+    if (!save || !document.querySelector(CARD_SELECTOR)) return;
+    if (!validate()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("change", (event) => {
+    if (event.target instanceof Element && event.target.matches('[data-game-setting-key="incomeMultiplier"]')) {
+      updateFormula();
+    }
+  }, true);
+
+  new MutationObserver(() => {
+    if (document.querySelector(".admin-terminal-settings-main-panel")) {
+      ensureCard();
+      void loadSettings();
+    }
+  }).observe(document.body, { subtree: true, childList: true });
+
+  ensureCard();
+  void loadSettings();
+})();
