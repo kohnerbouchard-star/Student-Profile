@@ -21,19 +21,29 @@
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
 
-  function requestFrom(input, init) {
-    if (input instanceof Request) return input;
-    const absoluteUrl = new URL(String(input), window.location.href).href;
-    return new Request(absoluteUrl, init);
+  function absoluteUrl(input) {
+    return input instanceof Request
+      ? input.url
+      : new URL(String(input), window.location.href).href;
   }
 
-  function settingsUrl(request) {
+  function requestMethod(input, init) {
+    return text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase() || "GET";
+  }
+
+  function settingsUrl(input) {
     try {
-      const url = new URL(request.url, window.location.href);
-      return /\/api\/admin\/games\/[^/]+\/settings(?:\/difficulty)?$/.test(url.pathname);
+      return /\/api\/admin\/games\/[^/]+\/settings(?:\/difficulty)?$/.test(
+        new URL(absoluteUrl(input)).pathname,
+      );
     } catch (_) {
       return false;
     }
+  }
+
+  function requestFrom(input, init) {
+    if (input instanceof Request) return input;
+    return new Request(absoluteUrl(input), init);
   }
 
   function currentAttendanceWindow() {
@@ -99,18 +109,18 @@
   }
 
   window.fetch = async function econovariaAttendanceRewardSettingsRouteFetch(input, init) {
-    const request = requestFrom(input, init);
-    const method = request.method.toUpperCase();
-    const isSettings = settingsUrl(request);
+    if (!settingsUrl(input)) return delegatedFetch(input, init);
 
-    if (isSettings && ["GET", "HEAD"].includes(method)) {
+    const method = requestMethod(input, init);
+    const request = requestFrom(input, init);
+
+    if (["GET", "HEAD"].includes(method)) {
       const response = await delegatedFetch(request);
       if (response.ok) response.clone().json().then(rememberSettings).catch(() => {});
       return response;
     }
 
     if (
-      isSettings &&
       ["POST", "PUT", "PATCH"].includes(method) &&
       document.querySelector("[data-admin-attendance-reward-settings]")
     ) {
