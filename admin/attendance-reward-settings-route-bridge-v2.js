@@ -41,11 +41,6 @@
     }
   }
 
-  function requestFrom(input, init) {
-    if (input instanceof Request) return input;
-    return new Request(absoluteUrl(input), init);
-  }
-
   function currentAttendanceWindow() {
     const fixedOption = field("currencyMode")?.querySelector('option[value="fixed"]')?.textContent || "";
     const currencyCode = (text(fixedOption).match(/\b[A-Z]{3,8}\b/)?.[0] ||
@@ -79,8 +74,17 @@
     }
   }
 
-  async function augment(request) {
-    const source = object(await request.clone().json());
+  async function requestJson(input, init) {
+    if (init?.body != null) {
+      if (typeof init.body === "string") return object(JSON.parse(init.body));
+      return object(init.body);
+    }
+    if (!(input instanceof Request)) return {};
+    return object(await input.clone().json());
+  }
+
+  async function augmentedFetchArguments(input, init) {
+    const source = await requestJson(input, init);
     const attendanceWindow = currentAttendanceWindow();
     let body;
 
@@ -92,20 +96,24 @@
       body = { ...source, attendanceWindow };
     }
 
-    const headers = new Headers(request.headers);
+    const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
     headers.set("Content-Type", "application/json");
-    return new Request(request.url, {
-      method: request.method,
-      headers,
-      body: JSON.stringify(body),
-      credentials: request.credentials,
-      cache: request.cache,
-      redirect: request.redirect,
-      referrer: request.referrer,
-      referrerPolicy: request.referrerPolicy,
-      mode: request.mode,
-      signal: request.signal,
-    });
+
+    return {
+      url: absoluteUrl(input),
+      init: {
+        method: requestMethod(input, init),
+        headers,
+        body: JSON.stringify(body),
+        credentials: init?.credentials || (input instanceof Request ? input.credentials : undefined),
+        cache: init?.cache || (input instanceof Request ? input.cache : undefined),
+        redirect: init?.redirect || (input instanceof Request ? input.redirect : undefined),
+        referrer: init?.referrer || (input instanceof Request ? input.referrer : undefined),
+        referrerPolicy: init?.referrerPolicy || (input instanceof Request ? input.referrerPolicy : undefined),
+        mode: init?.mode || (input instanceof Request ? input.mode : undefined),
+        signal: init?.signal || (input instanceof Request ? input.signal : undefined),
+      },
+    };
   }
 
   function markSettingsDirty() {
@@ -123,10 +131,9 @@
     if (!settingsUrl(input)) return delegatedFetch(input, init);
 
     const method = requestMethod(input, init);
-    const request = requestFrom(input, init);
 
     if (["GET", "HEAD"].includes(method)) {
-      const response = await delegatedFetch(request);
+      const response = await delegatedFetch(input, init);
       if (response.ok) response.clone().json().then(rememberSettings).catch(() => {});
       return response;
     }
@@ -135,12 +142,13 @@
       ["POST", "PUT", "PATCH"].includes(method) &&
       document.querySelector("[data-admin-attendance-reward-settings]")
     ) {
-      const response = await delegatedFetch(await augment(request));
+      const augmented = await augmentedFetchArguments(input, init);
+      const response = await delegatedFetch(augmented.url, augmented.init);
       if (response.ok) cachedAttendanceWindow = currentAttendanceWindow();
       return response;
     }
 
-    return delegatedFetch(request);
+    return delegatedFetch(input, init);
   };
 
   document.addEventListener("input", (event) => {
