@@ -16,6 +16,10 @@ interface DifficultyPolicyRow {
   readonly income_modifier: number | string;
 }
 
+interface GameSettingsDifficultyRow {
+  readonly difficulty_preset: string;
+}
+
 interface DifficultyProfileRow {
   readonly income_modifier: number | string;
 }
@@ -160,7 +164,18 @@ async function readIncomeModifier(
   const activeValue = optionalNumber(row?.income_modifier);
   if (activeValue !== null) return selectAttendanceIncomeModifier(activeValue, null);
 
-  const presetKey = String(difficultyPreset ?? "").trim().toLowerCase();
+  let presetKey = String(difficultyPreset ?? "").trim().toLowerCase();
+  if (!presetKey) {
+    const settingsResponse = await serviceClient
+      .from("game_settings")
+      .select("difficulty_preset")
+      .eq("game_session_id", gameSessionId)
+      .maybeSingle();
+    if (settingsResponse.error) throw policyReadFailed();
+    const settings = settingsResponse.data as GameSettingsDifficultyRow | null;
+    presetKey = String(settings?.difficulty_preset ?? "").trim().toLowerCase();
+  }
+
   if (!presetKey || presetKey === "custom") return 1;
 
   const profileResponse = await serviceClient
