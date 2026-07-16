@@ -94,7 +94,18 @@
 
     const headers = new Headers(request.headers);
     headers.set("Content-Type", "application/json");
-    return new Request(request, { headers, body: JSON.stringify(body) });
+    return new Request(request.url, {
+      method: request.method,
+      headers,
+      body: JSON.stringify(body),
+      credentials: request.credentials,
+      cache: request.cache,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      referrerPolicy: request.referrerPolicy,
+      mode: request.mode,
+      signal: request.signal,
+    });
   }
 
   function markSettingsDirty() {
