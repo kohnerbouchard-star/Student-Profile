@@ -63,20 +63,12 @@
     );
   }
 
-  function forceAutomaticAttendancePolicy(attendanceCard) {
-    const difficulty = attendanceCard.querySelector(
-      '[data-attendance-reward-field="applyDifficultyIncomeModifier"]',
-    );
-    const currency = attendanceCard.querySelector('[data-attendance-reward-field="currencyMode"]');
-
-    if (difficulty instanceof HTMLSelectElement && difficulty.value !== "true") {
-      difficulty.value = "true";
-    }
-    if (currency instanceof HTMLSelectElement && currency.value !== "player_country") {
-      currency.value = "player_country";
-    }
-
-    for (const control of [difficulty, currency]) {
+  function concealAutomaticAttendancePolicyControls(attendanceCard) {
+    const controls = [
+      attendanceCard.querySelector('[data-attendance-reward-field="applyDifficultyIncomeModifier"]'),
+      attendanceCard.querySelector('[data-attendance-reward-field="currencyMode"]'),
+    ];
+    for (const control of controls) {
       const tile = control?.closest(".admin-terminal-settings-change-tile");
       if (tile instanceof HTMLElement) {
         tile.hidden = true;
@@ -193,7 +185,7 @@
       "Set this to 0.00 when late arrivals should not receive a reward.",
     );
 
-    forceAutomaticAttendancePolicy(attendance);
+    concealAutomaticAttendancePolicyControls(attendance);
     const formula = ensureAttendanceExample(grid, attendance, page);
     placeInStableOrder(grid, [money, attendance, formula, events, safety]);
 
