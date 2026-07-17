@@ -75,6 +75,7 @@ Deno.test("player inventory derives player and game scope from the session token
       { currencyCode: "SLV", totalOwnedValue: 37.5 },
     ],
   });
+  assertEquals(body.redemptionRequests, []);
   assertEquals(body.items[0], {
     id: INVENTORY_ID,
     storeItemId: ITEM_ID,
@@ -90,10 +91,38 @@ Deno.test("player inventory derives player and game scope from the session token
     currencyCode: "ECO",
     itemStatus: "active",
     itemVisibility: "visible",
-    availableActions: [],
+    availableActions: ["inventory.use"],
     createdAt: "2026-07-16T08:00:00.000Z",
     updatedAt: "2026-07-17T07:00:00.000Z",
   });
+});
+
+Deno.test("player inventory includes scoped redemption history", async () => {
+  const response = await handlePlayerInventoryRequest(
+    request(),
+    dependencies({
+      repository: new MockInventoryRepository([inventoryRecord()]),
+      redemptionRequests: [{
+        id: "00000000-0000-4000-8000-000000000051",
+        inventoryHoldingId: INVENTORY_ID,
+        storeItemId: ITEM_ID,
+        quantity: 1,
+        status: "pending",
+        requestNote: "Use during workshop",
+        resolutionNote: null,
+        requestedAt: NOW,
+        reviewedAt: null,
+        fulfilledAt: null,
+        updatedAt: NOW,
+      }],
+    }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.redemptionRequests.length, 1);
+  assertEquals(body.redemptionRequests[0].status, "pending");
+  assertEquals(body.redemptionRequests[0].inventoryHoldingId, INVENTORY_ID);
 });
 
 Deno.test("player inventory rejects mismatched scope and client-supplied player identity", async () => {
@@ -160,6 +189,7 @@ Deno.test("player inventory maps persistence failures without leaking details", 
 function dependencies(options: {
   readonly repository?: MockInventoryRepository;
   readonly sessionMode?: "ok" | "invalid";
+  readonly redemptionRequests?: readonly Record<string, unknown>[];
 } = {}) {
   const repository = options.repository ?? new MockInventoryRepository();
 
@@ -211,6 +241,9 @@ function dependencies(options: {
       });
     },
     createRepository: () => repository,
+    readRedemptionRequests: () => Promise.resolve(
+      (options.redemptionRequests ?? []) as never,
+    ),
     now: () => NOW,
   };
 }
