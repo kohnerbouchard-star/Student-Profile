@@ -6,6 +6,16 @@ declare const Deno: {
 
 Deno.test("player terminal phase one routes parse direct and Edge Function paths", () => {
   assertEquals(
+    readPlayerTerminalPhaseOneRoutePath("/players/me/capabilities"),
+    { kind: "capabilities" },
+  );
+  assertEquals(
+    readPlayerTerminalPhaseOneRoutePath(
+      "/functions/v1/classroom-api/players/me/capabilities",
+    ),
+    { kind: "capabilities" },
+  );
+  assertEquals(
     readPlayerTerminalPhaseOneRoutePath("/players/me/inventory"),
     { kind: "inventory" },
   );
@@ -26,8 +36,18 @@ Deno.test("player terminal phase one routes parse direct and Edge Function paths
 Deno.test("player terminal phase one routes reject suffix spoofing and extra segments", () => {
   assertEquals(
     readPlayerTerminalPhaseOneRoutePath(
+      "/not-classroom-api/players/me/capabilities",
+    ),
+    null,
+  );
+  assertEquals(
+    readPlayerTerminalPhaseOneRoutePath(
       "/not-classroom-api/players/me/inventory",
     ),
+    null,
+  );
+  assertEquals(
+    readPlayerTerminalPhaseOneRoutePath("/players/me/capabilities/other"),
     null,
   );
   assertEquals(
