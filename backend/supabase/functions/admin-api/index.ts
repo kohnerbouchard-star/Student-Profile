@@ -9,6 +9,7 @@ import {
   resolveContext,
   selectGame,
 } from "./common.ts";
+import { buildPlayerCapabilityManifest } from "../../../src/domains/capabilities/playerCapabilityRegistry.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
@@ -74,6 +75,7 @@ async function handleGlobalRoute(
           auditLogExport: true,
           overallScore: false,
           marketplaceAdminTrading: false,
+          playerScopeReadiness: true,
         },
       },
     });
@@ -202,6 +204,15 @@ Deno.serve(async (request: Request) => {
       return json(request, 404, {
         code: "game_not_found",
         message: "That game is not available to this administrator.",
+      });
+    }
+
+    if (suffix === "/player-capabilities" && request.method === "GET") {
+      return json(request, 200, {
+        data: {
+          game: gameDto(game),
+          playerCapabilities: buildPlayerCapabilityManifest(),
+        },
       });
     }
 
