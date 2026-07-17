@@ -50,32 +50,23 @@ const ROUTE_META = Object.freeze(Object.fromEntries(
   PLAYER_NAV_GROUPS.flatMap((group) => group.routes.map((item) => [item.route, { ...item, groupId: group.id, groupLabel: group.label }]))
 ));
 
-function routeIsAvailable(route, data) {
+function activeGroupForRoute(route) {
+  return PLAYER_NAV_GROUPS.find((group) => group.routes.some((item) => item.route === route)) || PLAYER_NAV_GROUPS[0];
+}
+
+function capabilityForRoute(route, data) {
   const domains = data?.capabilities?.domains;
-  if (!Array.isArray(domains)) return true;
+  if (!Array.isArray(domains)) return null;
   const domainKey = PLAYER_ROUTE_DOMAINS[route];
-  if (!domainKey) return true;
-  const domain = domains.find((item) => item?.key === domainKey);
-  return !domain || domain.status !== "planned";
+  return domains.find((item) => item?.key === domainKey) || null;
 }
 
-function availableNavGroups(data) {
-  return PLAYER_NAV_GROUPS.map((group) => {
-    const routes = group.routes.filter((item) => routeIsAvailable(item.route, data));
-    if (!routes.length) return null;
-    return {
-      ...group,
-      routes,
-      defaultRoute: routes.some((item) => item.route === group.defaultRoute)
-        ? group.defaultRoute
-        : routes[0].route
-    };
-  }).filter(Boolean);
-}
-
-function activeGroupForRoute(route, data) {
-  const groups = availableNavGroups(data);
-  return groups.find((group) => group.routes.some((item) => item.route === route)) || groups[0] || PLAYER_NAV_GROUPS[0];
+function readinessPill(route, data, config) {
+  if (config.usePreviewData) return renderStatusPill("PREVIEW", "purple");
+  const capability = capabilityForRoute(route, data);
+  if (capability?.status === "planned") return renderStatusPill("PLANNED", "amber");
+  if (capability?.status === "read_only") return renderStatusPill("READ ONLY", "cyan");
+  return renderStatusPill("CONNECTED", "green");
 }
 
 function logoMark() {
@@ -96,13 +87,12 @@ function renderNavGroup(group, route, data) {
 }
 
 function renderSidebar(route, data, collapsed) {
-  const groups = availableNavGroups(data);
   return `<aside class="player-terminal-left-menu" aria-label="Player terminal navigation">
     <div class="player-terminal-menu-top">
       <div class="player-terminal-brand"><span class="player-terminal-brand-mark">${logoMark()}</span><div class="player-terminal-brand-copy"><strong>Player</strong><small>Terminal</small></div></div>
     </div>
     <nav class="player-terminal-nav" aria-label="Primary sections">
-      ${groups.map((group) => renderNavGroup(group, route, data)).join("")}
+      ${PLAYER_NAV_GROUPS.map((group) => renderNavGroup(group, route, data)).join("")}
     </nav>
     <div class="player-terminal-side-code">
       <button class="player-terminal-side-code-compact" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}" aria-label="Copy game code ${escapeHtml(data.session.gameCode)}"><span class="player-terminal-share-arrow">↗</span></button>
@@ -125,7 +115,7 @@ function renderTopbar(route, data, ui, config) {
   const balance = data.banking?.checking?.available ?? data.dashboard?.liquidBalance ?? 0;
   return `<header class="player-terminal-app-topbar">
     <div class="player-terminal-breadcrumb" aria-label="Current location"><span>${escapeHtml(meta.groupLabel)}</span><i>/</i><strong>${escapeHtml(meta.label)}</strong></div>
-    <div class="player-terminal-topbar-status"><span class="player-terminal-balance-chip"><small>Available</small><strong>${escapeHtml(formatCurrency(balance, data.session.currencyCode))}</strong></span>${renderStatusPill(config.usePreviewData ? "PREVIEW" : "CONNECTED", config.usePreviewData ? "purple" : "green")}<span class="player-terminal-system-clock" data-player-clock></span></div>
+    <div class="player-terminal-topbar-status"><span class="player-terminal-balance-chip"><small>Available</small><strong>${escapeHtml(formatCurrency(balance, data.session.currencyCode))}</strong></span>${readinessPill(route, data, config)}<span class="player-terminal-system-clock" data-player-clock></span></div>
     <div class="player-terminal-top-actions">
       <button class="player-terminal-bell" type="button" data-player-local-action="toggle-notifications" aria-expanded="${String(ui.notificationsOpen)}" aria-label="${ui.notificationsOpen ? "Close" : "Open"} notifications">${icon("bell", "player-terminal-bell-icon")}<small>${escapeHtml(data.notifications.length)}</small></button>
       <button class="player-terminal-user-button" type="button" data-route="profile" aria-label="Open player profile"><span class="player-terminal-avatar">${escapeHtml(data.session.initials)}</span><i></i></button>
@@ -134,18 +124,16 @@ function renderTopbar(route, data, ui, config) {
   </header>`;
 }
 
-function renderContextNav(route, data) {
-  const group = activeGroupForRoute(route, data);
+function renderContextNav(route) {
+  const group = activeGroupForRoute(route);
   if (group.routes.length <= 1) return "";
   return `<nav class="player-terminal-context-nav" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}>${escapeHtml(item.label)}</button>`).join("")}</nav>`;
 }
 
 function renderMobileNavigation(route, data, open) {
-  const groups = availableNavGroups(data);
-  const group = activeGroupForRoute(route, data);
-  const primary = groups.filter((item) => ["home", "finance", "work", "trade"].includes(item.id));
-  const moreGroups = groups.filter((item) => ["world", "messages", "profile"].includes(item.id));
-  const moreActive = moreGroups.some((item) => item.id === group.id);
+  const group = activeGroupForRoute(route);
+  const primary = PLAYER_NAV_GROUPS.filter((item) => ["home", "finance", "work", "trade"].includes(item.id));
+  const moreActive = ["world", "messages", "profile"].includes(group.id);
   return `<nav class="player-terminal-mobile-nav" aria-label="Mobile primary navigation">
     ${primary.map((item) => `<button type="button" data-route="${item.defaultRoute}" class="${item.id === group.id ? "active" : ""}" aria-label="${escapeHtml(item.label)}"${item.id === group.id ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><strong>${escapeHtml(item.label)}</strong></button>`).join("")}
     <button type="button" data-player-local-action="toggle-mobile-menu" class="${moreActive || open ? "active" : ""}" aria-expanded="${String(open)}" aria-label="${open ? "Close" : "Open"} more sections"><span>${icon("menu")}</span><strong>More</strong>${data.messages?.unread ? `<small>${escapeHtml(data.messages.unread)}</small>` : ""}</button>
@@ -154,7 +142,7 @@ function renderMobileNavigation(route, data, open) {
     <button class="player-terminal-mobile-sheet-scrim" type="button" data-player-local-action="toggle-mobile-menu" aria-label="Close menu"></button>
     <section role="dialog" aria-modal="true" aria-label="More player sections" tabindex="-1">
       <header><div><span>MORE SECTIONS</span><strong>Navigate the terminal</strong></div><button type="button" data-player-local-action="toggle-mobile-menu" aria-label="Close menu">${icon("close")}</button></header>
-      <div>${moreGroups.flatMap((item) => item.routes.map((subitem) => `<button type="button" data-route="${subitem.route}" class="${subitem.route === route ? "active" : ""}"${subitem.route === route ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><div><strong>${escapeHtml(subitem.label)}</strong><small>${escapeHtml(item.label)}</small></div>${icon("chevronRight")}</button>`)).join("")}</div>
+      <div>${PLAYER_NAV_GROUPS.filter((item) => ["world", "messages", "profile"].includes(item.id)).flatMap((item) => item.routes.map((subitem) => `<button type="button" data-route="${subitem.route}" class="${subitem.route === route ? "active" : ""}"${subitem.route === route ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><div><strong>${escapeHtml(subitem.label)}</strong><small>${escapeHtml(item.label)}</small></div>${icon("chevronRight")}</button>`)).join("")}</div>
       <button class="player-terminal-mobile-game-code" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}"><span>Game code</span><strong>${escapeHtml(data.session.gameCode)}</strong></button>
     </section>
   </div>`;
@@ -167,7 +155,7 @@ export function renderShell({ route, data, pageHtml, ui, config }) {
       ${renderSidebar(route, data, ui.sidebarCollapsed)}
       <main id="player-main-content" class="player-terminal-shell-main" tabindex="-1">
         ${renderTopbar(route, data, ui, config)}
-        ${renderContextNav(route, data)}
+        ${renderContextNav(route)}
         <div class="player-terminal-page-host">${pageHtml}</div>
       </main>
     </div>
