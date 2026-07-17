@@ -1,0 +1,49 @@
+name: Deno Lock Refresh
+
+on:
+  push:
+    branches:
+      - agent/production-hardening-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Refresh and validate Deno lockfile
+        working-directory: backend
+        run: |
+          deno check --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen=false \
+            supabase/functions/classroom-api/index.ts
+          deno check --lock=supabase/functions/deno.lock --frozen=false \
+            supabase/functions/stock-market-player-read/index.ts \
+            supabase/functions/stock-market-read/index.ts \
+            supabase/functions/stock-market-runner/index.ts \
+            supabase/functions/stock-market-seed-copy/index.ts \
+            supabase/functions/stock-market-trading/index.ts
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen=false \
+            supabase/functions/admin-api/index.ts
+          deno test --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen=false \
+            supabase/functions/admin-api/*.test.ts
+
+      - name: Upload refreshed lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: deno-lock-refresh
+          path: backend/supabase/functions/deno.lock
+          if-no-files-found: error
+          retention-days: 1
