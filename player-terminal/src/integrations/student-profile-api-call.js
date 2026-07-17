@@ -3,6 +3,7 @@ import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
+import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
   "playerId",
@@ -22,7 +23,6 @@ const READ_MODEL_KEYS = new Set([
   "marketAsset",
   "portfolio",
   "store",
-  "inventory",
   "banking",
   "notifications"
 ]);
@@ -189,6 +189,11 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (context.endpointKey === "contracts") {
       snapshot = { ...snapshot, contracts: normalizePlayerContracts(raw) };
       return snapshot.contracts;
+    }
+
+    if (context.endpointKey === "inventory") {
+      snapshot = { ...snapshot, inventory: normalizePlayerInventory(raw) };
+      return snapshot.inventory;
     }
 
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
