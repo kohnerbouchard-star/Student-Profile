@@ -1,6 +1,7 @@
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderChange, renderEmptyState, renderStatusPill } from "../components/ui.js";
+import { isResourceUnavailable } from "../api/resource-status.js";
 
 function chartPath(values, width = 720, height = 260, padding = 18) {
   const safeValues = Array.isArray(values) && values.length ? values : [0, 0];
@@ -37,8 +38,13 @@ export function renderMarketPage(data, ui) {
   const positionValue = selected.owned * selected.price;
   const gain = selected.owned ? positionValue - selected.owned * selected.averageCost : 0;
   const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
-  const relatedNews = data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
+  const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const newsUnavailable = isResourceUnavailable(data, "news");
+  const relatedNews = newsUnavailable ? [] : data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
+  const composite = market.assets.find((asset) => asset.id === "cel-index");
+  const compositeChange = Number(composite?.change) || 0;
+  const availableCash = bankingUnavailable ? "Unavailable" : formatCurrency(data.banking.checking.available, currencyCode);
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
@@ -47,9 +53,9 @@ export function renderMarketPage(data, ui) {
     </header>
 
     <div class="player-terminal-market-summary">
-      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(market.assets.find((asset) => asset.id === "cel-index")?.price || 0, 2))}</strong><span class="is-good">+1.36%</span></article>
-      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, currencyCode))}</strong><span class="is-good">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
-      <article><small>AVAILABLE CASH</small><strong>${escapeHtml(formatCurrency(data.banking.checking.available, currencyCode))}</strong><span>Ready to trade</span></article>
+      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
+      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, currencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
+      <article><small>AVAILABLE CASH</small><strong>${escapeHtml(availableCash)}</strong><span>${bankingUnavailable ? "Balance service unavailable" : "Ready to trade"}</span></article>
       <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
     </div>
 
@@ -70,7 +76,7 @@ export function renderMarketPage(data, ui) {
         </header>
         <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL">ALL</button><small>CURRENT SERIES</small></div>
         <div class="player-terminal-chart-frame">
-          <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Preview price chart for ${escapeHtml(selected.name)}">
+          <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Price chart for ${escapeHtml(selected.name)}">
             <defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
             <g class="player-terminal-chart-grid"><path d="M18 52H702M18 104H702M18 156H702M18 208H702"/><path d="M155 18V242M292 18V242M429 18V242M566 18V242"/></g>
             <path class="player-terminal-chart-area" d="${path} L702,242 L18,242 Z"/>
@@ -93,7 +99,7 @@ export function renderMarketPage(data, ui) {
           <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, currencyCode))}</strong></div>
           <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, currencyCode))}</strong></div>
         </div>
-        <div class="player-terminal-market-news-strip"><header><small>RELATED INTELLIGENCE</small><button type="button" data-route="news">Open news ${icon("chevronRight")}</button></header><div>${relatedNews.map((item) => `<button type="button" data-player-news-link="${escapeHtml(item.id)}"><span class="is-${escapeHtml(item.tone)}">${icon("news")}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.time)} · ${escapeHtml(item.severity)} impact</small></div></button>`).join("") || "<p>No active stories for this asset.</p>"}</div></div>
+        <div class="player-terminal-market-news-strip"><header><small>RELATED INTELLIGENCE</small><button type="button" data-route="news">Open news ${icon("chevronRight")}</button></header><div>${newsUnavailable ? "<p>Related intelligence is unavailable.</p>" : relatedNews.map((item) => `<button type="button" data-player-news-link="${escapeHtml(item.id)}"><span class="is-${escapeHtml(item.tone)}">${icon("news")}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.time)} · ${escapeHtml(item.severity)} impact</small></div></button>`).join("") || "<p>No active stories for this asset.</p>"}</div></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-order-ticket">
@@ -106,10 +112,10 @@ export function renderMarketPage(data, ui) {
           <label>LIMIT PRICE<input name="limitPrice" type="number" min="0" step="0.01" placeholder="Optional for limit order" /></label>
           <div class="player-terminal-order-review">
             <span><small>ESTIMATED VALUE</small><strong data-player-market-estimated-value>${escapeHtml(formatCurrency(selected.price * 10, currencyCode))}</strong></span>
-            <span><small>AVAILABLE CASH</small><strong>${escapeHtml(formatCurrency(data.banking.checking.available, currencyCode))}</strong></span>
+            <span><small>AVAILABLE CASH</small><strong>${escapeHtml(availableCash)}</strong></span>
             <span><small>ESTIMATED FEES</small><strong data-player-market-estimated-fees>${escapeHtml(formatCurrency(selected.price * 10 * 0.0025, currencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>Price, fees, available funds, and final holdings update only after the order is confirmed.</small></div>
+          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>${bankingUnavailable ? "Available cash could not be pre-validated. The backend will perform the authoritative balance check." : "Price, fees, available funds, and final holdings update only after the order is confirmed."}</small></div>
           <button class="player-terminal-primary-button" type="submit">${icon("send")} Send order for processing</button>
         </form>
       </section>
