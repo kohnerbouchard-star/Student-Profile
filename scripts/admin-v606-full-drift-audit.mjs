@@ -50,6 +50,7 @@ const expectedScripts = [
   "./classroom-write-fallback.js",
   "./create-action-adapter.js",
   "./player-access-code-bridge.js",
+  "./modal-accessibility.js",
   "./player-create-lifecycle.js",
   "./player-drawer-wiring.js",
   "./player-identity-wiring.js",
@@ -101,6 +102,15 @@ const scopedRuntimeFiles = {
   "admin/player-create-ux.js": [
     "data-admin-player-created-confirmation",
     "data-admin-terminal-player-form",
+    "EconovariaAdminModalAccessibility",
+    "dismissOnEscape: false",
+    "dismissOnBackdrop: false",
+  ],
+  "admin/modal-accessibility.js": [
+    "focusableElements",
+    'event.key === "Tab"',
+    'event.key === "Escape"',
+    "restoreFocus",
   ],
   "admin/asset-wiring.js": [
     "ORIGINAL_CURRENCY_ICONS",
@@ -157,10 +167,22 @@ assert(!lifecycle.includes("markExpandedPlayerDetail"), "Add Player lifecycle st
 assert(!lifecycle.includes("mountExpandedPlayerSettings"), "Add Player lifecycle still mounts removed inline settings.");
 assert(lifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions bypass field validation.");
 
+const credentialBridge = readText("admin/player-access-code-bridge.js");
+assert(credentialBridge.includes("econovaria:player-access-code-issued"), "Credential event emission is missing.");
+assert(!credentialBridge.includes("renderAccessCodeDialog"), "Credential bridge recreates duplicate presentation.");
+assert(!credentialBridge.includes("data-admin-player-access-code-dialog"), "Credential bridge still owns dialog markup.");
+assert(!credentialBridge.includes("style.cssText"), "Credential bridge injects inline presentation styles.");
+
 const createUx = readText("admin/player-create-ux.js");
 assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network wrapper.");
 assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
 assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
+assert(createUx.includes("lastCreateOpener"), "Player creation confirmation cannot restore focus to its opener.");
+
+const modalAccessibility = readText("admin/modal-accessibility.js");
+assert(!modalAccessibility.includes("window.fetch ="), "Modal accessibility adds a network wrapper.");
+assert(!modalAccessibility.includes("MutationObserver"), "Modal accessibility adds unnecessary DOM observation.");
+assert(!modalAccessibility.includes('createElement("style")'), "Modal accessibility injects runtime CSS.");
 
 const stabilization = readText("admin/admin-stabilization.js");
 assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a network wrapper.");
@@ -271,4 +293,4 @@ assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality 
 assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, scanner recovery, completed-control restoration, and scoped admin stabilization boundaries passed.");
+console.log("Accepted v606 core files, single credential presentation, modal accessibility, text/icon integrity, validation states, skeleton loading, scanner recovery, completed-control restoration, and scoped admin stabilization boundaries passed.");
