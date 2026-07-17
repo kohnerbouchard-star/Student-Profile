@@ -62,7 +62,7 @@ const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
 assert.ok(main.includes("installStorePurchaseFlow"), "The standalone entrypoint must install the Store transaction controller.");
 assert.ok(source.includes('api.execute("storeQuote"'), "The flow must obtain a quote before purchase.");
 assert.ok(source.includes('api.execute("storePurchase"'), "The flow must settle only after explicit confirmation.");
-assert.ok(source.indexOf('api.execute("storeQuote"') < source.indexOf('api.execute("storePurchase"')));
+assert.ok(source.indexOf('api.execute("storeQuote"') < source.indexOf('api.execute("storePurchase"'));
 assert.ok(source.includes("quoteExpired"), "Expired quotes must be rejected before settlement.");
 assert.ok(source.includes("await terminal.refresh()"), "Successful purchases must refresh authoritative terminal data.");
 assert.ok(source.includes("purchase completed, but current balances and inventory could not be refreshed"), "A committed purchase must remain completed even when refresh fails.");
