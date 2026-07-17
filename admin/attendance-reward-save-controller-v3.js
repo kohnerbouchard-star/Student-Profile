@@ -5,6 +5,7 @@
   const delegatedFetch = window.fetch.bind(window);
   const coreDirtyKeys = new Set();
   let dirtyGameId = "";
+  let contextGeneration = 0;
   let saveFlight = null;
 
   function text(value) {
@@ -33,21 +34,31 @@
     return document.querySelector(SAVE_SELECTOR);
   }
 
+  function ownsButtonState(button) {
+    return button instanceof HTMLButtonElement && (
+      button.hasAttribute("data-attendance-reward-error") ||
+      button.hasAttribute("data-attendance-reward-status") ||
+      button.hasAttribute("data-attendance-reward-direct-save")
+    );
+  }
+
   function clearAttendanceButtonState() {
     const button = saveButton();
     if (!(button instanceof HTMLButtonElement)) return;
+    const owned = ownsButtonState(button);
     button.removeAttribute("data-attendance-reward-error");
     button.removeAttribute("data-attendance-reward-status");
     button.removeAttribute("data-attendance-reward-direct-save");
-    button.removeAttribute("data-admin-terminal-api-state");
-    button.removeAttribute("aria-busy");
-    button.removeAttribute("aria-disabled");
+    if (owned) {
+      button.removeAttribute("data-admin-terminal-api-state");
+      button.removeAttribute("aria-busy");
+      button.removeAttribute("aria-disabled");
+    }
     window.EconovariaSimplifiedSettings?.refresh?.();
   }
 
   function resetDirtyKeysForGame(gameId) {
     if (!gameId || dirtyGameId === gameId) return;
-    if (dirtyGameId) clearAttendanceButtonState();
     dirtyGameId = gameId;
     coreDirtyKeys.clear();
   }
@@ -152,13 +163,18 @@
     window.EconovariaSimplifiedSettings?.refresh?.();
   }
 
+  function contextIsCurrent(gameId, generation) {
+    return generation === contextGeneration && selectedGameId() === gameId;
+  }
+
   async function saveAttendanceOnly(button) {
     if (saveFlight) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
+    const generation = contextGeneration;
 
     setSaveState(button, "processing", "Saving game settings");
-    saveFlight = (async () => {
+    const flight = (async () => {
       const settingsResponse = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         { method: "GET", headers: { "Accept": "application/json" } },
@@ -187,9 +203,11 @@
       }
       return { response, attendanceWindow, body, gameId };
     })();
+    saveFlight = flight;
 
     try {
-      const result = await saveFlight;
+      const result = await flight;
+      if (!contextIsCurrent(gameId, generation)) return result;
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
       button.removeAttribute("data-attendance-reward-error");
@@ -203,7 +221,7 @@
       }));
       setSaveState(button, "completed", "Game settings saved");
       window.setTimeout(() => {
-        if (attendanceDirty()) return;
+        if (!contextIsCurrent(gameId, generation) || attendanceDirty()) return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
         button.removeAttribute("data-attendance-reward-direct-save");
@@ -211,11 +229,12 @@
       }, 900);
       return result;
     } catch (error) {
+      if (!contextIsCurrent(gameId, generation)) return null;
       button.dataset.attendanceRewardError = error instanceof Error ? error.message : String(error);
       setSaveState(button, "error", "Game settings not saved");
       throw error;
     } finally {
-      saveFlight = null;
+      if (saveFlight === flight) saveFlight = null;
     }
   }
 
@@ -231,6 +250,14 @@
 
   document.addEventListener("input", markCoreEdit, true);
   document.addEventListener("change", markCoreEdit, true);
+
+  document.addEventListener("econovaria:settings-context-changed", (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    contextGeneration += 1;
+    dirtyGameId = text(detail?.gameId) || selectedGameId();
+    coreDirtyKeys.clear();
+    clearAttendanceButtonState();
+  });
 
   document.addEventListener("econovaria:attendance-reward-saved", (event) => {
     const detail = event instanceof CustomEvent ? event.detail : null;
