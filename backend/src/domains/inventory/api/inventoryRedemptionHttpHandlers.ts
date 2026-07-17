@@ -118,7 +118,7 @@ export async function handlePlayerInventoryRedemptionRequest(
 
     rejectClientSuppliedPlayerIdentity(request);
     rejectIdentityFields(body);
-    const requestedGameSessionId = readRequestedGameSessionId(request);
+
     const sessionToken = readPlayerSessionTokenFromRequest(request);
     if (!sessionToken) return invalidPlayerSessionResponse();
 
@@ -133,7 +133,7 @@ export async function handlePlayerInventoryRedemptionRequest(
     }
 
     requireMatchingPlayerGameSession(
-      requestedGameSessionId,
+      readRequestedGameSessionId(request),
       sessionResult.session.game_session_id,
     );
 
@@ -156,7 +156,7 @@ export async function handlePlayerInventoryRedemptionRequest(
     );
 
     if (rpcResponse.error) {
-      return redemptionPersistenceError(rpcResponse.error.message);
+      return redemptionPersistenceError(rpcResponse.error.message, false);
     }
 
     const row = firstRow(rpcResponse.data);
@@ -171,29 +171,11 @@ export async function handlePlayerInventoryRedemptionRequest(
     return jsonResponse(row.request_outcome === "created" ? 201 : 200, {
       ok: true,
       outcome: row.request_outcome ?? "created",
-      generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+      generatedAt: nowValue(dependencies.now),
       redemption: toRedemptionDto(row),
     });
   } catch (error) {
-    if (error instanceof EdgeActivationError) {
-      return jsonError(error.status, {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-      });
-    }
-    if (error instanceof RequestValidationError) {
-      return jsonError(400, {
-        code: error.code,
-        message: error.message,
-        retryable: false,
-      });
-    }
-    return jsonError(500, {
-      code: "inventory_redemption_request_failed",
-      message: "Inventory redemption could not be requested.",
-      retryable: false,
-    });
+    return requestErrorResponse(error);
   }
 }
 
@@ -226,8 +208,7 @@ async function readStaffRedemptionQueue(
   dependencies: StaffInventoryRedemptionDependencies,
 ): Promise<Response> {
   try {
-    const url = new URL(request.url);
-    const status = normalizeQueueStatus(url.searchParams.get("status"));
+    const status = normalizeQueueStatus(new URL(request.url).searchParams.get("status"));
     let query = dependencies.serviceClient
       .from("inventory_redemption_requests")
       .select(REDEMPTION_SELECT)
@@ -263,11 +244,18 @@ async function readStaffRedemptionQueue(
 
     return jsonResponse(200, {
       ok: true,
-      generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+      generatedAt: nowValue(dependencies.now),
       requests,
       summary: summarizeRequests(requests),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestValidationError) {
+      return jsonError(400, {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+      });
+    }
     return jsonError(500, {
       code: "inventory_redemption_queue_failed",
       message: "Inventory redemption requests could not be loaded.",
@@ -311,7 +299,7 @@ async function reviewStaffRedemption(
     return jsonResponse(200, {
       ok: true,
       outcome: row.review_outcome ?? "updated",
-      generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+      generatedAt: nowValue(dependencies.now),
       redemption: toRedemptionDto(row),
     });
   } catch (error) {
@@ -360,9 +348,11 @@ async function readItems(
   return (response.data ?? []) as unknown as readonly StoreItemRow[];
 }
 
-function firstRow(data: readonly RedemptionRow[] | RedemptionRow | null): RedemptionRow | null {
+function firstRow(
+  data: readonly RedemptionRow[] | RedemptionRow | null,
+): RedemptionRow | null {
   if (Array.isArray(data)) return data[0] ?? null;
-  return data ?? null;
+  return data as RedemptionRow | null;
 }
 
 function toRedemptionDto(row: RedemptionRow) {
@@ -408,7 +398,7 @@ function normalizeQueueStatus(value: string | null): string | null {
   const normalized = value?.trim().toLowerCase() ?? "";
   if (!normalized || normalized === "all") return null;
   if (["pending", "approved", "fulfilled", "rejected"].includes(normalized)) {
-    return normalized.toUpperCase();
+    return normalized;
   }
   throw new RequestValidationError(
     "inventory_redemption_status_invalid",
@@ -429,11 +419,13 @@ async function readRedemptionBody(request: Request): Promise<{
       "Provide a valid inventory redemption request.",
     );
   }
+
   const quantity = Number((body as Record<string, unknown>).quantity ?? 1);
   const note = String((body as Record<string, unknown>).note ?? "").trim();
   const idempotencyKey = String(
     (body as Record<string, unknown>).idempotencyKey ?? "",
   ).trim();
+
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
     throw new RequestValidationError(
       "inventory_redemption_quantity_invalid",
@@ -452,6 +444,7 @@ async function readRedemptionBody(request: Request): Promise<{
       "Redemption notes may contain at most 1,000 characters.",
     );
   }
+
   return { ...(body as Record<string, unknown>), quantity, note, idempotencyKey };
 }
 
@@ -464,6 +457,7 @@ async function readReviewBody(request: Request): Promise<{
     .trim()
     .toLowerCase();
   const note = String((body as Record<string, unknown> | null)?.note ?? "").trim();
+
   if (!["approve", "reject", "fulfill"].includes(action)) {
     throw new RequestValidationError(
       "inventory_redemption_action_invalid",
@@ -476,6 +470,7 @@ async function readReviewBody(request: Request): Promise<{
       "Resolution notes may contain at most 1,000 characters.",
     );
   }
+
   return { action: action as "approve" | "reject" | "fulfill", note };
 }
 
@@ -490,14 +485,40 @@ function rejectIdentityFields(body: Record<string, unknown>) {
   }
 }
 
-function redemptionPersistenceError(message: string, staff = false): Response {
+function requestErrorResponse(error: unknown): Response {
+  if (error instanceof EdgeActivationError) {
+    return jsonError(error.status, {
+      code: error.code,
+      message: error.message,
+      retryable: error.retryable,
+    });
+  }
+  if (error instanceof RequestValidationError) {
+    return jsonError(400, {
+      code: error.code,
+      message: error.message,
+      retryable: false,
+    });
+  }
+  return jsonError(500, {
+    code: "inventory_redemption_request_failed",
+    message: "Inventory redemption could not be requested.",
+    retryable: false,
+  });
+}
+
+function redemptionPersistenceError(message: string, staff: boolean): Response {
   const normalized = message.toUpperCase();
   const mapping: readonly [string, number, string, string][] = [
+    ["INVENTORY_REDEMPTION_REQUEST_INVALID", 400, "inventory_redemption_request_invalid", "Inventory redemption request is invalid."],
+    ["INVENTORY_REDEMPTION_REVIEW_INVALID", 400, "inventory_redemption_review_invalid", "Inventory redemption review is invalid."],
+    ["INVENTORY_REDEMPTION_REVIEW_FORBIDDEN", 403, "inventory_redemption_review_forbidden", "This administrator cannot review redemption requests for that game."],
     ["INVENTORY_REDEMPTION_IDEMPOTENCY_CONFLICT", 409, "inventory_redemption_idempotency_conflict", "That idempotency key was already used for a different redemption request."],
-    ["INVENTORY_REDEMPTION_INSUFFICIENT_AVAILABLE", 409, "inventory_redemption_insufficient_available", "The requested quantity is no longer available."],
+    ["INVENTORY_REDEMPTION_QUANTITY_UNAVAILABLE", 409, "inventory_redemption_insufficient_available", "The requested quantity is no longer available."],
     ["INVENTORY_REDEMPTION_HOLDING_NOT_FOUND", 404, "inventory_redemption_holding_not_found", "Inventory item was not found."],
     ["INVENTORY_REDEMPTION_REQUEST_NOT_FOUND", 404, "inventory_redemption_not_found", "Inventory redemption request was not found."],
     ["INVENTORY_REDEMPTION_INVALID_TRANSITION", 409, "inventory_redemption_invalid_transition", "That redemption transition is not allowed."],
+    ["INVENTORY_REDEMPTION_RESERVATION_CORRUPT", 409, "inventory_redemption_reservation_conflict", "The inventory reservation no longer matches the request."],
   ];
   const matched = mapping.find(([needle]) => normalized.includes(needle));
   if (matched) {
@@ -507,6 +528,7 @@ function redemptionPersistenceError(message: string, staff = false): Response {
       retryable: false,
     });
   }
+
   return jsonError(500, {
     code: staff
       ? "inventory_redemption_review_failed"
@@ -516,6 +538,10 @@ function redemptionPersistenceError(message: string, staff = false): Response {
       : "Inventory redemption could not be requested.",
     retryable: false,
   });
+}
+
+function nowValue(now?: () => string): string {
+  return (now ?? (() => new Date().toISOString()))();
 }
 
 class RequestValidationError extends Error {
