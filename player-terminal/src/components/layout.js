@@ -58,7 +58,7 @@ function renderNavGroup(group, route, data) {
     <button class="player-terminal-nav-item${active ? " active" : ""}" type="button" data-route="${group.defaultRoute}" aria-label="${escapeHtml(group.label)}" title="${escapeHtml(group.label)}"${active ? ' aria-current="page"' : ""}>
       <span class="player-terminal-nav-icon">${icon(group.iconName)}</span><strong>${escapeHtml(group.label)}</strong>${badge}
     </button>
-    ${active && group.routes.length > 1 ? `<div class="player-terminal-nav-submenu" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}">${escapeHtml(item.label)}</button>`).join("")}</div>` : ""}
+    ${active && group.routes.length > 1 ? `<div class="player-terminal-nav-submenu" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}>${escapeHtml(item.label)}</button>`).join("")}</div>` : ""}
   </div>`;
 }
 
@@ -72,7 +72,7 @@ function renderSidebar(route, data, collapsed) {
       ${groups.map((group) => renderNavGroup(group, route, data)).join("")}
     </nav>
     <div class="player-terminal-side-code">
-      <button class="player-terminal-side-code-compact" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}" aria-label="Copy game code ${escapeHtml(data.session.gameCode)}"><span class="player-terminal-share-arrow">↗</span></button>
+      <button class="player-terminal-side-code-compact" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}" aria-label="Copy game code ${escapeHtml(data.session.gameCode)}"><span class="player-terminal-share-arrow">${icon("chevronRight")}</span></button>
       <div class="player-terminal-side-code-expanded"><span>Game Code</span><strong>${escapeHtml(data.session.gameCode)}</strong><small>${escapeHtml(data.session.gameName)} · ${escapeHtml(data.session.status)}</small></div>
     </div>
     <button class="player-terminal-collapse-control" type="button" data-player-local-action="toggle-sidebar" aria-label="${collapsed ? "Expand" : "Collapse"} navigation" title="${collapsed ? "Expand" : "Collapse"} navigation">${icon(collapsed ? "chevronRight" : "chevronLeft")}</button>
@@ -83,7 +83,7 @@ function renderNotifications(data, open) {
   return `<div class="player-terminal-bell-drawer" data-player-notification-drawer role="region" aria-label="Player notifications" tabindex="-1" ${open ? "" : "hidden"}>
     <div class="player-terminal-drawer-head"><div><span>PLAYER ALERTS</span><strong>${escapeHtml(data.notifications.length)} Active</strong></div><small>Live feed</small></div>
     <div class="player-terminal-notice-list">${data.notifications.length ? data.notifications.map((item) => `<article class="player-terminal-notice is-${escapeHtml(item.tone === "warn" ? "warn" : item.tone === "good" ? "good" : item.tone === "purple" ? "purple" : "")}"><span></span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></div></article>`).join("") : `<p class="player-terminal-inline-empty">No active notifications.</p>`}</div>
-    <button class="player-terminal-drawer-action" type="button" data-player-action="notifications-read" ${data.notifications.length ? "" : "disabled"}>Mark all read <i>✓</i></button>
+    <button class="player-terminal-drawer-action" type="button" data-player-action="notifications-read" ${data.notifications.length ? "" : "disabled"}>Mark all read ${icon("check")}</button>
   </div>`;
 }
 
@@ -105,7 +105,7 @@ function renderContextNav(route, capabilities) {
   const group = activeGroupForRoute(route, capabilities);
   if (!group) return "";
   if (group.routes.length <= 1) return "";
-  return `<nav class="player-terminal-context-nav" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>`;
+  return `<nav class="player-terminal-context-nav" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}>${escapeHtml(item.label)}</button>`).join("")}</nav>`;
 }
 
 function renderMobileNavigation(route, data, open) {
