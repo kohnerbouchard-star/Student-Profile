@@ -4,7 +4,7 @@ export const SHELL_OPTIONAL_RESOURCES = Object.freeze(["notifications"]);
 export const ROUTE_RESOURCE_PLAN = Object.freeze({
   dashboard: Object.freeze({
     required: Object.freeze(["dashboard", "countries"]),
-    optional: Object.freeze(["news", "market", "contracts", "messages", "banking", "inventory"])
+    optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory"])
   }),
   news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
   market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking"]) }),

@@ -5,7 +5,7 @@ import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 function listingCard(listing, code, isSelected) {
   return `<button class="player-terminal-marketplace-card${isSelected ? " active" : ""}" type="button" data-player-marketplace-select="${escapeHtml(listing.id)}">
     <span class="player-terminal-marketplace-image"><img src="${escapeHtml(listing.image)}" alt="" /></span>
-    <div><small>${escapeHtml(listing.category)} · ${escapeHtml(listing.country)}</small><strong>${escapeHtml(listing.name)}</strong><p>${escapeHtml(listing.description)}</p><span>Seller ${escapeHtml(listing.seller)} · ${escapeHtml(listing.rating.toFixed(1))} ★</span></div>
+    <div><small>${escapeHtml(listing.category)} · ${escapeHtml(listing.country)}</small><strong>${escapeHtml(listing.name)}</strong><p>${escapeHtml(listing.description)}</p><span aria-label="Seller ${escapeHtml(listing.seller)}, rated ${escapeHtml(listing.rating.toFixed(1))} out of 5">Seller ${escapeHtml(listing.seller)} · ${escapeHtml(listing.rating.toFixed(1))} ${icon("star")}</span></div>
     <div><strong>${escapeHtml(formatCurrency(listing.unitPrice, code))}</strong><small>${escapeHtml(formatNumber(listing.quantity))} available</small></div>
   </button>`;
 }

@@ -3,6 +3,7 @@ export function createEmptyReadModels() {
     session: null,
     dashboard: null,
     capabilities: { routes: { dashboard: true, profile: true }, actions: {} },
+    resourceStatus: {},
     notifications: [],
     countries: [],
     news: { categories: ["All"], selectedId: "", items: [] },
@@ -19,8 +20,29 @@ export function createEmptyReadModels() {
       countryExposure: []
     },
     business: {
-      company: { status: "Unavailable", valuation: 0, valuationChange: 0, cashFlow: 0, employees: 0, capacity: 0 },
-      operations: { utilization: 0, currentJobs: [], completedThisCycle: 0 },
+      company: {
+        name: "Business not configured",
+        registration: "",
+        status: "Unavailable",
+        industry: "Not configured",
+        headquarters: "Not configured",
+        valuation: 0,
+        valuationChange: 0,
+        cash: 0,
+        revenue: 0,
+        margin: 0,
+        reputation: 0,
+        reputationLabel: "Unavailable",
+        summary: "Business information is unavailable."
+      },
+      operations: {
+        employees: 0,
+        output: 0,
+        backlog: 0,
+        capacityUse: 0,
+        maxRun: 0,
+        capacityNote: "Production capacity is unavailable."
+      },
       products: [],
       suppliers: []
     },
@@ -37,10 +59,10 @@ export function createEmptyReadModels() {
       queue: []
     },
     banking: {
-      checking: { accountId: "", balance: 0, available: 0 },
-      savings: { accountId: "", balance: 0, available: 0, interestRate: 0, interestEarned: 0 },
-      creditScore: 0,
-      transferLimit: 0,
+      checking: { accountId: "", balance: undefined, available: undefined },
+      savings: { accountId: "", balance: undefined, available: undefined, interestRate: undefined, interestEarned: undefined },
+      creditScore: undefined,
+      transferLimit: undefined,
       transactions: []
     },
     loans: {

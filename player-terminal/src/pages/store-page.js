@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
+import { isResourceUnavailable } from "../api/resource-status.js";
 
 function renderStoreItem(item, currencyCode) {
   const soldOut = item.stock <= 0;
@@ -15,11 +16,15 @@ export function renderStorePage(data, ui) {
   const category = ui.storeCategory || "All";
   const items = data.store.items.filter((item) => category === "All" || item.category === category);
   const currencyCode = data.session.currencyCode;
+  const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const availableBalance = bankingUnavailable
+    ? "Unavailable"
+    : formatCurrency(data.banking.checking.available, currencyCode);
 
   return `<section class="player-terminal-page player-terminal-store-page" data-page="store">
     <header class="player-terminal-page-heading">
       <div><small>PLAYER COMMERCE NETWORK</small><h2>Store</h2><p>Review equipment, materials, consumables, and access items available to your player account.</p></div>
-      <div class="player-terminal-heading-balance"><small>AVAILABLE BALANCE</small><strong>${escapeHtml(formatCurrency(data.banking.checking.available, currencyCode))}</strong>${renderStatusPill("LIVE INVENTORY", "purple")}</div>
+      <div class="player-terminal-heading-balance"><small>AVAILABLE BALANCE</small><strong>${escapeHtml(availableBalance)}</strong>${renderStatusPill(bankingUnavailable ? "BALANCE UNAVAILABLE" : "LIVE INVENTORY", bankingUnavailable ? "amber" : "purple")}</div>
     </header>
 
     <div class="player-terminal-store-toolbar">
