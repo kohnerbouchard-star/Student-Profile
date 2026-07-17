@@ -42,6 +42,20 @@ export interface PlayerInventoryItemDto {
   readonly updatedAt: string;
 }
 
+export interface PlayerInventoryRedemptionDto {
+  readonly id: string;
+  readonly inventoryHoldingId: string;
+  readonly storeItemId: string;
+  readonly quantity: number;
+  readonly status: string;
+  readonly requestNote: string | null;
+  readonly resolutionNote: string | null;
+  readonly requestedAt: string;
+  readonly reviewedAt: string | null;
+  readonly fulfilledAt: string | null;
+  readonly updatedAt: string;
+}
+
 export interface PlayerInventoryValueSummaryDto {
   readonly currencyCode: string;
   readonly totalOwnedValue: number;
@@ -70,5 +84,6 @@ export interface PlayerInventoryResponseBody {
     readonly quantityAvailable: number;
     readonly values: readonly PlayerInventoryValueSummaryDto[];
   };
+  readonly redemptionRequests: readonly PlayerInventoryRedemptionDto[];
   readonly items: readonly PlayerInventoryItemDto[];
 }
