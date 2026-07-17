@@ -6,7 +6,7 @@
   "scripts": {
     "check": "node tools/check-source.mjs",
     "smoke": "node tests/smoke.mjs",
-    "test:api": "node tests/api-adapter.mjs",
+    "test:api": "node tests/api-adapter.mjs && node tests/inventory-redemption-lifecycle.mjs",
     "audit": "node tools/audit.mjs",
     "verify": "npm run check && npm run smoke && npm run test:api && npm run audit",
     "dev": "python3 -m http.server ${PORT:-4173}"
