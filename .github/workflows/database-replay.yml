@@ -5,6 +5,7 @@ on:
     paths:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
+      - "backend/supabase/tests/**"
       - "scripts/validate-supabase-migrations.mjs"
       - "package.json"
       - "package-lock.json"
@@ -15,6 +16,7 @@ on:
     paths:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
+      - "backend/supabase/tests/**"
       - "scripts/validate-supabase-migrations.mjs"
       - "package.json"
       - "package-lock.json"
@@ -61,6 +63,13 @@ jobs:
         run: |
           npx supabase db reset --workdir backend --local
           npx supabase db reset --workdir backend --local
+
+      - name: Verify inventory redemption transaction lifecycle
+        run: >-
+          psql
+          "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          --set ON_ERROR_STOP=on
+          --file backend/supabase/tests/inventory_redemption_workflow.sql
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
