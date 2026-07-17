@@ -78,14 +78,41 @@ jobs:
       - name: Validate repository-owned assets
         run: node scripts/asset-reference-audit.mjs
 
-      - name: Validate admin shell source contracts
-        run: node scripts/admin-shell-smoke.mjs
+      - name: Capture admin shell source contracts
+        shell: bash
+        run: |
+          set +e
+          node scripts/admin-shell-smoke.mjs > /tmp/admin-shell-source.log 2>&1
+          echo $? > /tmp/admin-shell-source.status
+          cat /tmp/admin-shell-source.log
+          exit 0
+
+      - name: Upload admin shell source diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-shell-source-${{ github.sha }}
+          path: |
+            /tmp/admin-shell-source.log
+            /tmp/admin-shell-source.status
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce admin shell source contracts
+        shell: bash
+        run: |
+          status="$(cat /tmp/admin-shell-source.status)"
+          if [ "$status" != "0" ]; then
+            echo "Admin shell source contracts failed. Download the admin-shell-source artifact."
+            exit 1
+          fi
 
       - name: Validate accepted v606 drift boundaries
         run: node scripts/admin-v606-full-drift-audit.mjs
 
       - name: Validate admin session refresh and rotation
         run: node scripts/admin-session-manager-smoke.mjs
+
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
 
@@ -93,8 +120,7 @@ jobs:
         run: node scripts/admin-player-access-code-smoke.mjs
 
       - name: Install browser smoke runtime
-        run: |
-          npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Start static preview
         run: |
