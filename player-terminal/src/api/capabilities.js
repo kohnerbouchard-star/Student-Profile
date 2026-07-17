@@ -40,28 +40,38 @@ function capabilitySource(value) {
   return value;
 }
 
-function readCapability(source, key, group) {
-  if (Array.isArray(source[group])) return source[group].includes(key);
+function explicitCapability(source, key, group) {
+  if (Array.isArray(source[group])) return source[group].includes(key) ? true : undefined;
   const nested = capabilitySource(source[group]);
   if (typeof nested[key] === "boolean") return nested[key];
   if (typeof source[key] === "boolean") return source[key];
+  return undefined;
+}
+
+function mergedCapability(sources, key, group) {
+  for (const source of sources) {
+    const value = explicitCapability(source, key, group);
+    if (typeof value === "boolean") return value;
+  }
   return false;
 }
 
 export function resolveCapabilities({ config, session, dashboard }) {
-  const declared = capabilitySource(
-    config.capabilities || dashboard?.capabilities || session?.capabilities
-  );
+  const sources = [
+    capabilitySource(config.capabilities),
+    capabilitySource(dashboard?.capabilities),
+    capabilitySource(session?.capabilities)
+  ];
   const preview = config.usePreviewData === true;
   const routes = Object.fromEntries(ROUTES.map((route) => [
     route,
     route === "dashboard" || route === "profile" || preview
       ? true
-      : readCapability(declared, route, "routes")
+      : mergedCapability(sources, route, "routes")
   ]));
   const actions = Object.fromEntries(PLAYER_ACTION_CAPABILITIES.map((action) => [
     action,
-    preview || readCapability(declared, action, "actions")
+    preview || mergedCapability(sources, action, "actions")
   ]));
 
   return Object.freeze({ routes: Object.freeze(routes), actions: Object.freeze(actions) });
