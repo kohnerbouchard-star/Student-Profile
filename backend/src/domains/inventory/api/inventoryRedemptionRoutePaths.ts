@@ -24,7 +24,7 @@ export function readInventoryRedemptionRoutePath(
       : segments;
 
   if (
-    normalized.length === 6 &&
+    normalized.length === 5 &&
     normalized[0] === "players" &&
     normalized[1] === "me" &&
     normalized[2] === "inventory" &&
