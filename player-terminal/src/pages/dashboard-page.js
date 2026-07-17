@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderMetric, renderStatusPill } from "../components/ui.js";
+import { isResourceUnavailable } from "../api/resource-status.js";
 import { ECONOVARIA_COUNTRY_REGIONS, countryRegionPath } from "../data/map-regions.js";
 
 function renderTicker(items) {
@@ -54,12 +55,32 @@ function worldEvent(event) {
   return `<button class="player-terminal-command-event is-${escapeHtml(event.tone)}" type="button" data-player-news-link="${escapeHtml(event.id)}"><i></i><span><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.region)} · ${escapeHtml(event.impact)}</small></span>${icon("chevronRight")}</button>`;
 }
 
-export function renderDashboardPage(data) {
+export function renderDashboardPage(data, ui = {}, config = {}) {
   const { session, dashboard, countries, contracts, banking, messages, portfolio } = data;
-  const activeContract = contracts.items.find((item) => item.status === "Active");
+  const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const contractsUnavailable = isResourceUnavailable(data, "contracts");
+  const messagesUnavailable = isResourceUnavailable(data, "messages");
+  const portfolioUnavailable = isResourceUnavailable(data, "portfolio");
+  const activeContract = contractsUnavailable ? null : contracts.items.find((item) => item.status === "Active");
   const playerCountry = countries.find((item) => item.id === session.countryId) || countries[0] || { id: session.countryId || "unknown", name: session.countryName || "Unassigned", condition: "Unavailable", policy: "Country intelligence is awaiting the world service.", growth: 0, inflation: 0, stability: 0 };
   const currencyCode = session.currencyCode;
-  const allocation = portfolio?.allocation || [];
+  const allocation = portfolioUnavailable ? [] : (portfolio?.allocation || []);
+  const allocationItems = allocation.length
+    ? allocation.slice(0, 4)
+    : config.usePreviewData
+      ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]
+      : [];
+  const availableCash = bankingUnavailable ? "Unavailable" : formatCurrency(banking.checking.available, currencyCode);
+  const unreadMessages = messagesUnavailable ? "—" : String(messages?.unread || 0);
+
+  const contractAction = contractsUnavailable
+    ? { eyebrow: "Unavailable", title: "Contract details unavailable", detail: "The contracts service could not be reached. Other dashboard information remains current." }
+    : activeContract
+      ? { eyebrow: activeContract.due, title: activeContract.title, detail: `${activeContract.progress}% complete · ${activeContract.objective}` }
+      : { eyebrow: "No deadline", title: "Review available contracts", detail: "Select a contract to begin earning capital and XP." };
+  const messageAction = messagesUnavailable
+    ? { eyebrow: "Unavailable", detail: "Communications could not be loaded. Retry from the Messages section." }
+    : { eyebrow: `${messages?.unread || 0} unread`, detail: messages?.threads?.find((thread) => thread.unread)?.preview || "No urgent messages. Review official announcements when ready." };
 
   return `<section class="player-terminal-page player-terminal-command-page" data-page="dashboard">
     <div class="player-terminal-page-heading player-terminal-command-heading">
@@ -68,19 +89,19 @@ export function renderDashboardPage(data) {
     </div>
 
     <div class="player-terminal-command-metrics">
-      ${renderMetric({ label: "Available cash", value: formatCurrency(banking.checking.available, currencyCode), meta: "Ready to deploy", tone: "green", iconName: "wallet" })}
+      ${renderMetric({ label: "Available cash", value: availableCash, meta: bankingUnavailable ? "Balance service unavailable" : "Ready to deploy", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}
       ${renderMetric({ label: "Net worth", value: formatCurrency(dashboard.netWorth, currencyCode), meta: `${dashboard.dailyChange >= 0 ? "+" : ""}${dashboard.dailyChange.toFixed(2)}% today`, tone: "cyan", iconName: "portfolio" })}
       ${renderMetric({ label: "Active contracts", value: String(dashboard.contractsActive), meta: `${dashboard.contractsDueSoon} due soon`, tone: "amber", iconName: "contracts" })}
-      ${renderMetric({ label: "Unread messages", value: String(messages?.unread || 0), meta: "Player and official channels", tone: "purple", iconName: "messages" })}
+      ${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}
     </div>
 
     <div class="player-terminal-command-layout">
       <section class="player-terminal-panel player-terminal-priority-panel">
         <header class="player-terminal-panel-header"><div><span>NEXT ACTIONS</span><strong>Your core game loop</strong></div><small>Ordered by urgency</small></header>
         <div class="player-terminal-next-actions">
-          ${actionCard({ step: "01", eyebrow: activeContract?.due || "No deadline", title: activeContract?.title || "Review available contracts", detail: activeContract ? `${activeContract.progress}% complete · ${activeContract.objective}` : "Select a contract to begin earning capital and XP.", route: "contracts", iconName: "contracts", tone: "amber" })}
+          ${actionCard({ step: "01", eyebrow: contractAction.eyebrow, title: contractAction.title, detail: contractAction.detail, route: "contracts", iconName: "contracts", tone: "amber" })}
           ${actionCard({ step: "02", eyebrow: dashboard.worldEvents[0]?.region || "World", title: dashboard.worldEvents[0]?.title || "Review world intelligence", detail: dashboard.worldEvents[0]?.impact || "Check the events currently moving markets.", route: "news", iconName: "news", tone: "cyan" })}
-          ${actionCard({ step: "03", eyebrow: `${messages?.unread || 0} unread`, title: "Check communications", detail: messages?.threads?.find((thread) => thread.unread)?.preview || "No urgent messages. Review official announcements when ready.", route: "messages", iconName: "messages", tone: "purple" })}
+          ${actionCard({ step: "03", eyebrow: messageAction.eyebrow, title: "Check communications", detail: messageAction.detail, route: "messages", iconName: "messages", tone: "purple" })}
         </div>
       </section>
 
@@ -110,7 +131,7 @@ export function renderDashboardPage(data) {
             <button type="button" data-route="inventory"><span>${icon("inventory")}</span><div><small>Inventory value</small><strong>${escapeHtml(formatCurrency(dashboard.inventoryValue, currencyCode))}</strong></div></button>
           </div>
           <div class="player-terminal-allocation-mini" aria-label="Portfolio allocation">
-            ${(allocation.length ? allocation.slice(0, 4) : [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }]).map((item) => `<div><span><small>${escapeHtml(item.label || item.name)}</small><strong>${escapeHtml(item.percent ?? item.value)}%</strong></span><i><b style="width:${Math.min(100, Number(item.percent ?? item.value))}%"></b></i></div>`).join("")}
+            ${allocationItems.length ? allocationItems.map((item) => `<div><span><small>${escapeHtml(item.label || item.name)}</small><strong>${escapeHtml(item.percent ?? item.value)}%</strong></span><i><b style="width:${Math.min(100, Number(item.percent ?? item.value))}%"></b></i></div>`).join("") : `<p class="player-terminal-inline-empty">${portfolioUnavailable ? "Portfolio allocation is unavailable." : "No portfolio allocation yet."}</p>`}
           </div>
         </div>
         <div class="player-terminal-panel-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Open portfolio</button><button class="player-terminal-secondary-button" type="button" data-route="market">${icon("market")} Review market</button></div>
