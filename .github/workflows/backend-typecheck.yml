@@ -50,13 +50,27 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run backend typecheck
+      - name: Run backend typecheck with bounded dependency retries
         shell: bash
         run: |
           set +e
-          npm run typecheck:all > /tmp/backend-typecheck.log 2>&1
-          echo $? > /tmp/backend-typecheck.status
-          tail -n 160 /tmp/backend-typecheck.log
+          status=1
+          : > /tmp/backend-typecheck.log
+          for attempt in 1 2 3; do
+            echo "Backend typecheck attempt ${attempt}/3" | tee -a /tmp/backend-typecheck.log
+            npm run typecheck:all >> /tmp/backend-typecheck.log 2>&1
+            status=$?
+            if [ "$status" = "0" ]; then
+              break
+            fi
+            if grep -Eq "(Import .* failed: 5[0-9]{2}|error sending request|connection reset|timed out)" /tmp/backend-typecheck.log; then
+              sleep $((attempt * 5))
+              continue
+            fi
+            break
+          done
+          echo "$status" > /tmp/backend-typecheck.status
+          tail -n 200 /tmp/backend-typecheck.log
           exit 0
 
       - name: Upload backend typecheck diagnostics
