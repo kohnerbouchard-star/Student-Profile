@@ -3,6 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import { PlayerApi } from "../src/api/player-api.js";
 import { resolveCapabilities } from "../src/api/capabilities.js";
+import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 import { renderShell } from "../src/components/layout.js";
 import { renderMarketplacePage } from "../src/pages/marketplace-page.js";
 import { previewData } from "../src/data/preview-data.js";
@@ -57,6 +58,13 @@ assert.equal(merged.routes.market, true, "Runtime capability declarations must n
 assert.equal(merged.actions.marketOrder, true);
 assert.equal(merged.actions.storePurchase, true, "Dashboard declarations must not mask session declarations.");
 
+assert.throws(
+  () => normalizeApiResponse("banking", { checking: {}, savings: {} }, { requestId: "ptr_shape", path: "/banking/summary" }),
+  (error) => error.code === "INVALID_RESPONSE",
+  "Missing nested endpoint fields must fail at the adapter boundary."
+);
+assert.doesNotThrow(() => normalizeApiResponse("banking", structuredClone(previewData.banking), { requestId: "ptr_shape_ok", path: "/banking/summary" }));
+
 const data = structuredClone(previewData);
 data.capabilities = resolveCapabilities({ config: { usePreviewData: true }, dashboard: {}, session: {} });
 const shell = renderShell({
@@ -71,4 +79,4 @@ const marketplace = renderMarketplacePage(data, { marketplaceCategory: "All", ma
 assert.ok(!marketplace.includes("★"), "Marketplace ratings must use the shared SVG icon system.");
 assert.ok(marketplace.includes("out of 5"), "Marketplace ratings must preserve accessible context.");
 
-console.log("v7.5.1 correctness passed: logical writes, retry idempotency, capability merging, landmarks, identity input, and glyph cleanup are valid.");
+console.log("v7.5.1 correctness passed: logical writes, retry idempotency, capability merging, response schemas, landmarks, identity input, and glyph cleanup are valid.");
