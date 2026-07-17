@@ -42,7 +42,7 @@ export function renderBankingPage(data) {
       <section class="player-terminal-panel player-terminal-external-transfer-panel">
         <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
         <details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The recipient is verified before funds move</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer">
-          <label>RECIPIENT PLAYER ID<input name="recipientPlayerId" type="text" required pattern="[A-Za-z]{2}-[0-9]{4}-[0-9]{3}" title="Use the format EN-0000-000" autocomplete="off" autocapitalize="characters" placeholder="EN-0000-000" /></label>
+          <label>RECIPIENT PLAYER ID<input name="recipientPlayerId" type="text" required maxlength="160" autocomplete="off" autocapitalize="characters" placeholder="Scan or enter Player ID" /></label>
           <label>AMOUNT<input name="amount" type="number" min="1" max="${escapeHtml(bank.transferLimit)}" step="1" required placeholder="0" /></label>
           <label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label>
           <button class="player-terminal-primary-button" type="submit">${icon("send")} Send transfer</button>
