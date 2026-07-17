@@ -118,6 +118,25 @@ try {
     throw new Error("Settings error bridge still owns numeric input propagation.");
   }
 
+  const presenterSource = await page.request.get(`${BASE_URL}/settings-simplified.js`);
+  const presenterText = await presenterSource.text();
+  if (
+    /forceAutomaticAttendancePolicy/.test(presenterText) ||
+    /difficulty\.value\s*=\s*["']true["']/.test(presenterText) ||
+    /currency\.value\s*=\s*["']player_country["']/.test(presenterText)
+  ) {
+    throw new Error("Shared Settings presenter still mutates attendance policy values.");
+  }
+
+  const attendanceSource = await page.request.get(`${BASE_URL}/attendance-reward-settings-v4.js`);
+  const attendanceText = await attendanceSource.text();
+  if (
+    !/AUTOMATIC_CURRENCY_MODE\s*=\s*["']player_country["']/.test(attendanceText) ||
+    !/AUTOMATIC_DIFFICULTY_ADJUSTMENT\s*=\s*true/.test(attendanceText)
+  ) {
+    throw new Error("Attendance domain no longer owns the automatic payout policy invariant.");
+  }
+
   await page.evaluate(() => {
     const current = document.querySelector(".admin-terminal-settings-page");
     if (!(current instanceof HTMLElement)) throw new Error("Settings page was not found.");
@@ -151,7 +170,7 @@ try {
 
   await capture("settings-disclosure-persistence");
   if (errors.length) throw new Error(errors[0]);
-  console.log("Shared Settings state preserves native events, focus, save feedback, and disclosure state.");
+  console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
   await finish({ afterOption, duringNumericEdit, errors });
 } catch (error) {
   await capture("settings-disclosure-failure").catch(() => {});
