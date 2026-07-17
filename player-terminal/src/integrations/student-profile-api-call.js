@@ -2,6 +2,7 @@ import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
+import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
   "playerId",
@@ -21,7 +22,6 @@ const READ_MODEL_KEYS = new Set([
   "marketAsset",
   "portfolio",
   "store",
-  "contracts",
   "inventory",
   "banking",
   "notifications"
@@ -184,6 +184,11 @@ export function createStudentProfileApiCall({ request } = {}) {
       }
       snapshot = normalizeTerminalBootstrap(rawSession, raw);
       return snapshot.dashboard;
+    }
+
+    if (context.endpointKey === "contracts") {
+      snapshot = { ...snapshot, contracts: normalizePlayerContracts(raw) };
+      return snapshot.contracts;
     }
 
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
