@@ -54,6 +54,20 @@ function shouldReuseIdempotencyKey(error) {
   return ["NETWORK_ERROR", "OFFLINE", "REQUEST_TIMEOUT"].includes(error?.code) || status >= 500;
 }
 
+function readyResourceStatus() {
+  return Object.freeze({ state: "ready", status: 200, code: "", retryAfterMs: 0 });
+}
+
+function unavailableResourceStatus(error) {
+  const normalized = normalizeApiError(error);
+  return Object.freeze({
+    state: "unavailable",
+    status: Number(normalized.status || 0),
+    code: String(normalized.code || "REQUEST_FAILED"),
+    retryAfterMs: Number(normalized.retryAfterMs || 0)
+  });
+}
+
 export class PlayerApi {
   constructor(config) {
     this.config = config;
@@ -127,10 +141,19 @@ export class PlayerApi {
     const dashboard = await this.request("dashboard", { force });
     const optional = await Promise.allSettled(SHELL_OPTIONAL_RESOURCES.map((key) => this.request(key, { force })));
     const data = { session, dashboard };
+    const resourceStatus = { session: readyResourceStatus(), dashboard: readyResourceStatus() };
     SHELL_OPTIONAL_RESOURCES.forEach((key, index) => {
-      data[key] = optional[index].status === "fulfilled" ? optional[index].value : [];
+      const result = optional[index];
+      if (result.status === "fulfilled") {
+        data[key] = result.value;
+        resourceStatus[key] = readyResourceStatus();
+      } else {
+        data[key] = [];
+        resourceStatus[key] = unavailableResourceStatus(result.reason);
+      }
     });
     data.capabilities = resolveCapabilities({ config: this.config, session, dashboard });
+    data.resourceStatus = Object.freeze(resourceStatus);
     return data;
   }
 
@@ -139,12 +162,20 @@ export class PlayerApi {
     const settled = await Promise.allSettled(uniqueKeys.map((key) => this.request(key, { force })));
     const data = {};
     const errors = {};
+    const resourceStatus = {};
     settled.forEach((result, index) => {
       const key = uniqueKeys[index];
-      if (result.status === "fulfilled") data[key] = result.value;
-      else errors[key] = normalizeApiError(result.reason, { endpointKey: key });
+      if (result.status === "fulfilled") {
+        data[key] = result.value;
+        resourceStatus[key] = readyResourceStatus();
+      } else {
+        const error = normalizeApiError(result.reason, { endpointKey: key });
+        errors[key] = error;
+        resourceStatus[key] = unavailableResourceStatus(error);
+      }
     });
-    return { data, errors };
+    data.resourceStatus = Object.freeze(resourceStatus);
+    return { data, errors, resourceStatus: data.resourceStatus };
   }
 
   async loadRoute(route, { force = false } = {}) {
