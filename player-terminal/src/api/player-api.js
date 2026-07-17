@@ -3,7 +3,7 @@ import { PreviewTransport } from "./preview-transport.js";
 import { HttpTransport } from "./http-transport.js";
 import { AdapterTransport } from "./adapter-transport.js";
 import { ApiRequestError, normalizeApiError } from "./errors.js";
-import { createIdempotencyKey, createRequestId, stableRequestKey } from "./request-context.js";
+import { createIdempotencyKey, createRequestId, stableOperationKey, stableRequestKey } from "./request-context.js";
 import { normalizeApiResponse } from "./response-normalizer.js";
 import { resolveCapabilities } from "./capabilities.js";
 import {
@@ -49,6 +49,11 @@ function mergeAbortSignals(...signals) {
   };
 }
 
+function shouldReuseIdempotencyKey(error) {
+  const status = Number(error?.status || 0);
+  return ["NETWORK_ERROR", "OFFLINE", "REQUEST_TIMEOUT"].includes(error?.code) || status >= 500;
+}
+
 export class PlayerApi {
   constructor(config) {
     this.config = config;
@@ -61,6 +66,7 @@ export class PlayerApi {
     this.inFlightReads = new Map();
     this.inFlightWrites = new Map();
     this.writeCompletedAt = new Map();
+    this.retryIdempotencyKeys = new Map();
     this.sessionVersion = 0;
     this.sessionFingerprint = sessionFingerprint(config);
     this.sessionController = new AbortController();
@@ -82,6 +88,7 @@ export class PlayerApi {
       this.inFlightReads.clear();
       this.inFlightWrites.clear();
       this.writeCompletedAt.clear();
+      this.retryIdempotencyKeys.clear();
     }
   }
 
@@ -176,7 +183,7 @@ export class PlayerApi {
       throw new ApiRequestError("A read endpoint cannot be submitted as an action.", { code: "INVALID_REQUEST", endpointKey, path });
     }
 
-    const writeKey = `${endpointKey}:${path}`;
+    const writeKey = stableOperationKey({ endpointKey, method: endpoint.method, path, payload });
     if (this.inFlightWrites.has(writeKey)) return this.inFlightWrites.get(writeKey);
     const completedAt = this.writeCompletedAt.get(writeKey) || 0;
     if (Date.now() - completedAt < this.config.writeCooldownMs) {
@@ -189,7 +196,7 @@ export class PlayerApi {
 
     const requestId = createRequestId();
     const idempotencyKey = IDEMPOTENT_WRITE_ENDPOINTS.has(endpointKey)
-      ? createIdempotencyKey(endpointKey)
+      ? this.retryIdempotencyKeys.get(writeKey) || createIdempotencyKey(endpointKey)
       : "";
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
     const context = { endpointKey, method: endpoint.method, path, payload, requestId, idempotencyKey, signal: mergedSignal.signal };
@@ -202,11 +209,19 @@ export class PlayerApi {
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
         }
+        this.retryIdempotencyKeys.delete(writeKey);
         this.writeCompletedAt.set(writeKey, Date.now());
         this.invalidateResources(invalidatedResources);
         return { result, invalidatedResources: [...invalidatedResources], requestId, idempotencyKey };
       })
-      .catch((error) => { throw normalizeApiError(error, context); })
+      .catch((error) => {
+        const normalized = normalizeApiError(error, context);
+        if (sessionVersion === this.sessionVersion && idempotencyKey) {
+          if (shouldReuseIdempotencyKey(normalized)) this.retryIdempotencyKeys.set(writeKey, idempotencyKey);
+          else this.retryIdempotencyKeys.delete(writeKey);
+        }
+        throw normalized;
+      })
       .finally(() => {
         mergedSignal.cleanup();
         if (this.inFlightWrites.get(writeKey) === operation) this.inFlightWrites.delete(writeKey);
