@@ -3,6 +3,12 @@ import { PreviewTransport } from "./preview-transport.js";
 import { HttpTransport } from "./http-transport.js";
 import { AdapterTransport } from "./adapter-transport.js";
 import { ApiRequestError, normalizeApiError } from "./errors.js";
+import { resourceFreshnessMs } from "./freshness.js";
+import {
+  clearAllResourceInvalidations,
+  clearResourceInvalidation,
+  isResourceInvalidated
+} from "./invalidation-registry.js";
 import { createIdempotencyKey, createRequestId, stableOperationKey, stableRequestKey } from "./request-context.js";
 import { normalizeApiResponse } from "./response-normalizer.js";
 import { resolveCapabilities } from "./capabilities.js";
@@ -77,6 +83,7 @@ export class PlayerApi {
         ? new AdapterTransport(config.apiCall || config.adapter, config)
         : new HttpTransport(config);
     this.readCache = new Map();
+    this.readCacheUpdatedAt = new Map();
     this.inFlightReads = new Map();
     this.inFlightWrites = new Map();
     this.writeCompletedAt = new Map();
@@ -99,11 +106,21 @@ export class PlayerApi {
       this.sessionFingerprint = nextFingerprint;
       this.sessionVersion += 1;
       this.readCache.clear();
+      this.readCacheUpdatedAt.clear();
       this.inFlightReads.clear();
       this.inFlightWrites.clear();
       this.writeCompletedAt.clear();
       this.retryIdempotencyKeys.clear();
+      clearAllResourceInvalidations();
     }
+  }
+
+  isCachedReadFresh(endpointKey, key, now = Date.now()) {
+    if (isResourceInvalidated(endpointKey)) return false;
+    if (!this.readCache.has(key)) return false;
+    const updatedAt = Number(this.readCacheUpdatedAt.get(key) || 0);
+    const freshnessMs = resourceFreshnessMs(endpointKey, this.config.resourceFreshnessMs);
+    return freshnessMs > 0 && updatedAt > 0 && now - updatedAt <= freshnessMs;
   }
 
   async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
@@ -114,7 +131,7 @@ export class PlayerApi {
     const key = stableRequestKey(context);
     const sessionVersion = this.sessionVersion;
 
-    if (endpoint.method === "GET" && !force && this.readCache.has(key)) return this.readCache.get(key);
+    if (endpoint.method === "GET" && !force && this.isCachedReadFresh(endpointKey, key)) return this.readCache.get(key);
     if (endpoint.method === "GET" && this.inFlightReads.has(key)) return this.inFlightReads.get(key);
 
     const operation = this.transport.request(context)
@@ -123,7 +140,11 @@ export class PlayerApi {
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
         }
-        if (endpoint.method === "GET") this.readCache.set(key, value);
+        if (endpoint.method === "GET") {
+          this.readCache.set(key, value);
+          this.readCacheUpdatedAt.set(key, Date.now());
+          clearResourceInvalidation(endpointKey);
+        }
         return value;
       })
       .catch((error) => { throw normalizeApiError(error, context); })
@@ -199,7 +220,9 @@ export class PlayerApi {
     const targets = new Set(keys);
     for (const key of this.readCache.keys()) {
       const endpointKey = key.split(":")[1];
-      if (targets.has(endpointKey)) this.readCache.delete(key);
+      if (!targets.has(endpointKey)) continue;
+      this.readCache.delete(key);
+      this.readCacheUpdatedAt.delete(key);
     }
   }
 
