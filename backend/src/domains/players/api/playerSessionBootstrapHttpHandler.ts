@@ -10,6 +10,10 @@ import {
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
 import {
+  buildPlayerCapabilityManifest,
+  type PlayerCapabilityManifest,
+} from "../../capabilities/playerCapabilityRegistry.ts";
+import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
 } from "./playerSessionHttpHelpers.ts";
@@ -51,6 +55,7 @@ interface PlayerSessionBootstrapBody {
     readonly status: "not_configured";
   };
   readonly availableActions: readonly string[];
+  readonly capabilities: PlayerCapabilityManifest;
 }
 
 export async function handlePlayerSessionBootstrapRequest(
@@ -216,6 +221,7 @@ export async function handlePlayerSessionBootstrapRequest(
         "ledger.view",
         "STORE_PURCHASE",
       ],
+      capabilities: buildPlayerCapabilityManifest(),
     });
   } catch {
     return jsonError(500, {
