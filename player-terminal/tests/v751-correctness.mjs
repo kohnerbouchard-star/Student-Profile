@@ -4,6 +4,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { PlayerApi } from "../src/api/player-api.js";
 import { resolveCapabilities } from "../src/api/capabilities.js";
 import { normalizeApiResponse } from "../src/api/response-normalizer.js";
+import { buildPlayerTerminalConfig } from "../src/config/player-terminal.config.js";
 import { renderShell } from "../src/components/layout.js";
 import { renderMarketplacePage } from "../src/pages/marketplace-page.js";
 import { previewData } from "../src/data/preview-data.js";
@@ -72,11 +73,29 @@ const shell = renderShell({
   data,
   pageHtml: '<section class="player-terminal-page">Dashboard</section>',
   ui: { sidebarCollapsed: false, notificationsOpen: true, mobileMenuOpen: false },
-  config: { usePreviewData: true }
+  config: { usePreviewData: true, preserveProductSurface: true }
 });
 assert.ok(!shell.includes("↗") && !shell.includes("✓"), "Shell controls must use semantic SVG icons instead of raw glyphs.");
 const marketplace = renderMarketplacePage(data, { marketplaceCategory: "All", marketplaceListingId: data.marketplace.listings[0].id });
 assert.ok(!marketplace.includes("★"), "Marketplace ratings must use the shared SVG icon system.");
 assert.ok(marketplace.includes("out of 5"), "Marketplace ratings must preserve accessible context.");
 
-console.log("v7.5.1 correctness passed: logical writes, retry idempotency, capability merging, response schemas, landmarks, identity input, and glyph cleanup are valid.");
+const productionConfig = buildPlayerTerminalConfig(
+  { capabilities: { routes: { store: true } } },
+  { hostname: "play.econovaria.example", search: "" }
+);
+assert.equal(productionConfig.preserveProductSurface, true);
+const connectedData = structuredClone(previewData);
+connectedData.capabilities = resolveCapabilities({ config: productionConfig, dashboard: {}, session: {} });
+const connectedShell = renderShell({
+  route: "dashboard",
+  data: connectedData,
+  pageHtml: '<section class="player-terminal-page">Dashboard</section>',
+  ui: { sidebarCollapsed: false, notificationsOpen: false, mobileMenuOpen: false },
+  config: productionConfig
+});
+assert.ok(connectedShell.includes('data-route="store"'));
+assert.ok(connectedShell.includes('data-route="marketplace"'), "Intended routes must remain visible while their backend capability is pending.");
+assert.ok(connectedShell.includes('data-capability-status="integration-pending"'));
+
+console.log("v7.5.1 correctness passed: logical writes, retry idempotency, capability merging, response schemas, product-surface preservation, landmarks, identity input, and glyph cleanup are valid.");
