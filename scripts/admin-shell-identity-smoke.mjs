@@ -25,6 +25,7 @@ const expectedScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./player-scope-readiness.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -125,4 +126,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, and original-video admin shell contract passed.");
+console.log("Original v606 player drawer, Edit Player Profile, generated Add Player credentials, confirmation UX, player scope readiness, and original-video admin shell contract passed.");
