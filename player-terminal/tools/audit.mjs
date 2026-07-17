@@ -55,8 +55,10 @@ const mapStats = await stat(path.join(root, "assets/images/econovaria-world-map.
 if (mapStats.size < 500_000) throw new Error("World map asset appears incomplete.");
 
 const sourceFiles = [];
+const ignoredDirectories = new Set([".git", "node_modules", "playwright-report", "test-results"]);
 async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
     const full = path.join(directory, entry.name);
     if (entry.isDirectory()) await walk(full);
     if (entry.isFile() && /\.(?:js|html|css|md)$/.test(entry.name)) sourceFiles.push(full);
@@ -122,7 +124,6 @@ for (const marker of [
 ]) {
   if (!polishCss.includes(marker)) throw new Error(`Required UI/map polish marker is missing: ${marker}`);
 }
-
 
 const normalizationCss = await readFile(path.join(root, "css/player-terminal-normalization.css"), "utf8");
 for (const marker of [
