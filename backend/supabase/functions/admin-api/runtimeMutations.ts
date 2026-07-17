@@ -4,6 +4,25 @@ import { handleStaffInventoryRedemptionRequest } from "../../../src/domains/inve
 
 export { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
 
+export async function normalizeInventoryRedemptionReviewRequest(
+  request: Request,
+): Promise<Request> {
+  if (request.method !== "PATCH") return request;
+
+  const value = await request.clone().json().catch(() => ({}));
+  if (!value || typeof value !== "object" || Array.isArray(value)) return request;
+
+  const source = value as Record<string, unknown>;
+  const note = source.note ?? source.resolutionNote;
+  if (note === undefined || source.note !== undefined) return request;
+
+  return new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: JSON.stringify({ ...source, note }),
+  });
+}
+
 export async function handleRuntimeMutation(
   request: Request,
   context: any,
@@ -13,7 +32,7 @@ export async function handleRuntimeMutation(
   const redemptionMatch = suffix.match(/^\/inventory\/redemptions(?:\/([^/]+))?$/);
   if (redemptionMatch) {
     return handleStaffInventoryRedemptionRequest(
-      request,
+      await normalizeInventoryRedemptionReviewRequest(request),
       gameId,
       redemptionMatch[1] ? decodeURIComponent(redemptionMatch[1]) : null,
       {
