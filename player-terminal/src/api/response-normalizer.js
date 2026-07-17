@@ -87,6 +87,13 @@ function unwrap(raw) {
   return raw;
 }
 
+function applySafeDefaults(endpointKey, value) {
+  if (endpointKey === "news" && !Array.isArray(value.categories)) value.categories = ["All"];
+  if (endpointKey === "store" && !Array.isArray(value.categories)) value.categories = ["All"];
+  if (endpointKey === "market" && !Array.isArray(value.sectors)) value.sectors = ["All"];
+  return value;
+}
+
 function validateEndpointShape(endpointKey, value, context) {
   for (const key of REQUIRED_ARRAY_FIELDS[endpointKey] || []) {
     if (!Array.isArray(value[key])) throw invalidResponse(endpointKey, context.requestId, context.path);
@@ -99,7 +106,7 @@ function validateEndpointShape(endpointKey, value, context) {
 }
 
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
-  const value = sanitizeValue(unwrap(raw), context.config || {});
+  let value = sanitizeValue(unwrap(raw), context.config || {});
   if (!READ_ENDPOINTS.has(endpointKey)) return value;
 
   if (ARRAY_READS.has(endpointKey)) {
@@ -113,6 +120,9 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
       if (typeof value[key] !== "string" || !value[key].trim()) throw invalidResponse(endpointKey, context.requestId, context.path);
     }
   }
-  if (!ARRAY_READS.has(endpointKey)) validateEndpointShape(endpointKey, value, context);
+  if (!ARRAY_READS.has(endpointKey)) {
+    value = applySafeDefaults(endpointKey, value);
+    validateEndpointShape(endpointKey, value, context);
+  }
   return value;
 }
