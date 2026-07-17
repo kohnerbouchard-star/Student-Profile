@@ -1,0 +1,4549 @@
+[
+  {
+    "viewport": "desktop",
+    "route": "dashboard",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SELECT A COUNTRY",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "NOVA",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "184.22",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "AURX",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "92.14",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "THR",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "41.08",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SYN",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "276.90",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "VAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "118.54",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "XAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "64.72",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "NOVA",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "184.22",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "AURX",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "92.14",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "THR",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "41.08",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SYN",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "276.90",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "VAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "118.54",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "XAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "64.72",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        }
+      ],
+      "out": [
+        {
+          "tag": "DIV",
+          "cls": "player-terminal-world-ticker-track",
+          "left": 278.9389343261719,
+          "right": 1809.6576843261719,
+          "width": 1530.71875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1455.18896484375,
+          "right": 1552.48583984375,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1455.18896484375,
+          "right": 1471.45458984375,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1479.45458984375,
+          "right": 1511.97021484375,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 1519.97021484375,
+          "right": 1552.48583984375,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1586.48583984375,
+          "right": 1683.78271484375,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1586.48583984375,
+          "right": 1602.75146484375,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1610.75146484375,
+          "right": 1643.26708984375,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "left": 1651.26708984375,
+          "right": 1683.78271484375,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1717.78271484375,
+          "right": 1809.65771484375,
+          "width": 91.875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1717.78271484375,
+          "right": 1734.04833984375,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1742.04833984375,
+          "right": 1769.14208984375,
+          "width": 27.09375
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 1777.14208984375,
+          "right": 1809.65771484375,
+          "width": 32.515625
+        }
+      ],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item active",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "news",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "6",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "World · 12 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Markets · 28 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Policy · 46 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Policy · 1 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "World · 2 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Contracts · 3 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "-0.61%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "market",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "NO",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Novaria Systems",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Technology",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "AU",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aurora Exchange",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Finance",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "TH",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Thaloris Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "SY",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Syndalis Media Grid",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Consumer",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "VA",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Valerion Industrial",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Industry",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "XA",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Xalvoria Works",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Industry",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "CE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Celestial Composite",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Index · All",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+1.36%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Technology",
+          "fs": "8px"
+        },
+        {
+          "tag": "P",
+          "cls": "",
+          "text": "NOVA · Northreach",
+          "fs": "8px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PREVIEW SERIES",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "OPEN",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DAY HIGH",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DAY LOW",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "VOLUME",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "MARKET CAP",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "P/E RATIO",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DIVIDEND",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "RISK / OUTLOOK",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "YOUR POSITION",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "AVERAGE COST",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "POSITION VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "UNREALIZED GAIN",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "RELATED INTELLIGENCE",
+          "fs": "7px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Eldoran maintains supportive credit policy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 hr ago · Low impact",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "AVAILABLE CASH",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED FEES",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Execution notice",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "The backend must confirm price, fees, available funds, and final holdings before the interface chang",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "portfolio",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equities",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Checking",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Savings",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Inventory",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "28.4%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "26.6%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "18.1%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "14.7%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "12.2%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "ASSET",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "SHARES",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "GAIN / LOSS",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "DAY",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Novaria Systems",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+14.14%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Xalvoria Works",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+6.10%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Valerion Industrial",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+8.55%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Thaloris Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+10.28%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aurora Exchange",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+2.83%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "business",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Analytics",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Components",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        },
+        {
+          "a": "player-terminal-secondary-button",
+          "b": "",
+          "area": 2060.139404296875
+        },
+        {
+          "a": "player-terminal-secondary-button",
+          "b": "player-terminal-compact-button",
+          "area": 497.521728515625
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "contracts",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Active",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "3",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Available",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Submitted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Completed",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DUE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "REWARD",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DUE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "REWARD",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DUE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "REWARD",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Eldoran Commerce Authority",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Available",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "2",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Active",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "3",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Submitted",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "4",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Completed",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "CASH REWARD",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "EXPERIENCE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PROGRESS",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ACTIVITY TIMELINE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 09:10",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Current stage",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Pending",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Pending",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "store",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 8 · OWNED 1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 12 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Materials",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 42 · OWNED 4",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Materials",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 65 · OWNED 8",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Consumables",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 15 · OWNED 2",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Consumables",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 6 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Access",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 3 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Access",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 10 · OWNED 1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Purchase buttons produce a typed payload for POST /store/purchases and remain pending until the back",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "marketplace",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Valerion",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Eldoran",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumables · Dravenlok",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Access · Lumenor",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Thaloris",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Valerion",
+          "fs": "8px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "UNIT PRICE",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "AVAILABLE",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "SELLER",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATING",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED TOTAL",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 units · ELD 2,450",
+          "fs": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "player-terminal-compact-button",
+          "text": "Cancel",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "3 units · ELD 490",
+          "fs": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "player-terminal-compact-button",
+          "text": "Cancel",
+          "fs": "8px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "inventory",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Equipped",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "4×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "8×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "2×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumables · Ready",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Access · Ready",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "crafting",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumable · 20 min",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumable · 35 min",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · 2 hr",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 owned / 1 required",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "8 owned / 2 required",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "One eligible submission receives priority processing.",
+          "fs": "8px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "banking",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "CHECKING ACCOUNT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "SAVINGS ACCOUNT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "FINANCIAL PROFILE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 15 · 10:42 · Contract",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 15 · 09:18 · Market",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 16:31 · Transfer",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 13:05 · Store",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 13 · 11:14 · Interest",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 12 · 15:44 · Contract",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "loans",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MAXIMUM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "APR",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "ORIGINATION FEE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "LN-8804",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "of ELD 10,000",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "NEXT DUE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Jul 20",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 10",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Paid",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 20",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Due",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 30",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Scheduled",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aug 9",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Scheduled",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "messages",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "I can deliver the alloy bundle today.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "09:42",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "2",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Submission guidance was updated.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "Yesterday",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "1",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Market closes at 17:00 today.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "Jul 15",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-thread-avatar is-cyan",
+          "text": "MC",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PLAYER DIRECT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "2 participants · Online",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "MC",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:31",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "AR",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:36",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "MC",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:42",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Messages remain visible to game administrators.",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "progression",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "SKILL POINTS",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LICENSES",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "ACHIEVEMENTS",
+          "fs": "7px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "80%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "74%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "92%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "desktop",
+    "route": "profile",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "GAME",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "GAME CODE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "COUNTRY",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "CURRENCY",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "window.ECONOVARIA_PLAYER_TERMINAL_CONFIG",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "src/main.js",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "?api=1",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-nav-item",
+          "b": "player-terminal-collapse-control",
+          "area": 120
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "dashboard",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SELECT A COUNTRY",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "NOVA",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "184.22",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "AURX",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "92.14",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "THR",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "41.08",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SYN",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "276.90",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "VAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "118.54",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "XAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "64.72",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "NOVA",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "184.22",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "AURX",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "92.14",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "THR",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "41.08",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "SYN",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "276.90",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "VAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "118.54",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "XAL",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "64.72",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        }
+      ],
+      "out": [
+        {
+          "tag": "DIV",
+          "cls": "player-terminal-world-ticker-track",
+          "left": 11.321868896484375,
+          "right": 1542.0406188964844,
+          "width": 1530.71875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 405.2124938964844,
+          "right": 502.5093688964844,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 405.2124938964844,
+          "right": 421.4781188964844,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 429.4781188964844,
+          "right": 461.9937438964844,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 469.9937438964844,
+          "right": 502.5093688964844,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 536.5093994140625,
+          "right": 633.8062744140625,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 536.5093994140625,
+          "right": 552.7750244140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 560.7750244140625,
+          "right": 593.2906494140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "left": 601.2906494140625,
+          "right": 633.8062744140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 667.8062744140625,
+          "right": 759.6812744140625,
+          "width": 91.875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 667.8062744140625,
+          "right": 684.0718994140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 692.0718994140625,
+          "right": 719.1656494140625,
+          "width": 27.09375
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 727.1656494140625,
+          "right": 759.6812744140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 793.6812744140625,
+          "right": 896.4000244140625,
+          "width": 102.71875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 793.6812744140625,
+          "right": 815.3687744140625,
+          "width": 21.6875
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 823.3687744140625,
+          "right": 855.8843994140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 863.8843994140625,
+          "right": 896.4000244140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 930.4000244140625,
+          "right": 1027.6968994140625,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 930.4000244140625,
+          "right": 952.0875244140625,
+          "width": 21.6875
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 960.0875244140625,
+          "right": 987.1812744140625,
+          "width": 27.09375
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "left": 995.1812744140625,
+          "right": 1027.6968994140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1061.6968994140625,
+          "right": 1153.5718994140625,
+          "width": 91.875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1061.6968994140625,
+          "right": 1077.9625244140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1085.9625244140625,
+          "right": 1113.0562744140625,
+          "width": 27.09375
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 1121.0562744140625,
+          "right": 1153.5718994140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1187.5718994140625,
+          "right": 1284.8687744140625,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1187.5718994140625,
+          "right": 1203.8375244140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1211.8375244140625,
+          "right": 1244.3531494140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 1252.3531494140625,
+          "right": 1284.8687744140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1318.8687744140625,
+          "right": 1416.1656494140625,
+          "width": 97.296875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1318.8687744140625,
+          "right": 1335.1343994140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1343.1343994140625,
+          "right": 1375.6500244140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "I",
+          "cls": "is-bad",
+          "left": 1383.6500244140625,
+          "right": 1416.1656494140625,
+          "width": 32.515625
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "left": 1450.1656494140625,
+          "right": 1542.0406494140625,
+          "width": 91.875
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "left": 1450.1656494140625,
+          "right": 1466.4312744140625,
+          "width": 16.265625
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "left": 1474.4312744140625,
+          "right": 1501.5250244140625,
+          "width": 27.09375
+        },
+        {
+          "tag": "I",
+          "cls": "is-good",
+          "left": 1509.5250244140625,
+          "right": 1542.0406494140625,
+          "width": 32.515625
+        }
+      ],
+      "collisions": [
+        {
+          "a": "player-terminal-next-action is-amber",
+          "b": "active",
+          "area": 3528
+        },
+        {
+          "a": "player-terminal-next-action is-amber",
+          "b": "",
+          "area": 4788
+        },
+        {
+          "a": "player-terminal-next-action is-amber",
+          "b": "",
+          "area": 4788
+        },
+        {
+          "a": "player-terminal-next-action is-amber",
+          "b": "",
+          "area": 4788
+        },
+        {
+          "a": "player-terminal-next-action is-amber",
+          "b": "",
+          "area": 3528
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "news",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "6",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "8.33333px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "World · 12 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Markets · 28 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Policy · 46 min ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Policy · 1 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "World · 2 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Contracts · 3 hr ago",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "B",
+          "cls": "",
+          "text": "-0.61%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-news-row is-selected",
+          "b": "",
+          "area": 2170.730224609375
+        },
+        {
+          "a": "player-terminal-news-row is-selected",
+          "b": "",
+          "area": 3172.605712890625
+        },
+        {
+          "a": "player-terminal-news-row is-selected",
+          "b": "",
+          "area": 3172.605712890625
+        },
+        {
+          "a": "player-terminal-news-row is-selected",
+          "b": "",
+          "area": 3172.605712890625
+        },
+        {
+          "a": "player-terminal-news-row is-selected",
+          "b": "active",
+          "area": 2170.730224609375
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "market",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "NO",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Novaria Systems",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Technology",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "AU",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aurora Exchange",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Finance",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-bad",
+          "text": "-0.61%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "TH",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Thaloris Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+1.12%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "SY",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Syndalis Media Grid",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Consumer",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+3.06%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "VA",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Valerion Industrial",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Industry",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-bad",
+          "text": "-1.42%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "XA",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Xalvoria Works",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Industry",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+0.88%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-asset-symbol",
+          "text": "CE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Celestial Composite",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Index · All",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+1.36%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Stock · Technology",
+          "fs": "8px"
+        },
+        {
+          "tag": "P",
+          "cls": "",
+          "text": "NOVA · Northreach",
+          "fs": "8px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-market-change is-good",
+          "text": "+2.48%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PREVIEW SERIES",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "OPEN",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DAY HIGH",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DAY LOW",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "VOLUME",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "MARKET CAP",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "P/E RATIO",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "DIVIDEND",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "RISK / OUTLOOK",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "YOUR POSITION",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "AVERAGE COST",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "POSITION VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "UNREALIZED GAIN",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "RELATED INTELLIGENCE",
+          "fs": "7px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Eldoran maintains supportive credit policy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 hr ago · Low impact",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "AVAILABLE CASH",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED FEES",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Execution notice",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "The backend must confirm price, fees, available funds, and final holdings before the interface chang",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "active",
+          "b": "",
+          "area": 1845.2228746414185
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 167.49892711639404
+        },
+        {
+          "a": "",
+          "b": "active",
+          "area": 3325.366455078125
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 410.88512325286865
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 2564.4427576065063
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 162.71324348449707
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 2812.614637374878
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 208.5190725326538
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 607.2396240234375
+        },
+        {
+          "a": "",
+          "b": "active",
+          "area": 244.75833225250244
+        },
+        {
+          "a": "",
+          "b": "active",
+          "area": 519.9137868881226
+        },
+        {
+          "a": "",
+          "b": "",
+          "area": 332.0841693878174
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "portfolio",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equities",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Checking",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Savings",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Inventory",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "28.4%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "26.6%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "18.1%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "14.7%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "12.2%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Novaria Systems",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+14.14%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Xalvoria Works",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+6.10%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Valerion Industrial",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+8.55%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Thaloris Energy",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+10.28%",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aurora Exchange",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "+2.83%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "business",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Analytics",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Components",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "PRICE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MARGIN",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "DEMAND",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "contracts",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Active",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "3",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Available",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "2",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Submitted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Completed",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Eldoran Commerce Authority",
+          "fs": "9px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Available",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "2",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Active",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "3",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Submitted",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "4",
+          "fs": "8px"
+        },
+        {
+          "tag": "STRONG",
+          "cls": "",
+          "text": "Completed",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "CASH REWARD",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "EXPERIENCE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PROGRESS",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ACTIVITY TIMELINE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 09:10",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Current stage",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Pending",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Pending",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "store",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 8 · OWNED 1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Equipment",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 12 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Materials",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 42 · OWNED 4",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Materials",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 65 · OWNED 8",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Consumables",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 15 · OWNED 2",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Consumables",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 6 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Access",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 3 · OWNED 0",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Access",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "STOCK 10 · OWNED 1",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Purchase buttons produce a typed payload for POST /store/purchases and remain pending until the back",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-compact-button",
+          "b": "active",
+          "area": 944.5711460113525
+        },
+        {
+          "a": "player-terminal-compact-button",
+          "b": "",
+          "area": 1218.89599609375
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "marketplace",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Valerion",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Eldoran",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumables · Dravenlok",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Access · Lumenor",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Thaloris",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Valerion",
+          "fs": "8px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "UNIT PRICE",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "AVAILABLE",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "SELLER",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATING",
+          "fs": "7px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "ESTIMATED TOTAL",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 units · ELD 2,450",
+          "fs": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "player-terminal-compact-button",
+          "text": "Cancel",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "3 units · ELD 490",
+          "fs": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "player-terminal-compact-button",
+          "text": "Cancel",
+          "fs": "8px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "",
+          "b": "player-terminal-compact-button",
+          "area": 3519
+        },
+        {
+          "a": "",
+          "b": "player-terminal-compact-button",
+          "area": 11475
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "inventory",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Equipped",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "4×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "8×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Materials · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "2×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumables · Ready",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Access · Ready",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "1×",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · Stored",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "TOTAL VALUE",
+          "fs": "7px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "crafting",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumable · 20 min",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Consumable · 35 min",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Equipment · 2 hr",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "1 owned / 1 required",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "8 owned / 2 required",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "One eligible submission receives priority processing.",
+          "fs": "8px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-recipe-row active",
+          "b": "",
+          "area": 1961.96923828125
+        },
+        {
+          "a": "player-terminal-recipe-row active",
+          "b": "",
+          "area": 2761.2900390625
+        },
+        {
+          "a": "player-terminal-recipe-row active",
+          "b": "active",
+          "area": 2761.2900390625
+        },
+        {
+          "a": "player-terminal-recipe-row active",
+          "b": "",
+          "area": 2761.2900390625
+        },
+        {
+          "a": "player-terminal-recipe-row active",
+          "b": "",
+          "area": 1961.96923828125
+        },
+        {
+          "a": "player-terminal-recipe-row",
+          "b": "",
+          "area": 1062.03076171875
+        },
+        {
+          "a": "player-terminal-recipe-row",
+          "b": "",
+          "area": 1494.7099609375
+        },
+        {
+          "a": "player-terminal-recipe-row",
+          "b": "active",
+          "area": 1494.7099609375
+        },
+        {
+          "a": "player-terminal-recipe-row",
+          "b": "",
+          "area": 1494.7099609375
+        },
+        {
+          "a": "player-terminal-recipe-row",
+          "b": "",
+          "area": 1062.03076171875
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "banking",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "CHECKING ACCOUNT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "SAVINGS ACCOUNT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "FINANCIAL PROFILE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 15 · 10:42 · Contract",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 15 · 09:18 · Market",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 16:31 · Transfer",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 14 · 13:05 · Store",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 13 · 11:14 · Interest",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 12 · 15:44 · Contract",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Posted",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "",
+          "b": "player-terminal-compact-button",
+          "area": 2136.171875
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "loans",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LIMIT",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "RATE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "TERM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "MAXIMUM",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "APR",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "ORIGINATION FEE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "LN-8804",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "of ELD 10,000",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "NEXT DUE",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Jul 20",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 10",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Paid",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 20",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Due",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Jul 30",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Scheduled",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Aug 9",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Scheduled",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": [
+        {
+          "a": "player-terminal-loan-offer active",
+          "b": "active",
+          "area": 4.52734375
+        },
+        {
+          "a": "player-terminal-loan-offer active",
+          "b": "",
+          "area": 4.52734375
+        },
+        {
+          "a": "player-terminal-loan-offer active",
+          "b": "",
+          "area": 4.52734375
+        },
+        {
+          "a": "player-terminal-primary-button",
+          "b": "",
+          "area": 3891.9375
+        }
+      ]
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "messages",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "I can deliver the alloy bundle today.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "09:42",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "2",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Submission guidance was updated.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "Yesterday",
+          "fs": "9px"
+        },
+        {
+          "tag": "I",
+          "cls": "",
+          "text": "1",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Market closes at 17:00 today.",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "Jul 15",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "player-terminal-thread-avatar is-cyan",
+          "text": "MC",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "PLAYER DIRECT",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "2 participants · Online",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "MC",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:31",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "AR",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:36",
+          "fs": "9px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "MC",
+          "fs": "8px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "09:42",
+          "fs": "9px"
+        },
+        {
+          "tag": "SMALL",
+          "cls": "",
+          "text": "Messages remain visible to game administrators.",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "progression",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "SKILL POINTS",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "LICENSES",
+          "fs": "7px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "ACHIEVEMENTS",
+          "fs": "7px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "80%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "74%",
+          "fs": "9px"
+        },
+        {
+          "tag": "EM",
+          "cls": "",
+          "text": "92%",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  },
+  {
+    "viewport": "mobile",
+    "route": "profile",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "bodyOverflow": 0,
+      "clipped": [],
+      "tiny": [
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "GAME",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "GAME CODE",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "COUNTRY",
+          "fs": "9px"
+        },
+        {
+          "tag": "DT",
+          "cls": "",
+          "text": "CURRENCY",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "window.ECONOVARIA_PLAYER_TERMINAL_CONFIG",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "src/main.js",
+          "fs": "9px"
+        },
+        {
+          "tag": "CODE",
+          "cls": "",
+          "text": "?api=1",
+          "fs": "9px"
+        }
+      ],
+      "out": [],
+      "collisions": []
+    }
+  }
+]

@@ -1,0 +1,81 @@
+import { ROUTES } from "../core/router.js";
+
+export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
+  "bankingExport",
+  "bankTransfer",
+  "businessHire",
+  "businessPrice",
+  "businessProduction",
+  "chartRange",
+  "contractAccept",
+  "contractSubmit",
+  "craftItem",
+  "inventoryUse",
+  "loanApply",
+  "loanRepay",
+  "marketOrder",
+  "marketSearch",
+  "marketWatchlist",
+  "marketplaceCancel",
+  "marketplaceListing",
+  "marketplacePurchase",
+  "messageAttachment",
+  "messageSearch",
+  "messageSend",
+  "notificationsRead",
+  "progressionClaim",
+  "progressionUnlock",
+  "savingsTransfer",
+  "storePurchase"
+]);
+
+const ENDPOINT_ACTIONS = Object.freeze(Object.fromEntries(
+  PLAYER_ACTION_CAPABILITIES
+    .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
+    .map((key) => [key, key])
+));
+
+function capabilitySource(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+}
+
+function readCapability(source, key, group) {
+  if (Array.isArray(source[group])) return source[group].includes(key);
+  const nested = capabilitySource(source[group]);
+  if (typeof nested[key] === "boolean") return nested[key];
+  if (typeof source[key] === "boolean") return source[key];
+  return false;
+}
+
+export function resolveCapabilities({ config, session, dashboard }) {
+  const declared = capabilitySource(
+    config.capabilities || dashboard?.capabilities || session?.capabilities
+  );
+  const preview = config.usePreviewData === true;
+  const routes = Object.fromEntries(ROUTES.map((route) => [
+    route,
+    route === "dashboard" || route === "profile" || preview
+      ? true
+      : readCapability(declared, route, "routes")
+  ]));
+  const actions = Object.fromEntries(PLAYER_ACTION_CAPABILITIES.map((action) => [
+    action,
+    preview || readCapability(declared, action, "actions")
+  ]));
+
+  return Object.freeze({ routes: Object.freeze(routes), actions: Object.freeze(actions) });
+}
+
+export function isRouteEnabled(capabilities, route) {
+  return route === "dashboard" || route === "profile" || capabilities?.routes?.[route] === true;
+}
+
+export function isActionEnabled(capabilities, action) {
+  return capabilities?.actions?.[action] === true;
+}
+
+export function isEndpointEnabled(capabilities, endpointKey) {
+  const action = ENDPOINT_ACTIONS[endpointKey];
+  return action ? isActionEnabled(capabilities, action) : false;
+}

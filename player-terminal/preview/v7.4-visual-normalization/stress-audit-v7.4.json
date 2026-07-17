@@ -1,0 +1,389 @@
+[
+  {
+    "viewport": "mobile-320",
+    "route": "dashboard",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "mapRegions": 11,
+      "countryModal": true
+    }
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "market",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 38
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "business",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "contracts",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "store",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 25
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "marketplace",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 18
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "crafting",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "loans",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "messages",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "mobile-320",
+    "route": "profile",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 4
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "dashboard",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "mapRegions": 11,
+      "countryModal": true
+    }
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "market",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 38
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "business",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "contracts",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "store",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 25
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "marketplace",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 18
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "crafting",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "loans",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "messages",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "tablet-768",
+    "route": "profile",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 4
+    },
+    "interactions": {}
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "dashboard",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "mapRegions": 11,
+      "countryModal": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "market",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 38
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "business",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "contracts",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "store",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 25
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "marketplace",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 18
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "crafting",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "loans",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "messages",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 12
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  },
+  {
+    "viewport": "desktop-1440",
+    "route": "profile",
+    "errors": [],
+    "metrics": {
+      "docOverflow": 0,
+      "clipped": [],
+      "pageControlsOut": [],
+      "mutatedTargets": 4
+    },
+    "interactions": {
+      "sidebarCollapsed": true
+    }
+  }
+]

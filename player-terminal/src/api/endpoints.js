@@ -1,0 +1,48 @@
+export const PLAYER_ENDPOINTS = Object.freeze({
+  session: { method: "GET", path: "/session" },
+  dashboard: { method: "GET", path: "/dashboard" },
+  countries: { method: "GET", path: "/world/countries" },
+  country: { method: "GET", path: "/world/countries/:countryId" },
+  news: { method: "GET", path: "/world/news" },
+  portfolio: { method: "GET", path: "/portfolio" },
+  business: { method: "GET", path: "/business" },
+  businessProduction: { method: "POST", path: "/business/production-runs" },
+  businessPrice: { method: "POST", path: "/business/products/:productId/pricing" },
+  businessHire: { method: "POST", path: "/business/employees/hire" },
+  market: { method: "GET", path: "/market/assets" },
+  marketOrder: { method: "POST", path: "/market/orders" },
+  marketWatchlist: { method: "POST", path: "/market/watchlist/:assetId" },
+  store: { method: "GET", path: "/store/items" },
+  storePurchase: { method: "POST", path: "/store/purchases" },
+  marketplace: { method: "GET", path: "/marketplace/listings" },
+  marketplacePurchase: { method: "POST", path: "/marketplace/listings/:listingId/purchase" },
+  marketplaceListing: { method: "POST", path: "/marketplace/listings" },
+  marketplaceCancel: { method: "POST", path: "/marketplace/listings/:listingId/cancel" },
+  contracts: { method: "GET", path: "/contracts" },
+  contractAccept: { method: "POST", path: "/contracts/:contractId/accept" },
+  contractSubmit: { method: "POST", path: "/contracts/:contractId/submissions" },
+  inventory: { method: "GET", path: "/inventory" },
+  inventoryUse: { method: "POST", path: "/inventory/:inventoryItemId/use" },
+  crafting: { method: "GET", path: "/crafting" },
+  craftItem: { method: "POST", path: "/crafting/recipes/:recipeId/craft" },
+  banking: { method: "GET", path: "/banking/summary" },
+  bankTransfer: { method: "POST", path: "/banking/transfers" },
+  savingsTransfer: { method: "POST", path: "/banking/savings/transfers" },
+  loans: { method: "GET", path: "/banking/loans" },
+  loanApply: { method: "POST", path: "/banking/loans/applications/:offerId" },
+  loanRepay: { method: "POST", path: "/banking/loans/:loanId/payments" },
+  messages: { method: "GET", path: "/messages" },
+  messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
+  progression: { method: "GET", path: "/progression" },
+  progressionUnlock: { method: "POST", path: "/progression/skills/:skillId/unlock" },
+  progressionClaim: { method: "POST", path: "/progression/rewards/:rewardId/claim" },
+  notifications: { method: "GET", path: "/notifications" },
+  notificationsRead: { method: "POST", path: "/notifications/read" }
+});
+
+export function resolveEndpoint(endpoint, params = {}) {
+  return Object.entries(params).reduce(
+    (path, [key, value]) => path.replace(`:${key}`, encodeURIComponent(String(value))),
+    endpoint.path
+  );
+}

@@ -1,0 +1,16 @@
+{
+  "name": "econovaria-player-terminal-standalone",
+  "version": "7.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tools/check-source.mjs",
+    "smoke": "node tests/smoke.mjs",
+    "hardening": "node tests/v75-hardening.mjs",
+    "audit": "node tools/audit.mjs",
+    "audit:v75": "node tools/v75-audit.mjs",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run audit && npm run audit:v75",
+    "dev": "python3 -m http.server ${PORT:-4173}"
+  },
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, and authoritative post-write refreshes."
+}
