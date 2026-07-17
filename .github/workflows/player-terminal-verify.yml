@@ -43,7 +43,7 @@ jobs:
           if [ -n "$unexpected" ]; then
             echo "Player Terminal PR changed protected repository paths:"
             echo "$unexpected"
-            exit 1
+            false
           fi
 
       - name: Set up Node
@@ -52,5 +52,21 @@ jobs:
           node-version: "22"
 
       - name: Verify standalone player terminal
+        id: player-terminal-verify
         working-directory: player-terminal
-        run: npm run verify
+        shell: bash
+        run: |
+          set +e
+          npm run verify 2>&1 | tee "$RUNNER_TEMP/player-terminal-verify.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
+
+      - name: Upload failed verification log
+        if: failure() && steps.player-terminal-verify.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: player-terminal-verify-log
+          path: ${{ runner.temp }}/player-terminal-verify.log
+          if-no-files-found: error
+          retention-days: 7
