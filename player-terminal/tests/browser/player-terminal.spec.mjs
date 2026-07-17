@@ -146,6 +146,14 @@ test("zoom-equivalent narrow layout preserves reflow and critical controls", asy
   const overflow = await horizontalOverflow(page);
   expect(overflow.document).toBeLessThanOrEqual(1);
   expect(overflow.body).toBeLessThanOrEqual(1);
-  const clippedControls = await page.locator("button:visible").evaluateAll((buttons) => buttons.filter((button) => button.scrollWidth > button.clientWidth + 2 && getComputedStyle(button).whiteSpace !== "nowrap").length);
-  expect(clippedControls).toBe(0);
+  const clippedControls = await page.locator("button:visible").evaluateAll((buttons) => buttons
+    .filter((button) => button.scrollWidth > button.clientWidth + 2 && getComputedStyle(button).whiteSpace !== "nowrap")
+    .map((button) => ({
+      text: String(button.textContent || "").trim().replace(/\s+/g, " ").slice(0, 160),
+      ariaLabel: button.getAttribute("aria-label"),
+      className: button.className,
+      scrollWidth: button.scrollWidth,
+      clientWidth: button.clientWidth
+    })));
+  expect(clippedControls, `Clipped controls: ${JSON.stringify(clippedControls)}`).toEqual([]);
 });
