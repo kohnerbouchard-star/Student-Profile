@@ -21,10 +21,6 @@
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
 
-  function saveButton() {
-    return document.querySelector('[data-admin-terminal-action="save-settings"]');
-  }
-
   function absoluteUrl(input) {
     return input instanceof Request
       ? input.url
@@ -139,26 +135,9 @@
     };
   }
 
-  function markSettingsDirty() {
-    const button = saveButton();
-    if (!(button instanceof HTMLButtonElement)) return;
-    if (!button.hasAttribute("data-attendance-reward-core-pending")) {
-      button.dataset.attendanceRewardCorePending = "false";
-    }
-    button.disabled = false;
-    button.removeAttribute("disabled");
-    button.removeAttribute("aria-disabled");
-    button.removeAttribute("data-admin-terminal-api-state");
-    button.dataset.attendanceRewardDirty = "true";
-    button.classList.add("is-dirty");
-  }
-
   function acknowledgeCombinedSave(gameId, attendanceWindow) {
-    const button = saveButton();
-    if (!(button instanceof HTMLButtonElement) || button.dataset.attendanceRewardCorePending !== "true") return;
-    button.removeAttribute("data-attendance-reward-core-pending");
-    button.removeAttribute("data-attendance-reward-dirty");
-    button.classList.remove("is-dirty");
+    const controller = window.EconovariaAttendanceRewardSaveController;
+    if (controller?.combinedCoreSavePending?.() !== true) return;
     document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
       detail: { gameId, attendanceWindow, combined: true },
     }));
@@ -193,16 +172,4 @@
 
     return delegatedFetch(input, init);
   };
-
-  document.addEventListener("input", (event) => {
-    if (event.target instanceof Element && event.target.matches("[data-attendance-reward-field]")) {
-      markSettingsDirty();
-    }
-  }, true);
-
-  document.addEventListener("change", (event) => {
-    if (event.target instanceof Element && event.target.matches("[data-attendance-reward-field]")) {
-      markSettingsDirty();
-    }
-  }, true);
 })();
