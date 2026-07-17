@@ -54,21 +54,36 @@ try {
     }
     root.dataset.settingsNumericRootToken = "stable-root";
     input.dataset.settingsNumericInputToken = "stable-input";
+    window.__settingsNativeInputCount = 0;
+    document.addEventListener("input", (event) => {
+      if (event.target === input) window.__settingsNativeInputCount += 1;
+    });
   });
+
   await numeric.focus();
   await numeric.press("ControlOrMeta+A");
   await numeric.type("2.75", { delay: 35 });
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
 
   const duringNumericEdit = await page.evaluate(() => {
     const root = document.querySelector(".admin-terminal-settings-page");
     const input = document.querySelector('[data-attendance-reward-field="presentRewardAmount"]');
+    const save = root?.querySelector('[data-admin-terminal-action="save-settings"]');
+    const saveBar = root?.querySelector(".admin-terminal-settings-save-bar");
+    const status = root?.querySelector("[data-settings-save-status]");
     return {
       rootStable: root?.dataset.settingsNumericRootToken === "stable-root",
       inputStable: input?.dataset.settingsNumericInputToken === "stable-input",
       focused: document.activeElement === input,
       open: root?.classList.contains("is-custom-settings-open") || false,
       value: input instanceof HTMLInputElement ? input.value : "",
+      nativeInputCount: Number(window.__settingsNativeInputCount || 0),
+      attendanceDirty: window.EconovariaAttendanceRewardSettings?.isDirty?.() === true,
+      sharedDirty: window.EconovariaSimplifiedSettings?.isDirty?.() === true,
+      saveEnabled: save instanceof HTMLButtonElement && !save.disabled,
+      saveVisible: Boolean(saveBar && !saveBar.hidden && getComputedStyle(saveBar).display !== "none"),
+      statusRole: status?.getAttribute("role") || "",
+      statusText: status?.textContent?.trim() || "",
     };
   });
   if (
@@ -76,9 +91,16 @@ try {
     !duringNumericEdit.inputStable ||
     !duringNumericEdit.focused ||
     !duringNumericEdit.open ||
-    duringNumericEdit.value !== "2.75"
+    duringNumericEdit.value !== "2.75" ||
+    duringNumericEdit.nativeInputCount < 1 ||
+    !duringNumericEdit.attendanceDirty ||
+    !duringNumericEdit.sharedDirty ||
+    !duringNumericEdit.saveEnabled ||
+    !duringNumericEdit.saveVisible ||
+    duringNumericEdit.statusRole !== "status" ||
+    !/unsaved/i.test(duringNumericEdit.statusText)
   ) {
-    throw new Error(`Numeric Settings edit lost focus or rerendered: ${JSON.stringify(duringNumericEdit)}`);
+    throw new Error(`Numeric Settings state boundary failed: ${JSON.stringify(duringNumericEdit)}`);
   }
 
   await numeric.blur();
@@ -89,6 +111,12 @@ try {
       root?.classList.contains("has-unsaved-settings") &&
       save instanceof HTMLButtonElement && !save.disabled;
   }, null, { timeout: 5_000 });
+
+  const bridgeSource = await page.request.get(`${BASE_URL}/settings-save-error-bridge.js`);
+  const bridgeText = await bridgeSource.text();
+  if (/stopImmediatePropagation|NUMERIC_EDITOR_SELECTOR|deferredNumericControls/.test(bridgeText)) {
+    throw new Error("Settings error bridge still owns numeric input propagation.");
+  }
 
   await page.evaluate(() => {
     const current = document.querySelector(".admin-terminal-settings-page");
@@ -123,7 +151,7 @@ try {
 
   await capture("settings-disclosure-persistence");
   if (errors.length) throw new Error(errors[0]);
-  console.log("Custom Settings remains open and numeric controls retain focus until editing completes.");
+  console.log("Shared Settings state preserves native events, focus, save feedback, and disclosure state.");
   await finish({ afterOption, duringNumericEdit, errors });
 } catch (error) {
   await capture("settings-disclosure-failure").catch(() => {});
