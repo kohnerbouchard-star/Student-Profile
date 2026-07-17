@@ -6,6 +6,27 @@ function randomToken() {
   return `${Date.now().toString(36)}-${random}`;
 }
 
+function stableValue(value) {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])])
+  );
+}
+
+function hashText(value) {
+  const text = String(value || "");
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export function createRequestId() {
   return `ptr_${randomToken()}`;
 }
@@ -25,4 +46,9 @@ export function parseRetryAfter(value, now = Date.now()) {
 
 export function stableRequestKey({ endpointKey, method, path }) {
   return `${String(method || "GET").toUpperCase()}:${endpointKey}:${path}`;
+}
+
+export function stableOperationKey({ endpointKey, method, path, payload }) {
+  const fingerprint = hashText(JSON.stringify(stableValue(payload || {})));
+  return `${String(method || "POST").toUpperCase()}:${endpointKey}:${path}:${fingerprint}`;
 }
