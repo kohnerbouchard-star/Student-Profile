@@ -15,6 +15,7 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-player-scope-readiness-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
@@ -41,6 +42,7 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-player-scope-readiness-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
@@ -137,6 +139,11 @@ jobs:
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs
+
+      - name: Exercise Player Scope readiness and redemption
+        env:
+          ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/player-scope
+        run: node scripts/admin-player-scope-readiness-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
