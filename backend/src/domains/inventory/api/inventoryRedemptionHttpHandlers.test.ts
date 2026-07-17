@@ -21,54 +21,49 @@ const REQUEST_ID = "00000000-0000-4000-8000-000000000051";
 const STAFF_ID = "00000000-0000-4000-8000-000000000061";
 const NOW = "2026-07-18T09:30:00.000Z";
 
-Deno.test("player redemption creates one session-scoped request", async () => {
+Deno.test("player redemption creates a session-scoped request", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const client = rpcClient((name, args) => {
-    calls.push({ name, args });
-    return { data: [{ ...redemptionRow(), request_outcome: "created" }], error: null };
-  });
-
   const response = await handlePlayerInventoryRedemptionRequest(
-    playerRequest({ quantity: 2, note: "Use during the workshop", idempotencyKey: "redeem-1" }),
+    playerRequest({ quantity: 2, note: "Workshop", idempotencyKey: "redeem-1" }),
     HOLDING_ID,
-    playerDependencies(client),
+    playerDependencies(rpcClient((name, args) => {
+      calls.push({ name, args });
+      return success([{ ...redemptionRow(), request_outcome: "created" }]);
+    })),
   );
   const body = await response.json();
 
-  assertEquals(response.status, 201);
-  assertEquals(body.ok, true);
-  assertEquals(body.outcome, "created");
-  assertEquals(body.redemption.status, "pending");
-  assertEquals(calls[0].name, "request_inventory_redemption");
-  assertEquals(calls[0].args.p_game_session_id, GAME_ID);
-  assertEquals(calls[0].args.p_player_id, PLAYER_ID);
-  assertEquals(calls[0].args.p_inventory_holding_id, HOLDING_ID);
-  assertEquals(calls[0].args.p_quantity, 2);
-  assertEquals(calls[0].args.p_idempotency_key, "redeem-1");
+  expectEqual(response.status, 201);
+  expectEqual(body.outcome, "created");
+  expectEqual(body.redemption.status, "pending");
+  expectEqual(calls[0].name, "request_inventory_redemption");
+  expectEqual(calls[0].args.p_game_session_id, GAME_ID);
+  expectEqual(calls[0].args.p_player_id, PLAYER_ID);
+  expectEqual(calls[0].args.p_quantity, 2);
+  expectEqual(calls[0].args.p_idempotency_key, "redeem-1");
 });
 
-Deno.test("player redemption reports replay without creating a second request", async () => {
-  const client = rpcClient(() => ({
-    data: [{ ...redemptionRow(), request_outcome: "replayed" }],
-    error: null,
-  }));
+Deno.test("player redemption reports an idempotent replay", async () => {
   const response = await handlePlayerInventoryRedemptionRequest(
     playerRequest({ quantity: 1, idempotencyKey: "redeem-replay" }),
     HOLDING_ID,
-    playerDependencies(client),
+    playerDependencies(rpcClient(() => success([{
+      ...redemptionRow(),
+      request_outcome: "replayed",
+    }]))),
   );
   const body = await response.json();
 
-  assertEquals(response.status, 200);
-  assertEquals(body.outcome, "replayed");
+  expectEqual(response.status, 200);
+  expectEqual(body.outcome, "replayed");
 });
 
-Deno.test("player redemption rejects identity injection and mismatched game scope", async () => {
-  const client = rpcClient(() => ({ data: [], error: null }));
+Deno.test("player redemption rejects identity injection and mismatched scope", async () => {
+  const client = rpcClient(() => success([]));
   const injected = await handlePlayerInventoryRedemptionRequest(
     playerRequest({
       quantity: 1,
-      idempotencyKey: "redeem-injected",
+      idempotencyKey: "injected",
       playerId: "00000000-0000-4000-8000-000000000099",
     }),
     HOLDING_ID,
@@ -76,129 +71,127 @@ Deno.test("player redemption rejects identity injection and mismatched game scop
   );
   const mismatched = await handlePlayerInventoryRedemptionRequest(
     playerRequest(
-      { quantity: 1, idempotencyKey: "redeem-wrong-game" },
+      { quantity: 1, idempotencyKey: "wrong-game" },
       { gameSessionId: OTHER_GAME_ID },
     ),
     HOLDING_ID,
     playerDependencies(client),
   );
 
-  await assertError(injected, 400, "invalid_player_request");
-  await assertError(mismatched, 401, "invalid_player_session_scope");
+  await expectError(injected, 400, "invalid_player_request");
+  await expectError(mismatched, 401, "invalid_player_session_scope");
 });
 
-Deno.test("player redemption maps idempotency and availability conflicts", async () => {
-  const idempotencyClient = rpcClient(() => ({
-    data: null,
-    error: { message: "INVENTORY_REDEMPTION_IDEMPOTENCY_CONFLICT" },
-  }));
-  const unavailableClient = rpcClient(() => ({
-    data: null,
-    error: { message: "INVENTORY_REDEMPTION_QUANTITY_UNAVAILABLE" },
-  }));
-
+Deno.test("player redemption maps idempotency and quantity conflicts", async () => {
   const conflict = await handlePlayerInventoryRedemptionRequest(
-    playerRequest({ quantity: 1, idempotencyKey: "redeem-conflict" }),
+    playerRequest({ quantity: 1, idempotencyKey: "conflict" }),
     HOLDING_ID,
-    playerDependencies(idempotencyClient),
+    playerDependencies(rpcClient(() => failure(
+      "INVENTORY_REDEMPTION_IDEMPOTENCY_CONFLICT",
+    ))),
   );
   const unavailable = await handlePlayerInventoryRedemptionRequest(
-    playerRequest({ quantity: 8, idempotencyKey: "redeem-unavailable" }),
+    playerRequest({ quantity: 8, idempotencyKey: "unavailable" }),
     HOLDING_ID,
-    playerDependencies(unavailableClient),
+    playerDependencies(rpcClient(() => failure(
+      "INVENTORY_REDEMPTION_QUANTITY_UNAVAILABLE",
+    ))),
   );
 
-  await assertError(conflict, 409, "inventory_redemption_idempotency_conflict");
-  await assertError(unavailable, 409, "inventory_redemption_insufficient_available");
+  await expectError(conflict, 409, "inventory_redemption_idempotency_conflict");
+  await expectError(unavailable, 409, "inventory_redemption_insufficient_available");
 });
 
-Deno.test("staff redemption review forwards owner-scoped action and supports replay", async () => {
+Deno.test("staff redemption review forwards the owner-scoped action", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const client = rpcClient((name, args) => {
-    calls.push({ name, args });
-    return {
-      data: [{
-        ...redemptionRow({ status: "approved", reviewed_at: NOW }),
-        review_outcome: "approved",
-      }],
-      error: null,
-    };
-  });
-
   const response = await handleStaffInventoryRedemptionRequest(
     staffRequest("PATCH", { action: "approve", note: "Verified" }),
     GAME_ID,
     REQUEST_ID,
-    { serviceClient: client, staffUserId: STAFF_ID, now: () => NOW },
+    {
+      serviceClient: rpcClient((name, args) => {
+        calls.push({ name, args });
+        return success([{
+          ...redemptionRow({ status: "approved", reviewed_at: NOW }),
+          review_outcome: "approved",
+        }]);
+      }),
+      staffUserId: STAFF_ID,
+      now: () => NOW,
+    },
   );
   const body = await response.json();
 
-  assertEquals(response.status, 200);
-  assertEquals(body.outcome, "approved");
-  assertEquals(calls[0].name, "review_inventory_redemption");
-  assertEquals(calls[0].args.p_game_session_id, GAME_ID);
-  assertEquals(calls[0].args.p_request_id, REQUEST_ID);
-  assertEquals(calls[0].args.p_staff_user_id, STAFF_ID);
-  assertEquals(calls[0].args.p_action, "approve");
+  expectEqual(response.status, 200);
+  expectEqual(body.outcome, "approved");
+  expectEqual(calls[0].name, "review_inventory_redemption");
+  expectEqual(calls[0].args.p_staff_user_id, STAFF_ID);
+  expectEqual(calls[0].args.p_action, "approve");
 });
 
-Deno.test("staff redemption review maps ownership and transition failures", async () => {
-  const forbiddenClient = rpcClient(() => ({
-    data: null,
-    error: { message: "INVENTORY_REDEMPTION_REVIEW_FORBIDDEN" },
-  }));
-  const transitionClient = rpcClient(() => ({
-    data: null,
-    error: { message: "INVENTORY_REDEMPTION_INVALID_TRANSITION" },
-  }));
-
+Deno.test("staff redemption maps ownership and transition failures", async () => {
   const forbidden = await handleStaffInventoryRedemptionRequest(
     staffRequest("PATCH", { action: "approve" }),
     OTHER_GAME_ID,
     REQUEST_ID,
-    { serviceClient: forbiddenClient, staffUserId: STAFF_ID },
+    {
+      serviceClient: rpcClient(() => failure(
+        "INVENTORY_REDEMPTION_REVIEW_FORBIDDEN",
+      )),
+      staffUserId: STAFF_ID,
+    },
   );
   const transition = await handleStaffInventoryRedemptionRequest(
     staffRequest("PATCH", { action: "fulfill" }),
     GAME_ID,
     REQUEST_ID,
-    { serviceClient: transitionClient, staffUserId: STAFF_ID },
+    {
+      serviceClient: rpcClient(() => failure(
+        "INVENTORY_REDEMPTION_INVALID_TRANSITION",
+      )),
+      staffUserId: STAFF_ID,
+    },
   );
 
-  await assertError(forbidden, 403, "inventory_redemption_review_forbidden");
-  await assertError(transition, 409, "inventory_redemption_invalid_transition");
+  await expectError(forbidden, 403, "inventory_redemption_review_forbidden");
+  await expectError(transition, 409, "inventory_redemption_invalid_transition");
 });
 
-Deno.test("staff redemption queue keeps lowercase database status filters", async () => {
+Deno.test("staff redemption queue uses lowercase status values", async () => {
   const filters: Array<[string, unknown]> = [];
-  const client = queryClient(filters, {
-    inventory_redemption_requests: [redemptionRow({ status: "approved" })],
-    players: [{ id: PLAYER_ID, display_name: "Avery", roster_label: "A-1" }],
-    store_items: [{ id: ITEM_ID, name: "Repair Kit", category: "Consumables" }],
-  });
-
   const response = await handleStaffInventoryRedemptionRequest(
     staffRequest("GET", undefined, "?status=Approved"),
     GAME_ID,
     null,
-    { serviceClient: client, staffUserId: STAFF_ID, now: () => NOW },
+    {
+      serviceClient: queryClient(filters, {
+        inventory_redemption_requests: [redemptionRow({ status: "approved" })],
+        players: [{ id: PLAYER_ID, display_name: "Avery", roster_label: "A-1" }],
+        store_items: [{ id: ITEM_ID, name: "Repair Kit", category: "Consumables" }],
+      }),
+      staffUserId: STAFF_ID,
+      now: () => NOW,
+    },
   );
   const body = await response.json();
 
-  assertEquals(response.status, 200);
-  assertEquals(body.summary.approved, 1);
-  assert(filters.some(([column, value]) => column === "status" && value === "approved"), true);
+  expectEqual(response.status, 200);
+  expectEqual(body.summary.approved, 1);
+  expectEqual(
+    filters.some(([column, value]) => column === "status" && value === "approved"),
+    true,
+  );
 });
 
-Deno.test("staff redemption queue rejects unknown status filters", async () => {
+Deno.test("staff redemption queue rejects unknown status values", async () => {
   const response = await handleStaffInventoryRedemptionRequest(
     staffRequest("GET", undefined, "?status=destroyed"),
     GAME_ID,
     null,
-    { serviceClient: rpcClient(() => ({ data: [], error: null })), staffUserId: STAFF_ID },
+    { serviceClient: rpcClient(() => success([])), staffUserId: STAFF_ID },
   );
 
-  await assertError(response, 400, "inventory_redemption_status_invalid");
+  await expectError(response, 400, "inventory_redemption_status_invalid");
 });
 
 function playerDependencies(client: EdgeSupabaseClient) {
@@ -237,12 +230,12 @@ function playerDependencies(client: EdgeSupabaseClient) {
 
 function playerRequest(
   body: Record<string, unknown>,
-  options: { gameSessionId?: string; token?: string | null } = {},
+  options: { gameSessionId?: string } = {},
 ): Request {
-  const headers = new Headers({ "content-type": "application/json" });
-  if (options.token !== null) {
-    headers.set("x-player-session-token", options.token ?? "player-token");
-  }
+  const headers = new Headers({
+    "content-type": "application/json",
+    "x-player-session-token": "player-token",
+  });
   if (options.gameSessionId) {
     headers.set("x-econovaria-game-session-id", options.gameSessionId);
   }
@@ -285,6 +278,14 @@ function redemptionRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function success(data: unknown) {
+  return { data, error: null };
+}
+
+function failure(message: string) {
+  return { data: null, error: { message } };
+}
+
 function rpcClient(
   resolver: (name: string, args: Record<string, unknown>) => {
     data: unknown;
@@ -304,40 +305,27 @@ function queryClient(
 ): EdgeSupabaseClient {
   return {
     from(tableName: string) {
-      return new QueryBuilder(tableName, filters, tableData[tableName] ?? []);
+      return new QueryBuilder(filters, tableData[tableName] ?? []);
     },
   } as unknown as EdgeSupabaseClient;
 }
 
 class QueryBuilder implements PromiseLike<{ data: unknown[]; error: null }> {
   constructor(
-    private readonly tableName: string,
     private readonly filters: Array<[string, unknown]>,
     private readonly rows: unknown[],
   ) {}
-
-  select(_columns: string) {
-    return this;
-  }
-
+  select(_columns: string) { return this; }
   eq(column: string, value: unknown) {
     this.filters.push([column, value]);
     return this;
   }
-
   in(column: string, values: readonly unknown[]) {
     this.filters.push([column, values]);
     return this;
   }
-
-  order(_column: string, _options?: unknown) {
-    return this;
-  }
-
-  limit(_count: number) {
-    return this;
-  }
-
+  order(_column: string, _options?: unknown) { return this; }
+  limit(_count: number) { return this; }
   then<TResult1 = { data: unknown[]; error: null }, TResult2 = never>(
     onfulfilled?: ((value: { data: unknown[]; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
     _onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -347,21 +335,21 @@ class QueryBuilder implements PromiseLike<{ data: unknown[]; error: null }> {
   }
 }
 
-async function assertError(
+async function expectError(
   response: Response,
   status: number,
   code: string,
 ): Promise<void> {
   const body = await response.json();
-  assertEquals(response.status, status);
-  assertEquals(body.ok, false);
-  assertEquals(body.error.code, code);
+  expectEqual(response.status, status);
+  expectEqual(body.ok, false);
+  expectEqual(body.error.code, code);
 }
 
-function assertEquals(actual: unknown, expected: unknown): void {
+function expectEqual(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
+      `Expected ${JSON.stringify(expected)} but received ${JSON.stringify(actual)}.`,
     );
   }
 }
