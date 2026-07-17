@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "./icons.js";
 import { renderStatusPill } from "./ui.js";
+import { isRouteEnabled } from "../api/capabilities.js";
 
 export const PLAYER_NAV_GROUPS = Object.freeze([
   { id: "home", label: "Home", iconName: "dashboard", defaultRoute: "dashboard", routes: [{ route: "dashboard", label: "Dashboard" }] },
@@ -32,8 +33,16 @@ const ROUTE_META = Object.freeze(Object.fromEntries(
   PLAYER_NAV_GROUPS.flatMap((group) => group.routes.map((item) => [item.route, { ...item, groupId: group.id, groupLabel: group.label }]))
 ));
 
-function activeGroupForRoute(route) {
-  return PLAYER_NAV_GROUPS.find((group) => group.routes.some((item) => item.route === route)) || PLAYER_NAV_GROUPS[0];
+function enabledGroups(capabilities) {
+  return PLAYER_NAV_GROUPS.map((group) => {
+    const routes = group.routes.filter((item) => isRouteEnabled(capabilities, item.route));
+    return routes.length ? { ...group, routes, defaultRoute: routes[0].route } : null;
+  }).filter(Boolean);
+}
+
+function activeGroupForRoute(route, capabilities) {
+  const groups = enabledGroups(capabilities);
+  return groups.find((group) => group.routes.some((item) => item.route === route)) || groups[0];
 }
 
 function logoMark() {
@@ -54,12 +63,13 @@ function renderNavGroup(group, route, data) {
 }
 
 function renderSidebar(route, data, collapsed) {
+  const groups = enabledGroups(data.capabilities);
   return `<aside class="player-terminal-left-menu" aria-label="Player terminal navigation">
     <div class="player-terminal-menu-top">
       <div class="player-terminal-brand"><span class="player-terminal-brand-mark">${logoMark()}</span><div class="player-terminal-brand-copy"><strong>Player</strong><small>Terminal</small></div></div>
     </div>
     <nav class="player-terminal-nav" aria-label="Primary sections">
-      ${PLAYER_NAV_GROUPS.map((group) => renderNavGroup(group, route, data)).join("")}
+      ${groups.map((group) => renderNavGroup(group, route, data)).join("")}
     </nav>
     <div class="player-terminal-side-code">
       <button class="player-terminal-side-code-compact" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}" aria-label="Copy game code ${escapeHtml(data.session.gameCode)}"><span class="player-terminal-share-arrow">↗</span></button>
@@ -91,25 +101,29 @@ function renderTopbar(route, data, ui, config) {
   </header>`;
 }
 
-function renderContextNav(route) {
-  const group = activeGroupForRoute(route);
+function renderContextNav(route, capabilities) {
+  const group = activeGroupForRoute(route, capabilities);
+  if (!group) return "";
   if (group.routes.length <= 1) return "";
   return `<nav class="player-terminal-context-nav" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}"${item.route === route ? ' aria-current="page"' : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>`;
 }
 
 function renderMobileNavigation(route, data, open) {
-  const group = activeGroupForRoute(route);
-  const primary = PLAYER_NAV_GROUPS.filter((item) => ["home", "finance", "work", "trade"].includes(item.id));
+  const groups = enabledGroups(data.capabilities);
+  const group = activeGroupForRoute(route, data.capabilities);
+  const primary = PLAYER_NAV_GROUPS
+    .filter((item) => ["home", "finance", "work", "trade"].includes(item.id))
+    .map((item) => groups.find((enabled) => enabled.id === item.id) || { ...item, unavailable: true });
   const moreActive = ["world", "messages", "profile"].includes(group.id);
   return `<nav class="player-terminal-mobile-nav" aria-label="Mobile primary navigation">
-    ${primary.map((item) => `<button type="button" data-route="${item.defaultRoute}" class="${item.id === group.id ? "active" : ""}" aria-label="${escapeHtml(item.label)}"${item.id === group.id ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><strong>${escapeHtml(item.label)}</strong></button>`).join("")}
+    ${primary.map((item) => `<button type="button" data-route="${item.defaultRoute}" class="${item.id === group.id ? "active" : ""}" aria-label="${escapeHtml(item.unavailable ? `${item.label} is not available` : item.label)}"${item.unavailable ? ' disabled aria-disabled="true" title="Not available in this game"' : ""}${item.id === group.id ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><strong>${escapeHtml(item.label)}</strong></button>`).join("")}
     <button type="button" data-player-local-action="toggle-mobile-menu" class="${moreActive || open ? "active" : ""}" aria-expanded="${String(open)}" aria-label="${open ? "Close" : "Open"} more sections"><span>${icon("menu")}</span><strong>More</strong>${data.messages?.unread ? `<small>${escapeHtml(data.messages.unread)}</small>` : ""}</button>
   </nav>
   <div class="player-terminal-mobile-sheet${open ? " is-open" : ""}" ${open ? "" : "hidden"}>
     <button class="player-terminal-mobile-sheet-scrim" type="button" data-player-local-action="toggle-mobile-menu" aria-label="Close menu"></button>
     <section role="dialog" aria-modal="true" aria-label="More player sections" tabindex="-1">
       <header><div><span>MORE SECTIONS</span><strong>Navigate the terminal</strong></div><button type="button" data-player-local-action="toggle-mobile-menu" aria-label="Close menu">${icon("close")}</button></header>
-      <div>${PLAYER_NAV_GROUPS.filter((item) => ["world", "messages", "profile"].includes(item.id)).flatMap((item) => item.routes.map((subitem) => `<button type="button" data-route="${subitem.route}" class="${subitem.route === route ? "active" : ""}"${subitem.route === route ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><div><strong>${escapeHtml(subitem.label)}</strong><small>${escapeHtml(item.label)}</small></div>${icon("chevronRight")}</button>`)).join("")}</div>
+      <div>${groups.filter((item) => ["world", "messages", "profile"].includes(item.id)).flatMap((item) => item.routes.map((subitem) => `<button type="button" data-route="${subitem.route}" class="${subitem.route === route ? "active" : ""}"${subitem.route === route ? ' aria-current="page"' : ""}><span>${icon(item.iconName)}</span><div><strong>${escapeHtml(subitem.label)}</strong><small>${escapeHtml(item.label)}</small></div>${icon("chevronRight")}</button>`)).join("")}</div>
       <button class="player-terminal-mobile-game-code" type="button" data-player-local-action="copy-game-code" data-game-code="${escapeHtml(data.session.gameCode)}"><span>Game code</span><strong>${escapeHtml(data.session.gameCode)}</strong></button>
     </section>
   </div>`;
@@ -122,7 +136,7 @@ export function renderShell({ route, data, pageHtml, ui, config }) {
       ${renderSidebar(route, data, ui.sidebarCollapsed)}
       <main id="player-main-content" class="player-terminal-shell-main" tabindex="-1">
         ${renderTopbar(route, data, ui, config)}
-        ${renderContextNav(route)}
+        ${renderContextNav(route, data.capabilities)}
         <div class="player-terminal-page-host">${pageHtml}</div>
       </main>
     </div>

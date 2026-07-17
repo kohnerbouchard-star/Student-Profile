@@ -17,7 +17,7 @@ export function renderBankingPage(data) {
 
   return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
     <header class="player-terminal-page-heading">
-      <div><small>ELDORAN CIVIC BANK</small><h2>Banking</h2><p>Review account balances, transaction history, and transfer connection points.</p></div>
+      <div><small>ELDORAN CIVIC BANK</small><h2>Banking</h2><p>Review account balances, transaction history, and available transfer tools.</p></div>
       <div class="player-terminal-heading-actions">${renderStatusPill(`CREDIT ${bank.creditScore}`, "green")}</div>
     </header>
 
@@ -29,7 +29,7 @@ export function renderBankingPage(data) {
 
     <div class="player-terminal-bank-layout">
       <section class="player-terminal-panel player-terminal-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill("API READY", "cyan")}</header>
+        <header class="player-terminal-panel-header"><div><span>INTERNAL TRANSFER</span><strong>Move funds</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}</header>
         <details class="player-terminal-disclosure" open><summary><span>${icon("arrowSwap")}</span><div><strong>Transfer between your accounts</strong><small>Move funds between checking and savings</small></div>${icon("chevronRight")}</summary><form data-player-form="savings-transfer" data-endpoint="savingsTransfer">
           <label>FROM ACCOUNT<select name="fromAccount"><option value="checking">Checking · ${escapeHtml(bank.checking.accountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings.accountId)}</option></select></label>
           <label>TO ACCOUNT<select name="toAccount"><option value="savings">Savings · ${escapeHtml(bank.savings.accountId)}</option><option value="checking">Checking · ${escapeHtml(bank.checking.accountId)}</option></select></label>
@@ -40,8 +40,8 @@ export function renderBankingPage(data) {
       </section>
 
       <section class="player-terminal-panel player-terminal-external-transfer-panel">
-        <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill("REQUIRES API", "amber")}</header>
-        <details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>Recipient verification occurs after API connection</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer">
+        <header class="player-terminal-panel-header"><div><span>PLAYER TRANSFER</span><strong>Send funds</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
+        <details class="player-terminal-disclosure"><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The recipient is verified before funds move</small></div>${icon("chevronRight")}</summary><form data-player-form="bank-transfer" data-endpoint="bankTransfer">
           <label>RECIPIENT PLAYER ID<input name="recipientPlayerId" type="text" required pattern="[A-Za-z]{2}-[0-9]{4}-[0-9]{3}" title="Use the format EN-0000-000" autocomplete="off" autocapitalize="characters" placeholder="EN-0000-000" /></label>
           <label>AMOUNT<input name="amount" type="number" min="1" max="${escapeHtml(bank.transferLimit)}" step="1" required placeholder="0" /></label>
           <label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label>

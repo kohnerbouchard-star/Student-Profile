@@ -27,7 +27,7 @@ export function renderPortfolioPage(data) {
   return `<section class="player-terminal-page player-terminal-portfolio-page" data-page="portfolio">
     <header class="player-terminal-page-heading">
       <div><small>WEALTH & PERFORMANCE CENTER</small><h2>Portfolio</h2><p>See your complete financial position without adding another complex management system.</p></div>
-      <div class="player-terminal-heading-actions">${renderStatusPill("READ MODEL", "purple")}<button class="player-terminal-primary-button player-terminal-portfolio-trade" type="button" data-route="market">${icon("market")} Open market</button></div>
+      <div class="player-terminal-heading-actions">${renderStatusPill("CURRENT VIEW", "purple")}<button class="player-terminal-primary-button player-terminal-portfolio-trade" type="button" data-route="market">${icon("market")} Open market</button></div>
     </header>
 
     <div class="player-terminal-portfolio-metrics">

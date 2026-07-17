@@ -24,14 +24,10 @@ export function renderStorePage(data, ui) {
 
     <div class="player-terminal-store-toolbar">
       <div class="player-terminal-filter-row">${data.store.categories.map((item) => `<button type="button" class="${item === category ? "active" : ""}" data-player-store-category="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}</div>
-      <label class="player-terminal-search-field">${icon("eye")}<input type="search" placeholder="Search inventory" data-player-store-search /></label>
+      <label class="player-terminal-search-field">${icon("eye")}<input type="search" placeholder="Search store" data-player-store-search /></label>
     </div>
 
     <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, currencyCode)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
 
-    <section class="player-terminal-panel player-terminal-connection-note">
-      <div>${icon("globe")}<span><strong>Store purchase connector</strong><small>Purchase buttons produce a typed payload for POST /store/purchases and remain pending until the backend responds.</small></span></div>
-      ${renderStatusPill("NOT WIRED", "amber")}
-    </section>
   </section>`;
 }

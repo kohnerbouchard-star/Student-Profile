@@ -42,7 +42,7 @@ export function renderBusinessPage(data) {
       </section>
 
       <section class="player-terminal-panel player-terminal-business-actions">
-        <header class="player-terminal-panel-header"><div><span>OPERATIONS</span><strong>Run the company</strong></div>${renderStatusPill("API READY", "amber")}</header>
+        <header class="player-terminal-panel-header"><div><span>OPERATIONS</span><strong>Run the company</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
         <details class="player-terminal-disclosure" open><summary><span>${icon("factory")}</span><div><strong>Start a production run</strong><small>Choose a product, run size, and priority</small></div>${icon("chevronRight")}</summary><form data-player-form="business-production" data-endpoint="businessProduction">
           <label>PRODUCT<select name="productId" required ${business.products.length ? "" : "disabled"}>${business.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)}</option>`).join("") || `<option value="">No products configured</option>`}</select></label>
           <label>RUN SIZE<input name="quantity" type="number" min="1" max="${escapeHtml(business.operations.maxRun)}" value="10" required /></label>
@@ -57,7 +57,7 @@ export function renderBusinessPage(data) {
       </section>
 
       <section class="player-terminal-panel player-terminal-business-products">
-        <header class="player-terminal-panel-header"><div><span>PRODUCT LINE</span><strong>${escapeHtml(business.products.length)} active products</strong></div><small>Pricing changes require backend confirmation</small></header>
+        <header class="player-terminal-panel-header"><div><span>PRODUCT LINE</span><strong>${escapeHtml(business.products.length)} active products</strong></div><small>Pricing changes apply only after confirmation</small></header>
         <div>${business.products.length ? business.products.map((product) => productRow(product, code)).join("") : renderEmptyState({ title: "No products configured", detail: "The company product line will appear after business data is connected.", iconName: "business" })}</div>
       </section>
 

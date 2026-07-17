@@ -2,18 +2,18 @@ import { escapeHtml, formatPercent } from "../core/format.js";
 import { icon } from "./icons.js";
 import { renderStatusPill } from "./ui.js";
 
-export function renderModal(modal) {
+export function renderModal(modal, config = {}) {
   if (!modal) return "";
 
   if (modal.type === "connection") {
-    const payload = JSON.stringify(modal.payload || {}, null, 2);
+    const diagnostics = modal.developerDiagnostics === true && config.environment === "development";
+    const payload = diagnostics ? JSON.stringify(modal.payload || {}, null, 2) : "";
     return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
       <section class="player-terminal-modal player-terminal-connector-modal" role="dialog" aria-modal="true" aria-labelledby="connectorModalTitle">
-        <header class="player-terminal-modal-head"><div><small>BACKEND CONNECTION POINT</small><h3 id="connectorModalTitle">Frontend request is ready</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
+        <header class="player-terminal-modal-head"><div><small>ACTION UNAVAILABLE</small><h3 id="connectorModalTitle">This action is not connected yet</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
         <div class="player-terminal-modal-body">
-          <div class="player-terminal-connector-status">${renderStatusPill("AWAITING API", "amber")}<p>The interface reached the defined action boundary. No fake transaction was completed because a backend adapter is not connected.</p></div>
-          <dl class="player-terminal-connector-meta"><div><dt>ENDPOINT KEY</dt><dd>${escapeHtml(modal.endpointKey)}</dd></div><div><dt>METHOD</dt><dd>${escapeHtml(modal.method)}</dd></div><div><dt>PATH</dt><dd><code>${escapeHtml(modal.path)}</code></dd></div></dl>
-          <div class="player-terminal-payload-preview"><small>TYPED PAYLOAD</small><pre>${escapeHtml(payload)}</pre></div>
+          <div class="player-terminal-connector-status">${renderStatusPill("NOT AVAILABLE", "amber")}<p>No transaction was completed. This feature will become available after the game service enables it.</p></div>
+          ${diagnostics ? `<dl class="player-terminal-connector-meta"><div><dt>ENDPOINT KEY</dt><dd>${escapeHtml(modal.endpointKey)}</dd></div><div><dt>METHOD</dt><dd>${escapeHtml(modal.method)}</dd></div><div><dt>PATH</dt><dd><code>${escapeHtml(modal.path)}</code></dd></div></dl><div class="player-terminal-payload-preview"><small>DEVELOPMENT PAYLOAD</small><pre>${escapeHtml(payload)}</pre></div>` : ""}
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-primary-button" type="button" data-player-local-action="close-modal">Acknowledge</button></footer>
       </section>

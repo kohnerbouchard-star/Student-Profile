@@ -42,6 +42,6 @@ The function must return the v7 read model expected by the requested endpoint. W
 
 - `econovaria:player-session-required`: no existing session was available.
 - `econovaria:player-session-invalid`: the API returned HTTP 401.
-- `econovaria:player-logout-requested`: the player selected Sign out; the host performs the actual logout.
+- `econovaria:player-logout-requested`: the player selected Sign out; the host performs the actual logout. The detail contains only the reason, terminal name, game-session ID, and player-session ID—never a session token.
 
 No credentials or session tokens are persisted by this package.

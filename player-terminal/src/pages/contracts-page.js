@@ -43,7 +43,7 @@ export function renderContractsPage(data, ui) {
 
   return `<section class="player-terminal-page player-terminal-contracts-page" data-page="contracts">
     <header class="player-terminal-page-heading">
-      <div><small>MISSION & WORKFLOW CENTER</small><h2>Contracts</h2><p>Follow one visible lifecycle from availability through review and reward. Every state change remains backend-confirmed.</p></div>
+      <div><small>MISSION & WORKFLOW CENTER</small><h2>Contracts</h2><p>Follow one visible lifecycle from availability through review and reward. Every state change is confirmed before progress updates.</p></div>
       <div class="player-terminal-heading-actions">${renderStatusPill(`${contracts.length} ${tab.toUpperCase()}`, contractTone(selected || { urgency: "low" }))}</div>
     </header>
 
@@ -65,7 +65,7 @@ export function renderContractsPage(data, ui) {
           ${renderTimeline(selected)}
         </div>
 
-        ${selected.status === "Available" ? `<div class="player-terminal-contract-action-panel"><p>Accepting this contract will add it to your active workload. The backend must confirm eligibility and capacity.</p><button class="player-terminal-primary-button" type="button" data-player-contract-accept="${escapeHtml(selected.id)}">${icon("contracts")} Accept contract</button></div>` : selected.status === "Active" ? `<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(selected.id)}">
+        ${selected.status === "Available" ? `<div class="player-terminal-contract-action-panel"><p>Accepting this contract will add it to your active workload after eligibility and capacity are confirmed.</p><button class="player-terminal-primary-button" type="button" data-player-contract-accept="${escapeHtml(selected.id)}">${icon("contracts")} Accept contract</button></div>` : selected.status === "Active" ? `<form class="player-terminal-contract-submit" data-player-form="contract-submit" data-endpoint="contractSubmit" data-contract-id="${escapeHtml(selected.id)}">
           <label>SUBMISSION LINK<input name="submissionUrl" type="url" placeholder="https://..." required /></label>
           <label>PLAYER NOTE<textarea name="note" rows="3" placeholder="Briefly describe the submitted work."></textarea></label>
           <input type="hidden" name="contractId" value="${escapeHtml(selected.id)}" />

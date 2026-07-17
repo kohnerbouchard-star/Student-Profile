@@ -1,5 +1,6 @@
 import { escapeHtml, formatCurrency, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "./icons.js";
+import { playerSafeErrorMessage } from "../api/errors.js";
 
 export function renderStatusPill(label, tone = "cyan") {
   return `<span class="player-terminal-status-pill is-${escapeHtml(tone)}"><i aria-hidden="true"></i>${escapeHtml(label)}</span>`;
@@ -41,9 +42,9 @@ export function renderSkeletonPage() {
 export function renderConnectionError(error) {
   return `<section class="player-terminal-page player-terminal-error-page">
     <span class="player-terminal-error-icon">!</span>
-    <small>PLAYER API UNAVAILABLE</small>
+    <small>GAME SERVICE UNAVAILABLE</small>
     <h2>Connection could not be established</h2>
-    <p>${escapeHtml(error?.message || "The player terminal could not load backend data.")}</p>
+    <p>${escapeHtml(playerSafeErrorMessage(error))}</p>
     <button class="player-terminal-primary-button" type="button" data-player-action="refresh-data">${icon("refresh")} Retry connection</button>
   </section>`;
 }

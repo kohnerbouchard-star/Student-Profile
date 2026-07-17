@@ -46,7 +46,7 @@ export function renderMarketplacePage(data, ui) {
       </section>
 
       <section class="player-terminal-panel player-terminal-marketplace-create">
-        <header class="player-terminal-panel-header"><div><span>SELL INVENTORY</span><strong>Create a listing</strong></div>${renderStatusPill("REQUIRES API", "amber")}</header>
+        <header class="player-terminal-panel-header"><div><span>SELL INVENTORY</span><strong>Create a listing</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "amber")}</header>
         <details class="player-terminal-disclosure"><summary><span>${icon("tag")}</span><div><strong>List an inventory item</strong><small>Set quantity, price, and expiry</small></div>${icon("chevronRight")}</summary><form data-player-form="marketplace-listing" data-endpoint="marketplaceListing">
           <label>INVENTORY ITEM<select name="inventoryItemId" required ${data.inventory.items.length ? "" : "disabled"}>${data.inventory.items.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${escapeHtml(item.quantity)} owned</option>`).join("") || `<option value="">No inventory available</option>`}</select></label>
           <label>QUANTITY<input name="quantity" type="number" min="1" value="1" required ${data.inventory.items.length ? "" : "disabled"} /></label>

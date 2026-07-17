@@ -1,3 +1,18 @@
+# v7.5.0 — API-readiness hardening
+
+- Replaced the eighteen-read all-or-nothing bootstrap with session/dashboard bootstrap and route-local lazy loading.
+- Added fail-closed route and action capabilities for connected environments.
+- Disabled preview records in production and staging, including query-string attempts.
+- Added adapter timeouts, cancellation signals, request IDs, read deduplication, and normalized safe errors.
+- Added player-session, request-ID, and idempotency headers to direct HTTP mode.
+- Added session-generation isolation so host session replacement aborts outstanding work and cannot admit stale reads, invalidations, or cooldowns into the new player session.
+- Added per-action/resource write serialization, short cooldowns, and critical-write idempotency keys.
+- Added targeted post-write invalidation and authoritative refetches.
+- Added bounded response normalization, remote-image allowlisting, finite-number handling, and write-payload validation.
+- Removed the provisional logout endpoint and retained host-owned sign-out.
+- Removed player-facing API placeholder language and gated unavailable controls.
+- Preserved all approved v7 CSS, icon, map, responsive, and visual evidence locks.
+
 # v7.4.0 — Surgical visual normalization
 
 - Preserved the approved v7 CSS layers, icon component, map geometry, and session/API adapter.

@@ -1,6 +1,8 @@
 import { PlayerApi } from "./api/player-api.js";
 import { PLAYER_ENDPOINTS, resolveEndpoint } from "./api/endpoints.js";
-import { ApiConnectionPendingError } from "./api/errors.js";
+import { ApiConnectionPendingError, normalizeApiError } from "./api/errors.js";
+import { isActionEnabled, isEndpointEnabled, isRouteEnabled, resolveCapabilities } from "./api/capabilities.js";
+import { normalizeWritePayload } from "./api/payload-normalizer.js";
 import { PLAYER_NAV_GROUPS, renderShell } from "./components/layout.js";
 import { renderModal } from "./components/modal.js";
 import { renderConnectionError, renderSkeletonPage } from "./components/ui.js";
@@ -9,6 +11,7 @@ import { navigate, readRoute } from "./core/router.js";
 import { createStore } from "./core/store.js";
 import { focusFirstInteractive, setButtonProcessing } from "./core/dom.js";
 import { applyPlayerSessionHandoff, dispatchHostEvent, resolveExistingPlayerSession } from "./api/session-handoff.js";
+import { createEmptyReadModels } from "./data/empty-read-models.js";
 import { renderDashboardPage } from "./pages/dashboard-page.js";
 import { renderNewsPage } from "./pages/news-page.js";
 import { renderMarketPage } from "./pages/market-page.js";
@@ -70,16 +73,6 @@ function initialMarkup(label = "INITIALIZING PLAYER TERMINAL") {
   return `<div class="player-terminal-overview player-terminal-loading-shell" role="status" aria-live="polite"><div class="player-terminal-loading-brand"><span>E</span><div><strong>ECONOVARIA</strong><small>${escapeHtml(label)}</small></div></div>${renderSkeletonPage()}</div>`;
 }
 
-function normalizePayload(endpointKey, raw) {
-  const payload = { ...raw };
-  ["quantity", "limitPrice", "amount", "unitPrice", "price", "durationHours"].forEach((key) => {
-    if (payload[key] !== undefined && payload[key] !== "") payload[key] = Number(payload[key]);
-    if (payload[key] === "") delete payload[key];
-  });
-  if (endpointKey === "marketOrder") payload.timeInForce = "GTC";
-  return payload;
-}
-
 export function createPlayerTerminal({ mount, config }) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("A valid player terminal mount element is required.");
 
@@ -89,6 +82,8 @@ export function createPlayerTerminal({ mount, config }) {
     route: readRoute(),
     data: null,
     error: null,
+    routeLoading: {},
+    routeErrors: {},
     modal: null,
     ui: {
       sidebarCollapsed: readStoredBoolean("econovaria.player.sidebarCollapsed", false),
@@ -114,6 +109,8 @@ export function createPlayerTerminal({ mount, config }) {
   let clockTimer = 0;
   let pendingFocusSelector = "";
   let restoreFocusSelector = "";
+  const routeRequestVersions = new Map();
+  let terminalLoadVersion = 0;
 
   function selectorForElement(element) {
     if (!(element instanceof HTMLElement)) return "";
@@ -194,16 +191,23 @@ export function createPlayerTerminal({ mount, config }) {
       return;
     }
 
-    const pageRenderer = PAGE_RENDERERS[state.route] || PAGE_RENDERERS.dashboard;
     let pageHtml;
-    try {
-      pageHtml = pageRenderer(state.data, state.ui, config);
-    } catch (error) {
-      console.error(`Failed to render player route ${state.route}`, error);
-      pageHtml = `<section class="player-terminal-page player-terminal-route-error" role="alert"><small>VIEW COULD NOT BE RENDERED</small><h2>${escapeHtml(ROUTE_TITLES[state.route] || "Player view")} is temporarily unavailable</h2><p>${escapeHtml(error?.message || "The page received incomplete or invalid data.")}</p><button class="player-terminal-primary-button" type="button" data-player-action="refresh-data">Retry data load</button></section>`;
+    if (state.routeLoading[state.route]) {
+      pageHtml = renderSkeletonPage();
+    } else if (state.routeErrors[state.route]) {
+      pageHtml = `<section class="player-terminal-page player-terminal-route-error" role="alert"><small>SECTION UNAVAILABLE</small><h2>${escapeHtml(ROUTE_TITLES[state.route] || "Player view")} could not be loaded</h2><p>This section encountered a data problem. The rest of the terminal remains available.</p><button class="player-terminal-primary-button" type="button" data-player-action="retry-route">Retry this section</button></section>`;
+    } else {
+      const pageRenderer = PAGE_RENDERERS[state.route] || PAGE_RENDERERS.dashboard;
+      try {
+        pageHtml = pageRenderer(state.data, state.ui, config);
+      } catch (error) {
+        if (config.developerDiagnostics) console.error(`Failed to render player route ${state.route}`, error);
+        pageHtml = `<section class="player-terminal-page player-terminal-route-error" role="alert"><small>VIEW COULD NOT BE RENDERED</small><h2>${escapeHtml(ROUTE_TITLES[state.route] || "Player view")} is temporarily unavailable</h2><p>The page received incomplete or invalid data.</p><button class="player-terminal-primary-button" type="button" data-player-action="retry-route">Retry this section</button></section>`;
+      }
     }
-    mount.innerHTML = `${renderShell({ route: state.route, data: state.data, pageHtml, ui: state.ui, config })}${renderModal(state.modal)}`;
+    mount.innerHTML = `${renderShell({ route: state.route, data: state.data, pageHtml, ui: state.ui, config })}${renderModal(state.modal, config)}`;
     mount.querySelectorAll("[data-player-form]").forEach((form) => { form.noValidate = true; });
+    applyCapabilityControls(state.data.capabilities);
     const appRoot = mount.querySelector(".player-terminal-app-root");
     const shell = mount.querySelector(".player-terminal-shell");
     const mobileNav = mount.querySelector(".player-terminal-mobile-nav");
@@ -218,6 +222,53 @@ export function createPlayerTerminal({ mount, config }) {
     document.title = `${ROUTE_TITLES[state.route] || "Dashboard"} · Econovaria Player Terminal`;
     updateClock();
     focusAfterRender(state);
+  }
+
+  function disableControl(control, reason = "Not available in this game.") {
+    if (!(control instanceof HTMLElement)) return;
+    if (control.matches("form")) {
+      control.querySelectorAll("input, select, textarea, button").forEach((field) => { field.disabled = true; });
+    } else if ("disabled" in control) {
+      control.disabled = true;
+    }
+    control.setAttribute("aria-disabled", "true");
+    control.setAttribute("title", reason);
+  }
+
+  function applyCapabilityControls(capabilities) {
+    mount.querySelectorAll("[data-route]").forEach((control) => {
+      if (!isRouteEnabled(capabilities, control.dataset.route)) disableControl(control, "This section is not enabled for the current game.");
+    });
+
+    mount.querySelectorAll("[data-player-form][data-endpoint]").forEach((form) => {
+      if (!isEndpointEnabled(capabilities, form.dataset.endpoint)) disableControl(form);
+    });
+
+    const endpointControls = [
+      ["[data-player-marketplace-cancel]", "marketplaceCancel"],
+      ["[data-player-skill-unlock]", "progressionUnlock"],
+      ["[data-player-reward-claim]", "progressionClaim"],
+      ["[data-player-market-watchlist]", "marketWatchlist"],
+      ["[data-player-purchase]", "storePurchase"],
+      ["[data-player-contract-accept]", "contractAccept"],
+      ["[data-player-inventory-use]", "inventoryUse"],
+      ["[data-player-action=\"notifications-read\"]", "notificationsRead"]
+    ];
+    endpointControls.forEach(([selector, endpointKey]) => {
+      if (!isEndpointEnabled(capabilities, endpointKey)) mount.querySelectorAll(selector).forEach((control) => disableControl(control));
+    });
+
+    const localControls = Object.freeze({
+      "download-transactions": "bankingExport",
+      "market-search": "marketSearch",
+      "chart-range": "chartRange",
+      "message-search": "messageSearch",
+      "message-attachment": "messageAttachment"
+    });
+    mount.querySelectorAll("[data-player-local-action]").forEach((control) => {
+      const action = localControls[control.dataset.playerLocalAction];
+      if (action && !isActionEnabled(capabilities, action)) disableControl(control);
+    });
   }
 
   function updateClock() {
@@ -242,9 +293,71 @@ export function createPlayerTerminal({ mount, config }) {
     }, 2600);
   }
 
+  function handleInvalidSession(error) {
+    terminalLoadVersion += 1;
+    const detail = {
+      reason: "invalid_player_session",
+      status: Number(error?.status || 401),
+      code: String(error?.code || "SESSION_INVALID"),
+      requestId: String(error?.requestId || "")
+    };
+    if (typeof config.onSessionInvalid === "function") config.onSessionInvalid(detail);
+    dispatchHostEvent(config.sessionInvalidEvent, detail);
+    store.setState({ status: "waiting", error: null, modal: null, routeLoading: {}, routeErrors: {} });
+  }
+
+  async function loadRouteData(route, { force = false } = {}) {
+    const current = store.getState();
+    const loadVersion = terminalLoadVersion;
+    if (current.status !== "ready") return;
+    if (!isRouteEnabled(current.data.capabilities, route)) {
+      if (route !== "dashboard") navigate("dashboard");
+      showToast("That section is not enabled for the current game.", "amber");
+      return;
+    }
+
+    const version = (routeRequestVersions.get(route) || 0) + 1;
+    routeRequestVersions.set(route, version);
+    store.setState((state) => ({
+      ...state,
+      routeLoading: { ...state.routeLoading, [route]: true },
+      routeErrors: { ...state.routeErrors, [route]: null }
+    }));
+
+    try {
+      const result = await api.loadRoute(route, { force });
+      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion) return;
+      store.setState((state) => {
+        const data = { ...state.data, ...result.data };
+        if (result.data.session || result.data.dashboard) {
+          data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
+        }
+        return {
+          ...state,
+          data,
+          routeLoading: { ...state.routeLoading, [route]: false },
+          routeErrors: { ...state.routeErrors, [route]: null }
+        };
+      });
+    } catch (error) {
+      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion) return;
+      if (Number(error?.status) === 401) {
+        handleInvalidSession(error);
+        return;
+      }
+      store.setState((state) => ({
+        ...state,
+        routeLoading: { ...state.routeLoading, [route]: false },
+        routeErrors: { ...state.routeErrors, [route]: error }
+      }));
+    }
+  }
+
   async function loadData() {
+    const loadVersion = ++terminalLoadVersion;
     if (!config.usePreviewData) {
       const existingSession = await resolveExistingPlayerSession(config);
+      if (terminalLoadVersion !== loadVersion) return;
       if (!existingSession) {
         store.setState({ status: "waiting", error: null, modal: null });
         const detail = { reason: "missing_player_session", terminal: "player" };
@@ -256,19 +369,23 @@ export function createPlayerTerminal({ mount, config }) {
       api.setSession(existingSession);
     }
 
-    store.setState({ status: "loading", error: null, modal: null });
+    store.setState({ status: "loading", error: null, modal: null, routeLoading: {}, routeErrors: {} });
     try {
-      const data = await api.bootstrap();
-      store.setState((state) => ({ ...state, status: "ready", data, error: null }));
+      const shellData = await api.bootstrap({ force: true });
+      if (terminalLoadVersion !== loadVersion) return;
+      const data = { ...createEmptyReadModels(), ...shellData };
+      const requestedRoute = store.getState().route;
+      const route = isRouteEnabled(data.capabilities, requestedRoute) ? requestedRoute : "dashboard";
+      if (route !== requestedRoute) navigate(route);
+      store.setState((state) => ({ ...state, status: "ready", route, data, error: null }));
+      await loadRouteData(route);
     } catch (error) {
+      if (terminalLoadVersion !== loadVersion) return;
       if (!config.usePreviewData && Number(error?.status) === 401) {
-        const detail = { reason: "invalid_player_session", error };
-        if (typeof config.onSessionInvalid === "function") config.onSessionInvalid(detail);
-        dispatchHostEvent(config.sessionInvalidEvent, detail);
-        store.setState({ status: "waiting", error: null, modal: null });
+        handleInvalidSession(error);
         return;
       }
-      store.setState({ status: "error", error });
+      store.setState({ status: "error", error: normalizeApiError(error) });
     }
   }
 
@@ -287,16 +404,29 @@ export function createPlayerTerminal({ mount, config }) {
       endpointKey: error.endpointKey,
       method: error.method,
       path: error.path,
-      payload: error.payload
+      payload: error.payload,
+      developerDiagnostics: config.developerDiagnostics
     }}));
   }
 
   async function executeEndpoint(endpointKey, payload = {}, params = {}, button = null) {
     const endpoint = PLAYER_ENDPOINTS[endpointKey];
     if (!endpoint) throw new Error(`Unknown endpoint ${endpointKey}`);
-    const normalizedPayload = normalizePayload(endpointKey, payload);
+    const capabilities = store.getState().data?.capabilities;
+    if (!isEndpointEnabled(capabilities, endpointKey)) {
+      showToast("This action is not enabled for the current game.", "amber");
+      return null;
+    }
+
+    let normalizedPayload;
+    try {
+      normalizedPayload = normalizeWritePayload(endpointKey, payload);
+    } catch (error) {
+      showToast(error?.message || "Check the entered information and try again.", "red");
+      return null;
+    }
     const path = resolveEndpoint(endpoint, params);
-    const restoreButton = setButtonProcessing(button, "Awaiting API");
+    const restoreButton = setButtonProcessing(button, "Processing");
 
     const event = new CustomEvent("econovaria:player-api-request", {
       bubbles: true,
@@ -306,11 +436,30 @@ export function createPlayerTerminal({ mount, config }) {
     mount.dispatchEvent(event);
 
     try {
-      const result = await api.execute(endpointKey, normalizedPayload, params);
+      const operation = await api.execute(endpointKey, normalizedPayload, params);
       restoreButton("Completed");
-      showToast(result?.preview ? "Preview action completed." : "Backend action completed.", "green");
+      const refresh = operation.invalidatedResources.length
+        ? await api.refreshResources(operation.invalidatedResources)
+        : { data: {}, errors: {} };
+      const invalidSession = Object.values(refresh.errors).find((error) => Number(error?.status) === 401);
+      if (invalidSession) {
+        handleInvalidSession(invalidSession);
+        return null;
+      }
+      store.setState((state) => {
+        const data = { ...state.data, ...refresh.data };
+        if (refresh.data.session || refresh.data.dashboard) {
+          data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
+        }
+        return { ...state, data };
+      });
+      const refreshIncomplete = Object.keys(refresh.errors).length > 0;
+      showToast(
+        refreshIncomplete ? "Action completed. Some information will refresh when the service is available." : "Action completed and current information refreshed.",
+        refreshIncomplete ? "amber" : "green"
+      );
       setTimeout(() => restoreButton(), 1200);
-      return result;
+      return operation.result;
     } catch (error) {
       if (error instanceof ApiConnectionPendingError) {
         restoreButton("Awaiting backend");
@@ -318,8 +467,16 @@ export function createPlayerTerminal({ mount, config }) {
         setTimeout(() => restoreButton(), 1200);
         return null;
       }
+      if (Number(error?.status) === 401) {
+        restoreButton();
+        handleInvalidSession(error);
+        return null;
+      }
       restoreButton();
-      showToast(error?.message || "The request failed.", "red");
+      const retryDetail = Number(error?.status) === 429 && Number(error?.retryAfterMs) > 0
+        ? ` Try again in ${Math.max(1, Math.ceil(error.retryAfterMs / 1000))} seconds.`
+        : "";
+      showToast(`${error?.message || "The request failed."}${retryDetail}`, "red");
       return null;
     }
   }
@@ -365,19 +522,19 @@ export function createPlayerTerminal({ mount, config }) {
         break;
       }
       case "download-transactions":
-        showToast("Export connection point is reserved for the banking API.", "cyan");
+        showToast("Transaction export is not available in this game.", "amber");
         break;
       case "market-search":
-        showToast("Asset search can be connected to GET /market/assets query parameters.", "cyan");
+        showToast("Market search is not available in this game.", "amber");
         break;
       case "message-search":
-        showToast("Message search is reserved for GET /messages query parameters.", "cyan");
+        showToast("Message search is not available in this game.", "amber");
         break;
       case "message-attachment":
-        showToast("Attachment upload is reserved for the messaging API.", "cyan");
+        showToast("Message attachments are not available in this game.", "amber");
         break;
       case "chart-range":
-        showToast(`${target.dataset.range || "Selected"} chart data will load from the market history endpoint.`, "cyan");
+        showToast(`${target.dataset.range || "Selected"} chart history is not available in this game.`, "amber");
         break;
       default:
         break;
@@ -401,6 +558,10 @@ export function createPlayerTerminal({ mount, config }) {
 
     const routeButton = event.target.closest("[data-route]");
     if (routeButton) {
+      if (!isRouteEnabled(stateAtClick.data?.capabilities, routeButton.dataset.route)) {
+        showToast("That section is not enabled for the current game.", "amber");
+        return;
+      }
       restoreFocusSelector = "";
       pendingFocusSelector = "#player-main-content";
       updateUi({ mobileMenuOpen: false, notificationsOpen: false });
@@ -580,9 +741,18 @@ export function createPlayerTerminal({ mount, config }) {
     const actionButton = event.target.closest("[data-player-action]");
     if (actionButton) {
       const action = actionButton.dataset.playerAction;
-      if (action === "refresh-data") await loadData();
+      if (action === "refresh-data") {
+        if (store.getState().status === "ready") await loadRouteData(store.getState().route, { force: true });
+        else await loadData();
+      }
+      if (action === "retry-route") await loadRouteData(store.getState().route, { force: true });
       if (action === "logout") {
-        const detail = { session: { playerSessionToken: config.playerSessionToken, gameSessionId: config.gameSessionId, playerSessionId: config.playerSessionId } };
+        const detail = {
+          reason: "player_requested",
+          terminal: "player",
+          gameSessionId: config.gameSessionId,
+          playerSessionId: config.playerSessionId
+        };
         if (typeof config.onLogoutRequested === "function") config.onLogoutRequested(detail);
         dispatchHostEvent(config.logoutRequestedEvent, detail);
       }
@@ -823,9 +993,16 @@ export function createPlayerTerminal({ mount, config }) {
 
   function handleHashChange() {
     const route = readRoute();
+    const current = store.getState();
+    if (current.status === "ready" && !isRouteEnabled(current.data?.capabilities, route)) {
+      if (route !== "dashboard") navigate("dashboard");
+      showToast("That section is not enabled for the current game.", "amber");
+      return;
+    }
     restoreFocusSelector = "";
     pendingFocusSelector = "#player-main-content";
     store.setState((state) => ({ ...state, route, modal: null, ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false } }));
+    if (current.status === "ready") void loadRouteData(route);
     requestAnimationFrame(() => globalThis.scrollTo?.({ top: 0, left: 0, behavior: "auto" }));
   }
 
@@ -840,7 +1017,9 @@ export function createPlayerTerminal({ mount, config }) {
   globalThis.addEventListener("resize", handleResize);
   globalThis.addEventListener("offline", handleOffline);
   globalThis.addEventListener("online", handleOnline);
-  const handleSessionReady = (event) => { connectSession(event?.detail).catch((error) => store.setState({ status: "error", error })); };
+  const handleSessionReady = (event) => {
+    connectSession(event?.detail).catch((error) => store.setState({ status: "error", error: normalizeApiError(error) }));
+  };
   globalThis.addEventListener(config.sessionReadyEvent, handleSessionReady);
   const unsubscribe = store.subscribe(render);
   render();
@@ -851,8 +1030,14 @@ export function createPlayerTerminal({ mount, config }) {
     refresh: loadData,
     connectSession,
     getState: store.getState,
-    navigate,
+    navigate(route) {
+      const state = store.getState();
+      if (state.status === "ready" && !isRouteEnabled(state.data?.capabilities, route)) return false;
+      navigate(route);
+      return true;
+    },
     destroy() {
+      terminalLoadVersion += 1;
       clearInterval(clockTimer);
       mount.removeEventListener("click", handleClick);
       mount.removeEventListener("submit", handleSubmit);

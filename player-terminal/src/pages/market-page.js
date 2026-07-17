@@ -26,7 +26,7 @@ function renderAssetRow(asset, selectedId) {
 export function renderMarketPage(data, ui) {
   const market = data.market;
   if (!Array.isArray(market?.assets) || !market.assets.length) {
-    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and route orders to the player market API.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when the market service returns tradable instruments.", iconName: "market" })}</section>`;
+    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}</section>`;
   }
   const selectedId = ui.marketAssetId || market.selectedAssetId;
   const selected = market.assets.find((asset) => asset.id === selectedId) || market.assets[0];
@@ -42,7 +42,7 @@ export function renderMarketPage(data, ui) {
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
-      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, understand event exposure, inspect your positions, and route orders to the player market API.</p></div>
+      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, understand event exposure, inspect your positions, and place market orders.</p></div>
       <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${renderStatusPill(`${market.status} · ${market.nextClose}`, "green")}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
     </header>
 
@@ -68,7 +68,7 @@ export function renderMarketPage(data, ui) {
           <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
           <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, currencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
         </header>
-        <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL">ALL</button><small>PREVIEW SERIES</small></div>
+        <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL">ALL</button><small>CURRENT SERIES</small></div>
         <div class="player-terminal-chart-frame">
           <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Preview price chart for ${escapeHtml(selected.name)}">
             <defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
@@ -97,7 +97,7 @@ export function renderMarketPage(data, ui) {
       </section>
 
       <section class="player-terminal-panel player-terminal-order-ticket">
-        <header class="player-terminal-panel-header"><div><span>ORDER TICKET</span><strong>${escapeHtml(selected.symbol)}</strong></div>${renderStatusPill("API READY", "cyan")}</header>
+        <header class="player-terminal-panel-header"><div><span>ORDER TICKET</span><strong>${escapeHtml(selected.symbol)}</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}</header>
         <form data-player-form="market-order" data-endpoint="marketOrder">
           <input type="hidden" name="assetId" value="${escapeHtml(selected.id)}" />
           <label>ORDER SIDE<div class="player-terminal-segmented"><label><input type="radio" name="side" value="buy" checked /><span>Buy</span></label><label><input type="radio" name="side" value="sell" /><span>Sell</span></label></div></label>
@@ -109,7 +109,7 @@ export function renderMarketPage(data, ui) {
             <span><small>AVAILABLE CASH</small><strong>${escapeHtml(formatCurrency(data.banking.checking.available, currencyCode))}</strong></span>
             <span><small>ESTIMATED FEES</small><strong data-player-market-estimated-fees>${escapeHtml(formatCurrency(selected.price * 10 * 0.0025, currencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>The backend must confirm price, fees, available funds, and final holdings before the interface changes.</small></div>
+          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>Price, fees, available funds, and final holdings update only after the order is confirmed.</small></div>
           <button class="player-terminal-primary-button" type="submit">${icon("send")} Send order for processing</button>
         </form>
       </section>
