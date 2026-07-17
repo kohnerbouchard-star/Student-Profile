@@ -14,10 +14,11 @@
     "market-flow": "node tests/market-order-flow.mjs",
     "banking-read": "node tests/banking-read-model.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
+    "realtime": "node tests/realtime-freshness.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run audit && npm run audit:v75",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store quote transactions, Contracts lifecycle states, Market order settlement, truthful Banking, and authoritative Inventory read models."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store quote transactions, Contracts lifecycle states, Market order settlement, truthful Banking and Inventory, plus targeted realtime invalidation and resource freshness."
 }
