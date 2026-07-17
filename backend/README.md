@@ -1,22 +1,49 @@
-# Backend
+# Econovaria backend
 
-Backend workspace for the Classroom Economy / Eco Novaria Supabase migration.
+This workspace contains the active Supabase replacement backend. It is no
+longer a structure-only checkpoint: it includes domain services, migrations,
+database RPCs, repository adapters, smoke tests, and deployed Edge Function
+sources.
 
-This checkpoint establishes the backend folder structure only. It does not add SQL schema, RLS policies, Edge Function handlers, stock calculations, or frontend wiring.
+## Runtime boundaries
 
-## Current backend status
+- `supabase/functions/admin-api/` is the staff-authenticated, game-scoped admin
+  API and uses service-role access only after route authorization.
+- `supabase/functions/classroom-api/` owns modern classroom/student capabilities
+  including licensing, sessions, attendance, Store, contracts, and related
+  game-scoped reads and writes.
+- `supabase/functions/stock-market-*` contains stock read, trading, seed-copy,
+  and runner boundaries.
+- `supabase/migrations/` is the only normal database schema path.
+- `src/domains/` owns business rules and contracts by bounded context.
+- `src/platform/` owns Supabase, scheduling, and realtime adapters.
+- `src/shared/` is restricted to genuinely cross-domain primitives.
+- `legacy/` is reference material and must not receive new production logic.
 
-- Structure checkpoint complete.
-- Frontend CSS cleanup completed separately.
-- Current checkpoint is Backend Core Loop V1 + Future SQL Shape design.
-- Do not create migrations until the core loop/schema design doc is reviewed.
-- Do not wire frontend to Supabase until schema, RLS, and Edge Function boundaries are reviewed.
+## Verification
 
-## Folder layout
+From the repository root:
 
-- `legacy/` is reference material only. Existing Apps Script and workbook exports remain unchanged and should not be edited for new backend module work.
-- `supabase/` contains deployable Supabase assets, including future migrations, seed data, Edge Functions, and Edge Function shared code.
-- `src/domains/` contains self-contained product modules with clear ownership boundaries.
-- `src/platform/` contains adapters to infrastructure and runtime concerns such as Supabase, scheduling, and realtime behavior.
-- `src/shared/` contains small cross-domain helpers only and should not become a dumping ground.
-- `scripts/` contains local, import, and maintenance scripts used outside runtime code.
+```zsh
+npm --prefix backend ci
+npm --prefix backend run typecheck:all
+npm --prefix backend run smoke
+```
+
+Edge imports and runtimes are exact-pinned. Do not restore `--no-lock`, use a
+floating Deno release, or omit a deployable function from typechecking.
+
+Database changes must be forward migrations, preserve game/player scope, and
+pass the clean database replay workflow. Never repair the live migration ledger
+or execute production SQL merely because migration names appear equivalent.
+
+## Security rules
+
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to frontend or admin browser code.
+- Authenticate before creating a service-role client and prove target-game
+  ownership on every privileged route.
+- Use composite game/player or game/resource relationships where data carries
+  `game_session_id`.
+- Keep monetary, inventory, reward, contract, attendance, and stock writes
+  transactional and idempotent.
+- Add authorization-matrix coverage when creating or changing a route.

@@ -3,14 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --no-lock src/smoke/classroomApiSmokeTest.ts && npm run test:admin-api",
-    "test:admin-api": "deno test --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/*.test.ts",
+    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --lock=supabase/functions/deno.lock --frozen src/smoke/classroomApiSmokeTest.ts && npm run test:admin-api",
+    "test:admin-api": "deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:edge": "deno check --no-lock supabase/functions/classroom-api/index.ts",
-    "typecheck:admin-edge": "deno check --config supabase/functions/admin-api/deno.json --no-lock supabase/functions/admin-api/index.ts",
-    "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:admin-edge"
+    "typecheck:edge": "deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts",
+    "typecheck:stock-edge": "deno check --lock=supabase/functions/deno.lock --frozen supabase/functions/stock-market-player-read/index.ts supabase/functions/stock-market-read/index.ts supabase/functions/stock-market-runner/index.ts supabase/functions/stock-market-seed-copy/index.ts supabase/functions/stock-market-trading/index.ts",
+    "typecheck:admin-edge": "deno check --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/index.ts",
+    "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-17",
+  "captureMode": "read-only audit",
+  "environment": "current single live project; production designation not approved",
+  "repository": {
+    "name": "kohnerbouchard-star/Student-Profile",
+    "branch": "feat/contracts-end-to-end-wiring",
+    "auditedCommit": "2b39b8af714d84ed6392185a09e53e5cde6cf307",
+    "pullRequest": 138,
+    "pullRequestState": "open-draft",
+    "mainIsProductionSourceOfTruth": false
+  },
+  "supabase": {
+    "projectRef": "cgiukdjwicykrmtkhudh",
+    "projectName": "ECON SIM",
+    "region": "ap-northeast-2",
+    "postgresVersion": "17.6.1.121",
+    "organization": "EconovariaOrg",
+    "plan": "free",
+    "branches": ["main"],
+    "publicTableCount": 48,
+    "publicTablesWithRlsEnabled": 48,
+    "migrationHistoryEntryCount": 53,
+    "securityAdvisorWarnings": [
+      "leaked-password protection disabled"
+    ],
+    "performanceAdvisor": {
+      "unindexedForeignKeys": 19,
+      "unusedIndexesInformational": 53
+    },
+    "notificationIntegrityPreflight": {
+      "deliveryRows": 0,
+      "mismatchedGameSessionRows": 0,
+      "invalidLifecycleTimestampRows": 0,
+      "currentNotificationForeignKey": "single-column notification_id",
+      "forwardScopeHardeningApplied": false
+    }
+  },
+  "deployedFunctions": [
+    {
+      "name": "admin-api",
+      "version": 14,
+      "sourceMatchesAuditedCommit": true,
+      "status": "modern-active"
+    },
+    {
+      "name": "classroom-api",
+      "version": 23,
+      "sourceMatchesAuditedCommit": true,
+      "status": "modern-active"
+    },
+    {
+      "name": "stock-market-runner",
+      "version": 6,
+      "verifyJwt": true,
+      "sourceMatchesAuditedCommit": null,
+      "status": "modern-active-source-match-unverified"
+    },
+    {
+      "name": "stock-market-seed-copy",
+      "version": 3,
+      "verifyJwt": true,
+      "sourceMatchesAuditedCommit": null,
+      "status": "modern-active-source-match-unverified"
+    },
+    {
+      "name": "stock-market-read",
+      "version": 3,
+      "verifyJwt": true,
+      "sourceMatchesAuditedCommit": null,
+      "status": "modern-active-source-match-unverified"
+    },
+    {
+      "name": "stock-market-trading",
+      "version": 3,
+      "verifyJwt": true,
+      "sourceMatchesAuditedCommit": null,
+      "status": "modern-active-source-match-unverified"
+    },
+    {
+      "name": "stock-market-player-read",
+      "version": 1,
+      "verifyJwt": true,
+      "sourceMatchesAuditedCommit": null,
+      "status": "modern-active-source-match-unverified"
+    },
+    {
+      "name": "make-server-0dbf686f",
+      "version": 54,
+      "verifyJwt": true,
+      "status": "legacy-p0-containment-required"
+    },
+    {
+      "name": "server",
+      "version": 225,
+      "verifyJwt": false,
+      "status": "legacy-consumer-unknown"
+    },
+    {
+      "name": "admin-api-staging",
+      "version": 3,
+      "verifyJwt": false,
+      "status": "returns-410-removal-candidate"
+    }
+  ],
+  "externalRuntime": {
+    "cloudflareWorkerOrigin": "https://silent-haze-ca17.kohner.workers.dev",
+    "status": "active-student-capabilities-and-legacy-session-path",
+    "sourceCommit": null,
+    "owner": null
+  },
+  "latencySampleMilliseconds": {
+    "edgeNonOptionsRequestCount": 22,
+    "p50": 497,
+    "p95": 1205,
+    "max": 1456
+  },
+  "releaseDecision": {
+    "productionPilotApproved": false,
+    "blockers": [
+      "live and repository migration histories are not reconciled",
+      "legacy authorization exposure is not contained",
+      "live code was deployed from an unmerged draft branch",
+      "no isolated staging environment or production-grade backup posture exists"
+    ]
+  },
+  "secretInventory": {
+    "valuesRecorded": false,
+    "requiredNextCapture": [
+      "secret names",
+      "system owner",
+      "rotation owner",
+      "last rotation date",
+      "consuming services"
+    ]
+  }
+}

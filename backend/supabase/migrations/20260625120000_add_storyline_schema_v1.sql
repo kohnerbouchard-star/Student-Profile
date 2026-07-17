@@ -286,99 +286,10 @@ comment on table public.game_session_story_flags is
 create index game_session_story_flags_source_event_idx
 on public.game_session_story_flags (source_story_event_id);
 
-create table public.notifications (
-  id uuid primary key default gen_random_uuid(),
-  game_session_id uuid not null references public.game_sessions (id) on delete cascade,
-  source_type text not null,
-  source_id uuid null,
-  notification_type text not null,
-  title text not null,
-  summary text not null default '',
-  priority text not null default 'normal',
-  display_mode text not null default 'notification_only',
-  payload jsonb not null default '{}'::jsonb,
-  published_at timestamptz not null default now(),
-
-  constraint notifications_game_session_id_id_unique unique (game_session_id, id),
-  constraint notifications_source_type_not_blank check (length(btrim(source_type)) > 0),
-  constraint notifications_notification_type_check check (
-    notification_type in (
-      'story_cutscene',
-      'story_impact',
-      'market_news',
-      'contract_unlocked',
-      'policy_changed'
-    )
-  ),
-  constraint notifications_title_not_blank check (length(btrim(title)) > 0),
-  constraint notifications_priority_check check (
-    priority in ('low', 'normal', 'major', 'critical')
-  ),
-  constraint notifications_display_mode_check check (
-    display_mode in (
-      'notification_only',
-      'modal_immediate',
-      'modal_on_next_login'
-    )
-  ),
-  constraint notifications_payload_object check (jsonb_typeof(payload) = 'object')
-);
-
-comment on table public.notifications is
-  'General in-app notification records. Story cutscenes are notifications; they are not the source of truth for story resolution.';
-comment on column public.notifications.display_mode is
-  'Controls the delivery surface. Modal replay/opening must still depend on unseen notification_deliveries state.';
-
-create unique index notifications_source_unique_idx
-on public.notifications (game_session_id, source_type, source_id, notification_type)
-where source_id is not null;
-
-create index notifications_game_published_idx
-on public.notifications (game_session_id, published_at desc);
-
-create table public.notification_deliveries (
-  id uuid primary key default gen_random_uuid(),
-  notification_id uuid not null,
-  game_session_id uuid not null,
-  player_id uuid not null,
-  delivered_at timestamptz not null default now(),
-  seen_at timestamptz null,
-  dismissed_at timestamptz null,
-  acknowledged_at timestamptz null,
-
-  constraint notification_deliveries_notification_scope_fk
-    foreign key (game_session_id, notification_id)
-    references public.notifications (game_session_id, id)
-    on delete cascade,
-  constraint notification_deliveries_player_scope_fk
-    foreign key (game_session_id, player_id)
-    references public.players (game_session_id, id)
-    on delete cascade,
-  constraint notification_deliveries_notification_player_unique unique (notification_id, player_id),
-  constraint notification_deliveries_seen_after_delivery check (
-    seen_at is null
-    or seen_at >= delivered_at
-  ),
-  constraint notification_deliveries_dismissed_after_delivery check (
-    dismissed_at is null
-    or dismissed_at >= delivered_at
-  ),
-  constraint notification_deliveries_acknowledged_after_delivery check (
-    acknowledged_at is null
-    or acknowledged_at >= delivered_at
-  )
-);
-
-comment on table public.notification_deliveries is
-  'Per-player notification delivery state. Unseen cutscene modals must be driven by this table, not public realtime.';
-
-create index notification_deliveries_player_unseen_idx
-on public.notification_deliveries (game_session_id, player_id, delivered_at desc)
-where seen_at is null
-  and dismissed_at is null;
-
-create index notification_deliveries_notification_idx
-on public.notification_deliveries (notification_id);
+-- Notification storage is deliberately created by
+-- 20260715003000_add_story_notification_tables_v1.sql. Keeping one canonical
+-- definition prevents clean database replays from creating incompatible
+-- source_id, timestamp, constraint, and index contracts for the same tables.
 
 alter table public.storylines enable row level security;
 alter table public.storyline_events enable row level security;
@@ -387,8 +298,6 @@ alter table public.story_event_resolutions enable row level security;
 alter table public.player_story_impacts enable row level security;
 alter table public.game_session_policies enable row level security;
 alter table public.game_session_story_flags enable row level security;
-alter table public.notifications enable row level security;
-alter table public.notification_deliveries enable row level security;
 
 -- No authenticated direct policies are added in this foundation slice.
 -- Custom player sessions are not Supabase Auth identities, and story runtime
