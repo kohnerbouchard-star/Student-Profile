@@ -166,6 +166,20 @@ const ROUTE_BUILDERS = Object.freeze({
 
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
 
+  inventoryUse: ({ params = {}, payload = {} }) => ({
+    method: "POST",
+    path: `/players/me/inventory/${encodeURIComponent(requiredText(
+      params.inventoryItemId || payload.inventoryHoldingId,
+      "inventoryHoldingId",
+      "inventoryUse"
+    ))}/redemptions`,
+    payload: {
+      quantity: Number(payload.quantity ?? 1),
+      note: typeof payload.note === "string" ? payload.note.trim() : "",
+      idempotencyKey: idempotencyKey(payload, "inventoryUse")
+    }
+  }),
+
   banking: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 })
