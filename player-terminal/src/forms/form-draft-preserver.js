@@ -76,56 +76,65 @@ function restoreForm(form, draft) {
   form.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-export function installFormDraftPreserver(mount) {
+function mutationForm(record) {
+  const target = record.target?.nodeType === 1 ? record.target : record.target?.parentElement;
+  return target?.closest?.("form[data-player-form]") || null;
+}
+
+export function installFormDraftPreserver(mount, {
+  sessionReadyEvent = "",
+  sessionInvalidEvent = ""
+} = {}) {
   if (!(mount instanceof HTMLElement)) return { destroy() {}, clear() {} };
   const drafts = new Map();
-  const submitted = [];
+  let restoring = false;
+  let restoreQueued = false;
 
   const capture = (event) => {
+    if (restoring) return;
     const form = event.target.closest?.("[data-player-form]");
     if (!(form instanceof HTMLFormElement)) return;
     drafts.set(formIdentity(form), captureForm(form));
   };
 
-  const markSubmitted = (event) => {
-    const form = event.target.closest?.("[data-player-form]");
-    if (!(form instanceof HTMLFormElement)) return;
-    const key = formIdentity(form);
-    drafts.set(key, captureForm(form));
-    submitted.push(key);
-  };
-
   const restoreVisibleForms = () => {
-    mount.querySelectorAll("form[data-player-form]").forEach((form) => {
-      const draft = drafts.get(formIdentity(form));
-      if (draft) restoreForm(form, draft);
-    });
+    restoring = true;
+    try {
+      mount.querySelectorAll("form[data-player-form]").forEach((form) => {
+        const draft = drafts.get(formIdentity(form));
+        if (draft) restoreForm(form, draft);
+      });
+    } finally {
+      restoring = false;
+    }
   };
 
-  const settleSubmittedDraft = () => {
-    const toast = mount.querySelector(".player-terminal-toast");
-    if (!toast || !String(toast.textContent || "").startsWith("Action completed")) return;
-    const key = submitted.shift();
-    if (!key) return;
-    drafts.delete(key);
-    const matchingForm = [...mount.querySelectorAll("form[data-player-form]")].find((form) => formIdentity(form) === key);
-    matchingForm?.reset();
+  const clearCompletedForms = (records) => {
+    for (const record of records) {
+      const form = mutationForm(record);
+      if (!(form instanceof HTMLFormElement)) continue;
+      const submit = form.querySelector('button[type="submit"]');
+      if (submit && /\bCompleted\b/i.test(String(submit.textContent || ""))) {
+        drafts.delete(formIdentity(form));
+      }
+    }
   };
 
-  let restoreQueued = false;
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver((records) => {
+    clearCompletedForms(records);
     if (restoreQueued) return;
     restoreQueued = true;
     queueMicrotask(() => {
       restoreQueued = false;
-      settleSubmittedDraft();
       restoreVisibleForms();
     });
   });
 
+  const clearAll = () => drafts.clear();
   mount.addEventListener("input", capture, true);
   mount.addEventListener("change", capture, true);
-  mount.addEventListener("submit", markSubmitted, true);
+  if (sessionReadyEvent) globalThis.addEventListener(sessionReadyEvent, clearAll);
+  if (sessionInvalidEvent) globalThis.addEventListener(sessionInvalidEvent, clearAll);
   observer.observe(mount, { childList: true, subtree: true });
   restoreVisibleForms();
 
@@ -138,9 +147,9 @@ export function installFormDraftPreserver(mount) {
       observer.disconnect();
       mount.removeEventListener("input", capture, true);
       mount.removeEventListener("change", capture, true);
-      mount.removeEventListener("submit", markSubmitted, true);
+      if (sessionReadyEvent) globalThis.removeEventListener(sessionReadyEvent, clearAll);
+      if (sessionInvalidEvent) globalThis.removeEventListener(sessionInvalidEvent, clearAll);
       drafts.clear();
-      submitted.length = 0;
     }
   };
 }
