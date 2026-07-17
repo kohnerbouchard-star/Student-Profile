@@ -21,11 +21,14 @@ function renderStorePurchaseModal(modal) {
 
   if (stage === "receipt") {
     const total = receipt.finalTotalPrice ?? quote.finalTotalPrice ?? 0;
+    const receiptDetail = modal.refreshWarning
+      ? modal.refreshWarning
+      : "The authoritative Store purchase completed and current account data was refreshed.";
     return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
       <section class="player-terminal-modal player-terminal-connector-modal" role="dialog" aria-modal="true" aria-labelledby="storePurchaseModalTitle">
         <header class="player-terminal-modal-head"><div><small>PURCHASE RECEIPT</small><h3 id="storePurchaseModalTitle">${escapeHtml(item.name || "Store purchase")}</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
         <div class="player-terminal-modal-body">
-          <div class="player-terminal-connector-status">${renderStatusPill("COMPLETED", "green")}<p>The authoritative Store purchase completed and current account data was refreshed.</p></div>
+          <div class="player-terminal-connector-status">${renderStatusPill(modal.refreshWarning ? "COMPLETED · REFRESH PENDING" : "COMPLETED", modal.refreshWarning ? "amber" : "green")}<p>${escapeHtml(receiptDetail)}</p></div>
           <dl class="player-terminal-connector-meta">
             <div><dt>QUANTITY</dt><dd>${escapeHtml(quote.quantity || modal.quantity || 1)}</dd></div>
             <div><dt>TOTAL PAID</dt><dd>${escapeHtml(formatCurrency(total, currencyCode))}</dd></div>
