@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { PlayerApi } from "../src/api/player-api.js";
@@ -93,14 +94,20 @@ assert.equal(productionConfig.preserveProductSurface, true);
 const connectedData = structuredClone(previewData);
 connectedData.capabilities = resolveCapabilities({ config: productionConfig, dashboard: {}, session: {} });
 const connectedShell = renderShell({
-  route: "dashboard",
+  route: "store",
   data: connectedData,
-  pageHtml: '<section class="player-terminal-page">Dashboard</section>',
+  pageHtml: '<section class="player-terminal-page">Store</section>',
   ui: { sidebarCollapsed: false, notificationsOpen: false, mobileMenuOpen: false },
   config: productionConfig
 });
 assert.ok(connectedShell.includes('data-route="store"'));
-assert.ok(connectedShell.includes('data-route="marketplace"'), "Intended routes must remain visible while their backend capability is pending.");
+assert.ok(connectedShell.includes('data-route="marketplace"'), "Intended routes must remain discoverable in their active navigation group while backend capability is pending.");
 assert.ok(connectedShell.includes('data-capability-status="integration-pending"'));
 
-console.log("v7.5.1 correctness passed: UUID ownership, logical writes, retry idempotency, capability merging, response schemas, product-surface preservation, landmarks, identity input, and glyph cleanup are valid.");
+const draftSource = await readFile(new URL("../src/forms/form-draft-preserver.js", import.meta.url), "utf8");
+const mainSource = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
+assert.ok(mainSource.includes("installFormDraftPreserver"), "The application entrypoint must install form draft preservation.");
+assert.ok(draftSource.includes("SENSITIVE_NAME") && draftSource.includes("Completed"), "Draft preservation must exclude credential-like fields and clear only completed forms.");
+assert.ok(!draftSource.includes("localStorage") && !draftSource.includes("sessionStorage"), "Unsent form drafts must remain memory-only.");
+
+console.log("v7.5.1 correctness passed: UUID ownership, logical writes, retry idempotency, capability merging, response schemas, product-surface preservation, draft survival, landmarks, identity input, and glyph cleanup are valid.");
