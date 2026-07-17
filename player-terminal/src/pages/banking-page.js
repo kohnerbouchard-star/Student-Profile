@@ -2,12 +2,16 @@ import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 
+function hasNumericValue(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+}
+
 function optionalCurrency(value, currencyCode, fallback = "Not configured") {
-  return Number.isFinite(Number(value)) ? formatCurrency(Number(value), currencyCode) : fallback;
+  return hasNumericValue(value) ? formatCurrency(Number(value), currencyCode) : fallback;
 }
 
 function optionalPercent(value, fallback = "Not configured") {
-  return Number.isFinite(Number(value)) ? `${Number(value).toFixed(2)}%` : fallback;
+  return hasNumericValue(value) ? `${Number(value).toFixed(2)}%` : fallback;
 }
 
 function renderTransaction(transaction, fallbackCurrencyCode) {
@@ -23,11 +27,12 @@ function renderTransaction(transaction, fallbackCurrencyCode) {
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
-  const savingsConfigured = bank.savings?.configured !== false && Number.isFinite(Number(bank.savings?.balance));
-  const creditConfigured = bank.creditConfigured === true && Number.isFinite(Number(bank.creditScore));
+  const savingsConfigured = bank.savings?.configured !== false && hasNumericValue(bank.savings?.balance);
+  const creditConfigured = bank.creditConfigured === true && hasNumericValue(bank.creditScore);
   const transfersConfigured = bank.transfersConfigured === true;
-  const transferLimit = Number(bank.transferLimit);
-  const transferMax = Number.isFinite(transferLimit) && transferLimit > 0 ? ` max="${escapeHtml(transferLimit)}"` : "";
+  const transferLimitAvailable = hasNumericValue(bank.transferLimit);
+  const transferLimit = transferLimitAvailable ? Number(bank.transferLimit) : null;
+  const transferMax = transferLimitAvailable && transferLimit > 0 ? ` max="${escapeHtml(transferLimit)}"` : "";
 
   return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
     <header class="player-terminal-page-heading">
@@ -38,7 +43,7 @@ export function renderBankingPage(data) {
     <div class="player-terminal-bank-accounts">
       <article class="player-terminal-bank-card is-checking"><div>${icon("wallet")}<span><small>CASH ACCOUNT</small><strong>${escapeHtml(bank.checking.accountId || "CASH")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.checking.balance, currencyCode, "Unavailable"))}</h3><p>${escapeHtml(optionalCurrency(bank.checking.available, currencyCode, "Unavailable"))} available</p></article>
       <article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>${escapeHtml(savingsConfigured ? bank.savings.accountId : "NOT CONFIGURED")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.savings?.balance, currencyCode))}</h3><p>${savingsConfigured ? `${escapeHtml(optionalPercent(bank.savings.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings.interestEarned, currencyCode, "Interest unavailable"))} earned` : "The current backend has not provisioned a savings account for this player."}</p></article>
-      <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${Number.isFinite(transferLimit) ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
+      <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
     </div>
 
     <div class="player-terminal-bank-layout">
