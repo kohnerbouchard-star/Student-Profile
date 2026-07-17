@@ -128,7 +128,7 @@ export async function handlePlayerInventoryRedemptionRequest(
     );
     const sessionResult = await (dependencies.resolvePlayerSession ??
       resolveActivePlayerSession)(serviceClient, sessionTokenHash);
-    if (!sessionResult.ok) {
+    if (sessionResult.ok === false) {
       return jsonError(sessionResult.status, sessionResult.error);
     }
 
@@ -264,14 +264,8 @@ async function readStaffRedemptionQueue(
     return jsonResponse(200, {
       ok: true,
       generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
-      summary: {
-        total: requests.length,
-        pending: requests.filter((entry) => entry.status === "pending").length,
-        approved: requests.filter((entry) => entry.status === "approved").length,
-        fulfilled: requests.filter((entry) => entry.status === "fulfilled").length,
-        rejected: requests.filter((entry) => entry.status === "rejected").length,
-      },
       requests,
+      summary: summarizeRequests(requests),
     });
   } catch {
     return jsonError(500, {
@@ -297,23 +291,26 @@ async function reviewStaffRedemption(
         p_request_id: requestId,
         p_staff_user_id: dependencies.staffUserId,
         p_action: body.action,
-        p_resolution_note: body.resolutionNote || null,
+        p_resolution_note: body.note || null,
       },
     );
+
     if (rpcResponse.error) {
-      return redemptionPersistenceError(rpcResponse.error.message);
+      return redemptionPersistenceError(rpcResponse.error.message, true);
     }
+
     const row = firstRow(rpcResponse.data);
     if (!row) {
-      return jsonError(500, {
-        code: "inventory_redemption_review_failed",
-        message: "Inventory redemption could not be reviewed.",
+      return jsonError(404, {
+        code: "inventory_redemption_not_found",
+        message: "Inventory redemption request was not found.",
         retryable: false,
       });
     }
+
     return jsonResponse(200, {
       ok: true,
-      outcome: row.review_outcome ?? body.action,
+      outcome: row.review_outcome ?? "updated",
       generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
       redemption: toRedemptionDto(row),
     });
@@ -327,42 +324,45 @@ async function reviewStaffRedemption(
     }
     return jsonError(500, {
       code: "inventory_redemption_review_failed",
-      message: "Inventory redemption could not be reviewed.",
+      message: "Inventory redemption request could not be reviewed.",
       retryable: false,
     });
   }
 }
 
 async function readPlayers(
-  client: EdgeSupabaseClient,
+  serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   playerIds: readonly string[],
 ): Promise<readonly PlayerRow[]> {
-  if (!playerIds.length) return [];
-  const response = await client.from("players")
+  if (playerIds.length === 0) return [];
+  const response = await serviceClient
+    .from("players")
     .select("id,display_name,roster_label")
     .eq("game_session_id", gameSessionId)
     .in("id", playerIds);
-  if (response.error) throw new Error("players_read_failed");
+  if (response.error) throw new Error("inventory redemption player lookup failed");
   return (response.data ?? []) as unknown as readonly PlayerRow[];
 }
 
 async function readItems(
-  client: EdgeSupabaseClient,
+  serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   itemIds: readonly string[],
 ): Promise<readonly StoreItemRow[]> {
-  if (!itemIds.length) return [];
-  const response = await client.from("store_items")
+  if (itemIds.length === 0) return [];
+  const response = await serviceClient
+    .from("store_items")
     .select("id,name,category")
     .eq("game_session_id", gameSessionId)
     .in("id", itemIds);
-  if (response.error) throw new Error("items_read_failed");
+  if (response.error) throw new Error("inventory redemption item lookup failed");
   return (response.data ?? []) as unknown as readonly StoreItemRow[];
 }
 
-function firstRow(data: readonly RedemptionRow[] | null): RedemptionRow | null {
-  return Array.isArray(data) && data.length ? data[0] : null;
+function firstRow(data: readonly RedemptionRow[] | RedemptionRow | null): RedemptionRow | null {
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data ?? null;
 }
 
 function toRedemptionDto(row: RedemptionRow) {
@@ -373,12 +373,12 @@ function toRedemptionDto(row: RedemptionRow) {
     inventoryHoldingId: row.inventory_holding_id,
     storeItemId: row.store_item_id,
     quantity: Number(row.quantity),
-    status: row.status,
-    requestNote: row.request_note ?? null,
-    resolutionNote: row.resolution_note ?? null,
+    status: row.status.toLowerCase(),
+    requestNote: row.request_note,
+    resolutionNote: row.resolution_note,
     requestedAt: row.requested_at,
-    reviewedAt: row.reviewed_at ?? null,
-    fulfilledAt: row.fulfilled_at ?? null,
+    reviewedAt: row.reviewed_at,
+    fulfilledAt: row.fulfilled_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -386,155 +386,140 @@ function toRedemptionDto(row: RedemptionRow) {
 
 function toPlayerDto(row: PlayerRow | undefined) {
   return row
-    ? { id: row.id, displayName: row.display_name, rosterLabel: row.roster_label ?? null }
-    : { id: null, displayName: "Unknown player", rosterLabel: null };
+    ? { id: row.id, displayName: row.display_name, rosterLabel: row.roster_label }
+    : null;
 }
 
 function toItemDto(row: StoreItemRow | undefined) {
-  return row
-    ? { id: row.id, name: row.name, category: row.category }
-    : { id: null, name: "Unknown item", category: "unknown" };
+  return row ? { id: row.id, name: row.name, category: row.category } : null;
 }
 
-function redemptionPersistenceError(message: string): Response {
-  const normalized = String(message || "").toUpperCase();
-  const cases: readonly [string, number, string, string][] = [
-    ["INVENTORY_REDEMPTION_HOLDING_NOT_FOUND", 404, "inventory_holding_not_found", "Inventory holding was not found."],
-    ["INVENTORY_REDEMPTION_REQUEST_NOT_FOUND", 404, "inventory_redemption_not_found", "Inventory redemption request was not found."],
-    ["INVENTORY_REDEMPTION_QUANTITY_UNAVAILABLE", 409, "inventory_quantity_unavailable", "The requested inventory quantity is not available."],
-    ["INVENTORY_REDEMPTION_IDEMPOTENCY_CONFLICT", 409, "inventory_redemption_idempotency_conflict", "The idempotency key was already used for a different request."],
-    ["INVENTORY_REDEMPTION_INVALID_TRANSITION", 409, "inventory_redemption_invalid_transition", "That redemption status transition is not allowed."],
-    ["INVENTORY_REDEMPTION_REVIEW_FORBIDDEN", 403, "inventory_redemption_review_forbidden", "This administrator cannot review requests for that game."],
-    ["INVENTORY_REDEMPTION_RESERVATION_CORRUPT", 500, "inventory_redemption_reservation_invalid", "Inventory reservation state is inconsistent."],
-  ];
-  const match = cases.find(([token]) => normalized.includes(token));
-  if (match) {
-    return jsonError(match[1], {
-      code: match[2],
-      message: match[3],
-      retryable: false,
-    });
+function summarizeRequests(requests: readonly { status: string }[]) {
+  return {
+    total: requests.length,
+    pending: requests.filter((request) => request.status === "pending").length,
+    approved: requests.filter((request) => request.status === "approved").length,
+    fulfilled: requests.filter((request) => request.status === "fulfilled").length,
+    rejected: requests.filter((request) => request.status === "rejected").length,
+  };
+}
+
+function normalizeQueueStatus(value: string | null): string | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  if (!normalized || normalized === "all") return null;
+  if (["pending", "approved", "fulfilled", "rejected"].includes(normalized)) {
+    return normalized.toUpperCase();
   }
-  return jsonError(500, {
-    code: "inventory_redemption_persistence_failed",
-    message: "Inventory redemption could not be completed.",
-    retryable: false,
-  });
+  throw new RequestValidationError(
+    "inventory_redemption_status_invalid",
+    "Inventory redemption status is invalid.",
+  );
 }
 
 async function readRedemptionBody(request: Request): Promise<{
-  quantity: number;
-  note: string;
-  idempotencyKey: string;
-  [key: string]: unknown;
+  readonly quantity: number;
+  readonly note: string;
+  readonly idempotencyKey: string;
+  readonly [key: string]: unknown;
 }> {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
     throw new RequestValidationError(
       "invalid_request_body",
-      "Request body must be valid JSON.",
+      "Provide a valid inventory redemption request.",
     );
   }
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new RequestValidationError(
-      "invalid_request_body",
-      "Request body must be a JSON object.",
-    );
-  }
-  const quantity = Number(body.quantity ?? 1);
+  const quantity = Number((body as Record<string, unknown>).quantity ?? 1);
+  const note = String((body as Record<string, unknown>).note ?? "").trim();
+  const idempotencyKey = String(
+    (body as Record<string, unknown>).idempotencyKey ?? "",
+  ).trim();
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
     throw new RequestValidationError(
       "inventory_redemption_quantity_invalid",
-      "Quantity must be an integer between 1 and 100.",
+      "Redemption quantity must be an integer between 1 and 100.",
     );
   }
-  const note = typeof body.note === "string" ? body.note.trim() : "";
-  if (note.length > 1000) {
-    throw new RequestValidationError(
-      "inventory_redemption_note_too_long",
-      "Redemption note must be 1,000 characters or fewer.",
-    );
-  }
-  const idempotencyKey = typeof body.idempotencyKey === "string"
-    ? body.idempotencyKey.trim()
-    : "";
-  if (idempotencyKey.length < 8 || idempotencyKey.length > 200) {
+  if (!idempotencyKey || idempotencyKey.length > 160) {
     throw new RequestValidationError(
       "inventory_redemption_idempotency_key_invalid",
       "A valid idempotency key is required.",
     );
   }
-  return { ...body, quantity, note, idempotencyKey };
+  if (note.length > 1000) {
+    throw new RequestValidationError(
+      "inventory_redemption_note_too_long",
+      "Redemption notes may contain at most 1,000 characters.",
+    );
+  }
+  return { ...(body as Record<string, unknown>), quantity, note, idempotencyKey };
 }
 
 async function readReviewBody(request: Request): Promise<{
-  action: "approve" | "reject" | "fulfill";
-  resolutionNote: string;
+  readonly action: "approve" | "reject" | "fulfill";
+  readonly note: string;
 }> {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    throw new RequestValidationError(
-      "invalid_request_body",
-      "Request body must be valid JSON.",
-    );
-  }
-  const action = typeof body?.action === "string"
-    ? body.action.trim().toLowerCase()
-    : "";
-  if (!(["approve", "reject", "fulfill"] as const).includes(action as never)) {
+  const body = await request.json().catch(() => null);
+  const action = String((body as Record<string, unknown> | null)?.action ?? "")
+    .trim()
+    .toLowerCase();
+  const note = String((body as Record<string, unknown> | null)?.note ?? "").trim();
+  if (!["approve", "reject", "fulfill"].includes(action)) {
     throw new RequestValidationError(
       "inventory_redemption_action_invalid",
       "Action must be approve, reject, or fulfill.",
     );
   }
-  const resolutionNote = typeof body.resolutionNote === "string"
-    ? body.resolutionNote.trim()
-    : "";
-  if (resolutionNote.length > 1000) {
+  if (note.length > 1000) {
     throw new RequestValidationError(
       "inventory_redemption_note_too_long",
-      "Resolution note must be 1,000 characters or fewer.",
+      "Resolution notes may contain at most 1,000 characters.",
     );
   }
-  return {
-    action: action as "approve" | "reject" | "fulfill",
-    resolutionNote,
-  };
+  return { action: action as "approve" | "reject" | "fulfill", note };
 }
 
-function normalizeQueueStatus(value: string | null): string | null {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (!normalized || normalized === "all") return null;
-  if (["pending", "approved", "rejected", "fulfilled", "cancelled"].includes(normalized)) {
-    return normalized;
-  }
-  throw new RequestValidationError(
-    "inventory_redemption_status_invalid",
-    "Status filter is invalid.",
-  );
-}
-
-function rejectIdentityFields(body: Record<string, unknown>): void {
-  for (const key of ["playerId", "player_id", "studentId", "student_id"]) {
+function rejectIdentityFields(body: Record<string, unknown>) {
+  for (const key of ["playerId", "player_id", "playerSessionId", "player_session_id"]) {
     if (Object.hasOwn(body, key)) {
       throw new RequestValidationError(
-        "player_identity_not_allowed",
-        "Player identity is derived from the authenticated session.",
+        "invalid_player_request",
+        "Player identity must come from the authenticated player session.",
       );
     }
   }
 }
 
-class RequestValidationError extends Error {
-  readonly code: string;
+function redemptionPersistenceError(message: string, staff = false): Response {
+  const normalized = message.toUpperCase();
+  const mapping: readonly [string, number, string, string][] = [
+    ["INVENTORY_REDEMPTION_IDEMPOTENCY_CONFLICT", 409, "inventory_redemption_idempotency_conflict", "That idempotency key was already used for a different redemption request."],
+    ["INVENTORY_REDEMPTION_INSUFFICIENT_AVAILABLE", 409, "inventory_redemption_insufficient_available", "The requested quantity is no longer available."],
+    ["INVENTORY_REDEMPTION_HOLDING_NOT_FOUND", 404, "inventory_redemption_holding_not_found", "Inventory item was not found."],
+    ["INVENTORY_REDEMPTION_REQUEST_NOT_FOUND", 404, "inventory_redemption_not_found", "Inventory redemption request was not found."],
+    ["INVENTORY_REDEMPTION_INVALID_TRANSITION", 409, "inventory_redemption_invalid_transition", "That redemption transition is not allowed."],
+  ];
+  const matched = mapping.find(([needle]) => normalized.includes(needle));
+  if (matched) {
+    return jsonError(matched[1], {
+      code: matched[2],
+      message: matched[3],
+      retryable: false,
+    });
+  }
+  return jsonError(500, {
+    code: staff
+      ? "inventory_redemption_review_failed"
+      : "inventory_redemption_request_failed",
+    message: staff
+      ? "Inventory redemption request could not be reviewed."
+      : "Inventory redemption could not be requested.",
+    retryable: false,
+  });
+}
 
-  constructor(code: string, message: string) {
+class RequestValidationError extends Error {
+  constructor(readonly code: string, message: string) {
     super(message);
-    this.name = "RequestValidationError";
-    this.code = code;
   }
 }
