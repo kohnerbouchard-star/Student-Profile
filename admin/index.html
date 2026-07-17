@@ -16,6 +16,9 @@
   <link rel="stylesheet" href="./css/session-gate.css" />
   <link rel="stylesheet" href="./css/player-runtime-integration.css" />
   <link rel="stylesheet" href="./css/player-create-confirmation.css" />
+  <link rel="stylesheet" href="./css/admin-stabilization.css" />
+  <link rel="stylesheet" href="./css/admin-stabilization-visual-finish.css" />
+  <link rel="stylesheet" href="./css/interaction-quality.css" />
   <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>
   <script defer src="./dist/admin-overview-terminal.js"></script>
@@ -28,11 +31,18 @@
   <script defer src="./player-identity-wiring.js"></script>
   <script defer src="./player-create-ux.js"></script>
   <script defer src="./game-code-wiring.js"></script>
+  <script defer src="./admin-stabilization.js"></script>
+  <script defer src="./interaction-quality.js"></script>
+  <script defer src="./interaction-quality-control-reset.js" onload="void import('./scanner-auto-refresh.js').then(() =&gt; import('./scanner-reward-localization.js')).then(() =&gt; import('./attendance-reward-settings-route-bridge-v2.js')).then(() =&gt; import('./attendance-reward-save-controller-v3.js')).then(() =&gt; import('./attendance-reward-settings-v4.js')).then(() =&gt; import('./settings-simplified.js')).then(() =&gt; import('./settings-save-error-bridge.js'))"></script>
   <script defer src="./dist/admin-overview-boot.js"></script>
 </head>
 <body>
   <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite">
-    Opening administrator console…
+    <div class="admin-session-skeleton" aria-hidden="true">
+      <div class="admin-session-skeleton__top"><i></i><i></i></div>
+      <div class="admin-session-skeleton__grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <span class="admin-qol-sr-only">Verifying administrator access</span>
   </div>
   <main id="adminPreview" aria-label="Eco Novaria admin terminal" hidden></main>
 </body>

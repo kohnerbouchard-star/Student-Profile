@@ -20,7 +20,6 @@ import {
 } from "../../players/api/playerSessionHttpHelpers.ts";
 import type {
   ContractRepository,
-  GameSessionContractRecord,
   PlayerContractProgressRecord,
 } from "../contracts/contractRepositoryContracts.ts";
 import { ContractRepositoryError } from "../contracts/contractRepositoryContracts.ts";
@@ -31,6 +30,10 @@ import {
   toPlayerContractProgressDto,
 } from "../contracts/contractHttpContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
+import {
+  listPlayerContractsAvailableNow,
+  resolveActivePlayerCountryCode,
+} from "../services/playerContractAvailabilityService.ts";
 import type { PlayerContractRoute } from "./playerContractRoutePaths.ts";
 
 export interface PlayerContractHttpHandlerDependencies {
@@ -43,6 +46,11 @@ export interface PlayerContractHttpHandlerDependencies {
     serviceClient: EdgeSupabaseClient,
     sessionTokenHash: string,
   ) => ReturnType<typeof resolveActivePlayerSession>;
+  readonly resolvePlayerCountryCode?: (
+    serviceClient: EdgeSupabaseClient,
+    gameSessionId: string,
+    playerId: string,
+  ) => Promise<string | null>;
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => ContractRepository;
@@ -140,12 +148,19 @@ export async function handlePlayerContractRequest(
       ? dependencies.createRepository(serviceClient)
       : new SupabaseContractRepository(serviceClient as never);
     const nowIso = (dependencies.now ?? (() => new Date().toISOString()))();
+    const countryCode = await (dependencies.resolvePlayerCountryCode ??
+      resolveActivePlayerCountryCode)(
+      serviceClient,
+      gameSessionId,
+      sessionResult.player.id,
+    );
 
     if (route.kind === "contracts") {
       return await listPlayerContracts({
         repository,
         gameSessionId,
         playerId: sessionResult.player.id,
+        countryCode,
         rosterLabel: sessionResult.player.roster_label,
         nowIso,
       });
@@ -160,6 +175,7 @@ export async function handlePlayerContractRequest(
       gameSessionId,
       contractId: route.contractId,
       playerId: sessionResult.player.id,
+      countryCode,
       rosterLabel: sessionResult.player.roster_label,
       evidencePayload: submitBody.evidencePayload,
       submittedAt: nowIso,
@@ -173,27 +189,27 @@ async function listPlayerContracts(input: {
   readonly repository: ContractRepository;
   readonly gameSessionId: string;
   readonly playerId: string;
+  readonly countryCode: string | null;
   readonly rosterLabel: string | null;
   readonly nowIso: string;
 }): Promise<Response> {
   const [contracts, progress] = await Promise.all([
-    input.repository.listPlayerAvailableContracts({
+    listPlayerContractsAvailableNow(input.repository, {
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
-      rosterLabel: input.rosterLabel,
+      ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+      ...(input.rosterLabel ? { rosterLabel: input.rosterLabel } : {}),
+      nowIso: input.nowIso,
     }),
     input.repository.listPlayerContractProgress({
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
     }),
   ]);
-  const visibleContracts = contracts.filter((contract) =>
-    isPlayerVisibleContract(contract, input.gameSessionId, input.nowIso)
-  );
 
   return jsonResponse<PlayerContractListResponseBody>(200, {
     ok: true,
-    contracts: visibleContracts.map(toPlayerContractDto),
+    contracts: contracts.map(toPlayerContractDto),
     progress: progress
       .filter((row) =>
         row.gameSessionId === input.gameSessionId &&
@@ -208,19 +224,23 @@ async function submitPlayerContract(input: {
   readonly gameSessionId: string;
   readonly contractId: string;
   readonly playerId: string;
+  readonly countryCode: string | null;
   readonly rosterLabel: string | null;
   readonly evidencePayload: JsonObject;
   readonly submittedAt: string;
 }): Promise<Response> {
-  const availableContracts = await input.repository
-    .listPlayerAvailableContracts({
+  const availableContracts = await listPlayerContractsAvailableNow(
+    input.repository,
+    {
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
-      rosterLabel: input.rosterLabel,
-    });
+      ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+      ...(input.rosterLabel ? { rosterLabel: input.rosterLabel } : {}),
+      nowIso: input.submittedAt,
+    },
+  );
   const contract = availableContracts.find((candidate) =>
-    candidate.id === input.contractId &&
-    isPlayerVisibleContract(candidate, input.gameSessionId, input.submittedAt)
+    candidate.id === input.contractId
   );
 
   if (!contract) {
@@ -373,29 +393,6 @@ function readEvidencePayload(value: unknown): JsonObject {
   }
 
   return value as JsonObject;
-}
-
-function isPlayerVisibleContract(
-  contract: GameSessionContractRecord,
-  gameSessionId: string,
-  nowIso: string,
-): boolean {
-  const nowMs = Date.parse(nowIso);
-  const publishedAtMs = contract.publishedAt === null
-    ? NaN
-    : Date.parse(contract.publishedAt);
-  const expiresAtMs = contract.expiresAt === null
-    ? null
-    : Date.parse(contract.expiresAt);
-
-  return contract.gameSessionId === gameSessionId &&
-    contract.status === "active" &&
-    (contract.visibility === "public" || contract.visibility === "targeted") &&
-    !Number.isNaN(nowMs) &&
-    !Number.isNaN(publishedAtMs) &&
-    publishedAtMs <= nowMs &&
-    (expiresAtMs === null ||
-      (!Number.isNaN(expiresAtMs) && expiresAtMs > nowMs));
 }
 
 function isLockedProgress(progress: PlayerContractProgressRecord): boolean {

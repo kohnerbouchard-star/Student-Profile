@@ -1,17 +1,160 @@
 import { number } from "./common.ts";
 
+function evidenceText(value: unknown, depth = 0): string {
+  if (value === null || value === undefined || depth > 4) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => evidenceText(item, depth + 1))
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  const prompt = evidenceText(
+    record.prompt ?? record.question ?? record.label ?? record.title,
+    depth + 1,
+  );
+  const answer = evidenceText(
+    record.answer ?? record.response ?? record.value ?? record.text,
+    depth + 1,
+  );
+  if (prompt && answer) return `${prompt}: ${answer}`;
+  if (answer) return answer;
+
+  const priorityKeys = [
+    "writtenResponse",
+    "written_response",
+    "submissionText",
+    "submission_text",
+    "submissionUrl",
+    "submission_url",
+    "link",
+    "url",
+    "answers",
+    "responses",
+    "files",
+  ];
+  const priority = priorityKeys
+    .map((key) => evidenceText(record[key], depth + 1))
+    .filter(Boolean);
+  if (priority.length) return priority.join(" · ");
+
+  return Object.entries(record)
+    .map(([key, item]) => {
+      const nestedText = evidenceText(item, depth + 1);
+      return nestedText ? `${key}: ${nestedText}` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function submissionMessage(
+  contractTitle: string,
+  progressId: string,
+  resultPayload: Record<string, unknown>,
+): string {
+  const existing = evidenceText(
+    resultPayload.message ??
+      resultPayload.feedback ??
+      resultPayload.reviewFeedback ??
+      resultPayload.review_feedback,
+  );
+  if (existing) return existing;
+
+  return [
+    `Re: ${contractTitle || "Contract"}`,
+    "",
+    "This message is linked to your contract submission.",
+    progressId ? `Submission: ${progressId}` : "",
+  ].filter(Boolean).join("\n");
+}
+
 export async function loadContractSubmissions(
   service: any,
   gameId: string,
   contractId = "",
 ): Promise<any[]> {
-  let query = service.from("player_contract_progress").select("*")
+  let progressQuery = service.from("player_contract_progress").select("*")
     .eq("game_session_id", gameId)
     .order("updated_at", { ascending: false });
-  if (contractId) query = query.eq("contract_id", contractId);
-  const result = await query;
-  if (result.error) throw result.error;
-  return result.data || [];
+  if (contractId) progressQuery = progressQuery.eq("contract_id", contractId);
+
+  const [progressResult, playersResult, contractsResult] = await Promise.all([
+    progressQuery,
+    service.from("players")
+      .select("id,display_name,roster_label,player_identifier,status")
+      .eq("game_session_id", gameId),
+    service.from("game_session_contracts")
+      .select("id,title,status,reward_payload,completion_mode,deadline_at")
+      .eq("game_session_id", gameId),
+  ]);
+
+  if (progressResult.error) throw progressResult.error;
+  if (playersResult.error) throw playersResult.error;
+  if (contractsResult.error) throw contractsResult.error;
+
+  const players = new Map<string, any>(
+    (playersResult.data || []).map((row: any) => [String(row.id), row]),
+  );
+  const contracts = new Map<string, any>(
+    (contractsResult.data || []).map((row: any) => [String(row.id), row]),
+  );
+
+  return (progressResult.data || []).map((row: any) => {
+    const player = players.get(String(row.player_id)) || {};
+    const contract = contracts.get(String(row.contract_id)) || {};
+    const evidencePayload = row.evidence_payload || {};
+    const resultPayload = row.result_payload || {};
+    const evidence = evidenceText(evidencePayload) || "Submission received";
+    const previousStatus = evidenceText(
+      resultPayload.previousStatus ?? resultPayload.previous_status,
+    ) || "—";
+    const currentStatus = String(row.status || "—");
+    const playerName = player.display_name || "Player";
+    const country = player.country_code || row.country_code || "—";
+    const contractTitle = contract.title || "Contract";
+
+    return {
+      ...row,
+      id: row.id,
+      progressId: row.id,
+      submissionId: row.id,
+      gameSessionId: row.game_session_id,
+      contractId: row.contract_id,
+      contractTitle,
+      contractStatus: contract.status || null,
+      rewardPayload: contract.reward_payload || {},
+      completionMode: contract.completion_mode || null,
+      deadlineAt: contract.deadline_at || null,
+      playerId: row.player_id,
+      player: playerName,
+      playerName,
+      displayName: playerName,
+      rosterLabel: player.roster_label || null,
+      playerIdentifier: player.player_identifier || null,
+      playerStatus: player.status || null,
+      country,
+      countryCode: country === "—" ? null : country,
+      status: row.status,
+      summary: evidence,
+      evidence,
+      before: previousStatus,
+      after: currentStatus,
+      message: submissionMessage(contractTitle, String(row.id || ""), resultPayload),
+      evidencePayload,
+      resultPayload,
+      submittedAt: row.submitted_at || null,
+      completedAt: row.completed_at || null,
+      rewardIssuedAt: row.reward_issued_at || null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  });
 }
 
 export async function loadContractRewardAudit(

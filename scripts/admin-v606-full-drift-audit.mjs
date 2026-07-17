@@ -54,6 +54,9 @@ const expectedScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./admin-stabilization.js",
+  "./interaction-quality.js",
+  "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -63,16 +66,25 @@ assert(
 );
 assert(!/<style(?:\s|>)/i.test(html), "Admin entrypoint contains an inline style block.");
 
-for (const requiredStyle of [
+const expectedStyles = [
   "./css/page-shell.css",
   "./css/admin-overview-terminal.css",
   "./css/admin-overview-integrity.css",
   "./css/session-gate.css",
   "./css/player-runtime-integration.css",
   "./css/player-create-confirmation.css",
-]) {
+  "./css/admin-stabilization.css",
+  "./css/admin-stabilization-visual-finish.css",
+  "./css/interaction-quality.css",
+];
+
+for (const requiredStyle of expectedStyles) {
   assert(styleSources.includes(requiredStyle), `Missing required admin stylesheet ${requiredStyle}.`);
 }
+assert(
+  JSON.stringify(styleSources) === JSON.stringify(expectedStyles),
+  `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`,
+);
 
 const scopedRuntimeFiles = {
   "admin/player-drawer-wiring.js": [
@@ -93,6 +105,26 @@ const scopedRuntimeFiles = {
     "ORIGINAL_CURRENCY_ICONS",
     "ORIGINAL_PLAYER_ACTION_ICONS",
     "ORIGINAL_MODAL_VIDEOS",
+  ],
+  "admin/admin-stabilization.js": [
+    "reconcileKnownButtons",
+    "reconcileNumericFormatting",
+    "admin-terminal-ui-icon",
+    "admin-terminal-export-history-button-v601",
+    "admin-terminal-logs-export-icon",
+  ],
+  "admin/interaction-quality.js": [
+    "validateForm",
+    "setScannerProcessing",
+    "setScannerCompleted",
+    "setScannerError",
+    "admin-qol-page-skeleton",
+  ],
+  "admin/interaction-quality-control-reset.js": [
+    "restoreCompletedControl",
+    "setScannerReady",
+    "removeAttribute(\"aria-disabled\")",
+    "Scan a player code. The result appears here.",
   ],
 };
 
@@ -122,16 +154,41 @@ assert(!identity.includes('createElement("style")'), "Player identity wiring inj
 const lifecycle = readText("admin/player-create-lifecycle.js");
 assert(!lifecycle.includes("markExpandedPlayerDetail"), "Add Player lifecycle still mutates expanded player drawers.");
 assert(!lifecycle.includes("mountExpandedPlayerSettings"), "Add Player lifecycle still mounts removed inline settings.");
+assert(lifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions bypass field validation.");
 
 const createUx = readText("admin/player-create-ux.js");
 assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network wrapper.");
 assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
 assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
 
+const stabilization = readText("admin/admin-stabilization.js");
+assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a network wrapper.");
+assert(!stabilization.includes('createElement("style")'), "Admin stabilization injects runtime CSS.");
+assert(!stabilization.includes("document.body.innerHTML"), "Admin stabilization replaces the document body.");
+
+for (const [glyph, iconName] of [
+  ["↻", "history"],
+  ["⇩", "download"],
+  ["←", "arrow-left"],
+  ["→", "arrow-right"],
+]) {
+  assert(
+    stabilization.includes(`["${glyph}", "${iconName}"]`),
+    `Admin stabilization does not replace the raw ${glyph} control glyph.`,
+  );
+  assert(
+    stabilization.includes(`${iconName}:`) || stabilization.includes(`"${iconName}":`),
+    `Admin stabilization is missing the ${iconName} SVG path.`,
+  );
+}
+
 for (const path of [
   "admin/css/session-gate.css",
   "admin/css/player-runtime-integration.css",
   "admin/css/player-create-confirmation.css",
+  "admin/css/admin-stabilization.css",
+  "admin/css/admin-stabilization-visual-finish.css",
+  "admin/css/interaction-quality.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [
@@ -157,4 +214,60 @@ assert(
   "Player-created confirmation CSS is not bounded to its modal.",
 );
 
-console.log("Accepted v606 core files, external styling, and post-merge visual scope boundaries passed.");
+const stabilizationCss = readText("admin/css/admin-stabilization.css");
+assert(stabilizationCss.includes(".admin-terminal-modal-backdrop"), "Admin modal stabilization is missing.");
+assert(stabilizationCss.includes(".admin-terminal-modal.is-contract-modal"), "Contract modal stabilization is missing.");
+assert(
+  !/#adminPreview\s*,[\s\S]{0,80}#adminPreview\s+\*/m.test(stabilizationCss) &&
+    !/#adminPreview\s+\*\s*\{/m.test(stabilizationCss),
+  "Admin stabilization applies a blanket box-sizing reset to the accepted page shell.",
+);
+assert(
+  /\.admin-terminal-modal-backdrop\s*,\s*\.admin-terminal-modal-backdrop\s+\*\s*\{[\s\S]*?box-sizing:\s*border-box/m.test(stabilizationCss),
+  "Modal-only border-box containment is missing.",
+);
+
+const visualFinishCss = readText("admin/css/admin-stabilization-visual-finish.css");
+assert(
+  visualFinishCss.includes("#adminPreview .admin-terminal-clickable-row::after"),
+  "Clickable-row SVG affordance correction is missing.",
+);
+assert(
+  !visualFinishCss.includes("#adminPreview *"),
+  "Final visual corrections contain a blanket page-shell selector.",
+);
+
+const interactionQuality = readText("admin/interaction-quality.js");
+assert(
+  interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"),
+  "Interaction quality does not observe final admin request outcomes.",
+);
+assert(
+  interactionQuality.includes("aria-invalid") && interactionQuality.includes("admin-qol-field-error"),
+  "Field-level validation feedback is incomplete.",
+);
+assert(
+  interactionQuality.includes('"Scanning"') &&
+    interactionQuality.includes('"Completed"') &&
+    interactionQuality.includes('"Scan failed"'),
+  "Scanner processing, completion, or error copy is missing.",
+);
+
+const interactionControlReset = readText("admin/interaction-quality-control-reset.js");
+assert(
+  interactionControlReset.includes("restoreCompletedControl") &&
+    interactionControlReset.includes('removeAttribute("aria-disabled")') &&
+    interactionControlReset.includes("setScannerReady"),
+  "Completed actions or scanner idle recovery are incomplete.",
+);
+
+const interactionQualityCss = readText("admin/css/interaction-quality.css");
+assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-page-skeleton"), "Page skeleton CSS is missing.");
+assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error CSS is missing.");
+assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing CSS is missing.");
+assert(!interactionQualityCss.includes("#adminPreview *"), "Interaction quality contains a blanket page-shell reset.");
+assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
+assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
+
+console.log("Accepted v606 core files, text/icon integrity, validation states, skeleton loading, scanner recovery, completed-control restoration, and scoped admin stabilization boundaries passed.");

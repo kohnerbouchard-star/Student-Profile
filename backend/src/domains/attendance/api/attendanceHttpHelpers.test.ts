@@ -1,10 +1,61 @@
 import {
+  readPlayerAttendanceWindowConfig,
   readStaffAttendanceScanRequestBody,
 } from "./attendanceHttpHelpers.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
+
+Deno.test("attendance window preserves legacy fixed rewards until local policy is saved", () => {
+  assertEquals(readPlayerAttendanceWindowConfig({}), {
+    timezone: "Asia/Seoul",
+    lateCutoffMinutes: null,
+    presentRewardAmount: 1,
+    lateRewardAmount: 0,
+    currencyCode: "ECO",
+    currencyMode: "fixed",
+    applyDifficultyIncomeModifier: false,
+  });
+});
+
+Deno.test("attendance window preserves explicit reward values including zero", () => {
+  assertEquals(readPlayerAttendanceWindowConfig({
+    timezone: "America/Los_Angeles",
+    lateCutoff: "09:15",
+    presentRewardAmount: 0,
+    lateRewardAmount: 0.5,
+    currencyCode: "eco",
+    currencyMode: "fixed",
+    applyDifficultyIncomeModifier: false,
+  }), {
+    timezone: "America/Los_Angeles",
+    lateCutoffMinutes: 555,
+    presentRewardAmount: 0,
+    lateRewardAmount: 0.5,
+    currencyCode: "ECO",
+    currencyMode: "fixed",
+    applyDifficultyIncomeModifier: false,
+  });
+});
+
+Deno.test("attendance window enables local currency and difficulty only when explicit", () => {
+  assertEquals(readPlayerAttendanceWindowConfig({
+    presentRewardAmount: 2.5,
+    lateRewardAmount: 0.5,
+    currencyCode: "eco",
+    currencyMode: "player_country",
+    applyDifficultyIncomeModifier: true,
+  }), {
+    timezone: "Asia/Seoul",
+    lateCutoffMinutes: null,
+    presentRewardAmount: 2.5,
+    lateRewardAmount: 0.5,
+    currencyCode: "ECO",
+    currencyMode: "player_country",
+    applyDifficultyIncomeModifier: true,
+  });
+});
 
 Deno.test("attendance scan parser accepts the canonical contract", async () => {
   const result = await readStaffAttendanceScanRequestBody(jsonRequest({

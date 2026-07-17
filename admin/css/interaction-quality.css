@@ -1,0 +1,289 @@
+/* Admin-only interaction quality states: validation, progress, completion, errors, and skeleton loading. */
+
+.admin-qol-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.admin-session-skeleton {
+  width: min(920px, calc(100vw - 48px));
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid rgba(116, 226, 255, 0.12);
+  background: rgba(5, 17, 31, 0.74);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.42);
+}
+
+.admin-session-skeleton__top,
+.admin-session-skeleton__grid,
+.admin-qol-skeleton-head,
+.admin-qol-skeleton-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-session-skeleton__top {
+  grid-template-columns: 180px minmax(120px, 1fr);
+}
+
+.admin-session-skeleton__grid,
+.admin-qol-skeleton-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-session-skeleton i,
+.admin-qol-page-skeleton i {
+  display: block;
+  min-height: 18px;
+  border: 1px solid rgba(116, 226, 255, 0.08);
+  background:
+    linear-gradient(100deg, transparent 25%, rgba(116, 226, 255, 0.12) 45%, transparent 65%) 200% 0 / 200% 100%,
+    rgba(116, 226, 255, 0.055);
+  animation: adminQolSkeletonSweep 1.25s linear infinite;
+}
+
+.admin-session-skeleton__top i:first-child,
+.admin-qol-skeleton-head i:first-child {
+  min-height: 26px;
+}
+
+.admin-session-skeleton__grid i,
+.admin-qol-skeleton-grid i {
+  min-height: 138px;
+}
+
+@keyframes adminQolSkeletonSweep {
+  to { background-position: -200% 0, 0 0; }
+}
+
+.admin-terminal-shell-main {
+  position: relative;
+}
+
+.admin-qol-page-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-height: 100%;
+  padding: 4px 0 24px;
+  background: #020810;
+}
+
+.admin-qol-page-skeleton[hidden] {
+  display: none !important;
+}
+
+.admin-qol-skeleton-head {
+  grid-template-columns: minmax(180px, 0.48fr) minmax(140px, 0.22fr);
+  justify-content: space-between;
+}
+
+.admin-terminal-field.is-invalid > input,
+.admin-terminal-field.is-invalid > textarea,
+.admin-terminal-field.is-invalid > select,
+label.is-invalid > input,
+label.is-invalid > textarea,
+label.is-invalid > select,
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: rgba(255, 90, 95, 0.92) !important;
+  box-shadow: 0 0 0 1px rgba(255, 90, 95, 0.42), 0 0 18px rgba(255, 90, 95, 0.08) !important;
+  outline: none !important;
+}
+
+.admin-terminal-field.is-invalid > span,
+label.is-invalid > span {
+  color: #ff7c84 !important;
+}
+
+.admin-qol-field-error {
+  display: block;
+  margin-top: 5px;
+  color: #ff7c84;
+  font: 800 10px/1.35 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.025em;
+  text-transform: none;
+}
+
+.admin-qol-form-message {
+  grid-column: 1 / -1;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(116, 226, 255, 0.18);
+  color: rgba(233, 251, 255, 0.78);
+  background: rgba(3, 17, 31, 0.62);
+  font: 800 10px/1.4 var(--admin-terminal-font-ui, ui-monospace, monospace);
+  letter-spacing: 0.025em;
+}
+
+.admin-qol-form-message[hidden] {
+  display: none !important;
+}
+
+.admin-qol-form-message[data-state="loading"] {
+  color: #9eefff;
+  border-color: rgba(116, 226, 255, 0.36);
+}
+
+.admin-qol-form-message[data-state="success"] {
+  color: #71ef9b;
+  border-color: rgba(74, 222, 128, 0.34);
+  background: rgba(74, 222, 128, 0.07);
+}
+
+.admin-qol-form-message[data-state="error"] {
+  color: #ff7c84;
+  border-color: rgba(255, 90, 95, 0.42);
+  background: rgba(255, 90, 95, 0.07);
+}
+
+button[data-admin-qol-state] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+button[data-admin-qol-state] > :not(.admin-qol-button-status) {
+  opacity: 0 !important;
+}
+
+.admin-qol-button-status {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: inherit;
+  color: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.admin-qol-button-status::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+button[data-admin-qol-state="loading"] .admin-qol-button-status::before {
+  border-right-color: transparent;
+  animation: adminQolButtonSpin 0.7s linear infinite;
+}
+
+button[data-admin-qol-state="success"] {
+  color: #83f4a8 !important;
+  border-color: rgba(74, 222, 128, 0.52) !important;
+  background: rgba(74, 222, 128, 0.11) !important;
+}
+
+button[data-admin-qol-state="success"] .admin-qol-button-status::before {
+  border: 0;
+  border-radius: 0;
+  width: 14px;
+  height: 8px;
+  transform: translateY(-2px) rotate(-45deg);
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+button[data-admin-qol-state="error"] {
+  color: #ff858c !important;
+  border-color: rgba(255, 90, 95, 0.54) !important;
+  background: rgba(255, 90, 95, 0.10) !important;
+}
+
+button[data-admin-qol-state="error"] .admin-qol-button-status::before {
+  content: "!";
+  display: grid;
+  place-items: center;
+  border-color: currentColor;
+  font: 950 9px/1 var(--admin-terminal-font-ui, ui-monospace, monospace);
+}
+
+@keyframes adminQolButtonSpin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="processing"] .admin-terminal-mode-dot,
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="processing"] .admin-terminal-scanner-dot {
+  background: #74e2ff !important;
+  box-shadow: 0 0 16px rgba(116, 226, 255, 0.92) !important;
+  animation: adminQolScannerPulse 0.75s ease-in-out infinite alternate;
+}
+
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="completed"] .admin-terminal-mode-dot,
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="completed"] .admin-terminal-scanner-dot {
+  background: #4ade80 !important;
+  box-shadow: 0 0 16px rgba(74, 222, 128, 0.9) !important;
+}
+
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="error"] .admin-terminal-mode-dot,
+.admin-terminal-scanner-video-container[data-admin-qol-scanner-state="error"] .admin-terminal-scanner-dot {
+  background: #ff5a5f !important;
+  box-shadow: 0 0 16px rgba(255, 90, 95, 0.9) !important;
+}
+
+@keyframes adminQolScannerPulse {
+  from { transform: scale(0.82); opacity: 0.62; }
+  to { transform: scale(1.18); opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .admin-session-skeleton__grid,
+  .admin-qol-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-session-skeleton {
+    width: calc(100vw - 24px);
+    padding: 16px;
+  }
+
+  .admin-session-skeleton__top,
+  .admin-session-skeleton__grid,
+  .admin-qol-skeleton-head,
+  .admin-qol-skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-session-skeleton__grid i,
+  .admin-qol-skeleton-grid i {
+    min-height: 100px;
+  }
+
+  .admin-qol-button-status {
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-session-skeleton i,
+  .admin-qol-page-skeleton i,
+  button[data-admin-qol-state="loading"] .admin-qol-button-status::before,
+  .admin-terminal-scanner-video-container[data-admin-qol-scanner-state="processing"] .admin-terminal-mode-dot,
+  .admin-terminal-scanner-video-container[data-admin-qol-scanner-state="processing"] .admin-terminal-scanner-dot {
+    animation: none !important;
+  }
+}

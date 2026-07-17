@@ -1,0 +1,80 @@
+/* Final responsive and completion-state polish for the preset-first Settings page. */
+
+.admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+  .admin-terminal-settings-save-bar.is-saved {
+  justify-content: flex-start;
+}
+
+.admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+  .admin-terminal-settings-save-bar.is-saved > button {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-config-summary > header,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-main-panel > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-config-summary header small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-summary-list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-summary-list > div,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-summary-list > div:nth-child(odd),
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-summary-list > div:nth-last-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid rgba(116, 226, 255, 0.08);
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-summary-list > div:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-custom-toggle {
+    width: 100%;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-field {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 7px;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-field > span,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-field > small,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-field > input,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-field > select,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-settings-segmented,
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-attendance-field-error {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .admin-terminal-settings-page.is-settings-simplified.is-settings-preset-first
+    .admin-terminal-attendance-reward-formula {
+    grid-template-columns: 1fr;
+  }
+}

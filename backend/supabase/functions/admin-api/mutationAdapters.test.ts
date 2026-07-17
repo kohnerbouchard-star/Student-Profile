@@ -189,3 +189,67 @@ Deno.test("applies a named difficulty preset from the authoritative profile", as
   assert(appliedPatch?.price_modifier === 1.18, "preset modifiers should come from the profile");
   assert(appliedPatch?.custom_label === null, "preset mode should clear the custom label");
 });
+
+Deno.test("initializes a missing custom difficulty policy from the saved preset", async () => {
+  const profile = {
+    id: "profile-moderate",
+    preset_key: "moderate",
+    label: "Moderate",
+    price_modifier: 1.08,
+    event_volatility_modifier: 1.1,
+    scarcity_modifier: 1.08,
+    income_modifier: 0.95,
+    trade_modifier: 1.08,
+    credit_modifier: 1.08,
+    status: "active",
+  };
+  let inserted: Record<string, unknown> | null = null;
+
+  const service = {
+    from(table: string) {
+      let mode = "select";
+      let payload: Record<string, unknown> | null = null;
+      const query = {
+        select() {
+          return query;
+        },
+        eq() {
+          return query;
+        },
+        insert(value: Record<string, unknown>) {
+          mode = "insert";
+          payload = value;
+          inserted = value;
+          return query;
+        },
+        async maybeSingle() {
+          if (table === "game_difficulty_policy_settings" && mode === "select") {
+            return { data: null, error: null };
+          }
+          if (table === "game_settings") {
+            return { data: { difficulty_preset: "moderate" }, error: null };
+          }
+          if (table === "difficulty_policy_profiles") {
+            return { data: profile, error: null };
+          }
+          return { data: { id: "new-policy", ...(payload || {}) }, error: null };
+        },
+      };
+      return query;
+    },
+  };
+
+  const result = await applyDifficultyPolicy(service, "game-id", {
+    source: "custom",
+    custom_label: "Income only",
+    income_modifier: 0.75,
+  });
+
+  assert(inserted?.game_session_id === "game-id", "missing policy should be inserted for the game");
+  assert(inserted?.difficulty_preset === "custom", "custom changes should create custom policy mode");
+  assert(inserted?.income_modifier === 0.75, "edited modifier should be preserved");
+  assert(inserted?.price_modifier === 1.08, "unedited price modifier should come from the saved preset");
+  assert(inserted?.event_volatility_modifier === 1.1, "unedited volatility should come from the saved preset");
+  assert(inserted?.metadata && Object.keys(inserted.metadata as Record<string, unknown>).length === 0, "new policy metadata should be initialized");
+  assert(result.id === "new-policy", "inserted policy should be returned");
+});

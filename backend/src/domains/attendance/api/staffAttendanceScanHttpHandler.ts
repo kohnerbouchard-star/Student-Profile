@@ -25,6 +25,9 @@ import {
   readPlayerAttendanceWindowConfig,
   readStaffAttendanceScanRequestBody,
 } from "./attendanceHttpHelpers.ts";
+import {
+  resolveAttendanceRewardPolicy,
+} from "./attendanceRewardPolicy.ts";
 
 export interface StaffAttendanceScanHttpHandlerDependencies {
   readonly resolveStaffForRequest: (
@@ -79,6 +82,12 @@ export interface StaffAttendanceScanSuccessBody {
     readonly amount: number;
     readonly currencyCode: string;
     readonly ledgerEntryId: string | null;
+    readonly configuredBaseAmount: number;
+    readonly baseCurrencyCode: string;
+    readonly currencyMode: "player_country" | "fixed" | "fixed_fallback";
+    readonly countryCode: string | null;
+    readonly incomeModifier: number;
+    readonly exchangeRateIndex: number;
   };
 }
 
@@ -180,9 +189,18 @@ export async function handleStaffAttendanceScanRequest(
         currentMinutes > attendanceConfig.lateCutoffMinutes
         ? "late"
         : "present";
-    const rewardAmount = attendanceStatus === "late"
+    const configuredBaseAmount = attendanceStatus === "late"
       ? attendanceConfig.lateRewardAmount
       : attendanceConfig.presentRewardAmount;
+    const rewardPolicy = await resolveAttendanceRewardPolicy(
+      staffResult.serviceClient,
+      {
+        gameSessionId,
+        playerId: player.id,
+        configuredBaseAmount,
+        attendanceConfig,
+      },
+    );
     const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
 
     const attendanceResponse = await staffResult.serviceClient.rpc(
@@ -192,8 +210,8 @@ export async function handleStaffAttendanceScanRequest(
         p_player_id: player.id,
         p_attendance_date: attendanceDate,
         p_status: attendanceStatus,
-        p_reward_amount: rewardAmount,
-        p_currency_code: attendanceConfig.currencyCode,
+        p_reward_amount: rewardPolicy.effectiveAmount,
+        p_currency_code: rewardPolicy.currencyCode,
         p_request_id: requestId,
       },
     );
@@ -244,6 +262,12 @@ export async function handleStaffAttendanceScanRequest(
         amount: readBalanceNumber(attendanceRow.reward_amount),
         currencyCode: attendanceRow.currency_code,
         ledgerEntryId: attendanceRow.ledger_entry_id,
+        configuredBaseAmount: rewardPolicy.configuredBaseAmount,
+        baseCurrencyCode: rewardPolicy.baseCurrencyCode,
+        currencyMode: rewardPolicy.currencyMode,
+        countryCode: rewardPolicy.countryCode,
+        incomeModifier: rewardPolicy.incomeModifier,
+        exchangeRateIndex: rewardPolicy.exchangeRateIndex,
       },
     });
   } catch (error) {

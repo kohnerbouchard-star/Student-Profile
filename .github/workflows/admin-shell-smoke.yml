@@ -9,13 +9,25 @@ on:
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
+      - "frontend/src/features/contracts/**"
+      - "frontend/src/styles/screens/contracts.css"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-stabilization-smoke.mjs"
+      - "scripts/admin-quality-smoke-fixture.mjs"
+      - "scripts/admin-contract-validation-smoke.mjs"
+      - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-attendance-reward-settings-smoke.mjs"
+      - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/admin-contract-review-source-audit.mjs"
+      - "scripts/admin-contract-review-smoke.mjs"
+      - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -34,13 +46,25 @@ on:
       - "index.html"
       - "frontend/src/core/bootstrap.js"
       - "frontend/src/features/auth/**"
+      - "frontend/src/features/contracts/**"
+      - "frontend/src/styles/screens/contracts.css"
       - "frontend/src/core/api.js"
       - "scripts/asset-reference-audit.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-stabilization-smoke.mjs"
+      - "scripts/admin-quality-smoke-fixture.mjs"
+      - "scripts/admin-contract-validation-smoke.mjs"
+      - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-attendance-reward-settings-smoke.mjs"
+      - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
       - "scripts/admin-create-actions-smoke.mjs"
+      - "scripts/admin-contract-end-to-end-smoke.mjs"
+      - "scripts/admin-contract-review-source-audit.mjs"
+      - "scripts/admin-contract-review-smoke.mjs"
+      - "scripts/player-contracts-workspace-smoke.mjs"
       - "scripts/admin-player-create-ux-smoke.mjs"
       - "scripts/admin-classroom-write-fallback-smoke.mjs"
       - "scripts/admin-player-access-code-smoke.mjs"
@@ -75,6 +99,9 @@ jobs:
       - name: Validate accepted v606 drift boundaries
         run: node scripts/admin-v606-full-drift-audit.mjs
 
+      - name: Audit accepted admin review actions
+        run: node scripts/admin-contract-review-source-audit.mjs
+
       - name: Validate classroom write fallback
         run: node scripts/admin-classroom-write-fallback-smoke.mjs
 
@@ -97,10 +124,28 @@ jobs:
             sleep 1
           done
           cat /tmp/admin-smoke-server.log
-          exit 1
+          false
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs
+
+      - name: Exercise student contracts workspace
+        run: node scripts/player-contracts-workspace-smoke.mjs
+
+      - name: Audit admin stabilization boundaries
+        run: node scripts/admin-stabilization-smoke.mjs
+
+      - name: Audit contract validation and button states
+        run: node scripts/admin-contract-validation-smoke.mjs
+
+      - name: Audit verification skeleton and scanner lifecycle
+        run: node scripts/admin-loading-scanner-smoke.mjs
+
+      - name: Audit attendance reward settings and local currency
+        run: node scripts/admin-attendance-reward-settings-smoke.mjs
+
+      - name: Keep custom Settings open during edits
+        run: node scripts/admin-settings-disclosure-smoke.mjs
 
       - name: Audit desktop navigation and layout
         env:
@@ -125,6 +170,12 @@ jobs:
 
       - name: Open every admin create workflow
         run: node scripts/admin-create-actions-smoke.mjs
+
+      - name: Exercise complete contract create payload
+        run: node scripts/admin-contract-end-to-end-smoke.mjs
+
+      - name: Exercise accepted admin contract review flow
+        run: node scripts/admin-contract-review-smoke.mjs
 
       - name: Exercise generated player credentials and confirmation UX
         run: node scripts/admin-player-create-ux-smoke.mjs

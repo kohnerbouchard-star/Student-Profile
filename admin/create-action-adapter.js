@@ -15,9 +15,20 @@
     XALVORIA: "XAL",
     DRAVENLOK: "DRV"
   };
+  let contractCreateFlight = null;
 
   function text(value) {
     return String(value ?? "").trim();
+  }
+
+  function object(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+  }
+
+  function array(value) {
+    return Array.isArray(value) ? value : [];
   }
 
   function numberOrUndefined(value) {
@@ -31,11 +42,11 @@
     return text(new FormData(form).get(name));
   }
 
-  function checkedValues(form) {
+  function checkedValues(form, selector = 'input[type="checkbox"]:checked') {
     if (!form) return [];
-    return [...form.querySelectorAll('input[type="checkbox"]:checked')]
+    return [...form.querySelectorAll(selector)]
       .map((input) => text(input.value))
-      .filter(Boolean);
+      .filter((value) => value && value !== "on");
   }
 
   function compact(record) {
@@ -127,14 +138,64 @@
       ...source,
       ...canonical,
       payload: compact({
-        ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
+        ...object(source.payload),
         ...canonical
       })
     };
   }
 
+  function canonicalContractRewards(payload) {
+    const rewardRows = array(payload.rewards).length
+      ? array(payload.rewards)
+      : array(payload.rewardRules);
+    const cashRows = array(payload.cashRewards).length
+      ? array(payload.cashRewards)
+      : rewardRows.filter((reward) =>
+        ["cash", "money"].includes(text(reward?.kind || reward?.rewardType).toLowerCase())
+      );
+    const itemRows = array(payload.itemRewards).length
+      ? array(payload.itemRewards)
+      : rewardRows.filter((reward) =>
+        ["item", "inventory"].includes(text(reward?.kind || reward?.rewardType).toLowerCase())
+      );
+
+    const cashSource = object(cashRows[0]);
+    const cashAmount = numberOrUndefined(
+      cashSource.amount ?? cashSource.value ?? payload.cashRewardAmount ?? payload.rewardCash
+    );
+    const cash = cashAmount && cashAmount > 0
+      ? {
+        amount: Math.round(cashAmount * 100) / 100,
+        accountType: text(cashSource.accountType) || "cash",
+        currencyCode: text(
+          cashSource.currencyCode || cashSource.currency || payload.currencyCode
+        ).toUpperCase() || preferredStoreCurrency()
+      }
+      : undefined;
+
+    const seen = new Set();
+    const items = itemRows.map((reward) => {
+      const source = object(reward);
+      const storeItemId = text(
+        source.storeItemId || source.itemUuid || source.itemId || source.id
+      );
+      const quantity = Math.trunc(numberOrUndefined(source.quantity) || 0);
+      if (!storeItemId || quantity <= 0 || seen.has(storeItemId)) return null;
+      seen.add(storeItemId);
+      return {
+        storeItemId,
+        itemUuid: storeItemId,
+        quantity,
+        name: text(source.name || source.itemName) || undefined
+      };
+    }).filter(Boolean);
+
+    return compact({ cash, items: items.length ? items : undefined });
+  }
+
   function contractPayload(source) {
     const form = document.querySelector("[data-admin-terminal-contract-form]");
+    const sourcePayload = object(source.payload);
     if (!form) return source;
 
     const title = formValue(form, "title");
@@ -144,40 +205,135 @@
     const deadline = formValue(form, "deadline");
     const postSetting = formValue(form, "postSetting") || "now";
     const postAt = formValue(form, "postAt");
-    const locations = checkedValues(form);
+    const reviewType = formValue(form, "reviewType") || text(sourcePayload.reviewType) || "teacher";
+    const difficulty = formValue(form, "difficulty") || text(sourcePayload.difficulty) || "Standard";
+    const reviewNote = formValue(form, "reviewNote") || text(sourcePayload.reviewNote);
+    const quantity = numberOrUndefined(formValue(form, "quantity"));
+    const quantityScope = formValue(form, "quantityScope") || "total";
+    const locations = checkedValues(
+      form,
+      '[data-admin-terminal-contract-location]:checked'
+    );
     const normalizedLocations = locations.includes("all") ? ["all"] : locations;
+    const materials = array(sourcePayload.materials);
+    const singularRequirement = object(sourcePayload.submissionRequirement);
+    const existingRequirements = array(sourcePayload.submissionRequirements);
+    const submissionRequirements = existingRequirements.length
+      ? existingRequirements
+      : Object.keys(singularRequirement).length
+        ? [singularRequirement]
+        : evidence
+          ? [{ type: "text", prompt: evidence, required: true }]
+          : [];
+    const rewardPayload = canonicalContractRewards(sourcePayload);
+    const completionMode = reviewType === "auto" ? "auto_check" : "manual_review";
+    const targeting = normalizedLocations.includes("all") || normalizedLocations.length === 0
+      ? { allPlayers: true }
+      : { countryCodes: normalizedLocations };
+    const status = postSetting === "draft"
+      ? "draft"
+      : postAt
+        ? "scheduled"
+        : "active";
+    const metadata = compact({
+      ...object(sourcePayload.metadata),
+      materials,
+      materialCount: materials.length,
+      submissionRequirement: Object.keys(singularRequirement).length
+        ? singularRequirement
+        : undefined,
+      submissionRequirements,
+      difficulty,
+      reviewNote: reviewNote || undefined,
+      reviewType,
+      quantity,
+      quantityScope,
+      postText: sourcePayload.postText || undefined,
+      rewardSummary: sourcePayload.reward || undefined
+    });
 
     return {
       ...source,
       payload: compact({
-        ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
+        ...sourcePayload,
         title,
         objective,
         description: objective || instructions,
         instructions,
         evidence,
-        submissionRequirements: evidence
-          ? [{ type: "text", prompt: evidence, required: true }]
-          : [],
+        materials,
+        submissionRequirement: Object.keys(singularRequirement).length
+          ? singularRequirement
+          : undefined,
+        submissionRequirements,
+        requirementsPayload: compact({
+          ...object(sourcePayload.requirementsPayload),
+          manualText: evidence || undefined,
+          submissionRequirement: Object.keys(singularRequirement).length
+            ? singularRequirement
+            : undefined
+        }),
+        rewardPayload,
         deadline,
         deadlineAt: deadline,
-        quantity: numberOrUndefined(formValue(form, "quantity")),
-        quantityScope: formValue(form, "quantityScope") || "total",
+        quantity,
+        quantityScope,
         locations: normalizedLocations.length ? normalizedLocations : ["all"],
-        targeting: normalizedLocations.includes("all")
-          ? { allPlayers: true }
-          : { countryCodes: normalizedLocations },
+        targeting,
+        targetingPayload: targeting,
+        visibility: targeting.allPlayers ? "public" : "targeted",
+        reviewType,
+        completionMode,
+        difficulty,
+        reviewNote,
+        metadata,
         postSetting,
         postAt,
         scheduledAt: postAt || undefined,
+        publishedAt: postAt || undefined,
         publishNow: postSetting === "now",
-        status: postSetting === "draft"
-          ? "draft"
-          : postAt
-            ? "scheduled"
-            : "active"
+        status
       })
     };
+  }
+
+  function contractCreateKey(pathname, normalized) {
+    const payload = object(normalized.payload);
+    return JSON.stringify({
+      pathname,
+      title: text(payload.title).toLowerCase(),
+      instructions: text(payload.instructions),
+      deadlineAt: text(payload.deadlineAt || payload.deadline),
+      postAt: text(payload.postAt || payload.scheduledAt || payload.publishedAt),
+      locations: array(payload.locations).map(text).filter(Boolean).sort()
+    });
+  }
+
+  async function sendContractCreateOnce(request, normalized, pathname) {
+    const key = contractCreateKey(pathname, normalized);
+    const now = Date.now();
+    const current = contractCreateFlight;
+    if (current && current.key === key && now - current.startedAt < 3000) {
+      if (current.response) return current.response.clone();
+      return (await current.promise).clone();
+    }
+
+    const outgoing = jsonRequest(request, normalized);
+    const promise = delegatedFetch(outgoing);
+    const flight = { key, startedAt: now, promise, response: null };
+    contractCreateFlight = flight;
+
+    try {
+      const response = await promise;
+      flight.response = response.clone();
+      window.setTimeout(() => {
+        if (contractCreateFlight === flight) contractCreateFlight = null;
+      }, 3000);
+      return response;
+    } catch (error) {
+      if (contractCreateFlight === flight) contractCreateFlight = null;
+      throw error;
+    }
   }
 
   function storePayload(source) {
@@ -193,7 +349,7 @@
     return {
       ...source,
       payload: compact({
-        ...(source.payload && typeof source.payload === "object" ? source.payload : {}),
+        ...object(source.payload),
         itemKey: slug(itemName, `custom_item_${crypto.randomUUID().slice(0, 8)}`),
         itemName,
         name: itemName,
@@ -233,6 +389,7 @@
       normalized = playerPayload(source);
     } else if (/\/contracts$/.test(url.pathname) && source.action === "create-contract") {
       normalized = contractPayload(source);
+      return sendContractCreateOnce(request, normalized, url.pathname);
     } else if (/\/store\/items$/.test(url.pathname) && source.action === "save-store-item") {
       normalized = storePayload(source);
     }
