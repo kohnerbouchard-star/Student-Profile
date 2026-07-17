@@ -15,9 +15,10 @@
     "banking-read": "node tests/banking-read-model.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
     "realtime": "node tests/realtime-freshness.mjs",
+    "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
