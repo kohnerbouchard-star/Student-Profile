@@ -1,3 +1,4 @@
+import { installCountryFocusController } from "./accessibility/country-focus-controller.js";
 import { installSkipLinkController } from "./accessibility/skip-link-controller.js";
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
@@ -9,6 +10,7 @@ import { installPlayerInvalidationController } from "./realtime/player-invalidat
 const mount = document.getElementById("playerTerminal");
 const config = resolvePlayerTerminalConfig();
 const skipLink = installSkipLinkController(mount);
+const countryFocus = installCountryFocusController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent
@@ -24,6 +26,7 @@ terminal.destroy = () => {
   marketOrders.destroy();
   storePurchases.destroy();
   formDrafts.destroy();
+  countryFocus.destroy();
   skipLink.destroy();
   destroyTerminal();
 };
