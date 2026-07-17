@@ -15,6 +15,7 @@
   let disclosureOpen = false;
   let disclosureGameId = "";
   let numericDraftPending = false;
+  let activeDeferredNumericControl = null;
   const deferredNumericControls = new WeakSet();
 
   function text(value) {
@@ -56,6 +57,7 @@
       disclosureGameId = gameId;
       disclosureOpen = false;
       numericDraftPending = false;
+      activeDeferredNumericControl = null;
       observedPage = null;
     }
 
@@ -152,9 +154,20 @@
     const target = event.target;
     if (!isActiveNumericEditor(target)) return;
     deferredNumericControls.add(target);
+    activeDeferredNumericControl = target;
     numericDraftPending = true;
     event.stopImmediatePropagation();
     reconcilePersistentSave();
+  }
+
+  function flushDeferredNumericControl(target = activeDeferredNumericControl) {
+    if (!(target instanceof HTMLInputElement) || !deferredNumericControls.has(target)) return false;
+    deferredNumericControls.delete(target);
+    if (activeDeferredNumericControl === target) activeDeferredNumericControl = null;
+    target.dispatchEvent(new Event("input", { bubbles: true }));
+    target.dispatchEvent(new Event("change", { bubbles: true }));
+    numericDraftPending = false;
+    return true;
   }
 
   window.addEventListener("input", deferNumericEvent, true);
@@ -163,14 +176,20 @@
   window.addEventListener("focusout", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || !deferredNumericControls.has(target)) return;
-    deferredNumericControls.delete(target);
     window.queueMicrotask(() => {
       if (!target.isConnected) return;
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-      target.dispatchEvent(new Event("change", { bubbles: true }));
-      numericDraftPending = false;
+      flushDeferredNumericControl(target);
       schedule();
     });
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const save = target?.closest(SELECTOR);
+    if (save instanceof HTMLButtonElement && activeDeferredNumericControl) {
+      flushDeferredNumericControl();
+      reconcilePersistentSave();
+    }
   }, true);
 
   document.addEventListener("click", (event) => {
