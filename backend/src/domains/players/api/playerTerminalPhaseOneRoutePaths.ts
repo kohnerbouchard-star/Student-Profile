@@ -1,5 +1,4 @@
 export type PlayerTerminalPhaseOneRoute =
-  | { readonly kind: "capabilities" }
   | { readonly kind: "inventory" }
   | { readonly kind: "logout" };
 
@@ -7,10 +6,6 @@ export function readPlayerTerminalPhaseOneRoutePath(
   pathname: string,
 ): PlayerTerminalPhaseOneRoute | null {
   const segments = pathname.split("/").filter(Boolean);
-
-  if (matchesRoute(segments, ["players", "me", "capabilities"])) {
-    return { kind: "capabilities" };
-  }
 
   if (matchesRoute(segments, ["players", "me", "inventory"])) {
     return { kind: "inventory" };
