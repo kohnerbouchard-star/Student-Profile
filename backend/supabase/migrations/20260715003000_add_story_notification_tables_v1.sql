@@ -1,3 +1,5 @@
+begin;
+
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
   game_session_id uuid not null references public.game_sessions(id) on delete cascade,
@@ -67,3 +69,5 @@ comment on table public.notifications is
   'Server-managed game notifications and story cutscenes. Browser access is mediated through authenticated Edge Function routes.';
 comment on table public.notification_deliveries is
   'Server-managed per-player notification delivery state. Browser access is mediated through authenticated Edge Function routes.';
+
+commit;

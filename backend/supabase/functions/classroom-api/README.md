@@ -1,75 +1,41 @@
 # Classroom API
 
-Supabase Edge Function compatibility API router for Eco Novaria / Classroom API traffic.
+`classroom-api` is an active Supabase Edge Function and the modern HTTP boundary
+for classroom and student capabilities. Its deployed source must be traceable to
+a reviewed Git commit and promoted with the matching migrations and frontend.
 
-## Checkpoint status
+## Responsibilities
 
-The Edge/API structure checkpoint is now open.
+- staff authentication and licensing/game creation boundaries;
+- player session and identity validation;
+- attendance clock-in and localized, idempotent reward issuance;
+- player-safe Store quoting and purchase execution;
+- contract reads, evidence submission, and game-scoped classroom operations;
+- thin HTTP adaptation into domain handlers and repository/RPC boundaries.
 
-This folder is no longer only a placeholder, but it is still not a live public runtime route yet. Do not add production request handlers until the route wiring checkpoint is intentionally opened and reviewed.
+## Request boundary
 
-## Current safe scope
+The router validates method, path, headers, and body before invoking a handler.
+Staff routes use a Supabase Auth bearer token. Player routes use the configured
+player session token contract and derive player/game identity from that session;
+they do not accept browser-selected identity as authority.
 
-Allowed in this checkpoint:
+After authentication, each operation must enforce its game/player scope before
+using service-role data access. CORS remains restricted to approved application
+origins and local development—not wildcard origins.
 
-- document the Edge/API route structure
-- define route naming conventions
-- define dependency wiring expectations
-- define auth/header/body parsing expectations
-- prepare non-runtime structure files
+## Development rules
 
-Not allowed in this checkpoint:
+- Keep the Edge router thin; business rules belong in `backend/src/domains/`.
+- Do not duplicate transaction logic that already exists in an atomic RPC.
+- Do not log tokens, access codes, passwords, or student-sensitive bodies.
+- Add route tests for unauthenticated, wrong-role, wrong-game, revoked/expired,
+  valid-owner, and replay/idempotency cases.
+- Pin Edge dependencies and update `../deno.lock` intentionally.
 
-- no production request handlers
-- no service-role key exposure
-- no frontend wiring
-- no database schema changes
-- no RLS policy changes
-- no purchase-code redemption outside the transaction-safe RPC
-- no direct plaintext purchase-code persistence
+Verify from the repository root:
 
-## Planned route structure
-
-Future classroom API routes should flow through the backend source handlers first, then be wired into Edge runtime adapters.
-
-Planned licensing activation route:
-
-```text
-POST /licensing/activate
+```zsh
+npm --prefix backend run typecheck:edge
+npm --prefix backend run smoke
 ```
-
-Expected internal flow:
-
-```text
-Supabase Auth user
-→ staff identity resolution
-→ licensing API boundary handler
-→ activation handler composition
-→ request parser
-→ purchase-code normalization/hash boundary
-→ transaction-safe activation RPC
-→ safe response mapper
-```
-
-Current backend source boundary:
-
-```text
-backend/src/domains/licensing/api/activationRouteHandler.ts
-```
-
-The Edge runtime wrapper should call this backend boundary instead of duplicating licensing business logic inside the Edge folder.
-
-## Required runtime dependencies
-
-The future Edge runtime wrapper must provide:
-
-- verified `SupabaseAuthUser`
-- staff access repository
-- licensing activation repository
-- Web Crypto runtime
-- request body as `unknown`
-- request metadata such as request id and route source
-
-## Safety rule
-
-The Edge runtime wrapper must remain thin. It should only translate HTTP/runtime concerns into the existing backend API boundary.

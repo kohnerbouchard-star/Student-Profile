@@ -11,3 +11,8 @@ backend/node_modules/
 
 # Supabase CLI local state
 backend/supabase/.temp/
+backend/supabase/.branches/
+admin-browser-smoke-artifacts/
+playwright-report/
+test-results/
+coverage/

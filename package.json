@@ -1,0 +1,25 @@
+{
+  "name": "econovaria",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Repository-wide validation and production-readiness tooling for Econovaria.",
+  "engines": {
+    "node": ">=22.23.1 <23",
+    "npm": ">=10.9.8 <11"
+  },
+  "packageManager": "npm@10.9.8",
+  "scripts": {
+    "audit": "npm run audit:migrations && npm run audit:architecture && npm run audit:assets && npm run audit:admin-contracts",
+    "audit:admin-contracts": "node scripts/admin-bundle-contract-audit.mjs",
+    "audit:architecture": "node scripts/admin-architecture-ratchet.mjs",
+    "audit:assets": "node scripts/asset-reference-audit.mjs",
+    "audit:migrations": "node scripts/validate-supabase-migrations.mjs",
+    "db:lint": "supabase db lint --workdir backend --local --level warning",
+    "db:reset": "supabase db reset --workdir backend --local",
+    "test": "npm run audit && node scripts/admin-session-manager-smoke.mjs && node scripts/admin-shell-smoke.mjs && node scripts/admin-v606-full-drift-audit.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1",
+    "supabase": "2.109.1"
+  }
+}

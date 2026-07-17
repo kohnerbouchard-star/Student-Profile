@@ -1,0 +1,74 @@
+name: Database Replay
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/**"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/database-replay.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/**"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/database-replay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install pinned tooling
+        run: npm ci
+
+      - name: Validate migration source
+        run: npm run audit:migrations
+
+      - name: Start disposable Supabase stack
+        run: >-
+          npx supabase start --workdir backend
+          --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor
+
+      - name: Replay migrations from zero twice
+        run: |
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Capture local service diagnostics
+        if: failure()
+        run: npx supabase status --workdir backend || true
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
