@@ -36,6 +36,19 @@ function createIdempotencyKey(prefix) {
   return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
 }
 
+function attachInventoryRedemptions(data, response) {
+  if (!data?.inventory) return data;
+  return {
+    ...data,
+    inventory: {
+      ...data.inventory,
+      redemptionRequests: Array.isArray(response?.redemptionRequests)
+        ? response.redemptionRequests
+        : []
+    }
+  };
+}
+
 export class PlayerApi {
   constructor(config) {
     this.config = config;
@@ -92,7 +105,10 @@ export class PlayerApi {
     if (!endpointKey || (!force && this.loadedLazyRoutes.has(route))) return data;
     const response = await this.request(endpointKey);
     this.loadedLazyRoutes.add(route);
-    const next = mergeTerminalRead(data, endpointKey, response);
+    const merged = mergeTerminalRead(data, endpointKey, response);
+    const next = endpointKey === "inventory"
+      ? attachInventoryRedemptions(merged, response)
+      : merged;
     if (endpointKey !== "market") return next;
     const assetId = next.market?.selectedAssetId;
     return assetId ? this.loadMarketAsset(next, assetId) : next;
@@ -122,7 +138,10 @@ export class PlayerApi {
     if (this.config.usePreviewData) return data;
     const response = await this.request("inventory");
     this.loadedLazyRoutes.add("inventory");
-    return mergeTerminalRead(data, "inventory", response);
+    return attachInventoryRedemptions(
+      mergeTerminalRead(data, "inventory", response),
+      response
+    );
   }
 
   async refreshNotifications(data) {
