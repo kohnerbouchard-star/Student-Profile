@@ -4,6 +4,8 @@
   const SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const PAGE_SELECTOR = ".admin-terminal-settings-page";
   const DISCLOSURE_SELECTOR = "[data-settings-custom-toggle]";
+  const SAVE_PANEL_SELECTOR = ".admin-terminal-settings-save-bar";
+  const SAVE_STATUS_SELECTOR = "[data-settings-save-status]";
   const NUMERIC_EDITOR_SELECTOR =
     `${PAGE_SELECTOR}.is-custom-settings-open ` +
     ".admin-terminal-settings-tuning-grid input[type=\"number\"]";
@@ -12,6 +14,7 @@
   let observedPage = null;
   let disclosureOpen = false;
   let disclosureGameId = "";
+  let numericDraftPending = false;
   const deferredNumericControls = new WeakSet();
 
   function text(value) {
@@ -52,6 +55,7 @@
     if (gameId !== disclosureGameId) {
       disclosureGameId = gameId;
       disclosureOpen = false;
+      numericDraftPending = false;
       observedPage = null;
     }
 
@@ -90,10 +94,43 @@
     if (changed) window.EconovariaSimplifiedSettings?.reconcile?.();
   }
 
+  function settingsDirty() {
+    return numericDraftPending ||
+      window.EconovariaSimplifiedSettings?.isDirty?.() === true ||
+      window.EconovariaAttendanceRewardSettings?.isDirty?.() === true;
+  }
+
+  function reconcilePersistentSave() {
+    const page = document.querySelector(PAGE_SELECTOR);
+    const panel = page?.querySelector(SAVE_PANEL_SELECTOR);
+    const button = panel?.querySelector(SELECTOR);
+    const status = panel?.querySelector(SAVE_STATUS_SELECTOR);
+    if (!(page instanceof HTMLElement) || !(panel instanceof HTMLElement) ||
+        !(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const open = page.classList.contains("is-custom-settings-open");
+    const dirty = settingsDirty();
+    const busy = button.hasAttribute("aria-busy");
+    const failed = button.getAttribute("data-admin-terminal-api-state") === "error";
+    const saved = /settings saved/i.test(text(status?.textContent));
+
+    panel.hidden = !(open || dirty || busy || failed || saved);
+    button.disabled = !dirty || busy;
+
+    if (numericDraftPending && !busy && !failed && status instanceof HTMLElement) {
+      status.textContent = "Unsaved changes";
+    } else if (open && !dirty && !busy && !failed && !saved && status instanceof HTMLElement) {
+      status.textContent = "No unsaved changes";
+    }
+  }
+
   function reconcile() {
     ensureStylesheet();
     reconcileDisclosure();
     reconcileSaveError();
+    reconcilePersistentSave();
   }
 
   function schedule() {
@@ -115,7 +152,9 @@
     const target = event.target;
     if (!isActiveNumericEditor(target)) return;
     deferredNumericControls.add(target);
+    numericDraftPending = true;
     event.stopImmediatePropagation();
+    reconcilePersistentSave();
   }
 
   window.addEventListener("input", deferNumericEvent, true);
@@ -129,6 +168,7 @@
       if (!target.isConnected) return;
       target.dispatchEvent(new Event("input", { bubbles: true }));
       target.dispatchEvent(new Event("change", { bubbles: true }));
+      numericDraftPending = false;
       schedule();
     });
   }, true);
@@ -143,6 +183,7 @@
       if (!(page instanceof HTMLElement)) return;
       observedPage = page;
       disclosureOpen = page.classList.contains("is-custom-settings-open");
+      reconcilePersistentSave();
     });
   });
 
@@ -152,7 +193,11 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["data-attendance-reward-error"],
+      attributeFilter: [
+        "data-attendance-reward-error",
+        "data-admin-terminal-api-state",
+        "aria-busy",
+      ],
     });
   }
 
