@@ -40,6 +40,12 @@ import {
   readInventoryRedemptionRoutePath,
 } from "./inventoryRedemptionRoutePaths.ts";
 
+export type PlayerInventoryRedemptionReader = (
+  client: EdgeSupabaseClient,
+  gameSessionId: string,
+  playerId: string,
+) => Promise<readonly PlayerInventoryRedemptionDto[]>;
+
 export interface PlayerInventoryHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly readSupabaseEnv?: typeof readSupabaseEnv;
@@ -48,6 +54,7 @@ export interface PlayerInventoryHttpHandlerDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerInventoryRepository;
+  readonly readRedemptionRequests?: PlayerInventoryRedemptionReader;
   readonly now?: () => string;
 }
 
@@ -139,7 +146,7 @@ export async function handlePlayerInventoryRequest(
         gameSessionId: sessionResult.session.game_session_id,
         playerId: sessionResult.session.player_id,
       }),
-      readPlayerRedemptionRequests(
+      (dependencies.readRedemptionRequests ?? readPlayerRedemptionRequests)(
         serviceClient,
         sessionResult.session.game_session_id,
         sessionResult.session.player_id,
