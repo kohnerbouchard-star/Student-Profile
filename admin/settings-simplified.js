@@ -517,6 +517,18 @@
     renderSaveState(page, ensureSaveBar(page));
   }
 
+  function acknowledgeSaved(detail) {
+    const gameId = text(detail?.gameId);
+    if (gameId && gameId !== state.gameId) return;
+    const page = settingsPage();
+    if (!(page instanceof HTMLElement)) return;
+    captureBaseline(page);
+    state.savedUntil = Date.now() + 1800;
+    window.clearTimeout(state.savedTimer);
+    state.savedTimer = window.setTimeout(schedulePresentation, 1850);
+    renderPresentation();
+  }
+
   function reconcileStructure() {
     ensureStylesheet();
     const page = settingsPage();
@@ -580,16 +592,8 @@
     if (target?.closest(SAVE_SELECTOR)) schedulePresentation();
   }, true);
 
-  document.addEventListener("econovaria:attendance-reward-saved", () => {
-    window.setTimeout(() => {
-      const page = settingsPage();
-      if (!(page instanceof HTMLElement)) return;
-      captureBaseline(page);
-      state.savedUntil = Date.now() + 1800;
-      window.clearTimeout(state.savedTimer);
-      state.savedTimer = window.setTimeout(schedulePresentation, 1850);
-      schedulePresentation();
-    }, 0);
+  document.addEventListener("econovaria:attendance-reward-saved", (event) => {
+    acknowledgeSaved(event instanceof CustomEvent ? event.detail : null);
   });
 
   const root = document.body || document.documentElement;
@@ -631,6 +635,7 @@
   window.EconovariaSimplifiedSettings = {
     reconcile: reconcileStructure,
     refresh: renderPresentation,
+    acknowledgeSaved,
     isDirty: () => {
       const page = settingsPage();
       return Boolean(page && state.baselineValues.size && (changedCount(page) > 0 || attendanceDirty()));
