@@ -67,7 +67,10 @@ export class PlayerApi {
     const sessionResponse = await this.request("session");
     this.setSession(readSessionContext(sessionResponse));
     const dashboardResponse = await this.request("dashboard");
-    return normalizeTerminalBootstrap(sessionResponse, dashboardResponse);
+    return {
+      ...normalizeTerminalBootstrap(sessionResponse, dashboardResponse),
+      capabilities: sessionResponse?.capabilities ?? null
+    };
   }
 
   execute(endpointKey, payload, params) {
