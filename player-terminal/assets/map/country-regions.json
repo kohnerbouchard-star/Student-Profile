@@ -1,0 +1,5411 @@
+{
+  "map": {
+    "id": "econovaria_cyberpunk_player_map_v33_market_research_ui",
+    "name": "Econovaria Player Strategic Map \u2014 v33 Market Research UI",
+    "version": "v33-market-research-macro-micro",
+    "imageWidth": 1672,
+    "imageHeight": 941,
+    "backgroundImage": "./assets/econovaria-cyberpunk-map-source-1672x941.png",
+    "highResBackgroundImage": "./assets/econovaria-cyberpunk-map-4k.jpg"
+  },
+  "countries": [
+    {
+      "id": "northreach",
+      "key": "NORTHREACH",
+      "name": "Northreach",
+      "shortName": "Northreach",
+      "capital": "Frostgate",
+      "color": "#b15cff",
+      "centroid": [
+        412,
+        196
+      ],
+      "capitalPoint": [
+        414,
+        212
+      ],
+      "bbox": [
+        203,
+        62,
+        622,
+        329
+      ],
+      "polygons": [
+        [
+          [
+            203,
+            171
+          ],
+          [
+            223,
+            200
+          ],
+          [
+            259,
+            211
+          ],
+          [
+            258,
+            222
+          ],
+          [
+            269,
+            229
+          ],
+          [
+            270,
+            239
+          ],
+          [
+            286,
+            240
+          ],
+          [
+            300,
+            247
+          ],
+          [
+            310,
+            247
+          ],
+          [
+            316,
+            241
+          ],
+          [
+            322,
+            245
+          ],
+          [
+            330,
+            240
+          ],
+          [
+            339,
+            241
+          ],
+          [
+            347,
+            248
+          ],
+          [
+            350,
+            260
+          ],
+          [
+            363,
+            261
+          ],
+          [
+            381,
+            280
+          ],
+          [
+            400,
+            284
+          ],
+          [
+            405,
+            296
+          ],
+          [
+            438,
+            304
+          ],
+          [
+            467,
+            326
+          ],
+          [
+            491,
+            329
+          ],
+          [
+            502,
+            323
+          ],
+          [
+            509,
+            326
+          ],
+          [
+            518,
+            317
+          ],
+          [
+            535,
+            313
+          ],
+          [
+            542,
+            282
+          ],
+          [
+            554,
+            274
+          ],
+          [
+            551,
+            270
+          ],
+          [
+            536,
+            270
+          ],
+          [
+            536,
+            264
+          ],
+          [
+            567,
+            265
+          ],
+          [
+            572,
+            254
+          ],
+          [
+            599,
+            251
+          ],
+          [
+            603,
+            242
+          ],
+          [
+            601,
+            224
+          ],
+          [
+            617,
+            213
+          ],
+          [
+            616,
+            207
+          ],
+          [
+            622,
+            200
+          ],
+          [
+            614,
+            180
+          ],
+          [
+            603,
+            180
+          ],
+          [
+            594,
+            170
+          ],
+          [
+            584,
+            170
+          ],
+          [
+            571,
+            158
+          ],
+          [
+            563,
+            159
+          ],
+          [
+            556,
+            169
+          ],
+          [
+            560,
+            179
+          ],
+          [
+            557,
+            183
+          ],
+          [
+            544,
+            179
+          ],
+          [
+            542,
+            165
+          ],
+          [
+            564,
+            153
+          ],
+          [
+            550,
+            135
+          ],
+          [
+            530,
+            133
+          ],
+          [
+            538,
+            124
+          ],
+          [
+            547,
+            122
+          ],
+          [
+            529,
+            94
+          ],
+          [
+            528,
+            82
+          ],
+          [
+            520,
+            77
+          ],
+          [
+            522,
+            71
+          ],
+          [
+            514,
+            65
+          ],
+          [
+            488,
+            69
+          ],
+          [
+            473,
+            62
+          ],
+          [
+            456,
+            67
+          ],
+          [
+            445,
+            62
+          ],
+          [
+            427,
+            62
+          ],
+          [
+            424,
+            67
+          ],
+          [
+            414,
+            66
+          ],
+          [
+            409,
+            71
+          ],
+          [
+            401,
+            62
+          ],
+          [
+            373,
+            62
+          ],
+          [
+            357,
+            78
+          ],
+          [
+            346,
+            79
+          ],
+          [
+            335,
+            90
+          ],
+          [
+            326,
+            108
+          ],
+          [
+            325,
+            124
+          ],
+          [
+            312,
+            132
+          ],
+          [
+            292,
+            132
+          ],
+          [
+            272,
+            143
+          ],
+          [
+            265,
+            134
+          ],
+          [
+            247,
+            140
+          ],
+          [
+            238,
+            153
+          ],
+          [
+            210,
+            164
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Arctic resource-security state",
+        "government": "Security Directorate",
+        "summary": "Cold-resource economy built around rare minerals, northern logistics, energy security, and hardened infrastructure.",
+        "risk": "Medium",
+        "momentum": "+4.2%",
+        "liquidity": "Stable",
+        "stability": "High",
+        "sectors": [
+          "Rare minerals",
+          "Arctic shipping",
+          "Energy storage",
+          "Defense infrastructure"
+        ],
+        "flavor": {
+          "headline": "Rare minerals under a hard northern sky.",
+          "briefing": "Frostgate controls the cold-chain corridors that keep the northern extraction belt moving. When energy prices or shipping capacity tighten, Northreach becomes a strategic pressure valve.",
+          "playerHook": "Best watched for resource shocks, energy contracts, and logistics bottlenecks.",
+          "marketMood": "Defensive resource bid",
+          "terrain": "Glacial ridges, fortified depots, polar ports, mineral corridors",
+          "opportunity": "Accumulate rare-mineral exposure before manufacturing demand spikes.",
+          "riskNarrative": "Weather closures and infrastructure strain can turn supply into a premium overnight.",
+          "tradePattern": "Exports raw minerals and stored energy; imports precision machinery and port capacity."
+        }
+      },
+      "intel": [
+        "Rare-mineral extraction is expanding near the northern ridge corridor.",
+        "Port logistics remain weather-constrained but strategically valuable.",
+        "Defense-linked infrastructure grants reduce downside volatility."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+4.2%",
+        "riskLevel": "Medium",
+        "liquidity": "Stable",
+        "politicalStability": "High"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "NRC",
+        "indicators": {
+          "gdpPerCapita": 74200,
+          "inflationRate": 2.4,
+          "interestRate": 3.1,
+          "population": 8.4,
+          "consumerConfidence": 68,
+          "businessConfidence": 72,
+          "currencyStability": 84,
+          "cpiIndex": 111.2,
+          "unemploymentRate": 4.8,
+          "logisticsIndex": 76
+        }
+      },
+      "backendKey": "NORTHREACH",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "NRC",
+        "indicators": {
+          "consumerDemandIndex": 48,
+          "businessDemandIndex": 71,
+          "localPriceIndex": 118.4,
+          "supplyPressureIndex": 74,
+          "inventoryIndex": 42,
+          "wagePressureIndex": 63,
+          "resourceCostIndex": 81,
+          "importExposureIndex": 39,
+          "tariffExposureIndex": 52,
+          "logisticsFrictionIndex": 76,
+          "productionCapacityIndex": 73,
+          "servicesActivityIndex": 45,
+          "retailBasketCost": 126.5,
+          "marginPressureIndex": 68
+        },
+        "sectors": [
+          {
+            "name": "Rare minerals",
+            "demand": 84,
+            "supply": 58,
+            "priceIndex": 142.5,
+            "inventory": 38,
+            "margin": 72
+          },
+          {
+            "name": "Energy",
+            "demand": 76,
+            "supply": 61,
+            "priceIndex": 131.2,
+            "inventory": 45,
+            "margin": 65
+          },
+          {
+            "name": "Cold-chain logistics",
+            "demand": 68,
+            "supply": 54,
+            "priceIndex": 122.4,
+            "inventory": 49,
+            "margin": 59
+          }
+        ],
+        "signals": [
+          "Mineral input prices remain elevated.",
+          "Logistics friction raises delivery costs.",
+          "Consumer demand is defensive rather than growth-led."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A defensive resource market where rare minerals, cold logistics, and energy storage create pricing power during supply shocks.",
+        "opportunity": "Best researched through input scarcity: battery metals, hardened storage, polar shipping slots, and state-backed procurement cycles.",
+        "friction": "Weather windows, infrastructure capex, and security permits can erase margin if the player enters without logistics coverage.",
+        "recommendedAction": "Start with rare-mineral demand, then verify winter-route capacity and storage inventory before committing capital.",
+        "buyerSegments": [
+          "Battery and storage manufacturers",
+          "Defense infrastructure buyers",
+          "Cold-chain logistics operators"
+        ],
+        "priceDrivers": [
+          "Rare mineral extraction capacity",
+          "Winter shipping reliability",
+          "Energy storage demand",
+          "Weather-driven logistics premiums"
+        ],
+        "researchQuestions": [
+          "Are inventories building or being drawn down?",
+          "Are transport costs rising faster than selling prices?",
+          "Which buyers have long-term contracts versus spot exposure?"
+        ],
+        "entrySignals": [
+          "High resource costs with stable demand",
+          "Improving logistics index",
+          "New storage contracts or defense grants"
+        ],
+        "avoidSignals": [
+          "Inventory collapse without price pass-through",
+          "Severe winter delays",
+          "Currency or permit instability"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Rare minerals",
+            "demand": 84,
+            "supply": 58,
+            "priceIndex": 142.5,
+            "inventory": 38,
+            "margin": 72,
+            "researchAngle": "Scarcity trade: high demand is colliding with thin inventory.",
+            "checkFirst": [
+              "Demand quality in Rare minerals",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Energy",
+            "demand": 76,
+            "supply": 61,
+            "priceIndex": 131.2,
+            "inventory": 45,
+            "margin": 65,
+            "researchAngle": "Pricing-power trade: prices are elevated; verify margin durability.",
+            "checkFirst": [
+              "Demand quality in Energy",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Cold-chain logistics",
+            "demand": 68,
+            "supply": 54,
+            "priceIndex": 122.4,
+            "inventory": 49,
+            "margin": 59,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Cold-chain logistics",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "yrethia",
+      "key": "YRETHIA",
+      "name": "Yrethia",
+      "shortName": "Yrethia",
+      "capital": "Sableport",
+      "color": "#2ea7ff",
+      "centroid": [
+        340,
+        374
+      ],
+      "capitalPoint": [
+        300,
+        389
+      ],
+      "bbox": [
+        86,
+        251,
+        594,
+        498
+      ],
+      "polygons": [
+        [
+          [
+            86,
+            374
+          ],
+          [
+            86,
+            380
+          ],
+          [
+            95,
+            389
+          ],
+          [
+            113,
+            390
+          ],
+          [
+            126,
+            396
+          ],
+          [
+            131,
+            395
+          ],
+          [
+            135,
+            390
+          ],
+          [
+            148,
+            386
+          ],
+          [
+            164,
+            385
+          ],
+          [
+            166,
+            389
+          ],
+          [
+            174,
+            392
+          ],
+          [
+            178,
+            400
+          ],
+          [
+            188,
+            401
+          ],
+          [
+            198,
+            410
+          ],
+          [
+            198,
+            419
+          ],
+          [
+            205,
+            424
+          ],
+          [
+            207,
+            429
+          ],
+          [
+            206,
+            436
+          ],
+          [
+            210,
+            449
+          ],
+          [
+            217,
+            453
+          ],
+          [
+            223,
+            464
+          ],
+          [
+            239,
+            467
+          ],
+          [
+            261,
+            477
+          ],
+          [
+            267,
+            484
+          ],
+          [
+            275,
+            483
+          ],
+          [
+            289,
+            487
+          ],
+          [
+            308,
+            498
+          ],
+          [
+            322,
+            495
+          ],
+          [
+            329,
+            498
+          ],
+          [
+            339,
+            493
+          ],
+          [
+            350,
+            494
+          ],
+          [
+            356,
+            489
+          ],
+          [
+            355,
+            485
+          ],
+          [
+            358,
+            479
+          ],
+          [
+            371,
+            469
+          ],
+          [
+            399,
+            466
+          ],
+          [
+            408,
+            470
+          ],
+          [
+            416,
+            467
+          ],
+          [
+            426,
+            476
+          ],
+          [
+            432,
+            478
+          ],
+          [
+            439,
+            471
+          ],
+          [
+            447,
+            470
+          ],
+          [
+            461,
+            460
+          ],
+          [
+            470,
+            462
+          ],
+          [
+            474,
+            459
+          ],
+          [
+            491,
+            460
+          ],
+          [
+            505,
+            468
+          ],
+          [
+            517,
+            479
+          ],
+          [
+            551,
+            481
+          ],
+          [
+            594,
+            440
+          ],
+          [
+            594,
+            428
+          ],
+          [
+            579,
+            418
+          ],
+          [
+            567,
+            416
+          ],
+          [
+            556,
+            423
+          ],
+          [
+            549,
+            423
+          ],
+          [
+            541,
+            420
+          ],
+          [
+            537,
+            416
+          ],
+          [
+            537,
+            410
+          ],
+          [
+            532,
+            407
+          ],
+          [
+            514,
+            408
+          ],
+          [
+            498,
+            398
+          ],
+          [
+            493,
+            382
+          ],
+          [
+            482,
+            374
+          ],
+          [
+            476,
+            357
+          ],
+          [
+            461,
+            351
+          ],
+          [
+            454,
+            344
+          ],
+          [
+            431,
+            342
+          ],
+          [
+            414,
+            330
+          ],
+          [
+            414,
+            324
+          ],
+          [
+            401,
+            314
+          ],
+          [
+            385,
+            316
+          ],
+          [
+            370,
+            310
+          ],
+          [
+            350,
+            309
+          ],
+          [
+            345,
+            302
+          ],
+          [
+            346,
+            293
+          ],
+          [
+            337,
+            287
+          ],
+          [
+            332,
+            276
+          ],
+          [
+            323,
+            267
+          ],
+          [
+            293,
+            259
+          ],
+          [
+            280,
+            260
+          ],
+          [
+            263,
+            254
+          ],
+          [
+            248,
+            262
+          ],
+          [
+            242,
+            270
+          ],
+          [
+            229,
+            268
+          ],
+          [
+            221,
+            263
+          ],
+          [
+            214,
+            265
+          ],
+          [
+            210,
+            261
+          ],
+          [
+            209,
+            251
+          ],
+          [
+            204,
+            257
+          ],
+          [
+            183,
+            252
+          ],
+          [
+            168,
+            255
+          ],
+          [
+            166,
+            265
+          ],
+          [
+            159,
+            271
+          ],
+          [
+            158,
+            280
+          ],
+          [
+            163,
+            283
+          ],
+          [
+            163,
+            293
+          ],
+          [
+            155,
+            302
+          ],
+          [
+            154,
+            314
+          ],
+          [
+            126,
+            341
+          ],
+          [
+            107,
+            345
+          ],
+          [
+            97,
+            356
+          ],
+          [
+            93,
+            368
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Regulated maritime trade republic",
+        "government": "Maritime Council",
+        "summary": "Trade-forward economy centered on customs, ports, shipping finance, insurance, and transshipment.",
+        "risk": "Low",
+        "momentum": "+2.8%",
+        "liquidity": "Deep",
+        "stability": "High",
+        "sectors": [
+          "Container ports",
+          "Shipping finance",
+          "Insurance",
+          "Customs technology"
+        ],
+        "flavor": {
+          "headline": "The regulated gatekeeper of ocean trade.",
+          "briefing": "Sableport converts movement into margin. Customs throughput, insurance pricing, and shipping finance determine whether Yrethia becomes a quiet tollbooth or a regional chokepoint.",
+          "playerHook": "Best watched for freight-rate moves, customs delays, and import/export arbitrage.",
+          "marketMood": "Trade liquidity engine",
+          "terrain": "Deepwater ports, customs towers, finance districts, transshipment lanes",
+          "opportunity": "Trade volume favors players who buy into logistics before congestion prices in.",
+          "riskNarrative": "Port fees and compliance checks can squeeze volume without warning.",
+          "tradePattern": "Imports broad goods; exports shipping services, insurance, customs clearance, and liquidity."
+        }
+      },
+      "intel": [
+        "Sableport remains the cleanest entry node for regulated trade.",
+        "Customs throughput is strong, but port fees are rising.",
+        "Marine insurance demand tracks global route volatility."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+2.8%",
+        "riskLevel": "Low",
+        "liquidity": "Deep",
+        "politicalStability": "High"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "YRC",
+        "indicators": {
+          "gdpPerCapita": 68800,
+          "inflationRate": 2.1,
+          "interestRate": 2.8,
+          "population": 14.8,
+          "consumerConfidence": 74,
+          "businessConfidence": 79,
+          "currencyStability": 89,
+          "cpiIndex": 108.6,
+          "unemploymentRate": 3.9,
+          "logisticsIndex": 91
+        }
+      },
+      "backendKey": "YRETHIA",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "YRC",
+        "indicators": {
+          "consumerDemandIndex": 62,
+          "businessDemandIndex": 66,
+          "localPriceIndex": 107.8,
+          "supplyPressureIndex": 55,
+          "inventoryIndex": 67,
+          "wagePressureIndex": 49,
+          "resourceCostIndex": 58,
+          "importExposureIndex": 82,
+          "tariffExposureIndex": 44,
+          "logisticsFrictionIndex": 39,
+          "productionCapacityIndex": 69,
+          "servicesActivityIndex": 71,
+          "retailBasketCost": 111.3,
+          "marginPressureIndex": 46
+        },
+        "sectors": [
+          {
+            "name": "Shipping services",
+            "demand": 78,
+            "supply": 72,
+            "priceIndex": 116.7,
+            "inventory": 70,
+            "margin": 53
+          },
+          {
+            "name": "Insurance",
+            "demand": 72,
+            "supply": 68,
+            "priceIndex": 112.9,
+            "inventory": 77,
+            "margin": 61
+          },
+          {
+            "name": "Trade finance",
+            "demand": 74,
+            "supply": 71,
+            "priceIndex": 109.8,
+            "inventory": 73,
+            "margin": 55
+          }
+        ],
+        "signals": [
+          "Port inventory remains healthy.",
+          "Trade services are liquid but sensitive to sea-lane shocks.",
+          "Retail basket remains near baseline."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A mature trade-services market where value comes from port throughput, insurance, customs technology, and finance volume rather than raw production.",
+        "opportunity": "Research it as a services hub: fee income, claims volume, customs clearance speed, and transshipment demand.",
+        "friction": "Margins compress when port fees, compliance costs, or maritime risk premiums rise faster than cargo volume.",
+        "recommendedAction": "Compare logistics health against import exposure; strong volume plus low friction means safer market entry.",
+        "buyerSegments": [
+          "Freight forwarders and port operators",
+          "Marine insurers",
+          "Trade-finance desks"
+        ],
+        "priceDrivers": [
+          "Container volume",
+          "Customs processing time",
+          "Insurance risk premiums",
+          "Regional trade-route disruptions"
+        ],
+        "researchQuestions": [
+          "Is demand volume real or just fee inflation?",
+          "Are insurance spreads widening?",
+          "Are inventories stuck at port or clearing quickly?"
+        ],
+        "entrySignals": [
+          "High logistics index",
+          "Healthy inventory",
+          "Rising trade-finance demand"
+        ],
+        "avoidSignals": [
+          "Falling cargo velocity",
+          "Rising customs delays",
+          "Political or sanctions exposure"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Shipping services",
+            "demand": 78,
+            "supply": 72,
+            "priceIndex": 116.7,
+            "inventory": 70,
+            "margin": 53,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Shipping services",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Insurance",
+            "demand": 72,
+            "supply": 68,
+            "priceIndex": 112.9,
+            "inventory": 77,
+            "margin": 61,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Insurance",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Trade finance",
+            "demand": 74,
+            "supply": 71,
+            "priceIndex": 109.8,
+            "inventory": 73,
+            "margin": 55,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Trade finance",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "thaloris",
+      "key": "THALORIS",
+      "name": "Thaloris",
+      "shortName": "Thaloris",
+      "capital": "Dusk Harbor",
+      "color": "#ff9635",
+      "centroid": [
+        348,
+        640
+      ],
+      "capitalPoint": [
+        346,
+        645
+      ],
+      "bbox": [
+        152,
+        492,
+        545,
+        789
+      ],
+      "polygons": [
+        [
+          [
+            155,
+            542
+          ],
+          [
+            152,
+            551
+          ],
+          [
+            156,
+            563
+          ],
+          [
+            165,
+            568
+          ],
+          [
+            165,
+            586
+          ],
+          [
+            179,
+            601
+          ],
+          [
+            182,
+            611
+          ],
+          [
+            179,
+            619
+          ],
+          [
+            188,
+            627
+          ],
+          [
+            188,
+            635
+          ],
+          [
+            203,
+            646
+          ],
+          [
+            199,
+            655
+          ],
+          [
+            203,
+            665
+          ],
+          [
+            212,
+            670
+          ],
+          [
+            225,
+            669
+          ],
+          [
+            233,
+            677
+          ],
+          [
+            234,
+            693
+          ],
+          [
+            230,
+            705
+          ],
+          [
+            237,
+            710
+          ],
+          [
+            238,
+            717
+          ],
+          [
+            245,
+            721
+          ],
+          [
+            269,
+            718
+          ],
+          [
+            289,
+            722
+          ],
+          [
+            315,
+            716
+          ],
+          [
+            333,
+            721
+          ],
+          [
+            337,
+            736
+          ],
+          [
+            361,
+            745
+          ],
+          [
+            367,
+            754
+          ],
+          [
+            392,
+            761
+          ],
+          [
+            394,
+            758
+          ],
+          [
+            390,
+            754
+          ],
+          [
+            396,
+            752
+          ],
+          [
+            404,
+            761
+          ],
+          [
+            422,
+            766
+          ],
+          [
+            434,
+            782
+          ],
+          [
+            454,
+            779
+          ],
+          [
+            469,
+            789
+          ],
+          [
+            474,
+            784
+          ],
+          [
+            479,
+            787
+          ],
+          [
+            498,
+            779
+          ],
+          [
+            511,
+            764
+          ],
+          [
+            514,
+            736
+          ],
+          [
+            509,
+            727
+          ],
+          [
+            518,
+            710
+          ],
+          [
+            520,
+            687
+          ],
+          [
+            529,
+            683
+          ],
+          [
+            532,
+            663
+          ],
+          [
+            541,
+            657
+          ],
+          [
+            543,
+            638
+          ],
+          [
+            539,
+            625
+          ],
+          [
+            545,
+            603
+          ],
+          [
+            536,
+            593
+          ],
+          [
+            528,
+            572
+          ],
+          [
+            508,
+            559
+          ],
+          [
+            494,
+            555
+          ],
+          [
+            487,
+            541
+          ],
+          [
+            462,
+            538
+          ],
+          [
+            434,
+            546
+          ],
+          [
+            414,
+            529
+          ],
+          [
+            374,
+            528
+          ],
+          [
+            362,
+            516
+          ],
+          [
+            343,
+            513
+          ],
+          [
+            345,
+            509
+          ],
+          [
+            330,
+            497
+          ],
+          [
+            293,
+            499
+          ],
+          [
+            283,
+            493
+          ],
+          [
+            249,
+            492
+          ],
+          [
+            237,
+            493
+          ],
+          [
+            227,
+            503
+          ],
+          [
+            208,
+            499
+          ],
+          [
+            201,
+            506
+          ],
+          [
+            186,
+            510
+          ],
+          [
+            169,
+            526
+          ],
+          [
+            171,
+            536
+          ],
+          [
+            165,
+            535
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "High-risk port and salvage economy",
+        "government": "Harbor Compact",
+        "summary": "A rugged commercial zone with repair yards, salvage rights, informal logistics, and gray-zone re-export trade.",
+        "risk": "High",
+        "momentum": "+6.7%",
+        "liquidity": "Thin",
+        "stability": "Volatile",
+        "sectors": [
+          "Salvage yards",
+          "Repair docks",
+          "Re-export trade",
+          "Security contracting"
+        ],
+        "flavor": {
+          "headline": "Where disruption becomes a business model.",
+          "briefing": "Dusk Harbor thrives in imperfect markets: salvage, repair, rerouting, and gray-zone commerce. Volatility raises its upside, but enforcement cycles can compress access fast.",
+          "playerHook": "Best watched for sanctions, shipping accidents, repair demand, and black-swan logistics events.",
+          "marketMood": "High-risk opportunistic trade",
+          "terrain": "Rust ports, salvage fields, dry badlands, repair yards, informal docks",
+          "opportunity": "Buy repair and salvage exposure when neighboring trade routes destabilize.",
+          "riskNarrative": "Regulatory crackdowns can freeze activity and punish overexposed players.",
+          "tradePattern": "Imports damaged assets and distressed cargo; exports repair capacity, re-export routes, and salvage output."
+        }
+      },
+      "intel": [
+        "High returns are tied to volatile port access and enforcement cycles.",
+        "Dusk Harbor attracts opportunistic capital during sanctions shocks.",
+        "Industrial fire risk remains elevated near the southern works."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+6.7%",
+        "riskLevel": "High",
+        "liquidity": "Thin",
+        "politicalStability": "Volatile"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "THD",
+        "indicators": {
+          "gdpPerCapita": 42100,
+          "inflationRate": 6.8,
+          "interestRate": 8.4,
+          "population": 21.6,
+          "consumerConfidence": 52,
+          "businessConfidence": 61,
+          "currencyStability": 57,
+          "cpiIndex": 126.8,
+          "unemploymentRate": 7.6,
+          "logisticsIndex": 63
+        }
+      },
+      "backendKey": "THALORIS",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "THD",
+        "indicators": {
+          "consumerDemandIndex": 55,
+          "businessDemandIndex": 69,
+          "localPriceIndex": 123.6,
+          "supplyPressureIndex": 78,
+          "inventoryIndex": 34,
+          "wagePressureIndex": 58,
+          "resourceCostIndex": 77,
+          "importExposureIndex": 73,
+          "tariffExposureIndex": 69,
+          "logisticsFrictionIndex": 81,
+          "productionCapacityIndex": 59,
+          "servicesActivityIndex": 53,
+          "retailBasketCost": 129.8,
+          "marginPressureIndex": 75
+        },
+        "sectors": [
+          {
+            "name": "Salvage materials",
+            "demand": 73,
+            "supply": 44,
+            "priceIndex": 149.2,
+            "inventory": 31,
+            "margin": 76
+          },
+          {
+            "name": "Repair yards",
+            "demand": 82,
+            "supply": 59,
+            "priceIndex": 136.6,
+            "inventory": 43,
+            "margin": 71
+          },
+          {
+            "name": "Re-export goods",
+            "demand": 67,
+            "supply": 52,
+            "priceIndex": 128.4,
+            "inventory": 40,
+            "margin": 67
+          }
+        ],
+        "signals": [
+          "Inventory shortages create price spikes.",
+          "Repair-yard demand is high after disruption events.",
+          "Gray-market supply is volatile."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A high-volatility salvage and repair market where disruption creates revenue, but enforcement and inventory shocks drive downside risk.",
+        "opportunity": "Research repair-yard utilization, salvage material scarcity, re-export flows, and post-disruption service demand.",
+        "friction": "Thin liquidity and gray-zone trade make this market profitable but fragile; players need fast exits and risk buffers.",
+        "recommendedAction": "Look for high demand plus low inventory, but discount returns for legal, logistics, and supply reliability risk.",
+        "buyerSegments": [
+          "Repair-yard operators",
+          "Re-export brokers",
+          "Security and salvage contractors"
+        ],
+        "priceDrivers": [
+          "Disruption events",
+          "Salvage inventory",
+          "Port enforcement intensity",
+          "Industrial fire and security risk"
+        ],
+        "researchQuestions": [
+          "Is the price spike caused by real scarcity or temporary panic?",
+          "Can repair capacity handle demand?",
+          "Are re-export goods blocked by enforcement?"
+        ],
+        "entrySignals": [
+          "High repair demand",
+          "Low inventory with rising price index",
+          "New shipping disruption events"
+        ],
+        "avoidSignals": [
+          "Port shutdown risk",
+          "Unhedged tariff exposure",
+          "Inventory too low to fulfill contracts"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Salvage materials",
+            "demand": 73,
+            "supply": 44,
+            "priceIndex": 149.2,
+            "inventory": 31,
+            "margin": 76,
+            "researchAngle": "Pricing-power trade: prices are elevated; verify margin durability.",
+            "checkFirst": [
+              "Demand quality in Salvage materials",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Repair yards",
+            "demand": 82,
+            "supply": 59,
+            "priceIndex": 136.6,
+            "inventory": 43,
+            "margin": 71,
+            "researchAngle": "Scarcity trade: high demand is colliding with thin inventory.",
+            "checkFirst": [
+              "Demand quality in Repair yards",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Re-export goods",
+            "demand": 67,
+            "supply": 52,
+            "priceIndex": 128.4,
+            "inventory": 40,
+            "margin": 67,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Re-export goods",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "solvend",
+      "key": "SOLVEND",
+      "name": "Solvend",
+      "shortName": "Solvend",
+      "capital": "Aurora Spire",
+      "color": "#41c7ff",
+      "centroid": [
+        830,
+        235
+      ],
+      "capitalPoint": [
+        810,
+        255
+      ],
+      "bbox": [
+        722,
+        144,
+        937,
+        326
+      ],
+      "polygons": [
+        [
+          [
+            766,
+            158
+          ],
+          [
+            762,
+            162
+          ],
+          [
+            764,
+            166
+          ],
+          [
+            760,
+            172
+          ],
+          [
+            751,
+            177
+          ],
+          [
+            741,
+            190
+          ],
+          [
+            747,
+            200
+          ],
+          [
+            759,
+            192
+          ],
+          [
+            767,
+            196
+          ],
+          [
+            778,
+            196
+          ],
+          [
+            785,
+            208
+          ],
+          [
+            782,
+            215
+          ],
+          [
+            786,
+            220
+          ],
+          [
+            770,
+            222
+          ],
+          [
+            769,
+            219
+          ],
+          [
+            775,
+            212
+          ],
+          [
+            770,
+            208
+          ],
+          [
+            762,
+            211
+          ],
+          [
+            760,
+            205
+          ],
+          [
+            754,
+            200
+          ],
+          [
+            749,
+            204
+          ],
+          [
+            751,
+            208
+          ],
+          [
+            749,
+            212
+          ],
+          [
+            738,
+            204
+          ],
+          [
+            722,
+            229
+          ],
+          [
+            727,
+            234
+          ],
+          [
+            730,
+            244
+          ],
+          [
+            729,
+            266
+          ],
+          [
+            735,
+            272
+          ],
+          [
+            743,
+            274
+          ],
+          [
+            753,
+            288
+          ],
+          [
+            756,
+            287
+          ],
+          [
+            768,
+            293
+          ],
+          [
+            778,
+            292
+          ],
+          [
+            783,
+            300
+          ],
+          [
+            793,
+            306
+          ],
+          [
+            799,
+            318
+          ],
+          [
+            804,
+            322
+          ],
+          [
+            826,
+            325
+          ],
+          [
+            845,
+            322
+          ],
+          [
+            855,
+            326
+          ],
+          [
+            885,
+            321
+          ],
+          [
+            890,
+            323
+          ],
+          [
+            897,
+            320
+          ],
+          [
+            899,
+            295
+          ],
+          [
+            908,
+            288
+          ],
+          [
+            915,
+            289
+          ],
+          [
+            929,
+            284
+          ],
+          [
+            934,
+            279
+          ],
+          [
+            937,
+            270
+          ],
+          [
+            932,
+            258
+          ],
+          [
+            929,
+            236
+          ],
+          [
+            923,
+            230
+          ],
+          [
+            919,
+            218
+          ],
+          [
+            915,
+            214
+          ],
+          [
+            910,
+            216
+          ],
+          [
+            905,
+            213
+          ],
+          [
+            899,
+            216
+          ],
+          [
+            891,
+            211
+          ],
+          [
+            900,
+            208
+          ],
+          [
+            904,
+            211
+          ],
+          [
+            906,
+            209
+          ],
+          [
+            900,
+            203
+          ],
+          [
+            900,
+            198
+          ],
+          [
+            887,
+            189
+          ],
+          [
+            884,
+            180
+          ],
+          [
+            868,
+            168
+          ],
+          [
+            856,
+            169
+          ],
+          [
+            854,
+            167
+          ],
+          [
+            858,
+            162
+          ],
+          [
+            856,
+            160
+          ],
+          [
+            845,
+            159
+          ],
+          [
+            838,
+            153
+          ],
+          [
+            831,
+            152
+          ],
+          [
+            824,
+            144
+          ],
+          [
+            796,
+            147
+          ],
+          [
+            786,
+            159
+          ],
+          [
+            784,
+            154
+          ],
+          [
+            787,
+            149
+          ],
+          [
+            784,
+            147
+          ],
+          [
+            776,
+            156
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "High-altitude research and aerospace state",
+        "government": "Research Senate",
+        "summary": "Research-heavy technology state anchored by AI labs, aerospace systems, universities, and precision engineering.",
+        "risk": "Medium",
+        "momentum": "+8.1%",
+        "liquidity": "Selective",
+        "stability": "High",
+        "sectors": [
+          "AI systems",
+          "Aerospace",
+          "University R&D",
+          "Precision components"
+        ],
+        "flavor": {
+          "headline": "Research capacity is the currency.",
+          "briefing": "Aurora Spire turns talent, laboratories, and prototype cycles into pricing power. Growth depends less on freight and more on whether its technical base can scale production.",
+          "playerHook": "Best watched for R&D surges, talent shortages, aerospace demand, and component scarcity.",
+          "marketMood": "Innovation premium",
+          "terrain": "High-altitude labs, research spires, aerospace pads, university enclaves",
+          "opportunity": "Early exposure pays when prototypes move from lab signal to industrial demand.",
+          "riskNarrative": "Talent bottlenecks and long development cycles make gains uneven.",
+          "tradePattern": "Exports AI systems, aerospace parts, and precision components; imports rare inputs and skilled labor."
+        }
+      },
+      "intel": [
+        "Aurora Spire is leading the regional R&D cycle.",
+        "Talent scarcity is the main growth bottleneck.",
+        "Export controls can disrupt advanced component supply."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+8.1%",
+        "riskLevel": "Medium",
+        "liquidity": "Selective",
+        "politicalStability": "High"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "SLV",
+        "indicators": {
+          "gdpPerCapita": 81200,
+          "inflationRate": 1.9,
+          "interestRate": 2.6,
+          "population": 5.7,
+          "consumerConfidence": 77,
+          "businessConfidence": 88,
+          "currencyStability": 92,
+          "cpiIndex": 106.2,
+          "unemploymentRate": 3.2,
+          "logisticsIndex": 79
+        }
+      },
+      "backendKey": "SOLVEND",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "SLV",
+        "indicators": {
+          "consumerDemandIndex": 66,
+          "businessDemandIndex": 82,
+          "localPriceIndex": 112.7,
+          "supplyPressureIndex": 49,
+          "inventoryIndex": 61,
+          "wagePressureIndex": 75,
+          "resourceCostIndex": 64,
+          "importExposureIndex": 58,
+          "tariffExposureIndex": 31,
+          "logisticsFrictionIndex": 47,
+          "productionCapacityIndex": 83,
+          "servicesActivityIndex": 86,
+          "retailBasketCost": 118.1,
+          "marginPressureIndex": 54
+        },
+        "sectors": [
+          {
+            "name": "AI compute",
+            "demand": 91,
+            "supply": 64,
+            "priceIndex": 139.5,
+            "inventory": 51,
+            "margin": 79
+          },
+          {
+            "name": "Aerospace components",
+            "demand": 85,
+            "supply": 62,
+            "priceIndex": 132.7,
+            "inventory": 47,
+            "margin": 74
+          },
+          {
+            "name": "Research services",
+            "demand": 88,
+            "supply": 78,
+            "priceIndex": 119.2,
+            "inventory": 66,
+            "margin": 68
+          }
+        ],
+        "signals": [
+          "Skilled wage pressure is the core constraint.",
+          "Research demand is strong and recurring.",
+          "Input exposure is moderate but specialized."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "An innovation market where research capacity, specialized labor, and aerospace/AI demand create high-margin but talent-constrained opportunities.",
+        "opportunity": "Research technical bottlenecks: research hiring, university output, IP licensing, precision components, and aerospace orders.",
+        "friction": "The constraint is not demand; it is labor, certification, and long development cycles.",
+        "recommendedAction": "Prioritize sectors with high demand and adequate production capacity; avoid pure hype without delivery capacity.",
+        "buyerSegments": [
+          "Aerospace integrators",
+          "AI infrastructure firms",
+          "Precision-engineering buyers"
+        ],
+        "priceDrivers": [
+          "Technical labor availability",
+          "R&D pipeline strength",
+          "Aerospace contract timing",
+          "Certification and component supply"
+        ],
+        "researchQuestions": [
+          "Does demand convert into orders?",
+          "Are wages rising faster than productivity?",
+          "Is capacity constrained by talent or components?"
+        ],
+        "entrySignals": [
+          "High business demand",
+          "Stable inventory",
+          "Rising services activity"
+        ],
+        "avoidSignals": [
+          "Wage pressure with flat capacity",
+          "Delayed certifications",
+          "Supplier concentration"
+        ],
+        "sectorResearch": [
+          {
+            "name": "AI compute",
+            "demand": 91,
+            "supply": 64,
+            "priceIndex": 139.5,
+            "inventory": 51,
+            "margin": 79,
+            "researchAngle": "Pricing-power trade: prices are elevated; verify margin durability.",
+            "checkFirst": [
+              "Demand quality in AI compute",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Aerospace components",
+            "demand": 85,
+            "supply": 62,
+            "priceIndex": 132.7,
+            "inventory": 47,
+            "margin": 74,
+            "researchAngle": "Pricing-power trade: prices are elevated; verify margin durability.",
+            "checkFirst": [
+              "Demand quality in Aerospace components",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Research services",
+            "demand": 88,
+            "supply": 78,
+            "priceIndex": 119.2,
+            "inventory": 66,
+            "margin": 68,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Research services",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "eldoran",
+      "key": "ELDORAN",
+      "name": "Eldoran",
+      "shortName": "Eldoran",
+      "capital": "Crescent Bay",
+      "color": "#d5e64a",
+      "centroid": [
+        850,
+        390
+      ],
+      "capitalPoint": [
+        810,
+        390
+      ],
+      "bbox": [
+        660,
+        317,
+        1041,
+        462
+      ],
+      "polygons": [
+        [
+          [
+            1041,
+            371
+          ],
+          [
+            1025,
+            363
+          ],
+          [
+            1026,
+            355
+          ],
+          [
+            1017,
+            347
+          ],
+          [
+            1012,
+            350
+          ],
+          [
+            1005,
+            348
+          ],
+          [
+            1005,
+            332
+          ],
+          [
+            1002,
+            329
+          ],
+          [
+            971,
+            317
+          ],
+          [
+            962,
+            321
+          ],
+          [
+            951,
+            320
+          ],
+          [
+            947,
+            325
+          ],
+          [
+            944,
+            323
+          ],
+          [
+            925,
+            335
+          ],
+          [
+            918,
+            335
+          ],
+          [
+            911,
+            325
+          ],
+          [
+            901,
+            327
+          ],
+          [
+            880,
+            321
+          ],
+          [
+            855,
+            325
+          ],
+          [
+            845,
+            321
+          ],
+          [
+            835,
+            324
+          ],
+          [
+            799,
+            323
+          ],
+          [
+            785,
+            333
+          ],
+          [
+            766,
+            329
+          ],
+          [
+            753,
+            330
+          ],
+          [
+            741,
+            325
+          ],
+          [
+            734,
+            332
+          ],
+          [
+            714,
+            336
+          ],
+          [
+            698,
+            345
+          ],
+          [
+            679,
+            338
+          ],
+          [
+            666,
+            346
+          ],
+          [
+            663,
+            355
+          ],
+          [
+            667,
+            376
+          ],
+          [
+            664,
+            379
+          ],
+          [
+            663,
+            406
+          ],
+          [
+            660,
+            412
+          ],
+          [
+            664,
+            418
+          ],
+          [
+            663,
+            423
+          ],
+          [
+            668,
+            428
+          ],
+          [
+            679,
+            427
+          ],
+          [
+            682,
+            423
+          ],
+          [
+            691,
+            421
+          ],
+          [
+            712,
+            430
+          ],
+          [
+            722,
+            438
+          ],
+          [
+            731,
+            438
+          ],
+          [
+            737,
+            432
+          ],
+          [
+            743,
+            435
+          ],
+          [
+            742,
+            438
+          ],
+          [
+            747,
+            443
+          ],
+          [
+            754,
+            444
+          ],
+          [
+            761,
+            451
+          ],
+          [
+            772,
+            448
+          ],
+          [
+            777,
+            452
+          ],
+          [
+            805,
+            455
+          ],
+          [
+            821,
+            453
+          ],
+          [
+            834,
+            462
+          ],
+          [
+            875,
+            460
+          ],
+          [
+            884,
+            453
+          ],
+          [
+            898,
+            452
+          ],
+          [
+            914,
+            460
+          ],
+          [
+            923,
+            453
+          ],
+          [
+            943,
+            453
+          ],
+          [
+            952,
+            443
+          ],
+          [
+            966,
+            435
+          ],
+          [
+            1002,
+            441
+          ],
+          [
+            1016,
+            438
+          ],
+          [
+            1033,
+            417
+          ],
+          [
+            1033,
+            387
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Central food-security and logistics hub",
+        "government": "Civic Assembly",
+        "summary": "Balanced central economy with agriculture, internal transport, commodity pricing, and market-stability functions.",
+        "risk": "Low",
+        "momentum": "+3.6%",
+        "liquidity": "Broad",
+        "stability": "Very High",
+        "sectors": [
+          "Agriculture",
+          "Commodity pricing",
+          "Rail logistics",
+          "Food storage"
+        ],
+        "flavor": {
+          "headline": "The center holds when supply chains shake.",
+          "briefing": "Crescent Bay links food, inland transport, and commodity pricing. Eldoran is rarely the loudest market, but it anchors the simulation when inflation, storage, and routing matter.",
+          "playerHook": "Best watched for food shocks, transport spreads, storage inventory, and central-route arbitrage.",
+          "marketMood": "Balanced stability core",
+          "terrain": "River basins, food corridors, storage hubs, inland transit grids",
+          "opportunity": "Stability creates repeatable margins when riskier markets overreact.",
+          "riskNarrative": "A bad harvest or routing shock can transmit inflation across the map.",
+          "tradePattern": "Exports food security and routing stability; imports machinery, energy, and high-tech services."
+        }
+      },
+      "intel": [
+        "Crescent Bay benefits from central-route arbitrage.",
+        "Food storage capacity makes Eldoran defensive in supply shocks.",
+        "Policy stability attracts cautious capital."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+3.6%",
+        "riskLevel": "Low",
+        "liquidity": "Broad",
+        "politicalStability": "Very High"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "ELD",
+        "indicators": {
+          "gdpPerCapita": 53600,
+          "inflationRate": 3.2,
+          "interestRate": 4.1,
+          "population": 30.3,
+          "consumerConfidence": 71,
+          "businessConfidence": 70,
+          "currencyStability": 78,
+          "cpiIndex": 113.4,
+          "unemploymentRate": 5.1,
+          "logisticsIndex": 82
+        }
+      },
+      "backendKey": "ELDORAN",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "ELD",
+        "indicators": {
+          "consumerDemandIndex": 72,
+          "businessDemandIndex": 67,
+          "localPriceIndex": 104.9,
+          "supplyPressureIndex": 42,
+          "inventoryIndex": 78,
+          "wagePressureIndex": 43,
+          "resourceCostIndex": 48,
+          "importExposureIndex": 36,
+          "tariffExposureIndex": 27,
+          "logisticsFrictionIndex": 35,
+          "productionCapacityIndex": 76,
+          "servicesActivityIndex": 65,
+          "retailBasketCost": 106.4,
+          "marginPressureIndex": 38
+        },
+        "sectors": [
+          {
+            "name": "Food staples",
+            "demand": 79,
+            "supply": 82,
+            "priceIndex": 105.8,
+            "inventory": 84,
+            "margin": 39
+          },
+          {
+            "name": "Internal logistics",
+            "demand": 71,
+            "supply": 77,
+            "priceIndex": 103.9,
+            "inventory": 79,
+            "margin": 34
+          },
+          {
+            "name": "Commodity brokerage",
+            "demand": 68,
+            "supply": 73,
+            "priceIndex": 108.6,
+            "inventory": 72,
+            "margin": 41
+          }
+        ],
+        "signals": [
+          "High inventories dampen inflation pressure.",
+          "Food demand is stable and resilient.",
+          "Low logistics friction supports trade velocity."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "The benchmark stability market: food, logistics, and internal transport set the baseline for the whole world economy.",
+        "opportunity": "Research staples, warehousing, commodity routing, and food-price stability; Eldoran is where defensive demand becomes strategy.",
+        "friction": "Returns are lower, but pricing data is cleaner and useful as a benchmark against riskier countries.",
+        "recommendedAction": "Use Eldoran as the control market: compare its basket costs and inventory levels against every other country.",
+        "buyerSegments": [
+          "Food distributors",
+          "Warehouse operators",
+          "Internal transport providers"
+        ],
+        "priceDrivers": [
+          "Crop yields",
+          "Rail and road capacity",
+          "Warehouse inventory",
+          "Food basket demand"
+        ],
+        "researchQuestions": [
+          "Are food prices moving before wages?",
+          "Is inventory high enough to absorb shocks?",
+          "Are transport bottlenecks forming?"
+        ],
+        "entrySignals": [
+          "High inventory and stable demand",
+          "Low logistics friction",
+          "Stable consumer confidence"
+        ],
+        "avoidSignals": [
+          "Inventory drawdown",
+          "Weather or transport shocks",
+          "Food inflation spreading to wages"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Food staples",
+            "demand": 79,
+            "supply": 82,
+            "priceIndex": 105.8,
+            "inventory": 84,
+            "margin": 39,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Food staples",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Internal logistics",
+            "demand": 71,
+            "supply": 77,
+            "priceIndex": 103.9,
+            "inventory": 79,
+            "margin": 34,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Internal logistics",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Commodity brokerage",
+            "demand": 68,
+            "supply": 73,
+            "priceIndex": 108.6,
+            "inventory": 72,
+            "margin": 41,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Commodity brokerage",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "valerion",
+      "key": "VALERION",
+      "name": "Valerion",
+      "shortName": "Valerion",
+      "capital": "Glassfall",
+      "color": "#35f4e6",
+      "centroid": [
+        870,
+        572
+      ],
+      "capitalPoint": [
+        840,
+        570
+      ],
+      "bbox": [
+        702,
+        472,
+        1038,
+        671
+      ],
+      "polygons": [
+        [
+          [
+            1038,
+            606
+          ],
+          [
+            1027,
+            593
+          ],
+          [
+            1013,
+            590
+          ],
+          [
+            1006,
+            576
+          ],
+          [
+            1009,
+            571
+          ],
+          [
+            1018,
+            570
+          ],
+          [
+            1022,
+            561
+          ],
+          [
+            1014,
+            530
+          ],
+          [
+            1017,
+            518
+          ],
+          [
+            1010,
+            513
+          ],
+          [
+            1011,
+            498
+          ],
+          [
+            994,
+            488
+          ],
+          [
+            987,
+            494
+          ],
+          [
+            974,
+            487
+          ],
+          [
+            968,
+            489
+          ],
+          [
+            965,
+            486
+          ],
+          [
+            970,
+            480
+          ],
+          [
+            962,
+            472
+          ],
+          [
+            941,
+            480
+          ],
+          [
+            938,
+            488
+          ],
+          [
+            952,
+            492
+          ],
+          [
+            943,
+            498
+          ],
+          [
+            937,
+            498
+          ],
+          [
+            932,
+            490
+          ],
+          [
+            917,
+            500
+          ],
+          [
+            900,
+            497
+          ],
+          [
+            889,
+            490
+          ],
+          [
+            877,
+            490
+          ],
+          [
+            869,
+            481
+          ],
+          [
+            860,
+            482
+          ],
+          [
+            854,
+            477
+          ],
+          [
+            822,
+            490
+          ],
+          [
+            785,
+            479
+          ],
+          [
+            749,
+            490
+          ],
+          [
+            702,
+            518
+          ],
+          [
+            713,
+            556
+          ],
+          [
+            712,
+            566
+          ],
+          [
+            723,
+            583
+          ],
+          [
+            718,
+            592
+          ],
+          [
+            724,
+            607
+          ],
+          [
+            723,
+            615
+          ],
+          [
+            729,
+            622
+          ],
+          [
+            740,
+            626
+          ],
+          [
+            744,
+            620
+          ],
+          [
+            751,
+            620
+          ],
+          [
+            747,
+            627
+          ],
+          [
+            756,
+            627
+          ],
+          [
+            760,
+            631
+          ],
+          [
+            757,
+            637
+          ],
+          [
+            762,
+            644
+          ],
+          [
+            780,
+            652
+          ],
+          [
+            785,
+            660
+          ],
+          [
+            799,
+            668
+          ],
+          [
+            811,
+            663
+          ],
+          [
+            815,
+            669
+          ],
+          [
+            840,
+            661
+          ],
+          [
+            851,
+            663
+          ],
+          [
+            857,
+            655
+          ],
+          [
+            879,
+            650
+          ],
+          [
+            893,
+            656
+          ],
+          [
+            895,
+            662
+          ],
+          [
+            907,
+            671
+          ],
+          [
+            923,
+            669
+          ],
+          [
+            935,
+            662
+          ],
+          [
+            935,
+            653
+          ],
+          [
+            940,
+            645
+          ],
+          [
+            959,
+            637
+          ],
+          [
+            957,
+            630
+          ],
+          [
+            970,
+            622
+          ],
+          [
+            968,
+            617
+          ],
+          [
+            979,
+            608
+          ],
+          [
+            988,
+            606
+          ],
+          [
+            1014,
+            626
+          ],
+          [
+            1020,
+            627
+          ],
+          [
+            1033,
+            621
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Clean-tech capital market",
+        "government": "Civic Technate",
+        "summary": "Wealthy innovation economy with clean infrastructure, high-trust finance, and advanced materials production.",
+        "risk": "Low",
+        "momentum": "+5.4%",
+        "liquidity": "Deep",
+        "stability": "High",
+        "sectors": [
+          "Clean energy",
+          "Advanced materials",
+          "Capital markets",
+          "Water systems"
+        ],
+        "flavor": {
+          "headline": "Premium capital meets clean infrastructure.",
+          "briefing": "Glassfall prices trust. Its clean-energy grid, finance rails, and advanced materials base make it the safest high-value market, but premium valuations leave less room for mistakes.",
+          "playerHook": "Best watched for financing rates, clean-energy demand, and advanced-material supply chains.",
+          "marketMood": "High-trust premium market",
+          "terrain": "Waterfalls, green infrastructure, capital towers, advanced-material foundries",
+          "opportunity": "Quality compounds when financing conditions are favorable.",
+          "riskNarrative": "Crowded capital and expensive assets can punish late entries.",
+          "tradePattern": "Exports clean systems, finance, and advanced materials; imports research inputs and specialized equipment."
+        }
+      },
+      "intel": [
+        "Glassfall remains a premium financing center.",
+        "Clean-energy export demand is resilient.",
+        "Valuation multiples are rich relative to growth."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+5.4%",
+        "riskLevel": "Low",
+        "liquidity": "Deep",
+        "politicalStability": "High"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "VAL",
+        "indicators": {
+          "gdpPerCapita": 88400,
+          "inflationRate": 2.0,
+          "interestRate": 2.9,
+          "population": 11.2,
+          "consumerConfidence": 82,
+          "businessConfidence": 86,
+          "currencyStability": 94,
+          "cpiIndex": 107.5,
+          "unemploymentRate": 3.5,
+          "logisticsIndex": 88
+        }
+      },
+      "backendKey": "VALERION",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "VAL",
+        "indicators": {
+          "consumerDemandIndex": 74,
+          "businessDemandIndex": 79,
+          "localPriceIndex": 109.6,
+          "supplyPressureIndex": 45,
+          "inventoryIndex": 69,
+          "wagePressureIndex": 64,
+          "resourceCostIndex": 53,
+          "importExposureIndex": 49,
+          "tariffExposureIndex": 24,
+          "logisticsFrictionIndex": 37,
+          "productionCapacityIndex": 81,
+          "servicesActivityIndex": 83,
+          "retailBasketCost": 115.9,
+          "marginPressureIndex": 45
+        },
+        "sectors": [
+          {
+            "name": "Clean energy",
+            "demand": 88,
+            "supply": 74,
+            "priceIndex": 121.4,
+            "inventory": 65,
+            "margin": 63
+          },
+          {
+            "name": "Premium services",
+            "demand": 82,
+            "supply": 79,
+            "priceIndex": 116.5,
+            "inventory": 75,
+            "margin": 66
+          },
+          {
+            "name": "Green manufacturing",
+            "demand": 77,
+            "supply": 70,
+            "priceIndex": 114.1,
+            "inventory": 68,
+            "margin": 58
+          }
+        ],
+        "signals": [
+          "High consumer demand supports premium pricing.",
+          "Clean-energy sector has strong pricing power.",
+          "Supply is stable but not overbuilt."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A premium clean-tech and finance market where capital availability supports green infrastructure, luxury services, and advanced materials.",
+        "opportunity": "Research capital depth, clean-energy project flow, luxury consumption, and component supply pressure.",
+        "friction": "Valuations can run ahead of production; players should test whether demand is backed by capacity and inventory.",
+        "recommendedAction": "Follow price index, inventory, and production capacity together before buying into premium-sector momentum.",
+        "buyerSegments": [
+          "Clean infrastructure developers",
+          "Wealth-management clients",
+          "Advanced-materials buyers"
+        ],
+        "priceDrivers": [
+          "Clean-energy subsidies",
+          "Capital inflows",
+          "Luxury consumption",
+          "Advanced-material supply"
+        ],
+        "researchQuestions": [
+          "Is premium demand resilient or rate-sensitive?",
+          "Are clean-tech inputs constrained?",
+          "Are margins supported by financing terms?"
+        ],
+        "entrySignals": [
+          "High liquidity",
+          "Strong clean-tech demand",
+          "Stable currency"
+        ],
+        "avoidSignals": [
+          "Rate shock",
+          "Input-cost spike",
+          "Luxury demand reversal"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Clean energy",
+            "demand": 88,
+            "supply": 74,
+            "priceIndex": 121.4,
+            "inventory": 65,
+            "margin": 63,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Clean energy",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Premium services",
+            "demand": 82,
+            "supply": 79,
+            "priceIndex": 116.5,
+            "inventory": 75,
+            "margin": 66,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Premium services",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Green manufacturing",
+            "demand": 77,
+            "supply": 70,
+            "priceIndex": 114.1,
+            "inventory": 68,
+            "margin": 58,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Green manufacturing",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "lumenor",
+      "key": "LUMENOR",
+      "name": "Lumenor",
+      "shortName": "Lumenor",
+      "capital": "Starfall",
+      "color": "#9acbff",
+      "centroid": [
+        846,
+        762
+      ],
+      "capitalPoint": [
+        850,
+        770
+      ],
+      "bbox": [
+        641,
+        669,
+        1052,
+        854
+      ],
+      "polygons": [
+        [
+          [
+            1052,
+            683
+          ],
+          [
+            1045,
+            676
+          ],
+          [
+            1032,
+            670
+          ],
+          [
+            1027,
+            672
+          ],
+          [
+            1018,
+            670
+          ],
+          [
+            1014,
+            672
+          ],
+          [
+            1010,
+            669
+          ],
+          [
+            989,
+            674
+          ],
+          [
+            974,
+            681
+          ],
+          [
+            965,
+            681
+          ],
+          [
+            961,
+            679
+          ],
+          [
+            953,
+            684
+          ],
+          [
+            930,
+            682
+          ],
+          [
+            922,
+            675
+          ],
+          [
+            900,
+            672
+          ],
+          [
+            891,
+            676
+          ],
+          [
+            874,
+            673
+          ],
+          [
+            864,
+            680
+          ],
+          [
+            858,
+            678
+          ],
+          [
+            852,
+            672
+          ],
+          [
+            839,
+            673
+          ],
+          [
+            830,
+            682
+          ],
+          [
+            822,
+            683
+          ],
+          [
+            820,
+            687
+          ],
+          [
+            815,
+            690
+          ],
+          [
+            795,
+            687
+          ],
+          [
+            789,
+            684
+          ],
+          [
+            783,
+            690
+          ],
+          [
+            777,
+            691
+          ],
+          [
+            771,
+            688
+          ],
+          [
+            761,
+            687
+          ],
+          [
+            754,
+            678
+          ],
+          [
+            740,
+            682
+          ],
+          [
+            735,
+            681
+          ],
+          [
+            735,
+            685
+          ],
+          [
+            727,
+            692
+          ],
+          [
+            711,
+            697
+          ],
+          [
+            705,
+            696
+          ],
+          [
+            697,
+            703
+          ],
+          [
+            686,
+            706
+          ],
+          [
+            681,
+            712
+          ],
+          [
+            674,
+            714
+          ],
+          [
+            659,
+            727
+          ],
+          [
+            659,
+            733
+          ],
+          [
+            654,
+            737
+          ],
+          [
+            653,
+            742
+          ],
+          [
+            648,
+            745
+          ],
+          [
+            641,
+            758
+          ],
+          [
+            652,
+            767
+          ],
+          [
+            654,
+            773
+          ],
+          [
+            668,
+            779
+          ],
+          [
+            677,
+            788
+          ],
+          [
+            682,
+            788
+          ],
+          [
+            691,
+            781
+          ],
+          [
+            709,
+            787
+          ],
+          [
+            727,
+            775
+          ],
+          [
+            737,
+            775
+          ],
+          [
+            743,
+            780
+          ],
+          [
+            750,
+            779
+          ],
+          [
+            758,
+            782
+          ],
+          [
+            761,
+            785
+          ],
+          [
+            761,
+            794
+          ],
+          [
+            765,
+            800
+          ],
+          [
+            775,
+            802
+          ],
+          [
+            783,
+            810
+          ],
+          [
+            806,
+            818
+          ],
+          [
+            817,
+            825
+          ],
+          [
+            830,
+            827
+          ],
+          [
+            847,
+            826
+          ],
+          [
+            854,
+            830
+          ],
+          [
+            869,
+            827
+          ],
+          [
+            875,
+            833
+          ],
+          [
+            880,
+            833
+          ],
+          [
+            885,
+            837
+          ],
+          [
+            885,
+            845
+          ],
+          [
+            893,
+            845
+          ],
+          [
+            901,
+            849
+          ],
+          [
+            917,
+            846
+          ],
+          [
+            928,
+            854
+          ],
+          [
+            933,
+            847
+          ],
+          [
+            944,
+            841
+          ],
+          [
+            951,
+            829
+          ],
+          [
+            952,
+            822
+          ],
+          [
+            960,
+            817
+          ],
+          [
+            961,
+            812
+          ],
+          [
+            980,
+            801
+          ],
+          [
+            985,
+            793
+          ],
+          [
+            986,
+            786
+          ],
+          [
+            993,
+            782
+          ],
+          [
+            1010,
+            764
+          ],
+          [
+            1010,
+            760
+          ],
+          [
+            1013,
+            757
+          ],
+          [
+            1023,
+            752
+          ],
+          [
+            1022,
+            745
+          ],
+          [
+            1027,
+            742
+          ],
+          [
+            1031,
+            732
+          ],
+          [
+            1033,
+            712
+          ],
+          [
+            1044,
+            704
+          ],
+          [
+            1045,
+            698
+          ],
+          [
+            1052,
+            689
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Southern platform and orbital logistics economy",
+        "government": "Southern Directorate",
+        "summary": "Remote but sophisticated southern economy with ports, launch infrastructure, ocean engineering, and data relays.",
+        "risk": "Medium",
+        "momentum": "+4.9%",
+        "liquidity": "Moderate",
+        "stability": "Medium",
+        "sectors": [
+          "Launch platforms",
+          "Data relays",
+          "Ocean engineering",
+          "Cold-chain ports"
+        ],
+        "flavor": {
+          "headline": "The southern relay that makes distance profitable.",
+          "briefing": "Starfall sits far from the core but close to the routes others neglect. Launch infrastructure, ocean engineering, data relays, and cold-chain ports make Lumenor a hidden multiplier.",
+          "playerHook": "Best watched for southern shipping, launch demand, relay capacity, and weather disruptions.",
+          "marketMood": "Remote infrastructure leverage",
+          "terrain": "Southern ports, relay towers, launch platforms, ocean-engineering yards",
+          "opportunity": "Mispriced distance can become margin when southern routes matter.",
+          "riskNarrative": "Weather, maintenance, and distance keep operating costs structurally high.",
+          "tradePattern": "Exports launch access, data relay capacity, and cold-chain logistics; imports fuel, components, and food."
+        }
+      },
+      "intel": [
+        "Starfall is becoming a logistics bridge between southern routes.",
+        "Weather and distance inflate operating costs.",
+        "Data-relay assets are gaining strategic value."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+4.9%",
+        "riskLevel": "Medium",
+        "liquidity": "Moderate",
+        "politicalStability": "Medium"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "LUM",
+        "indicators": {
+          "gdpPerCapita": 62900,
+          "inflationRate": 3.9,
+          "interestRate": 4.7,
+          "population": 7.9,
+          "consumerConfidence": 64,
+          "businessConfidence": 68,
+          "currencyStability": 73,
+          "cpiIndex": 116.1,
+          "unemploymentRate": 5.9,
+          "logisticsIndex": 71
+        }
+      },
+      "backendKey": "LUMENOR",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "LUM",
+        "indicators": {
+          "consumerDemandIndex": 57,
+          "businessDemandIndex": 61,
+          "localPriceIndex": 110.8,
+          "supplyPressureIndex": 63,
+          "inventoryIndex": 55,
+          "wagePressureIndex": 52,
+          "resourceCostIndex": 62,
+          "importExposureIndex": 67,
+          "tariffExposureIndex": 48,
+          "logisticsFrictionIndex": 69,
+          "productionCapacityIndex": 58,
+          "servicesActivityIndex": 56,
+          "retailBasketCost": 117.6,
+          "marginPressureIndex": 57
+        },
+        "sectors": [
+          {
+            "name": "Maritime logistics",
+            "demand": 70,
+            "supply": 58,
+            "priceIndex": 122.9,
+            "inventory": 55,
+            "margin": 56
+          },
+          {
+            "name": "Cold-water fisheries",
+            "demand": 62,
+            "supply": 64,
+            "priceIndex": 108.7,
+            "inventory": 67,
+            "margin": 42
+          },
+          {
+            "name": "Island infrastructure",
+            "demand": 66,
+            "supply": 49,
+            "priceIndex": 127.2,
+            "inventory": 46,
+            "margin": 61
+          }
+        ],
+        "signals": [
+          "Island logistics keeps local prices above baseline.",
+          "Fisheries stabilize the food basket.",
+          "Infrastructure supply bottlenecks remain material."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A maritime island market where tourism, fisheries, cold-water logistics, and island infrastructure create localized price signals.",
+        "opportunity": "Research infrastructure gaps and seasonal demand; the best trades come from supply bottlenecks rather than raw market size.",
+        "friction": "Island logistics keeps costs sticky; imported goods can become expensive quickly when routes are stressed.",
+        "recommendedAction": "Check route reliability, retail basket costs, and cold-storage capacity before choosing market entry.",
+        "buyerSegments": [
+          "Island infrastructure contractors",
+          "Fisheries and cold-storage operators",
+          "Tourism-service providers"
+        ],
+        "priceDrivers": [
+          "Sea-lane reliability",
+          "Cold-storage capacity",
+          "Seasonal tourism demand",
+          "Imported retail goods"
+        ],
+        "researchQuestions": [
+          "Is demand seasonal or structural?",
+          "Which goods depend on import routes?",
+          "Can cold-chain capacity handle growth?"
+        ],
+        "entrySignals": [
+          "Rising infrastructure demand",
+          "Stable fisheries supply",
+          "Improving logistics friction"
+        ],
+        "avoidSignals": [
+          "Import route stress",
+          "Retail basket inflation",
+          "Storm or port disruption"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Maritime logistics",
+            "demand": 70,
+            "supply": 58,
+            "priceIndex": 122.9,
+            "inventory": 55,
+            "margin": 56,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Maritime logistics",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Cold-water fisheries",
+            "demand": 62,
+            "supply": 64,
+            "priceIndex": 108.7,
+            "inventory": 67,
+            "margin": 42,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Cold-water fisheries",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Island infrastructure",
+            "demand": 66,
+            "supply": 49,
+            "priceIndex": 127.2,
+            "inventory": 46,
+            "margin": 61,
+            "researchAngle": "Baseline research: compare demand trend against inventory and local costs.",
+            "checkFirst": [
+              "Demand quality in Island infrastructure",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "xalvoria",
+      "key": "XALVORIA",
+      "name": "Xalvoria",
+      "shortName": "Xalvoria",
+      "capital": "Emberhall",
+      "color": "#f4b342",
+      "centroid": [
+        1277,
+        192
+      ],
+      "capitalPoint": [
+        1220,
+        210
+      ],
+      "bbox": [
+        1027,
+        77,
+        1527,
+        307
+      ],
+      "polygons": [
+        [
+          [
+            1027,
+            268
+          ],
+          [
+            1037,
+            292
+          ],
+          [
+            1064,
+            307
+          ],
+          [
+            1079,
+            307
+          ],
+          [
+            1083,
+            302
+          ],
+          [
+            1101,
+            307
+          ],
+          [
+            1113,
+            295
+          ],
+          [
+            1156,
+            307
+          ],
+          [
+            1169,
+            302
+          ],
+          [
+            1185,
+            285
+          ],
+          [
+            1214,
+            292
+          ],
+          [
+            1239,
+            283
+          ],
+          [
+            1250,
+            285
+          ],
+          [
+            1259,
+            276
+          ],
+          [
+            1255,
+            266
+          ],
+          [
+            1281,
+            276
+          ],
+          [
+            1293,
+            269
+          ],
+          [
+            1303,
+            254
+          ],
+          [
+            1319,
+            269
+          ],
+          [
+            1329,
+            263
+          ],
+          [
+            1337,
+            265
+          ],
+          [
+            1336,
+            272
+          ],
+          [
+            1308,
+            271
+          ],
+          [
+            1311,
+            280
+          ],
+          [
+            1328,
+            274
+          ],
+          [
+            1336,
+            279
+          ],
+          [
+            1348,
+            277
+          ],
+          [
+            1352,
+            271
+          ],
+          [
+            1370,
+            273
+          ],
+          [
+            1385,
+            261
+          ],
+          [
+            1459,
+            252
+          ],
+          [
+            1443,
+            239
+          ],
+          [
+            1449,
+            232
+          ],
+          [
+            1474,
+            251
+          ],
+          [
+            1493,
+            248
+          ],
+          [
+            1523,
+            225
+          ],
+          [
+            1525,
+            201
+          ],
+          [
+            1514,
+            194
+          ],
+          [
+            1527,
+            175
+          ],
+          [
+            1508,
+            153
+          ],
+          [
+            1493,
+            151
+          ],
+          [
+            1494,
+            146
+          ],
+          [
+            1503,
+            146
+          ],
+          [
+            1498,
+            140
+          ],
+          [
+            1462,
+            132
+          ],
+          [
+            1442,
+            113
+          ],
+          [
+            1409,
+            115
+          ],
+          [
+            1402,
+            132
+          ],
+          [
+            1369,
+            136
+          ],
+          [
+            1355,
+            125
+          ],
+          [
+            1357,
+            117
+          ],
+          [
+            1338,
+            104
+          ],
+          [
+            1344,
+            92
+          ],
+          [
+            1309,
+            78
+          ],
+          [
+            1295,
+            77
+          ],
+          [
+            1279,
+            87
+          ],
+          [
+            1259,
+            91
+          ],
+          [
+            1232,
+            78
+          ],
+          [
+            1214,
+            80
+          ],
+          [
+            1209,
+            86
+          ],
+          [
+            1174,
+            77
+          ],
+          [
+            1149,
+            88
+          ],
+          [
+            1139,
+            98
+          ],
+          [
+            1115,
+            96
+          ],
+          [
+            1091,
+            110
+          ],
+          [
+            1089,
+            138
+          ],
+          [
+            1079,
+            152
+          ],
+          [
+            1088,
+            165
+          ],
+          [
+            1086,
+            185
+          ],
+          [
+            1079,
+            197
+          ],
+          [
+            1070,
+            198
+          ],
+          [
+            1046,
+            217
+          ],
+          [
+            1050,
+            226
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Industrial energy and manufacturing bloc",
+        "government": "Industrial Directorate",
+        "summary": "Heavy industrial economy built on energy generation, metallurgy, manufacturing, and high-output urban production.",
+        "risk": "Medium",
+        "momentum": "+5.9%",
+        "liquidity": "Strong",
+        "stability": "Medium",
+        "sectors": [
+          "Energy generation",
+          "Metallurgy",
+          "Manufacturing",
+          "Urban infrastructure"
+        ],
+        "flavor": {
+          "headline": "The industrial furnace of the east.",
+          "briefing": "Emberhall converts energy reliability into output. Heavy manufacturing, metallurgy, and high-density urban production make Xalvoria powerful when demand accelerates.",
+          "playerHook": "Best watched for energy spreads, factory utilization, metals demand, and manufacturing momentum.",
+          "marketMood": "Industrial expansion cycle",
+          "terrain": "Volcanic uplands, factory belts, tower cities, power corridors",
+          "opportunity": "Industrial throughput rewards players positioned before production cycles peak.",
+          "riskNarrative": "Energy or input shocks can ripple through every downstream market.",
+          "tradePattern": "Exports manufactured goods, energy-intensive products, and metals; imports raw minerals and tech inputs."
+        }
+      },
+      "intel": [
+        "Emberhall industrial throughput is above trend.",
+        "Energy reliability is a competitive advantage.",
+        "Pollution and labor constraints may pressure margins."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+5.9%",
+        "riskLevel": "Medium",
+        "liquidity": "Strong",
+        "politicalStability": "Medium"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "XAL",
+        "indicators": {
+          "gdpPerCapita": 70100,
+          "inflationRate": 4.4,
+          "interestRate": 5.3,
+          "population": 24.5,
+          "consumerConfidence": 66,
+          "businessConfidence": 81,
+          "currencyStability": 70,
+          "cpiIndex": 119.3,
+          "unemploymentRate": 4.6,
+          "logisticsIndex": 84
+        }
+      },
+      "backendKey": "XALVORIA",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "XAL",
+        "indicators": {
+          "consumerDemandIndex": 68,
+          "businessDemandIndex": 81,
+          "localPriceIndex": 117.3,
+          "supplyPressureIndex": 66,
+          "inventoryIndex": 53,
+          "wagePressureIndex": 67,
+          "resourceCostIndex": 75,
+          "importExposureIndex": 45,
+          "tariffExposureIndex": 36,
+          "logisticsFrictionIndex": 57,
+          "productionCapacityIndex": 84,
+          "servicesActivityIndex": 70,
+          "retailBasketCost": 121.7,
+          "marginPressureIndex": 64
+        },
+        "sectors": [
+          {
+            "name": "Heavy industry",
+            "demand": 86,
+            "supply": 71,
+            "priceIndex": 132.1,
+            "inventory": 56,
+            "margin": 72
+          },
+          {
+            "name": "Industrial energy",
+            "demand": 83,
+            "supply": 66,
+            "priceIndex": 138.3,
+            "inventory": 50,
+            "margin": 69
+          },
+          {
+            "name": "Capital equipment",
+            "demand": 79,
+            "supply": 68,
+            "priceIndex": 125.4,
+            "inventory": 57,
+            "margin": 63
+          }
+        ],
+        "signals": [
+          "Industrial demand keeps producer prices elevated.",
+          "Energy costs remain the key margin variable.",
+          "Capacity is high but input-sensitive."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A heavy industrial market where energy reliability and manufacturing capacity create scale, but input costs determine margin.",
+        "opportunity": "Research producer prices, energy load, metals demand, and capacity utilization; Xalvoria is about industrial throughput.",
+        "friction": "High capacity does not guarantee profit if energy, labor, or resource costs move against manufacturers.",
+        "recommendedAction": "Track energy costs and capacity together; enter when demand rises without a matching input-cost surge.",
+        "buyerSegments": [
+          "Manufacturers",
+          "Energy-intensive factories",
+          "Capital equipment buyers"
+        ],
+        "priceDrivers": [
+          "Energy cost reliability",
+          "Metals input prices",
+          "Capacity utilization",
+          "Urban infrastructure demand"
+        ],
+        "researchQuestions": [
+          "Are factories capacity-constrained?",
+          "Are input costs being passed through?",
+          "Is energy reliability improving margins?"
+        ],
+        "entrySignals": [
+          "High business demand",
+          "Strong production capacity",
+          "Stable energy supply"
+        ],
+        "avoidSignals": [
+          "Resource-cost spike",
+          "Labor unrest",
+          "Pollution compliance shock"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Heavy industry",
+            "demand": 86,
+            "supply": 71,
+            "priceIndex": 132.1,
+            "inventory": 56,
+            "margin": 72,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Heavy industry",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Industrial energy",
+            "demand": 83,
+            "supply": 66,
+            "priceIndex": 138.3,
+            "inventory": 50,
+            "margin": 69,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Industrial energy",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Capital equipment",
+            "demand": 79,
+            "supply": 68,
+            "priceIndex": 125.4,
+            "inventory": 57,
+            "margin": 63,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Capital equipment",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "dravenlok",
+      "key": "DRAVENLOK",
+      "name": "Dravenlok",
+      "shortName": "Dravenlok",
+      "capital": "Ironhold",
+      "color": "#ff514f",
+      "centroid": [
+        1382,
+        386
+      ],
+      "capitalPoint": [
+        1368,
+        390
+      ],
+      "bbox": [
+        1163,
+        287,
+        1602,
+        485
+      ],
+      "polygons": [
+        [
+          [
+            1260,
+            306
+          ],
+          [
+            1255,
+            327
+          ],
+          [
+            1261,
+            346
+          ],
+          [
+            1257,
+            373
+          ],
+          [
+            1271,
+            379
+          ],
+          [
+            1272,
+            387
+          ],
+          [
+            1268,
+            393
+          ],
+          [
+            1274,
+            415
+          ],
+          [
+            1266,
+            422
+          ],
+          [
+            1271,
+            433
+          ],
+          [
+            1293,
+            453
+          ],
+          [
+            1303,
+            454
+          ],
+          [
+            1311,
+            466
+          ],
+          [
+            1334,
+            468
+          ],
+          [
+            1344,
+            473
+          ],
+          [
+            1345,
+            480
+          ],
+          [
+            1351,
+            485
+          ],
+          [
+            1359,
+            485
+          ],
+          [
+            1376,
+            471
+          ],
+          [
+            1381,
+            476
+          ],
+          [
+            1392,
+            470
+          ],
+          [
+            1405,
+            472
+          ],
+          [
+            1428,
+            454
+          ],
+          [
+            1447,
+            455
+          ],
+          [
+            1460,
+            446
+          ],
+          [
+            1462,
+            433
+          ],
+          [
+            1451,
+            429
+          ],
+          [
+            1460,
+            420
+          ],
+          [
+            1468,
+            424
+          ],
+          [
+            1480,
+            421
+          ],
+          [
+            1484,
+            424
+          ],
+          [
+            1480,
+            430
+          ],
+          [
+            1473,
+            427
+          ],
+          [
+            1468,
+            431
+          ],
+          [
+            1469,
+            443
+          ],
+          [
+            1502,
+            448
+          ],
+          [
+            1512,
+            462
+          ],
+          [
+            1518,
+            461
+          ],
+          [
+            1522,
+            465
+          ],
+          [
+            1538,
+            460
+          ],
+          [
+            1543,
+            468
+          ],
+          [
+            1553,
+            466
+          ],
+          [
+            1562,
+            480
+          ],
+          [
+            1573,
+            477
+          ],
+          [
+            1587,
+            459
+          ],
+          [
+            1593,
+            432
+          ],
+          [
+            1601,
+            421
+          ],
+          [
+            1602,
+            384
+          ],
+          [
+            1594,
+            377
+          ],
+          [
+            1602,
+            366
+          ],
+          [
+            1600,
+            352
+          ],
+          [
+            1594,
+            348
+          ],
+          [
+            1599,
+            341
+          ],
+          [
+            1599,
+            329
+          ],
+          [
+            1589,
+            321
+          ],
+          [
+            1576,
+            323
+          ],
+          [
+            1572,
+            308
+          ],
+          [
+            1567,
+            309
+          ],
+          [
+            1540,
+            293
+          ],
+          [
+            1517,
+            294
+          ],
+          [
+            1498,
+            306
+          ],
+          [
+            1489,
+            296
+          ],
+          [
+            1483,
+            300
+          ],
+          [
+            1479,
+            297
+          ],
+          [
+            1463,
+            299
+          ],
+          [
+            1448,
+            288
+          ],
+          [
+            1406,
+            289
+          ],
+          [
+            1388,
+            297
+          ],
+          [
+            1378,
+            290
+          ],
+          [
+            1366,
+            288
+          ],
+          [
+            1325,
+            293
+          ],
+          [
+            1312,
+            288
+          ],
+          [
+            1290,
+            287
+          ]
+        ],
+        [
+          [
+            1180,
+            408
+          ],
+          [
+            1171,
+            411
+          ],
+          [
+            1166,
+            416
+          ],
+          [
+            1164,
+            420
+          ],
+          [
+            1163,
+            429
+          ],
+          [
+            1171,
+            439
+          ],
+          [
+            1181,
+            443
+          ],
+          [
+            1187,
+            441
+          ],
+          [
+            1195,
+            433
+          ],
+          [
+            1196,
+            428
+          ],
+          [
+            1188,
+            420
+          ],
+          [
+            1190,
+            412
+          ],
+          [
+            1188,
+            410
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Defense, metals, and hard-infrastructure state",
+        "government": "Iron Directorate",
+        "summary": "Fortified industrial economy with metals, defense production, rugged infrastructure, and high strategic leverage.",
+        "risk": "High",
+        "momentum": "+7.3%",
+        "liquidity": "Concentrated",
+        "stability": "Medium",
+        "sectors": [
+          "Steel",
+          "Defense production",
+          "Hard infrastructure",
+          "Security logistics"
+        ],
+        "flavor": {
+          "headline": "Risk becomes leverage behind fortified industry.",
+          "briefing": "Ironhold gains pricing power when the world feels unstable. Defense production, steel, rugged logistics, and hard infrastructure make Dravenlok a volatility hedge with sharp input risk.",
+          "playerHook": "Best watched for geopolitical risk, metals pricing, defense orders, and infrastructure shocks.",
+          "marketMood": "Fortified risk premium",
+          "terrain": "Iron ranges, defense yards, fortified rail, hard industrial corridors",
+          "opportunity": "Volatility can lift defense and hard-infrastructure demand quickly.",
+          "riskNarrative": "Input costs and concentration risk can reverse gains just as quickly.",
+          "tradePattern": "Exports steel, defense capacity, and rugged infrastructure; imports energy, components, and compliance access."
+        }
+      },
+      "intel": [
+        "Ironhold benefits when geopolitical risk rises.",
+        "Input-cost volatility is high across metals.",
+        "Sanction sensitivity is the key downside variable."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+7.3%",
+        "riskLevel": "High",
+        "liquidity": "Concentrated",
+        "politicalStability": "Medium"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "DRV",
+        "indicators": {
+          "gdpPerCapita": 46800,
+          "inflationRate": 7.2,
+          "interestRate": 9.1,
+          "population": 18.3,
+          "consumerConfidence": 49,
+          "businessConfidence": 63,
+          "currencyStability": 52,
+          "cpiIndex": 131.7,
+          "unemploymentRate": 6.8,
+          "logisticsIndex": 66
+        }
+      },
+      "backendKey": "DRAVENLOK",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "DRV",
+        "indicators": {
+          "consumerDemandIndex": 46,
+          "businessDemandIndex": 76,
+          "localPriceIndex": 126.4,
+          "supplyPressureIndex": 82,
+          "inventoryIndex": 37,
+          "wagePressureIndex": 71,
+          "resourceCostIndex": 86,
+          "importExposureIndex": 41,
+          "tariffExposureIndex": 88,
+          "logisticsFrictionIndex": 79,
+          "productionCapacityIndex": 78,
+          "servicesActivityIndex": 44,
+          "retailBasketCost": 132.1,
+          "marginPressureIndex": 83
+        },
+        "sectors": [
+          {
+            "name": "Defense manufacturing",
+            "demand": 92,
+            "supply": 63,
+            "priceIndex": 154.9,
+            "inventory": 35,
+            "margin": 88
+          },
+          {
+            "name": "Metals",
+            "demand": 84,
+            "supply": 52,
+            "priceIndex": 146.2,
+            "inventory": 39,
+            "margin": 80
+          },
+          {
+            "name": "Fortified logistics",
+            "demand": 73,
+            "supply": 48,
+            "priceIndex": 137.6,
+            "inventory": 41,
+            "margin": 74
+          }
+        ],
+        "signals": [
+          "Supply pressure is highest in metals and defense inputs.",
+          "Tariff exposure is elevated.",
+          "Consumer demand trails industrial demand."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A defense-and-metals market where geopolitical risk drives demand, while tariffs and supply pressure determine whether profits survive.",
+        "opportunity": "Research defense orders, steel inputs, sanctions exposure, and hard-logistics capacity.",
+        "friction": "The same risk that creates demand can block imports, restrict buyers, and widen financing costs.",
+        "recommendedAction": "Only treat high demand as attractive if inventory and tariff exposure remain manageable.",
+        "buyerSegments": [
+          "Defense manufacturers",
+          "Steel mills and fabricators",
+          "Hard-infrastructure contractors"
+        ],
+        "priceDrivers": [
+          "Security events",
+          "Steel supply",
+          "Tariff exposure",
+          "Sanction and import controls"
+        ],
+        "researchQuestions": [
+          "Is demand driven by real orders or fear?",
+          "Are tariffs trapping inputs?",
+          "Can producers fulfill without imported parts?"
+        ],
+        "entrySignals": [
+          "Defense demand with available inventory",
+          "Metals price pass-through",
+          "Improving logistics access"
+        ],
+        "avoidSignals": [
+          "Tariff shock",
+          "Input shortage",
+          "Currency pressure"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Defense manufacturing",
+            "demand": 92,
+            "supply": 63,
+            "priceIndex": 154.9,
+            "inventory": 35,
+            "margin": 88,
+            "researchAngle": "Scarcity trade: high demand is colliding with thin inventory.",
+            "checkFirst": [
+              "Demand quality in Defense manufacturing",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Metals",
+            "demand": 84,
+            "supply": 52,
+            "priceIndex": 146.2,
+            "inventory": 39,
+            "margin": 80,
+            "researchAngle": "Scarcity trade: high demand is colliding with thin inventory.",
+            "checkFirst": [
+              "Demand quality in Metals",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Fortified logistics",
+            "demand": 73,
+            "supply": 48,
+            "priceIndex": 137.6,
+            "inventory": 41,
+            "margin": 74,
+            "researchAngle": "Pricing-power trade: prices are elevated; verify margin durability.",
+            "checkFirst": [
+              "Demand quality in Fortified logistics",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Demand > 75, inventory > 45, and margin pressure below 75.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    },
+    {
+      "id": "syndalis",
+      "key": "SYNDALIS",
+      "name": "Syndalis",
+      "shortName": "Syndalis",
+      "capital": "Blacklight",
+      "color": "#cc47ff",
+      "centroid": [
+        1282,
+        607
+      ],
+      "capitalPoint": [
+        1265,
+        605
+      ],
+      "bbox": [
+        1094,
+        507,
+        1469,
+        707
+      ],
+      "polygons": [
+        [
+          [
+            1094,
+            589
+          ],
+          [
+            1098,
+            592
+          ],
+          [
+            1101,
+            609
+          ],
+          [
+            1112,
+            614
+          ],
+          [
+            1116,
+            635
+          ],
+          [
+            1128,
+            636
+          ],
+          [
+            1136,
+            643
+          ],
+          [
+            1143,
+            644
+          ],
+          [
+            1147,
+            653
+          ],
+          [
+            1166,
+            646
+          ],
+          [
+            1174,
+            653
+          ],
+          [
+            1182,
+            653
+          ],
+          [
+            1190,
+            659
+          ],
+          [
+            1199,
+            657
+          ],
+          [
+            1205,
+            663
+          ],
+          [
+            1204,
+            669
+          ],
+          [
+            1222,
+            687
+          ],
+          [
+            1240,
+            683
+          ],
+          [
+            1257,
+            685
+          ],
+          [
+            1270,
+            693
+          ],
+          [
+            1278,
+            707
+          ],
+          [
+            1322,
+            707
+          ],
+          [
+            1347,
+            702
+          ],
+          [
+            1354,
+            695
+          ],
+          [
+            1363,
+            696
+          ],
+          [
+            1375,
+            687
+          ],
+          [
+            1377,
+            670
+          ],
+          [
+            1395,
+            650
+          ],
+          [
+            1397,
+            624
+          ],
+          [
+            1401,
+            618
+          ],
+          [
+            1404,
+            620
+          ],
+          [
+            1409,
+            616
+          ],
+          [
+            1416,
+            602
+          ],
+          [
+            1421,
+            601
+          ],
+          [
+            1429,
+            607
+          ],
+          [
+            1439,
+            608
+          ],
+          [
+            1469,
+            591
+          ],
+          [
+            1468,
+            567
+          ],
+          [
+            1465,
+            564
+          ],
+          [
+            1418,
+            562
+          ],
+          [
+            1416,
+            552
+          ],
+          [
+            1410,
+            546
+          ],
+          [
+            1375,
+            544
+          ],
+          [
+            1368,
+            534
+          ],
+          [
+            1353,
+            534
+          ],
+          [
+            1343,
+            526
+          ],
+          [
+            1318,
+            520
+          ],
+          [
+            1296,
+            507
+          ],
+          [
+            1273,
+            507
+          ],
+          [
+            1252,
+            515
+          ],
+          [
+            1231,
+            507
+          ],
+          [
+            1219,
+            507
+          ],
+          [
+            1204,
+            515
+          ],
+          [
+            1191,
+            512
+          ],
+          [
+            1183,
+            519
+          ],
+          [
+            1176,
+            518
+          ],
+          [
+            1167,
+            528
+          ],
+          [
+            1156,
+            532
+          ],
+          [
+            1149,
+            530
+          ],
+          [
+            1140,
+            535
+          ],
+          [
+            1134,
+            532
+          ],
+          [
+            1129,
+            537
+          ],
+          [
+            1124,
+            536
+          ],
+          [
+            1120,
+            540
+          ],
+          [
+            1120,
+            552
+          ],
+          [
+            1105,
+            564
+          ],
+          [
+            1107,
+            572
+          ],
+          [
+            1100,
+            577
+          ],
+          [
+            1099,
+            584
+          ]
+        ]
+      ],
+      "profile": {
+        "regionType": "Cyber-finance and informal technology market",
+        "government": "Syndicate Council",
+        "summary": "Dense neon economy with cyber services, shadow finance, encrypted trade, entertainment, and high-risk tech markets.",
+        "risk": "Very High",
+        "momentum": "+9.4%",
+        "liquidity": "Fast",
+        "stability": "Low",
+        "sectors": [
+          "Cybersecurity",
+          "Fintech rails",
+          "Entertainment",
+          "Data brokerage"
+        ],
+        "flavor": {
+          "headline": "The brightest market signals are also the dirtiest.",
+          "briefing": "Blacklight is dense, liquid, and hard to read. Cyber services, shadow finance, data brokerage, and entertainment can outperform, but signal quality degrades when compliance risk rises.",
+          "playerHook": "Best watched for cyber demand, fintech rails, volatility, compliance events, and data-market shocks.",
+          "marketMood": "Speculative cyber liquidity",
+          "terrain": "Neon districts, encrypted exchanges, data spires, nightlife infrastructure",
+          "opportunity": "High upside appears when players can separate real demand from noise.",
+          "riskNarrative": "Compliance pressure and bad data can turn momentum into drawdown.",
+          "tradePattern": "Exports cyber services, encrypted rails, entertainment, and data; imports hardware, energy, and legal cover."
+        }
+      },
+      "intel": [
+        "Blacklight produces the highest upside and the dirtiest signal quality.",
+        "Cyber-service demand is strong but compliance risk is severe.",
+        "Liquidity moves quickly around rumor and network shocks."
+      ],
+      "nodes": [],
+      "metrics": {
+        "marketMomentum": "+9.4%",
+        "riskLevel": "Very High",
+        "liquidity": "Fast",
+        "politicalStability": "Low"
+      },
+      "macroFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "SYN",
+        "indicators": {
+          "gdpPerCapita": 59300,
+          "inflationRate": 8.6,
+          "interestRate": 10.4,
+          "population": 16.9,
+          "consumerConfidence": 58,
+          "businessConfidence": 74,
+          "currencyStability": 46,
+          "cpiIndex": 137.9,
+          "unemploymentRate": 8.2,
+          "logisticsIndex": 69
+        }
+      },
+      "backendKey": "SYNDALIS",
+      "microFallback": {
+        "source": "static_fallback",
+        "updatedAt": "2026-06-25T00:00:00.000Z",
+        "currencyCode": "SYN",
+        "indicators": {
+          "consumerDemandIndex": 81,
+          "businessDemandIndex": 88,
+          "localPriceIndex": 129.2,
+          "supplyPressureIndex": 71,
+          "inventoryIndex": 41,
+          "wagePressureIndex": 83,
+          "resourceCostIndex": 69,
+          "importExposureIndex": 74,
+          "tariffExposureIndex": 76,
+          "logisticsFrictionIndex": 73,
+          "productionCapacityIndex": 72,
+          "servicesActivityIndex": 94,
+          "retailBasketCost": 136.8,
+          "marginPressureIndex": 79
+        },
+        "sectors": [
+          {
+            "name": "Cyber services",
+            "demand": 96,
+            "supply": 74,
+            "priceIndex": 151.3,
+            "inventory": 58,
+            "margin": 86
+          },
+          {
+            "name": "Fintech rails",
+            "demand": 91,
+            "supply": 71,
+            "priceIndex": 142.5,
+            "inventory": 54,
+            "margin": 82
+          },
+          {
+            "name": "Data brokerage",
+            "demand": 89,
+            "supply": 62,
+            "priceIndex": 148.7,
+            "inventory": 39,
+            "margin": 84
+          }
+        ],
+        "signals": [
+          "Service demand is extremely strong.",
+          "Compliance risk inflates transaction costs.",
+          "Wage pressure is severe in cyber labor."
+        ]
+      },
+      "marketResearch": {
+        "thesis": "A cyber-services and shadow-finance market with the strongest upside but the dirtiest signals and highest compliance risk.",
+        "opportunity": "Research demand quality: cyber services, fintech rails, data brokerage, and how much revenue is exposed to enforcement.",
+        "friction": "Wage pressure, regulatory action, and rumor-driven liquidity can turn a winning market into a trap quickly.",
+        "recommendedAction": "Use signal quality as the filter: chase growth only when liquidity and compliance risk are not deteriorating together.",
+        "buyerSegments": [
+          "Cybersecurity clients",
+          "Fintech platforms",
+          "Data brokers and entertainment networks"
+        ],
+        "priceDrivers": [
+          "Cyber incident volume",
+          "Compliance enforcement",
+          "Specialized labor costs",
+          "Liquidity rumors"
+        ],
+        "researchQuestions": [
+          "Is demand legal, gray, or black-market?",
+          "Are wages eating margins?",
+          "Is liquidity real or rumor-driven?"
+        ],
+        "entrySignals": [
+          "High service demand",
+          "Strong margins",
+          "Stable enough currency/liquidity"
+        ],
+        "avoidSignals": [
+          "Compliance crackdown",
+          "Wage spiral",
+          "Data-liability shock"
+        ],
+        "sectorResearch": [
+          {
+            "name": "Cyber services",
+            "demand": 96,
+            "supply": 74,
+            "priceIndex": 151.3,
+            "inventory": 58,
+            "margin": 86,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Cyber services",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Fintech rails",
+            "demand": 91,
+            "supply": 71,
+            "priceIndex": 142.5,
+            "inventory": 54,
+            "margin": 82,
+            "researchAngle": "Scale trade: demand is strong and supply can still fulfill.",
+            "checkFirst": [
+              "Demand quality in Fintech rails",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          },
+          {
+            "name": "Data brokerage",
+            "demand": 89,
+            "supply": 62,
+            "priceIndex": 148.7,
+            "inventory": 39,
+            "margin": 84,
+            "researchAngle": "Scarcity trade: high demand is colliding with thin inventory.",
+            "checkFirst": [
+              "Demand quality in Data brokerage",
+              "Inventory coverage and restock timing",
+              "Whether price increases are passing through to margin"
+            ],
+            "buySignal": "Only buy if price power is offsetting margin pressure.",
+            "riskSignal": "Avoid if inventory keeps falling while logistics friction rises."
+          }
+        ]
+      }
+    }
+  ],
+  "routes": [],
+  "lastUpdated": "2026-06-25"
+}

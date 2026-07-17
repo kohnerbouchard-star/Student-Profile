@@ -1,0 +1,14 @@
+{
+  "name": "econovaria-player-terminal-standalone",
+  "version": "7.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tools/check-source.mjs",
+    "smoke": "node tests/smoke.mjs",
+    "audit": "node tools/audit.mjs",
+    "verify": "npm run check && npm run smoke && npm run audit",
+    "dev": "python3 -m http.server ${PORT:-4173}"
+  },
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while normalizing typography, spacing, containment, long-name behavior, and mobile layout without changing the host-owned session/API adapter."
+}
