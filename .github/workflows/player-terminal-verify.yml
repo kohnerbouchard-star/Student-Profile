@@ -22,6 +22,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -50,6 +51,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: player-terminal/package-lock.json
+
+      - name: Install package dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
 
       - name: Verify standalone player terminal
         id: player-terminal-verify
@@ -62,6 +69,23 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           test "$status" -eq 0
 
+      - name: Install Chromium
+        if: success()
+        working-directory: player-terminal
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Chromium browser verification
+        if: success()
+        id: player-terminal-browser
+        working-directory: player-terminal
+        shell: bash
+        run: |
+          set +e
+          npm run browser 2>&1 | tee "$RUNNER_TEMP/player-terminal-browser.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
+
       - name: Upload failed verification log
         if: failure() && steps.player-terminal-verify.outputs.status != '0'
         uses: actions/upload-artifact@v4
@@ -69,4 +93,16 @@ jobs:
           name: player-terminal-verify-log
           path: ${{ runner.temp }}/player-terminal-verify.log
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload failed browser artifacts
+        if: failure() && steps.player-terminal-browser.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: player-terminal-browser-failure
+          path: |
+            ${{ runner.temp }}/player-terminal-browser.log
+            player-terminal/playwright-report/
+            player-terminal/test-results/
+          if-no-files-found: warn
           retention-days: 7
