@@ -1,4 +1,7 @@
-import { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
+import {
+  normalizeInventoryRedemptionReviewRequest,
+  normalizeRuntimeMutation,
+} from "./runtimeMutations.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -71,6 +74,50 @@ Deno.test("normalizes plural attendance scan route and legacy code fields", () =
     result.mutation.body.deviceTimezone === "Asia/Seoul",
     "Expected timezone to map to deviceTimezone.",
   );
+});
+
+Deno.test("normalizes redemption resolutionNote to the handler note contract", async () => {
+  const request = new Request(
+    "https://example.test/functions/v1/admin-api/games/game-1/inventory/redemptions/request-1",
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: "approve",
+        resolutionNote: "Verified by administrator",
+      }),
+    },
+  );
+
+  const normalized = await normalizeInventoryRedemptionReviewRequest(request);
+  const body = await normalized.json();
+
+  assert(body.action === "approve", "Expected the redemption action to survive normalization.");
+  assert(
+    body.note === "Verified by administrator",
+    "Expected resolutionNote to map to the handler note field.",
+  );
+  assert(
+    body.resolutionNote === "Verified by administrator",
+    "Expected the original resolutionNote field to remain available for auditing.",
+  );
+});
+
+Deno.test("preserves an explicit redemption note", async () => {
+  const request = new Request("https://example.test/redemptions/request-1", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action: "reject",
+      note: "Canonical note",
+      resolutionNote: "Legacy note",
+    }),
+  });
+
+  const normalized = await normalizeInventoryRedemptionReviewRequest(request);
+  const body = await normalized.json();
+
+  assert(body.note === "Canonical note", "Expected explicit note to take precedence.");
 });
 
 Deno.test("rejects create player without a display name", () => {
