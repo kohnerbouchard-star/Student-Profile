@@ -342,6 +342,7 @@
       button.addEventListener("click", () => {
         state.disclosureOpen = !page.classList.contains("is-custom-settings-open");
         applyDisclosureState(page, button, cards.grid);
+        schedulePresentation();
         if (state.disclosureOpen) cards.grid.querySelector("input, select, button")?.focus({ preventScroll: true });
       });
       header.append(button);
@@ -402,7 +403,6 @@
     panel.classList.add("admin-terminal-settings-save-bar");
     if (panel.parentElement !== page) page.append(panel);
     if (detail instanceof HTMLElement) detail.hidden = true;
-    panel.hidden = false;
 
     const button = panel.querySelector(SAVE_SELECTOR);
     if (button instanceof HTMLButtonElement) setText(button, "Save changes");
@@ -439,7 +439,7 @@
     page.classList.toggle("has-unsaved-settings", dirty);
     panel.classList.toggle("is-saved", saved && !dirty);
     panel.classList.toggle("is-error", failed);
-    panel.hidden = false;
+    panel.hidden = !(state.disclosureOpen || dirty || busy || failed || saved);
 
     if (button instanceof HTMLButtonElement) button.disabled = !dirty || busy;
     if (busy) setText(status, "Saving changes…");
