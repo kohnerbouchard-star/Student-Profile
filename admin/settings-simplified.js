@@ -462,12 +462,20 @@
   function resetForPage(page) {
     const gameId = selectedGameId();
     if (state.page === page && state.gameId === gameId) return;
-    const gameChanged = state.gameId && state.gameId !== gameId;
+    const previousGameId = state.gameId;
+    const gameChanged = previousGameId && previousGameId !== gameId;
     state.page = page;
     state.gameId = gameId;
     state.baselineValues = new Map();
     state.savedUntil = 0;
-    if (gameChanged) state.disclosureOpen = false;
+    if (gameChanged) {
+      state.disclosureOpen = false;
+      window.queueMicrotask(() => {
+        document.dispatchEvent(new CustomEvent("econovaria:settings-context-changed", {
+          detail: { previousGameId, gameId },
+        }));
+      });
+    }
     page.removeAttribute("data-settings-ux-baseline-ready");
     window.clearTimeout(state.savedTimer);
   }
