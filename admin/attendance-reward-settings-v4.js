@@ -3,6 +3,8 @@
 
   const STYLE_ID = "econovaria-attendance-reward-settings-style";
   const CARD_SELECTOR = "[data-admin-attendance-reward-settings]";
+  const AUTOMATIC_CURRENCY_MODE = "player_country";
+  const AUTOMATIC_DIFFICULTY_ADJUSTMENT = true;
   const state = {
     gameId: "",
     attendanceWindow: {},
@@ -34,7 +36,7 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
+      .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
 
@@ -59,10 +61,8 @@
       presentRewardAmount: Math.max(0, number(value.presentRewardAmount, 1)),
       lateRewardAmount: Math.max(0, number(value.lateRewardAmount, 0)),
       currencyCode: (text(value.currencyCode) || "ECO").toUpperCase(),
-      currencyMode: text(value.currencyMode).toLowerCase() === "player_country"
-        ? "player_country"
-        : "fixed",
-      applyDifficultyIncomeModifier: value.applyDifficultyIncomeModifier === true,
+      currencyMode: AUTOMATIC_CURRENCY_MODE,
+      applyDifficultyIncomeModifier: AUTOMATIC_DIFFICULTY_ADJUSTMENT,
     };
   }
 
@@ -128,8 +128,8 @@
             <label class="admin-terminal-settings-field">
               <span>Difficulty adjustment</span>
               <select data-attendance-reward-field="applyDifficultyIncomeModifier">
-                <option value="true"${config.applyDifficultyIncomeModifier ? " selected" : ""}>Use income modifier</option>
-                <option value="false"${config.applyDifficultyIncomeModifier ? "" : " selected"}>Do not adjust</option>
+                <option value="true" selected>Use income modifier</option>
+                <option value="false">Do not adjust</option>
               </select>
               <small>The selected difficulty's bounded income modifier is shown below.</small>
             </label>
@@ -138,8 +138,8 @@
             <label class="admin-terminal-settings-field">
               <span>Payout currency</span>
               <select data-attendance-reward-field="currencyMode">
-                <option value="player_country"${config.currencyMode === "player_country" ? " selected" : ""}>Player country currency</option>
-                <option value="fixed"${config.currencyMode === "fixed" ? " selected" : ""}>Fixed ${currencyCode}</option>
+                <option value="player_country" selected>Player country currency</option>
+                <option value="fixed">Fixed ${currencyCode}</option>
               </select>
               <small>Local mode uses the player's active country and current exchange index.</small>
             </label>
@@ -161,8 +161,6 @@
       ...fallback,
       presentRewardAmount: Math.max(0, number(field("presentRewardAmount")?.value, fallback.presentRewardAmount)),
       lateRewardAmount: Math.max(0, number(field("lateRewardAmount")?.value, fallback.lateRewardAmount)),
-      currencyMode: field("currencyMode")?.value === "fixed" ? "fixed" : "player_country",
-      applyDifficultyIncomeModifier: field("applyDifficultyIncomeModifier")?.value !== "false",
     });
   }
 
