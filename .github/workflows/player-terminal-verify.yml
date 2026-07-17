@@ -29,8 +29,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Enforce isolated pull-request scope
-        if: github.event_name == 'pull_request'
+      - name: Enforce isolated player-terminal source branch scope
+        if: >-
+          github.event_name == 'pull_request' &&
+          (startsWith(github.head_ref, 'frontend/player-terminal-') ||
+          startsWith(github.head_ref, 'agent/player-terminal-v'))
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
