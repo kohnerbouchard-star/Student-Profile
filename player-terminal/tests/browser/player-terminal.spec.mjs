@@ -59,6 +59,7 @@ test("shell has one main landmark and an operational skip link", async ({ page }
   await skip.focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("#player-main-content")).toBeFocused();
+  await expect(page).toHaveURL(/#dashboard$/, "Skip navigation must not replace the application route hash.");
 });
 
 test("country map is keyboard operable and restores focus", async ({ page }) => {
@@ -67,8 +68,9 @@ test("country map is keyboard operable and restores focus", async ({ page }) => 
   await country.focus();
   await expect(country).toBeFocused();
   await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog", { name: /world intelligence/i });
+  const dialog = page.locator(".player-terminal-country-modal[role=\"dialog\"]");
   await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(page.locator(".player-terminal-app-root")).toHaveAttribute("aria-hidden", "true");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -98,8 +100,9 @@ test("Store purchase opens quote selection before confirmation", async ({ page }
   const purchase = page.locator("[data-player-purchase]:not([disabled])").first();
   await purchase.focus();
   await purchase.click();
-  const dialog = page.getByRole("dialog", { name: /store purchase/i });
+  const dialog = page.locator('[aria-labelledby="storePurchaseModalTitle"]');
   await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog).toContainText("QUOTE REQUIRED");
   await expect(dialog.locator("[data-player-store-quantity]")).toBeVisible();
   await expect(dialog.locator("[data-player-store-review]")).toBeVisible();
@@ -116,8 +119,9 @@ test("limit-order interface remains visible and sends no unsupported order", asy
   await form.locator('input[name="quantity"]').fill("3");
   await form.locator('input[name="limitPrice"]').fill("12.50");
   await form.locator('button[type="submit"]').click();
-  const dialog = page.getByRole("dialog", { name: /limit order/i });
+  const dialog = page.locator("[data-player-market-order-dialog]");
   await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog).toContainText("BACKEND INTEGRATION PENDING");
   await expect(dialog).toContainText("No order was sent");
   await expect(dialog.locator("[data-player-market-order-confirm]")).toHaveCount(0);
