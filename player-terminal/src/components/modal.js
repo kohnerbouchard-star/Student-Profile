@@ -1,9 +1,90 @@
-import { escapeHtml, formatPercent } from "../core/format.js";
+import { escapeHtml, formatCurrency, formatPercent } from "../core/format.js";
 import { icon } from "./icons.js";
 import { renderStatusPill } from "./ui.js";
 
+function quoteExpiry(value) {
+  const timestamp = Date.parse(String(value || ""));
+  if (!Number.isFinite(timestamp)) return "Expiration unavailable";
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date(timestamp));
+}
+
+function renderStorePurchaseModal(modal) {
+  const item = modal.item || {};
+  const stage = modal.stage || "select";
+  const quote = modal.quote || {};
+  const receipt = modal.receipt || {};
+  const currencyCode = quote.currencyCode || receipt.currencyCode || modal.currencyCode || "ECO";
+
+  if (stage === "receipt") {
+    const total = receipt.finalTotalPrice ?? quote.finalTotalPrice ?? 0;
+    const receiptDetail = modal.refreshWarning
+      ? modal.refreshWarning
+      : "The authoritative Store purchase completed and current account data was refreshed.";
+    return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
+      <section class="player-terminal-modal player-terminal-connector-modal" role="dialog" aria-modal="true" aria-labelledby="storePurchaseModalTitle">
+        <header class="player-terminal-modal-head"><div><small>PURCHASE RECEIPT</small><h3 id="storePurchaseModalTitle">${escapeHtml(item.name || "Store purchase")}</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
+        <div class="player-terminal-modal-body">
+          <div class="player-terminal-connector-status">${renderStatusPill(modal.refreshWarning ? "COMPLETED · REFRESH PENDING" : "COMPLETED", modal.refreshWarning ? "amber" : "green")}<p>${escapeHtml(receiptDetail)}</p></div>
+          <dl class="player-terminal-connector-meta">
+            <div><dt>QUANTITY</dt><dd>${escapeHtml(quote.quantity || modal.quantity || 1)}</dd></div>
+            <div><dt>TOTAL PAID</dt><dd>${escapeHtml(formatCurrency(total, currencyCode))}</dd></div>
+            <div><dt>PURCHASE ID</dt><dd><code>${escapeHtml(receipt.purchaseId || "Recorded")}</code></dd></div>
+            <div><dt>QUOTE ID</dt><dd><code>${escapeHtml(receipt.quoteId || quote.quoteId || "—")}</code></dd></div>
+          </dl>
+        </div>
+        <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-route="inventory" data-player-local-action="close-modal">${icon("inventory")} Open inventory</button><button class="player-terminal-primary-button" type="button" data-player-local-action="close-modal">Close receipt</button></footer>
+      </section>
+    </div>`;
+  }
+
+  if (stage === "review") {
+    return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
+      <section class="player-terminal-modal player-terminal-connector-modal" role="dialog" aria-modal="true" aria-labelledby="storePurchaseModalTitle">
+        <header class="player-terminal-modal-head"><div><small>AUTHORITATIVE QUOTE</small><h3 id="storePurchaseModalTitle">Review ${escapeHtml(item.name || "purchase")}</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
+        <div class="player-terminal-modal-body">
+          <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>The backend has reserved the current price for this quote. No funds have moved yet.</p></div>
+          <dl class="player-terminal-connector-meta">
+            <div><dt>ITEM</dt><dd>${escapeHtml(quote.itemName || item.name || "Store item")}</dd></div>
+            <div><dt>QUANTITY</dt><dd>${escapeHtml(quote.quantity || modal.quantity || 1)}</dd></div>
+            <div><dt>UNIT PRICE</dt><dd>${escapeHtml(formatCurrency(quote.finalUnitPrice, currencyCode))}</dd></div>
+            <div><dt>FINAL TOTAL</dt><dd>${escapeHtml(formatCurrency(quote.finalTotalPrice, currencyCode))}</dd></div>
+            <div><dt>QUOTE EXPIRES</dt><dd>${escapeHtml(quoteExpiry(quote.expiresAt))}</dd></div>
+            <div><dt>QUOTE ID</dt><dd><code>${escapeHtml(quote.quoteId || "—")}</code></dd></div>
+          </dl>
+          ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
+        </div>
+        <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-store-edit>${icon("edit")} Change quantity</button><button class="player-terminal-primary-button" type="button" data-player-store-confirm>${icon("cart")} Confirm purchase</button></footer>
+      </section>
+    </div>`;
+  }
+
+  return `<div class="player-terminal-modal-backdrop" data-player-modal-backdrop>
+    <section class="player-terminal-modal player-terminal-connector-modal" role="dialog" aria-modal="true" aria-labelledby="storePurchaseModalTitle">
+      <header class="player-terminal-modal-head"><div><small>STORE PURCHASE</small><h3 id="storePurchaseModalTitle">${escapeHtml(item.name || "Review item")}</h3></div><button class="player-terminal-icon-button" type="button" data-player-local-action="close-modal" aria-label="Close">${icon("close")}</button></header>
+      <div class="player-terminal-modal-body">
+        <div class="player-terminal-connector-status">${renderStatusPill("QUOTE REQUIRED", "amber")}<p>Choose a quantity. The backend will return the authoritative price, currency, stock validation, and quote expiration before confirmation.</p></div>
+        <dl class="player-terminal-connector-meta">
+          <div><dt>CATALOG ITEM</dt><dd>${escapeHtml(item.name || "Store item")}</dd></div>
+          <div><dt>CATALOG PRICE</dt><dd>${escapeHtml(formatCurrency(item.price, modal.currencyCode || "ECO"))}</dd></div>
+          <div><dt>AVAILABLE STOCK</dt><dd>${escapeHtml(item.stock ?? "Unavailable")}</dd></div>
+          <div><dt>OWNED</dt><dd>${escapeHtml(item.owned ?? 0)}</dd></div>
+        </dl>
+        <label>QUANTITY<input data-player-store-quantity type="number" min="1" max="${escapeHtml(Math.max(1, Number(item.stock) || 1))}" step="1" value="${escapeHtml(modal.quantity || 1)}" required /></label>
+        ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
+      </div>
+      <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-player-local-action="close-modal">Cancel</button><button class="player-terminal-primary-button" type="button" data-player-store-review>${icon("cart")} Request quote</button></footer>
+    </section>
+  </div>`;
+}
+
 export function renderModal(modal, config = {}) {
   if (!modal) return "";
+
+  if (modal.type === "storePurchase") return renderStorePurchaseModal(modal);
 
   if (modal.type === "connection") {
     const diagnostics = modal.developerDiagnostics === true && config.environment === "development";
