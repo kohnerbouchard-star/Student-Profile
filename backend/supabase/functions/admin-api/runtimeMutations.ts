@@ -1,5 +1,6 @@
 import { json, proxyClassroom } from "./common.ts";
 import { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
+import { handleStaffInventoryRedemptionRequest } from "../../../src/domains/inventory/api/inventoryRedemptionHttpHandlers.ts";
 
 export { normalizeRuntimeMutation } from "./runtimeMutationNormalization.ts";
 
@@ -9,6 +10,19 @@ export async function handleRuntimeMutation(
   gameId: string,
   suffix: string,
 ): Promise<Response | null> {
+  const redemptionMatch = suffix.match(/^\/inventory\/redemptions(?:\/([^/]+))?$/);
+  if (redemptionMatch) {
+    return handleStaffInventoryRedemptionRequest(
+      request,
+      gameId,
+      redemptionMatch[1] ? decodeURIComponent(redemptionMatch[1]) : null,
+      {
+        serviceClient: context.service,
+        staffUserId: context.staff.id,
+      },
+    );
+  }
+
   if (request.method !== "POST") return null;
 
   const value = await request.clone().json().catch(() => ({}));
