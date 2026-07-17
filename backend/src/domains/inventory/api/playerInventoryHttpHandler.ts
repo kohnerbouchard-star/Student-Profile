@@ -24,6 +24,7 @@ import {
 import type {
   PlayerInventoryItemDto,
   PlayerInventoryRecord,
+  PlayerInventoryRedemptionDto,
   PlayerInventoryResponseBody,
   PlayerInventoryValueSummaryDto,
 } from "../contracts/playerInventoryContracts.ts";
@@ -32,6 +33,12 @@ import {
   PlayerInventoryPersistenceError,
   SupabasePlayerInventoryRepository,
 } from "../infrastructure/supabasePlayerInventoryRepository.ts";
+import {
+  handlePlayerInventoryRedemptionRequest,
+} from "./inventoryRedemptionHttpHandlers.ts";
+import {
+  readInventoryRedemptionRoutePath,
+} from "./inventoryRedemptionRoutePaths.ts";
 
 export interface PlayerInventoryHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -44,10 +51,35 @@ export interface PlayerInventoryHttpHandlerDependencies {
   readonly now?: () => string;
 }
 
+interface RedemptionRow {
+  readonly id: string;
+  readonly inventory_holding_id: string;
+  readonly store_item_id: string;
+  readonly quantity: number | string;
+  readonly status: string;
+  readonly request_note: string | null;
+  readonly resolution_note: string | null;
+  readonly requested_at: string;
+  readonly reviewed_at: string | null;
+  readonly fulfilled_at: string | null;
+  readonly updated_at: string;
+}
+
 export async function handlePlayerInventoryRequest(
   request: Request,
   dependencies: PlayerInventoryHttpHandlerDependencies,
 ): Promise<Response> {
+  const redemptionRoute = readInventoryRedemptionRoutePath(
+    new URL(request.url).pathname,
+  );
+  if (redemptionRoute?.kind === "player_request") {
+    return handlePlayerInventoryRedemptionRequest(
+      request,
+      redemptionRoute.inventoryHoldingId,
+      dependencies,
+    );
+  }
+
   if (request.method !== "GET") {
     return jsonError(405, {
       code: "method_not_allowed",
@@ -102,10 +134,17 @@ export async function handlePlayerInventoryRequest(
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabasePlayerInventoryRepository(serviceClient as never);
-    const records = await repository.readPlayerInventory({
-      gameSessionId: sessionResult.session.game_session_id,
-      playerId: sessionResult.session.player_id,
-    });
+    const [records, redemptionRequests] = await Promise.all([
+      repository.readPlayerInventory({
+        gameSessionId: sessionResult.session.game_session_id,
+        playerId: sessionResult.session.player_id,
+      }),
+      readPlayerRedemptionRequests(
+        serviceClient,
+        sessionResult.session.game_session_id,
+        sessionResult.session.player_id,
+      ),
+    ]);
 
     if (
       records.some((record) =>
@@ -136,7 +175,6 @@ export async function handlePlayerInventoryRequest(
         status: sessionResult.player.status,
       },
       generatedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
-      // Capacity is intentionally null until a server-owned capacity policy exists.
       capacity: null,
       categories: [
         "All",
@@ -148,6 +186,7 @@ export async function handlePlayerInventoryRequest(
         ),
       ],
       summary: buildSummary(items),
+      redemptionRequests,
       items,
     });
   } catch (error) {
@@ -187,6 +226,10 @@ function toPlayerInventoryItemDto(
     );
   }
 
+  const redeemable = quantityAvailable > 0 &&
+    record.itemStatus === "active" &&
+    record.itemVisibility === "visible";
+
   return {
     id: record.id,
     storeItemId: record.storeItemId,
@@ -202,11 +245,58 @@ function toPlayerInventoryItemDto(
     currencyCode: record.currencyCode,
     itemStatus: record.itemStatus,
     itemVisibility: record.itemVisibility,
-    // Item-use semantics are not yet server-defined, so no write is advertised.
-    availableActions: [],
+    availableActions: redeemable ? ["inventory.use"] : [],
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
+}
+
+async function readPlayerRedemptionRequests(
+  client: EdgeSupabaseClient,
+  gameSessionId: string,
+  playerId: string,
+): Promise<readonly PlayerInventoryRedemptionDto[]> {
+  const response = await client.from("inventory_redemption_requests")
+    .select([
+      "id",
+      "inventory_holding_id",
+      "store_item_id",
+      "quantity",
+      "status",
+      "request_note",
+      "resolution_note",
+      "requested_at",
+      "reviewed_at",
+      "fulfilled_at",
+      "updated_at",
+    ].join(","))
+    .eq("game_session_id", gameSessionId)
+    .eq("player_id", playerId)
+    .order("requested_at", { ascending: false })
+    .limit(50);
+
+  if (response.error) {
+    throw new PlayerInventoryPersistenceError(
+      "player_inventory_redemptions_read_failed",
+      "Inventory redemption history could not be loaded.",
+    );
+  }
+
+  return ((response.data ?? []) as unknown as readonly RedemptionRow[]).map(
+    (row) => ({
+      id: row.id,
+      inventoryHoldingId: row.inventory_holding_id,
+      storeItemId: row.store_item_id,
+      quantity: Number(row.quantity),
+      status: row.status,
+      requestNote: row.request_note ?? null,
+      resolutionNote: row.resolution_note ?? null,
+      requestedAt: row.requested_at,
+      reviewedAt: row.reviewed_at ?? null,
+      fulfilledAt: row.fulfilled_at ?? null,
+      updatedAt: row.updated_at,
+    }),
+  );
 }
 
 function buildSummary(
