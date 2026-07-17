@@ -4,6 +4,11 @@ import { HttpTransport } from "./http-transport.js";
 import { AdapterTransport } from "./adapter-transport.js";
 import { ApiRequestError, normalizeApiError } from "./errors.js";
 import { resourceFreshnessMs } from "./freshness.js";
+import {
+  clearAllResourceInvalidations,
+  clearResourceInvalidation,
+  isResourceInvalidated
+} from "./invalidation-registry.js";
 import { createIdempotencyKey, createRequestId, stableOperationKey, stableRequestKey } from "./request-context.js";
 import { normalizeApiResponse } from "./response-normalizer.js";
 import { resolveCapabilities } from "./capabilities.js";
@@ -106,10 +111,12 @@ export class PlayerApi {
       this.inFlightWrites.clear();
       this.writeCompletedAt.clear();
       this.retryIdempotencyKeys.clear();
+      clearAllResourceInvalidations();
     }
   }
 
   isCachedReadFresh(endpointKey, key, now = Date.now()) {
+    if (isResourceInvalidated(endpointKey)) return false;
     if (!this.readCache.has(key)) return false;
     const updatedAt = Number(this.readCacheUpdatedAt.get(key) || 0);
     const freshnessMs = resourceFreshnessMs(endpointKey, this.config.resourceFreshnessMs);
@@ -136,6 +143,7 @@ export class PlayerApi {
         if (endpoint.method === "GET") {
           this.readCache.set(key, value);
           this.readCacheUpdatedAt.set(key, Date.now());
+          clearResourceInvalidation(endpointKey);
         }
         return value;
       })
