@@ -91,12 +91,18 @@ export class PlayerApi {
     };
   }
 
-  execute(endpointKey, payload = {}, params) {
+  async execute(endpointKey, payload = {}, params) {
     const prefix = IDEMPOTENCY_PREFIXES[endpointKey];
     const idempotentPayload = prefix && !payload?.idempotencyKey
       ? { ...payload, idempotencyKey: createIdempotencyKey(prefix) }
       : payload;
-    return this.request(endpointKey, { payload: idempotentPayload, params });
+    const result = await this.request(endpointKey, { payload: idempotentPayload, params });
+
+    if (endpointKey === "inventoryUse") {
+      this.invalidateRoute("inventory");
+    }
+
+    return result;
   }
 
   async loadRoute(route, data, { force = false } = {}) {
