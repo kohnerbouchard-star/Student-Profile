@@ -197,7 +197,7 @@ export async function resolveStaffSessionForRequest(
   if (options.beforeStaffLookup) {
     const prerequisiteResult = await options.beforeStaffLookup();
 
-    if (!prerequisiteResult.ok) {
+    if (prerequisiteResult.ok === false) {
       return prerequisiteResult;
     }
   }
@@ -218,7 +218,7 @@ export async function resolveStaffSessionForRequest(
     };
   }
 
-  const staff = staffResponse.data as EdgeStaffSessionStaff | null;
+  const staff = staffResponse.data as unknown as EdgeStaffSessionStaff | null;
 
   if (!staff?.id) {
     return {
