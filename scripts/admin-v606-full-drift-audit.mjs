@@ -55,6 +55,7 @@ const expectedScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./player-scope-readiness.js",
   "./dist/admin-overview-boot.js",
 ];
 
@@ -71,6 +72,7 @@ for (const requiredStyle of [
   "./css/session-gate.css",
   "./css/player-runtime-integration.css",
   "./css/player-create-confirmation.css",
+  "./css/player-scope-readiness.css",
 ]) {
   assert(styleSources.includes(requiredStyle), `Missing required admin stylesheet ${requiredStyle}.`);
 }
@@ -94,6 +96,11 @@ const scopedRuntimeFiles = {
     "ORIGINAL_CURRENCY_ICONS",
     "ORIGINAL_PLAYER_ACTION_ICONS",
     "ORIGINAL_MODAL_VIDEOS",
+  ],
+  "admin/player-scope-readiness.js": [
+    "econovariaPlayerScopeDialog",
+    "player-capabilities",
+    "inventory/redemptions",
   ],
 };
 
@@ -129,10 +136,19 @@ assert(!createUx.includes("window.fetch ="), "Player creation UX adds a network 
 assert(!createUx.includes('createElement("style")'), "Player creation UX injects runtime CSS.");
 assert(createUx.includes("Leave blank to auto-generate"), "Automatic credential guidance is missing.");
 
+const playerScope = readText("admin/player-scope-readiness.js");
+assert(!playerScope.includes("window.fetch ="), "Player scope readiness adds a network wrapper.");
+assert(!playerScope.includes('createElement("style")'), "Player scope readiness injects runtime CSS.");
+assert(
+  playerScope.includes("document.body.append(launcher, dialog)"),
+  "Player scope readiness is not mounted as a bounded extension.",
+);
+
 for (const path of [
   "admin/css/session-gate.css",
   "admin/css/player-runtime-integration.css",
   "admin/css/player-create-confirmation.css",
+  "admin/css/player-scope-readiness.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [
@@ -158,4 +174,11 @@ assert(
   "Player-created confirmation CSS is not bounded to its modal.",
 );
 
-console.log("Accepted v606 core files, external styling, and post-merge visual scope boundaries passed.");
+const playerScopeCss = readText("admin/css/player-scope-readiness.css");
+assert(
+  playerScopeCss.includes(".econovaria-player-scope-dialog") &&
+    playerScopeCss.includes(".econovaria-player-scope-launcher"),
+  "Player scope readiness CSS is not bounded to its extension.",
+);
+
+console.log("Accepted v606 core files, bounded readiness extension, external styling, and post-merge visual scope boundaries passed.");
