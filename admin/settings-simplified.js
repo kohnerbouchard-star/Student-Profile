@@ -4,14 +4,16 @@
   const STYLE_ID = "econovaria-settings-simplified-style";
   const PAGE_SELECTOR = ".admin-terminal-settings-page";
   const CONTROL_SELECTOR = "[data-game-setting-key], [data-attendance-reward-field]";
+  const SAVE_SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const state = {
     page: null,
     gameId: "",
-    baseline: "",
     baselineValues: new Map(),
-    reconcileQueued: false,
+    structureQueued: false,
+    presentationQueued: false,
     savedTimer: 0,
     savedUntil: 0,
+    disclosureOpen: false,
   };
 
   function text(value) {
@@ -55,8 +57,10 @@
     }
 
     const income = page.querySelector('[data-game-setting-key="incomeMultiplier"]');
-    const incomeHelp = income?.closest("label")?.querySelector("small");
-    setText(incomeHelp, "Applies to salaries, contracts, attendance, and other player earnings.");
+    setText(
+      income?.closest("label")?.querySelector("small"),
+      "Applies to salaries, contracts, attendance, and other player earnings.",
+    );
   }
 
   function forceAutomaticAttendancePolicy(attendanceCard) {
@@ -82,9 +86,7 @@
   }
 
   function attendanceRuleText(page) {
-    const income = Number(
-      page.querySelector('[data-game-setting-key="incomeMultiplier"]')?.value || 1,
-    );
+    const income = Number(page.querySelector('[data-game-setting-key="incomeMultiplier"]')?.value || 1);
     const present = Number(
       page.querySelector('[data-attendance-reward-field="presentRewardAmount"]')?.value || 0,
     );
@@ -140,7 +142,8 @@
         "admin-terminal-attendance-reward-formula admin-terminal-settings-attendance-example";
       formula.dataset.attendanceRewardFormula = "";
       formula.dataset.settingsAttendanceExample = "true";
-      formula.setAttribute("aria-live", "polite");
+      formula.setAttribute("role", "status");
+      formula.setAttribute("aria-atomic", "true");
       formula.innerHTML = "<strong>Example payout</strong><span></span>";
     }
 
@@ -153,9 +156,7 @@
     let cursor = parent.firstElementChild;
     for (const node of nodes) {
       if (!(node instanceof HTMLElement)) continue;
-      if (node.parentElement !== parent || node !== cursor) {
-        parent.insertBefore(node, cursor);
-      }
+      if (node.parentElement !== parent || node !== cursor) parent.insertBefore(node, cursor);
       cursor = node.nextElementSibling;
     }
   }
@@ -181,14 +182,16 @@
     rewriteSection(events, "Simulation events", "Frequency, severity, and direction");
     rewriteSection(safety, "Recovery and rollout", "Support strength and change pacing");
 
-    const presentHelp = attendance.querySelector(
-      '[data-attendance-reward-field="presentRewardAmount"]',
-    )?.closest("label")?.querySelector("small");
-    const lateHelp = attendance.querySelector(
-      '[data-attendance-reward-field="lateRewardAmount"]',
-    )?.closest("label")?.querySelector("small");
-    setText(presentHelp, "Base amount awarded for an on-time attendance scan.");
-    setText(lateHelp, "Set this to 0.00 when late arrivals should not receive a reward.");
+    setText(
+      attendance.querySelector('[data-attendance-reward-field="presentRewardAmount"]')
+        ?.closest("label")?.querySelector("small"),
+      "Base amount awarded for an on-time attendance scan.",
+    );
+    setText(
+      attendance.querySelector('[data-attendance-reward-field="lateRewardAmount"]')
+        ?.closest("label")?.querySelector("small"),
+      "Set this to 0.00 when late arrivals should not receive a reward.",
+    );
 
     forceAutomaticAttendancePolicy(attendance);
     const formula = ensureAttendanceExample(grid, attendance, page);
@@ -218,11 +221,9 @@
     if (!(card instanceof HTMLElement)) return [];
     return [...card.querySelectorAll(".admin-terminal-settings-field")]
       .map((field) => {
-        const tile = field.closest(".admin-terminal-settings-change-tile");
-        if (tile?.hidden) return null;
+        if (field.closest(".admin-terminal-settings-change-tile")?.hidden) return null;
         const label = text(field.querySelector(":scope > span")?.textContent);
-        const control = field.querySelector("input, select");
-        const value = controlValue(control);
+        const value = controlValue(field.querySelector("input, select"));
         return label && value ? `${label} ${value}` : null;
       })
       .filter(Boolean);
@@ -230,14 +231,15 @@
 
   function ensureConfigurationSummary(page, cards) {
     const strip = page.querySelector(".admin-terminal-settings-control-strip");
-    if (!(strip instanceof HTMLElement) || !cards) return;
+    if (!(strip instanceof HTMLElement) || !cards) return null;
 
     let summary = strip.querySelector("[data-settings-config-summary]");
     if (!(summary instanceof HTMLElement)) {
       summary = document.createElement("section");
       summary.className = "admin-terminal-settings-config-summary";
       summary.dataset.settingsConfigSummary = "true";
-      summary.setAttribute("aria-live", "polite");
+      summary.setAttribute("role", "status");
+      summary.setAttribute("aria-atomic", "true");
       summary.innerHTML = `
         <header>
           <div><span>Current configuration</span><strong>Review the active rules before editing</strong></div>
@@ -251,7 +253,12 @@
         </div>`;
       strip.append(summary);
     }
+    updateConfigurationSummary(summary, cards);
+    return summary;
+  }
 
+  function updateConfigurationSummary(summary, cards) {
+    if (!(summary instanceof HTMLElement) || !cards) return;
     const values = {
       economy: cardSummary(cards.money),
       attendance: cardSummary(cards.attendance),
@@ -298,7 +305,6 @@
           select.value = option.value;
           select.dispatchEvent(new Event("input", { bubbles: true }));
           select.dispatchEvent(new Event("change", { bubbles: true }));
-          scheduleReconcile();
         });
         group.append(button);
       }
@@ -334,23 +340,23 @@
       button.className = "admin-terminal-settings-custom-toggle";
       button.dataset.settingsCustomToggle = "true";
       button.addEventListener("click", () => {
-        const expanded = page.classList.toggle("is-custom-settings-open");
-        button.setAttribute("aria-expanded", String(expanded));
-        setText(button, expanded ? "Hide custom settings" : "Edit custom settings");
-        if (expanded) cards.grid.querySelector("input, select, button")?.focus({ preventScroll: true });
+        state.disclosureOpen = !page.classList.contains("is-custom-settings-open");
+        applyDisclosureState(page, button, cards.grid);
+        if (state.disclosureOpen) cards.grid.querySelector("input, select, button")?.focus({ preventScroll: true });
       });
       header.append(button);
     }
 
-    if (!page.dataset.settingsDisclosureInitialized) {
-      page.dataset.settingsDisclosureInitialized = "true";
-      page.classList.remove("is-custom-settings-open");
-    }
-    const expanded = page.classList.contains("is-custom-settings-open");
-    button.setAttribute("aria-expanded", String(expanded));
+    applyDisclosureState(page, button, cards.grid);
+  }
+
+  function applyDisclosureState(page, button, grid) {
+    page.dataset.settingsDisclosureInitialized = "true";
+    page.classList.toggle("is-custom-settings-open", state.disclosureOpen);
+    button.setAttribute("aria-expanded", String(state.disclosureOpen));
     button.setAttribute("aria-controls", "econovaria-custom-settings-grid");
-    cards.grid.id = "econovaria-custom-settings-grid";
-    setText(button, expanded ? "Hide custom settings" : "Edit custom settings");
+    grid.id = "econovaria-custom-settings-grid";
+    setText(button, state.disclosureOpen ? "Hide custom settings" : "Edit custom settings");
   }
 
   function controlKey(control, index) {
@@ -368,24 +374,23 @@
     return entries;
   }
 
-  function valuesSignature(page) {
-    return JSON.stringify(currentValues(page));
-  }
-
   function captureBaseline(page) {
     if (!(page instanceof HTMLElement)) return;
-    state.baseline = valuesSignature(page);
     state.baselineValues = new Map(currentValues(page));
     page.dataset.settingsUxBaselineReady = "true";
   }
 
   function changedCount(page) {
-    if (!state.baseline) return 0;
+    if (!state.baselineValues.size) return 0;
     let count = 0;
     for (const [key, value] of currentValues(page)) {
       if (state.baselineValues.get(key) !== value) count += 1;
     }
     return count;
+  }
+
+  function attendanceDirty() {
+    return window.EconovariaAttendanceRewardSettings?.isDirty?.() === true;
   }
 
   function ensureSaveBar(page) {
@@ -397,8 +402,9 @@
     panel.classList.add("admin-terminal-settings-save-bar");
     if (panel.parentElement !== page) page.append(panel);
     if (detail instanceof HTMLElement) detail.hidden = true;
+    panel.hidden = false;
 
-    const button = panel.querySelector('[data-admin-terminal-action="save-settings"]');
+    const button = panel.querySelector(SAVE_SELECTOR);
     if (button instanceof HTMLButtonElement) setText(button, "Save changes");
 
     let status = panel.querySelector("[data-settings-save-status]");
@@ -415,17 +421,15 @@
       status.dataset.settingsSaveStatus = "true";
       panel.prepend(status);
     }
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-atomic", "true");
     return { panel, button, status };
-  }
-
-  function attendanceDirty() {
-    return window.EconovariaAttendanceRewardSettings?.isDirty?.() === true;
   }
 
   function renderSaveState(page, saveArea) {
     if (!saveArea || !(saveArea.panel instanceof HTMLElement)) return;
     const { panel, button, status } = saveArea;
-    const baselineReady = Boolean(state.baseline);
+    const baselineReady = state.baselineValues.size > 0;
     const count = baselineReady ? changedCount(page) : 0;
     const dirty = baselineReady && (count > 0 || attendanceDirty());
     const busy = button?.hasAttribute("aria-busy") === true;
@@ -434,39 +438,78 @@
 
     page.classList.toggle("has-unsaved-settings", dirty);
     panel.classList.toggle("is-saved", saved && !dirty);
-    panel.classList.toggle("is-error", failed && dirty);
-    panel.hidden = !dirty && !saved;
+    panel.classList.toggle("is-error", failed);
+    panel.hidden = false;
 
     if (button instanceof HTMLButtonElement) button.disabled = !dirty || busy;
     if (busy) setText(status, "Saving changes…");
-    else if (failed && dirty) setText(status, "Settings were not saved. Review the error and try again.");
-    else if (dirty) setText(status, `${Math.max(count, 1)} unsaved ${Math.max(count, 1) === 1 ? "change" : "changes"}`);
-    else if (saved) setText(status, "Settings saved");
+    else if (failed) setText(status, "Settings were not saved. Review the error and try again.");
+    else if (dirty) {
+      const total = Math.max(count, 1);
+      setText(status, `${total} unsaved ${total === 1 ? "change" : "changes"}`);
+    } else if (saved) setText(status, "Settings saved");
     else setText(status, "No unsaved changes");
   }
 
   function initializeBaseline(page) {
     const attendanceApi = window.EconovariaAttendanceRewardSettings;
-    if (!attendanceApi || state.baseline || attendanceApi.isDirty?.() === true) return;
+    if (!attendanceApi || state.baselineValues.size || attendanceApi.isDirty?.() === true) return;
     if (attendanceApi.getGameId?.() !== state.gameId || attendanceApi.isLoaded?.() !== true) return;
-    const attendance = page.querySelector('[data-admin-attendance-reward-settings][data-attendance-reward-loaded="true"]');
-    if (!attendance) return;
+    if (!page.querySelector('[data-admin-attendance-reward-settings][data-attendance-reward-loaded="true"]')) return;
     captureBaseline(page);
   }
 
   function resetForPage(page) {
     const gameId = selectedGameId();
     if (state.page === page && state.gameId === gameId) return;
+    const gameChanged = state.gameId && state.gameId !== gameId;
     state.page = page;
     state.gameId = gameId;
-    state.baseline = "";
     state.baselineValues = new Map();
     state.savedUntil = 0;
+    if (gameChanged) state.disclosureOpen = false;
     page.removeAttribute("data-settings-ux-baseline-ready");
     window.clearTimeout(state.savedTimer);
   }
 
-  function reconcile() {
+  function cardsForPage(page) {
+    const grid = page.querySelector(".admin-terminal-settings-tuning-grid");
+    const money = page.querySelector(".admin-terminal-settings-tuning-card.is-money");
+    const attendance = page.querySelector("[data-admin-attendance-reward-settings]");
+    const events = page.querySelector(".admin-terminal-settings-tuning-card.is-events");
+    const safety = page.querySelector(".admin-terminal-settings-tuning-card.is-safety");
+    if (!(grid instanceof HTMLElement) || !(money instanceof HTMLElement) ||
+        !(attendance instanceof HTMLElement) || !(events instanceof HTMLElement) ||
+        !(safety instanceof HTMLElement)) return null;
+    return { grid, money, attendance, events, safety };
+  }
+
+  function renderPresentation() {
+    const page = settingsPage();
+    if (!(page instanceof HTMLElement)) return;
+    resetForPage(page);
+    const cards = cardsForPage(page);
+    if (cards) {
+      const formula = page.querySelector("[data-settings-attendance-example]");
+      setText(formula?.querySelector("span"), attendanceRuleText(page));
+      updateConfigurationSummary(page.querySelector("[data-settings-config-summary]"), cards);
+      for (const select of [...cards.events.querySelectorAll("select"), ...cards.safety.querySelectorAll("select")]) {
+        const group = select.closest(".admin-terminal-settings-field")
+          ?.querySelector(":scope > [data-settings-segmented]");
+        if (!(group instanceof HTMLElement)) continue;
+        for (const button of group.querySelectorAll("[data-settings-segment-value]")) {
+          const active = button.dataset.settingsSegmentValue === select.value;
+          button.classList.toggle("is-selected", active);
+          button.setAttribute("aria-checked", String(active));
+          button.tabIndex = active ? 0 : -1;
+        }
+      }
+    }
+    initializeBaseline(page);
+    renderSaveState(page, ensureSaveBar(page));
+  }
+
+  function reconcileStructure() {
     ensureStylesheet();
     const page = settingsPage();
     if (!(page instanceof HTMLElement)) return;
@@ -479,31 +522,55 @@
     enhanceDiscreteControls(cards);
     ensureConfigurationSummary(page, cards);
     ensureCustomDisclosure(page, cards);
-    const saveArea = ensureSaveBar(page);
+    ensureSaveBar(page);
     initializeBaseline(page);
-    renderSaveState(page, saveArea);
+    renderPresentation();
 
     page.dataset.settingsSimplifiedReady = "true";
     page.dataset.settingsUxReady = "true";
   }
 
-  function scheduleReconcile() {
-    if (state.reconcileQueued) return;
-    state.reconcileQueued = true;
+  function scheduleStructure() {
+    if (state.structureQueued) return;
+    state.structureQueued = true;
     window.requestAnimationFrame(() => {
-      state.reconcileQueued = false;
-      reconcile();
+      state.structureQueued = false;
+      reconcileStructure();
     });
   }
 
-  document.addEventListener("click", (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const save = target?.closest('[data-admin-terminal-action="save-settings"]');
-    if (save) scheduleReconcile();
+  function schedulePresentation() {
+    if (state.presentationQueued) return;
+    state.presentationQueued = true;
+    window.requestAnimationFrame(() => {
+      state.presentationQueued = false;
+      renderPresentation();
+    });
+  }
+
+  document.addEventListener("input", (event) => {
+    if (event.target instanceof Element && event.target.matches(CONTROL_SELECTOR)) {
+      schedulePresentation();
+    }
   }, true);
 
-  document.addEventListener("input", scheduleReconcile, true);
-  document.addEventListener("change", scheduleReconcile, true);
+  document.addEventListener("change", (event) => {
+    if (event.target instanceof Element && event.target.matches(CONTROL_SELECTOR)) {
+      schedulePresentation();
+      scheduleStructure();
+    }
+  }, true);
+
+  document.addEventListener("focusout", (event) => {
+    if (event.target instanceof Element && event.target.matches(CONTROL_SELECTOR)) {
+      scheduleStructure();
+    }
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest(SAVE_SELECTOR)) schedulePresentation();
+  }, true);
 
   document.addEventListener("econovaria:attendance-reward-saved", () => {
     window.setTimeout(() => {
@@ -512,20 +579,29 @@
       captureBaseline(page);
       state.savedUntil = Date.now() + 1800;
       window.clearTimeout(state.savedTimer);
-      state.savedTimer = window.setTimeout(scheduleReconcile, 1850);
-      scheduleReconcile();
+      state.savedTimer = window.setTimeout(schedulePresentation, 1850);
+      schedulePresentation();
     }, 0);
   });
 
   const root = document.body || document.documentElement;
   if (root && typeof MutationObserver === "function") {
     const observer = new MutationObserver((mutations) => {
-      const relevant = mutations.some((mutation) => {
-        if (mutation.type === "attributes") return true;
-        return [...mutation.addedNodes, ...mutation.removedNodes]
-          .some((node) => node instanceof Element);
-      });
-      if (relevant) scheduleReconcile();
+      let structure = false;
+      let presentation = false;
+      for (const mutation of mutations) {
+        if (mutation.type === "childList" && [...mutation.addedNodes, ...mutation.removedNodes]
+          .some((node) => node instanceof Element)) {
+          structure = true;
+          break;
+        }
+        if (mutation.type === "attributes") {
+          if (mutation.attributeName === "data-attendance-reward-loaded") structure = true;
+          else presentation = true;
+        }
+      }
+      if (structure) scheduleStructure();
+      else if (presentation) schedulePresentation();
     });
     observer.observe(root, {
       childList: true,
@@ -541,14 +617,15 @@
     });
   }
 
-  window.addEventListener("load", scheduleReconcile, { once: true });
-  scheduleReconcile();
+  window.addEventListener("load", scheduleStructure, { once: true });
+  scheduleStructure();
 
   window.EconovariaSimplifiedSettings = {
-    reconcile,
+    reconcile: reconcileStructure,
+    refresh: renderPresentation,
     isDirty: () => {
       const page = settingsPage();
-      return Boolean(page && state.baseline && (changedCount(page) > 0 || attendanceDirty()));
+      return Boolean(page && state.baselineValues.size && (changedCount(page) > 0 || attendanceDirty()));
     },
   };
 })();
