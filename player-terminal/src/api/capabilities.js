@@ -29,11 +29,14 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "storePurchase"
 ]);
 
-const ENDPOINT_ACTIONS = Object.freeze(Object.fromEntries(
-  PLAYER_ACTION_CAPABILITIES
-    .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
-    .map((key) => [key, key])
-));
+const ENDPOINT_ACTIONS = Object.freeze({
+  ...Object.fromEntries(
+    PLAYER_ACTION_CAPABILITIES
+      .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
+      .map((key) => [key, key])
+  ),
+  storeQuote: "storePurchase"
+});
 
 function capabilitySource(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
