@@ -9,6 +9,11 @@ function storeModalElement(mount) {
   return dialog?.closest(".player-terminal-modal-backdrop") || null;
 }
 
+function focusableElements(root) {
+  return [...root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+}
+
 function safeMessage(error, fallback) {
   if (error instanceof ApiConnectionPendingError) return "Store purchasing is awaiting the authoritative backend connection.";
   return String(error?.message || fallback || "The Store request could not be completed.");
@@ -71,6 +76,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       quote: null,
       receipt: null,
       error: "",
+      refreshWarning: "",
       currencyCode: state.data?.session?.currencyCode || "ECO"
     };
     renderTransaction();
@@ -99,7 +105,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         quantity,
         quote: operation.result,
         receipt: null,
-        error: ""
+        error: "",
+        refreshWarning: ""
       };
       renderTransaction();
     } catch (error) {
@@ -128,33 +135,43 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
 
     const restoreButton = setButtonProcessing(button, "Completing purchase");
+    let operation;
     try {
       api.setSession(config);
-      const operation = await api.execute("storePurchase", {
+      operation = await api.execute("storePurchase", {
         quoteId: quote.quoteId,
         clientSubmittedAt: new Date().toISOString()
       });
-
-      transaction = {
-        ...transaction,
-        stage: "receipt",
-        receipt: operation.result,
-        error: ""
-      };
-
-      storeModalElement(mount)?.remove();
-      restoreApplication();
-      await terminal.refresh();
-      renderTransaction();
     } catch (error) {
       restoreButton();
       transaction = { ...transaction, error: safeMessage(error, "The Store purchase could not be completed.") };
       renderTransaction();
+      return;
     }
+
+    transaction = {
+      ...transaction,
+      stage: "receipt",
+      receipt: operation.result,
+      error: "",
+      refreshWarning: ""
+    };
+
+    storeModalElement(mount)?.remove();
+    restoreApplication();
+    try {
+      await terminal.refresh();
+    } catch {
+      transaction = {
+        ...transaction,
+        refreshWarning: "The purchase completed, but current balances and inventory could not be refreshed. Reopen this section or retry the terminal refresh."
+      };
+    }
+    renderTransaction();
   }
 
   function editQuantity() {
-    transaction = { ...transaction, stage: "select", quote: null, receipt: null, error: "" };
+    transaction = { ...transaction, stage: "select", quote: null, receipt: null, error: "", refreshWarning: "" };
     renderTransaction();
   }
 
@@ -167,13 +184,14 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
 
-    const modal = event.target.closest?.('[aria-labelledby="storePurchaseModalTitle"]');
+    const backdrop = event.target.closest?.(".player-terminal-modal-backdrop");
+    const modal = backdrop?.querySelector?.('[aria-labelledby="storePurchaseModalTitle"]');
     if (!modal) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
 
-    if (event.target.closest("[data-player-modal-backdrop]") && event.target === event.target.closest("[data-player-modal-backdrop]")) {
+    if (event.target === backdrop) {
       closeModal();
       return;
     }
@@ -201,10 +219,26 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   function handleKeyDown(event) {
-    if (event.key !== "Escape" || !storeModalElement(mount)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    closeModal();
+    const modal = storeModalElement(mount);
+    if (!modal) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusables = focusableElements(modal);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   mount.addEventListener("click", handleClick, true);
