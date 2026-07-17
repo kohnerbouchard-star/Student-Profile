@@ -10,10 +10,11 @@
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
     "store-flow": "node tests/store-purchase-flow.mjs",
+    "contracts-flow": "node tests/contracts-flow.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run audit && npm run audit:v75",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, and Store quote transactions."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store quote transactions, and Contracts lifecycle states."
 }
