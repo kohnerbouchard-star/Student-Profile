@@ -1,11 +1,11 @@
 (function initEconovariaAttendanceRewardSaveControllerV3() {
   "use strict";
 
+  const SAVE_SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const delegatedFetch = window.fetch.bind(window);
   const coreDirtyKeys = new Set();
   let dirtyGameId = "";
   let saveFlight = null;
-  let reconcileQueued = false;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -29,23 +29,20 @@
     );
   }
 
+  function saveButton() {
+    return document.querySelector(SAVE_SELECTOR);
+  }
+
   function clearAttendanceButtonState() {
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    const button = saveButton();
     if (!(button instanceof HTMLButtonElement)) return;
-    const attendanceOwnedState = button.hasAttribute("data-attendance-reward-dirty") ||
-      button.hasAttribute("data-attendance-reward-error") ||
-      button.hasAttribute("data-attendance-reward-status") ||
-      button.hasAttribute("data-attendance-reward-direct-save");
-    button.removeAttribute("data-attendance-reward-core-pending");
-    button.removeAttribute("data-attendance-reward-dirty");
     button.removeAttribute("data-attendance-reward-error");
     button.removeAttribute("data-attendance-reward-status");
     button.removeAttribute("data-attendance-reward-direct-save");
-    if (attendanceOwnedState) {
-      button.removeAttribute("data-admin-terminal-api-state");
-      button.removeAttribute("aria-busy");
-      button.classList.remove("is-dirty");
-    }
+    button.removeAttribute("data-admin-terminal-api-state");
+    button.removeAttribute("aria-busy");
+    button.removeAttribute("aria-disabled");
+    window.EconovariaSimplifiedSettings?.refresh?.();
   }
 
   function resetDirtyKeysForGame(gameId) {
@@ -82,10 +79,8 @@
 
   function attendanceDirty() {
     const card = document.querySelector("[data-admin-attendance-reward-settings]");
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
     return window.EconovariaAttendanceRewardSettings?.isDirty?.() === true ||
-      card?.getAttribute("data-attendance-reward-dirty") === "true" ||
-      button?.getAttribute("data-attendance-reward-dirty") === "true";
+      card?.getAttribute("data-attendance-reward-dirty") === "true";
   }
 
   function combinedCoreSavePending() {
@@ -142,7 +137,7 @@
     };
   }
 
-  function setButtonState(button, state, label) {
+  function setSaveState(button, state, label) {
     if (!(button instanceof HTMLButtonElement)) return;
     button.dataset.adminTerminalApiState = state;
     button.dataset.attendanceRewardStatus = label;
@@ -153,30 +148,8 @@
     } else {
       button.removeAttribute("aria-busy");
       button.removeAttribute("aria-disabled");
-      button.disabled = false;
     }
-  }
-
-  function keepDirtyButtonAvailable() {
-    resetDirtyKeysForGame(selectedGameId());
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
-    if (!(button instanceof HTMLButtonElement) || !attendanceDirty() || saveFlight) return;
-    button.disabled = false;
-    button.removeAttribute("disabled");
-    button.removeAttribute("aria-disabled");
-    if (button.dataset.adminTerminalApiState === "error") {
-      button.removeAttribute("data-admin-terminal-api-state");
-    }
-    button.classList.add("is-dirty");
-  }
-
-  function scheduleReconcile() {
-    if (reconcileQueued) return;
-    reconcileQueued = true;
-    window.requestAnimationFrame(() => {
-      reconcileQueued = false;
-      keepDirtyButtonAvailable();
-    });
+    window.EconovariaSimplifiedSettings?.refresh?.();
   }
 
   async function saveAttendanceOnly(button) {
@@ -184,7 +157,7 @@
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
 
-    setButtonState(button, "processing", "Saving game settings");
+    setSaveState(button, "processing", "Saving game settings");
     saveFlight = (async () => {
       const settingsResponse = await delegatedFetch(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
@@ -219,10 +192,7 @@
       const result = await saveFlight;
       document.querySelector("[data-admin-attendance-reward-settings]")
         ?.removeAttribute("data-attendance-reward-dirty");
-      button.removeAttribute("data-attendance-reward-dirty");
-      button.removeAttribute("data-attendance-reward-core-pending");
       button.removeAttribute("data-attendance-reward-error");
-      button.classList.remove("is-dirty");
       button.dataset.attendanceRewardDirectSave = "true";
       document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
         detail: {
@@ -231,27 +201,25 @@
           combined: false,
         },
       }));
-      setButtonState(button, "completed", "Game settings saved");
+      setSaveState(button, "completed", "Game settings saved");
       window.setTimeout(() => {
-        if (button.dataset.attendanceRewardDirty === "true") return;
+        if (attendanceDirty()) return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
         button.removeAttribute("data-attendance-reward-direct-save");
-        button.disabled = false;
-        button.removeAttribute("aria-disabled");
+        window.EconovariaSimplifiedSettings?.refresh?.();
       }, 900);
       return result;
     } catch (error) {
       button.dataset.attendanceRewardError = error instanceof Error ? error.message : String(error);
-      setButtonState(button, "error", "Game settings not saved");
+      setSaveState(button, "error", "Game settings not saved");
       throw error;
     } finally {
       saveFlight = null;
     }
   }
 
-  function markTrustedCoreEdit(event) {
-    if (!event.isTrusted) return;
+  function markCoreEdit(event) {
     const control = event.target instanceof Element
       ? event.target.closest("[data-game-setting-key]")
       : null;
@@ -259,27 +227,19 @@
     if (!key) return;
     resetDirtyKeysForGame(selectedGameId());
     coreDirtyKeys.add(key);
-    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
-    if (button instanceof HTMLButtonElement) {
-      button.dataset.attendanceRewardCorePending = "true";
-    }
   }
 
-  document.addEventListener("input", markTrustedCoreEdit, true);
-  document.addEventListener("change", markTrustedCoreEdit, true);
+  document.addEventListener("input", markCoreEdit, true);
+  document.addEventListener("change", markCoreEdit, true);
 
   document.addEventListener("econovaria:attendance-reward-saved", (event) => {
     const detail = event instanceof CustomEvent ? event.detail : null;
-    if (detail?.combined === true) {
-      coreDirtyKeys.clear();
-      document.querySelector('[data-admin-terminal-action="save-settings"]')
-        ?.removeAttribute("data-attendance-reward-core-pending");
-    }
+    if (detail?.combined === true) coreDirtyKeys.clear();
   });
 
   document.addEventListener("click", (event) => {
     const button = event.target instanceof Element
-      ? event.target.closest('[data-admin-terminal-action="save-settings"]')
+      ? event.target.closest(SAVE_SELECTOR)
       : null;
     if (!(button instanceof HTMLButtonElement) || !attendanceDirty()) return;
     if (!validateAttendance()) {
@@ -296,23 +256,9 @@
     });
   }, true);
 
-  new MutationObserver(scheduleReconcile).observe(document.body, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: [
-      "disabled",
-      "aria-disabled",
-      "data-attendance-reward-dirty",
-      "data-attendance-reward-loaded",
-      "data-admin-terminal-api-state",
-    ],
-  });
-
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
     readCoreSettings,
     combinedCoreSavePending,
   };
-  scheduleReconcile();
 })();
