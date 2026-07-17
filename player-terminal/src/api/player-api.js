@@ -25,6 +25,11 @@ const LAZY_ROUTE_ENDPOINTS = Object.freeze({
   banking: "banking"
 });
 
+const IDEMPOTENCY_PREFIXES = Object.freeze({
+  marketOrder: "stock-order",
+  inventoryUse: "inventory-redemption"
+});
+
 function createIdempotencyKey(prefix) {
   const uuid = globalThis.crypto?.randomUUID?.();
   if (uuid) return `${prefix}:${uuid}`;
@@ -73,9 +78,10 @@ export class PlayerApi {
     };
   }
 
-  execute(endpointKey, payload, params) {
-    const idempotentPayload = endpointKey === "marketOrder" && !payload?.idempotencyKey
-      ? { ...payload, idempotencyKey: createIdempotencyKey("stock-order") }
+  execute(endpointKey, payload = {}, params) {
+    const prefix = IDEMPOTENCY_PREFIXES[endpointKey];
+    const idempotentPayload = prefix && !payload?.idempotencyKey
+      ? { ...payload, idempotencyKey: createIdempotencyKey(prefix) }
       : payload;
     return this.request(endpointKey, { payload: idempotentPayload, params });
   }
