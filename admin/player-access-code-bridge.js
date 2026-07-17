@@ -111,133 +111,10 @@
     }
   }
 
-  function emitAccessCode(detail, options = {}) {
+  function emitAccessCode(detail) {
+    // Presentation belongs to the accepted Admin modal controller. This bridge
+    // emits credential state only and never creates a second dialog.
     dispatchCredentialEvent("econovaria:player-access-code-issued", detail);
-    if (options.showDialog !== false) renderAccessCodeDialog(detail);
-  }
-
-  function renderAccessCodeDialog(detail) {
-    if (typeof document === "undefined" || !document.body || !detail.studentCode) return;
-
-    document.querySelector("[data-admin-player-access-code-dialog]")?.remove();
-
-    const overlay = document.createElement("div");
-    overlay.setAttribute("data-admin-player-access-code-dialog", "");
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-labelledby", "adminPlayerAccessCodeTitle");
-    overlay.style.cssText = [
-      "position:fixed",
-      "inset:0",
-      "z-index:12000",
-      "display:grid",
-      "place-items:center",
-      "padding:24px",
-      "background:rgba(1,7,14,.78)",
-      "backdrop-filter:blur(8px)",
-    ].join(";");
-
-    const panel = document.createElement("section");
-    panel.style.cssText = [
-      "width:min(500px,100%)",
-      "border:1px solid rgba(255,103,0,.7)",
-      "background:#071421",
-      "color:#e9fbff",
-      "padding:24px",
-      "box-shadow:0 24px 80px rgba(0,0,0,.5)",
-      "font-family:Inter,Arial,sans-serif",
-    ].join(";");
-
-    const title = document.createElement("h2");
-    title.id = "adminPlayerAccessCodeTitle";
-    title.textContent = "Player credentials saved";
-    title.style.cssText = "margin:0 0 8px;font-size:20px";
-
-    const description = document.createElement("p");
-    description.textContent = `${detail.displayName || "Player"} signs in with the Player ID and Access Code below.`;
-    description.style.cssText = "margin:0 0 18px;color:rgba(233,251,255,.72);line-height:1.5";
-
-    const identifierLabel = document.createElement("small");
-    identifierLabel.textContent = "PLAYER ID / RFID";
-    identifierLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
-
-    const identifier = document.createElement("strong");
-    identifier.setAttribute("data-admin-player-identifier-value", "");
-    identifier.textContent = detail.playerIdentifier || "—";
-    identifier.style.cssText = [
-      "display:block",
-      "padding:13px",
-      "border:1px solid rgba(255,103,0,.42)",
-      "background:#020b12",
-      "font:800 18px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace",
-      "letter-spacing:.08em",
-      "text-align:center",
-      "user-select:all",
-      "margin-bottom:14px",
-    ].join(";");
-
-    const codeLabel = document.createElement("small");
-    codeLabel.textContent = "ACCESS CODE";
-    codeLabel.style.cssText = "display:block;margin-bottom:6px;color:rgba(233,251,255,.62);font-weight:800;letter-spacing:.12em";
-
-    const code = document.createElement("strong");
-    code.setAttribute("data-admin-player-access-code-value", "");
-    code.textContent = detail.studentCode;
-    code.style.cssText = [
-      "display:block",
-      "padding:18px",
-      "border:1px solid rgba(105,250,255,.45)",
-      "background:#020b12",
-      "font:800 28px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace",
-      "letter-spacing:.16em",
-      "text-align:center",
-      "user-select:all",
-    ].join(";");
-
-    const warning = document.createElement("p");
-    warning.textContent = "Copy the Access Code now. Only its secure hash is stored in the database.";
-    warning.style.cssText = "margin:14px 0 18px;color:rgba(233,251,255,.62);font-size:13px;line-height:1.5";
-
-    const actions = document.createElement("div");
-    actions.style.cssText = "display:flex;justify-content:flex-end;gap:10px";
-
-    const copy = document.createElement("button");
-    copy.type = "button";
-    copy.textContent = "Copy credentials";
-    copy.style.cssText = "min-height:40px;padding:0 16px;border:1px solid rgba(105,250,255,.55);background:#0b2333;color:#e9fbff;cursor:pointer";
-    copy.addEventListener("click", async () => {
-      const value = `Player ID: ${detail.playerIdentifier || ""}\nAccess Code: ${detail.studentCode}`;
-      try {
-        await navigator.clipboard.writeText(value);
-        copy.textContent = "Copied";
-      } catch (_) {
-        code.focus?.();
-      }
-    });
-
-    const close = document.createElement("button");
-    close.type = "button";
-    close.textContent = "Close";
-    close.style.cssText = "min-height:40px;padding:0 16px;border:1px solid rgba(255,103,0,.65);background:#ff6700;color:#071421;font-weight:800;cursor:pointer";
-    close.addEventListener("click", () => overlay.remove());
-
-    actions.append(copy, close);
-    panel.append(
-      title,
-      description,
-      identifierLabel,
-      identifier,
-      codeLabel,
-      code,
-      warning,
-      actions,
-    );
-    overlay.append(panel);
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) overlay.remove();
-    });
-    document.body.append(overlay);
-    close.focus();
   }
 
   function mergedResponse(primary, primaryBody, resetBody) {
@@ -315,9 +192,7 @@
     };
 
     dispatchCredentialEvent("econovaria:player-identity-updated", detail);
-    if (studentCode) {
-      emitAccessCode(detail, { showDialog: input?.showCredentialDialog !== false });
-    }
+    if (studentCode) emitAccessCode(detail);
     return body;
   }
 
