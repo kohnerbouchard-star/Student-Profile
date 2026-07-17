@@ -1,3 +1,4 @@
+import { installSkipLinkController } from "./accessibility/skip-link-controller.js";
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
@@ -7,6 +8,7 @@ import { installPlayerInvalidationController } from "./realtime/player-invalidat
 
 const mount = document.getElementById("playerTerminal");
 const config = resolvePlayerTerminalConfig();
+const skipLink = installSkipLinkController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent
@@ -22,6 +24,7 @@ terminal.destroy = () => {
   marketOrders.destroy();
   storePurchases.destroy();
   formDrafts.destroy();
+  skipLink.destroy();
   destroyTerminal();
 };
 
