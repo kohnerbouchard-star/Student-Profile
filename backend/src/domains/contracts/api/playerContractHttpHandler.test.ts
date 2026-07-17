@@ -4,6 +4,8 @@ import {
   readPlayerContractRoutePath,
 } from "./playerContractRoutePaths.ts";
 import type {
+  AcceptPlayerContractProgressInput,
+  AcceptPlayerContractProgressResult,
   ContractRepository,
   CreateContractTemplateInput,
   CreateGameSessionContractInput,
@@ -37,12 +39,18 @@ const HIDDEN_CONTRACT_ID = "00000000-0000-4000-8000-000000000103";
 const PROGRESS_ID = "00000000-0000-4000-8000-000000000201";
 const NOW = "2026-06-25T12:30:00.000Z";
 
-Deno.test("player contract route paths parse list and submit routes", () => {
+Deno.test("player contract route paths parse list, accept, and submit routes", () => {
   assertEquals(
     readPlayerContractRoutePath(
       `/functions/v1/classroom-api/players/me/contracts`,
     ),
     { kind: "contracts" },
+  );
+  assertEquals(
+    readPlayerContractRoutePath(
+      `/functions/v1/classroom-api/players/me/contracts/${CONTRACT_ID}/accept`,
+    ),
+    { kind: "accept", contractId: CONTRACT_ID },
   );
   assertEquals(
     readPlayerContractRoutePath(
@@ -55,6 +63,108 @@ Deno.test("player contract route paths parse list and submit routes", () => {
       `/functions/v1/classroom-api/players/me/contracts/not-a-uuid/submit`,
     ),
     null,
+  );
+});
+
+Deno.test("player contract accept creates in-progress state from authenticated scope", async () => {
+  const repository = new MockContractRepository({
+    contracts: [contractRecord({ id: CONTRACT_ID })],
+  });
+  const response = await handlePlayerContractRequest(
+    acceptRequest(),
+    acceptRoute(),
+    dependencies({ repository }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.ok, true);
+  assertEquals(body.alreadyAccepted, false);
+  assertEquals(body.contract.contractId, CONTRACT_ID);
+  assertEquals(body.progress.playerId, PLAYER_ID);
+  assertEquals(body.progress.status, "in_progress");
+  assertEquals(repository.acceptInputs, [{
+    gameSessionId: GAME_SESSION_ID,
+    contractId: CONTRACT_ID,
+    playerId: PLAYER_ID,
+  }]);
+});
+
+Deno.test("player contract accept is idempotent for existing in-progress state", async () => {
+  const existing = progressRecord({ status: "in_progress" });
+  const repository = new MockContractRepository({
+    contracts: [contractRecord({ id: CONTRACT_ID })],
+    progress: [existing],
+  });
+  const response = await handlePlayerContractRequest(
+    acceptRequest(),
+    acceptRoute(),
+    dependencies({ repository }),
+  );
+  const body = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(body.alreadyAccepted, true);
+  assertEquals(body.progress.progressId, existing.id);
+  assertEquals(body.progress.status, "in_progress");
+  assertEquals(repository.upsertInputs.length, 0);
+});
+
+Deno.test("player contract accept rejects unavailable, mismatched, and locked progress", async () => {
+  const mismatched = await handlePlayerContractRequest(
+    acceptRequest({ body: { gameSessionId: OTHER_GAME_SESSION_ID } }),
+    acceptRoute(),
+    dependencies(),
+  );
+  await assertErrorResponse(mismatched, 401, "invalid_player_session_scope");
+
+  const unavailable = await handlePlayerContractRequest(
+    acceptRequest(),
+    acceptRoute(),
+    dependencies({ repository: new MockContractRepository() }),
+  );
+  await assertErrorResponse(unavailable, 404, "contract_not_available");
+
+  for (
+    const status of [
+      "submitted",
+      "completed",
+      "expired",
+      "failed",
+      "dismissed",
+    ]
+  ) {
+    const repository = new MockContractRepository({
+      contracts: [contractRecord({ id: CONTRACT_ID })],
+      progress: [progressRecord({ status })],
+    });
+    const response = await handlePlayerContractRequest(
+      acceptRequest(),
+      acceptRoute(),
+      dependencies({ repository }),
+    );
+
+    await assertErrorResponse(response, 409, "contract_progress_locked");
+    assertEquals(repository.upsertInputs.length, 0);
+  }
+});
+
+Deno.test("player contract accept rejects client-supplied identity", async () => {
+  const response = await handlePlayerContractRequest(
+    acceptRequest({
+      body: {
+        gameSessionId: GAME_SESSION_ID,
+        playerId: OTHER_PLAYER_ID,
+      },
+    }),
+    acceptRoute(),
+    dependencies(),
+  );
+
+  await assertErrorResponse(
+    response,
+    400,
+    "invalid_player_contract_request",
   );
 });
 
@@ -511,6 +621,27 @@ function submitRequest(options: {
   );
 }
 
+function acceptRequest(options: {
+  readonly authToken?: string | null;
+  readonly body?: unknown;
+  readonly rawBody?: string;
+  readonly extraQuery?: string;
+  readonly playerSessionIdHeader?: string;
+} = {}): Request {
+  const query = options.extraQuery ? `?${options.extraQuery}` : "";
+  return request(
+    "POST",
+    `/players/me/contracts/${CONTRACT_ID}/accept${query}`,
+    {
+      ...options,
+      body: options.rawBody === undefined
+        ? (options.body ?? { gameSessionId: GAME_SESSION_ID })
+        : undefined,
+      rawBody: options.rawBody,
+    },
+  );
+}
+
 function request(
   method: string,
   path: string,
@@ -551,6 +682,13 @@ function contractsRoute(): PlayerContractRoute {
   return { kind: "contracts" };
 }
 
+function acceptRoute(): PlayerContractRoute {
+  return {
+    kind: "accept",
+    contractId: CONTRACT_ID,
+  };
+}
+
 function submitRoute(): PlayerContractRoute {
   return {
     kind: "submit",
@@ -562,6 +700,7 @@ class MockContractRepository implements ContractRepository {
   readonly listAvailableInputs: ListPlayerAvailableContractsInput[] = [];
   readonly listProgressInputs: ListPlayerContractProgressInput[] = [];
   readonly getProgressInputs: GetPlayerContractProgressInput[] = [];
+  readonly acceptInputs: AcceptPlayerContractProgressInput[] = [];
   readonly upsertInputs: UpsertPlayerContractProgressInput[] = [];
 
   private readonly contracts: GameSessionContractRecord[];
@@ -627,6 +766,50 @@ class MockContractRepository implements ContractRepository {
         row.playerId === input.playerId
       ) ?? null,
     );
+  }
+
+  acceptPlayerContractProgress(
+    input: AcceptPlayerContractProgressInput,
+  ): Promise<AcceptPlayerContractProgressResult> {
+    this.acceptInputs.push(input);
+    const existingIndex = this.progress.findIndex((row) =>
+      row.gameSessionId === input.gameSessionId &&
+      row.contractId === input.contractId &&
+      row.playerId === input.playerId
+    );
+    const existing = existingIndex >= 0 ? this.progress[existingIndex] : null;
+
+    if (existing && existing.status !== "available") {
+      return Promise.resolve({
+        outcome: existing.status === "in_progress"
+          ? "already_accepted"
+          : "locked",
+        progress: existing,
+      });
+    }
+
+    const accepted = progressRecord({
+      id: existing?.id ?? PROGRESS_ID,
+      gameSessionId: input.gameSessionId,
+      contractId: input.contractId,
+      playerId: input.playerId,
+      status: "in_progress",
+      evidencePayload: existing?.evidencePayload ?? {},
+      resultPayload: existing?.resultPayload ?? {},
+      submittedAt: existing?.submittedAt ?? null,
+      completedAt: existing?.completedAt ?? null,
+      rewardIssuedAt: existing?.rewardIssuedAt ?? null,
+      createdAt: existing?.createdAt ?? "2026-06-25T12:00:00.000Z",
+      updatedAt: NOW,
+    });
+
+    if (existingIndex >= 0) {
+      this.progress[existingIndex] = accepted;
+    } else {
+      this.progress.push(accepted);
+    }
+
+    return Promise.resolve({ outcome: "accepted", progress: accepted });
   }
 
   upsertPlayerContractProgress(

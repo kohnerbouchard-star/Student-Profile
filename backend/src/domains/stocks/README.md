@@ -317,14 +317,62 @@ does not add a new cash fallback, does not create direct table writes in the
 route, and does not expose or accept `x-stock-market-runner-secret` from
 player clients.
 
+## V9 Player-Safe Market Asset Reads
+
+V9 exposes the existing public-safe market board DTO through the authenticated
+player surface:
+
+- `GET /players/me/stocks/assets?limit=50&offset=0`
+- `GET /players/me/stocks/assets/:assetId?historyLimit=200`
+
+Both routes derive the game scope from `x-player-session-token`. They reject
+client-supplied game, player, or player-session identity, and never accept the
+stock runner secret. List reads use bounded offset pagination. Detail reads
+require a UUID asset ID, return only an active asset from the authenticated
+game, and include at most 500 recent `stock_price_ticks` points in ascending
+chart order. Player/session identifiers, runner configuration, fundamentals,
+fair-value anchors, exposure models, and other runner-only fields are omitted
+from responses.
+
+The repository fetches each asset page in one table query and latest volumes in
+one existing latest-tick RPC; it does not issue one query per asset.
+
+V9 did not include watchlist persistence or mutations.
+
+## V10 Player Stock Watchlist
+
+V10 adds the server-managed `player_stock_watchlist` ownership table and these
+player routes:
+
+- `GET /players/me/stocks/watchlist?limit=50&offset=0`
+- `PUT /players/me/stocks/watchlist/:assetId`
+- `DELETE /players/me/stocks/watchlist/:assetId`
+
+All scope comes from `x-player-session-token`; watchlist routes reject
+client-supplied game/player/session scope, request bodies on mutations, and
+stock runner secrets. `PUT` and `DELETE` are idempotent and report whether the
+stored state changed. Both mutation paths require an active asset in the
+authenticated game.
+
+The table has composite player and asset foreign keys, a unique
+game/player/asset constraint, cascade cleanup, RLS with no browser policies,
+and direct privileges only for `service_role`. Its insertion trigger locks and
+validates the active player and active same-game asset to close the race between
+route validation and persistence.
+
+Player asset list/detail DTOs now include `isWatchlisted`. List enrichment uses
+one batched watchlist membership query for the returned asset page. Watchlist
+reads fetch the ownership page, active asset DTOs, and latest ticks in batches;
+they do not issue one query per asset.
+
 ## Future Phases
 
 Future work should keep the calculation boundary intact:
 
 - Frontend/admin wiring should let trusted staff initialize one game session and
   display the read-only market board without adding student stock writes.
-- Frontend/player wiring can consume the V7/V8 player-safe stock routes without
-  exposing runner secrets or service-role access to students.
+- Frontend/player wiring can consume the V7/V8/V9/V10 player-safe stock routes
+  without exposing runner secrets or service-role access to students.
 
 Future API handlers, persistence, scheduled tick orchestration, trading,
 analyst features, admin controls, and audit logs should call the

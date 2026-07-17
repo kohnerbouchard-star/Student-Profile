@@ -464,6 +464,9 @@ function createContractBody(): Record<string, unknown> {
 }
 
 class MockContractRepository implements ContractRepository {
+  acceptPlayerContractProgress(): Promise<never> {
+    throw new Error("Not implemented in staff contract handler tests.");
+  }
   readonly createInputs: CreateGameSessionContractInput[] = [];
   readonly listInputs: ListGameSessionContractsInput[] = [];
   readonly updateStatusInputs: UpdateGameSessionContractStatusInput[] = [];

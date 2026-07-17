@@ -1,38 +1,13 @@
 (function initEconovariaAdminSessionGate() {
   "use strict";
 
-  const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const sessionManager = window.EconovariaAdminAuthSession;
+  const MINIMUM_GATE_VISIBLE_MS = 120;
+  const initializedAt = performance.now();
   let released = false;
   let redirecting = false;
   let mountTimeout = null;
-
-  function readSession() {
-    try {
-      const session = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null");
-      return session && typeof session.accessToken === "string" && session.accessToken.trim()
-        ? session
-        : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function parseJwt(token) {
-    try {
-      const payload = String(token || "").split(".")[1] || "";
-      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-      return JSON.parse(atob(padded));
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function sessionIsExpired(session) {
-    const claims = parseJwt(session?.accessToken || "");
-    return Boolean(Number(claims.exp || 0) && Number(claims.exp) * 1000 <= Date.now() + 5000);
-  }
 
   function mainLoginUrl(reason) {
     const url = new URL("../", window.location.href);
@@ -42,8 +17,7 @@
   }
 
   function clearTransferredSession() {
-    window.sessionStorage.removeItem(SESSION_KEY);
-    window.sessionStorage.removeItem(SELECTED_GAME_KEY);
+    sessionManager?.clear();
   }
 
   function redirectToMainLogin(reason) {
@@ -98,50 +72,64 @@
     showError
   };
 
-  const session = readSession();
-  const selectedGameId = String(window.sessionStorage.getItem(SELECTED_GAME_KEY) || "").trim();
+  function watchForAdminMount() {
+    document.addEventListener("DOMContentLoaded", () => {
+      const mount = document.getElementById("adminPreview");
 
-  if (!session) {
-    redirectToMainLogin("session-required");
-    return;
+      if (mount && !mount.hidden && mount.childElementCount > 0) {
+        release();
+        return;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (mount && !mount.hidden && mount.childElementCount > 0) {
+          observer.disconnect();
+          release();
+        }
+      });
+
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["hidden"]
+      });
+
+      mountTimeout = window.setTimeout(() => {
+        observer.disconnect();
+        showError("The administrator console took too long to start. Reload this page or return to sign in.");
+      }, 10000);
+    }, { once: true });
   }
 
-  if (sessionIsExpired(session)) {
-    clearTransferredSession();
-    redirectToMainLogin("session-expired");
-    return;
-  }
-
-  if (!selectedGameId) {
-    redirectToMainLogin("select-game");
-    return;
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const mount = document.getElementById("adminPreview");
-
-    if (mount && !mount.hidden && mount.childElementCount > 0) {
-      release();
+  async function verifyTransferredSession() {
+    if (!sessionManager) {
+      showError("The administrator session service could not start.");
       return;
     }
 
-    const observer = new MutationObserver(() => {
-      if (mount && !mount.hidden && mount.childElementCount > 0) {
-        observer.disconnect();
-        release();
-      }
-    });
+    const previousSession = sessionManager.read();
+    if (!previousSession) {
+      redirectToMainLogin("session-required");
+      return;
+    }
 
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["hidden"]
-    });
+    try {
+      await sessionManager.getUsableSession();
+    } catch (_) {
+      clearTransferredSession();
+      redirectToMainLogin("session-expired");
+      return;
+    }
 
-    mountTimeout = window.setTimeout(() => {
-      observer.disconnect();
-      showError("The administrator console took too long to start. Reload this page or return to sign in.");
-    }, 10000);
-  }, { once: true });
+    const selectedGameId = String(window.sessionStorage.getItem(SELECTED_GAME_KEY) || "").trim();
+    if (!selectedGameId) {
+      redirectToMainLogin("select-game");
+      return;
+    }
+
+    watchForAdminMount();
+  }
+
+  void verifyTransferredSession();
 })();

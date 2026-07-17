@@ -43,6 +43,10 @@ export interface ContractRepository {
     input: GetPlayerContractProgressInput,
   ): Promise<PlayerContractProgressRecord | null>;
 
+  acceptPlayerContractProgress(
+    input: AcceptPlayerContractProgressInput,
+  ): Promise<AcceptPlayerContractProgressResult>;
+
   upsertPlayerContractProgress(
     input: UpsertPlayerContractProgressInput,
   ): Promise<PlayerContractProgressRecord>;
@@ -194,6 +198,22 @@ export interface GetPlayerContractProgressInput {
   readonly contractId: string;
   readonly playerId: string;
 }
+
+export interface AcceptPlayerContractProgressInput {
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly playerId: string;
+}
+
+export type AcceptPlayerContractProgressResult =
+  | {
+    readonly outcome: "accepted" | "already_accepted" | "locked";
+    readonly progress: PlayerContractProgressRecord;
+  }
+  | {
+    readonly outcome: "not_available";
+    readonly progress: null;
+  };
 
 export interface UpsertPlayerContractProgressInput {
   readonly gameSessionId: string;

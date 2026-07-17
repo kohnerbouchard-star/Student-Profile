@@ -6,6 +6,18 @@ import type {
   StockMarketReadResult,
 } from "../contracts/stockMarketReadContracts.ts";
 import { StockMarketReadError } from "../contracts/stockMarketReadContracts.ts";
+import type {
+  StockMarketPlayerAssetBatchInput,
+  StockMarketPlayerAssetBatchReadResult,
+  StockMarketPlayerAssetDetailInput,
+  StockMarketPlayerAssetDetailReadResult,
+  StockMarketPlayerAssetListInput,
+  StockMarketPlayerAssetListReadResult,
+  StockMarketPlayerAssetReadRepository,
+} from "../contracts/stockMarketPlayerAssetReadContracts.ts";
+import {
+  StockMarketPlayerAssetReadError,
+} from "../contracts/stockMarketPlayerAssetReadContracts.ts";
 
 interface SupabaseReadQueryError {
   readonly message: string;
@@ -25,7 +37,9 @@ type StockMarketReadTableName =
   | "stock_price_ticks";
 
 interface SupabaseStockMarketReadClient {
-  from(tableName: StockMarketReadTableName): SupabaseStockMarketReadQueryBuilder;
+  from(
+    tableName: StockMarketReadTableName,
+  ): SupabaseStockMarketReadQueryBuilder;
   rpc<Data = unknown>(
     functionName: string,
     args?: unknown,
@@ -39,11 +53,16 @@ interface SupabaseStockMarketReadQueryBuilder {
 interface SupabaseStockMarketReadFilterBuilder
   extends PromiseLike<SupabaseReadQueryResponse<unknown[]>> {
   eq(column: string, value: unknown): SupabaseStockMarketReadFilterBuilder;
+  in(
+    column: string,
+    values: readonly unknown[],
+  ): SupabaseStockMarketReadFilterBuilder;
   order(
     column: string,
     options?: { readonly ascending?: boolean },
   ): SupabaseStockMarketReadFilterBuilder;
   limit(count: number): SupabaseStockMarketReadFilterBuilder;
+  range(from: number, to: number): SupabaseStockMarketReadFilterBuilder;
 }
 
 interface GameSessionReadRow {
@@ -111,13 +130,15 @@ const STOCK_TICK_READ_SELECT = [
 ].join(",");
 
 export class SupabaseStockMarketReadRepository
-  implements StockMarketReadRepository {
+  implements StockMarketReadRepository, StockMarketPlayerAssetReadRepository {
   constructor(private readonly client: SupabaseStockMarketReadClient) {}
 
   async read(input: StockMarketReadInput): Promise<StockMarketReadResult> {
     await this.assertGameSessionExists(input.gameSessionId);
 
-    const requestedTicker = input.ticker ? normalizeTicker(input.ticker) : undefined;
+    const requestedTicker = input.ticker
+      ? normalizeTicker(input.ticker)
+      : undefined;
     const [assetRows, latestTickRows] = await Promise.all([
       this.readAssets(input.gameSessionId, requestedTicker),
       this.readLatestTicks(input.gameSessionId, requestedTicker),
@@ -132,7 +153,9 @@ export class SupabaseStockMarketReadRepository
       toBoardStock(asset, latestTickByAssetId.get(asset.id))
     );
     const tickIndex = latestTickRows.length > 0
-      ? Math.max(...latestTickRows.map((row) => Math.trunc(toNumber(row.tick_index))))
+      ? Math.max(
+        ...latestTickRows.map((row) => Math.trunc(toNumber(row.tick_index))),
+      )
       : 0;
     const result: StockMarketReadResult = {
       gameSessionId: input.gameSessionId,
@@ -162,8 +185,112 @@ export class SupabaseStockMarketReadRepository
       ticker: requestedTicker,
       stock,
       history: input.includeHistory
-        ? await this.readHistory(input.gameSessionId, requestedTicker, input.historyLimit)
+        ? await this.readHistory(
+          input.gameSessionId,
+          requestedTicker,
+          input.historyLimit,
+        )
         : undefined,
+    };
+  }
+
+  async listPlayerAssets(
+    input: StockMarketPlayerAssetListInput,
+  ): Promise<StockMarketPlayerAssetListReadResult> {
+    const assetRowsWithLookahead = await this.readAssets(
+      input.gameSessionId,
+      undefined,
+      {
+        limit: input.limit + 1,
+        offset: input.offset,
+      },
+    );
+    const hasMore = assetRowsWithLookahead.length > input.limit;
+    const assetRows = assetRowsWithLookahead.slice(0, input.limit);
+    const latestTickRows = await this.readLatestTicks(
+      input.gameSessionId,
+      undefined,
+    );
+    const latestTickByAssetId = new Map(
+      latestTickRows.map((row) => [row.stock_asset_id, row] as const),
+    );
+
+    return {
+      tickIndex: latestTickIndex(latestTickRows),
+      assets: assetRows.map((asset) =>
+        toBoardStock(asset, latestTickByAssetId.get(asset.id))
+      ),
+      pagination: {
+        limit: input.limit,
+        offset: input.offset,
+        returned: assetRows.length,
+        hasMore,
+        nextOffset: hasMore ? input.offset + input.limit : null,
+      },
+    };
+  }
+
+  async readPlayerAsset(
+    input: StockMarketPlayerAssetDetailInput,
+  ): Promise<StockMarketPlayerAssetDetailReadResult> {
+    const assetRows = await this.readAssets(
+      input.gameSessionId,
+      undefined,
+      {
+        assetId: input.assetId,
+        limit: 1,
+        offset: 0,
+      },
+    );
+    const asset = assetRows[0];
+
+    if (!asset) {
+      throw new StockMarketPlayerAssetReadError(
+        "stock_asset_not_available",
+        "Stock asset is not available in the authenticated game session.",
+        404,
+      );
+    }
+
+    const [latestTickRows, history] = await Promise.all([
+      this.readLatestTicks(input.gameSessionId, asset.ticker),
+      this.readHistory(
+        input.gameSessionId,
+        asset.ticker,
+        input.historyLimit,
+        asset.id,
+      ),
+    ]);
+    const latestTick = latestTickRows.find((row) =>
+      row.stock_asset_id === asset.id
+    );
+
+    return {
+      tickIndex: latestTickIndex(latestTickRows),
+      asset: toBoardStock(asset, latestTick),
+      history,
+    };
+  }
+
+  async readPlayerAssetsByIds(
+    input: StockMarketPlayerAssetBatchInput,
+  ): Promise<StockMarketPlayerAssetBatchReadResult> {
+    const assetIds = unique(input.assetIds);
+    const [assetRows, latestTickRows] = await Promise.all([
+      assetIds.length > 0
+        ? this.readAssets(input.gameSessionId, undefined, { assetIds })
+        : Promise.resolve([]),
+      this.readLatestTicks(input.gameSessionId, undefined),
+    ]);
+    const latestTickByAssetId = new Map(
+      latestTickRows.map((row) => [row.stock_asset_id, row] as const),
+    );
+
+    return {
+      tickIndex: latestTickIndex(latestTickRows),
+      assets: assetRows.map((asset) =>
+        toBoardStock(asset, latestTickByAssetId.get(asset.id))
+      ),
     };
   }
 
@@ -192,6 +319,12 @@ export class SupabaseStockMarketReadRepository
   private async readAssets(
     gameSessionId: string,
     ticker: string | undefined,
+    options: {
+      readonly assetId?: string;
+      readonly assetIds?: readonly string[];
+      readonly limit?: number;
+      readonly offset?: number;
+    } = {},
   ): Promise<readonly GameSessionStockAssetReadRow[]> {
     let query = this.client
       .from("game_session_stock_assets")
@@ -203,7 +336,22 @@ export class SupabaseStockMarketReadRepository
       query = query.eq("ticker", ticker);
     }
 
-    const response = await query.order("ticker", { ascending: true });
+    if (options.assetId) {
+      query = query.eq("id", options.assetId);
+    }
+
+    if (options.assetIds && options.assetIds.length > 0) {
+      query = query.in("id", options.assetIds);
+    }
+
+    query = query.order("ticker", { ascending: true });
+
+    if (options.limit !== undefined) {
+      const offset = options.offset ?? 0;
+      query = query.range(offset, offset + options.limit - 1);
+    }
+
+    const response = await query;
 
     if (response.error) {
       throw mapReadError(response.error);
@@ -235,12 +383,19 @@ export class SupabaseStockMarketReadRepository
     gameSessionId: string,
     ticker: string,
     historyLimit: number,
+    stockAssetId?: string,
   ): Promise<readonly StockMarketHistoryPointDto[]> {
-    const response = await this.client
+    let query = this.client
       .from("stock_price_ticks")
       .select(STOCK_TICK_READ_SELECT)
       .eq("game_session_id", gameSessionId)
-      .eq("ticker", ticker)
+      .eq("ticker", ticker);
+
+    if (stockAssetId) {
+      query = query.eq("stock_asset_id", stockAssetId);
+    }
+
+    const response = await query
       .order("tick_index", { ascending: false })
       .limit(historyLimit);
 
@@ -252,6 +407,16 @@ export class SupabaseStockMarketReadRepository
       .map(toHistoryPoint)
       .sort((left, right) => left.tickIndex - right.tickIndex);
   }
+}
+
+function latestTickIndex(rows: readonly StockPriceTickReadRow[]): number {
+  return rows.length > 0
+    ? Math.max(...rows.map((row) => Math.trunc(toNumber(row.tick_index))))
+    : 0;
+}
+
+function unique(values: readonly string[]): readonly string[] {
+  return [...new Set(values)];
 }
 
 function toBoardStock(
@@ -283,7 +448,9 @@ function toBoardStock(
   };
 }
 
-function toHistoryPoint(row: StockPriceTickReadRow): StockMarketHistoryPointDto {
+function toHistoryPoint(
+  row: StockPriceTickReadRow,
+): StockMarketHistoryPointDto {
   return {
     tickIndex: Math.trunc(toNumber(row.tick_index)),
     price: toNumber(row.price),
@@ -312,7 +479,9 @@ function toNumber(value: number | string | null | undefined): number {
   return 0;
 }
 
-function toNullableNumber(value: number | string | null | undefined): number | null {
+function toNullableNumber(
+  value: number | string | null | undefined,
+): number | null {
   if (value === undefined || value === null) {
     return null;
   }

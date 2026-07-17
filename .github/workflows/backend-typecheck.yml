@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "scripts/supabase-migration-history-audit.mjs"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:
       - main
     paths:
       - "backend/**"
+      - "scripts/supabase-migration-history-audit.mjs"
       - ".github/workflows/backend-typecheck.yml"
 
 permissions:
@@ -30,14 +32,20 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.23.1"
           cache: npm
           cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.9.3
+
+      - name: Audit Supabase migration history
+        run: node ../scripts/supabase-migration-history-audit.mjs
 
       - name: Install backend dependencies
         run: npm ci

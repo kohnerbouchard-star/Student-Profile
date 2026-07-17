@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   jsonError,
   jsonResponse,
@@ -61,6 +61,12 @@ import {
   handlePlayerSessionBootstrapRequest,
 } from "../../../src/domains/players/api/playerSessionBootstrapHttpHandler.ts";
 import {
+  handlePlayerSessionLogoutRequest,
+} from "../../../src/domains/players/api/playerSessionLogoutHttpHandler.ts";
+import {
+  readPlayerTerminalPhaseOneRoutePath,
+} from "../../../src/domains/players/api/playerTerminalPhaseOneRoutePaths.ts";
+import {
   handlePlayerLoginRequest,
 } from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
 import {
@@ -95,6 +101,21 @@ import {
   handlePlayerStoreCatalogRequest,
 } from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
 import {
+  handlePlayerInventoryRequest,
+} from "../../../src/domains/inventory/api/playerInventoryHttpHandler.ts";
+import {
+  handlePlayerWorldReadRequest,
+} from "../../../src/domains/countries/api/playerWorldReadHttpHandler.ts";
+import {
+  readPlayerWorldRoutePath,
+} from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
+import {
+  handlePlayerNotificationRequest,
+} from "../../../src/domains/notifications/api/playerNotificationHttpHandler.ts";
+import {
+  readPlayerNotificationRoutePath,
+} from "../../../src/domains/notifications/api/playerNotificationRoutePaths.ts";
+import {
   handlePlayerStorePurchaseHistoryRequest,
   handlePlayerStorePurchaseRequest,
   handlePlayerStoreQuoteRequest,
@@ -102,6 +123,18 @@ import {
 import {
   handlePlayerStockMarketReadRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketReadHttpHandler.ts";
+import {
+  handlePlayerStockMarketAssetRequest,
+} from "../../../src/domains/stocks/api/playerStockMarketAssetHttpHandler.ts";
+import {
+  readPlayerStockMarketAssetRoutePath,
+} from "../../../src/domains/stocks/api/playerStockMarketAssetRoutePaths.ts";
+import {
+  handlePlayerStockMarketWatchlistRequest,
+} from "../../../src/domains/stocks/api/playerStockMarketWatchlistHttpHandler.ts";
+import {
+  readPlayerStockMarketWatchlistRoutePath,
+} from "../../../src/domains/stocks/api/playerStockMarketWatchlistRoutePaths.ts";
 import {
   handlePlayerStockMarketTradingRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts";
@@ -134,6 +167,40 @@ Deno.serve(async (request) => {
       service: "classroom-api",
       status: "ready",
     });
+  }
+
+  const playerTerminalPhaseOneRoute = readPlayerTerminalPhaseOneRoutePath(
+    url.pathname,
+  );
+
+  if (playerTerminalPhaseOneRoute?.kind === "inventory") {
+    return handlePlayerInventoryRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  if (playerTerminalPhaseOneRoute?.kind === "logout") {
+    return handlePlayerSessionLogoutRequest(request, {
+      createServiceClient,
+    });
+  }
+
+  const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);
+
+  if (playerWorldRoute) {
+    return handlePlayerWorldReadRequest(request, playerWorldRoute, {
+      createServiceClient,
+    });
+  }
+
+  const playerNotificationRoute = readPlayerNotificationRoutePath(url.pathname);
+
+  if (playerNotificationRoute) {
+    return handlePlayerNotificationRequest(
+      request,
+      playerNotificationRoute,
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/store/items")) {
@@ -172,6 +239,35 @@ Deno.serve(async (request) => {
     return handlePlayerContractRequest(request, playerContractRoute, {
       createServiceClient,
     });
+  }
+
+  const playerStockMarketWatchlistRoute =
+    readPlayerStockMarketWatchlistRoutePath(
+      url.pathname,
+    );
+
+  if (playerStockMarketWatchlistRoute) {
+    return handlePlayerStockMarketWatchlistRequest(
+      request,
+      playerStockMarketWatchlistRoute,
+      {
+        createServiceClient,
+      },
+    );
+  }
+
+  const playerStockMarketAssetRoute = readPlayerStockMarketAssetRoutePath(
+    url.pathname,
+  );
+
+  if (playerStockMarketAssetRoute) {
+    return handlePlayerStockMarketAssetRequest(
+      request,
+      playerStockMarketAssetRoute,
+      {
+        createServiceClient,
+      },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/portfolio")) {

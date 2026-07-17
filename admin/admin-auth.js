@@ -5,12 +5,12 @@
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
   const ADMIN_API_BASE = `${SUPABASE_URL}/functions/v1/admin-api`;
   const LOCAL_API_PREFIX = "/api/admin";
-  const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
   const IDLE_SEED_FINGERPRINT_KEY = "econovaria.admin.idle-seed-fingerprint.v1";
   const IDLE_ACTIVITY_KEY_PREFIX = "econovaria-admin:last-activity";
   const nativeFetch = window.fetch.bind(window);
+  const sessionManager = window.EconovariaAdminAuthSession;
 
   window.ECONOVARIA_ADMIN_API_BASE_URL = LOCAL_API_PREFIX;
   window.ECONOVARIA_ADMIN_REAUTH_URL = new URL(
@@ -22,14 +22,7 @@
     window.ECONOVARIA_ADMIN_MOTION_BACKGROUND || "";
 
   function readStoredSession() {
-    try {
-      const value = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null");
-      return value && typeof value.accessToken === "string" && value.accessToken.trim()
-        ? value
-        : null;
-    } catch (_) {
-      return null;
-    }
+    return sessionManager?.read() || null;
   }
 
   function readSelectedGameId() {
@@ -37,22 +30,11 @@
   }
 
   function parseJwt(token) {
-    try {
-      const payload = String(token || "").split(".")[1] || "";
-      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-      return JSON.parse(atob(padded));
-    } catch (_) {
-      return {};
-    }
+    return sessionManager?.parseJwt(token) || {};
   }
 
   function sessionIsExpired(session) {
-    const claims = parseJwt(session?.accessToken || "");
-    return Boolean(
-      Number(claims.exp || 0) &&
-      Number(claims.exp) * 1000 <= Date.now() + 5000
-    );
+    return sessionManager?.isExpired(session) ?? true;
   }
 
   function randomHexToken() {
@@ -122,16 +104,16 @@
     } catch (_) {}
   }
 
-  function initializeAdminSecurityRuntime() {
-    const session = readStoredSession();
-    if (!session || sessionIsExpired(session)) return;
+  async function initializeAdminSecurityRuntime() {
+    const session = await sessionManager?.getUsableSession().catch(() => null);
+    if (!session) return;
     ensureAdminActionToken();
     seedIdleStateForTransferredLogin(session);
   }
 
   function clearTransferredSession() {
     try {
-      window.sessionStorage.removeItem(SESSION_KEY);
+      sessionManager?.clear();
       window.sessionStorage.removeItem(SELECTED_GAME_KEY);
       window.sessionStorage.removeItem(CSRF_TOKEN_KEY);
       window.sessionStorage.removeItem(IDLE_SEED_FINGERPRINT_KEY);
@@ -486,14 +468,15 @@
   }
 
   async function forwardAdminRequest(request, localUrl) {
-    const session = readStoredSession();
+    const priorSession = readStoredSession();
+    let session = await sessionManager?.getUsableSession().catch(() => null);
     const selectedGameId = readSelectedGameId();
     const originalUrl = new URL(localUrl.href);
 
     if (!session || sessionIsExpired(session)) {
       clearTransferredSession();
       window.setTimeout(
-        () => redirectToMainLogin(session ? "session-expired" : "session-required"),
+        () => redirectToMainLogin(priorSession ? "session-expired" : "session-required"),
         0
       );
       return jsonResponse(401, {
@@ -522,9 +505,9 @@
       headers.set("Content-Type", "application/json");
     }
 
-    let response;
-    try {
-      response = await nativeFetch(buildAdminApiUrl(normalized.localUrl), {
+    const fetchWithAccessToken = (accessToken) => {
+      headers.set("Authorization", `Bearer ${accessToken}`);
+      return nativeFetch(buildAdminApiUrl(normalized.localUrl), {
         method: normalized.method,
         headers,
         body: normalized.body,
@@ -533,12 +516,25 @@
         redirect: "follow",
         referrerPolicy: "no-referrer"
       });
+    };
+
+    let response;
+    try {
+      response = await fetchWithAccessToken(session.accessToken);
     } catch (_) {
       return jsonResponse(503, {
         code: "admin_api_unreachable",
         message:
           "Administrator data service could not be reached. Retry in a moment."
       });
+    }
+
+    if (response.status === 401 && session.refreshToken) {
+      try {
+        const refreshedSession = await sessionManager.refresh();
+        session = refreshedSession;
+        response = await fetchWithAccessToken(refreshedSession.accessToken);
+      } catch (_) {}
     }
 
     if (response.status === 401) {
@@ -598,13 +594,14 @@
     }
   }
 
-  function mountTerminal(terminal) {
-    const session = readStoredSession();
+  async function mountTerminal(terminal) {
+    const priorSession = readStoredSession();
+    const session = await sessionManager?.getUsableSession().catch(() => null);
     const selectedGameId = readSelectedGameId();
 
     if (!session || sessionIsExpired(session)) {
       clearTransferredSession();
-      redirectToMainLogin(session ? "session-expired" : "session-required");
+      redirectToMainLogin(priorSession ? "session-expired" : "session-required");
       return;
     }
 
@@ -635,18 +632,18 @@
     redirectToMainLogin("session-required");
   }
 
-  initializeAdminSecurityRuntime();
+  void initializeAdminSecurityRuntime();
 
   window.EconovariaAdminAuth = {
     attachTerminal(terminal) {
       if (document.readyState === "loading") {
         document.addEventListener(
           "DOMContentLoaded",
-          () => mountTerminal(terminal),
+          () => void mountTerminal(terminal),
           { once: true }
         );
       } else {
-        mountTerminal(terminal);
+        void mountTerminal(terminal);
       }
     },
     showSignIn,

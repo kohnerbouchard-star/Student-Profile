@@ -9,6 +9,8 @@ import {
   type PlayerContractStatus,
 } from "../contracts/contractContracts.ts";
 import type {
+  AcceptPlayerContractProgressInput,
+  AcceptPlayerContractProgressResult,
   ContractRepository,
   ContractTemplateRecord,
   CreateContractTemplateInput,
@@ -48,6 +50,10 @@ interface SupabaseContractQueryResponse<T = unknown> {
 
 interface SupabaseContractClient {
   from(tableName: ContractTableName): SupabaseContractQueryBuilder;
+  rpc(
+    functionName: "accept_player_contract",
+    args: Record<string, unknown>,
+  ): PromiseLike<SupabaseContractQueryResponse<unknown[]>>;
 }
 
 interface SupabaseContractQueryBuilder {
@@ -147,6 +153,10 @@ interface PlayerContractProgressRow {
   readonly reward_issued_at?: string | null;
   readonly created_at: string;
   readonly updated_at: string;
+}
+
+interface AcceptPlayerContractProgressRpcRow extends PlayerContractProgressRow {
+  readonly accept_outcome: string;
 }
 
 const CONTRACT_TEMPLATE_SELECT = [
@@ -455,6 +465,43 @@ export class SupabaseContractRepository implements ContractRepository {
         response.data as PlayerContractProgressRow,
       )
       : null;
+  }
+
+  async acceptPlayerContractProgress(
+    input: AcceptPlayerContractProgressInput,
+  ): Promise<AcceptPlayerContractProgressResult> {
+    const response = await this.client.rpc("accept_player_contract", {
+      p_game_session_id: input.gameSessionId,
+      p_contract_id: input.contractId,
+      p_player_id: input.playerId,
+    });
+
+    assertNoError(response, "player_contract_progress", "accept_rpc");
+
+    const row = (response.data ?? [])[0] as
+      | AcceptPlayerContractProgressRpcRow
+      | undefined;
+
+    if (!row) {
+      throw missingRowError("player_contract_progress", "accept_rpc");
+    }
+
+    if (row.accept_outcome === "not_available") {
+      return { outcome: "not_available", progress: null };
+    }
+
+    if (
+      row.accept_outcome !== "accepted" &&
+      row.accept_outcome !== "already_accepted" &&
+      row.accept_outcome !== "locked"
+    ) {
+      throw missingRowError("player_contract_progress", "accept_rpc");
+    }
+
+    return {
+      outcome: row.accept_outcome,
+      progress: toPlayerContractProgressRecord(row),
+    };
   }
 
   async upsertPlayerContractProgress(

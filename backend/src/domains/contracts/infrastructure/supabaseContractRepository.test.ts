@@ -392,6 +392,34 @@ Deno.test("contract repository gets player progress row and null", async () => {
   assertEquals(missing, null);
 });
 
+Deno.test("contract repository maps atomic accept outcomes", async () => {
+  const client = new FakeClient(baseTables());
+  const repository = new SupabaseContractRepository(client as never);
+
+  const accepted = await repository.acceptPlayerContractProgress({
+    gameSessionId: "game-1",
+    contractId: "contract-1",
+    playerId: "player-1",
+  });
+  const replay = await repository.acceptPlayerContractProgress({
+    gameSessionId: "game-1",
+    contractId: "contract-1",
+    playerId: "player-1",
+  });
+  client.tables.player_contract_progress[0].status = "submitted";
+  const locked = await repository.acceptPlayerContractProgress({
+    gameSessionId: "game-1",
+    contractId: "contract-1",
+    playerId: "player-1",
+  });
+
+  assertEquals(accepted.outcome, "accepted");
+  assertEquals(accepted.progress?.status, "in_progress");
+  assertEquals(replay.outcome, "already_accepted");
+  assertEquals(locked.outcome, "locked");
+  assertEquals(locked.progress?.status, "submitted");
+});
+
 Deno.test("contract repository upserts player progress idempotently", async () => {
   const client = new FakeClient(baseTables());
   const repository = new SupabaseContractRepository(client as never);
@@ -668,6 +696,50 @@ class FakeClient {
 
   from(tableName: FakeTableName): FakeQueryBuilder {
     return new FakeQueryBuilder(this.tables, this.failures, tableName);
+  }
+
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): Promise<FakeResponse<unknown[]>> {
+    if (functionName !== "accept_player_contract") {
+      return Promise.resolve({
+        data: null,
+        error: { message: `Unknown RPC ${functionName}` },
+      });
+    }
+
+    const existing = this.tables.player_contract_progress.find((row) =>
+      row.game_session_id === args.p_game_session_id &&
+      row.contract_id === args.p_contract_id &&
+      row.player_id === args.p_player_id
+    );
+    const row = existing ?? playerContractProgressRow({
+      id: `player_contract_progress-${
+        this.tables.player_contract_progress.length + 1
+      }`,
+      game_session_id: args.p_game_session_id,
+      contract_id: args.p_contract_id,
+      player_id: args.p_player_id,
+      status: "in_progress",
+    });
+
+    if (!existing) this.tables.player_contract_progress.push(row);
+
+    const acceptOutcome = !existing
+      ? "accepted"
+      : existing.status === "available"
+      ? "accepted"
+      : existing.status === "in_progress"
+      ? "already_accepted"
+      : "locked";
+
+    if (existing?.status === "available") existing.status = "in_progress";
+
+    return Promise.resolve({
+      data: [{ ...row, accept_outcome: acceptOutcome }],
+      error: null,
+    });
   }
 }
 

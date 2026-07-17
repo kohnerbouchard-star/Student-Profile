@@ -42,6 +42,7 @@ const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((matc
 const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((match) => match[1]);
 
 const expectedScripts = [
+  "./auth-session-manager.js",
   "./session-gate.js",
   "./admin-auth.js",
   "./dist/admin-overview-terminal.js",

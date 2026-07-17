@@ -20,17 +20,21 @@ import {
 } from "../../players/api/playerSessionHttpHelpers.ts";
 import type {
   ContractRepository,
-  GameSessionContractRecord,
   PlayerContractProgressRecord,
 } from "../contracts/contractRepositoryContracts.ts";
 import { ContractRepositoryError } from "../contracts/contractRepositoryContracts.ts";
 import {
+  type PlayerContractAcceptResponseBody,
   type PlayerContractListResponseBody,
   type PlayerContractSubmitResponseBody,
   toPlayerContractDto,
   toPlayerContractProgressDto,
 } from "../contracts/contractHttpContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
+import {
+  listPlayerContractsAvailableNow,
+  resolveActivePlayerCountryCode,
+} from "../services/playerContractAvailabilityService.ts";
 import type { PlayerContractRoute } from "./playerContractRoutePaths.ts";
 
 export interface PlayerContractHttpHandlerDependencies {
@@ -43,6 +47,11 @@ export interface PlayerContractHttpHandlerDependencies {
     serviceClient: EdgeSupabaseClient,
     sessionTokenHash: string,
   ) => ReturnType<typeof resolveActivePlayerSession>;
+  readonly resolvePlayerCountryCode?: (
+    serviceClient: EdgeSupabaseClient,
+    gameSessionId: string,
+    playerId: string,
+  ) => Promise<string | null>;
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => ContractRepository;
@@ -52,6 +61,10 @@ export interface PlayerContractHttpHandlerDependencies {
 interface PlayerContractSubmitRequestBody {
   readonly gameSessionId: string;
   readonly evidencePayload: JsonObject;
+}
+
+interface PlayerContractAcceptRequestBody {
+  readonly gameSessionId: string;
 }
 
 const LOCKED_PROGRESS_STATUSES = [
@@ -78,6 +91,14 @@ export async function handlePlayerContractRequest(
     return jsonError(405, {
       code: "method_not_allowed",
       message: "Use POST to submit contract evidence.",
+      retryable: false,
+    });
+  }
+
+  if (route.kind === "accept" && request.method !== "POST") {
+    return jsonError(405, {
+      code: "method_not_allowed",
+      message: "Use POST to accept a player contract.",
       retryable: false,
     });
   }
@@ -111,10 +132,12 @@ export async function handlePlayerContractRequest(
       return invalidPlayerSessionResponse();
     }
 
-    const submitBody = route.kind === "submit"
+    const actionBody = route.kind === "contracts"
+      ? null
+      : route.kind === "submit"
       ? await readSubmitRequestBody(request)
-      : null;
-    const gameSessionId = submitBody?.gameSessionId ??
+      : await readAcceptRequestBody(request);
+    const gameSessionId = actionBody?.gameSessionId ??
       readListGameSessionId(url.searchParams);
     const serviceClient = dependencies.createServiceClient(envResult.value);
     const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
@@ -140,26 +163,47 @@ export async function handlePlayerContractRequest(
       ? dependencies.createRepository(serviceClient)
       : new SupabaseContractRepository(serviceClient as never);
     const nowIso = (dependencies.now ?? (() => new Date().toISOString()))();
+    const countryCode = await (dependencies.resolvePlayerCountryCode ??
+      resolveActivePlayerCountryCode)(
+        serviceClient,
+        gameSessionId,
+        sessionResult.player.id,
+      );
 
     if (route.kind === "contracts") {
       return await listPlayerContracts({
         repository,
         gameSessionId,
         playerId: sessionResult.player.id,
+        countryCode,
         rosterLabel: sessionResult.player.roster_label,
         nowIso,
       });
     }
 
-    if (!submitBody) {
+    if (route.kind === "accept") {
+      return await acceptPlayerContract({
+        repository,
+        gameSessionId,
+        contractId: route.contractId,
+        playerId: sessionResult.player.id,
+        countryCode,
+        rosterLabel: sessionResult.player.roster_label,
+        acceptedAt: nowIso,
+      });
+    }
+
+    if (!actionBody || !("evidencePayload" in actionBody)) {
       throw invalidRequest("Request body must be a JSON object.");
     }
+    const submitBody = actionBody as PlayerContractSubmitRequestBody;
 
     return await submitPlayerContract({
       repository,
       gameSessionId,
       contractId: route.contractId,
       playerId: sessionResult.player.id,
+      countryCode,
       rosterLabel: sessionResult.player.roster_label,
       evidencePayload: submitBody.evidencePayload,
       submittedAt: nowIso,
@@ -169,31 +213,100 @@ export async function handlePlayerContractRequest(
   }
 }
 
+async function acceptPlayerContract(input: {
+  readonly repository: ContractRepository;
+  readonly gameSessionId: string;
+  readonly contractId: string;
+  readonly playerId: string;
+  readonly countryCode: string | null;
+  readonly rosterLabel: string | null;
+  readonly acceptedAt: string;
+}): Promise<Response> {
+  const availableContracts = await listPlayerContractsAvailableNow(
+    input.repository,
+    {
+      gameSessionId: input.gameSessionId,
+      playerId: input.playerId,
+      ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+      ...(input.rosterLabel ? { rosterLabel: input.rosterLabel } : {}),
+      nowIso: input.acceptedAt,
+    },
+  );
+  const contract = availableContracts.find((candidate) =>
+    candidate.id === input.contractId
+  );
+
+  if (!contract) {
+    return jsonError(404, {
+      code: "contract_not_available",
+      message: "Contract is not available to the authenticated player.",
+      retryable: false,
+    });
+  }
+
+  const acceptance = await input.repository.acceptPlayerContractProgress({
+    gameSessionId: input.gameSessionId,
+    contractId: input.contractId,
+    playerId: input.playerId,
+  });
+
+  if (acceptance.outcome === "not_available") {
+    return jsonError(404, {
+      code: "contract_not_available",
+      message: "Contract is not available to the authenticated player.",
+      retryable: false,
+    });
+  }
+
+  if (acceptance.outcome === "locked") {
+    return jsonError(409, {
+      code: "contract_progress_locked",
+      message: "Contract progress can no longer be accepted.",
+      retryable: false,
+    });
+  }
+
+  if (acceptance.outcome === "already_accepted") {
+    return jsonResponse<PlayerContractAcceptResponseBody>(200, {
+      ok: true,
+      alreadyAccepted: true,
+      contract: toPlayerContractDto(contract),
+      progress: toPlayerContractProgressDto(acceptance.progress),
+    });
+  }
+
+  return jsonResponse<PlayerContractAcceptResponseBody>(200, {
+    ok: true,
+    alreadyAccepted: false,
+    contract: toPlayerContractDto(contract),
+    progress: toPlayerContractProgressDto(acceptance.progress),
+  });
+}
+
 async function listPlayerContracts(input: {
   readonly repository: ContractRepository;
   readonly gameSessionId: string;
   readonly playerId: string;
+  readonly countryCode: string | null;
   readonly rosterLabel: string | null;
   readonly nowIso: string;
 }): Promise<Response> {
   const [contracts, progress] = await Promise.all([
-    input.repository.listPlayerAvailableContracts({
+    listPlayerContractsAvailableNow(input.repository, {
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
-      rosterLabel: input.rosterLabel,
+      ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+      ...(input.rosterLabel ? { rosterLabel: input.rosterLabel } : {}),
+      nowIso: input.nowIso,
     }),
     input.repository.listPlayerContractProgress({
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
     }),
   ]);
-  const visibleContracts = contracts.filter((contract) =>
-    isPlayerVisibleContract(contract, input.gameSessionId, input.nowIso)
-  );
-
   return jsonResponse<PlayerContractListResponseBody>(200, {
     ok: true,
-    contracts: visibleContracts.map(toPlayerContractDto),
+    contracts: contracts.map(toPlayerContractDto),
     progress: progress
       .filter((row) =>
         row.gameSessionId === input.gameSessionId &&
@@ -208,19 +321,23 @@ async function submitPlayerContract(input: {
   readonly gameSessionId: string;
   readonly contractId: string;
   readonly playerId: string;
+  readonly countryCode: string | null;
   readonly rosterLabel: string | null;
   readonly evidencePayload: JsonObject;
   readonly submittedAt: string;
 }): Promise<Response> {
-  const availableContracts = await input.repository
-    .listPlayerAvailableContracts({
+  const availableContracts = await listPlayerContractsAvailableNow(
+    input.repository,
+    {
       gameSessionId: input.gameSessionId,
       playerId: input.playerId,
-      rosterLabel: input.rosterLabel,
-    });
+      ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+      ...(input.rosterLabel ? { rosterLabel: input.rosterLabel } : {}),
+      nowIso: input.submittedAt,
+    },
+  );
   const contract = availableContracts.find((candidate) =>
-    candidate.id === input.contractId &&
-    isPlayerVisibleContract(candidate, input.gameSessionId, input.submittedAt)
+    candidate.id === input.contractId
   );
 
   if (!contract) {
@@ -288,6 +405,34 @@ async function readSubmitRequestBody(
   return {
     gameSessionId: readRequiredString(value.gameSessionId, "gameSessionId"),
     evidencePayload: readEvidencePayload(value.evidencePayload),
+  };
+}
+
+async function readAcceptRequestBody(
+  request: Request,
+): Promise<PlayerContractAcceptRequestBody> {
+  const text = await request.text();
+
+  if (!text.trim()) {
+    throw invalidRequest("Request body must be a JSON object.");
+  }
+
+  let value: unknown;
+
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw invalidRequest("Request body must be valid JSON.");
+  }
+
+  if (!isRecord(value)) {
+    throw invalidRequest("Request body must be a JSON object.");
+  }
+
+  rejectClientSuppliedBodyIdentity(value);
+
+  return {
+    gameSessionId: readRequiredString(value.gameSessionId, "gameSessionId"),
   };
 }
 
@@ -373,29 +518,6 @@ function readEvidencePayload(value: unknown): JsonObject {
   }
 
   return value as JsonObject;
-}
-
-function isPlayerVisibleContract(
-  contract: GameSessionContractRecord,
-  gameSessionId: string,
-  nowIso: string,
-): boolean {
-  const nowMs = Date.parse(nowIso);
-  const publishedAtMs = contract.publishedAt === null
-    ? NaN
-    : Date.parse(contract.publishedAt);
-  const expiresAtMs = contract.expiresAt === null
-    ? null
-    : Date.parse(contract.expiresAt);
-
-  return contract.gameSessionId === gameSessionId &&
-    contract.status === "active" &&
-    (contract.visibility === "public" || contract.visibility === "targeted") &&
-    !Number.isNaN(nowMs) &&
-    !Number.isNaN(publishedAtMs) &&
-    publishedAtMs <= nowMs &&
-    (expiresAtMs === null ||
-      (!Number.isNaN(expiresAtMs) && expiresAtMs > nowMs));
 }
 
 function isLockedProgress(progress: PlayerContractProgressRecord): boolean {

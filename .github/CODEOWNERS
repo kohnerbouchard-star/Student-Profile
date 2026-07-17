@@ -1,0 +1,10 @@
+# Default owner until domain teams are split out.
+* @kohnerbouchard-star
+
+# Production-critical boundaries require explicit ownership.
+/.github/ @kohnerbouchard-star
+/backend/supabase/functions/ @kohnerbouchard-star
+/backend/supabase/migrations/ @kohnerbouchard-star
+/admin/ @kohnerbouchard-star
+/frontend/src/core/ @kohnerbouchard-star
+/docs/operations/ @kohnerbouchard-star

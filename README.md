@@ -1,36 +1,75 @@
-# Classroom Economy Static App — Login + Write Permissions
+# Econovaria
 
-This version keeps the login screen and restores controlled write actions.
+Econovaria is a classroom economic simulation with a student terminal, an
+administrator console, and a Supabase-backed domain/API layer. Students manage
+country-linked currencies, attendance rewards, Store purchases, contracts,
+inventory, and a simulated stock market while staff configure and supervise a
+game session.
 
-## What changed
+## Production status
 
-- No student dropdown.
-- Students log in with access code.
-- The active access code is stored in the session.
-- Store purchases, stock trades, analyst ratings, and clock-in actions are permission-gated.
-- Students cannot choose another student for a write action from the UI.
-- Local prototype mode saves writes in browser storage.
-- `apps-script-api.gs` includes a permissioned backend scaffold with session tokens and `LockService`.
+The application is an active production candidate, not an approved
+production-grade release. Modern `admin-api` and `classroom-api` services are
+deployed, but launch remains blocked by database-history reconciliation,
+legacy-service containment, controlled staging/promotion, and backup/plan
+posture. Do not deploy from an unmerged branch or make manual schema changes.
 
-## Important security note
+The current audit and program are maintained in:
 
-Static files alone cannot provide true data privacy because `data.js` is visible in the browser. For real privacy and real Google Sheets writes, deploy `apps-script-api.gs` as a Google Apps Script Web App and do not commit deployed URLs, keys, or student data to the frontend.
+- `docs/operations/production-grade-execution-plan.md`
+- `docs/operations/production-manifest-2026-07-17.json`
+- `docs/operations/production-change-control.md`
+- `docs/operations/legacy-service-containment.md`
 
-## Fast setup
+## Repository map
 
-1. Open `index.html` locally to test the UI.
-2. Use any access code from the uploaded workbook to log in.
-3. Try Store Kiosk, Stock Trade, Analyst Rating, or Clock In.
-4. In local mode, writes are saved only in that browser.
-5. To reset local demo data, clear the browser's local storage for this page.
+- `frontend/` — modular student application source.
+- `admin/` — authenticated v606 administrator shell and compatibility layers.
+- `backend/src/` — domain logic, contracts, repositories, and platform adapters.
+- `backend/supabase/migrations/` — the only normal database change path.
+- `backend/supabase/functions/` — deployable Edge Function sources.
+- `scripts/` — source, architecture, browser, and database validation.
+- `docs/` — active operations, audits, plans, research, and worldbuilding.
 
-## Backend setup
+The student runtime is temporarily split between modern Supabase capabilities
+and an explicitly tracked legacy Worker. Do not add another backend or dual
+write balances, inventory, rewards, contracts, or stock state.
 
-1. Open your master Google Sheet.
-2. Go to Extensions → Apps Script.
-3. Paste the contents of `apps-script-api.gs`.
-4. Set `SPREADSHEET_ID`.
-5. Deploy → New deployment → Web app.
-6. Paste the Web App URL into `API_URL` in `app.js`.
+## Local verification
 
-The backend uses `LockService`, session tokens, and server-side permission checks. Store purchases and stock trades are queued by default in `WebApp_Action_Queue` so you can connect them safely to your existing Apps Script transaction functions.
+Use the pinned Node release in `.nvmrc` and install both lockfiles.
+
+```zsh
+nvm use
+npm ci
+npm --prefix backend ci
+npm test
+npm --prefix backend run typecheck:all
+npm --prefix backend run smoke
+```
+
+Run the static application locally:
+
+```zsh
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Then open `http://127.0.0.1:4173/` or
+`http://127.0.0.1:4173/admin/`.
+
+Database migrations must also pass the Docker-backed `Database Replay` GitHub
+workflow, which resets a blank Supabase database twice and runs database lint.
+
+## Security boundaries
+
+- Public Supabase publishable keys may appear in browser configuration; service
+  role keys, passwords, access codes, session tokens, and refresh tokens may not
+  appear in commits, logs, issues, or artifacts.
+- Browser identity is not authority. Every privileged route must authenticate,
+  resolve the actor, and prove ownership of the target game before service-role
+  access.
+- Every game/player relationship must preserve `game_session_id` scope.
+- Money, reward, inventory, attendance, contract, and trading writes must be
+  transactional and idempotent.
+
+See `CONTRIBUTING.md` for branch, pull-request, migration, and release rules.

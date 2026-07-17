@@ -12,6 +12,7 @@ function assert(condition, message) {
 
 const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
 const expectedScripts = [
+  "./auth-session-manager.js",
   "./session-gate.js",
   "./admin-auth.js",
   "./dist/admin-overview-terminal.js",
@@ -39,6 +40,7 @@ for (const reference of scripts) {
   assert(result.status === 0, `JavaScript syntax check failed for ${reference}:\n${result.stderr || result.stdout}`);
 }
 
+const sessionManager = readFileSync(resolve(adminRoot, "auth-session-manager.js"), "utf8");
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
 const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
@@ -51,6 +53,8 @@ const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.j
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
+assert(sessionManager.includes("grant_type=refresh_token"), "Admin refresh-token grant is missing.");
+assert(sessionManager.includes("refreshPromise"), "Concurrent admin token refresh is not deduplicated.");
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
 assert(boot.includes("function installAuthenticatedAdminModelBridge()"), "Authenticated model bridge is missing.");
 assert(boot.includes('Object.defineProperty(feature, "currentModel"'), "Authorization metadata is not preserved across model replacement.");

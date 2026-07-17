@@ -5,6 +5,10 @@ export type PlayerContractRoute =
     readonly kind: "contracts";
   }
   | {
+    readonly kind: "accept";
+    readonly contractId: string;
+  }
+  | {
     readonly kind: "submit";
     readonly contractId: string;
   };
@@ -22,7 +26,7 @@ export function readPlayerContractRoutePath(
   const meSegment = segments[playersIndex + 1];
   const contractsSegment = segments[playersIndex + 2];
   const contractId = segments[playersIndex + 3];
-  const submitSegment = segments[playersIndex + 4];
+  const actionSegment = segments[playersIndex + 4];
 
   if (meSegment !== "me" || contractsSegment !== "contracts") {
     return null;
@@ -37,11 +41,11 @@ export function readPlayerContractRoutePath(
   if (
     contractId &&
     isUuid(contractId) &&
-    submitSegment === "submit" &&
+    (actionSegment === "accept" || actionSegment === "submit") &&
     playersIndex + 5 === segments.length
   ) {
     return {
-      kind: "submit",
+      kind: actionSegment,
       contractId,
     };
   }

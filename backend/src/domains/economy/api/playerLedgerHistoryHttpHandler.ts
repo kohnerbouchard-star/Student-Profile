@@ -5,8 +5,8 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
@@ -84,7 +84,22 @@ export async function handlePlayerLedgerHistoryRequest(
     });
   }
 
+  if (request.headers.has("x-stock-market-runner-secret")) {
+    return jsonError(400, {
+      code: "stock_runner_secret_not_allowed",
+      message:
+        "Player ledger requests must not send the stock market runner secret.",
+      retryable: false,
+    });
+  }
+
   try {
+    const url = new URL(request.url);
+    rejectClientSuppliedIdentity(url.searchParams, request.headers);
+    rejectUnexpectedQueryParameters(url.searchParams);
+    const requestedGameSessionId = readOptionalGameSessionHeader(
+      request.headers,
+    );
     const envResult = readSupabaseEnv();
 
     if (!envResult.ok) {
@@ -102,7 +117,6 @@ export async function handlePlayerLedgerHistoryRequest(
     }
 
     const sessionTokenHash = await sha256Hex(sessionToken);
-    const url = new URL(request.url);
     const limit = readLedgerHistoryLimitQuery(url.searchParams.get("limit"));
     const serviceClient = dependencies.createServiceClient(envResult.value);
 
@@ -136,6 +150,18 @@ export async function handlePlayerLedgerHistoryRequest(
       Date.parse(session.expires_at) <= Date.now()
     ) {
       return invalidPlayerSessionResponse();
+    }
+
+    if (
+      requestedGameSessionId &&
+      requestedGameSessionId !== session.game_session_id
+    ) {
+      throw new EdgeActivationError(
+        "invalid_player_session_scope",
+        "Requested game session does not match the authenticated player session.",
+        401,
+        false,
+      );
     }
 
     const gameResponse = await serviceClient
@@ -206,7 +232,9 @@ export async function handlePlayerLedgerHistoryRequest(
 
     const ledgerResponse = await serviceClient
       .from("ledger_entries")
-      .select("id,account_type,amount,currency_code,entry_type,source_domain,source_action,source_id,created_by_type,created_at")
+      .select(
+        "id,account_type,amount,currency_code,entry_type,source_domain,source_action,source_id,created_by_type,created_at",
+      )
       .eq("game_session_id", session.game_session_id)
       .eq("player_id", session.player_id)
       .order("created_at", { ascending: false })
@@ -270,4 +298,80 @@ export async function handlePlayerLedgerHistoryRequest(
       retryable: false,
     });
   }
+}
+
+function rejectClientSuppliedIdentity(
+  searchParams: URLSearchParams,
+  headers: Headers,
+): void {
+  for (
+    const fieldName of [
+      "playerId",
+      "playerIds",
+      "playerSessionId",
+      "playerSessionIds",
+      "sessionId",
+      "sessionIds",
+      "gameSessionId",
+      "gameSessionIds",
+    ]
+  ) {
+    if (searchParams.has(fieldName)) {
+      throw invalidRequest(
+        "Player ledger scope is derived from x-player-session-token.",
+      );
+    }
+  }
+
+  for (
+    const headerName of [
+      "x-player-id",
+      "x-player-session-id",
+      "x-player-session",
+    ]
+  ) {
+    if (headers.has(headerName)) {
+      throw invalidRequest(
+        "Player ledger scope is derived from x-player-session-token.",
+      );
+    }
+  }
+}
+
+function rejectUnexpectedQueryParameters(searchParams: URLSearchParams): void {
+  let unexpected: string | null = null;
+  searchParams.forEach((_value, key) => {
+    if (unexpected === null && key !== "limit") unexpected = key;
+  });
+
+  if (unexpected !== null) {
+    throw invalidRequest(`Unexpected query parameter: ${unexpected}.`);
+  }
+
+  if (searchParams.getAll("limit").length > 1) {
+    throw invalidRequest("Exactly one limit query parameter is allowed.");
+  }
+}
+
+function readOptionalGameSessionHeader(headers: Headers): string | null {
+  const values = [
+    headers.get("x-econovaria-game-session-id")?.trim() ?? "",
+    headers.get("x-econovaria-game-id")?.trim() ?? "",
+  ].filter(Boolean);
+  const uniqueValues = [...new Set(values)];
+
+  if (uniqueValues.length > 1) {
+    throw invalidRequest("Game-session headers must identify the same game.");
+  }
+
+  return uniqueValues[0] ?? null;
+}
+
+function invalidRequest(message: string): EdgeActivationError {
+  return new EdgeActivationError(
+    "invalid_player_ledger_history_request",
+    message,
+    400,
+    false,
+  );
 }

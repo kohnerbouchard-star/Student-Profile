@@ -102,6 +102,13 @@ export interface PlayerContractSubmitResponseBody {
   readonly progress: PlayerContractProgressDto;
 }
 
+export interface PlayerContractAcceptResponseBody {
+  readonly ok: true;
+  readonly alreadyAccepted: boolean;
+  readonly contract: PlayerContractDto;
+  readonly progress: PlayerContractProgressDto;
+}
+
 export interface StaffContractProgressListResponseBody {
   readonly ok: true;
   readonly contract: StaffContractSummaryDto;
@@ -123,6 +130,19 @@ export interface StaffContractRewardIssueResponseBody {
   readonly rewardResult: Record<string, unknown>;
 }
 
+const PLAYER_REDACTED_KEYS = new Set([
+  "correctAnswer",
+  "correctAnswers",
+  "correctChoice",
+  "correctChoices",
+  "answerKey",
+  "answerKeys",
+  "expectedAnswer",
+  "expectedAnswers",
+  "acceptedAnswer",
+  "acceptedAnswers",
+]);
+
 export function toStaffContractDto(
   contract: GameSessionContractRecord,
 ): StaffContractDto {
@@ -139,14 +159,14 @@ export function toStaffContractDto(
     category: contract.category,
     status: contract.status,
     visibility: contract.visibility,
-    targetingPayload: contract.targetingPayload,
-    requirementsPayload: contract.requirementsPayload,
-    rewardPayload: contract.rewardPayload,
+    targetingPayload: redactPlayerObject(contract.targetingPayload),
+    requirementsPayload: redactPlayerObject(contract.requirementsPayload),
+    rewardPayload: redactPlayerObject(contract.rewardPayload),
     completionMode: contract.completionMode,
     publishedAt: contract.publishedAt,
     deadlineAt: contract.deadlineAt,
     expiresAt: contract.expiresAt,
-    metadata: contract.metadata,
+    metadata: redactPlayerObject(contract.metadata),
     createdAt: contract.createdAt,
     updatedAt: contract.updatedAt,
   };
@@ -214,4 +234,28 @@ export function toPlayerContractProgressDto(
     createdAt: progress.createdAt,
     updatedAt: progress.updatedAt,
   };
+}
+function redactPlayerObject(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  return redactPlayerValue(value) as Record<string, unknown>;
+}
+
+function redactPlayerValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactPlayerValue);
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (PLAYER_REDACTED_KEYS.has(key)) continue;
+    result[key] = redactPlayerValue(nestedValue);
+  }
+
+  return result;
 }

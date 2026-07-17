@@ -1,3 +1,5 @@
+begin;
+
 -- Demo storyline seed/copy RPC V1.
 -- Creates one reusable demo storyline and activates it for one game session.
 -- This is non-destructive and does not add schedulers, frontend behavior,
@@ -366,3 +368,5 @@ comment on function public.initialize_demo_storyline_for_game(uuid, text) is
 
 revoke all on function public.initialize_demo_storyline_for_game(uuid, text) from public;
 grant execute on function public.initialize_demo_storyline_for_game(uuid, text) to service_role;
+
+commit;

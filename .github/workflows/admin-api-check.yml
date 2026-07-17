@@ -28,14 +28,15 @@ jobs:
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.9.3
 
       - name: Typecheck admin API
         working-directory: backend
         shell: bash
         run: |
           set +e
-          deno check --config supabase/functions/admin-api/deno.json --no-lock \
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
             supabase/functions/admin-api/index.ts \
             > /tmp/admin-api-check.log 2>&1
           echo $? > /tmp/admin-api-check.status
@@ -52,7 +53,8 @@ jobs:
             exit 0
           fi
           set +e
-          deno test --config supabase/functions/admin-api/deno.json --no-lock \
+          deno test --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
             supabase/functions/admin-api/*.test.ts \
             > /tmp/admin-api-test.log 2>&1
           echo $? > /tmp/admin-api-test.status

@@ -627,6 +627,9 @@ class CapturingRewardLedgerWriter implements ContractRewardLedgerWriter {
 }
 
 class MockContractRepository implements ContractRepository {
+  acceptPlayerContractProgress(): Promise<never> {
+    throw new Error("Not implemented in staff contract review tests.");
+  }
   readonly listStaffProgressInputs: ListContractProgressForStaffInput[] = [];
   readonly reviewInputs: ReviewPlayerContractProgressInput[] = [];
   readonly markRewardInputs: MarkContractRewardIssuedInput[] = [];
