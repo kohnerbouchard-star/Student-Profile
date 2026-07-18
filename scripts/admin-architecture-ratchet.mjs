@@ -3,8 +3,8 @@ import path from "node:path";
 
 const ADMIN_ROOT = path.resolve("admin");
 const LIMITS = Object.freeze({
-  fetchAssignments: 8,
-  mutationObservers: 13,
+  fetchAssignments: 7,
+  mutationObservers: 12,
 });
 
 async function listJavaScriptFiles(directory) {
@@ -47,5 +47,5 @@ console.log(JSON.stringify({
   status: "pass",
   measurements,
   limits: LIMITS,
-  note: "These are maximums, not targets. Each transport and observer migration should lower them.",
+  note: "Interaction quality no longer owns a global fetch interceptor or broad DOM observer. These limits remain maximums, not targets.",
 }, null, 2));
