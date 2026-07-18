@@ -743,7 +743,7 @@ Required gates:
 - [ ] Create campaign events, news, interactions, and notifications.
 - [ ] Create deterministic fixture scenarios.
 - [ ] Implement seed importer.
-- [ ] `SEED-PREFLIGHT-001` Implement deterministic fail-closed seed-content preflight validation.
+- [ ] `SEED-PREFLIGHT-001` Implement deterministic fail-closed seed-content preflight validation. `IMPLEMENTED_NOT_MERGED` on PR #163 at `f49192bfd9e2e452313523c3011f9b2c71f792a7`; nine tests pass and design mode checks 47 JSON files with zero structural errors while preserving 42 explicit readiness blockers.
 - [ ] Implement rollback.
 - [ ] Run reproducible economic and market simulations.
 - [ ] Record seeds, inputs, outputs, integrity checks, and balance decisions.
@@ -1004,6 +1004,15 @@ No item may be checked complete merely because code was written.
 
 Append entries in reverse chronological order.
 
+### 2026-07-18 — Executable seed preflight on PR #163
+
+- `SEED-PREFLIGHT-001` is `IMPLEMENTED_NOT_MERGED` on branch `agent/seed-content-foundation-v1`, PR #163, commit `f49192bfd9e2e452313523c3011f9b2c71f792a7`; the branch was synchronized with `main` `14adbc525995cc931998244c442a23b542f43c7a` and reconciled repeatedly with concurrent seed-authority commits without force updates.
+- Added `scripts/seed-content-preflight.mjs`, `scripts/seed-content-preflight-lib.mjs`, nine Node tests, root `audit:seed-content` registration, and `docs/seed-content/technical/seed-content-preflight-operator-guide-v1.md`. Corrected stale issuer counts in the Solvend, Thaloris, and Yrethia candidate records from unsupported values to the actual 17 entries.
+- Added no migrations, routes, RPCs, database writes, workflows, deployments, credentials, or runtime activation. The preflight accepts both recorded simulation checksum schemas, validates every country run manifest, rejects unsafe declared paths/runtime ownership fields/UUIDs/activation flags, and fails closed for staging/production.
+- Latest reconciled local evidence: `npm test` and Player Terminal verify passed; focused preflight tests passed 9/9; design mode checked 47 JSON files with 0 structural errors and 42 blockers; staging mode exited nonzero. The blockers include ten absent 320-record universe JSONLs, incomplete active-country coverage, 50 unverified map points, ten incomplete arrival packages, Northreach evidence gaps, and checksum/file mismatches in newly added Thaloris/Yrethia simulation records.
+- No staging/runtime evidence exists. CI for published head `f49192bfd9e2e452313523c3011f9b2c71f792a7` was pending at ledger update.
+- Next exact seed item: commit and reconcile the ten referenced 320-record country universe JSONLs with checksums, then rerun the preflight until the 3,200-record count and uniqueness claims are evidence-backed. Runtime importer work remains blocked by stable-ID storage and Backend compatibility.
+
 ### 2026-07-18 — Contract acceptance, security, rate-limit, and staging-preflight continuation
 
 - `BETA-CONTRACT-001` through `BETA-CONTRACT-003`: `IMPLEMENTED_NOT_MERGED` on PR #158 through head `7931815f99d529bdf229e09fdabb79955163020b`. Added public route `POST /players/me/contracts/:contractKey/accept`, service-role-only transactional RPC `accept_player_contract_by_key(uuid, uuid, text)`, migration `20260718112000_accept_player_contract_by_key_v2.sql`, Classroom API dispatch, nine focused route/handler/repository tests, Backend smoke registration, contract documentation, and capability-manifest `2026-07-18.2`. No Player Terminal wiring, deployment, or runtime evidence exists.
@@ -1011,7 +1020,7 @@ Append entries in reverse chronological order.
 - `BETA-AUTH-005` / `OPS-RATE-001`: shared rate-limit foundation published at `330a134a2c6681cfbf7200d67b01c844c66cb5cc`. Added migration `20260718173000_add_shared_request_rate_limits_v1.sql`, table `request_rate_limit_buckets`, service-role-only RPC `consume_request_rate_limits_v1(jsonb)`, HMAC keying, policies, repository/service/HTTP helpers, 12 focused tests, and two evidence documents. It stores no raw IP, token, action composite, player UUID, or game UUID. Route/login wiring, staging configuration, SQL concurrency, tuning, cleanup, and runtime evidence remain open; no capability is advertised.
 - Phase 5 staging-preflight support: PR #169 / `agent/staging-readiness-preflight-v1` published commit `7d3c62c377c57bd5e90cf59336fbea58d7bc55db` with seven files, eight focused tests, a names-only secret inventory, deterministic migration/function facts, fail-closed evidence validation, template, operator guide, and protected manual workflow. It adds no migration, route, RPC, credential, deployment, or runtime evidence and remains `IMPLEMENTED_NOT_MERGED`.
 - Required CI on PR #158 head `330a134a2c6681cfbf7200d67b01c844c66cb5cc`: Repository Quality #408 and Admin API #602 passed; Backend Typecheck #988 and Database Replay #130 were running at ledger update. PR #169 Repository Quality #409, Database Replay #131, and Staging Readiness Preflight #1 were running.
-- Next exact unblocked Backend item: `BETA-INV-003`, followed by the remaining Inventory redemption workflow on PR #158. Next exact operational item: `OPS-ARTIFACT-001`/`002` on PR #169. Next exact seed item: `SEED-PREFLIGHT-001` reconciliation on the moving PR #163 head, then the ten 320-record universe JSONL sources and checksums.
+- Next exact unblocked Backend item: `BETA-INV-003`, followed by the remaining Inventory redemption workflow on PR #158. Next exact operational item: `OPS-ARTIFACT-001`/`002` on PR #169. `SEED-PREFLIGHT-001` is now implemented-not-merged; the next seed item is the ten 320-record universe JSONL sources and checksums.
 
 ### 2026-07-18 — Player capability manifest tranche on PR #158
 
