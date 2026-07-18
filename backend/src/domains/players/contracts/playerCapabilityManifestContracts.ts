@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-18.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-18.3" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -60,6 +60,7 @@ export type PlayerCapabilityEndpointKey =
   | "countries"
   | "country"
   | "inventory"
+  | "inventoryRedemptions"
   | "logout"
   | "market"
   | "marketAsset"
@@ -166,6 +167,25 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "inventory",
     operations: [{ method: "GET", pathTemplate: "/players/me/inventory" }],
     routeCapabilities: ["inventory"],
+  },
+  {
+    key: "inventoryRedemptions",
+    operations: [
+      {
+        method: "GET",
+        pathTemplate: "/players/me/inventory/redemptions",
+      },
+      {
+        method: "POST",
+        pathTemplate: "/players/me/inventory/:itemId/redemptions",
+      },
+      {
+        method: "GET",
+        pathTemplate: "/players/me/inventory/redemptions/:requestId",
+      },
+    ],
+    routeCapabilities: ["inventory"],
+    actionCapabilities: ["inventoryUse"],
   },
   {
     key: "notifications",
