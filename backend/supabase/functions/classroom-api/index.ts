@@ -106,6 +106,12 @@ import {
   handlePlayerStockMarketTradingRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts";
 import {
+  handlePlayerStockAssetListRequest,
+} from "../../../src/domains/stocks/api/playerStockAssetListHttpHandler.ts";
+import {
+  readPlayerStockAssetListRoutePath,
+} from "../../../src/domains/stocks/api/playerStockAssetListRoutePaths.ts";
+import {
   handlePlayerGameDashboardRequest,
 } from "../../../src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts";
 import {
@@ -148,6 +154,18 @@ Deno.serve(async (request) => {
     return handlePlayerWorldReadRequest(request, playerWorldRoute, {
       createServiceClient,
     });
+  }
+
+  const playerStockAssetListRoute = readPlayerStockAssetListRoutePath(
+    url.pathname,
+  );
+
+  if (playerStockAssetListRoute) {
+    return handlePlayerStockAssetListRequest(
+      request,
+      playerStockAssetListRoute,
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/store/items")) {
