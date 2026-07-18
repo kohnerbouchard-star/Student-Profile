@@ -1,12 +1,25 @@
 import type {
   PlayerStockAssetRoute,
 } from "../contracts/playerStockAssetListContracts.ts";
+import type {
+  PlayerStockWatchlistRoute,
+} from "../contracts/playerStockWatchlistContracts.ts";
+import {
+  readPlayerStockWatchlistRoutePath,
+} from "./playerStockWatchlistRoutePaths.ts";
 
 const PUBLIC_STOCK_ASSET_ID_PATTERN = /^[A-Z0-9][A-Z0-9.-]{0,15}$/;
 
-export function readPlayerStockAssetRoutePath(
+export type PlayerStockMarketPublicRoute =
+  | PlayerStockAssetRoute
+  | PlayerStockWatchlistRoute;
+
+export function readPlayerStockMarketPublicRoutePath(
   pathname: string,
-): PlayerStockAssetRoute | null {
+): PlayerStockMarketPublicRoute | null {
+  const watchlistRoute = readPlayerStockWatchlistRoutePath(pathname);
+  if (watchlistRoute) return watchlistRoute;
+
   const segments = pathname.split("/").filter(Boolean);
   const playersIndex = segments.lastIndexOf("players");
 
@@ -41,4 +54,7 @@ export function readPlayerStockAssetRoutePath(
     : { kind: "malformed" };
 }
 
-export const readPlayerStockAssetListRoutePath = readPlayerStockAssetRoutePath;
+export const readPlayerStockAssetRoutePath =
+  readPlayerStockMarketPublicRoutePath;
+export const readPlayerStockAssetListRoutePath =
+  readPlayerStockMarketPublicRoutePath;

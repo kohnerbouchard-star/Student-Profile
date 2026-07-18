@@ -21,9 +21,12 @@ import {
 import {
   type PlayerStockAssetListRepository,
   type PlayerStockAssetListResponseBody,
-  type PlayerStockAssetListRoute,
+  type PlayerStockAssetRoute,
   PlayerStockAssetListError,
 } from "../contracts/playerStockAssetListContracts.ts";
+import type {
+  PlayerStockWatchlistRoute,
+} from "../contracts/playerStockWatchlistContracts.ts";
 import {
   SupabasePlayerStockAssetDetailRepository,
 } from "../infrastructure/supabasePlayerStockAssetDetailRepository.ts";
@@ -34,6 +37,9 @@ import { PlayerStockAssetDetailService } from "../services/playerStockAssetDetai
 import { PlayerStockAssetListService } from "../services/playerStockAssetListService.ts";
 import { parsePlayerStockAssetDetailRequest } from "./playerStockAssetDetailRequestParser.ts";
 import { parsePlayerStockAssetListRequest } from "./playerStockAssetListRequestParser.ts";
+import {
+  handlePlayerStockWatchlistRequest,
+} from "./playerStockWatchlistHttpHandler.ts";
 
 export interface PlayerStockAssetListHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -52,11 +58,25 @@ export interface PlayerStockAssetListHttpHandlerDependencies {
   readonly now?: () => Date;
 }
 
-export async function handlePlayerStockAssetListRequest(
+export async function handlePlayerStockMarketPublicRequest(
   request: Request,
-  route: PlayerStockAssetListRoute,
+  route: PlayerStockAssetRoute | PlayerStockWatchlistRoute,
   dependencies: PlayerStockAssetListHttpHandlerDependencies,
 ): Promise<Response> {
+  if (isWatchlistRoute(request, route)) {
+    return handlePlayerStockWatchlistRequest(
+      request,
+      route as PlayerStockWatchlistRoute,
+      {
+        createServiceClient: dependencies.createServiceClient,
+        readSupabaseEnv: dependencies.readSupabaseEnv,
+        hashSessionToken: dependencies.hashSessionToken,
+        resolvePlayerSession: dependencies.resolvePlayerSession,
+        now: dependencies.now,
+      },
+    );
+  }
+
   if (request.method !== "GET") {
     return jsonError(405, {
       code: "method_not_allowed",
@@ -99,9 +119,10 @@ export async function handlePlayerStockAssetListRequest(
       playerUuid: scope.playerUuid,
       effectiveAt: now.toISOString(),
     };
+    const assetRoute = route as PlayerStockAssetRoute;
 
-    if (route.kind === "assets") {
-      const query = parsePlayerStockAssetListRequest(request, route);
+    if (assetRoute.kind === "assets") {
+      const query = parsePlayerStockAssetListRequest(request, assetRoute);
       const repository = dependencies.createRepository
         ? dependencies.createRepository(client)
         : new SupabasePlayerStockAssetListRepository(client as never);
@@ -110,7 +131,7 @@ export async function handlePlayerStockAssetListRequest(
       return playerMarketJsonResponse<PlayerStockAssetListResponseBody>(body);
     }
 
-    const query = parsePlayerStockAssetDetailRequest(request, route);
+    const query = parsePlayerStockAssetDetailRequest(request, assetRoute);
     const repository = dependencies.createDetailRepository
       ? dependencies.createDetailRepository(client)
       : new SupabasePlayerStockAssetDetailRepository(client as never);
@@ -138,8 +159,20 @@ export async function handlePlayerStockAssetListRequest(
   }
 }
 
+export const handlePlayerStockAssetListRequest =
+  handlePlayerStockMarketPublicRequest;
 export const handlePlayerStockAssetReadRequest =
-  handlePlayerStockAssetListRequest;
+  handlePlayerStockMarketPublicRequest;
+
+function isWatchlistRoute(
+  request: Request,
+  route: PlayerStockAssetRoute | PlayerStockWatchlistRoute,
+): boolean {
+  return route.kind === "watchlist" ||
+    route.kind === "watchlist_asset" ||
+    (route.kind === "malformed" &&
+      new URL(request.url).pathname.split("/").includes("watchlist"));
+}
 
 function playerMarketJsonResponse<TBody>(body: TBody): Response {
   const response = jsonResponse<TBody>(200, body);
