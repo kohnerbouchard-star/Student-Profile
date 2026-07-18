@@ -5,6 +5,7 @@ import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js"
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
+import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
 import { installPlayerInvalidationController } from "./realtime/player-invalidation-controller.js";
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
@@ -20,11 +21,13 @@ const formDrafts = installFormDraftPreserver(mount, {
 
 const terminal = createPlayerTerminal({ mount, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
+const logout = installPlayerLogoutController({ terminal, config, mount });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
+  logout.destroy();
   sessionSafeExit.destroy();
   invalidations.destroy();
   marketOrders.destroy();
