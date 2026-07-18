@@ -6,7 +6,7 @@ Version: 1.0.0-draft
 Maturity: draft
 Country: Thaloris
 Owner domain: world and narrative canon
-Lead supporting character: `character.thaloris.sera-noll.v1`
+Lead supporting character: `character.thaloris.maelin-noll.v1`
 Implementation status: definition only
 
 ## Purpose
@@ -55,7 +55,7 @@ Trust rises through evidence, due process, proportionate remedies, and visible p
 
 ## Review status
 
-- narrative: pending
-- representation: pending
-- economic: pending
-- technical: pending
+- narrative: pending;
+- representation: pending;
+- economic: pending;
+- technical: pending.
