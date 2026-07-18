@@ -36,6 +36,8 @@ Personal wealth and world success are evaluated separately.
 Primary narrative references:
 
 - `story-arcs/global/immigrant-fortune-and-war-premise.md` — core player premise and arrival-to-war story spine.
+- `story-arcs/countries/immigrant-opening-framework-v1.md` — required structure for every country opening.
+- `story-arcs/countries/README.md` — index and comparison guide for all ten immigrant openings.
 - `02-world-state-and-historical-timeline.md` — durable world history, Meridian boom, fracture, attack, and runtime war sequence.
 - `04-narrative-system-and-story-state.md` — player-centered choice, relationship, consequence, war, and ending rules.
 - `story-arcs/global/meridian-corridor.md` — central opening arc.
@@ -74,7 +76,7 @@ Primary narrative references:
 - `13-current-system-compatibility-matrix.md` — code and capability mapping.
 - `14-country-baseline-and-viability-model.md` — candidate country baseline and future stress-test requirements.
 
-### Story
+### Global story
 
 - `story-arcs/global/immigrant-fortune-and-war-premise.md`
 - `story-arcs/global/meridian-corridor.md`
@@ -84,9 +86,36 @@ Primary narrative references:
 - `story-arcs/global/meridian-outcome-reaction-matrix.md`
 - `story-arcs/cross-arc-concurrency-policy.md`
 
-### Countries
+### Country immigrant openings
 
-Country-specific narrative and economic planning lives in `countries/`. Each country has its own file so institutions, events, companies, Contracts, locations, dependencies, and future immigrant perspectives can be searched independently.
+Directory: `story-arcs/countries/`
+
+- `northreach-immigrant-opening.md`
+- `yrethia-immigrant-opening.md`
+- `thaloris-immigrant-opening.md`
+- `solvend-immigrant-opening.md`
+- `eldoran-immigrant-opening.md`
+- `valerion-immigrant-opening.md`
+- `lumenor-immigrant-opening.md`
+- `xalvoria-immigrant-opening.md`
+- `dravenlok-immigrant-opening.md`
+- `syndalis-immigrant-opening.md`
+
+Each opening defines:
+
+- the player’s reason for choosing the country;
+- the arrival scene and immediate need;
+- multiple initial economic paths;
+- sponsor, friend, rival, and institutional gatekeeper;
+- Meridian-boom connection;
+- fracture, attack, and wartime transformation;
+- belonging crisis;
+- personal ending hooks;
+- validation and representation constraints.
+
+### Country world design
+
+Country-specific economic and canonical planning lives in `countries/`. Each country has its own file so institutions, events, companies, Contracts, locations, dependencies, and strategic roles can be searched independently.
 
 ### Player briefings
 
@@ -115,7 +144,7 @@ A concept is not approved because it appears in the catalog. It is approved only
 
 No economic simulation has been executed for this content foundation.
 
-`reviews/economic-simulation-review-v1.md` now contains a proposed reproducible protocol only.
+`reviews/economic-simulation-review-v1.md` contains a proposed reproducible protocol only.
 
 No reward, price, affordability, progression, concentration, currency, or wartime-economy value is simulation-validated.
 
@@ -139,6 +168,7 @@ Included:
 - ten-country world design;
 - immigrant fortune-and-war premise;
 - revised Meridian Corridor arc;
+- ten distinct country immigrant openings;
 - economic, narrative, gameplay, and technical review structures;
 - catalog structure and future implementation map.
 
