@@ -1,13 +1,12 @@
 import {
-  type PlayerStockAssetDto,
   type PlayerStockAssetListQuery,
   type PlayerStockAssetListRepository,
   type PlayerStockAssetListResponseBody,
   type PlayerStockAssetListScope,
   PlayerStockAssetListError,
   PlayerStockAssetListPersistenceError,
-  type PlayerStockAssetRecord,
 } from "../contracts/playerStockAssetListContracts.ts";
+import { toPlayerStockAssetDto } from "./playerStockAssetDtoMapper.ts";
 
 export class PlayerStockAssetListService {
   constructor(private readonly repository: PlayerStockAssetListRepository) {}
@@ -40,7 +39,10 @@ export class PlayerStockAssetListService {
 
       const page = ordered.slice(0, query.limit);
       const hasMore = ordered.length > query.limit;
-      const latestByAssetUuid = new Map<string, { tickIndex: number; volume: number }>();
+      const latestByAssetUuid = new Map<
+        string,
+        { tickIndex: number; volume: number }
+      >();
 
       for (const tick of result.latestTicks) {
         const current = latestByAssetUuid.get(tick.internalAssetUuid);
@@ -53,7 +55,10 @@ export class PlayerStockAssetListService {
       }
 
       const assets = page.map((asset) =>
-        toAssetDto(asset, latestByAssetUuid.get(asset.internalAssetUuid)?.volume ?? 0)
+        toPlayerStockAssetDto(
+          asset,
+          latestByAssetUuid.get(asset.internalAssetUuid)?.volume ?? 0,
+        )
       );
       const sectors = [...new Set(assets.map((asset) => asset.sector))]
         .sort((left, right) => left.localeCompare(right));
@@ -92,38 +97,6 @@ export class PlayerStockAssetListService {
       throw error;
     }
   }
-}
-
-function toAssetDto(
-  asset: PlayerStockAssetRecord,
-  volume: number,
-): PlayerStockAssetDto {
-  const changePct = asset.previousClose > 0
-    ? ((asset.currentPrice - asset.previousClose) / asset.previousClose) * 100
-    : 0;
-
-  return {
-    assetId: asset.ticker,
-    ticker: asset.ticker,
-    companyName: asset.companyName,
-    sector: asset.sector,
-    countryCode: asset.countryCode,
-    currentPrice: asset.currentPrice,
-    previousClose: asset.previousClose,
-    changePct: round(changePct),
-    openPrice: asset.openPrice,
-    dayHigh: asset.dayHigh,
-    dayLow: asset.dayLow,
-    volume,
-    marketCap: asset.marketCap,
-    currentVolatility: asset.currentVolatility,
-    longRunVolatility: asset.longRunVolatility,
-    description: asset.description,
-  };
-}
-
-function round(value: number): number {
-  return Math.round(value * 1_000_000) / 1_000_000;
 }
 
 function scopeViolation(): PlayerStockAssetListError {
