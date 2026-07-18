@@ -85,7 +85,17 @@ async function manualSnapshot(route, label) {
 }
 
 async function automaticSnapshot(label) {
-  await page.locator(".admin-qol-page-skeleton").waitFor({ state: "visible", timeout: 3000 });
+  await page.waitForFunction(() => {
+    const main = document.querySelector(".admin-terminal-shell-main");
+    const overlay = document.querySelector(".admin-qol-page-skeleton");
+    return Boolean(
+      overlay &&
+      !overlay.hidden &&
+      main?.getAttribute("aria-busy") === "true" &&
+      overlay.dataset.adminShapeSkeletonRoute &&
+      overlay.dataset.adminShapeSkeletonGeneration
+    );
+  }, null, { timeout: 3000 });
   const snapshot = await page.evaluate(() => {
     const api = window.EconovariaAdminShapeSkeletons;
     const controller = api.activePageController();
