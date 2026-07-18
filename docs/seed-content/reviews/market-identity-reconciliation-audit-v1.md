@@ -1,6 +1,6 @@
 # Market Identity Reconciliation Audit v1
 
-Status: **canonical-identities-reconciled**  
+Status: **canonical-identities-reconciled**
 Production authorization: false
 
 ## Result
@@ -25,7 +25,7 @@ Production authorization: false
 
 ## Decision
 
-The curated active-candidate identity is canonical for every overlapping symbol because enrichment and simulation evidence already reference those IDs. Generated identities are placeholders and may not coexist as separate instruments under the same symbol.
+The curated active-candidate identity is canonical for every overlapping symbol because enrichment and simulation evidence already reference those IDs]. Generated identities are placeholders and may not coexist as separate instruments under the same symbol.
 
 The ten country-qualified public-institution role families are approved for design use. The fifteen generated corporate roots remain placeholder taxonomy and are not approved for public activation.
 
