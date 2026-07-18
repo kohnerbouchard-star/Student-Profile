@@ -17,6 +17,8 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-source-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -55,6 +57,8 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-source-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -123,6 +127,9 @@ jobs:
       - name: Install browser smoke runtime
         run: |
           npx playwright install --with-deps chromium
+
+      - name: Exercise Admin keyboard navigation
+        run: node scripts/admin-keyboard-navigation-smoke.mjs
 
       - name: Start static preview
         run: |
