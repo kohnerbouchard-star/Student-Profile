@@ -174,9 +174,9 @@ The application is not yet approved for beta or production runtime cutover becau
 - [ ] `BETA-AUTH-001` Merge authoritative player logout route. `IMPLEMENTED_NOT_MERGED` on PR #158 as `POST /players/me/session/logout` at `67cc25cced3000fae9a624c71e8c1093879867a2`.
 - [ ] `BETA-AUTH-002` Connect Player Terminal Logout to the reviewed host revocation lifecycle.
 - [x] `BETA-AUTH-003` Verify both Player and Admin session expiry return safely to login. `VERIFIED_COMPLETE` through merged PRs #165, #166, and #167 with Player Terminal Verify #109, Admin Shell Smoke #594, Repository Quality #342/#329, and Branch Hygiene #16/#15.
-- [ ] `BETA-AUTH-004` Add final brute-force, replay, revoked-session, expired-session, and cross-game authorization matrix.
-- [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action.
-- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors.
+- [ ] `BETA-AUTH-004` Add final brute-force, replay, revoked-session, expired-session, and cross-game authorization matrix. `IMPLEMENTED_NOT_MERGED` QA foundation at `5944fd5127289c659909e6b608858345672fdd4d`; shared throttling and connected abuse evidence remain under `BETA-AUTH-005`.
+- [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action. Atomic HMAC-keyed four-dimension foundation is `IMPLEMENTED_NOT_MERGED` at `330a134a2c6681cfbf7200d67b01c844c66cb5cc`; authoritative route/login wiring, staging configuration, concurrency evidence, and tuning remain open.
+- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. Leak scanner and browser-payload regression suite are `IMPLEMENTED_NOT_MERGED` at `5944fd5127289c659909e6b608858345672fdd4d`; legacy login/bootstrap DTO UUID removal and staging/CI artifact evidence remain open.
 
 ### Authoritative capability manifest
 
@@ -184,8 +184,8 @@ The application is not yet approved for beta or production runtime cutover becau
 - [ ] `BETA-CAP-002` Version the manifest schema and capability mapping independently. `IMPLEMENTED_NOT_MERGED` with schema `1` and manifest `2026-07-18.1`.
 - [ ] `BETA-CAP-003` Advertise only reviewed, implemented Backend operations and represent unsupported operations as unavailable. `IMPLEMENTED_NOT_MERGED`; legacy UUID-bearing routes, market orders, Contract acceptance, redemption, and Store writes remain unavailable.
 - [ ] `BETA-CAP-004` Keep the manifest private/no-store, session-scoped, game-isolated, and free of internal UUIDs. `IMPLEMENTED_NOT_MERGED` with focused security coverage.
-- [ ] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `IMPLEMENTED_NOT_MERGED` at `7d068bf31a67614bf31bc0ae45f564f4a18556a3`; eight focused tests and 45 market-regression tests pass locally, with PR CI evidence pending.
-- [ ] `BETA-CAP-006` Reconcile the manifest after every later Phase 1 tranche and before PR #158 merges.
+- [ ] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `IMPLEMENTED_NOT_MERGED` at `7d068bf31a67614bf31bc0ae45f564f4a18556a3`; eight focused tests and 45 market-regression tests pass locally. Head `5e3969d453c522fcced2b52901ce0df5ce8c45b8` passed Repository Quality #363, Admin API Check #586, Backend Typecheck #972, and Database Replay #114.
+- [ ] `BETA-CAP-006` Reconcile the manifest after every later Phase 1 tranche and before PR #158 merges. Manifest `2026-07-18.2` advertises only the reviewed atomic Contract acceptance action at `7931815f99d529bdf229e09fdabb79955163020b`; future tranches still require reconciliation.
 
 ---
 
@@ -295,9 +295,9 @@ The application is not yet approved for beta or production runtime cutover becau
 
 ### Remaining
 
-- [ ] `BETA-CONTRACT-001` Implement atomic `POST /players/me/contracts/:contractId/accept`.
-- [ ] `BETA-CONTRACT-002` Reject acceptance for unavailable, expired, non-targeted, already-active, or completed Contracts.
-- [ ] `BETA-CONTRACT-003` Make acceptance retry-idempotent.
+- [ ] `BETA-CONTRACT-001` Implement atomic `POST /players/me/contracts/:contractId/accept`. `IMPLEMENTED_NOT_MERGED` on PR #158 as the public-key route `POST /players/me/contracts/:contractKey/accept`, dispatched by head `7931815f99d529bdf229e09fdabb79955163020b`.
+- [ ] `BETA-CONTRACT-002` Reject acceptance for unavailable, expired, non-targeted, already-active, or completed Contracts. `IMPLEMENTED_NOT_MERGED` for unavailable/expired/non-targeted/completed/locked states; active desired-state retries return the reviewed idempotent success envelope.
+- [ ] `BETA-CONTRACT-003` Make acceptance retry-idempotent. `IMPLEMENTED_NOT_MERGED` through the scoped unique progress key, atomic upsert/row lock, and `alreadyAccepted` replay outcome; database concurrency and connected staging evidence remain open.
 - [ ] `BETA-CONTRACT-004` Connect Player Terminal accept action to the authoritative route.
 - [ ] `BETA-CONTRACT-005` Verify full connected flow: available → accept → submit → revision → resubmit → approve → reward.
 - [ ] `BETA-CONTRACT-006` Add introductory tutorial Contract chain.
@@ -743,7 +743,7 @@ Required gates:
 - [ ] Create campaign events, news, interactions, and notifications.
 - [ ] Create deterministic fixture scenarios.
 - [ ] Implement seed importer.
-- [ ] Implement preflight validation.
+- [ ] `SEED-PREFLIGHT-001` Implement deterministic fail-closed seed-content preflight validation.
 - [ ] Implement rollback.
 - [ ] Run reproducible economic and market simulations.
 - [ ] Record seeds, inputs, outputs, integrity checks, and balance decisions.
@@ -757,28 +757,30 @@ Required gates:
 
 **Goal:** Make the beta survivable, observable, reversible, and secure.
 
-- [ ] Reconcile live and repository migration history.
-- [ ] Export live schema, grants, policies, Auth configuration, function inventory, and migration ledger.
-- [ ] Restore into an isolated project and compare with clean replay.
-- [ ] Contain or retire legacy Edge Functions and Cloudflare Worker routes.
-- [ ] Rotate legacy credentials.
-- [ ] Create isolated development, staging, and production environments.
-- [ ] Add protected approval for staging and production.
-- [ ] Build immutable artifacts from merge commits.
-- [ ] Generate release manifest with hashes, migration head, config version, and feature flags.
-- [ ] Add secret scanning, dependency review, SBOM/provenance, and patch cadence.
-- [ ] Add leaked-password protection and staff access policy.
-- [ ] Add rate limiting.
-- [ ] Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes.
-- [ ] Add dashboards and alerts.
-- [ ] Add backup retention.
-- [ ] Create encrypted off-platform backup.
-- [ ] Rehearse full restore.
-- [ ] Define and rehearse RPO/RTO.
-- [ ] Define incident severity, ownership, communications, classroom fallback, and correction procedures.
-- [ ] Add load fixtures and query-plan review.
-- [ ] Add missing foreign-key indexes based on evidence.
-- [ ] Complete staging-backed Admin and Player smoke.
+- [ ] `OPS-STAGE-001` Reconcile live and repository migration history.
+- [ ] `OPS-STAGE-002` Export live schema, grants, policies, Auth configuration, function inventory, and migration ledger.
+- [ ] `OPS-STAGE-003` Restore into an isolated project and compare with clean replay.
+- [ ] `OPS-STAGE-004` Contain or retire legacy Edge Functions and Cloudflare Worker routes.
+- [ ] `OPS-STAGE-005` Rotate legacy credentials.
+- [ ] `OPS-STAGE-006` Create isolated development, staging, and production environments.
+- [ ] `OPS-STAGE-007` Add protected approval for staging and production.
+- [ ] `OPS-ARTIFACT-001` Build immutable artifacts from merge commits.
+- [ ] `OPS-ARTIFACT-002` Generate release manifest with hashes, migration head, config version, and feature flags.
+- [ ] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence.
+- [ ] `OPS-ACCESS-001` Add leaked-password protection and staff access policy.
+- [ ] `OPS-RATE-001` Add rate limiting. Shared Backend foundation is `IMPLEMENTED_NOT_MERGED` at `330a134a2c6681cfbf7200d67b01c844c66cb5cc`; wiring and runtime evidence remain open.
+- [ ] `OPS-OBS-001` Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes.
+- [ ] `OPS-OBS-002` Add dashboards and alerts.
+- [ ] `OPS-BACKUP-001` Add backup retention.
+- [ ] `OPS-BACKUP-002` Create encrypted off-platform backup.
+- [ ] `OPS-RESTORE-001` Rehearse full restore.
+- [ ] `OPS-RESTORE-002` Define and rehearse RPO/RTO.
+- [ ] `OPS-INCIDENT-001` Define incident severity, ownership, communications, classroom fallback, and correction procedures.
+- [ ] `OPS-PERF-001` Add load fixtures and query-plan review.
+- [ ] `OPS-PERF-002` Add missing foreign-key indexes based on evidence.
+- [ ] `OPS-SMOKE-001` Complete staging-backed Admin and Player smoke.
+
+PR #169 / branch `agent/staging-readiness-preflight-v1` provides an `IMPLEMENTED_NOT_MERGED` fail-closed evidence validator at `7d3c62c377c57bd5e90cf59336fbea58d7bc55db`. It supports `OPS-STAGE-001` through `OPS-STAGE-007`, `OPS-ARTIFACT-001`/`002`, `OPS-STAGE-004`, and `OPS-RESTORE-001`/`002` without claiming their missing external evidence.
 
 **Exit gate:** A reviewed merge commit can be promoted unchanged through staging, rolled back, and restored within the approved recovery objective.
 
@@ -1002,6 +1004,15 @@ No item may be checked complete merely because code was written.
 
 Append entries in reverse chronological order.
 
+### 2026-07-18 — Contract acceptance, security, rate-limit, and staging-preflight continuation
+
+- `BETA-CONTRACT-001` through `BETA-CONTRACT-003`: `IMPLEMENTED_NOT_MERGED` on PR #158 through head `7931815f99d529bdf229e09fdabb79955163020b`. Added public route `POST /players/me/contracts/:contractKey/accept`, service-role-only transactional RPC `accept_player_contract_by_key(uuid, uuid, text)`, migration `20260718112000_accept_player_contract_by_key_v2.sql`, Classroom API dispatch, nine focused route/handler/repository tests, Backend smoke registration, contract documentation, and capability-manifest `2026-07-18.2`. No Player Terminal wiring, deployment, or runtime evidence exists.
+- `BETA-AUTH-004`/`006`: additive authorization, payload-privacy, and redacted browser/artifact leak-audit suites were published at `5944fd5127289c659909e6b608858345672fdd4d`. Local evidence included 14 new checks, ten existing request-scope checks, and all Player smoke suites. Head `5944fd5127289c659909e6b608858345672fdd4d` passed Repository Quality #364, Admin API #587, Backend Typecheck #973, and Database Replay #115. Legacy login/bootstrap UUID DTOs and connected evidence remain blockers.
+- `BETA-AUTH-005` / `OPS-RATE-001`: shared rate-limit foundation published at `330a134a2c6681cfbf7200d67b01c844c66cb5cc`. Added migration `20260718173000_add_shared_request_rate_limits_v1.sql`, table `request_rate_limit_buckets`, service-role-only RPC `consume_request_rate_limits_v1(jsonb)`, HMAC keying, policies, repository/service/HTTP helpers, 12 focused tests, and two evidence documents. It stores no raw IP, token, action composite, player UUID, or game UUID. Route/login wiring, staging configuration, SQL concurrency, tuning, cleanup, and runtime evidence remain open; no capability is advertised.
+- Phase 5 staging-preflight support: PR #169 / `agent/staging-readiness-preflight-v1` published commit `7d3c62c377c57bd5e90cf59336fbea58d7bc55db` with seven files, eight focused tests, a names-only secret inventory, deterministic migration/function facts, fail-closed evidence validation, template, operator guide, and protected manual workflow. It adds no migration, route, RPC, credential, deployment, or runtime evidence and remains `IMPLEMENTED_NOT_MERGED`.
+- Required CI on PR #158 head `330a134a2c6681cfbf7200d67b01c844c66cb5cc`: Repository Quality #408 and Admin API #602 passed; Backend Typecheck #988 and Database Replay #130 were running at ledger update. PR #169 Repository Quality #409, Database Replay #131, and Staging Readiness Preflight #1 were running.
+- Next exact unblocked Backend item: `BETA-INV-003`, followed by the remaining Inventory redemption workflow on PR #158. Next exact operational item: `OPS-ARTIFACT-001`/`002` on PR #169. Next exact seed item: `SEED-PREFLIGHT-001` reconciliation on the moving PR #163 head, then the ten 320-record universe JSONL sources and checksums.
+
 ### 2026-07-18 — Player capability manifest tranche on PR #158
 
 - Addressed `BETA-CAP-001` through `BETA-CAP-005` on branch `agent/player-backend-reconciliation-v2`, PR #158, commit `7d068bf31a67614bf31bc0ae45f564f4a18556a3`; all remain `IMPLEMENTED_NOT_MERGED` until the PR is merged and required evidence exists.
@@ -1010,9 +1021,10 @@ Append entries in reverse chronological order.
 - Changed 17 capability-tranche files: the capability contract/handler/route modules and tests, Classroom API dispatch, stock route parsers and tests, Backend scripts, two Backend audit documents, two capability evidence documents, and this roadmap. The branch reconciliation also preserves the 11 current-`main` files from PRs #164 through #167.
 - Added no migrations, database functions, RPCs, scheduled jobs, deployment workflows, or runtime configuration. Added one HTTP route and no newly advertised economic write operation.
 - Local evidence: `npm test` passed; `npm --prefix player-terminal run verify` passed; `npm --prefix backend run test:player-capabilities` passed 8/8; `npm --prefix backend run test:player-market-assets` passed 45/45; `npm --prefix backend run typecheck` passed; `git diff --check` passed. Full local Backend smoke and `typecheck:all` reached the Admin API/Deno check but could not fetch the pinned `https://esm.sh/@supabase/supabase-js@2.108.2` import because the local sandbox blocks that host; no test assertion failed before the environmental fetch block.
-- Runtime evidence: none. Isolated staging, deployment, and live route probes remain required. PR CI evidence for this head is pending.
-- Remaining blockers for the capability tranche: required PR checks, review, merge to `main`, post-merge verification, and later `BETA-CAP-006` reconciliation after each subsequent Phase 1 tranche.
-- Next exact unblocked item: `BETA-CONTRACT-001` on PR #158, atomic `POST /players/me/contracts/:contractId/accept` with server-derived ownership, transactional/idempotent settlement, append-only ledger authority, UUID-private responses, and manifest reconciliation.
+- PR CI evidence on head `5e3969d453c522fcced2b52901ce0df5ce8c45b8`: Repository Quality #363, Admin API Check #586, Backend Typecheck #972, and Database Replay #114 passed; replay evidence includes migration-source validation, zero-state replay twice, and rebuilt database lint.
+- Runtime evidence: none. Isolated staging, deployment, and live route probes remain required.
+- Remaining blockers for the capability tranche: review, merge to `main`, post-merge verification, and later `BETA-CAP-006` reconciliation after each subsequent Phase 1 tranche.
+- Superseded next item: `BETA-CONTRACT-001`, now implemented-not-merged on PR #158; `BETA-INV-003` is the next Backend item.
 
 ### 2026-07-18 — Repository reconciliation and Phase 1 continuation
 
