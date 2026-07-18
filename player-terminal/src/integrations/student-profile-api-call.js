@@ -4,6 +4,7 @@ import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
+import { validateStudentProfileCapabilityManifest } from "./student-profile-capability-manifest.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
   "playerId",
@@ -107,6 +108,20 @@ async function readBody(response) {
   return text ? { message: text.slice(0, 5000) } : {};
 }
 
+function applyCapabilityManifest(snapshot, manifest) {
+  if (!manifest) return snapshot;
+  return {
+    ...snapshot,
+    session: {
+      ...snapshot.session,
+      capabilities: manifest.capabilities,
+      capabilitySchemaVersion: manifest.schemaVersion,
+      capabilityManifestVersion: manifest.manifestVersion,
+      capabilityService: manifest.service
+    }
+  };
+}
+
 export function createStudentProfileFetchRequest({
   apiBaseUrl = "/functions/v1/classroom-api",
   fetchImpl = globalThis.fetch
@@ -140,8 +155,37 @@ export function createStudentProfileApiCall({ request } = {}) {
   if (typeof request !== "function") throw new TypeError("A Student-Profile request function is required.");
 
   let rawSession = null;
+  let capabilityManifest = null;
   let snapshot = createEmptyReadModels();
   let sessionToken = "";
+
+  async function loadCapabilityManifest(context) {
+    const route = resolvePlayerBackendRequest({
+      endpointKey: "capabilities",
+      method: "GET",
+      path: "/capabilities",
+      payload: undefined,
+      params: {},
+      session: context.session
+    });
+    if (!route) {
+      throw new ApiConnectionPendingError({
+        endpointKey: "capabilities",
+        method: "GET",
+        path: "/capabilities"
+      });
+    }
+    const raw = await request({
+      endpointKey: "capabilities",
+      method: route.method,
+      path: route.path,
+      payload: route.payload,
+      headers: headersFor({ ...context, endpointKey: "capabilities" }),
+      signal: context.signal,
+      requestId: context.requestId
+    });
+    return validateStudentProfileCapabilityManifest(raw);
+  }
 
   return async function studentProfileApiCall(context) {
     assertNoClientOwnershipFields(context.payload, context.endpointKey);
@@ -150,6 +194,7 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (currentToken !== sessionToken) {
       sessionToken = currentToken;
       rawSession = null;
+      capabilityManifest = null;
       snapshot = createEmptyReadModels();
     }
 
@@ -181,7 +226,8 @@ export function createStudentProfileApiCall({ request } = {}) {
 
     if (context.endpointKey === "session") {
       rawSession = raw;
-      snapshot = normalizeTerminalBootstrap(rawSession, {});
+      capabilityManifest = await loadCapabilityManifest(context);
+      snapshot = applyCapabilityManifest(normalizeTerminalBootstrap(rawSession, {}), capabilityManifest);
       const sessionExpiresAt = authoritativeSessionExpiry(rawSession);
       if (sessionExpiresAt) {
         snapshot = {
@@ -196,14 +242,14 @@ export function createStudentProfileApiCall({ request } = {}) {
     }
 
     if (context.endpointKey === "dashboard") {
-      if (!rawSession) {
-        throw new ApiRequestError("The player session must load before the dashboard.", {
+      if (!rawSession || !capabilityManifest) {
+        throw new ApiRequestError("The player session and capability manifest must load before the dashboard.", {
           code: "INVALID_RESPONSE",
           endpointKey: context.endpointKey,
           requestId: context.requestId
         });
       }
-      snapshot = normalizeTerminalBootstrap(rawSession, raw);
+      snapshot = applyCapabilityManifest(normalizeTerminalBootstrap(rawSession, raw), capabilityManifest);
       const sessionExpiresAt = authoritativeSessionExpiry(rawSession);
       if (sessionExpiresAt) {
         snapshot = {
