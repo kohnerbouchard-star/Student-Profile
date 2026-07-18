@@ -13,8 +13,8 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 | PR #141 World reads | Reviewed and redesigned | Complete. Countries, country detail, and news use public identifiers, bounded parsing, separate service/repository layers, and UUID-private DTOs. |
 | PR #141 Market collection | Reviewed and redesigned | Complete. Public ticker IDs, bounded pagination, current tick volume, explicit empty/unavailable states, and no stock-table UUIDs. |
 | PR #141 Market detail/history | Reviewed and redesigned | Complete. Public ticker route, 1–500 history bound, same-game internal resolution, duplicate detection, deterministic ascending history. |
-| PR #141 stock watchlists | Reviewed and redesigned | Complete in the current tranche. Public ticker routes, token-derived ownership, deterministic reads, idempotent PUT/DELETE, forward-only migration, forced RLS, and browser privilege denial. |
-| PR #141 Inventory reads | Pending review | Must be reconciled independently after watchlists. |
+| PR #141 stock watchlists | Reviewed and redesigned | Complete. Public ticker routes, token-derived ownership, deterministic reads, idempotent PUT/DELETE, forward-only migration, forced RLS, and browser privilege denial. |
+| PR #141 Inventory reads | Reviewed and redesigned | Implemented in the current tranche. Public item keys, token-derived ownership, 200-holding bound, batched Store metadata, UUID-private DTOs, explicit empty/unavailable states, and no new migration. |
 | PR #141 notifications | Pending review | List/read routes remain donor candidates. |
 | PR #141 logout | Pending review | Session revocation behavior remains a donor candidate. |
 | PR #141 atomic Contract acceptance | Pending manual reconciliation | Must preserve the merged submission, review, reward, and idempotency lifecycle. |
@@ -27,50 +27,57 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 - service-role persistence behind Edge routes;
 - game-isolated reads and writes;
 - deterministic ordering and explicit bounds;
-- explicit service-unavailability mapping;
-- current stock pricing and latest-tick integration;
+- explicit empty-state versus service-unavailability semantics;
+- current Store, Inventory, and stock persistence foundations;
 - idempotent desired-state watchlist mutations.
 
 ## Behavior intentionally changed
 
-- Browser callers never select game, player, owner, session, or stock-table UUID scope.
+- Browser callers never select game, player, owner, session, holding, Store-item, watchlist, or stock-table UUID scope.
 - Country detail uses a public country code.
 - Market assets and watchlists use normalized public tickers.
-- Internal player, session, game, assignment, watchlist, and stock-row UUIDs are not serialized.
+- Inventory uses stable per-game Store item keys as public identifiers.
+- Internal player, session, game, assignment, holding, Store-item, watchlist, and stock-row UUIDs are not serialized.
 - Market detail history is capped at 500 and returned in ascending chart order.
+- Inventory is capped at 200 holdings and uses two bounded batch queries.
 - Unsupported parameters fail closed.
 - A valid empty state is distinct from persistence unavailability.
 - Watchlist PUT and DELETE accept no body and use database constraints for idempotency.
-- The donor watchlist UUID route was rejected.
-- The donor migration timestamp was not reused; PR #158 uses a fresh forward-only version.
+- Generic Inventory item use remains unsupported until the redemption contract is implemented.
+- Donor migration timestamps are not reused.
 
-## Stock watchlist file accounting
+## Inventory file accounting
 
 | Donor file or behavior | Classification | PR #158 result |
 |---|---|---|
-| `playerStockMarketWatchlistRoutePaths.ts` | Redesigned | Replaced UUID paths with exact collection and public-ticker item routes. |
-| embedded watchlist parsing | Redesigned | Separate bounded parser rejects duplicate/unknown fields, identity injection, mutation query strings, and mutation bodies. |
-| watchlist HTTP handler | Redesigned | Uses `resolvePlayerRequestScope`, private no-store controls, shared error envelopes, and no client ownership inputs. |
-| `stockMarketWatchlistContracts.ts` | Redesigned | Separates internal UUID-bearing records from browser-safe ticker DTOs and exposes explicit idempotency state. |
-| `supabaseStockMarketWatchlistRepository.ts` | Redesigned | Resolves ticker inside the authenticated game, batches list assets, treats unique conflict and missing delete as idempotent, and permits stale-row removal after deactivation. |
-| donor watchlist migration | Redesigned | New migration `20260718064000_add_player_stock_watchlist_v1.sql`; composite FKs, unique ownership key, active-scope insert trigger, forced RLS, browser privilege revocation, service-role least privilege. |
-| donor dispatcher edits | Rejected wholesale | Current public stock-route facade was extended additively; the donor dispatcher was not restored. |
-| donor tests | Redesigned | Current route, parser, handler, service, repository, privacy, scope, idempotency, migration, and replay gates are authoritative. |
+| `playerInventoryHttpHandler.ts` | Redesigned | Split into exact route parser, bounded request parser, authoritative-scope HTTP handler, service, and repository layers. |
+| donor Inventory route handling | Redesigned | Exact direct and `classroom-api` collection paths; spoofed prefixes and item paths fail closed. |
+| donor request parsing | Unsupported in donor; added | No query parameters, no browser game scope, no ownership UUID inputs, GET only, and no runner secret. |
+| `playerInventoryContracts.ts` | Redesigned | Internal UUID-bearing records are separated from browser-safe item-key DTOs. Response-level game/player UUID objects were rejected. |
+| `playerInventoryRepository.ts` | Redesigned | Repository input requires authenticated game/player scope and an explicit hard limit. |
+| `supabasePlayerInventoryRepository.ts` | Redesigned | Two bounded queries, positive holdings only, same-game batch metadata, strict field validation, over-limit rejection, and no per-item query loop. |
+| donor Inventory DTO identifiers | Rejected | Holding UUID, Store-item UUID, player UUID, game UUID, and session UUID are not serialized. |
+| donor client game verification hint | Rejected | Inventory accepts no browser-selected game scope; scope comes only from the active player session. |
+| donor unbounded holding reads | Rejected | Maximum 200 holdings with one-row lookahead. |
+| donor `availableActions` behavior | Retained as unsupported | `availableActions` remains empty; item use and redemption are deferred. |
+| donor tests | Redesigned | Current route, parser, handler, service, repository, bounds, privacy, empty-state, unavailable-state, and cache-control tests are authoritative. |
+| Inventory migration | Already present | Existing `inventory_holdings` and `store_items` schema is sufficient; this read-only tranche adds no migration. |
+| donor dispatcher edits | Rejected wholesale | Current `classroom-api` dispatcher was extended additively. |
 
-## Watchlist database invariants
+## Inventory invariants
 
-- one row per `(game_session_id, player_id, stock_asset_id)`;
-- player and asset composite foreign keys enforce same-game ownership;
-- PUT requires one active same-game asset;
-- insert trigger rechecks active player and asset under database locking;
-- DELETE can remove an existing same-game row after the asset becomes inactive;
-- direct browser table access is denied;
-- no update privilege is granted;
-- no production migration execution is authorized by this PR.
+- one holding is scoped by authenticated game, player, and Store item;
+- only positive owned quantities are returned;
+- reserved quantity cannot exceed owned quantity;
+- Store metadata must resolve inside the same game;
+- duplicate public item keys fail closed;
+- maximum 200 browser-visible holdings;
+- public item identity is the stable per-game item key;
+- successful responses are private and non-cacheable;
+- no direct browser table access or production schema change is introduced.
 
 ## Remaining PR #141 candidates
 
-- Inventory read handler, contracts, repository, and tests;
 - notification list/read parser, handler, repository, and tests;
 - player-session logout handler and repository;
 - atomic Contract acceptance and transaction tests.
@@ -98,8 +105,8 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 2. World reads — complete;
 3. Market collection — complete;
 4. Market detail/history — complete;
-5. stock watchlist reads and writes — implemented; final gates pending;
-6. Inventory read;
+5. stock watchlist reads and writes — complete;
+6. Inventory read — implemented; final gates pending;
 7. notifications list/read;
 8. player logout;
 9. generated capability manifest;
