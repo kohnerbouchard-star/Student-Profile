@@ -14,7 +14,7 @@ Deno.test("player inventory request parser accepts an unparameterized read", () 
   );
 });
 
-Deno.test("player inventory request parser rejects malformed routes and query parameters", () => {
+Deno.test("player inventory request parser rejects malformed routes, query parameters, and game headers", () => {
   assertThrows(() =>
     parsePlayerInventoryReadRequest(
       new Request("https://example.test/players/me/inventory/extra"),
@@ -26,6 +26,16 @@ Deno.test("player inventory request parser rejects malformed routes and query pa
       new Request("https://example.test/players/me/inventory?limit=20"),
       { kind: "inventory" },
     )
+  );
+
+  const request = new Request("https://example.test/players/me/inventory", {
+    headers: {
+      "x-econovaria-game-session-id":
+        "00000000-0000-4000-8000-000000000002",
+    },
+  });
+  assertThrows(() =>
+    parsePlayerInventoryReadRequest(request, { kind: "inventory" })
   );
 });
 
