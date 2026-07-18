@@ -1,242 +1,211 @@
-# Economic Simulation Review v1
+# Economic Simulation Protocol v1
 
-Status: conditional pass with calibration changes
-Run date: 2026-07-18
-Model type: deterministic stochastic classroom-economy simulation
-Random seed: 20260718
-Population: 1,000 simulated players
-Countries: 10
-Periods: 20
-Difficulty profiles: accessible, standard, challenging, expert
-Cohorts: active, average, low participation, late joining
+Status: proposed protocol; not executed
+Original status correction date: 2026-07-18
+Owner domains: economic design, balance review, test engineering
+
+## Correction notice
+
+An earlier version of this document incorrectly described a 1,000-player economic simulation as executed and reported numerical outputs.
+
+No executable simulation program, raw output, result artifact, or reproducible run command existed for those claims.
+
+All prior percentages, medians, concentration measures, and price conclusions are withdrawn.
+
+This document now defines only the simulation that must be built and run before rewards, prices, progression pacing, or affordability bands may be approved.
 
 ## Purpose
 
-Test whether the candidate reward, price, saving, and participation bands create a viable classroom economy before exact values are approved for staging.
+Specify a reproducible test model for evaluating whether Econovaria's proposed income, reward, price, savings, market, currency, and participation rules create a viable classroom economy.
 
-This is a design simulation, not a database, backend, or staging test.
+## Required implementation
 
-## Model assumptions
+A valid simulation requires:
 
-### Cohort distribution
+- committed source code;
+- versioned input configuration;
+- explicit formulas;
+- documented assumptions;
+- deterministic random seeds;
+- multiple independent runs;
+- raw machine-readable output;
+- summarized result files generated from the raw output;
+- a documented command that reproduces each result;
+- source commit and configuration checksums;
+- review of the model against current backend and product rules.
 
-- active: 30 percent;
-- average: 50 percent;
-- low participation: 15 percent;
-- late joining: 5 percent.
+A prose document alone is not a simulation.
 
-### Participation behavior
+## Required population model
 
-Active cohort:
+The first implementation should support at least:
 
-- 95 percent attendance probability;
-- 85 percent Contract-completion probability;
-- mean completed-Contract reward of 7.5 ECO-equivalent.
+- 1,000 simulated players;
+- all ten countries;
+- multiple participation cohorts;
+- multiple difficulty profiles;
+- late joiners;
+- temporary inactivity;
+- different economic strategies;
+- different starting conditions where product rules permit them.
 
-Average cohort:
+The exact population size is a test configuration, not evidence of quality by itself.
 
-- 85 percent attendance probability;
-- 65 percent Contract-completion probability;
-- mean reward of 6.5.
+## Required participation cohorts
 
-Low-participation cohort:
+At minimum:
 
-- 65 percent attendance probability;
-- 35 percent Contract-completion probability;
-- mean reward of 5.5.
+- high participation;
+- typical participation;
+- low participation;
+- late joining;
+- interrupted participation;
+- recovery participation after a period of inactivity.
 
-Late-joining cohort:
+Each cohort must use explicit attendance, Contract-completion, purchase, savings, and investment behaviors.
 
-- joins after five periods;
-- 80 percent attendance probability after joining;
-- 60 percent Contract-completion probability;
-- mean reward of 6.0;
-- receives a one-time onboarding grant of 7.0.
+## Required economic paths
 
-### Difficulty distribution
+The model should test several viable player approaches:
 
-- accessible: 15 percent at 1.10 income modifier;
-- standard: 55 percent at 1.00;
-- challenging: 20 percent at 0.90;
-- expert: 10 percent at 0.80.
+- stable employment and saving;
+- Contract-focused income;
+- entrepreneurship or business income when supported;
+- market participation;
+- conservative liquidity management;
+- consumption-focused behavior;
+- late-joiner catch-up;
+- wartime or crisis-response work when the relevant systems exist.
 
-### Player allocation behavior
+No single strategy should be assumed to represent every player.
 
-- eight percent of available liquid balance above a minimum is moved to savings each period;
-- five percent of sufficiently large balances is allocated to the market every third period;
-- savings receives 0.50 percent every fifth period;
-- market allocations receive a small stochastic return with bounded ordinary volatility;
-- players attempt Common purchases at periods 4, 8, 12, 16, and 20;
-- players attempt Strategic purchases at periods 8, 12, 16, and 20.
+## Required test scenarios
 
-### Country affordability factors
+### Baseline economy
 
-Country price factors ranged from 0.94 to 1.10 around the common reference value. These were used only to test cross-country affordability divergence, not as approved exchange rates.
+Tests ordinary rewards, prices, savings, and spending without a major crisis.
 
-## Price iterations
+### Meridian boom
 
-### Initial Strategic test: 30 ECO-equivalent
+Tests increased employment, strategic-sector demand, housing pressure, and investment opportunity.
 
-Result:
+### Supply disruption
 
-- active cohort Strategic access: 77.7 percent;
-- average cohort: 11.1 percent;
-- late cohort: 3.7 percent;
-- low cohort: 0.6 percent;
-- median average first purchase: period 15.
+Tests food, energy, logistics, and imported-price pressure.
 
-Decision:
+### Currency stress
 
-Fails the intended Strategic acquisition window. The price was too high when Common purchases, saving, and market allocation also competed for income.
+Tests explicit pair-rate conversion, local purchasing power, and settlement-currency effects.
 
-### Second Strategic test: 24 ECO-equivalent
+### Approval delay
 
-Result:
+Tests delayed Contract approval and payout timing.
 
-- active cohort access: 86.2 percent;
-- average cohort: 15.4 percent;
-- late cohort: 5.6 percent;
-- low cohort: 0.6 percent;
-- median average first purchase: period 16.
+### Market loss
 
-Decision:
+Tests bounded investment losses and recovery.
 
-Still too slow for average players.
+### Late joining
 
-### Selected pilot test: 18 ECO-equivalent
+Tests whether a player can obtain basic access without automatic parity with early participants.
 
-Result:
+### Low participation recovery
 
-- active cohort access: 98.2 percent;
-- average cohort: 48.2 percent;
-- late cohort: 22.2 percent;
-- low cohort: 1.1 percent;
-- active median first Strategic purchase: period 8;
-- average median: period 12;
-- late median: period 16 after a period-5 start;
-- low-participation median among purchasers: period 10.
+Tests active catch-up paths without creating passive inflation or rewarding inactivity more than participation.
 
-Decision:
+### Wartime economy
 
-Conditional pilot value. It produces meaningful access for active and average players while retaining scarcity, but the low-participation recovery model still requires additional targeted testing.
+Future scenario requiring approved war-state mechanics. It should test shortages, emergency work, restricted routes, financial controls, and reconstruction without assuming that war is inherently profitable.
 
-## Common-item result
+## Required outputs
 
-Common reference price: 10 ECO-equivalent.
+Each run should record at least:
 
-- all cohorts eventually purchased at least one Common item;
-- active and average median first purchase: period 4;
-- late-joining median first purchase: period 8, three active periods after joining;
-- low-participation median first purchase: period 8.
+- player-level income by source;
+- spending by category;
+- liquid balance;
+- savings balance;
+- market allocation and return;
+- local and ECO settlement amounts;
+- first-access period for basic, strategic, and premium items;
+- Contract completion and approval delay;
+- country-level price and income divergence;
+- late-joiner recovery timing;
+- negative-balance events;
+- concentration measures;
+- inactive or trapped-player counts;
+- number of players unable to access required gameplay;
+- source of wealth during crisis scenarios.
 
-Decision:
+## Required evaluation questions
 
-Passes the broad accessibility target for the simulated assumptions.
+The simulation must answer:
 
-## Cohort results at selected pilot values
+1. Can a typical active player afford basic participation?
+2. Can low-participation and late-joining players recover through active choices?
+3. Do country differences create meaningful variation without making one assignment clearly inferior?
+4. Do difficulty modifiers preserve playability?
+5. Do rewards and prices avoid runaway inflation?
+6. Does saving remain useful without becoming mandatory?
+7. Can market losses occur without permanently removing ordinary players?
+8. Are premium purchases scarce without being inaccessible?
+9. Do crisis and war opportunities create trade-offs rather than automatic wealth?
+10. Does any single strategy dominate every other strategy?
 
-| Cohort | Simulated players | Median total income | Median final wealth | Common access | Strategic access | Median first Common | Median first Strategic |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Active | 282 | 141.95 | 51.30 | 100% | 98.2% | 4 | 8 |
-| Average | 488 | 97.72 | 38.79 | 100% | 48.2% | 4 | 12 |
-| Late joining | 54 | 72.36 | 28.59 | 100% | 22.2% | 8 | 16 |
-| Low participation | 176 | 49.97 | 19.24 | 100% | 1.1% | 8 | 10 among purchasers |
+## Seed and repetition requirements
 
-`Final wealth` combines remaining liquid balance, savings, and simulated market allocation. It is not a production net-worth calculation.
+A valid review should use:
 
-## Country results
+- one documented reference seed;
+- at least 30 additional seeds for ordinary stochastic variation;
+- stress seeds or fixed scenarios for rare severe events;
+- identical reruns to verify determinism;
+- comparison of output distributions rather than one selected run.
 
-| Country | Median income | Median final wealth | Wealth deviation from country median | Strategic access |
-|---|---:|---:|---:|---:|
-| Eldoran | 95.84 | 35.67 | -10.19% | 63% |
-| Thaloris | 92.44 | 37.38 | -5.90% | 54% |
-| Dravenlok | 96.26 | 38.01 | -4.32% | 52% |
-| Lumenor | 102.19 | 39.12 | -1.52% | 55% |
-| Valerion | 105.04 | 39.16 | -1.43% | 53% |
-| Northreach | 96.70 | 40.29 | +1.43% | 53% |
-| Yrethia | 102.29 | 40.89 | +2.93% | 50% |
-| Xalvoria | 98.42 | 41.49 | +4.46% | 44% |
-| Solvend | 105.86 | 42.02 | +5.80% | 48% |
-| Syndalis | 107.43 | 43.53 | +9.58% | 54% |
+## Acceptance status vocabulary
 
-Results are affected by the random assignment of cohorts and difficulty profiles as well as country price factors.
+Allowed statuses:
 
-Country wealth divergence remained within 10.2 percent of the country median, below the candidate 20 percent normal-condition threshold.
+- not implemented;
+- implemented but unverified;
+- execution failed;
+- results generated;
+- conditional pass;
+- fail;
+- approved for staging calibration.
 
-## Concentration and safety results
+This document remains `not implemented` until executable source and result artifacts exist.
 
-- negative liquid balances: 0;
-- top-decile share of final simulated wealth: 15.62 percent;
-- all countries reached Common-item access;
-- no country exceeded the 20 percent normal-condition affordability divergence threshold;
-- no duplicate transaction behavior was modeled in this run;
-- no borrowing was enabled;
-- market returns remained deliberately small.
+## Prohibited claims
 
-## Findings
+Do not claim:
 
-### Pass
+- a simulation was run without an execution artifact;
+- a price is validated from assumed outputs;
+- a random seed was used without executable code;
+- percentages or medians are empirical when calculated only as narrative examples;
+- production balance approval from a single run;
+- production readiness from a design model alone.
 
-- Common-tier accessibility;
-- late-joiner access to a Common item within three active periods;
-- no negative balances;
-- low country divergence;
-- moderate concentration under the selected behavior assumptions;
-- continued competition between spending, saving, and market allocation.
+## Required repository artifacts
 
-### Conditional pass
+A future real implementation should add, in an approved non-production location:
 
-- Strategic reference price of 18 ECO-equivalent;
-- onboarding grant of 7 ECO-equivalent;
-- selected difficulty income modifiers;
-- current savings allocation assumptions.
+- simulation source;
+- configuration schema;
+- reference configurations;
+- run command documentation;
+- raw outputs;
+- generated summaries;
+- model-validation notes;
+- reviewer sign-off.
 
-### Changes required
+The implementation location and language should be decided after repository and backend coordination.
 
-1. Separate Strategic items by utility. A strong academic or gameplay benefit may need a 20–30 range, while the introductory Strategic tier should begin near 18.
-2. Test a catch-up Contract for low-participation and late-joining players rather than increasing passive grants.
-3. Add Store purchase limits so active players do not repeatedly consume every low-tier item.
-4. Add explicit trading fees and market-loss scenarios.
-5. Add loan behavior and default once banking is supported.
-6. Run currency direct, inverse, expired, and missing-rate scenarios.
-7. Model reward approval delays and rejected submissions.
-8. Model a full Meridian chain rather than one generic Contract opportunity per period.
-9. Run more than one random seed and report confidence intervals.
-10. Validate teacher-side workload and reward-approval cadence.
+## Current conclusion
 
-## Recommended pilot bands after this run
+No economic simulation has been executed for the seeded-content foundation.
 
-- Immediate item: 2–5 ECO-equivalent;
-- Common item: 7–12;
-- introductory Strategic item: 16–22;
-- strong Strategic item: 23–35 with lower purchase frequency;
-- Premium and Exceptional values remain unapproved;
-- late-joiner grant: 5–8, conditional on active onboarding work;
-- normal completed-Contract mean: approximately 6–8;
-- Attendance remains a minority income source.
+No reward, price, progression, affordability, or concentration value is validated by simulation at this time.
 
-## Reproducibility record
-
-The simulation used a fixed random seed and the explicit assumptions in this file. A production calibration tool should preserve:
-
-- model version;
-- random seed;
-- input configuration;
-- generated cohort assignments;
-- per-period aggregate outputs;
-- result checksum;
-- application commit and content-pack version.
-
-The documentation branch does not add the simulation code to production or authorize these values for live use.
-
-## Review conclusion
-
-The candidate economy is viable enough to continue design work, but exact rewards and prices remain blocked until:
-
-- multiple-seed simulation;
-- currency scenarios;
-- reward-approval timing;
-- Store limits;
-- market fees and losses;
-- banking and loan tests;
-- staging validation.
+All such values remain proposals requiring a reproducible model and staging review.
