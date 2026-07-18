@@ -2,8 +2,6 @@ import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 
-const INTENDED_USE_CATEGORIES = new Set(["consumable", "consumables", "access"]);
-
 function itemTone(item) {
   if (item.state === "Available") return "green";
   if (item.state.includes("Reserved")) return "amber";
@@ -15,12 +13,8 @@ function renderItemAction(item) {
   const availableActions = Array.isArray(item.availableActions) ? item.availableActions : [];
   const canUse = availableActions.some((action) => ["use", "inventory.use"].includes(action))
     && Number(item.quantityAvailable) > 0;
-  const intendedUseControl = canUse || INTENDED_USE_CATEGORIES.has(String(item.category || "").toLowerCase());
-  if (!intendedUseControl) return renderStatusPill(item.state, itemTone(item));
-  if (canUse) {
-    return `<button class="player-terminal-compact-button" type="button" data-player-inventory-use="${escapeHtml(item.id)}">${icon("use")} Request use</button>`;
-  }
-  return `<button class="player-terminal-compact-button" type="button" data-player-inventory-use="${escapeHtml(item.id)}" data-capability-status="integration-pending" disabled aria-disabled="true" title="This item action is not enabled for the current game.">${icon("use")} Request use · Pending</button>`;
+  if (!canUse) return renderStatusPill(item.state, itemTone(item));
+  return `<button class="player-terminal-compact-button" type="button" data-player-inventory-use="${escapeHtml(item.id)}">${icon("use")} Request use</button>`;
 }
 
 function renderInventoryItem(item, fallbackCurrencyCode) {
