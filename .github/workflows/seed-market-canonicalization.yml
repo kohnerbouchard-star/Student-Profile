@@ -1,0 +1,75 @@
+name: Seed Market Canonicalization
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - scripts/apply-seed-market-canonicalization.mjs
+      - scripts/seed-market-curated-overlay-lib.mjs
+      - .github/workflows/seed-market-canonicalization.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-market-canonicalization-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  canonicalize:
+    name: Canonicalize active and universe market identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out seed authority branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+
+      - name: Apply canonical exchange and generator corrections
+        run: node scripts/apply-seed-market-canonicalization.mjs
+
+      - name: Regenerate canonical market universe
+        run: node scripts/generate-seed-market-universe.mjs
+
+      - name: Regenerate editorial evidence
+        run: node scripts/seed-content-universe-editorial-audit.mjs
+
+      - name: Regenerate identity reconciliation evidence
+        run: node scripts/seed-market-identity-reconciliation-summary.mjs
+
+      - name: Verify deterministic canonicalization
+        run: |
+          node scripts/apply-seed-market-canonicalization.mjs --check
+          node scripts/generate-seed-market-universe.mjs --check
+          node scripts/seed-content-universe-editorial-audit.mjs --check
+          node scripts/seed-market-identity-reconciliation-summary.mjs --check
+
+      - name: Run focused seed preflight
+        run: |
+          npm run test:seed-content-preflight
+          npm run preflight:seed-content
+
+      - name: Validate generated diff
+        run: git diff --check
+
+      - name: Commit canonicalized market identity layer
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Market identity layer is already canonical."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add scripts/generate-seed-market-universe.mjs docs/seed-content/markets/active-subsets docs/seed-content/markets/universe docs/seed-content/reviews/market-universe-editorial-collision-review-v1.json docs/seed-content/reviews/market-universe-editorial-collision-review-v1.md docs/seed-content/reviews/market-identity-reconciliation-audit-v1.json docs/seed-content/reviews/market-identity-reconciliation-audit-v1.md
+            git commit -m "fix(seed): canonicalize active and universe market identities [skip ci]"
+            git push origin HEAD:agent/seed-content-foundation-v1
+          fi
