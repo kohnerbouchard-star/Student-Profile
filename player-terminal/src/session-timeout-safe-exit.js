@@ -93,7 +93,7 @@ export function installPlayerSessionSafeExit({
           </div>
           <p>Your player session is no longer active. Unsaved submissions were not sent.</p>
         </main>`;
-      runtime.document && (runtime.document.title = "Session expired · Econovaria");
+      if (runtime.document) runtime.document.title = "Session expired · Econovaria";
     } catch {
       // Navigation still proceeds if the shell cannot be replaced.
     }
@@ -126,6 +126,7 @@ export function installPlayerSessionSafeExit({
   }
 
   function notifyExpiry() {
+    expiryTimer = 0;
     if (exiting) return;
     const detail = {
       reason: "invalid_player_session",
@@ -150,15 +151,17 @@ export function installPlayerSessionSafeExit({
     if (exiting) return;
     const expiresAt = sessionExpiryFromState(terminal);
     if (!expiresAt) return;
+
+    const delay = expiresAt - Date.now() - expirySkewMs;
+    if (delay <= 0) {
+      clearTimer("expiry");
+      notifyExpiry();
+      return;
+    }
     if (expiresAt === scheduledExpiry && expiryTimer) return;
 
     clearTimer("expiry");
     scheduledExpiry = expiresAt;
-    const delay = expiresAt - Date.now() - expirySkewMs;
-    if (delay <= 0) {
-      notifyExpiry();
-      return;
-    }
     expiryTimer = runtime.setTimeout?.(notifyExpiry, delay) || 0;
   }
 
