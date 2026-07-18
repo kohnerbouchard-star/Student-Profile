@@ -1,16 +1,13 @@
 (function initEconovariaAdminInteractionQuality() {
   "use strict";
 
-  const delegatedFetch = window.fetch.bind(window);
-  const ADMIN_LOCAL_PREFIX = "/api/admin";
-  const ADMIN_EDGE_FRAGMENT = "/functions/v1/admin-api/";
-  const CLASSROOM_EDGE_FRAGMENT = "/functions/v1/classroom-api/";
   const MIN_SKELETON_MS = 260;
   const SUCCESS_HOLD_MS = 1400;
   const ERROR_HOLD_MS = 2600;
   const fieldIds = new WeakMap();
+  const pendingActionContexts = new Map();
+  const requestContexts = new Map();
   let fieldSequence = 0;
-  let activeAction = null;
   let pendingPageReads = 0;
   let pageSkeletonShownAt = 0;
   let pageSkeletonTimer = null;
@@ -33,9 +30,7 @@
       selector: "[data-admin-terminal-player-form]",
       action: "create-player",
       messageTarget: ".admin-terminal-player-form-actions, .admin-terminal-contract-actions",
-      fields: [
-        { name: "displayName", label: "Player name" },
-      ],
+      fields: [{ name: "displayName", label: "Player name" }],
     },
     {
       selector: "[data-admin-terminal-store-form]",
@@ -50,7 +45,9 @@
           validate(value) {
             const amount = Number(value);
             if (value === "") return "Enter a price.";
-            if (!Number.isFinite(amount) || amount < 0) return "Enter a valid price of 0 or more.";
+            if (!Number.isFinite(amount) || amount < 0) {
+              return "Enter a valid price of 0 or more.";
+            }
             return "";
           },
         },
@@ -86,69 +83,18 @@
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
   }
 
-  function safeJson(response) {
-    try {
-      return response.clone().json().catch(() => ({}));
-    } catch (_) {
-      return Promise.resolve({});
-    }
-  }
-
-  function responseMessage(payload, fallback) {
-    const source = payload && typeof payload === "object" ? payload : {};
-    return text(
-      source.message || source.error?.message || source.error || source.detail ||
-      source.data?.message || source.data?.error?.message || fallback,
-    );
-  }
-
-  function requestUrl(input) {
-    try {
-      return new URL(input instanceof Request ? input.url : String(input), window.location.href);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  async function requestBody(input, init) {
-    try {
-      const rawUrl = input instanceof Request ? input.url : new URL(String(input), window.location.href).href;
-      const request = input instanceof Request ? new Request(input, init) : new Request(rawUrl, init);
-      if (["GET", "HEAD"].includes(request.method.toUpperCase())) return {};
-      const value = await request.clone().json();
-      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function isAdminRequest(url) {
-    if (!url) return false;
-    return url.pathname.startsWith(ADMIN_LOCAL_PREFIX) ||
-      url.pathname.includes(ADMIN_EDGE_FRAGMENT) ||
-      url.pathname.includes(CLASSROOM_EDGE_FRAGMENT);
-  }
-
-  function inferAction(body, url, method) {
-    const direct = text(body.action || body.adminOperation || body.operation);
-    if (direct) return direct;
-    const pathname = url?.pathname || "";
-    if (/\/attendance\/(?:scan|scans)$/.test(pathname) && method === "POST") return "submit-attendance-scan";
-    if (/\/contracts$/.test(pathname) && method === "POST") return "create-contract";
-    if (/\/players$/.test(pathname) && method === "POST") return "create-player";
-    if (/\/store\/items$/.test(pathname) && method === "POST") return "save-store-item";
-    if (/\/review$/.test(pathname) && ["POST", "PATCH"].includes(method)) return "review-contract-submission";
-    if (/\/logs\/export/.test(pathname)) return "export-logs";
-    return activeAction?.action || "admin-write";
-  }
-
   function actionLabels(action) {
-    return ACTION_LABELS[action] || { loading: "Processing…", success: "Completed", error: "Action failed" };
+    return ACTION_LABELS[action] || {
+      loading: "Processing…",
+      success: "Completed",
+      error: "Action failed",
+    };
   }
 
   function actionButton(action) {
-    if (activeAction?.button?.isConnected && (!action || activeAction.action === action)) return activeAction.button;
-    return document.querySelector(`[data-admin-terminal-action="${CSS.escape(action)}"]:not([hidden])`);
+    return document.querySelector(
+      `[data-admin-terminal-action="${CSS.escape(action)}"]:not([hidden])`,
+    );
   }
 
   function setButtonState(button, state, label) {
@@ -167,7 +113,7 @@
     button.dataset.adminQolState = state;
     button.setAttribute("aria-busy", state === "loading" ? "true" : "false");
     if (state === "loading") button.disabled = true;
-    if (state !== "loading") button.disabled = button.dataset.adminQolOriginalDisabled === "true";
+    else button.disabled = button.dataset.adminQolOriginalDisabled === "true";
   }
 
   function clearButtonState(button) {
@@ -190,8 +136,10 @@
   }
 
   function fieldControl(form, name) {
-    return form.elements?.namedItem(name) instanceof HTMLElement
-      ? form.elements.namedItem(name)
+    if (!form) return null;
+    const named = form.elements?.namedItem(name);
+    return named instanceof HTMLElement
+      ? named
       : form.querySelector(`[name="${CSS.escape(name)}"]`);
   }
 
@@ -201,7 +149,9 @@
 
   function ensureControlId(control) {
     if (control.id) return control.id;
-    if (!fieldIds.has(control)) fieldIds.set(control, `admin-qol-field-${++fieldSequence}`);
+    if (!fieldIds.has(control)) {
+      fieldIds.set(control, `admin-qol-field-${++fieldSequence}`);
+    }
     control.id = fieldIds.get(control);
     return control.id;
   }
@@ -212,14 +162,15 @@
     container?.classList.remove("is-invalid");
     control.removeAttribute("aria-invalid");
     const errorId = control.dataset.adminQolErrorId;
-    if (errorId) {
-      document.getElementById(errorId)?.remove();
-      const describedBy = text(control.getAttribute("aria-describedby"))
-        .split(" ").filter((value) => value && value !== errorId).join(" ");
-      if (describedBy) control.setAttribute("aria-describedby", describedBy);
-      else control.removeAttribute("aria-describedby");
-      delete control.dataset.adminQolErrorId;
-    }
+    if (!errorId) return;
+    document.getElementById(errorId)?.remove();
+    const describedBy = text(control.getAttribute("aria-describedby"))
+      .split(" ")
+      .filter((value) => value && value !== errorId)
+      .join(" ");
+    if (describedBy) control.setAttribute("aria-describedby", describedBy);
+    else control.removeAttribute("aria-describedby");
+    delete control.dataset.adminQolErrorId;
   }
 
   function setFieldError(control, message) {
@@ -235,19 +186,23 @@
     error.textContent = message;
     container?.append(error);
     control.dataset.adminQolErrorId = error.id;
-    const describedBy = new Set(text(control.getAttribute("aria-describedby")).split(" ").filter(Boolean));
+    const describedBy = new Set(
+      text(control.getAttribute("aria-describedby")).split(" ").filter(Boolean),
+    );
     describedBy.add(error.id);
     control.setAttribute("aria-describedby", [...describedBy].join(" "));
   }
 
   function formMessageElement(form, config) {
-    let message = form.querySelector(":scope > .admin-qol-form-message, .admin-qol-form-message");
+    let message = form.querySelector(".admin-qol-form-message");
     if (message) return message;
     message = document.createElement("div");
     message.className = "admin-qol-form-message";
     message.setAttribute("role", "status");
     message.setAttribute("aria-live", "polite");
-    const target = config?.messageTarget ? form.querySelector(config.messageTarget) : null;
+    const target = config?.messageTarget
+      ? form.querySelector(config.messageTarget)
+      : null;
     if (target?.parentNode) target.parentNode.insertBefore(message, target);
     else form.prepend(message);
     return message;
@@ -263,16 +218,10 @@
 
   function clearFormMessage(form) {
     const message = form?.querySelector?.(".admin-qol-form-message");
-    if (message) {
-      message.hidden = true;
-      message.textContent = "";
-      delete message.dataset.state;
-    }
-  }
-
-  function defaultValidationMessage(rule, value) {
-    if (text(value)) return "";
-    return `${rule.label} is required.`;
+    if (!message) return;
+    message.hidden = true;
+    message.textContent = "";
+    delete message.dataset.state;
   }
 
   function validateStoreStock(form, invalid) {
@@ -286,9 +235,10 @@
       }
     }
     if (stockMode === "Country") {
-      const countryInputs = [...form.querySelectorAll("[data-admin-terminal-store-country-stock]")];
-      const hasStock = countryInputs.some((input) => Number(input.value) > 0);
-      if (!hasStock && countryInputs[0]) {
+      const countryInputs = [...form.querySelectorAll(
+        "[data-admin-terminal-store-country-stock]",
+      )];
+      if (!countryInputs.some((input) => Number(input.value) > 0) && countryInputs[0]) {
         setFieldError(countryInputs[0], "Enter stock for at least one country.");
         invalid.push(countryInputs[0]);
       }
@@ -298,12 +248,10 @@
   function validateForm(form, options = {}) {
     const config = formConfig(form);
     if (!config) return true;
-    const draftMode = options.draftMode === true;
     const invalid = [];
     clearFormMessage(form);
-
     for (const rule of config.fields) {
-      if (draftMode && rule.name !== "title") continue;
+      if (options.draftMode === true && rule.name !== "title") continue;
       const control = fieldControl(form, rule.name);
       if (!(control instanceof HTMLElement)) continue;
       clearFieldError(control);
@@ -311,78 +259,30 @@
       const value = text(control.value);
       const message = typeof rule.validate === "function"
         ? rule.validate(value, control, form)
-        : defaultValidationMessage(rule, value);
+        : value ? "" : `${rule.label} is required.`;
       if (message) {
         setFieldError(control, message);
         invalid.push(control);
       }
     }
-
-    if (form.matches("[data-admin-terminal-store-form]")) validateStoreStock(form, invalid);
-
-    if (invalid.length) {
-      showFormMessage(
-        form,
-        "error",
-        `Complete ${invalid.length} required ${invalid.length === 1 ? "field" : "fields"} before continuing.`,
-      );
-      invalid[0].focus({ preventScroll: true });
-      invalid[0].scrollIntoView({ block: "center", behavior: "smooth" });
-      return false;
+    if (form.matches("[data-admin-terminal-store-form]")) {
+      validateStoreStock(form, invalid);
     }
-    return true;
-  }
-
-  function validateMaterialBuilder(button) {
-    const builder = button.closest("[data-admin-terminal-contract-material-builder]");
-    if (!builder || builder.hidden) return true;
-    const title = builder.querySelector('[name="materialTitle"]');
-    const type = text(builder.querySelector('input[type="hidden"]')?.value).toLowerCase();
-    const invalid = [];
-    if (title && !text(title.value)) {
-      setFieldError(title, "Material title is required.");
-      invalid.push(title);
-    }
-    if (type === "link") {
-      const url = builder.querySelector('[name="materialUrl"]');
-      let valid = false;
-      try {
-        valid = ["http:", "https:"].includes(new URL(text(url?.value)).protocol);
-      } catch (_) {}
-      if (!valid) {
-        setFieldError(url, "Enter a valid http or https link.");
-        invalid.push(url);
-      }
-    }
-    if (invalid.length) {
-      invalid[0].focus();
-      return false;
-    }
-    return true;
-  }
-
-  function validateSchedule(button) {
-    const picker = button.closest("[data-admin-terminal-contract-schedule-picker]") ||
-      document.querySelector("[data-admin-terminal-contract-schedule-picker]:not([hidden])");
-    if (!picker) return true;
-    const date = picker.querySelector('input[type="date"]');
-    const time = picker.querySelector('input[type="time"]');
-    const invalid = [];
-    for (const [control, message] of [[date, "Choose a posting date."], [time, "Choose a posting time."]]) {
-      if (control && !text(control.value)) {
-        setFieldError(control, message);
-        invalid.push(control);
-      }
-    }
-    if (invalid.length) {
-      invalid[0].focus();
-      return false;
-    }
-    return true;
+    if (!invalid.length) return true;
+    showFormMessage(
+      form,
+      "error",
+      `Complete ${invalid.length} required ${invalid.length === 1 ? "field" : "fields"} before continuing.`,
+    );
+    invalid[0].focus({ preventScroll: true });
+    invalid[0].scrollIntoView({ block: "center", behavior: "smooth" });
+    return false;
   }
 
   function scannerElements() {
-    const consoleElement = document.querySelector("[data-admin-terminal-scanner-console]");
+    const consoleElement = document.querySelector(
+      "[data-admin-terminal-scanner-console]",
+    );
     if (!consoleElement) return null;
     return {
       consoleElement,
@@ -408,59 +308,51 @@
     const elements = scannerElements();
     if (!elements) return;
     elements.consoleElement.dataset.adminQolScannerState = "processing";
+    elements.consoleElement.setAttribute("aria-busy", "true");
     if (elements.state) elements.state.textContent = "Scanning";
     if (elements.empty) {
       elements.empty.hidden = false;
-      const strong = elements.empty.querySelector("strong");
-      const small = elements.empty.querySelector("small");
-      if (strong) strong.textContent = "Scanning";
-      if (small) small.textContent = "Checking the player code…";
+      elements.empty.querySelector("strong")?.replaceChildren("Scanning");
+      elements.empty.querySelector("small")?.replaceChildren("Checking the player code…");
     }
     if (elements.result) elements.result.hidden = true;
     setScannerPanel(elements.autoPanel, "Processing", "Validating attendance…");
     setScannerPanel(elements.manualPanel, "Processing", "Validating attendance…");
-    elements.consoleElement.setAttribute("aria-busy", "true");
   }
 
   function setScannerCompleted() {
-    window.setTimeout(() => {
-      const elements = scannerElements();
-      if (!elements) return;
-      elements.consoleElement.dataset.adminQolScannerState = "completed";
-      elements.consoleElement.removeAttribute("aria-busy");
-      if (elements.state) elements.state.textContent = "Completed";
-      setScannerPanel(elements.autoPanel, "Listening", "Ready for the next scan.");
-      setScannerPanel(elements.manualPanel, "Manual entry", "Ready for the next code.");
-      window.setTimeout(() => {
-        const current = scannerElements();
-        if (!current || current.consoleElement.dataset.adminQolScannerState !== "completed") return;
-        delete current.consoleElement.dataset.adminQolScannerState;
-        if (current.state) current.state.textContent = "Armed";
-        setScannerPanel(current.autoPanel, "Listening", "Auto-submit is active.");
-        setScannerPanel(current.manualPanel, "Manual entry", "Fallback mode");
-      }, 1800);
-    }, 80);
+    const elements = scannerElements();
+    if (!elements) return;
+    elements.consoleElement.dataset.adminQolScannerState = "completed";
+    elements.consoleElement.removeAttribute("aria-busy");
+    if (elements.state) elements.state.textContent = "Completed";
+    setScannerPanel(elements.autoPanel, "Listening", "Ready for the next scan.");
+    setScannerPanel(elements.manualPanel, "Manual entry", "Ready for the next code.");
+    document.dispatchEvent(new CustomEvent("econovaria:admin-scanner-state", {
+      detail: { state: "completed" },
+    }));
   }
 
   function setScannerError(message) {
-    window.setTimeout(() => {
-      const elements = scannerElements();
-      if (!elements) return;
-      elements.consoleElement.dataset.adminQolScannerState = "error";
-      elements.consoleElement.removeAttribute("aria-busy");
-      if (elements.state) elements.state.textContent = "Error";
-      if (elements.empty) {
-        elements.empty.hidden = false;
-        const strong = elements.empty.querySelector("strong");
-        const small = elements.empty.querySelector("small");
-        if (strong) strong.textContent = "Scan failed";
-        if (small) small.textContent = message || "Check the player code and try again.";
-      }
-      if (elements.result) elements.result.hidden = true;
-      setScannerPanel(elements.autoPanel, "Not submitted", "Check the code and try again.");
-      setScannerPanel(elements.manualPanel, "Not submitted", "Check the code and try again.");
-      (elements.manualInput || elements.autoInput)?.focus();
-    }, 80);
+    const elements = scannerElements();
+    if (!elements) return;
+    elements.consoleElement.dataset.adminQolScannerState = "error";
+    elements.consoleElement.removeAttribute("aria-busy");
+    if (elements.state) elements.state.textContent = "Error";
+    if (elements.empty) {
+      elements.empty.hidden = false;
+      elements.empty.querySelector("strong")?.replaceChildren("Scan failed");
+      elements.empty.querySelector("small")?.replaceChildren(
+        message || "Check the player code and try again.",
+      );
+    }
+    if (elements.result) elements.result.hidden = true;
+    setScannerPanel(elements.autoPanel, "Not submitted", "Check the code and try again.");
+    setScannerPanel(elements.manualPanel, "Not submitted", "Check the code and try again.");
+    (elements.manualInput || elements.autoInput)?.focus();
+    document.dispatchEvent(new CustomEvent("econovaria:admin-scanner-state", {
+      detail: { state: "error" },
+    }));
   }
 
   function scannerCode() {
@@ -479,9 +371,7 @@
     skeleton.setAttribute("aria-label", "Loading administrator data");
     skeleton.innerHTML = `
       <div class="admin-qol-skeleton-head"><i></i><i></i></div>
-      <div class="admin-qol-skeleton-grid">
-        <i></i><i></i><i></i><i></i><i></i><i></i>
-      </div>
+      <div class="admin-qol-skeleton-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <span class="admin-qol-sr-only">Loading administrator data</span>`;
     main.append(skeleton);
     return skeleton;
@@ -500,7 +390,10 @@
     if (!force && pendingPageReads > 0) return;
     const skeleton = document.querySelector(".admin-qol-page-skeleton");
     if (!skeleton) return;
-    const remaining = Math.max(0, MIN_SKELETON_MS - (Date.now() - pageSkeletonShownAt));
+    const remaining = Math.max(
+      0,
+      MIN_SKELETON_MS - (Date.now() - pageSkeletonShownAt),
+    );
     if (pageSkeletonTimer) window.clearTimeout(pageSkeletonTimer);
     pageSkeletonTimer = window.setTimeout(() => {
       if (!force && pendingPageReads > 0) return;
@@ -511,14 +404,77 @@
     }, remaining);
   }
 
-  function beginPageRead() {
-    pendingPageReads += 1;
-    if (initialPageLoad || navigationLoad) showPageSkeleton();
+  function rememberActionContext(action, button, form) {
+    if (!action) return;
+    const queue = pendingActionContexts.get(action) || [];
+    queue.push({ action, button, form, capturedAt: Date.now() });
+    pendingActionContexts.set(action, queue.slice(-4));
   }
 
-  function finishPageRead() {
-    pendingPageReads = Math.max(0, pendingPageReads - 1);
-    if (pendingPageReads === 0) hidePageSkeleton();
+  function consumeActionContext(action) {
+    const queue = pendingActionContexts.get(action) || [];
+    const context = queue.shift() || {
+      action,
+      button: actionButton(action),
+      form: actionButton(action)?.closest("form") || null,
+      capturedAt: Date.now(),
+    };
+    if (queue.length) pendingActionContexts.set(action, queue);
+    else pendingActionContexts.delete(action);
+    return context;
+  }
+
+  function beginLifecycle(detail) {
+    if (detail.pageRead && (initialPageLoad || navigationLoad)) {
+      pendingPageReads += 1;
+      showPageSkeleton();
+    }
+    if (!detail.action || detail.action === "admin-read") return;
+    const context = consumeActionContext(detail.action);
+    requestContexts.set(detail.requestId, context);
+    const labels = actionLabels(detail.action);
+    if (detail.action === "submit-attendance-scan") setScannerProcessing();
+    if (context.button) setButtonState(context.button, "loading", labels.loading);
+    if (context.form) showFormMessage(context.form, "loading", labels.loading.replace("…", ""));
+  }
+
+  function finishLifecycle(detail) {
+    if (detail.pageRead) {
+      pendingPageReads = Math.max(0, pendingPageReads - 1);
+      if (pendingPageReads === 0) hidePageSkeleton();
+    }
+    const context = requestContexts.get(detail.requestId);
+    requestContexts.delete(detail.requestId);
+    if (!context) return;
+    const labels = actionLabels(context.action);
+    const success = detail.phase === "committed";
+    const message = text(detail.message) || (success ? labels.success : labels.error);
+    if (context.action === "submit-attendance-scan") {
+      if (success) setScannerCompleted();
+      else setScannerError(message);
+    }
+    if (context.button) {
+      holdButtonState(
+        context.button,
+        success ? "success" : "error",
+        success ? labels.success : labels.error,
+        success ? SUCCESS_HOLD_MS : ERROR_HOLD_MS,
+      );
+    }
+    if (context.form) {
+      showFormMessage(context.form, success ? "success" : "error", message);
+    }
+  }
+
+  function handleRequestLifecycle(event) {
+    const detail = event.detail && typeof event.detail === "object"
+      ? event.detail
+      : {};
+    if (!text(detail.requestId)) return;
+    if (detail.phase === "started") beginLifecycle(detail);
+    else if (["committed", "failed", "cancelled"].includes(detail.phase)) {
+      finishLifecycle(detail);
+    }
   }
 
   function configureForm(form) {
@@ -527,8 +483,7 @@
     form.dataset.adminQolConfigured = "true";
     form.setAttribute("novalidate", "novalidate");
     for (const rule of config.fields) {
-      const control = fieldControl(form, rule.name);
-      if (control instanceof HTMLElement) control.setAttribute("aria-required", "true");
+      fieldControl(form, rule.name)?.setAttribute("aria-required", "true");
     }
   }
 
@@ -569,139 +524,64 @@
       ? event.submitter
       : form.querySelector('button[type="submit"]');
     const action = text(submitter?.dataset.adminTerminalAction) || config.action;
-    if (!validateForm(form)) {
+    const draftMode = action === "save-contract-draft";
+    if (!validateForm(form, { draftMode })) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (submitter) holdButtonState(submitter, "error", "Check required fields", ERROR_HOLD_MS);
+      if (submitter) {
+        holdButtonState(submitter, "error", "Check required fields", ERROR_HOLD_MS);
+      }
       return;
     }
-    activeAction = { action, button: submitter, form, startedAt: Date.now() };
-    if (submitter) setButtonState(submitter, "loading", actionLabels(action).loading);
-    showFormMessage(form, "loading", actionLabels(action).loading.replace("…", ""));
+    rememberActionContext(action, submitter, form);
   }, true);
 
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const nav = target?.closest("[data-admin-section]");
+    if (!target) return;
+    const nav = target.closest("[data-admin-section]");
     if (nav && !nav.hasAttribute("disabled") && nav.getAttribute("aria-disabled") !== "true") {
       navigationLoad = true;
       showPageSkeleton();
-      window.setTimeout(() => hidePageSkeleton(), 800);
+      window.requestAnimationFrame(() => reconcile(document));
     }
-
-    const button = target?.closest("button");
+    const button = target.closest("button");
     if (!(button instanceof HTMLButtonElement)) return;
     const action = text(button.dataset.adminTerminalAction);
     if (!action) return;
-
-    if (action === "save-contract-material-builder" && !validateMaterialBuilder(button)) {
+    if (action === "submit-attendance-scan" && !scannerCode()) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      holdButtonState(button, "error", "Check required fields", ERROR_HOLD_MS);
+      const elements = scannerElements();
+      const input = elements?.manualInput || elements?.autoInput;
+      if (input) setFieldError(input, "Enter or scan a player code.");
+      setScannerError("Enter or scan a player code.");
+      holdButtonState(button, "error", "Code required", ERROR_HOLD_MS);
       return;
     }
-
-    if (action === "confirm-contract-schedule" && !validateSchedule(button)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      holdButtonState(button, "error", "Choose date and time", ERROR_HOLD_MS);
-      return;
-    }
-
-    if (action === "save-contract-draft") {
-      const form = button.closest("form");
-      if (form && !validateForm(form, { draftMode: true })) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        holdButtonState(button, "error", "Add a title", ERROR_HOLD_MS);
-        return;
-      }
-    }
-
-    if (action === "submit-attendance-scan") {
-      if (!scannerCode()) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const elements = scannerElements();
-        const input = elements?.manualInput || elements?.autoInput;
-        if (input) setFieldError(input, "Enter or scan a player code.");
-        setScannerError("Enter or scan a player code.");
-        holdButtonState(button, "error", "Code required", ERROR_HOLD_MS);
-        return;
-      }
-      setScannerProcessing();
-    }
-
     if (button.type !== "submit") {
-      activeAction = { action, button, form: button.closest("form"), startedAt: Date.now() };
+      rememberActionContext(action, button, button.closest("form"));
     }
   }, true);
 
-  window.fetch = async function econovariaAdminQualityFetch(input, init) {
-    const url = requestUrl(input);
-    const method = text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase() || "GET";
-    const relevant = isAdminRequest(url);
-    const pageRead = relevant && method === "GET" && (initialPageLoad || navigationLoad);
-    const body = relevant && method !== "GET" && method !== "HEAD" ? await requestBody(input, init) : {};
-    const action = relevant && method !== "GET" && method !== "HEAD" ? inferAction(body, url, method) : "";
-    const labels = actionLabels(action);
-    const button = action ? actionButton(action) : null;
-    const form = activeAction?.form?.isConnected ? activeAction.form : button?.closest("form");
-
-    if (pageRead) beginPageRead();
-    if (action) {
-      if (action === "submit-attendance-scan") setScannerProcessing();
-      if (button) setButtonState(button, "loading", labels.loading);
-      if (form) showFormMessage(form, "loading", labels.loading.replace("…", ""));
-    }
-
-    try {
-      const response = await delegatedFetch(input, init);
-      const payload = action ? await safeJson(response) : {};
-      if (pageRead) finishPageRead();
-
-      if (action) {
-        if (response.ok) {
-          if (action === "submit-attendance-scan") setScannerCompleted();
-          if (button) holdButtonState(button, "success", labels.success, SUCCESS_HOLD_MS);
-          if (form) showFormMessage(form, "success", labels.success);
-        } else {
-          const message = responseMessage(payload, labels.error);
-          if (action === "submit-attendance-scan") setScannerError(message);
-          if (button) holdButtonState(button, "error", labels.error, ERROR_HOLD_MS);
-          if (form) showFormMessage(form, "error", message);
-        }
-      }
-      return response;
-    } catch (error) {
-      if (pageRead) finishPageRead();
-      if (action) {
-        const message = text(error?.message) || labels.error;
-        if (action === "submit-attendance-scan") setScannerError(message);
-        if (button) holdButtonState(button, "error", labels.error, ERROR_HOLD_MS);
-        if (form) showFormMessage(form, "error", message);
-      }
-      throw error;
-    } finally {
-      if (activeAction && Date.now() - activeAction.startedAt > 300) {
-        window.setTimeout(() => {
-          if (activeAction && Date.now() - activeAction.startedAt > 1000) activeAction = null;
-        }, 1000);
-      }
-    }
-  };
-
-  if (document.body && typeof MutationObserver === "function") {
-    const observer = new MutationObserver((mutations) => {
-      const hasAddedElements = mutations.some((mutation) =>
-        [...mutation.addedNodes].some((node) => node instanceof Element)
-      );
-      if (hasAddedElements) window.requestAnimationFrame(() => reconcile(document));
+  document.addEventListener(
+    "econovaria:admin-request-lifecycle",
+    handleRequestLifecycle,
+  );
+  for (const eventName of [
+    "econovaria:admin-route-mounted",
+    "econovaria:admin-modal-mounted",
+    "econovaria:admin-account-surface-ready",
+  ]) {
+    document.addEventListener(eventName, (event) => {
+      const root = event.target instanceof Element ? event.target : document;
+      window.requestAnimationFrame(() => reconcile(root));
     });
-    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  document.addEventListener("DOMContentLoaded", () => reconcile(document), { once: true });
+  document.addEventListener("DOMContentLoaded", () => reconcile(document), {
+    once: true,
+  });
   reconcile(document);
 
   window.EconovariaAdminInteractionQuality = {
@@ -711,5 +591,8 @@
     setScannerError,
     showPageSkeleton,
     hidePageSkeleton,
+    notifyMounted(root = document) {
+      reconcile(root);
+    },
   };
 })();
