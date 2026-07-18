@@ -6,6 +6,7 @@ import {
   PlayerStockAssetDetailError,
   PlayerStockAssetDetailPersistenceError,
   type PlayerStockAssetHistoryPointDto,
+  type PlayerStockAssetHistoryRecord,
 } from "../contracts/playerStockAssetDetailContracts.ts";
 import { toPlayerStockAssetDto } from "./playerStockAssetDtoMapper.ts";
 
@@ -84,7 +85,7 @@ export class PlayerStockAssetDetailService {
 }
 
 function toHistoryDto(
-  point: Parameters<typeof toHistoryDto>[0],
+  point: PlayerStockAssetHistoryRecord,
 ): PlayerStockAssetHistoryPointDto {
   return {
     tickIndex: point.tickIndex,
