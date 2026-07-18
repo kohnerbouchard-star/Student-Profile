@@ -19,8 +19,8 @@ export interface PlayerInventoryRecord {
   readonly category: string;
   readonly unitValue: number;
   readonly currencyCode: string;
-  readonly itemStatus: string;
-  readonly itemVisibility: string;
+  readonly itemStatus: "active" | "disabled" | "archived";
+  readonly itemVisibility: "visible" | "hidden";
   readonly quantityOwned: number;
   readonly quantityReserved: number;
   readonly createdAt: string;
@@ -37,6 +37,7 @@ export interface PlayerInventoryReadRepository {
   readInventory(input: {
     readonly gameId: string;
     readonly playerUuid: string;
+    readonly limit: number;
   }): Promise<PlayerInventoryRepositoryResult>;
 }
 
@@ -55,8 +56,8 @@ export interface PlayerInventoryItemDto {
   readonly unitValue: number;
   readonly totalOwnedValue: number;
   readonly currencyCode: string;
-  readonly itemStatus: string;
-  readonly itemVisibility: string;
+  readonly itemStatus: "active" | "disabled" | "archived";
+  readonly itemVisibility: "player" | "hidden";
   readonly availableActions: readonly string[];
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -82,7 +83,7 @@ export interface PlayerInventoryReadResponseBody {
   };
   readonly items: readonly PlayerInventoryItemDto[];
   readonly emptyState: {
-    readonly reason: "no_inventory";
+    readonly reason: "inventory_empty";
   } | null;
 }
 
@@ -105,7 +106,8 @@ export class PlayerInventoryReadPersistenceError extends Error {
   constructor(
     readonly code:
       | "player_inventory_schema_not_applied"
-      | "player_inventory_read_failed",
+      | "player_inventory_read_failed"
+      | "player_inventory_metadata_missing",
     message: string,
   ) {
     super(message);
