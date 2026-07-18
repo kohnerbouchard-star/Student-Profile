@@ -6,7 +6,7 @@ Version: 1.0.0-draft
 Maturity: draft
 Country: Lumenor
 Owner domain: world and narrative canon
-Lead supporting character: `character.lumenor.dena-sol.v1`
+Lead supporting character: `character.lumenor.dena-holt.v1`
 Implementation status: definition only
 
 ## Purpose
@@ -56,7 +56,7 @@ Trust rises through accurate labeling, visible correction, independent evidence,
 
 ## Review status
 
-- narrative: pending
-- representation: pending
-- economic: pending
-- technical: pending
+- narrative: pending;
+- representation: pending;
+- economic: pending;
+- technical: pending.
