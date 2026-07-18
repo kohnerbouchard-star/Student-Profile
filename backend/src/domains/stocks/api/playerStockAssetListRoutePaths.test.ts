@@ -43,6 +43,16 @@ Deno.test("player stock asset routes reject internal UUIDs and malformed detail 
     readPlayerStockAssetRoutePath("/players/me/stocks/orders"),
     null,
   );
+  assertEquals(
+    readPlayerStockAssetRoutePath("/spoof/players/me/stocks/assets"),
+    null,
+  );
+  assertEquals(
+    readPlayerStockAssetRoutePath(
+      "/spoof/classroom-api/players/me/stocks/assets",
+    ),
+    null,
+  );
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

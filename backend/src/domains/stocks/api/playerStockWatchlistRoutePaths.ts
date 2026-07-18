@@ -10,26 +10,27 @@ export function readPlayerStockWatchlistRoutePath(
   pathname: string,
 ): PlayerStockWatchlistRoute | null {
   const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
+  const routeSegments = readExactRouteSegments(segments);
 
   if (
-    playersIndex < 0 ||
-    segments[playersIndex + 1] !== "me" ||
-    segments[playersIndex + 2] !== "stocks" ||
-    segments[playersIndex + 3] !== "watchlist"
+    !routeSegments ||
+    routeSegments[0] !== "players" ||
+    routeSegments[1] !== "me" ||
+    routeSegments[2] !== "stocks" ||
+    routeSegments[3] !== "watchlist"
   ) {
     return null;
   }
 
-  if (playersIndex + 4 === segments.length) {
+  if (routeSegments.length === 4) {
     return { kind: "watchlist" };
   }
 
-  const rawAssetId = segments[playersIndex + 4] ?? "";
+  const rawAssetId = routeSegments[4] ?? "";
   const assetId = rawAssetId.trim().toUpperCase();
 
   if (
-    playersIndex + 5 === segments.length &&
+    routeSegments.length === 5 &&
     TICKER_PATTERN.test(assetId) &&
     !UUID_PATTERN.test(assetId)
   ) {
@@ -37,4 +38,20 @@ export function readPlayerStockWatchlistRoutePath(
   }
 
   return { kind: "malformed" };
+}
+
+function readExactRouteSegments(
+  segments: readonly string[],
+): readonly string[] | null {
+  if (segments[0] === "players") return segments;
+
+  if (
+    segments[0] === "functions" &&
+    segments[1] === "v1" &&
+    segments[2] === "classroom-api"
+  ) {
+    return segments.slice(3);
+  }
+
+  return null;
 }

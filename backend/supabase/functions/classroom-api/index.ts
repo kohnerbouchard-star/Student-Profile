@@ -67,6 +67,12 @@ import {
   readPlayerSessionLogoutRoutePath,
 } from "../../../src/domains/players/api/playerSessionLogoutRoutePaths.ts";
 import {
+  handlePlayerCapabilityManifestRequest,
+} from "../../../src/domains/players/api/playerCapabilityManifestHttpHandler.ts";
+import {
+  readPlayerCapabilityManifestRoutePath,
+} from "../../../src/domains/players/api/playerCapabilityManifestRoutePaths.ts";
+import {
   handlePlayerLoginRequest,
 } from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
 import {
@@ -164,6 +170,18 @@ Deno.serve(async (request) => {
       service: "classroom-api",
       status: "ready",
     });
+  }
+
+  const playerCapabilityManifestRoute = readPlayerCapabilityManifestRoutePath(
+    url.pathname,
+  );
+
+  if (playerCapabilityManifestRoute) {
+    return handlePlayerCapabilityManifestRequest(
+      request,
+      playerCapabilityManifestRoute,
+      { createServiceClient },
+    );
   }
 
   const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);

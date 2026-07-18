@@ -21,26 +21,27 @@ export function readPlayerStockMarketPublicRoutePath(
   if (watchlistRoute) return watchlistRoute;
 
   const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
+  const routeSegments = readExactRouteSegments(segments);
 
   if (
-    playersIndex < 0 ||
-    segments[playersIndex + 1] !== "me" ||
-    segments[playersIndex + 2] !== "stocks" ||
-    segments[playersIndex + 3] !== "assets"
+    !routeSegments ||
+    routeSegments[0] !== "players" ||
+    routeSegments[1] !== "me" ||
+    routeSegments[2] !== "stocks" ||
+    routeSegments[3] !== "assets"
   ) {
     return null;
   }
 
-  if (playersIndex + 4 === segments.length) {
+  if (routeSegments.length === 4) {
     return { kind: "assets" };
   }
 
-  if (playersIndex + 5 !== segments.length) {
+  if (routeSegments.length !== 5) {
     return { kind: "malformed" };
   }
 
-  const encodedAssetId = segments[playersIndex + 4] ?? "";
+  const encodedAssetId = routeSegments[4] ?? "";
   let assetId = "";
 
   try {
@@ -58,3 +59,19 @@ export const readPlayerStockAssetRoutePath =
   readPlayerStockMarketPublicRoutePath;
 export const readPlayerStockAssetListRoutePath =
   readPlayerStockMarketPublicRoutePath;
+
+function readExactRouteSegments(
+  segments: readonly string[],
+): readonly string[] | null {
+  if (segments[0] === "players") return segments;
+
+  if (
+    segments[0] === "functions" &&
+    segments[1] === "v1" &&
+    segments[2] === "classroom-api"
+  ) {
+    return segments.slice(3);
+  }
+
+  return null;
+}

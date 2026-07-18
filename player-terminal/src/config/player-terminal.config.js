@@ -21,6 +21,10 @@ const DEFAULT_CONFIG = Object.freeze({
   sessionRequiredEvent: "econovaria:player-session-required",
   sessionInvalidEvent: "econovaria:player-session-invalid",
   logoutRequestedEvent: "econovaria:player-logout-requested",
+  sessionExitUrl: "",
+  sessionExitDelayMs: 120,
+  sessionExpirySkewMs: 250,
+  sessionExpiryWatchIntervalMs: 1000,
   onSessionRequired: null,
   onSessionInvalid: null,
   onLogoutRequested: null
@@ -61,6 +65,14 @@ export function buildPlayerTerminalConfig(runtime = {}, locationLike = globalThi
     developerDiagnostics: environment === "development" && runtime.developerDiagnostics === true,
     requestTimeoutMs: boundedInteger(runtime.requestTimeoutMs, DEFAULT_CONFIG.requestTimeoutMs, 1000, 60000),
     writeCooldownMs: boundedInteger(runtime.writeCooldownMs, DEFAULT_CONFIG.writeCooldownMs, 250, 10000),
+    sessionExitDelayMs: boundedInteger(runtime.sessionExitDelayMs, DEFAULT_CONFIG.sessionExitDelayMs, 0, 2000),
+    sessionExpirySkewMs: boundedInteger(runtime.sessionExpirySkewMs, DEFAULT_CONFIG.sessionExpirySkewMs, 0, 30000),
+    sessionExpiryWatchIntervalMs: boundedInteger(
+      runtime.sessionExpiryWatchIntervalMs,
+      DEFAULT_CONFIG.sessionExpiryWatchIntervalMs,
+      250,
+      10000
+    ),
     allowedImageHosts: Array.isArray(runtime.allowedImageHosts)
       ? runtime.allowedImageHosts.map((host) => String(host).trim().toLowerCase()).filter(Boolean).slice(0, 50)
       : []

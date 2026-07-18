@@ -15,8 +15,8 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 | PR #141 Market detail/history | Reviewed and redesigned | Complete. Public ticker route, 1–500 history bound, same-game internal resolution, duplicate detection, deterministic ascending history. |
 | PR #141 stock watchlists | Reviewed and redesigned | Complete. Public ticker routes, token-derived ownership, deterministic reads, idempotent PUT/DELETE, forward-only migration, forced RLS, and browser privilege denial. |
 | PR #141 Inventory reads | Reviewed and redesigned | Complete. Public item keys, token-derived ownership, 200-holding bound, batched Store metadata, UUID-private DTOs, explicit empty/unavailable states, and no new migration. |
-| PR #141 notifications | Pending review | List/read routes remain donor candidates. |
-| PR #141 logout | Pending review | Session revocation behavior remains a donor candidate. |
+| PR #141 notifications | Replaced by safer design | PR #158 uses independent public notification/delivery IDs, bounded cursor reads, and scoped idempotent mark-read. |
+| PR #141 logout | Replaced by safer design | PR #158 revokes the exact token-owned session and treats repeated logout as success without UUID output. |
 | PR #141 atomic Contract acceptance | Pending manual reconciliation | Must preserve the merged submission, review, reward, and idempotency lifecycle. |
 | PR #143 capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise incomplete mutations. |
 | PR #143 Inventory redemption | Pending migration and transaction review | Requires a fresh migration, restricted RPC grants, retry-safe state transitions, and Backend-only player/Admin routes. |
@@ -78,8 +78,6 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 
 ## Remaining PR #141 candidates
 
-- notification list/read parser, handler, repository, and tests;
-- player-session logout handler and repository;
 - atomic Contract acceptance and transaction tests.
 
 ## PR #143 candidates
@@ -107,9 +105,9 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 4. Market detail/history — complete;
 5. stock watchlist reads and writes — complete;
 6. Inventory read — complete;
-7. notifications list/read;
-8. player logout;
-9. generated capability manifest;
+7. notifications list/read — replaced by authoritative PR #158 implementation;
+8. player logout — replaced by authoritative PR #158 implementation;
+9. generated capability manifest — in progress as a safer reviewed allowlist;
 10. atomic Contract acceptance;
 11. Inventory redemption schema, RPCs, and player/Admin routes;
 12. security, replay, runtime contract, staging documentation, and final verification.

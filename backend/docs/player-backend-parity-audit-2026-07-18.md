@@ -37,10 +37,10 @@ PR #158 owns Backend-only reconciliation for the merged Player Terminal and curr
 | Contracts list/submission | existing player Contract routes | Implemented | Current lifecycle preserved. |
 | Contract acceptance | `POST /players/me/contracts/:contractId/accept` | Missing | Requires atomic reconciliation. |
 | Inventory read | `GET /players/me/inventory` | Implemented | Token-scoped, maximum 200 holdings, public item keys, batched Store metadata, UUID-private DTO, explicit empty/unavailable state. |
-| Notifications | `GET /players/me/notifications`; read mutation | Missing | Next bounded tranche. |
-| Logout | `POST /players/me/session/logout` | Missing | Follows notifications. |
+| Notifications | `GET /players/me/notifications`; `POST /players/me/notifications/read` | Implemented | Public delivery IDs, bounded cursor read, and idempotent mark-read. |
+| Logout | `POST /players/me/session/logout` | Implemented | Token-owned conditional revocation with retry-idempotent replay. |
 | Banking summary | `GET /players/me/ledger` | Implemented read-only | Transfers/savings remain unsupported. |
-| Capability manifest | bootstrap extension | Missing | Generate only after route support is authoritative. |
+| Capability manifest | `GET /players/me/capabilities` | In progress | Separate authenticated UUID-private route; advertises only reviewed PR #158 support. |
 | Inventory redemption | replacement contract | Planned | Generic use remains disabled. |
 
 ## Inventory read implementation
@@ -88,9 +88,9 @@ Persistence and response controls:
 4. Market detail/history — complete;
 5. watchlist reads/writes — complete;
 6. Inventory read — complete;
-7. notifications list/read;
-8. logout;
-9. capability manifest;
+7. notifications list/read — complete;
+8. logout — complete;
+9. capability manifest — in progress;
 10. atomic Contract acceptance;
 11. Inventory redemption schema/RPCs/routes;
 12. security audit, replay, staging documentation, and final verification.

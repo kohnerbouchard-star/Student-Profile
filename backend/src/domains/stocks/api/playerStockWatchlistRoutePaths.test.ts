@@ -31,15 +31,31 @@ Deno.test("player stock watchlist route rejects UUIDs, encoded separators, and e
     { kind: "malformed" },
   );
   assertEquals(
-    readPlayerStockWatchlistRoutePath("/players/me/stocks/watchlist/AURA%2FOTHER"),
+    readPlayerStockWatchlistRoutePath(
+      "/players/me/stocks/watchlist/AURA%2FOTHER",
+    ),
     { kind: "malformed" },
   );
   assertEquals(
-    readPlayerStockWatchlistRoutePath("/players/me/stocks/watchlist/AURA/extra"),
+    readPlayerStockWatchlistRoutePath(
+      "/players/me/stocks/watchlist/AURA/extra",
+    ),
     { kind: "malformed" },
   );
   assertEquals(
     readPlayerStockWatchlistRoutePath("/players/me/stocks/assets"),
+    null,
+  );
+  assertEquals(
+    readPlayerStockWatchlistRoutePath(
+      "/spoof/players/me/stocks/watchlist",
+    ),
+    null,
+  );
+  assertEquals(
+    readPlayerStockWatchlistRoutePath(
+      "/spoof/classroom-api/players/me/stocks/watchlist",
+    ),
     null,
   );
 });
@@ -47,7 +63,9 @@ Deno.test("player stock watchlist route rejects UUIDs, encoded separators, and e
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
+      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${
+        JSON.stringify(expected)
+      }`,
     );
   }
 }
