@@ -1,6 +1,7 @@
 import { escapeHtml, formatCurrency, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "./icons.js";
 import { playerSafeErrorMessage } from "../api/errors.js";
+import { renderRouteSkeleton } from "./route-skeletons.js";
 
 export function renderStatusPill(label, tone = "cyan") {
   return `<span class="player-terminal-status-pill is-${escapeHtml(tone)}"><i aria-hidden="true"></i>${escapeHtml(label)}</span>`;
@@ -29,14 +30,8 @@ export function renderEmptyState({ title, detail, iconName = "globe" }) {
   </section>`;
 }
 
-export function renderSkeletonPage() {
-  return `<section class="player-terminal-page player-terminal-page-skeleton" aria-label="Loading player terminal">
-    <div class="player-terminal-skeleton player-terminal-skeleton-title"></div>
-    <div class="player-terminal-skeleton-grid">
-      ${Array.from({ length: 4 }, () => `<div class="player-terminal-skeleton player-terminal-skeleton-card"></div>`).join("")}
-    </div>
-    <div class="player-terminal-skeleton player-terminal-skeleton-hero"></div>
-  </section>`;
+export function renderSkeletonPage(route) {
+  return renderRouteSkeleton(route);
 }
 
 export function renderConnectionError(error) {

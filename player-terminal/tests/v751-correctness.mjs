@@ -11,6 +11,7 @@ import { renderShell } from "../src/components/layout.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { renderDashboardPage } from "../src/pages/dashboard-page.js";
 import { renderMarketplacePage } from "../src/pages/marketplace-page.js";
+import { renderProgressionPage } from "../src/pages/progression-page.js";
 import { renderStorePage } from "../src/pages/store-page.js";
 import { previewData } from "../src/data/preview-data.js";
 
@@ -70,6 +71,15 @@ assert.throws(
   "Missing nested endpoint fields must fail at the adapter boundary."
 );
 assert.doesNotThrow(() => normalizeApiResponse("banking", structuredClone(previewData.banking), { requestId: "ptr_shape_ok", path: "/banking/summary" }));
+const progressionResponse = normalizeApiResponse("progression", structuredClone(previewData.progression), { requestId: "ptr_progression_ok", path: "/players/me/progression" });
+assert.equal(typeof progressionResponse.summary, "string", "Progression summary is descriptive text, not an array field.");
+assert.ok(Array.isArray(progressionResponse.reputation), "Progression reputation must remain a validated array.");
+assert.doesNotThrow(() => renderProgressionPage({ progression: progressionResponse }, { progressionTab: "Overview" }), "A valid Progression response must render instead of becoming route-unavailable.");
+assert.throws(
+  () => normalizeApiResponse("progression", { ...structuredClone(previewData.progression), reputation: "invalid" }, { requestId: "ptr_progression_bad", path: "/players/me/progression" }),
+  (error) => error.code === "INVALID_RESPONSE",
+  "Progression must fail closed when its actual array contract is invalid."
+);
 
 const optionalApi = new PlayerApi({
   usePreviewData: false,

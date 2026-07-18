@@ -20,7 +20,7 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
   banking: Object.freeze(["transactions"]),
   loans: Object.freeze(["offers", "activeLoans", "schedule"]),
   messages: Object.freeze(["threads"]),
-  progression: Object.freeze(["summary", "milestones", "skills", "achievements", "licenses"])
+  progression: Object.freeze(["reputation", "milestones", "skills", "achievements", "licenses"])
 });
 const REQUIRED_OBJECT_FIELDS = Object.freeze({
   business: Object.freeze(["company", "operations"]),
