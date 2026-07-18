@@ -5,7 +5,7 @@ on:
     branches:
       - agent/seed-content-foundation-v1
     paths:
-      - scripts/seed-market-identity-reconciliation-audit.mjs
+      - scripts/seed-market-identity-reconciliation-summary.mjs
       - docs/seed-content/markets/universe/**
       - docs/seed-content/markets/active-subsets/**
       - .github/workflows/seed-market-identity-reconciliation.yml
@@ -36,10 +36,10 @@ jobs:
           node-version: 22.23.1
 
       - name: Generate reconciliation evidence
-        run: node scripts/seed-market-identity-reconciliation-audit.mjs
+        run: node scripts/seed-market-identity-reconciliation-summary.mjs
 
       - name: Verify deterministic evidence
-        run: node scripts/seed-market-identity-reconciliation-audit.mjs --check
+        run: node scripts/seed-market-identity-reconciliation-summary.mjs --check
 
       - name: Validate generated diff
         run: git diff --check
