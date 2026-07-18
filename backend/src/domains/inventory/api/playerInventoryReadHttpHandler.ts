@@ -59,6 +59,8 @@ export async function handlePlayerInventoryReadRequest(
   }
 
   try {
+    parsePlayerInventoryReadRequest(request, route);
+
     const envResult = (dependencies.readSupabaseEnv ?? readSupabaseEnv)();
     if (!envResult.ok) {
       return jsonError(500, {
@@ -79,7 +81,6 @@ export async function handlePlayerInventoryReadRequest(
         ),
       now: () => now,
     });
-    parsePlayerInventoryReadRequest(request, route);
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
@@ -91,9 +92,12 @@ export async function handlePlayerInventoryReadRequest(
       effectiveAt: now.toISOString(),
     });
 
-    return jsonResponse<PlayerInventoryReadResponseBody>(200, body);
+    return playerInventoryJsonResponse(body);
   } catch (error) {
-    if (error instanceof EdgeActivationError || error instanceof PlayerInventoryReadError) {
+    if (
+      error instanceof EdgeActivationError ||
+      error instanceof PlayerInventoryReadError
+    ) {
       return jsonError(error.status, {
         code: error.code,
         message: error.message,
@@ -107,4 +111,13 @@ export async function handlePlayerInventoryReadRequest(
       retryable: false,
     });
   }
+}
+
+function playerInventoryJsonResponse(
+  body: PlayerInventoryReadResponseBody,
+): Response {
+  const response = jsonResponse<PlayerInventoryReadResponseBody>(200, body);
+  response.headers.set("cache-control", "private, no-store");
+  response.headers.set("vary", "authorization, x-player-session-token");
+  return response;
 }
