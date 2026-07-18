@@ -1,0 +1,224 @@
+
+## apply canonicalization
+Canonicalized scripts/generate-seed-market-universe.mjs
+Canonicalized docs/seed-content/markets/active-subsets/active-market-rollout-status-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-collective-reference-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-equity-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-fixed-income-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-issuer-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-issuer-registry-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-active-market-candidate-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/northreach-curve-and-recalibration-v2.json
+Canonicalized docs/seed-content/markets/active-subsets/solvend-active-collective-reference-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/solvend-active-equity-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/solvend-active-fixed-income-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/solvend-active-issuer-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/solvend-active-market-candidate-and-issuers-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-collective-reference-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-equity-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-fixed-income-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-issuer-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-market-candidate-and-issuers-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-collective-reference-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-equity-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-fixed-income-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-issuer-enrichment-v1.json
+Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-market-candidate-and-issuers-v1.json
+Applied seed-market canonicalization across the generator and active candidate records.
+exit=0
+
+## generate universe
+file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236
+    if (knownIssuerName && knownIssuerName !== record.issuerName) throw new Error(`${record.issuerId} maps to inconsistent issuer names.`);
+                                                                        ^
+
+Error: issuer.northreach.public.01.v1 maps to inconsistent issuer names.
+    at validate (file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236:73)
+    at file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:258:20
+
+Node.js v22.23.1
+exit=1
+
+## generate editorial evidence
+Generated editorial screen: 0 blockers and 10 warning groups.
+exit=0
+
+## generate identity evidence
+Recorded 96 active identities with 96 blockers.
+exit=0
+
+## check canonicalization
+Verified seed-market canonicalization across the generator and active candidate records.
+exit=0
+
+## check universe
+file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236
+    if (knownIssuerName && knownIssuerName !== record.issuerName) throw new Error(`${record.issuerId} maps to inconsistent issuer names.`);
+                                                                        ^
+
+Error: issuer.northreach.public.01.v1 maps to inconsistent issuer names.
+    at validate (file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236:73)
+    at file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:258:20
+
+Node.js v22.23.1
+exit=1
+
+## check editorial evidence
+Verified editorial screen: 0 blockers and 10 warning groups.
+exit=0
+
+## check identity evidence
+Verified 96 active identities with 96 blockers.
+exit=0
+
+## test seed preflight
+
+> econovaria@0.0.0 test:seed-content-preflight
+> node --test scripts/seed-content-preflight.test.mjs
+
+TAP version 13
+# Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
+not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+  ---
+  duration_ms: 90.989474
+  type: 'test'
+  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(codes.has("UNIVERSE_FILE_MISSING"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:22:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: preflight report is deterministic for unchanged inputs
+ok 2 - preflight report is deterministic for unchanged inputs
+  ---
+  duration_ms: 118.27191
+  type: 'test'
+  ...
+# Subtest: production environment fails closed for the unauthorized design pack
+ok 3 - production environment fails closed for the unauthorized design pack
+  ---
+  duration_ms: 47.641545
+  type: 'test'
+  ...
+# Subtest: staging mode remains blocked until executable content is complete
+not ok 4 - staging mode remains blocked until executable content is complete
+  ---
+  duration_ms: 44.105086
+  type: 'test'
+  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(report.issues.some((entry) => entry.code === "UNIVERSE_NOT_STAGING_READY"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:49:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: reusable definitions reject runtime ownership fields and UUID values
+ok 5 - reusable definitions reject runtime ownership fields and UUID values
+  ---
+  duration_ms: 0.407272
+  type: 'test'
+  ...
+# Subtest: definition arrays reject duplicate stable keys
+ok 6 - definition arrays reject duplicate stable keys
+  ---
+  duration_ms: 0.174527
+  type: 'test'
+  ...
+# Subtest: declared paths cannot escape the content root
+ok 7 - declared paths cannot escape the content root
+  ---
+  duration_ms: 0.384801
+  type: 'test'
+  ...
+# Subtest: operator must provide an explicit valid environment
+ok 8 - operator must provide an explicit valid environment
+  ---
+  duration_ms: 0.24051
+  type: 'test'
+  ...
+# Subtest: simulation manifests normalize both supported checksum schemas
+ok 9 - simulation manifests normalize both supported checksum schemas
+  ---
+  duration_ms: 0.46472
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 7
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 368.053964
+exit=1
+
+## design seed preflight
+
+> econovaria@0.0.0 preflight:seed-content
+> node scripts/seed-content-preflight.mjs --environment test --mode design
+
+Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.1.0-design
+Environment: test
+Mode: design
+JSON files checked: 58
+Errors: 0; blockers: 31; warnings: 0
+[BLOCKER] ACTIVE_MARKET_COUNTRIES_INCOMPLETE docs/seed-content/markets/active-subsets/active-market-rollout-status-v1.json: 4 country candidates are committed; 10 are required.
+[BLOCKER] ARRIVAL_PACKAGES_INCOMPLETE docs/seed-content/players/arrival-packages-v1.json: 10 arrival packages lack one or more required mechanical values or introductory references.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-packages, skills-and-credentials, contract-families, progression-model, simulation.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is blocked; dependencies: starting-value-calibration, housing-model, relationship-persistence, authoritative-instantiation-route.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: banking-products is blocked; dependencies: banking-write-capability, rate-and-affordability-simulation.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: contracts is blocked; dependencies: backend-contract-lifecycle, reward-calibration.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: events-news-interactions is blocked; dependencies: event-application-authority, narrative-persistence, recovery-content.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: exchanges is blocked; dependencies: market-calendar-policy, backend-exchange-support.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: industries-and-commodities is definition-only; dependencies: subindustry-mapping, benchmark-review.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: issuers is blocked; dependencies: issuer-master-generation, stable-id-ownership.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: locations is blocked; dependencies: map-coordinate-verification, adjacency-verification, runtime-location-schema.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: market-instruments is blocked; dependencies: repository-ingestion, issuer-registry, instrument-capability-mapping, financial-calibration, market-simulation.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: progression is blocked; dependencies: progression-persistence, threshold-calibration.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: routes is blocked; dependencies: map-verification, route-runtime-model.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: staging-import is blocked; dependencies: backend-baseline, stable-id-storage, machine-readable-records.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is blocked; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is blocked; dependencies: route-capability-map, notification-deduplication.
+[BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
+[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/northreach/run-manifest-v1.json: run_northreach_market_simulation_v1.py does not match its recorded SHA-256.
+[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/thaloris/run-manifest-v1.json: input-v1.json does not match its recorded SHA-256.
+[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/thaloris/run-manifest-v1.json: summary-v1.json does not match its recorded SHA-256.
+[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/yrethia/run-manifest-v1.json: input-v1.json does not match its recorded SHA-256.
+[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/yrethia/run-manifest-v1.json: run_yrethia_market_simulation_v1.py does not match its recorded SHA-256.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: northreach_active_instruments_v1.json is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_instrument_results.csv is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_paths.csv is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_portfolio_results.csv is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/summary.json is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: instrument-results.csv is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: portfolio-results.csv is recorded but absent from the repository.
+[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: summary.json is recorded but absent from the repository.
+Result: DESIGN_VALID_WITH_BLOCKERS
+exit=0
+
+## diff check
+exit=0
+
+finalStatus=1

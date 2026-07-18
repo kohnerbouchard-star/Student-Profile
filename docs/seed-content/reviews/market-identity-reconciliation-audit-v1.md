@@ -11,7 +11,7 @@ Production authorization: false
 - conflicting reused-symbol identities: 92;
 - missing universe symbols: 4;
 - active-ID conflicts: 0;
-- exchange mismatches: 69;
+- exchange mismatches: 0;
 - blocking findings: **96**.
 
 ## Coverage

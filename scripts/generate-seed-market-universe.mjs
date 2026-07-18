@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { overlayCuratedActiveIdentities } from "./seed-market-curated-overlay-lib.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const universeRoot = path.join(repoRoot, "docs", "seed-content", "markets", "universe");
@@ -56,7 +57,7 @@ const classCodes = {
   etf_fund: "F",
   listed_trust: "T",
   index: "X",
-  commodity_reference: "R",
+  commodity_reference: "C",
 };
 
 function alphaSequence(index) {
@@ -250,6 +251,10 @@ const configs = Object.entries(originalManifest.countries).sort(([left], [right]
 if (configs.length !== 10 || configs.some((config) => !config.prefix || config.sectors.length !== 10)) throw new Error("Country generation configuration is incomplete.");
 
 const countryRecords = new Map(configs.map((config) => [config.key, buildCountry(config)]));
+const overlaySummary = await overlayCuratedActiveIdentities({
+  countryRecords,
+  activeRoot: path.join(repoRoot, "docs", "seed-content", "markets", "active-subsets"),
+});
 const validation = validate(countryRecords);
 const countries = {};
 const payloads = new Map();
@@ -269,6 +274,7 @@ for (const config of configs) {
 
 const manifest = {
   allocationPerCountry,
+  curatedActiveOverlay: overlaySummary,
   countries,
   generatedAt: "2026-07-19",
   generationSeed: originalManifest.generationSeed ?? 20260718,
