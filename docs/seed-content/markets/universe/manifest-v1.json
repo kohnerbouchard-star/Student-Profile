@@ -1,0 +1,131 @@
+{
+  "allocationPerCountry": {
+    "commodity_reference": 15,
+    "common_equity": 150,
+    "corporate_bond": 60,
+    "etf_fund": 20,
+    "index": 15,
+    "listed_trust": 15,
+    "preferred_convertible": 10,
+    "sovereign_public_bond": 35
+  },
+  "countries": {
+    "dravenlok": {
+      "capital": "Ironhold",
+      "currency": "DRV",
+      "displayName": "Dravenlok",
+      "exchange": "IHX",
+      "file": "universe/dravenlok.jsonl",
+      "instrumentCount": 320
+    },
+    "eldoran": {
+      "capital": "Crescent Bay",
+      "currency": "ELD",
+      "displayName": "Eldoran",
+      "exchange": "CMX",
+      "file": "universe/eldoran.jsonl",
+      "instrumentCount": 320
+    },
+    "lumenor": {
+      "capital": "Starfall",
+      "currency": "LUM",
+      "displayName": "Lumenor",
+      "exchange": "SCX",
+      "file": "universe/lumenor.jsonl",
+      "instrumentCount": 320
+    },
+    "northreach": {
+      "capital": "Frostgate",
+      "currency": "NRC",
+      "displayName": "Northreach",
+      "exchange": "FGX",
+      "file": "universe/northreach.jsonl",
+      "instrumentCount": 320
+    },
+    "solvend": {
+      "capital": "Aurora Spire",
+      "currency": "SLV",
+      "displayName": "Solvend",
+      "exchange": "AUX",
+      "file": "universe/solvend.jsonl",
+      "instrumentCount": 320
+    },
+    "syndalis": {
+      "capital": "Blacklight",
+      "currency": "SYN",
+      "displayName": "Syndalis",
+      "exchange": "BDX",
+      "file": "universe/syndalis.jsonl",
+      "instrumentCount": 320
+    },
+    "thaloris": {
+      "capital": "Dusk Harbor",
+      "currency": "THD",
+      "displayName": "Thaloris",
+      "exchange": "DHM",
+      "file": "universe/thaloris.jsonl",
+      "instrumentCount": 320
+    },
+    "valerion": {
+      "capital": "Glassfall",
+      "currency": "VAL",
+      "displayName": "Valerion",
+      "exchange": "GFX",
+      "file": "universe/valerion.jsonl",
+      "instrumentCount": 320
+    },
+    "xalvoria": {
+      "capital": "Emberhall",
+      "currency": "XAL",
+      "displayName": "Xalvoria",
+      "exchange": "ECX",
+      "file": "universe/xalvoria.jsonl",
+      "instrumentCount": 320
+    },
+    "yrethia": {
+      "capital": "Sableport",
+      "currency": "YRC",
+      "displayName": "Yrethia",
+      "exchange": "SBX",
+      "file": "universe/yrethia.jsonl",
+      "instrumentCount": 320
+    }
+  },
+  "generatedAt": "2026-07-18",
+  "generationSeed": 20260718,
+  "instrumentTypeCounts": {
+    "commodity_reference": 150,
+    "common_equity": 1500,
+    "corporate_bond": 600,
+    "etf_fund": 200,
+    "index": 150,
+    "listed_trust": 150,
+    "preferred_convertible": 100,
+    "sovereign_public_bond": 350
+  },
+  "maturity": "design-candidate",
+  "packId": "econovaria.market-universe.v1",
+  "productionAuthorized": false,
+  "runtimeSupportVerified": false,
+  "totalInstrumentCount": 3200,
+  "validation": {
+    "allCountryCountsEqual": true,
+    "currencyCodes": [
+      "DRV",
+      "ELD",
+      "LUM",
+      "NRC",
+      "SLV",
+      "SYN",
+      "THD",
+      "VAL",
+      "XAL",
+      "YRC"
+    ],
+    "exactly320PerCountry": true,
+    "uniqueNames": 3200,
+    "uniqueStableIds": 3200,
+    "uniqueSymbols": 3200
+  },
+  "version": "1.0.0-draft"
+}
