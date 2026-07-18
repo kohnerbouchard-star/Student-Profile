@@ -92,8 +92,23 @@ async function automaticSnapshot(label) {
     const main = document.querySelector(".admin-terminal-shell-main");
     const overlay = document.querySelector(".admin-qol-page-skeleton");
     const probe = window.__adminShapeProbe;
+    const box = (element) => {
+      const rect = element?.getBoundingClientRect();
+      return rect ? {
+        x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+        right: rect.right, bottom: rect.bottom,
+      } : null;
+    };
+    const loaded = { ...(controller?.loadedGeometry || {}) };
+    const skeleton = { ...(controller?.measureSkeleton?.() || {}) };
+    const loadedHeading = main?.querySelector(".admin-terminal-account-page h2, .admin-terminal-account-page h1");
+    const skeletonHeading = overlay?.querySelector("[data-admin-shape-skeleton-stage] .admin-terminal-account-page h2, [data-admin-shape-skeleton-stage] .admin-terminal-account-page h1");
+    if (loadedHeading && skeletonHeading) {
+      loaded.heading = box(loadedHeading);
+      skeleton.heading = box(skeletonHeading);
+    }
     return {
-      loaded: controller?.loadedGeometry || {}, skeleton: controller?.measureSkeleton?.() || {},
+      loaded, skeleton,
       busy: main?.getAttribute("aria-busy") || "", role: overlay?.getAttribute("role") || "", label: overlay?.getAttribute("aria-label") || "",
       cloneHidden: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.getAttribute("aria-hidden") || "",
       cloneInert: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.hasAttribute("inert") || false,
