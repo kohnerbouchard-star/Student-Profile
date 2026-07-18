@@ -39,6 +39,7 @@ export async function overlayCuratedActiveIdentities({ countryRecords, activeRoo
     .filter((name) => name.includes("active-market-candidate") && name.endsWith(".json"))
     .sort();
   const overlays = [];
+  const canonicalNamesForSharedIssuerIds = new Map();
 
   for (const fileName of candidateFiles) {
     const candidate = candidateShape(await readJson(path.join(activeRoot, fileName)));
@@ -67,6 +68,14 @@ export async function overlayCuratedActiveIdentities({ countryRecords, activeRoo
         }
       }
 
+      if (generated.issuerId === identity.issuerId && generated.issuerName !== identity.issuerName) {
+        const knownName = canonicalNamesForSharedIssuerIds.get(identity.issuerId);
+        if (knownName && knownName !== identity.issuerName) {
+          throw new Error(`${identity.issuerId} receives conflicting curated issuer names.`);
+        }
+        canonicalNamesForSharedIssuerIds.set(identity.issuerId, identity.issuerName);
+      }
+
       records[index] = {
         ...generated,
         id: identity.id,
@@ -87,6 +96,20 @@ export async function overlayCuratedActiveIdentities({ countryRecords, activeRoo
     }
   }
 
+  let propagatedIssuerNameCount = 0;
+  for (const records of countryRecords.values()) {
+    for (let index = 0; index < records.length; index += 1) {
+      const canonicalName = canonicalNamesForSharedIssuerIds.get(records[index].issuerId);
+      if (!canonicalName || records[index].issuerName === canonicalName) continue;
+      records[index] = {
+        ...records[index],
+        issuerName: canonicalName,
+        issuerIdentitySource: "curated-active-candidate",
+      };
+      propagatedIssuerNameCount += 1;
+    }
+  }
+
   const symbols = new Set(overlays.map((entry) => entry.symbol));
   const ids = new Set(overlays.map((entry) => entry.id));
   if (overlays.length !== 96 || symbols.size !== 96 || ids.size !== 96) {
@@ -96,6 +119,8 @@ export async function overlayCuratedActiveIdentities({ countryRecords, activeRoo
   return {
     status: "canonical-active-identities-overlaid",
     overlayCount: overlays.length,
+    propagatedIssuerNameCount,
+    sharedIssuerIdsReconciled: [...canonicalNamesForSharedIssuerIds.keys()].sort(),
     countries: [...new Set(overlays.map((entry) => entry.country))].sort(),
     sourceFiles: candidateFiles,
     activationAuthorized: false,
