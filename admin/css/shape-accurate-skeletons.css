@@ -119,11 +119,7 @@
 .admin-session-skeleton__metric::after,
 .admin-session-skeleton__panel::after,
 .admin-session-skeleton__table-head::after,
-.admin-session-skeleton__table-row::after,
-.admin-shape-skeleton-text::after,
-.admin-shape-skeleton-control::after,
-.admin-shape-skeleton-media::after,
-.admin-shape-skeleton-cell::after {
+.admin-session-skeleton__table-row::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -163,35 +159,40 @@
 .admin-shape-skeleton-text,
 .admin-shape-skeleton-control,
 .admin-shape-skeleton-cell {
-  position: relative !important;
   color: transparent !important;
   text-shadow: none !important;
   caret-color: transparent !important;
+  background-image: linear-gradient(100deg, transparent 24%, rgba(116, 226, 255, 0.12) 46%, transparent 68%) !important;
+  background-position: 200% 0 !important;
+  background-size: 200% 100% !important;
+  background-repeat: no-repeat !important;
+  animation: adminShapeSkeletonSweep 1.65s ease-in-out infinite;
 }
 
-.admin-shape-skeleton-text::after {
-  inset: 20% 4%;
-  min-height: 8px;
+.admin-shape-skeleton-text {
   border-radius: 999px;
+  background-color: rgba(116, 226, 255, 0.045) !important;
 }
 
-.admin-shape-skeleton-control::after {
-  inset: 2px;
-  border-radius: inherit;
+.admin-shape-skeleton-control {
+  background-color: rgba(116, 226, 255, 0.045) !important;
 }
 
-.admin-shape-skeleton-cell::after {
-  inset: 30% 10%;
-  border-radius: 999px;
+.admin-shape-skeleton-cell {
+  background-color: rgba(116, 226, 255, 0.035) !important;
 }
 
 .admin-shape-skeleton-media {
-  position: relative !important;
   opacity: 1 !important;
   color: transparent !important;
   fill: transparent !important;
   stroke: transparent !important;
-  background: rgba(116, 226, 255, 0.045) !important;
+  background-color: rgba(116, 226, 255, 0.045) !important;
+  background-image: linear-gradient(100deg, transparent 24%, rgba(116, 226, 255, 0.12) 46%, transparent 68%) !important;
+  background-position: 200% 0 !important;
+  background-size: 200% 100% !important;
+  background-repeat: no-repeat !important;
+  animation: adminShapeSkeletonSweep 1.65s ease-in-out infinite;
 }
 
 .admin-shape-skeleton-media > * {
@@ -271,7 +272,7 @@
 }
 
 @keyframes adminShapeSkeletonSweep {
-  to { background-position: -200% 0, 0 0; }
+  to { background-position: -200% 0; }
 }
 
 @keyframes adminShapeRefreshSpin {
@@ -337,10 +338,10 @@
   .admin-session-skeleton__panel::after,
   .admin-session-skeleton__table-head::after,
   .admin-session-skeleton__table-row::after,
-  .admin-shape-skeleton-text::after,
-  .admin-shape-skeleton-control::after,
-  .admin-shape-skeleton-media::after,
-  .admin-shape-skeleton-cell::after,
+  .admin-shape-skeleton-text,
+  .admin-shape-skeleton-control,
+  .admin-shape-skeleton-media,
+  .admin-shape-skeleton-cell,
   .admin-shape-refresh-indicator[data-state="refreshing"]::before {
     animation: none !important;
   }
