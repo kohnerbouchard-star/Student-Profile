@@ -42,15 +42,17 @@ const expectedStyles = [
   "./css/page-shell.css", "./css/admin-overview-terminal.css", "./css/admin-overview-integrity.css",
   "./css/session-gate.css", "./css/player-runtime-integration.css", "./css/player-create-confirmation.css",
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
-  "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
+  "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css", "./css/keyboard-navigation.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
+assert(html.includes("import('./keyboard-navigation.js')"), "Keyboard navigation is not loaded through the accepted script order.");
 
 const scopedRuntimeFiles = {
   "admin/player-drawer-wiring.js": ["admin-terminal-player-real-data-v604", "data-admin-terminal-player-drawer", "data-admin-player-drawer-authoritative"],
   "admin/player-identity-wiring.js": ["player-settings-editor", "data-admin-player-profile-identity-editor", "data-admin-player-create-credential-field"],
   "admin/player-create-ux.js": ["data-admin-player-created-confirmation", "data-admin-terminal-player-form", "EconovariaAdminModalAccessibility", "dismissOnEscape: false", "dismissOnBackdrop: false"],
   "admin/modal-accessibility.js": ["focusableElements", 'event.key === "Tab"', 'event.key === "Escape"', "restoreFocus"],
+  "admin/keyboard-navigation.js": ["[data-admin-section]", '[role="tab"]', "[data-admin-terminal-action]", "ArrowDown", "ArrowUp", "Home", "End", "data-admin-input-modality"],
   "admin/asset-wiring.js": ["ORIGINAL_CURRENCY_ICONS", "ORIGINAL_PLAYER_ACTION_ICONS", "ORIGINAL_MODAL_VIDEOS"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
   "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
@@ -97,6 +99,12 @@ assert(!modalAccessibility.includes("window.fetch ="), "Modal accessibility adds
 assert(!modalAccessibility.includes("MutationObserver"), "Modal accessibility adds unnecessary DOM observation.");
 assert(!modalAccessibility.includes('createElement("style")'), "Modal accessibility injects runtime CSS.");
 
+const keyboardNavigation = readText("admin/keyboard-navigation.js");
+assert(!keyboardNavigation.includes("window.fetch ="), "Keyboard navigation adds a network wrapper.");
+assert(!keyboardNavigation.includes("MutationObserver"), "Keyboard navigation adds DOM observation.");
+assert(!keyboardNavigation.includes('createElement("style")'), "Keyboard navigation injects runtime CSS.");
+assert(!keyboardNavigation.includes("style.cssText"), "Keyboard navigation writes inline styles.");
+
 const skeletonRuntime = readText("admin/shape-accurate-skeletons.js");
 assert(!skeletonRuntime.includes("window.fetch ="), "Shape skeleton controller adds a network wrapper.");
 assert(!skeletonRuntime.includes("MutationObserver"), "Shape skeleton controller adds a broad DOM observer.");
@@ -117,7 +125,7 @@ for (const [glyph, iconName] of [["↻", "history"], ["⇩", "download"], ["←"
 for (const path of [
   "admin/css/session-gate.css", "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css", "admin/css/admin-stabilization-visual-finish.css",
-  "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css",
+  "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css", "admin/css/keyboard-navigation.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [/(^|[},\s])body\s*\{/m, /(^|[},\s])html\s*\{/m, /\.admin-terminal-shell\s*\{/m, /\[data-admin-section\]\s*\{/m]) {
@@ -163,7 +171,10 @@ for (const token of ["admin-session-skeleton__shell", "admin-shape-skeleton-stag
   assert(shapeCss.includes(token), `Shape-accurate skeleton CSS is missing ${token}.`);
 }
 assert(!shapeCss.includes("#adminPreview *"), "Shape skeleton CSS applies a blanket page-shell selector.");
+const keyboardCss = readText("admin/css/keyboard-navigation.css");
+assert(keyboardCss.includes(":focus-visible") && keyboardCss.includes("forced-colors: active"), "Keyboard focus CSS is incomplete.");
+assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a blanket page-shell selector.");
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, route-shaped skeletons, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, route-shaped skeletons, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
