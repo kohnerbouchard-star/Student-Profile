@@ -47,6 +47,7 @@ jobs:
       - name: Commit reconciliation evidence
         shell: bash
         run: |
+          # This workflow records deterministic evidence only; it never authorizes activation.
           if git diff --quiet -- docs/seed-content/reviews/market-identity-reconciliation-audit-v1.json docs/seed-content/reviews/market-identity-reconciliation-audit-v1.md; then
             echo "Identity reconciliation evidence is current."
           else
