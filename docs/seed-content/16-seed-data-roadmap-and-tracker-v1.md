@@ -28,14 +28,14 @@ This document is the controlling roadmap for the remaining seed-data work. Miles
 
 Completed in the current execution pass:
 
-- Northreach 24-instrument active candidate selected;
-- Northreach 21-issuer enrichment completed;
-- all 24 Northreach instruments received candidate financial, lifecycle, and exposure records;
-- Northreach structural and arithmetic validation passed;
-- Yrethia, Thaloris, and Solvend 24-instrument candidates and issuer registries created;
-- a reproducible Northreach market simulation was executed with 250 seeds, 60 cycles, and six scenarios;
-- simulation code, run manifest, checksums, integrity results, and review were committed;
-- no asset or country is authorized for activation.
+- Northreach, Yrethia, Thaloris, and Solvend each have a validated 24-instrument bounded active-market candidate;
+- the four-country issuer audit verified 72 unique issuers or administrators in total: 21 Northreach and 17 each for Yrethia, Thaloris, and Solvend;
+- all 96 instrument-to-issuer references and issuer-to-instrument backreferences are complete and bidirectionally consistent;
+- Northreach, Yrethia, and Thaloris financial enrichment and reproducible pilot simulations are complete with documented balance blockers;
+- Solvend financial enrichment covers all 17 issuers and all 24 instruments and has passed structural and arithmetic validation;
+- Northreach has a recalibrated long-end reference curve and v2 simulation evidence;
+- automated issuer-reference and Solvend financial audits run through Repository Quality;
+- no asset, country, importer, or runtime capability is authorized for activation.
 
 ## Milestone 1 — Ingest the 3,200-instrument universe
 
@@ -45,7 +45,7 @@ Deliverables:
 
 - ten country JSONL files with 320 records each;
 - universe manifest with counts and checksums;
-- validation for IDs, symbols, names, countries, currencies, exchanges, types, and sectors;
+- validation for IDs, symbols, names, countries, currencies, exchanges, types, sectors, and issuers;
 - editorial collision report;
 - repository paths recorded in the design manifest.
 
@@ -65,7 +65,7 @@ Immediate execution:
 
 ## Milestone 2 — Market reference and issuer system
 
-Status: started
+Status: started; first four countries verified
 
 Deliverables:
 
@@ -86,15 +86,16 @@ Acceptance gate:
 
 Current progress:
 
-- Northreach issuer enrichment: candidate-complete;
-- Yrethia issuer registry: selected, financial enrichment pending;
-- Thaloris issuer registry: selected, financial enrichment pending;
-- Solvend issuer registry: selected, financial enrichment pending;
-- remaining six countries: queued.
+- Northreach issuer enrichment: candidate-complete, 21 verified issuers or administrators;
+- Yrethia issuer enrichment: candidate-complete, 17 verified issuers or administrators;
+- Thaloris issuer enrichment: candidate-complete, 17 verified issuers or administrators;
+- Solvend issuer enrichment: candidate-complete, 17 verified issuers or administrators;
+- issuer-reference regression audit: active in Repository Quality;
+- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis: queued.
 
 ## Milestone 3 — Bounded active market and financial enrichment
 
-Status: in progress
+Status: in progress; first four countries enriched
 
 First review package:
 
@@ -119,7 +120,7 @@ Required enrichment:
 - bond face value, coupon, term, price, yield, credit band, payment schedule, and default treatment;
 - index constituents, methodology, starting level, rebalancing, and suspension treatment;
 - fund and trust holdings and NAV methodology;
-- event, currency, commodity, interest-rate, shipping, and war exposure.
+- event, currency, commodity, interest-rate, shipping, cyber, and war exposure.
 
 Acceptance gate:
 
@@ -131,19 +132,19 @@ Acceptance gate:
 
 Current progress:
 
-- Northreach: financial enrichment and first simulation complete with blockers;
-- Yrethia: selection complete, enrichment next;
-- Thaloris: selection complete, enrichment queued;
-- Solvend: selection complete, enrichment queued;
-- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, Syndalis: selection queued.
+- Northreach: financial enrichment and v2 simulation complete with blockers;
+- Yrethia: financial enrichment and pilot simulation complete with blockers;
+- Thaloris: financial enrichment and pilot simulation complete with blockers;
+- Solvend: financial enrichment, exact source coverage, and structural/arithmetic validation complete; simulation next;
+- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis: selection queued.
 
-Northreach simulation findings requiring correction:
+Four-country findings requiring continued calibration:
 
-- the current defensive portfolio is vulnerable to inflation and rate shocks;
-- broad recovery after crisis is too weak;
-- strategic wartime exposure may be too attractive;
-- long-end sovereign curve references are missing;
-- bank, default, recovery, refinancing, liquidity, and real-return mechanics remain incomplete.
+- defensive labels must not imply immunity to inflation, rate, currency, confidence, or route shocks;
+- broad recovery must remain viable without becoming guaranteed;
+- strategic wartime exposures must not dominate diversified portfolios;
+- technology concentration and interest-rate sensitivity require explicit Solvend stress testing;
+- bank capital, issuer default, recovery, refinancing, liquidity, real-return, transaction-cost, cyber, and player-order mechanics remain incomplete.
 
 ## Milestone 4 — Canonical geography
 
@@ -239,21 +240,26 @@ Acceptance gate:
 
 ## Milestone 8 — Reproducible simulation and calibration
 
-Status: Northreach pilot executed; global simulation pending
+Status: Northreach, Yrethia, and Thaloris pilots executed; Solvend simulation next; cross-country simulation pending
 
-Northreach evidence:
+Committed evidence currently includes:
 
-- 250 deterministic seeds;
-- 60 market cycles;
-- baseline, inflation/rate, Meridian disruption, war, commodity boom, and crisis-recovery scenarios;
-- no guaranteed-positive instrument or portfolio case in the final run;
-- zero non-finite results;
-- raw-output checksums recorded;
-- code and review committed.
+- 250 deterministic seeds and 60 cycles per completed country pilot;
+- country-specific baseline, stress, disruption, war, confidence, and recovery scenarios;
+- zero non-finite results in completed final runs;
+- zero guaranteed-positive instrument or portfolio cases in completed final runs;
+- checksummed scripts, inputs, summaries, manifests, and retained evidence declarations.
+
+Immediate simulation work:
+
+- execute the Solvend pilot with technology-concentration, rate-shock, cyber-disruption, Meridian-disruption, strategic-demand, confidence-crisis, and recovery scenarios;
+- verify that no Solvend instrument or portfolio has a guaranteed-positive path;
+- compare all four enriched countries for concentration, resilience, recovery, and exploitability;
+- begin cross-country currency, trade, strategic-component, route, and event propagation calibration.
 
 Remaining simulation domains:
 
-- all nine additional country markets;
+- Solvend and the six future country markets;
 - cross-country currency, trade, and event propagation;
 - starting-package viability;
 - reward sources and price sinks;
@@ -337,11 +343,10 @@ Acceptance gate:
 
 ## Immediate next execution order
 
-1. Financially enrich Yrethia’s 24-instrument candidate.
-2. Run Yrethia structural validation.
-3. Recalibrate Northreach defensive and recovery assumptions.
-4. Add five-year and ten-year Northreach curve references.
-5. Financially enrich Thaloris and Solvend.
-6. Select the remaining six country candidates.
-7. Continue full 3,200-record repository ingestion.
-8. Begin cross-country simulation only after at least four country markets are enriched.
+1. Execute the reproducible Solvend market simulation.
+2. Validate Solvend integrity, technology concentration, rate sensitivity, cyber and Meridian disruption, strategic wartime demand, confidence crisis, and recovery behavior.
+3. Correct any Solvend balance defects and record checksummed evidence.
+4. Begin four-country cross-market calibration after the Solvend pilot passes its integrity gate.
+5. Select the remaining six country candidates without creating duplicate issuer entities.
+6. Continue the complete 3,200-record repository ingest and editorial collision review.
+7. Advance geography, arrival-package, and core-gameplay content in dependency-safe parallel tranches.
