@@ -14,7 +14,7 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 | PR #141 Market collection | Reviewed and redesigned | Complete. Public ticker IDs, bounded pagination, current tick volume, explicit empty/unavailable states, and no stock-table UUIDs. |
 | PR #141 Market detail/history | Reviewed and redesigned | Complete. Public ticker route, 1–500 history bound, same-game internal resolution, duplicate detection, deterministic ascending history. |
 | PR #141 stock watchlists | Reviewed and redesigned | Complete. Public ticker routes, token-derived ownership, deterministic reads, idempotent PUT/DELETE, forward-only migration, forced RLS, and browser privilege denial. |
-| PR #141 Inventory reads | Reviewed and redesigned | Implemented in the current tranche. Public item keys, token-derived ownership, 200-holding bound, batched Store metadata, UUID-private DTOs, explicit empty/unavailable states, and no new migration. |
+| PR #141 Inventory reads | Reviewed and redesigned | Complete. Public item keys, token-derived ownership, 200-holding bound, batched Store metadata, UUID-private DTOs, explicit empty/unavailable states, and no new migration. |
 | PR #141 notifications | Pending review | List/read routes remain donor candidates. |
 | PR #141 logout | Pending review | Session revocation behavior remains a donor candidate. |
 | PR #141 atomic Contract acceptance | Pending manual reconciliation | Must preserve the merged submission, review, reward, and idempotency lifecycle. |
@@ -106,7 +106,7 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 3. Market collection — complete;
 4. Market detail/history — complete;
 5. stock watchlist reads and writes — complete;
-6. Inventory read — implemented; final gates pending;
+6. Inventory read — complete;
 7. notifications list/read;
 8. player logout;
 9. generated capability manifest;
