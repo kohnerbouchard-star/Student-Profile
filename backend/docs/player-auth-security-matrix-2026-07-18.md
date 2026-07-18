@@ -28,8 +28,10 @@ evidence below.
 | Brute-force throttling         | Shared limits by IP, identity, game, and action; audited `429` and retry headers                    | Not implemented here                                                                           | Blocked by `BETA-AUTH-005`    |
 
 The repeated-attempt test verifies fail-closed behavior and uniform errors, not
-rate limiting. `BETA-AUTH-004` must remain open until `BETA-AUTH-005` supplies
-the shared limiter and its runtime/clock/concurrency tests.
+rate limiting. The shared limiter foundation is now defined in
+`shared-rate-limit-foundation-2026-07-18.md`; `BETA-AUTH-004` must remain open
+until it is integrated on authoritative routes and has database-backed
+runtime/clock/concurrency evidence.
 
 ## Browser, log, fixture, artifact, and error privacy
 
@@ -64,8 +66,10 @@ staging runtime evidence.
 3. The current check cannot inspect uncommitted developer files, CI platform
    logs, hosted observability, browser memory dumps, or staging network traces.
    Those require CI artifact scanning and isolated staging evidence.
-4. Shared brute-force rate limiting is absent and remains owned by
-   `BETA-AUTH-005`.
+4. Shared brute-force rate-limit persistence, keying, policy, and response
+   contracts exist on PR #158. Route integration, login pre-auth IP/action
+   limiting, proxy trust verification, database replay, and staging concurrency
+   evidence remain open under `BETA-AUTH-005`.
 
 ## Commands
 
