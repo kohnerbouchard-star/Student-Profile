@@ -13,6 +13,7 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "inventoryUse",
   "loanApply",
   "loanRepay",
+  "logout",
   "marketOrder",
   "marketSearch",
   "marketWatchlist",
