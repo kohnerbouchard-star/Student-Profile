@@ -1,0 +1,17 @@
+{
+  "simulationId":"thaloris-market-simulation-v1",
+  "status":"executed-pass-with-blockers",
+  "activationAuthorized":false,
+  "seeds":250,
+  "cycles":60,
+  "instrumentCount":22,
+  "scenarioCount":7,
+  "strategyCount":4,
+  "integrity":{"nonFiniteCount":0,"guaranteedPositiveInstrumentCases":0,"guaranteedPositivePortfolioCases":0},
+  "files":{
+    "input-v1.json":"532818f4fbcacd70b26f5c85290cf1bfb7d3ef72d3971d3784b1ac3ccff1ea1b",
+    "run_thaloris_market_simulation_v1.py":"40169e758fd7db1ceeccf50a04f4bd5d16e490ec7299939b371e4a93e6800149",
+    "summary-v1.json":"3e5bfdb42021f4fe22820917b9e6cc85f9f14b5dab07a202476577d49af5a24d"
+  },
+  "exactCommand":"python run_thaloris_market_simulation_v1.py"
+}
