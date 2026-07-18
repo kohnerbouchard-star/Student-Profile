@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --config=supabase/functions/deno.json --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --lock=supabase/functions/deno.lock --frozen src/smoke/classroomApiSmokeTest.ts && npm run test:admin-api",
+    "smoke": "SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --config=supabase/functions/deno.json --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --lock=supabase/functions/deno.lock --frozen src/smoke/classroomApiSmokeTest.ts && npm run test:player-request-scope && npm run test:admin-api",
+    "test:player-request-scope": "deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/api/playerRequestScope.test.ts",
     "test:admin-api": "deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:edge": "deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts",
