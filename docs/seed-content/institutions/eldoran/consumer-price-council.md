@@ -6,7 +6,7 @@ Version: 1.0.0-draft
 Maturity: draft
 Country: Eldoran
 Owner domain: world and narrative canon
-Lead supporting character: `character.eldoran.eren-vale.v1`
+Lead supporting character: `character.eldoran.eren-calder.v1`
 Implementation status: definition only
 
 ## Purpose
@@ -55,7 +55,7 @@ Trust rises through transparent methods, current data, and practical eligibility
 
 ## Review status
 
-- narrative: pending
-- representation: pending
-- economic: pending
-- technical: pending
+- narrative: pending;
+- representation: pending;
+- economic: pending;
+- technical: pending.
