@@ -28,40 +28,45 @@ This document is the controlling roadmap for the remaining seed-data work. Miles
 
 Completed in the current execution pass:
 
-- Northreach, Yrethia, Thaloris, and Solvend each have a validated 24-instrument bounded active-market candidate;
+- the complete 3,200-instrument design universe is committed as ten deterministic JSONL files with 320 records per country;
+- the universe manifest now records per-file SHA-256 checksums, 3,200 unique stable IDs, 3,200 unique symbols, 3,200 unique names, and 1,610 stable issuer or administrator IDs;
+- `scripts/generate-seed-market-universe.mjs --check` reproduces and verifies every country file and the manifest, and Repository Quality invokes that check through `audit:seed-content-universe`;
+- Northreach, Yrethia, Thaloris, and Solvend each have a separate validated 24-instrument bounded active-market candidate;
 - the four-country issuer audit verified 72 unique issuers or administrators in total: 21 Northreach and 17 each for Yrethia, Thaloris, and Solvend;
-- all 96 instrument-to-issuer references and issuer-to-instrument backreferences are complete and bidirectionally consistent;
+- all 96 active-candidate instrument-to-issuer references and issuer-to-instrument backreferences are complete and bidirectionally consistent;
 - Northreach, Yrethia, Thaloris, and Solvend financial enrichment and reproducible pilot simulations are complete with documented balance blockers;
 - Solvend simulation evidence covers 250 deterministic seeds, 60 cycles, 22 tradable instruments, eight scenarios, and five portfolio strategies;
 - Northreach has a recalibrated long-end reference curve and v2 simulation evidence;
-- automated issuer-reference, Solvend financial, and simulation-checksum audits run through Repository Quality;
+- automated universe-drift, issuer-reference, Solvend financial, preflight, and simulation-checksum audits run through Repository Quality;
 - no asset, country, importer, or runtime capability is authorized for activation.
 
 ## Milestone 1 — Ingest the 3,200-instrument universe
 
-Status: in progress
+Status: structural gate complete; editorial approval pending
 
 Deliverables:
 
-- ten country JSONL files with 320 records each;
-- universe manifest with counts and checksums;
-- validation for IDs, symbols, names, countries, currencies, exchanges, types, sectors, and issuers;
-- editorial collision report;
-- repository paths recorded in the design manifest.
+- ten country JSONL files with 320 records each — complete;
+- universe manifest with counts and checksums — complete;
+- validation for IDs, symbols, names, countries, currencies, exchanges, types, sectors, and issuers — automated structural validation complete;
+- editorial collision report — pending;
+- repository paths recorded in the design manifest — pending final manifest reconciliation.
 
 Acceptance gate:
 
-- exactly 3,200 records and 320 per country;
-- no duplicate stable ID, symbol, or display name;
-- no ticker collision with official currency codes;
-- every exchange, country, currency, type, sector, and issuer reference is valid;
-- all records remain `activationAuthorized: false`.
+- exactly 3,200 records and 320 per country — passed;
+- no duplicate stable ID, symbol, or display name — passed;
+- no ticker collision with official currency codes — passed structurally;
+- every exchange, country, currency, type, sector, and issuer reference is structurally valid — passed for the generated library;
+- all records remain `activationAuthorized: false` — passed;
+- editorial, resemblance, pronunciation, cultural-association, and trademark-risk review — pending.
 
 Immediate execution:
 
-- continue ingesting the ten full country files;
+- generate and resolve the editorial collision and resemblance report across all 3,200 records;
+- reconcile generated issuer identities against the curated active-subset issuers so selected active candidates do not create duplicate entities;
 - preserve the 240-instrument active-subset candidate as a separate bounded layer;
-- do not confuse active-candidate records with the full reusable universe.
+- do not confuse the committed definition library with an approved or player-facing active market.
 
 ## Milestone 2 — Market reference and issuer system
 
@@ -86,12 +91,14 @@ Acceptance gate:
 
 Current progress:
 
+- generated definition universe: 1,610 stable issuer or administrator IDs with deterministic ID-to-name consistency;
 - Northreach issuer enrichment: candidate-complete, 21 verified issuers or administrators;
 - Yrethia issuer enrichment: candidate-complete, 17 verified issuers or administrators;
 - Thaloris issuer enrichment: candidate-complete, 17 verified issuers or administrators;
 - Solvend issuer enrichment: candidate-complete, 17 verified issuers or administrators;
 - issuer-reference regression audit: active in Repository Quality;
-- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis: queued.
+- generated-to-curated issuer reconciliation: pending;
+- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis bounded candidate selection: queued.
 
 ## Milestone 3 — Bounded active market and financial enrichment
 
@@ -136,7 +143,7 @@ Current progress:
 - Yrethia: financial enrichment and pilot simulation complete with blockers;
 - Thaloris: financial enrichment and pilot simulation complete with blockers;
 - Solvend: financial enrichment and pilot simulation complete with blockers; technology concentration, rate, cyber, Meridian, wartime-demand, confidence, and recovery behavior documented;
-- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis: selection queued.
+- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis: selection queued from the committed definition universe.
 
 Four-country findings requiring continued calibration:
 
@@ -218,7 +225,7 @@ Acceptance gate:
 
 ## Milestone 7 — Machine-readable manifests
 
-Status: scaffold exists
+Status: scaffold exists; market-universe manifest materially advanced
 
 Deliverables:
 
@@ -351,9 +358,10 @@ Acceptance gate:
 
 ## Immediate next execution order
 
-1. Begin four-country cross-market calibration using the completed Northreach, Yrethia, Thaloris, and Solvend evidence sets.
-2. Harmonize factor definitions, especially cyber disruption, and compare concentration, resilience, recovery, and exploitability thresholds.
-3. Select the remaining six country candidates without creating duplicate issuer entities.
-4. Continue the complete 3,200-record repository ingest and editorial collision review.
-5. Advance geography, arrival-package, and core-gameplay content in dependency-safe parallel tranches.
-6. Keep staging importer and runtime activation work blocked until calibration, capability mapping, and rollback gates are satisfied.
+1. Generate and resolve the 3,200-record editorial collision, pronunciation, resemblance, cultural-association, and trademark-risk review.
+2. Reconcile generated issuer identities with the four curated active-country issuer registries.
+3. Begin four-country cross-market calibration using the completed Northreach, Yrethia, Thaloris, and Solvend evidence sets.
+4. Harmonize factor definitions, especially cyber disruption, and compare concentration, resilience, recovery, and exploitability thresholds.
+5. Select the remaining six country candidates from the committed universe without creating duplicate issuer entities.
+6. Advance geography, arrival-package, and core-gameplay content in dependency-safe parallel tranches.
+7. Keep staging importer and runtime activation work blocked until calibration, capability mapping, editorial review, and rollback gates are satisfied.
