@@ -23,6 +23,7 @@ on:
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-loading-scope-contract.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -63,6 +64,7 @@ on:
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-loading-scope-contract.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -108,6 +110,9 @@ jobs:
 
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
+
+      - name: Audit Admin loading scope and quick actions
+        run: node scripts/admin-loading-scope-contract.mjs
 
       - name: Validate accepted v606 drift boundaries
         run: node scripts/admin-v606-full-drift-audit.mjs
