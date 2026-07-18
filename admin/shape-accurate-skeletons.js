@@ -130,6 +130,7 @@
 
   let activePageController = null;
   let activeSurfaceController = null;
+  let pageGeneration = 0;
   let refreshTimer = null;
   let bootFrames = 0;
   let modelBridgeInstalled = false;
@@ -344,9 +345,11 @@
 
     const viewportState = preserveViewportState();
     const loadedGeometry = componentGeometry(main, route);
+    const generation = ++pageGeneration;
     overlay.replaceChildren(clonePage(main, route, overlay), loadingLabel(route));
     overlay.dataset.adminShapeSkeleton = "page";
     overlay.dataset.adminShapeSkeletonRoute = route;
+    overlay.dataset.adminShapeSkeletonGeneration = String(generation);
     overlay.setAttribute("role", "status");
     overlay.setAttribute("aria-live", "polite");
     overlay.setAttribute("aria-label", assemblyFor(route).label);
@@ -360,10 +363,11 @@
     const controller = {
       route,
       overlay,
+      generation,
       loadedGeometry,
       measureLoaded: () => componentGeometry(main, route),
       measureSkeleton: () => componentGeometry(overlay.querySelector("[data-admin-shape-skeleton-stage]"), route),
-      hide: (hideOptions = {}) => hidePage({ ...hideOptions, shownAt, viewportState }),
+      hide: (hideOptions = {}) => hidePage({ ...hideOptions, controller, shownAt, viewportState }),
     };
     activePageController = controller;
     if (Number.isFinite(options.autoHideMs)) {
@@ -373,18 +377,20 @@
   }
 
   function hidePage(options = {}) {
-    const controller = activePageController;
+    const controller = options.controller || activePageController;
     const overlay = controller?.overlay || document.querySelector(PAGE_OVERLAY_SELECTOR);
     const main = mainElement();
     if (!(overlay instanceof HTMLElement)) return;
+    const generation = controller?.generation;
     const shownAt = options.shownAt || 0;
     const delay = Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAt));
     window.setTimeout(() => {
+      if (generation && overlay.dataset.adminShapeSkeletonGeneration !== String(generation)) return;
       overlay.hidden = true;
       main?.removeAttribute("aria-busy");
       if (main) delete main.dataset.adminShapeLoadingRoute;
       restoreViewportState(options.viewportState);
-      if (activePageController?.overlay === overlay) activePageController = null;
+      if (activePageController?.generation === generation) activePageController = null;
     }, delay);
   }
 
@@ -408,6 +414,7 @@
     sanitizeClone(stage, route);
     tagComponents(stage, route);
     overlay.append(stage, loadingLabel(route));
+    const loadedGeometry = componentGeometry(target, route);
     target.append(overlay);
     target.setAttribute("aria-busy", "true");
     const shownAt = Date.now();
@@ -416,8 +423,8 @@
       route,
       target,
       overlay,
-      loadedGeometry: componentGeometry(target, route),
-      measureLoaded: () => componentGeometry(target, route),
+      loadedGeometry,
+      measureLoaded: () => loadedGeometry,
       measureSkeleton: () => componentGeometry(stage, route),
       hide(hideOptions = {}) {
         const delay = hideOptions.immediate ? 0 : Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAt));
