@@ -30,6 +30,7 @@ const expectedScripts = [
   "./interaction-quality.js",
   "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
+  "./shape-accurate-skeletons.js",
 ];
 
 assert(
@@ -59,8 +60,11 @@ const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
 const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
 const interactionControlReset = readFileSync(resolve(adminRoot, "interaction-quality-control-reset.js"), "utf8");
+const shapeSkeletons = readFileSync(resolve(adminRoot, "shape-accurate-skeletons.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
 const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
+const shapeSkeletonCss = readFileSync(resolve(adminRoot, "css/shape-accurate-skeletons.css"), "utf8");
+const skeletonMatrix = readFileSync(resolve(adminRoot, "docs/admin-shape-accurate-skeleton-matrix-2026-07-18.md"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
 assert(sessionManager.includes("grant_type=refresh_token"), "Admin refresh-token grant is missing.");
@@ -81,7 +85,7 @@ assert(credentialBridge.includes("`${LOCAL_API_PREFIX}/games/"), "Existing-playe
 assert(credentialBridge.includes("econovaria:player-access-code-issued"), "Credential bridge no longer emits the one-time credential event.");
 assert(!credentialBridge.includes("renderAccessCodeDialog"), "Credential bridge recreates the duplicate credential dialog.");
 assert(!credentialBridge.includes("data-admin-player-access-code-dialog"), "Credential bridge still owns credential presentation markup.");
-assert(!credentialBridge.includes("style.cssText"), "Credential bridge still creates inline-styled presentation UI.");
+assert(!credentialBridge.includes("style.cssText"), "Credential bridge still creates inline-styled credential UI.");
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
 assert(createLifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions do not enforce form validation.");
@@ -102,7 +106,7 @@ for (const label of ["Overview", "Bank Accounts", "Assets", "Liabilities", "Inve
   assert(drawerWiring.includes(`"${label}"`), `Player drawer is missing the ${label} tab.`);
 }
 assert(drawerWiring.includes("data-admin-player-drawer-authoritative"), "Restored player drawer is not marked as authoritative-data only.");
-assert(!drawerWiring.includes("Math.random"), "Player drawer generates synthetic data.");
+assert(!drawerWiring.includes("Math.random"), "Player drawer generates synthetic values.");
 assert(!drawerWiring.includes("window.fetch ="), "Player drawer adds another fetch wrapper.");
 
 assert(identityWiring.includes('name="playerIdentifier"'), "Admin create form has no Player ID field.");
@@ -142,7 +146,7 @@ assert(interactionQuality.includes("validateForm"), "Admin field validation is m
 assert(interactionQuality.includes("setScannerProcessing"), "Scanner processing state is missing.");
 assert(interactionQuality.includes("setScannerCompleted"), "Scanner completed state is missing.");
 assert(interactionQuality.includes("setScannerError"), "Scanner error state is missing.");
-assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton runtime is missing.");
+assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton host is missing.");
 assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Admin request-state observer is missing.");
 assert(interactionControlReset.includes("restoreCompletedControl"), "Completed actions do not restore their controls.");
 assert(interactionControlReset.includes('removeAttribute("aria-disabled")'), "Completed controls do not clear stale disabled semantics.");
@@ -150,7 +154,32 @@ assert(interactionControlReset.includes("setScannerReady"), "Scanner does not re
 assert(interactionControlReset.includes("Scan a player code. The result appears here."), "Scanner idle guidance drifted.");
 assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error styling is missing.");
 assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing styling is missing.");
-assert(interactionQualityCss.includes(".admin-session-skeleton"), "Verification skeleton styling is missing.");
+
+for (const route of [
+  "overview", "players", "contracts", "store", "marketplace", "attendance", "logs", "settings",
+  "account-profile", "account-notifications", "account-security", "account-help", "account-games",
+  "player-drawer", "contract-review", "scanner", "modal",
+]) {
+  assert(shapeSkeletons.includes(`"${route}"`) || shapeSkeletons.includes(`${route}:`), `Shape skeleton route ${route} is missing.`);
+}
+assert(shapeSkeletons.includes("ROUTE_ASSEMBLIES"), "Route-specific skeleton registry is missing.");
+assert(shapeSkeletons.includes("clonePage"), "Shape skeletons do not reuse the mounted page shell.");
+assert(shapeSkeletons.includes("renderSurface"), "Bounded drawer, modal, review, and scanner skeleton support is missing.");
+assert(shapeSkeletons.includes("beginRefresh") && shapeSkeletons.includes("endRefresh"), "Background refresh presentation is missing.");
+assert(shapeSkeletons.includes('setAttribute("aria-busy", "true")'), "Skeleton hosts are not marked busy.");
+assert(shapeSkeletons.includes('setAttribute("aria-hidden", "true")') && shapeSkeletons.includes('setAttribute("inert", "")'), "Decorative skeleton clones are not hidden and inert.");
+assert(!shapeSkeletons.includes("window.fetch ="), "Shape skeleton controller adds a global fetch wrapper.");
+assert(!shapeSkeletons.includes("MutationObserver"), "Shape skeleton controller adds a DOM observer.");
+assert(!shapeSkeletons.includes('createElement("style")') && !shapeSkeletons.includes("style.cssText"), "Shape skeleton controller creates runtime styles.");
+assert(shapeSkeletonCss.includes("admin-shape-skeleton-stage"), "Shape skeleton stylesheet is missing the mounted-shell stage.");
+assert(shapeSkeletonCss.includes("prefers-reduced-motion"), "Shape skeleton motion is not reduced-motion aware.");
+assert(shapeSkeletonCss.includes("admin-session-skeleton__shell"), "Verification skeleton does not reproduce the Admin shell.");
+assert(html.includes("./css/shape-accurate-skeletons.css"), "Shape skeleton stylesheet is not loaded.");
+assert(html.includes("./shape-accurate-skeletons.js"), "Shape skeleton controller is not loaded.");
+assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification skeleton lacks metric and table geometry.");
+assert(skeletonMatrix.includes("Route-to-skeleton matrix") && skeletonMatrix.includes("Geometry tolerances"), "Skeleton route matrix or tolerances are undocumented.");
+assert(!skeletonMatrix.includes("inventory-redemption review queue"), "Blocked inventory redemption work entered the skeleton tranche.");
+
 assert(html.includes("admin-session-skeleton"), "Verification gate does not render a skeleton.");
 assert(!html.includes("Opening administrator console"), "Legacy verification copy is still visible.");
 assert(html.includes("./css/interaction-quality.css"), "Interaction quality stylesheet is not loaded.");
@@ -173,4 +202,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, single credential presentation, modal accessibility, admin wiring, validation, request states, skeleton loading, scanner lifecycle, and completed-control restoration passed.");
+console.log("Original v606 shell, route-shaped loading shells, responsive geometry, reduced motion, credential accessibility, request states, scanner lifecycle, and completed-control restoration passed.");
