@@ -252,6 +252,14 @@ async function assertReadyScanner(scanner, input) {
   if (await scanner.locator("[data-admin-terminal-last-scan-result]").isVisible()) fail("Prior scan result remained visible after refresh.");
 }
 
+await page.route("**/functions/v1/admin-api/**", async (route) => {
+  const pathname = new URL(route.request().url()).pathname;
+  if (pathname.endsWith("/session/bootstrap")) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+  }
+  await route.fallback();
+});
+
 try {
   await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
   await page.waitForSelector("#adminSessionGate .admin-session-skeleton__shell", { timeout: 5000 });
