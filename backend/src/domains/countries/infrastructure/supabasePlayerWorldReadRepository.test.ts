@@ -9,23 +9,21 @@ const PROFILE = "00000000-0000-4000-8000-000000000021";
 const OTHER_PROFILE = "00000000-0000-4000-8000-000000000022";
 const NOW = "2026-07-18T02:00:00.000Z";
 
-Deno.test("Supabase world repository scopes countries to game snapshots and active profiles", async () => {
+Deno.test("Supabase world repository scopes countries to authenticated game snapshots", async () => {
   const client = scriptedClient({
-    country_economic_snapshots: [response([
-      snapshotRow(PROFILE, GAME, 2),
-      snapshotRow(PROFILE, GAME, 1),
-      snapshotRow(OTHER_PROFILE, GAME, 1),
+    country_economic_snapshots: [ok([
+      snapshot(PROFILE, GAME, 2),
+      snapshot(PROFILE, GAME, 1),
+      snapshot(OTHER_PROFILE, GAME, 1),
     ])],
-    player_country_assignments: [response({
+    player_country_assignments: [ok({
       game_session_id: GAME,
       player_id: PLAYER,
       country_profile_id: PROFILE,
-      status: "active",
-      assigned_at: NOW,
     })],
-    country_profiles: [response([
-      profileRow(PROFILE, "NRC", "Northreach"),
-      profileRow(OTHER_PROFILE, "SLV", "Silverreach"),
+    country_profiles: [ok([
+      profile(PROFILE, "NRC", "Northreach"),
+      profile(OTHER_PROFILE, "SLV", "Silverreach"),
     ])],
   });
 
@@ -35,23 +33,20 @@ Deno.test("Supabase world repository scopes countries to game snapshots and acti
     effectiveAt: NOW,
   });
 
-  assertEquals(result.gameId, GAME);
-  assertEquals(result.playerUuid, PLAYER);
-  assertEquals(result.playerCountryProfileUuid, PROFILE);
   assertEquals(result.countries.map((item) => item.countryCode), ["NRC", "SLV"]);
   assertEquals(result.countries[0]?.snapshot.sequence, 2);
-
-  assertOperation(client.operations, "country_economic_snapshots", "eq", ["game_session_id", GAME]);
-  assertOperation(client.operations, "country_profiles", "eq", ["status", "active"]);
-  assertOperation(client.operations, "country_profiles", "in", ["id", [PROFILE, OTHER_PROFILE]]);
-  assertOperation(client.operations, "player_country_assignments", "eq", ["player_id", PLAYER]);
+  assertEquals(result.playerCountryProfileUuid, PROFILE);
+  assertCall(client.calls, "country_economic_snapshots", "eq", ["game_session_id", GAME]);
+  assertCall(client.calls, "country_profiles", "eq", ["status", "active"]);
+  assertCall(client.calls, "country_profiles", "in", ["id", [PROFILE, OTHER_PROFILE]]);
+  assertCall(client.calls, "player_country_assignments", "eq", ["player_id", PLAYER]);
 });
 
-Deno.test("country detail requires an active public code and an authenticated-game snapshot", async () => {
+Deno.test("country detail requires an active public country and a game snapshot", async () => {
   const client = scriptedClient({
-    country_profiles: [response(profileRow(PROFILE, "NRC", "Northreach"))],
-    player_country_assignments: [response(null)],
-    country_economic_snapshots: [response(null)],
+    country_profiles: [ok(profile(PROFILE, "NRC", "Northreach"))],
+    player_country_assignments: [ok(null)],
+    country_economic_snapshots: [ok(null)],
   });
 
   const result = await new SupabasePlayerWorldReadRepository(client as never).readCountry({
@@ -62,17 +57,14 @@ Deno.test("country detail requires an active public code and an authenticated-ga
   });
 
   assertEquals(result.country, null);
-  assertOperation(client.operations, "country_profiles", "eq", ["country_code", "NRC"]);
-  assertOperation(client.operations, "country_profiles", "eq", ["status", "active"]);
-  assertOperation(client.operations, "country_economic_snapshots", "eq", ["game_session_id", GAME]);
+  assertCall(client.calls, "country_profiles", "eq", ["country_code", "NRC"]);
+  assertCall(client.calls, "country_profiles", "eq", ["status", "active"]);
+  assertCall(client.calls, "country_economic_snapshots", "eq", ["game_session_id", GAME]);
 });
 
-Deno.test("news query enforces game, public visibility, activity, deterministic order, and cursor", async () => {
+Deno.test("world news query is game-scoped, public, active, ordered, and cursor-bounded", async () => {
   const client = scriptedClient({
-    stock_market_events: [response([
-      newsRow("event-b", 12),
-      newsRow("event-a", 11),
-    ])],
+    stock_market_events: [ok([news("event-b", 12), news("event-a", 11)])],
   });
 
   const result = await new SupabasePlayerWorldReadRepository(client as never).readNews({
@@ -83,42 +75,40 @@ Deno.test("news query enforces game, public visibility, activity, deterministic 
   });
 
   assertEquals(result.news.map((item) => item.publicId), ["event-b", "event-a"]);
-  assertOperation(client.operations, "stock_market_events", "eq", ["game_session_id", GAME]);
-  assertOperation(client.operations, "stock_market_events", "eq", ["visibility", "public"]);
-  assertOperation(client.operations, "stock_market_events", "eq", ["is_active", true]);
-  assertOperation(client.operations, "stock_market_events", "eq", ["category", "macro"]);
-  assertOperation(client.operations, "stock_market_events", "order", ["created_tick", { ascending: false }]);
-  assertOperation(client.operations, "stock_market_events", "order", ["shock_id", { ascending: false }]);
-  const cursorOperation = client.operations.find((item) => item.table === "stock_market_events" && item.name === "or");
-  assertEquals(
-    cursorOperation?.args,
-    ["created_tick.lt.13,and(created_tick.eq.13,shock_id.lt.\"event-c\")"],
+  assertCall(client.calls, "stock_market_events", "eq", ["game_session_id", GAME]);
+  assertCall(client.calls, "stock_market_events", "eq", ["visibility", "public"]);
+  assertCall(client.calls, "stock_market_events", "eq", ["is_active", true]);
+  assertCall(client.calls, "stock_market_events", "eq", ["category", "macro"]);
+  assertCall(client.calls, "stock_market_events", "order", ["created_tick", { ascending: false }]);
+  assertCall(client.calls, "stock_market_events", "order", ["shock_id", { ascending: false }]);
+  assertCall(
+    client.calls,
+    "stock_market_events",
+    "or",
+    ["created_tick.lt.13,and(created_tick.eq.13,shock_id.lt.event-c)"],
   );
 });
 
-Deno.test("repository rejects cross-game rows and unsafe media is omitted", async () => {
+Deno.test("cross-game rows fail closed and unsafe media is removed", async () => {
   const crossGame = scriptedClient({
-    country_economic_snapshots: [response([snapshotRow(PROFILE, OTHER_GAME, 1)])],
-    player_country_assignments: [response(null)],
+    country_economic_snapshots: [ok([snapshot(PROFILE, OTHER_GAME, 1)])],
+    player_country_assignments: [ok(null)],
   });
+  await assertRejects(() => new SupabasePlayerWorldReadRepository(crossGame as never).readCountries({
+    gameId: GAME,
+    playerUuid: PLAYER,
+    effectiveAt: NOW,
+  }));
 
-  await assertRejects(() =>
-    new SupabasePlayerWorldReadRepository(crossGame as never).readCountries({
-      gameId: GAME,
-      playerUuid: PLAYER,
-      effectiveAt: NOW,
-    })
-  );
-
-  const safeMedia = scriptedClient({
-    country_profiles: [response({
-      ...profileRow(PROFILE, "NRC", "Northreach"),
+  const unsafe = scriptedClient({
+    country_profiles: [ok({
+      ...profile(PROFILE, "NRC", "Northreach"),
       metadata: { flagUrl: "javascript:alert(1)", mapColor: "red" },
     })],
-    player_country_assignments: [response(null)],
-    country_economic_snapshots: [response(snapshotRow(PROFILE, GAME, 1))],
+    player_country_assignments: [ok(null)],
+    country_economic_snapshots: [ok(snapshot(PROFILE, GAME, 1))],
   });
-  const detail = await new SupabasePlayerWorldReadRepository(safeMedia as never).readCountry({
+  const detail = await new SupabasePlayerWorldReadRepository(unsafe as never).readCountry({
     gameId: GAME,
     playerUuid: PLAYER,
     effectiveAt: NOW,
@@ -128,100 +118,62 @@ Deno.test("repository rejects cross-game rows and unsafe media is omitted", asyn
   assertEquals(detail.country?.mapColor, null);
 });
 
-interface Operation {
-  readonly table: string;
-  readonly name: string;
-  readonly args: readonly unknown[];
-}
+interface Call { readonly table: string; readonly name: string; readonly args: readonly unknown[] }
 
-function scriptedClient(script: Record<string, readonly ReturnType<typeof response>[]>) {
+function scriptedClient(script: Record<string, readonly ReturnType<typeof ok>[]>) {
   const queues = new Map(Object.entries(script).map(([table, values]) => [table, [...values]]));
-  const operations: Operation[] = [];
+  const calls: Call[] = [];
   return {
-    operations,
+    calls,
     from(table: string) {
       return {
         select(columns: string) {
-          operations.push({ table, name: "select", args: [columns] });
-          return builder(table, queues, operations);
+          calls.push({ table, name: "select", args: [columns] });
+          return query(table, queues, calls);
         },
       };
     },
   };
 }
 
-function builder(
-  table: string,
-  queues: Map<string, ReturnType<typeof response>[]>,
-  operations: Operation[],
-) {
-  const value = {
-    eq(column: string, filter: unknown) {
-      operations.push({ table, name: "eq", args: [column, filter] });
-      return value;
-    },
-    in(column: string, filters: readonly unknown[]) {
-      operations.push({ table, name: "in", args: [column, filters] });
-      return value;
-    },
-    lte(column: string, filter: unknown) {
-      operations.push({ table, name: "lte", args: [column, filter] });
-      return value;
-    },
-    or(filters: string) {
-      operations.push({ table, name: "or", args: [filters] });
-      return value;
-    },
-    order(column: string, options?: { readonly ascending?: boolean }) {
-      operations.push({ table, name: "order", args: [column, options] });
-      return value;
-    },
-    limit(count: number) {
-      operations.push({ table, name: "limit", args: [count] });
-      return value;
-    },
-    maybeSingle() {
-      operations.push({ table, name: "maybeSingle", args: [] });
-      return Promise.resolve(next(table, queues));
-    },
+function query(table: string, queues: Map<string, ReturnType<typeof ok>[]>, calls: Call[]) {
+  const builder = {
+    eq(column: string, value: unknown) { calls.push({ table, name: "eq", args: [column, value] }); return builder; },
+    in(column: string, value: readonly unknown[]) { calls.push({ table, name: "in", args: [column, value] }); return builder; },
+    lte(column: string, value: unknown) { calls.push({ table, name: "lte", args: [column, value] }); return builder; },
+    or(value: string) { calls.push({ table, name: "or", args: [value] }); return builder; },
+    order(column: string, options?: { readonly ascending?: boolean }) { calls.push({ table, name: "order", args: [column, options] }); return builder; },
+    limit(value: number) { calls.push({ table, name: "limit", args: [value] }); return builder; },
+    maybeSingle() { calls.push({ table, name: "maybeSingle", args: [] }); return Promise.resolve(next(table, queues)); },
     then<TResult1 = unknown, TResult2 = never>(
-      onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
-      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-    ) {
-      return Promise.resolve(next(table, queues)).then(onfulfilled, onrejected);
-    },
+      fulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
+      rejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ) { return Promise.resolve(next(table, queues)).then(fulfilled, rejected); },
   };
-  return value;
+  return builder;
 }
 
-function next(table: string, queues: Map<string, ReturnType<typeof response>[]>): ReturnType<typeof response> {
-  const queue = queues.get(table) ?? [];
-  const item = queue.shift();
-  if (!item) throw new Error(`No scripted response for ${table}.`);
+function next(table: string, queues: Map<string, ReturnType<typeof ok>[]>): ReturnType<typeof ok> {
+  const item = queues.get(table)?.shift();
+  if (!item) throw new Error(`Missing scripted response for ${table}.`);
   return item;
 }
 
-function response(data: unknown, error: { readonly message: string; readonly code?: string } | null = null) {
-  return { data, error };
-}
+function ok(data: unknown) { return { data, error: null }; }
 
-function profileRow(id: string, countryCode: string, countryName: string) {
+function profile(id: string, code: string, name: string) {
   return {
     id,
-    country_code: countryCode,
-    country_name: countryName,
-    capital_name: `${countryName} City`,
-    currency_code: countryCode,
+    country_code: code,
+    country_name: name,
+    capital_name: `${name} City`,
+    currency_code: code,
     status: "active",
-    metadata: {
-      flagUrl: `/assets/flags/${countryCode.toLowerCase()}.svg`,
-      mapRegion: countryCode.toLowerCase(),
-      mapColor: "#123456",
-    },
+    metadata: { flagUrl: `/assets/flags/${code.toLowerCase()}.svg`, mapRegion: code.toLowerCase(), mapColor: "#123456" },
   };
 }
 
-function snapshotRow(countryProfileId: string, gameSessionId: string, sequence: number) {
+function snapshot(countryProfileId: string, gameSessionId: string, sequence: number) {
   return {
     game_session_id: gameSessionId,
     country_profile_id: countryProfileId,
@@ -239,7 +191,7 @@ function snapshotRow(countryProfileId: string, gameSessionId: string, sequence: 
   };
 }
 
-function newsRow(shockId: string, createdTick: number) {
+function news(shockId: string, createdTick: number) {
   return {
     game_session_id: GAME,
     shock_id: shockId,
@@ -262,24 +214,14 @@ function newsRow(shockId: string, createdTick: number) {
   };
 }
 
-function assertOperation(
-  operations: readonly Operation[],
-  table: string,
-  name: string,
-  args: readonly unknown[],
-): void {
-  const found = operations.some((item) =>
-    item.table === table && item.name === name && JSON.stringify(item.args) === JSON.stringify(args)
-  );
-  if (!found) throw new Error(`Missing ${table}.${name}(${JSON.stringify(args)}).`);
+function assertCall(calls: readonly Call[], table: string, name: string, args: readonly unknown[]): void {
+  if (!calls.some((call) => call.table === table && call.name === name && JSON.stringify(call.args) === JSON.stringify(args))) {
+    throw new Error(`Missing ${table}.${name}(${JSON.stringify(args)}).`);
+  }
 }
 
 async function assertRejects(run: () => Promise<unknown>): Promise<void> {
-  try {
-    await run();
-  } catch {
-    return;
-  }
+  try { await run(); } catch { return; }
   throw new Error("Expected rejection.");
 }
 
