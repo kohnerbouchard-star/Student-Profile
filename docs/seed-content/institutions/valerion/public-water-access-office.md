@@ -6,7 +6,7 @@ Version: 1.0.0-draft
 Maturity: draft
 Country: Valerion
 Owner domain: world and narrative canon
-Lead supporting character: `character.valerion.sola-merin.v1`
+Lead supporting character: `character.valerion.talia-quen.v1`
 Implementation status: definition only
 
 ## Purpose
@@ -55,7 +55,7 @@ Trust rises through transparent allocation, essential-use protection, and visibl
 
 ## Review status
 
-- narrative: pending
-- representation: pending
-- economic: pending
-- technical: pending
+- narrative: pending;
+- representation: pending;
+- economic: pending;
+- technical: pending.
