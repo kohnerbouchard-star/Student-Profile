@@ -4,17 +4,44 @@ export function readPlayerInventoryRoutePath(
   pathname: string,
 ): PlayerInventoryRoute | null {
   const segments = pathname.split("/").filter(Boolean);
-  const playersIndex = segments.lastIndexOf("players");
+  const routeSegments = readRouteSegments(segments);
 
-  if (
-    playersIndex < 0 ||
-    segments[playersIndex + 1] !== "me" ||
-    segments[playersIndex + 2] !== "inventory"
-  ) {
+  if (!routeSegments) {
     return null;
   }
 
-  return playersIndex + 3 === segments.length
-    ? { kind: "inventory" }
-    : { kind: "malformed" };
+  if (
+    routeSegments.length === 3 &&
+    routeSegments[0] === "players" &&
+    routeSegments[1] === "me" &&
+    routeSegments[2] === "inventory"
+  ) {
+    return { kind: "inventory" };
+  }
+
+  if (
+    routeSegments.length > 3 &&
+    routeSegments[0] === "players" &&
+    routeSegments[1] === "me" &&
+    routeSegments[2] === "inventory"
+  ) {
+    return { kind: "malformed" };
+  }
+
+  return null;
+}
+
+function readRouteSegments(
+  segments: readonly string[],
+): readonly string[] | null {
+  if (segments[0] === "players") {
+    return segments;
+  }
+
+  const classroomApiIndex = segments.lastIndexOf("classroom-api");
+  if (classroomApiIndex < 0) {
+    return null;
+  }
+
+  return segments.slice(classroomApiIndex + 1);
 }
