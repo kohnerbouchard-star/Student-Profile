@@ -3,184 +3,128 @@
 Date: 2026-07-18  
 Target PR: #158  
 Donor PRs: #141 and #143  
-Policy: extract reviewed backend behavior only; never merge or restore donor trees wholesale
+Policy: review and reconcile individual Backend behaviors; never merge or restore donor trees wholesale
 
-## Accounting status
+## Current accounting status
 
-| Donor component | Classification | Reconciliation result |
+| Donor component | Classification | Result on PR #158 |
 |---|---|---|
-| PR #141 `backend/src/domains/players/api/playerRequestScope.ts` | Replaced by a safer design | Reconciled into the same Backend-owned path with one authoritative `resolvePlayerRequestScope` boundary, immutable `playerUuid` naming, server-derived game scope, active-session validation, wrong-game rejection, query/header/body ownership-injection rejection, recipient UUID rejection, and compatibility exports for bounded route ports. |
-| PR #141 World reads | Reviewed and redesigned | Countries list, country detail, and world news are implemented on PR #158 through separate route, request-parser, handler, service, repository-contract, Supabase-repository, DTO, and test layers. |
-| PR #141 Market asset list | Reviewed and redesigned | The authenticated asset collection is implemented through a new route, bounded parser, service, repository contract, Supabase repository, public ticker identifier, UUID-private DTO, dispatcher handoff, and focused tests. Donor files were not copied wholesale. |
-| PR #141 remaining authenticated read domains | Pending review | Market detail/history, Inventory, notifications, watchlists, and logout remain unreviewed and must be reconciled independently. |
-| PR #141 atomic Contract acceptance | Pending manual reconciliation | Must be added to the current Contracts lifecycle without replacing merged submission, review, reward, or idempotency behavior. |
-| PR #143 capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise frontend-only mutations. |
-| PR #143 Inventory redemption | Pending migration and transaction review | Requires a fresh forward-only migration, restricted RPC grants, retry-safe transitions, and Backend-only route contracts. |
+| Player request scope | Replaced by a safer design | One authoritative `resolvePlayerRequestScope` derives immutable player UUID, active session, and game scope from `x-player-session-token` and rejects ownership injection. |
+| World countries, detail, and news | Reviewed and redesigned | Implemented through separate route, parser, handler, service, repository, DTO, and test layers. Internal database UUIDs are not published. |
+| Market asset collection | Reviewed and redesigned | Implemented at `GET /players/me/stocks/assets` with bounded pagination, ticker public IDs, one active-asset query, one latest-tick RPC, explicit empty state, and UUID-private DTOs. |
+| Market asset detail and history | Reviewed and redesigned | Implemented at `GET /players/me/stocks/assets/:assetId` with ticker resolution, a 500-point maximum, game/asset/ticker history scope, ascending chart output, and no internal UUID exposure. |
+| Stock watchlist | Pending | Requires ownership persistence, mutation validation, migration review, and public-ticker resolution before implementation. |
+| Inventory read | Pending | Must be reconciled independently against current Inventory and Store ownership semantics. |
+| Notifications and logout | Pending | Must be reconciled independently with current session and notification persistence. |
+| Contract acceptance | Pending manual reconciliation | Must preserve the merged Contract lifecycle, review, reward, and idempotency behavior. |
+| Capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise incomplete frontend actions. |
+| Inventory redemption | Pending migration and transaction review | Requires a fresh forward-only migration, restricted RPC grants, retry-safe transitions, and Backend-only routes. |
 
-## World tranche file accounting
+## World reconciliation
 
-Every World donor file was reviewed independently. No donor directory or dispatcher tree was copied wholesale.
+The useful donor concepts were reimplemented rather than copied:
 
-| Donor file or behavior | Classification | Result on PR #158 |
-|---|---|---|
-| `backend/src/domains/countries/api/playerWorldRoutePaths.ts` | Redesigned | Retains strict direct and `classroom-api` path recognition while rejecting spoofed prefixes and extra segments. |
-| `backend/src/domains/countries/api/playerWorldRoutePaths.test.ts` | Redesigned | Rewritten around the current three-route tranche and public country-code detail path. |
-| `backend/src/domains/countries/api/playerWorldReadHttpHandler.ts` | Redesigned | Split into request parsing, authorization scope, service, repository, and DTO layers. The handler now uses `resolvePlayerRequestScope` and never accepts browser-selected game ownership. |
-| `backend/src/domains/countries/api/playerWorldReadHttpHandler.test.ts` | Redesigned | Covers the three valid routes, missing/expired/revoked/wrong-game sessions, UUID injection, empty news, and browser DTO UUID privacy. |
-| `backend/src/domains/countries/contracts/playerWorldReadContracts.ts` | Redesigned | Internal UUID-bearing persistence records are separated from browser-safe DTOs. Public country codes and public event IDs are the only resource identifiers published. |
-| `backend/src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.ts` | Redesigned | Queries active country profiles only through authenticated-game snapshots, derives player assignment from the authenticated player UUID, and filters news by authenticated game, public visibility, and active publication state. |
-| `backend/src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.test.ts` | Redesigned | Verifies game filters, active-country filters, player assignment scope, deterministic news ordering, cursor filtering, cross-game rejection, and safe media normalization. |
-| Donor World request parsing embedded in the handler | Redesigned | Moved to `playerWorldRequestParser.ts` with bounded limits, category allowlisting, stable cursor parsing, public country-code validation, unknown-query rejection, and explicit prohibition of browser-selected game scope. |
-| Donor World DTO mapping embedded in the handler | Redesigned | Moved behind `PlayerWorldReadService`; internal player, game, assignment, profile, snapshot, and database row UUIDs are excluded from browser models. |
-| Donor World service layer | Unsupported in donor | A dedicated `PlayerWorldReadService` was added to validate repository scope, distinguish empty data from unavailable service, sort deterministically, paginate, and map browser-safe DTOs. |
-| Donor `classroom-api` dispatcher modifications | Redesigned | Only the current dispatcher received an additive World route-parser handoff. The donor dispatcher was not restored. |
-| Donor acceptance of UUID country identifiers | Rejected | Country detail accepts a public country code only. Browser callers cannot address internal country-profile UUIDs. |
-| Donor `playerCountryProfileId`, game-session, player, snapshot, and event database IDs in responses | Rejected | These internal UUIDs are not published. Assignment is represented only through `isPlayerCountry`. |
-| Donor offset-free limit-only news page | Redesigned | World news uses deterministic `created_tick DESC, shock_id DESC` ordering and a stable cursor contract with a maximum page size. |
-
-## World behavior retained from the donor
-
-The following concepts remain valid and were reimplemented rather than copied:
-
-- one bounded route parser for countries, country detail, and news;
-- service-role Supabase reads behind an authenticated player-session boundary;
-- active country profiles and latest effective per-game economic snapshots;
+- one bounded route parser for country collection, country detail, and news;
+- service-role reads behind the authenticated player-session boundary;
+- active country profiles and latest effective per-game snapshots;
 - player country assignment derived from the authenticated player and game;
-- public and active world-news filtering;
-- deterministic ordering and explicit limits;
-- safe media extraction from bounded metadata;
-- persistence errors mapped to player-safe service responses.
+- public and active news filtering;
+- deterministic cursor pagination and explicit limits;
+- safe media extraction and player-safe persistence errors.
 
-## World behavior intentionally changed
+Intentional changes:
 
-- The browser cannot provide a game ID even as a normal selector. Game scope comes only from the active player session.
-- Country detail no longer accepts a country-profile UUID.
-- Browser DTOs no longer contain game, player, assignment, profile, snapshot, or event database UUIDs.
-- A successful empty news response is `200` with `items: []`; persistence unavailability is a distinct retryable service error.
-- News pagination is cursor-based and deterministic.
-- Unsupported query parameters fail closed instead of being ignored.
-- The Player Terminal receives only active countries with an authoritative snapshot in the authenticated game.
+- the browser cannot select the game;
+- country detail accepts a public country code, not a profile UUID;
+- browser DTOs omit player, game, assignment, profile, snapshot, and database event UUIDs;
+- empty news is a successful response while persistence failure is retryable unavailability;
+- unsupported query parameters fail closed.
 
-## Market asset-list tranche accounting
+## Market collection reconciliation
 
-The donor Market list was reviewed file by file and redesigned around the current authoritative request scope and current Player Terminal response contract.
-
-| Donor file or behavior | Classification | Result on PR #158 |
+| Donor behavior | Classification | Current result |
 |---|---|---|
-| donor Market route parser | Redesigned | The current checkpoint recognizes only the exact asset collection path. Detail paths remain deliberately malformed until the next tranche. |
-| donor embedded query parsing | Redesigned | Moved to `playerStockAssetListRequestParser.ts` with bounded `limit` and `offset`, duplicate rejection, unknown-query rejection, and explicit game-scope injection rejection. |
-| donor Market HTTP handler | Redesigned | Uses `resolvePlayerRequestScope`, prohibits the runner secret, derives game scope from the player session, and delegates mapping to a service. |
-| donor asset contracts | Redesigned | Internal UUID-bearing asset and tick records are separated from the browser DTO. The public `assetId` is the normalized ticker. |
-| donor Market repository | Redesigned | Uses one active-asset query scoped to the authenticated game plus one existing latest-tick RPC. There is no per-asset query. |
-| donor Market response mapping | Redesigned | Adds deterministic sector and asset ordering, bounded lookahead pagination, current volume, calculated change percentage, and explicit empty/unavailable states. |
-| donor response containing stock-asset UUID | Rejected | Internal stock-asset, player, session, and game UUIDs are never serialized. Duplicate tickers fail closed rather than falling back to UUIDs. |
-| donor dispatcher edits | Redesigned | Only the current `classroom-api` dispatcher received the additive collection-route handoff. |
-| donor Market tests | Redesigned | Focused route, parser, handler, service, repository, privacy, scope, empty-state, and unavailability tests were added. |
+| Combined asset route parser | Redesigned | Collection and detail paths share an exact public-ticker route boundary. UUID-shaped identifiers, encoded slashes, and extra segments fail closed. |
+| Embedded list query parsing | Redesigned | `playerStockAssetListRequestParser.ts` validates bounded `limit` and `offset`, duplicates, unknown parameters, and game-scope injection. |
+| Collection handler | Redesigned | Uses the authoritative player request scope, prohibits the stock runner credential, and delegates mapping to a service. |
+| Asset contracts | Redesigned | Internal UUID-bearing records are separated from browser DTOs. Public `assetId` is the normalized ticker. |
+| Asset collection repository | Redesigned | Uses one authenticated-game active-asset query and one existing latest-tick RPC, with no per-asset query. |
+| Collection response | Redesigned | Deterministic ordering, bounded lookahead pagination, current volume, calculated change, sectors, and explicit empty/unavailable states. |
+| Stock-table UUID in browser response | Rejected | Internal stock-asset, game, player, and session UUIDs are never serialized. Duplicate public tickers fail closed. |
 
-## Market behavior retained from the donor
+## Market detail and history reconciliation
 
-- authenticated player-session boundary;
-- active per-game stock assets;
-- current asset prices and current latest-tick volume;
-- deterministic bounded pagination;
-- explicit service-unavailability mapping.
+| Donor behavior | Classification | Current result |
+|---|---|---|
+| UUID detail route | Rejected | The detail route accepts a public ticker only. The internal stock-row UUID is resolved after authentication. |
+| Detail query parsing embedded in handler | Redesigned | `playerStockAssetDetailRequestParser.ts` validates only `historyLimit`, default 200 and maximum 500, and rejects game-scope selection. |
+| Detail repository added to legacy board repository | Redesigned | A dedicated player-detail repository resolves one active game/ticker row and then reads history by game, resolved internal row, and ticker. |
+| Missing asset behavior | Redesigned | No history query occurs when the ticker is unavailable; the service returns a safe non-retryable 404. |
+| History ordering | Retained with stronger validation | Persistence reads newest-first under the SQL bound; the service validates scope and duplicate tick indices, then returns ascending chart order. |
+| Latest tick RPC plus history query | Simplified | Detail derives displayed volume and response tick from the newest bounded history point, avoiding an unnecessary extra RPC. |
+| Detail browser DTO | Redesigned | Reuses the collection DTO mapper and omits game, player, session, and internal stock-row UUIDs. |
+| Donor watchlist enrichment | Deferred | `isWatchlisted` remains absent until ownership persistence and watchlist routes are reconciled. |
 
-## Market behavior intentionally changed
+## Behavior intentionally preserved
 
-- The browser cannot select a game through query parameters or headers.
-- The list route accepts only the asset collection path in this checkpoint.
-- The browser receives the public ticker as `assetId`, never the stock-table UUID.
-- A valid game with no active assets returns a successful `stock_market_not_initialized` empty state.
-- Persistence failure is a distinct retryable 503 response.
-- The existing order-settlement implementation is preserved. A later mutation-boundary tranche must resolve the public ticker to exactly one active internal asset inside the authenticated game before settlement.
+- the current stock-market calculation and tick tables;
+- the existing latest-tick RPC for collection reads;
+- the existing Market order settlement path;
+- active per-game asset visibility;
+- deterministic bounded reads;
+- player-safe service-unavailability mapping.
 
-## PR #141 remaining candidate backend behavior
+The Market mutation boundary must later resolve the public ticker to exactly one active internal stock row inside the authenticated game before invoking existing settlement. The settlement implementation itself must not be replaced from the donor branch.
 
-The following areas still contain potentially unique behavior and remain open for later bounded review:
+## Remaining PR #141 candidate behavior
 
-- Inventory read handler, DTOs, repository, and tests;
-- player notification list/read handlers, request parser, route parser, DTOs, repository, and tests;
+- stock watchlist schema, repository, reads, and idempotent mutations;
+- Inventory read handler, DTO, repository, and tests;
+- notification list/read routes, parser, repository, and tests;
 - player session logout handler and repository;
-- stock asset detail/history handler, route parser, contracts, repository, and tests;
-- stock watchlist handler, route parser, contracts, repository, and tests;
-- atomic Contract acceptance route/handler/repository behavior and transaction tests;
-- forward Contract-acceptance and stock-watchlist migrations, subject to current migration-history and privilege review.
+- atomic Contract acceptance behavior and transaction tests;
+- forward migrations for watchlists and Contract acceptance, subject to current migration-history review.
 
-## Review-only modifications
+## PR #143 candidate behavior
 
-These donor files may contain useful corrections but must continue to be diffed against current `main` rather than copied:
+- authoritative capability registry and bootstrap projection;
+- Inventory redemption request and review contracts;
+- player and Admin redemption routes;
+- forward-only redemption migration and restricted RPCs;
+- rolled-back database workflow verification.
 
-- current Contract list/submission implementation and repository contracts;
-- player ledger handler;
-- shared Edge response helpers;
-- `classroom-api` dispatcher;
-- backend package metadata and lockfile;
-- Supabase function lock/config files;
-- stock service documentation.
+Required redesign remains:
 
-## Explicitly excluded from donor import
+- capabilities must reflect actual Backend support;
+- Admin support must be exposed through Backend contracts only;
+- migrations must receive unique forward versions;
+- RPC grants, `search_path`, RLS, service-role access, and browser-role denial require explicit verification;
+- player ownership and game scope must come from the active player session;
+- Admin transitions must validate role, game ownership, idempotency, and deterministic pagination.
 
-- all `admin/**` changes;
-- all `player-terminal/**` changes;
-- root package and lockfile changes without a lease;
-- GitHub workflows without a lease;
-- broad repository governance files already represented on current `main`;
-- historical migrations already present on current `main`;
-- any donor migration version that conflicts with current forward history.
+## Explicit exclusions
 
-## PR #143 accounting
-
-### Candidate backend behavior to reconcile
-
-- authoritative player capability registry;
-- capability-manifest integration into player bootstrap;
-- Inventory redemption route parser and HTTP handlers;
-- Inventory redemption backend tests;
-- Inventory DTO extensions required for redemption status and action policy;
-- Admin API backend routes and normalization for redemption review;
-- forward-only Inventory redemption migration design;
-- rolled-back database workflow smoke test.
-
-### Required redesign or repair before porting
-
-- Capability status must be generated from authoritative backend support and must not advertise frontend-only or incomplete mutations.
-- Admin support must be exposed through backend contracts only; donor Admin JavaScript and CSS are excluded.
-- The redemption migration must be assigned a unique version after comparing current migration history; do not reuse or renumber an applied migration.
-- RPC grants, `search_path`, RLS, service-role behavior, and direct anon/authenticated denial require explicit verification.
-- Player ownership and game scope must be derived from the active player session, independent of browser payloads.
-- Admin review must validate staff role and game ownership and use deterministic transitions and pagination.
-- Known donor TypeScript and Admin source-contract failures must not be imported.
-
-### Explicitly excluded from donor import
-
-- `admin/css/player-scope-readiness.css`;
-- `admin/player-scope-readiness.js`;
-- donor edits to `admin/index.html`;
+- all donor `admin/**` changes;
 - all donor `player-terminal/**` changes;
-- workflow edits without an explicit lease;
-- generic root scripts without an explicit lease.
+- root package, lockfile, workflow, and governance changes without an explicit lease;
+- historical migrations already represented on current `main`;
+- any migration version that conflicts with current forward history;
+- wholesale dispatcher, domain-directory, or repository replacement.
 
-## Planned extraction sequence
+## Remaining extraction sequence
 
-1. Reconcile the authoritative player request scope — **complete**.
-2. Reconcile World countries list, country detail, and world news — **complete**.
-3. Reconcile Market asset list — **implemented; current gates pending**.
-4. Reconcile Market asset detail/history and watchlists independently.
-5. Reconcile Inventory, notifications, and logout independently.
-6. Add the capability registry only after actual route support is known.
-7. Reconcile Contract acceptance manually with current list/submission/review/reward semantics.
-8. Design a fresh forward redemption migration, then implement and test RPCs.
-9. Add player and Admin redemption routes after database transaction semantics are green.
-10. Publish consumer contracts; do not modify Admin or Player Terminal code in this PR.
+1. Player request scope — **complete**.
+2. World countries, detail, and news — **complete**.
+3. Market asset collection — **complete**.
+4. Market asset detail and bounded history — **complete**.
+5. Stock watchlist reads and writes.
+6. Inventory read.
+7. Notifications list/read and player logout.
+8. Capability manifest generated from implemented support.
+9. Atomic Contract acceptance reconciled manually.
+10. Forward Inventory redemption migration, RPCs, player routes, and Admin routes.
+11. Security review, replay, runtime contract, staging documentation, and final verification.
 
 ## Donor closure rule
 
-PRs #141 and #143 remain open and unmerged until every candidate backend change is classified as:
-
-- ported;
-- already present on current `main`;
-- intentionally replaced by a safer design;
-- intentionally unsupported;
-- rejected with rationale.
-
-Only after that accounting is complete may the donor PRs be closed and their branches deleted.
+PRs #141 and #143 remain open and unmerged until every candidate Backend change is classified as ported, already present, replaced by a safer design, intentionally unsupported, or rejected with rationale. Only then may the donor PRs be closed and their branches deleted.
