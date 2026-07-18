@@ -22,6 +22,6 @@
     "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   }
 }
