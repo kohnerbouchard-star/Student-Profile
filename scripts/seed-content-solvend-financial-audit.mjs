@@ -147,9 +147,16 @@ if (source && issuerPack && equityPack && fixedPack && collectivePack) {
     if (!closeEnough(equity.priceEarnings, pe, 0.011)) fail("PE_ARITHMETIC", equity.id);
     if (!closeEnough(equity.dividendYield, dividendYield, 0.00011)) fail("DIVIDEND_YIELD_ARITHMETIC", equity.id);
     if (!closeEnough(equity.floatAdjustedMarketCapitalizationMillions, floatCap, 0.11)) fail("FLOAT_CAP_ARITHMETIC", equity.id);
-    for (const field of ["sharesOutstandingMillions", "startingPrice", "marketCapitalizationMillions", "earningsPerShare"]) {
-      if (!closeEnough(equity[field], issuer[field], field === "earningsPerShare" ? 0.0011 : 0.11)) {
-        fail("ISSUER_INSTRUMENT_MISMATCH", `${equity.id} ${field}`);
+    const issuerFieldByEquityField = {
+      sharesOutstandingMillions: "sharesOutstandingMillions",
+      startingPrice: "startingSharePrice",
+      marketCapitalizationMillions: "marketCapitalizationMillions",
+      earningsPerShare: "earningsPerShare",
+    };
+    for (const [equityField, issuerField] of Object.entries(issuerFieldByEquityField)) {
+      const tolerance = equityField === "earningsPerShare" ? 0.0011 : 0.11;
+      if (!closeEnough(equity[equityField], issuer[issuerField], tolerance)) {
+        fail("ISSUER_INSTRUMENT_MISMATCH", `${equity.id} ${equityField}`);
       }
     }
   }
