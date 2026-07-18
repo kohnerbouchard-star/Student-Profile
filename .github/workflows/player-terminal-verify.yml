@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -37,12 +37,20 @@ jobs:
         shell: bash
         run: |
           git diff --name-only "$BASE_SHA"...HEAD > /tmp/player-terminal-changed-files.txt
-          unexpected="$(awk '
-            $0 !~ /^player-terminal\// &&
-            $0 != ".github/workflows/player-terminal-verify.yml" { print }
-          ' /tmp/player-terminal-changed-files.txt)"
+
+          if grep -q '^player-terminal/' /tmp/player-terminal-changed-files.txt; then
+            unexpected="$(awk '
+              $0 !~ /^player-terminal\// &&
+              $0 != ".github/workflows/player-terminal-verify.yml" { print }
+            ' /tmp/player-terminal-changed-files.txt)"
+          else
+            unexpected="$(awk '
+              $0 !~ /^\.github\/workflows\/[^/]+\.ya?ml$/ { print }
+            ' /tmp/player-terminal-changed-files.txt)"
+          fi
+
           if [ -n "$unexpected" ]; then
-            echo "Player Terminal PR changed protected repository paths:"
+            echo "Player Terminal verification detected protected repository paths:"
             echo "$unexpected"
             false
           fi
