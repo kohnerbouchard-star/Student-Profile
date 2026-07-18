@@ -45,6 +45,8 @@ for (const file of [
   "20260714233000_harden_security_definer_rpc_privileges_v1.sql",
   "20260715003000_add_story_notification_tables_v1.sql",
   "20260717090000_harden_story_notification_scope_v1.sql",
+  "20260718112000_accept_player_contract_by_key_v2.sql",
+  "20260718113000_add_inventory_redemption_player_workflow_v1.sql",
 ]) {
   if (!files.includes(file)) {
     failures.push(`${file}: required critical migration is missing`);
@@ -56,6 +58,35 @@ for (const file of [
   }
 }
 
+const inventoryRedemptionFile =
+  "20260718113000_add_inventory_redemption_player_workflow_v1.sql";
+if (files.includes(inventoryRedemptionFile)) {
+  const source = (await readFile(
+    path.join(MIGRATION_ROOT, inventoryRedemptionFile),
+    "utf8",
+  )).toLowerCase();
+  for (
+    const requiredFragment of [
+      "create table public.inventory_redemption_requests",
+      "create table public.inventory_redemption_transitions",
+      "request_inventory_redemption_atomic_v1",
+      "read_player_inventory_redemptions_v1",
+      "for update of player_row",
+      "for update",
+      "redemption_requested",
+      "inventory.redemption_requested",
+      "security definer",
+      "set search_path = public, pg_temp",
+      "revoke all on function public.request_inventory_redemption_atomic_v1",
+      "grant execute on function public.request_inventory_redemption_atomic_v1",
+      "to service_role",
+    ]
+  ) {
+    if (!source.includes(requiredFragment)) {
+      failures.push(`${inventoryRedemptionFile}: missing ${requiredFragment}`);
+    }
+  }
+}
 if (failures.length > 0) {
   throw new Error(`Migration validation failed:\n- ${failures.join("\n- ")}`);
 }
