@@ -16,7 +16,8 @@
       "displayName": "Dravenlok",
       "exchange": "IHX",
       "file": "universe/dravenlok.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "8b305dc3b58274da5da15f5fc8459d04e01f2c6a3b49f20b6a53c0584662735c"
     },
     "eldoran": {
       "capital": "Crescent Bay",
@@ -24,7 +25,8 @@
       "displayName": "Eldoran",
       "exchange": "CMX",
       "file": "universe/eldoran.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "567ddc2e595c821399451e1bfba0e85160bb46f2fe619c7384c17de50524383f"
     },
     "lumenor": {
       "capital": "Starfall",
@@ -32,7 +34,8 @@
       "displayName": "Lumenor",
       "exchange": "SCX",
       "file": "universe/lumenor.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "a7db7b00a86989f73a417aeb574ee9c13bcb4ebc34d668f3258e12381f4efc4f"
     },
     "northreach": {
       "capital": "Frostgate",
@@ -40,7 +43,8 @@
       "displayName": "Northreach",
       "exchange": "FGX",
       "file": "universe/northreach.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "4901e7da363d5860c9aececda4c0ce6dd059808429569714e6b91095e6b0d96e"
     },
     "solvend": {
       "capital": "Aurora Spire",
@@ -48,7 +52,8 @@
       "displayName": "Solvend",
       "exchange": "AUX",
       "file": "universe/solvend.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "3ad17d3bccad2c37d07c4e157725f1f09d250dc2c1f717fe3928abb88da132a0"
     },
     "syndalis": {
       "capital": "Blacklight",
@@ -56,7 +61,8 @@
       "displayName": "Syndalis",
       "exchange": "BDX",
       "file": "universe/syndalis.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "864f0d61a595524f8da4e290dbbca28f67ee69b255b33e11b4d5ed7035c943fd"
     },
     "thaloris": {
       "capital": "Dusk Harbor",
@@ -64,7 +70,8 @@
       "displayName": "Thaloris",
       "exchange": "DHM",
       "file": "universe/thaloris.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "445fac0aa7cc64e0c3be16946e6e41b28ac62820e565f6a1ec3d9e7e78cade86"
     },
     "valerion": {
       "capital": "Glassfall",
@@ -72,7 +79,8 @@
       "displayName": "Valerion",
       "exchange": "GFX",
       "file": "universe/valerion.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "4a5e8fad465222d0fbe49f9eff0df3fb3dc7a305127313e76be6b0c630bbf942"
     },
     "xalvoria": {
       "capital": "Emberhall",
@@ -80,7 +88,8 @@
       "displayName": "Xalvoria",
       "exchange": "ECX",
       "file": "universe/xalvoria.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "608a919110a4dc8469d2dc52607e7d32e62679e32b30caf003462b5fc540eb00"
     },
     "yrethia": {
       "capital": "Sableport",
@@ -88,11 +97,13 @@
       "displayName": "Yrethia",
       "exchange": "SBX",
       "file": "universe/yrethia.jsonl",
-      "instrumentCount": 320
+      "instrumentCount": 320,
+      "sha256": "70cd4720a7c0a1de52cf384756108d53863991c8cf24940d464448b2391b6ccd"
     }
   },
-  "generatedAt": "2026-07-18",
+  "generatedAt": "2026-07-19",
   "generationSeed": 20260718,
+  "generator": "scripts/generate-seed-market-universe.mjs",
   "instrumentTypeCounts": {
     "commodity_reference": 150,
     "common_equity": 1500,
@@ -107,6 +118,7 @@
   "packId": "econovaria.market-universe.v1",
   "productionAuthorized": false,
   "runtimeSupportVerified": false,
+  "sourceFilesCommitted": true,
   "totalInstrumentCount": 3200,
   "validation": {
     "allCountryCountsEqual": true,
@@ -123,6 +135,7 @@
       "YRC"
     ],
     "exactly320PerCountry": true,
+    "uniqueIssuerIds": 1610,
     "uniqueNames": 3200,
     "uniqueStableIds": 3200,
     "uniqueSymbols": 3200
