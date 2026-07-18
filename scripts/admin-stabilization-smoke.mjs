@@ -86,27 +86,29 @@ async function audit(name) {
       const rect = element.getBoundingClientRect();
       return style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity || 1) > 0 && rect.width > 1 && rect.height > 1;
     };
+    const live = (element) => !element.closest("[data-admin-shape-skeleton-stage]");
+    const visibleLive = (element) => live(element) && visible(element);
     const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
     const issues = [];
     const root = document.querySelector("#adminPreview");
     if (!root) issues.push("admin preview missing");
     else if (root.scrollWidth > root.clientWidth + 3) issues.push(`horizontal overflow ${root.scrollWidth}/${root.clientWidth}`);
 
-    for (const button of [...document.querySelectorAll("button")].filter(visible)) {
+    for (const button of [...document.querySelectorAll("button")].filter(visibleLive)) {
       const label = String(button.getAttribute("aria-label") || button.title || button.innerText || "").replace(/\s+/g, " ").trim();
       if (!label) issues.push(`visible unnamed button: ${button.outerHTML.slice(0, 200)}`);
       if (/[↗×⌄⌃‹›＋]/u.test(button.innerText || "")) issues.push(`text glyph remains in ${label}`);
       if (getComputedStyle(button).pointerEvents === "none" && !button.disabled && button.getAttribute("aria-disabled") !== "true") issues.push(`enabled button is inert: ${label}`);
     }
 
-    for (const row of [...document.querySelectorAll(".admin-terminal-clickable-row")].filter(visible)) {
+    for (const row of [...document.querySelectorAll(".admin-terminal-clickable-row")].filter(visibleLive)) {
       const pseudo = getComputedStyle(row, "::after");
       if (/[↗×⌄⌃‹›＋]/u.test(pseudo.content || "")) issues.push("clickable row still uses a text pseudo-glyph");
       if ((pseudo.content === '""' || pseudo.content === "none") && pseudo.backgroundImage === "none") issues.push("clickable row has no hover affordance icon");
     }
 
-    for (const form of [...document.querySelectorAll("form")].filter(visible)) {
-      const controls = [...form.querySelectorAll("input:not([type=hidden]),textarea,select,button")].filter(visible);
+    for (const form of [...document.querySelectorAll("form")].filter(visibleLive)) {
+      const controls = [...form.querySelectorAll("input:not([type=hidden]),textarea,select,button")].filter(visibleLive);
       for (const control of controls) {
         const rect = control.getBoundingClientRect();
         if (rect.width < 24 || rect.height < 20) issues.push(`undersized control ${control.name || control.tagName}`);
@@ -117,22 +119,22 @@ async function audit(name) {
       }
     }
 
-    const stockMode = document.querySelector('select[name="stockMode"]');
-    if (stockMode && visible(stockMode) && stockMode.getBoundingClientRect().width < 280) {
+    const stockMode = document.querySelector('select[name="stockMode"]:not([inert] *)');
+    if (stockMode && visibleLive(stockMode) && stockMode.getBoundingClientRect().width < 280) {
       issues.push(`stock mode control is too narrow for its selected value: ${stockMode.getBoundingClientRect().width}`);
     }
 
-    const modal = document.querySelector(".admin-terminal-modal");
-    if (modal && visible(modal)) {
+    const modal = [...document.querySelectorAll(".admin-terminal-modal")].find(visibleLive);
+    if (modal) {
       const rect = modal.getBoundingClientRect();
       if (rect.left < -1 || rect.top < -1 || rect.right > innerWidth + 1 || rect.bottom > innerHeight + 1) issues.push("modal exceeds viewport");
       const preview = modal.querySelector(".admin-terminal-contract-preview");
       for (const panel of modal.querySelectorAll(".admin-terminal-contract-main,.admin-terminal-contract-reward")) {
-        if (preview && visible(preview) && visible(panel) && overlap(preview.getBoundingClientRect(), panel.getBoundingClientRect())) issues.push("contract preview overlaps form content");
+        if (preview && visibleLive(preview) && visibleLive(panel) && overlap(preview.getBoundingClientRect(), panel.getBoundingClientRect())) issues.push("contract preview overlaps form content");
       }
     }
 
-    const money = [...document.querySelectorAll(".admin-terminal-currency-number,.admin-terminal-currency-single-amount>b")].filter(visible).map((node) => node.textContent.trim());
+    const money = [...document.querySelectorAll(".admin-terminal-currency-number,.admin-terminal-currency-single-amount>b")].filter(visibleLive).map((node) => node.textContent.trim());
     for (const value of money) if (/\d/.test(value) && !/-?\d{1,3}(?:,\d{3})*\.\d{2}/.test(value)) issues.push(`money not two decimals: ${value}`);
     return { issues, money };
   });
