@@ -196,7 +196,7 @@ async function assertError(
 ): Promise<void> {
   const body = await response.json();
   assertEquals(response.status, status);
-  assertEquals(body.code, code);
+  assertEquals(body.error?.code, code);
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
