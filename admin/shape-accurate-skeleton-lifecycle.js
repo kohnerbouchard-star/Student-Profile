@@ -7,6 +7,7 @@
   const ACCOUNT_SETTLE_MS = 520;
   const ACCOUNT_FORCE_RENDER_MS = 1500;
   const ACCOUNT_VISIBLE_MS = 760;
+  const PAGE_COMPLETION_FAILSAFE_MS = 340;
   const REQUIRED_STABLE_FRAMES = 2;
   const MONITOR_WINDOW_MS = 5000;
 
@@ -181,6 +182,48 @@
     window.requestAnimationFrame(frame);
   }
 
+  function completePageReadLifecycle(detail) {
+    if (
+      detail?.pageRead !== true ||
+      !["committed", "failed", "cancelled"].includes(detail?.phase)
+    ) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const api = window.EconovariaAdminShapeSkeletons;
+      const controller = api?.activePageController?.() || null;
+      const main = currentMain();
+      const overlay = currentOverlay(main);
+      const generation = controller?.generation ||
+        Number(overlay?.dataset.adminShapeSkeletonGeneration || 0);
+
+      controller?.hide?.();
+
+      window.setTimeout(() => {
+        const liveMain = currentMain();
+        const liveOverlay = currentOverlay(liveMain);
+        if (!(liveMain instanceof HTMLElement) || !(liveOverlay instanceof HTMLElement)) return;
+        if (
+          generation &&
+          liveOverlay.dataset.adminShapeSkeletonGeneration !== String(generation)
+        ) {
+          return;
+        }
+        hideConnectedOverlay(liveOverlay);
+        liveMain.removeAttribute("aria-busy");
+        delete liveMain.dataset.adminShapeLoadingRoute;
+      }, PAGE_COMPLETION_FAILSAFE_MS);
+    });
+  }
+
+  function onRequestLifecycle(event) {
+    const detail = event.detail && typeof event.detail === "object"
+      ? event.detail
+      : {};
+    completePageReadLifecycle(detail);
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -199,5 +242,6 @@
     monitorAccountLoading(route, token);
   }
 
+  document.addEventListener("econovaria:admin-request-lifecycle", onRequestLifecycle);
   document.addEventListener("click", onDocumentClick, true);
 })();
