@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-18.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-18.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -56,6 +56,7 @@ export type PlayerActionCapabilityKey =
 
 export type PlayerCapabilityEndpointKey =
   | "capabilities"
+  | "contractAccept"
   | "countries"
   | "country"
   | "inventory"
@@ -107,6 +108,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   {
     key: "capabilities",
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
+  },
+  {
+    key: "contractAccept",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/contracts/:contractKey/accept",
+    }],
+    actionCapabilities: ["contractAccept"],
   },
   {
     key: "countries",
