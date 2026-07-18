@@ -121,6 +121,12 @@ import {
   readPlayerWorldRoutePath,
 } from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
 import {
+  handlePlayerInventoryReadRequest,
+} from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
+import {
+  readPlayerInventoryRoutePath,
+} from "../../../src/domains/inventory/api/playerInventoryRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -152,6 +158,14 @@ Deno.serve(async (request) => {
 
   if (playerWorldRoute) {
     return handlePlayerWorldReadRequest(request, playerWorldRoute, {
+      createServiceClient,
+    });
+  }
+
+  const playerInventoryRoute = readPlayerInventoryRoutePath(url.pathname);
+
+  if (playerInventoryRoute) {
+    return handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
       createServiceClient,
     });
   }
