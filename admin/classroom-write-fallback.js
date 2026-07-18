@@ -89,9 +89,14 @@
   }
 
   function emitLifecycle(detail) {
-    document.dispatchEvent(new CustomEvent(LIFECYCLE_EVENT, {
-      detail,
-    }));
+    const EventConstructor = window.CustomEvent || globalThis.CustomEvent;
+    if (
+      typeof document?.dispatchEvent !== "function" ||
+      typeof EventConstructor !== "function"
+    ) {
+      return;
+    }
+    document.dispatchEvent(new EventConstructor(LIFECYCLE_EVENT, { detail }));
   }
 
   async function responseMessage(response, fallback) {
