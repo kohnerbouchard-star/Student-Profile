@@ -5,8 +5,13 @@ on:
     branches:
       - agent/seed-content-foundation-v1
     paths:
+      - package.json
       - scripts/apply-seed-market-canonicalization.mjs
       - scripts/seed-market-curated-overlay-lib.mjs
+      - scripts/seed-market-identity-reconciliation-summary.mjs
+      - scripts/seed-content-preflight.test.mjs
+      - docs/seed-content/markets/active-subsets/**
+      - docs/seed-content/markets/universe/**
       - .github/workflows/seed-market-canonicalization.yml
   workflow_dispatch:
 
@@ -57,10 +62,10 @@ jobs:
           run_step "generate universe" node scripts/generate-seed-market-universe.mjs
           run_step "generate editorial evidence" node scripts/seed-content-universe-editorial-audit.mjs
           run_step "generate identity evidence" node scripts/seed-market-identity-reconciliation-summary.mjs
-          run_step "check canonicalization" node scripts/apply-seed-market-canonicalization.mjs --check
-          run_step "check universe" node scripts/generate-seed-market-universe.mjs --check
-          run_step "check editorial evidence" node scripts/seed-content-universe-editorial-audit.mjs --check
-          run_step "check identity evidence" node scripts/seed-market-identity-reconciliation-summary.mjs --check
+          run_step "check canonicalization" npm run audit:seed-content-canonicalization
+          run_step "check universe" npm run audit:seed-content-universe
+          run_step "check editorial evidence" npm run audit:seed-content-editorial
+          run_step "check identity evidence" npm run audit:seed-content-identities
           run_step "test seed preflight" npm run test:seed-content-preflight
           run_step "design seed preflight" npm run preflight:seed-content
           run_step "diff check" git diff --check
