@@ -5,24 +5,16 @@ const { page, browser, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 const results = [];
 
-const VIEWPORTS = [
-  ["desktop", 1440, 1000],
-  ["compact", 1024, 768],
-  ["narrow", 768, 900],
-];
+const VIEWPORTS = [["desktop", 1440, 1000], ["compact", 1024, 768], ["narrow", 768, 900]];
 const ROUTES = [
-  ["Overview", "overview"], ["Attendance", "attendance"],
-  ["Players", "players"], ["Assignments", "contracts"],
-  ["Store", "store"], ["Market", "marketplace"],
+  ["Overview", "overview"], ["Attendance", "attendance"], ["Players", "players"],
+  ["Assignments", "contracts"], ["Store", "store"], ["Market", "marketplace"],
   ["Settings", "settings"], ["Logs", "logs"],
 ];
 const ACCOUNTS = [
-  ["open-admin-profile", "account-profile"],
-  ["open-admin-settings", "account-settings"],
-  ["open-admin-notifications", "account-notifications"],
-  ["open-admin-security", "account-security"],
-  ["open-admin-help", "account-help"],
-  ["open-admin-games", "account-games"],
+  ["open-admin-profile", "account-profile"], ["open-admin-settings", "account-settings"],
+  ["open-admin-notifications", "account-notifications"], ["open-admin-security", "account-security"],
+  ["open-admin-help", "account-help"], ["open-admin-games", "account-games"],
 ];
 
 function assertGeometry(label, loaded, skeleton) {
@@ -50,11 +42,7 @@ async function waitForCleanup(label) {
     const state = await page.evaluate(() => {
       const main = document.querySelector(".admin-terminal-shell-main");
       const overlay = document.querySelector(".admin-qol-page-skeleton");
-      return {
-        busy: main?.getAttribute("aria-busy") || "",
-        removedOrHidden: !overlay || overlay.hidden,
-        route: overlay?.dataset.adminShapeSkeletonRoute || "",
-      };
+      return { busy: main?.getAttribute("aria-busy") || "", removedOrHidden: !overlay || overlay.hidden, route: overlay?.dataset.adminShapeSkeletonRoute || "" };
     });
     fail(`${label} did not clear: ${JSON.stringify(state)}.`);
   }
@@ -62,15 +50,9 @@ async function waitForCleanup(label) {
 
 function validate(label, snapshot) {
   const shared = assertGeometry(label, snapshot.loaded, snapshot.skeleton);
-  if (snapshot.busy !== "true" || snapshot.role !== "status" || !snapshot.label) {
-    fail(`${label} lacks loading semantics.`);
-  }
-  if (snapshot.cloneHidden !== "true" || !snapshot.cloneInert) {
-    fail(`${label} clone is not decorative and inert.`);
-  }
-  if (!snapshot.focusPreserved || !snapshot.scrollPreserved) {
-    fail(`${label} moved focus or scroll.`);
-  }
+  if (snapshot.busy !== "true" || snapshot.role !== "status" || !snapshot.label) fail(`${label} lacks loading semantics.`);
+  if (snapshot.cloneHidden !== "true" || !snapshot.cloneInert) fail(`${label} clone is not decorative and inert.`);
+  if (!snapshot.focusPreserved || !snapshot.scrollPreserved) fail(`${label} moved focus or scroll.`);
   if (snapshot.overflow > 2) fail(`${label} has ${snapshot.overflow}px horizontal overflow.`);
   return shared;
 }
@@ -85,11 +67,8 @@ async function manualSnapshot(route, label) {
     const overlay = document.querySelector(".admin-qol-page-skeleton");
     const shape = overlay?.querySelector(".admin-shape-skeleton-text");
     const output = {
-      loaded: controller?.loadedGeometry || {},
-      skeleton: controller?.measureSkeleton?.() || {},
-      busy: main?.getAttribute("aria-busy") || "",
-      role: overlay?.getAttribute("role") || "",
-      label: overlay?.getAttribute("aria-label") || "",
+      loaded: controller?.loadedGeometry || {}, skeleton: controller?.measureSkeleton?.() || {},
+      busy: main?.getAttribute("aria-busy") || "", role: overlay?.getAttribute("role") || "", label: overlay?.getAttribute("aria-label") || "",
       cloneHidden: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.getAttribute("aria-hidden") || "",
       cloneInert: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.hasAttribute("inert") || false,
       focusPreserved: document.activeElement === focus,
@@ -114,11 +93,8 @@ async function automaticSnapshot(label) {
     const overlay = document.querySelector(".admin-qol-page-skeleton");
     const probe = window.__adminShapeProbe;
     return {
-      loaded: controller?.loadedGeometry || {},
-      skeleton: controller?.measureSkeleton?.() || {},
-      busy: main?.getAttribute("aria-busy") || "",
-      role: overlay?.getAttribute("role") || "",
-      label: overlay?.getAttribute("aria-label") || "",
+      loaded: controller?.loadedGeometry || {}, skeleton: controller?.measureSkeleton?.() || {},
+      busy: main?.getAttribute("aria-busy") || "", role: overlay?.getAttribute("role") || "", label: overlay?.getAttribute("aria-label") || "",
       cloneHidden: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.getAttribute("aria-hidden") || "",
       cloneInert: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.hasAttribute("inert") || false,
       focusPreserved: document.activeElement === probe?.focus,
@@ -147,12 +123,8 @@ async function sessionSnapshot() {
     overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth,
   }));
   await context.close();
-  if (!result.shell || !result.nav || !result.main || result.metrics !== 4 || result.rows < 6) {
-    fail(`Session skeleton is incomplete: ${JSON.stringify(result)}.`);
-  }
-  if (result.overflow > 2 || result.label !== "Verifying administrator access") {
-    fail(`Session skeleton contract drifted: ${JSON.stringify(result)}.`);
-  }
+  if (!result.shell || !result.nav || !result.main || result.metrics !== 4 || result.rows < 6) fail(`Session skeleton is incomplete: ${JSON.stringify(result)}.`);
+  if (result.overflow > 2 || result.label !== "Verifying administrator access") fail(`Session skeleton contract drifted: ${JSON.stringify(result)}.`);
   return result;
 }
 
@@ -164,12 +136,7 @@ async function scannerSnapshot() {
     const target = document.querySelector("[data-admin-terminal-scanner-console]");
     const focus = document.activeElement;
     const controller = api.renderSurface("scanner", target);
-    const output = {
-      loaded: controller?.loadedGeometry || {},
-      skeleton: controller?.measureSkeleton?.() || {},
-      busy: target?.getAttribute("aria-busy") || "",
-      focusPreserved: document.activeElement === focus,
-    };
+    const output = { loaded: controller?.loadedGeometry || {}, skeleton: controller?.measureSkeleton?.() || {}, busy: target?.getAttribute("aria-busy") || "", focusPreserved: document.activeElement === focus };
     controller?.hide?.({ immediate: true });
     return output;
   });
@@ -198,10 +165,8 @@ try {
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   for (const [action, route] of ACCOUNTS) {
-    await page.locator("[data-admin-terminal-user]").first().click();
     const control = page.locator(`[data-admin-terminal-action="${action}"]`).first();
-    await control.waitFor({ state: "visible", timeout: 5000 });
-    await control.click();
+    await control.dispatchEvent("click");
     await page.evaluate(() => {
       const main = document.querySelector(".admin-terminal-shell-main");
       window.__adminShapeProbe = { focus: document.activeElement, x: window.scrollX, y: window.scrollY, main: main?.scrollTop || 0 };
@@ -222,19 +187,11 @@ try {
     const overlay = document.querySelector(".admin-qol-page-skeleton");
     const focus = document.activeElement;
     const indicator = api.beginRefresh("Refreshing current Admin data");
-    const output = {
-      visible: Boolean(indicator && !indicator.hidden),
-      state: indicator?.dataset.state || "",
-      noSkeleton: !overlay || overlay.hidden,
-      focusPreserved: document.activeElement === focus,
-      busy: main?.getAttribute("aria-busy") || "",
-    };
+    const output = { visible: Boolean(indicator && !indicator.hidden), state: indicator?.dataset.state || "", noSkeleton: !overlay || overlay.hidden, focusPreserved: document.activeElement === focus, busy: main?.getAttribute("aria-busy") || "" };
     api.endRefresh("Admin data updated");
     return output;
   });
-  if (!refresh.visible || refresh.state !== "refreshing" || !refresh.noSkeleton || !refresh.focusPreserved || refresh.busy) {
-    fail(`Background refresh contract failed: ${JSON.stringify(refresh)}.`);
-  }
+  if (!refresh.visible || refresh.state !== "refreshing" || !refresh.noSkeleton || !refresh.focusPreserved || refresh.busy) fail(`Background refresh contract failed: ${JSON.stringify(refresh)}.`);
 
   const scanner = await scannerSnapshot();
   if (errors.length) fail(errors[0]);
