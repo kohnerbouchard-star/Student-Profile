@@ -21,6 +21,23 @@ Policy: review and redesign bounded Backend behavior; never merge or restore don
 | PR #143 capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise incomplete mutations. |
 | PR #143 Inventory redemption | Pending migration and transaction review | Requires a fresh migration, restricted RPC grants, retry-safe state transitions, and Backend-only player/Admin routes. |
 
+## World file accounting
+
+| PR #141 World file or dependency | Classification | PR #158 disposition |
+|---|---|---|
+| `backend/src/domains/countries/api/playerWorldReadHttpHandler.ts` | Redesigned | The donor combined authentication, parsing, DTO mapping, service logic, and persistence orchestration in one handler; it also accepted browser-selected game-session scope and serialized game/player objects. PR #158 uses the authoritative token-derived request scope, a dedicated request parser, a service boundary, UUID-private DTOs, stable news cursors, and explicit available versus unavailable behavior. |
+| `backend/src/domains/countries/api/playerWorldReadHttpHandler.test.ts` | Redesigned | Replaced with current tests for active, missing, expired, revoked, and wrong-game sessions; query/header/body UUID injection; empty versus unavailable responses; and browser UUID privacy. |
+| `backend/src/domains/countries/api/playerWorldRoutePaths.ts` | Redesigned | Retained only the three intended public route shapes. Current parsing supports direct and `classroom-api` paths while rejecting spoofed prefixes and extra segments. |
+| `backend/src/domains/countries/api/playerWorldRoutePaths.test.ts` | Redesigned | Replaced with exact direct/Edge route coverage, spoofed-prefix rejection, and extra-segment rejection. |
+| `backend/src/domains/countries/contracts/playerWorldReadContracts.ts` | Redesigned | Donor UUID-bearing game, player, assignment, and country-profile response contracts were rejected. Current contracts separate internal records from browser DTOs and expose only public country codes and event IDs. |
+| `backend/src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.ts` | Redesigned | Current repository is scoped only by authenticated game/player inputs, selects active same-game countries and effective snapshots, enforces public active news visibility, applies deterministic cursor ordering, bounds reads, and sanitizes media. |
+| `backend/src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.test.ts` | Redesigned | Replaced with query and mapping tests for active-country filtering, effective snapshot selection, player assignment, same-game isolation, public/active news filtering, deterministic pagination, safe media, and persistence failure mapping. |
+| `backend/src/domains/players/api/playerRequestScope.ts` donor behavior used by World | Rejected | Browser-selected `gameSessionId` matching was rejected. Current World routes derive game, player, and session scope exclusively from the active player-session token and reject ownership/game selectors. |
+| `backend/supabase/functions/classroom-api/index.ts` donor World dispatcher edits | Rejected | The donor dispatcher tree was not restored. Current `classroom-api` was extended additively with the World route parser, reviewed player rate-limit dispatch, and World handler while preserving existing routes. |
+| `backend/supabase/functions/classroom-api/README.md` donor World documentation | Redesigned | Replaced by the current World contract and verification matrix, with public identifiers, bounded news pagination, explicit timestamps, UUID privacy, and unavailable-service semantics. |
+| Donor World service layer | Unsupported | PR #141 had no separate World service file. PR #158 added `playerWorldReadService.ts` and focused tests to enforce deterministic ordering, scope assertions, DTO mapping, cursor construction, and persistence-error translation. |
+| Donor World request-parser layer | Unsupported | PR #141 parsed requests inside the HTTP handler. PR #158 added `playerWorldRequestParser.ts` and focused tests for public country-code normalization, 1–50 limits, category allowlisting, versioned cursors, unsupported-query rejection, and client game-scope rejection. |
+
 ## Behavior retained in redesigned form
 
 - authenticated player-session boundary;
