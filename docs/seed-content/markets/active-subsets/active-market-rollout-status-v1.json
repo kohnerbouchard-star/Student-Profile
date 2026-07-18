@@ -12,7 +12,9 @@
       "issuerRegistryStatus": "complete",
       "financialEnrichmentStatus": "candidate-complete",
       "structuralValidationStatus": "pass",
-      "simulationStatus": "not-run",
+      "simulationStatus": "executed-pilot-pass-with-blockers",
+      "simulationSeeds": 250,
+      "simulationCycles": 60,
       "activationAuthorized": false
     },
     {
