@@ -78,6 +78,8 @@ assert(assetWiring.includes("media-placeholder.svg"), "Local media fallback is n
 assert(createAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")'), "Create adapter omits Player ID.");
 assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Create adapter omits Access Code.");
 assert(fallback.includes('"playerIdentifier"') && fallback.includes('"accessCode"'), "Fallback omits identity credentials.");
+assert(fallback.includes("econovaria:admin-request-lifecycle"), "Authenticated request owner does not emit explicit lifecycle events.");
+assert(fallback.includes("requestId") && fallback.includes('phase: "started"'), "Admin request lifecycle lacks request-scoped correlation.");
 assert(!html.includes("player-identity-transport.js"), "Header-stripping identity transport is still loaded.");
 assert(!html.includes("player-identity-roster-transport.js"), "Unsafe roster DOM replacement transport is still loaded.");
 assert(credentialBridge.includes("updatePlayerIdentity"), "Existing-player identity write bridge is missing.");
@@ -147,7 +149,10 @@ assert(interactionQuality.includes("setScannerProcessing"), "Scanner processing 
 assert(interactionQuality.includes("setScannerCompleted"), "Scanner completed state is missing.");
 assert(interactionQuality.includes("setScannerError"), "Scanner error state is missing.");
 assert(interactionQuality.includes("admin-qol-page-skeleton"), "Page skeleton host is missing.");
-assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Admin request-state observer is missing.");
+assert(interactionQuality.includes("econovaria:admin-request-lifecycle"), "Admin interaction controller does not consume explicit request lifecycle events.");
+assert(interactionQuality.includes("requestContexts"), "Concurrent Admin requests do not retain request-scoped UI ownership.");
+assert(!interactionQuality.includes("window.fetch ="), "Admin interaction controller still owns global transport interception.");
+assert(!interactionQuality.includes("MutationObserver"), "Admin interaction controller still observes the complete DOM subtree.");
 assert(interactionControlReset.includes("restoreCompletedControl"), "Completed actions do not restore their controls.");
 assert(interactionControlReset.includes('removeAttribute("aria-disabled")'), "Completed controls do not clear stale disabled semantics.");
 assert(interactionControlReset.includes("setScannerReady"), "Scanner does not restore its Ready state.");
@@ -202,4 +207,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, route-shaped loading shells, responsive geometry, reduced motion, credential accessibility, request states, scanner lifecycle, and completed-control restoration passed.");
+console.log("Original v606 shell, route-shaped loading shells, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");

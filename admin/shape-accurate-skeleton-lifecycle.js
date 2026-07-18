@@ -7,6 +7,8 @@
   const ACCOUNT_SETTLE_MS = 520;
   const ACCOUNT_FORCE_RENDER_MS = 1500;
   const ACCOUNT_VISIBLE_MS = 760;
+  const PAGE_COMPLETION_FAILSAFE_MS = 340;
+  const NAVIGATION_WATCHDOG_MS = 1200;
   const REQUIRED_STABLE_FRAMES = 2;
   const MONITOR_WINDOW_MS = 5000;
 
@@ -181,12 +183,83 @@
     window.requestAnimationFrame(frame);
   }
 
+  function hidePageGeneration(route, generation) {
+    const main = currentMain();
+    const overlay = currentOverlay(main);
+    if (!(main instanceof HTMLElement) || !(overlay instanceof HTMLElement)) return false;
+    if (route && !routeMatchesOverlay(overlay, route)) return false;
+    if (
+      generation &&
+      overlay.dataset.adminShapeSkeletonGeneration !== String(generation)
+    ) {
+      return false;
+    }
+    hideConnectedOverlay(overlay);
+    main.removeAttribute("aria-busy");
+    delete main.dataset.adminShapeLoadingRoute;
+    return true;
+  }
+
+  function completePageReadLifecycle(detail) {
+    if (
+      detail?.pageRead !== true ||
+      !["committed", "failed", "cancelled"].includes(detail?.phase)
+    ) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const api = window.EconovariaAdminShapeSkeletons;
+      const controller = api?.activePageController?.() || null;
+      const main = currentMain();
+      const overlay = currentOverlay(main);
+      const generation = controller?.generation ||
+        Number(overlay?.dataset.adminShapeSkeletonGeneration || 0);
+      const route = controller?.route || overlay?.dataset.adminShapeSkeletonRoute || "";
+
+      controller?.hide?.();
+
+      window.setTimeout(() => {
+        hidePageGeneration(route, generation);
+      }, PAGE_COMPLETION_FAILSAFE_MS);
+    });
+  }
+
+  function scheduleNavigationWatchdog(route, token) {
+    window.setTimeout(() => {
+      if (token !== lifecycleGeneration) return;
+      const api = window.EconovariaAdminShapeSkeletons;
+      const controller = api?.activePageController?.() || null;
+      if (controller?.route && controller.route !== route) return;
+      const overlay = currentOverlay(currentMain());
+      const generation = controller?.generation ||
+        Number(overlay?.dataset.adminShapeSkeletonGeneration || 0);
+      controller?.hide?.({ immediate: true });
+      hidePageGeneration(route, generation);
+    }, NAVIGATION_WATCHDOG_MS);
+  }
+
+  function onRequestLifecycle(event) {
+    const detail = event.detail && typeof event.detail === "object"
+      ? event.detail
+      : {};
+    completePageReadLifecycle(detail);
+  }
+
   function onDocumentClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
-    if (target.closest("[data-admin-section]")) {
-      lifecycleGeneration += 1;
+    const nav = target.closest("[data-admin-section]");
+    if (nav) {
+      const routeName = nav.getAttribute("data-admin-section") || "Overview";
+      const route = routeName === "Assignments"
+        ? "contracts"
+        : routeName === "Market"
+        ? "marketplace"
+        : routeName.toLowerCase();
+      const token = ++lifecycleGeneration;
+      scheduleNavigationWatchdog(route, token);
       return;
     }
 
@@ -199,5 +272,6 @@
     monitorAccountLoading(route, token);
   }
 
+  document.addEventListener("econovaria:admin-request-lifecycle", onRequestLifecycle);
   document.addEventListener("click", onDocumentClick, true);
 })();
