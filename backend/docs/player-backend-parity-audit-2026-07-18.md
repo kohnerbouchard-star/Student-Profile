@@ -3,7 +3,7 @@
 Date: 2026-07-18  
 Branch: `agent/player-backend-reconciliation-v2`  
 Base: `main` at `c7c949482b78c5960173e25e487f3aba2448d10e`  
-Status: World, Market, watchlist, and Inventory read tranches implemented; Inventory final verification pending; no production deployment authorized
+Status: World, Market, watchlist, and Inventory read tranches complete; no production deployment authorized
 
 ## Scope and invariants
 
@@ -36,7 +36,7 @@ PR #158 owns Backend-only reconciliation for the merged Player Terminal and curr
 | Store catalog/quote/purchase | existing player Store routes | Implemented | Existing quote and settlement behavior preserved. |
 | Contracts list/submission | existing player Contract routes | Implemented | Current lifecycle preserved. |
 | Contract acceptance | `POST /players/me/contracts/:contractId/accept` | Missing | Requires atomic reconciliation. |
-| Inventory read | `GET /players/me/inventory` | Implemented; final gates pending | Token-scoped, maximum 200 holdings, public item keys, batched Store metadata, UUID-private DTO, explicit empty/unavailable state. |
+| Inventory read | `GET /players/me/inventory` | Implemented | Token-scoped, maximum 200 holdings, public item keys, batched Store metadata, UUID-private DTO, explicit empty/unavailable state. |
 | Notifications | `GET /players/me/notifications`; read mutation | Missing | Next bounded tranche. |
 | Logout | `POST /players/me/session/logout` | Missing | Follows notifications. |
 | Banking summary | `GET /players/me/ledger` | Implemented read-only | Transfers/savings remain unsupported. |
@@ -87,7 +87,7 @@ Persistence and response controls:
 3. Market collection — complete;
 4. Market detail/history — complete;
 5. watchlist reads/writes — complete;
-6. Inventory read — implemented; final gates pending;
+6. Inventory read — complete;
 7. notifications list/read;
 8. logout;
 9. capability manifest;
