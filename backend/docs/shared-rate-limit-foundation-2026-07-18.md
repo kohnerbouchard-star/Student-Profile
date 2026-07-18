@@ -2,13 +2,13 @@
 
 **Roadmap item:** `BETA-AUTH-005`\
 **Authority:** PR #158 / `agent/player-backend-reconciliation-v2`\
-**Baseline:** `5944fd5127289c659909e6b608858345672fdd4d`
+**Baseline:** `72a1c1c593a11627eaddbafe37177619ead0d8b3`
 
-This tranche adds the shared persistence, keying, policy, repository, service,
-and HTTP response foundation for authenticated Player request throttling. It
-does not advertise a new capability and does not change the Classroom API
-dispatcher. `BETA-AUTH-005` therefore remains `IMPLEMENTED_NOT_MERGED` and
-requires the route integration and runtime evidence listed below.
+The foundation now includes the Classroom API integration for reviewed Player
+routes and a separate pre-authentication login guard. It does not advertise a
+new capability or change any accepted visual system. `BETA-AUTH-005` remains
+`IMPLEMENTED_NOT_MERGED` until PR #158 merges and the runtime evidence below is
+recorded.
 
 ## Security model
 
@@ -42,6 +42,53 @@ Configuration values and derived keys must never be logged.
 The service accepts the full `PlayerRequestScope` produced by the shared active
 session resolver rather than independent player/game arguments. This makes the
 intended ownership provenance explicit at the integration boundary.
+
+`POST /players/login` is different because no authenticated owner exists before
+credential verification. Its pre-authentication guard consumes exactly two
+buckets in one transaction:
+
+- IP, derived only from the configured platform-overwritten proxy header;
+- action-per-IP, derived from the reviewed constant `player.login.attempt` and
+  that IP.
+
+The login guard does not parse the request body and cannot receive submitted
+game code, Player ID, access code, player UUID, or game UUID. A second
+forward-only RPC, `consume_pre_auth_request_rate_limits_v1(jsonb)`, accepts
+exactly the `action` and `ip` dimensions. It reuses the HMAC-only counter table,
+deterministic lock ordering, atomic upsert, RLS, and service-role-only execution
+boundary.
+
+## Dispatcher integration
+
+`playerRateLimitDispatch.ts` is the single post-authentication integration
+point. It resolves active token-owned scope, selects an action/profile from a
+server-owned endpoint-and-method map, consumes the limiter once, and invokes the
+route only after an allowed decision. Unsupported methods bypass consumption so
+the authoritative handler retains its `405` semantics. Denial or outage never
+invokes route work.
+
+Integrated routes:
+
+| Route operation | Action | Profile |
+| --- | --- | --- |
+| `GET /players/me` | `player.session.read` | read |
+| `GET /players/me/capabilities` | `player.capabilities.read` | read |
+| `GET /players/me/world/countries` | `player.countries.read` | read |
+| `GET /players/me/world/countries/:countryCode` | `player.country.read` | read |
+| `GET /players/me/world/news` | `player.news.read` | read |
+| `GET /players/me/stocks/assets` | `player.market.read` | read |
+| `GET /players/me/stocks/assets/:ticker` | `player.asset.read` | read |
+| `GET /players/me/stocks/watchlist` | `player.watchlist.read` | read |
+| `PUT/DELETE /players/me/stocks/watchlist/:ticker` | `player.watchlist.write` | write |
+| `GET /players/me/inventory` | `player.inventory.read` | read |
+| `GET /players/me/notifications` | `player.notifications.read` | read |
+| `POST /players/me/notifications/read` | `player.notifications.write` | write |
+| `POST /players/me/session/logout` | `player.session.logout` | sensitive |
+| `POST /players/login` | `player.login.attempt` | sensitive pre-auth |
+
+The reviewed `contractAccept` mapping is defined as
+`player.contracts.accept/write`, but dispatcher wiring remains with the active
+Contract acceptance owner and is deliberately not changed in this tranche.
 
 ## Atomic persistence and replay semantics
 
@@ -103,49 +150,48 @@ The focused suites cover:
   atomic upsert, exact dimension count, and no raw identity columns in migration
   source.
 
-## Remaining integration and runtime evidence
+## Remaining runtime evidence
 
-1. Add a single reviewed integration point after session authentication and
-   before route work for each supported Player action. Pass only action
-   constants and token-derived scope. Do not let query, body, or browser headers
-   select the action, player, or game dimension.
-2. Add an IP/action pre-authentication limiter for `/players/login`. Invalid
-   credentials cannot supply authoritative player/game dimensions, so login must
-   not fabricate them from submitted identifiers. Successful login may consume
-   the authenticated dimensions after identity resolution.
-3. Map limiter errors to the provided `429`/`503` responses and prove protected
-   writes never execute when limiting is unavailable or denied.
-4. Configure the two runtime variables in isolated staging only after verifying
+1. Wire `contractAccept` through the shared dispatch helper when its owning
+   branch completes; do not duplicate limiter consumption in its handler.
+2. Configure the two runtime variables in isolated staging only after verifying
    that the chosen proxy header is overwritten by the platform. Rotate the HMAC
    secret only as a coordinated security change; rotation starts a new digest
    key space and therefore resets active counters.
-5. Run Database Replay twice and database lint in CI, then run real concurrent
+3. Run Database Replay twice and database lint in CI, then run real concurrent
    requests across two games, multiple players, and a shared classroom NAT.
-6. Tune thresholds from staging telemetry. Policy changes require review because
+4. Tune thresholds from staging telemetry. Policy changes require review because
    overly narrow game/IP buckets can deny a whole classroom.
-7. Add bounded global expired-row cleanup and monitoring for denial rate,
+5. Add bounded global expired-row cleanup and monitoring for denial rate,
    limiter latency, RPC failures, bucket volume, and sustained blocks.
 
-No route, Classroom API dispatcher, capability manifest, package script, visual
-system, or existing migration is changed in this tranche.
+No capability manifest, package script, visual system, or existing migration is
+changed. The forward migration
+`20260718190000_add_pre_auth_rate_limit_rpc_v1.sql` adds only the dedicated
+pre-authentication RPC.
 
 ## Local verification
 
-After rebasing onto PR #158 commit `120277da75b970165e9fc8b64b5d4b8b092a1d55`:
+On the integration tranche based on privacy commit
+`72a1c1c593a11627eaddbafe37177619ead0d8b3`:
 
-- all 12 focused rate-limit tests passed;
-- the combined security suite passed 23 tests and the leak scanner passed 3
+- all 26 rate-limit keying, service, repository, HTTP, migration, guard, and
+  Classroom API dispatch tests passed;
+- the combined security suite passed 43 tests and the leak scanner passed 3
   tests plus its live Player Terminal repository scan;
 - Backend TypeScript typecheck passed;
-- migration source audit passed with 61 unique migrations;
+- migration source audit passed with 62 unique migrations;
 - the concurrent Contract-acceptance tranche's 9 tests passed unchanged;
-- the root repository test/release-quality suite passed before the compatible
-  Contract-only rebase.
+- the root repository test/release-quality suite passed, including Admin v606
+  drift gates.
 
 The broader Backend smoke passed Classroom API smoke and every Player suite (45
 market, 10 scope, 8 capability, 17 world, 14 inventory, 15 notification, and 9
-logout tests). It then reached the Admin API suite but could not download
+logout tests) plus 9 Contract-acceptance tests. It then reached the Admin API
+suite but could not download
 `@supabase/supabase-js@2.108.2` from `esm.sh` because the execution environment
-refused the network connection. No Admin assertion ran or failed. Docker and a
-local Supabase CLI are unavailable here, so CI must supply the authoritative
-two-pass database replay, lint, and SQL concurrency evidence.
+refused the network connection. Classroom API Edge typecheck reached the same
+remote import before checking the dispatcher entry point. No Admin assertion
+ran or failed. Docker and a local Supabase runtime are unavailable here, so CI
+must supply the authoritative Edge typecheck, two-pass database replay, lint,
+and SQL concurrency evidence.

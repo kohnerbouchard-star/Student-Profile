@@ -162,6 +162,10 @@ import {
 import {
   handleStaffDemoStorylineInitializationRequest,
 } from "../../../src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts";
+import {
+  dispatchRateLimitedPlayerLoginRequest,
+  dispatchRateLimitedReviewedPlayerRequest,
+} from "../../../src/security/playerRateLimitDispatch.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -189,9 +193,15 @@ Deno.serve(async (request) => {
   );
 
   if (playerCapabilityManifestRoute) {
-    return handlePlayerCapabilityManifestRequest(
+    return dispatchRateLimitedReviewedPlayerRequest(
       request,
-      playerCapabilityManifestRoute,
+      "capabilities",
+      () =>
+        handlePlayerCapabilityManifestRequest(
+          request,
+          playerCapabilityManifestRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -199,9 +209,15 @@ Deno.serve(async (request) => {
   const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);
 
   if (playerWorldRoute) {
-    return handlePlayerWorldReadRequest(request, playerWorldRoute, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      playerWorldRoute.kind,
+      () =>
+        handlePlayerWorldReadRequest(request, playerWorldRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerInventoryRedemptionRoute = readPlayerInventoryRedemptionRoutePath(
@@ -209,9 +225,15 @@ Deno.serve(async (request) => {
   );
 
   if (playerInventoryRedemptionRoute) {
-    return handlePlayerInventoryRedemptionRequest(
+    return dispatchRateLimitedReviewedPlayerRequest(
       request,
-      playerInventoryRedemptionRoute,
+      "inventoryRedemption",
+      () =>
+        handlePlayerInventoryRedemptionRequest(
+          request,
+          playerInventoryRedemptionRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -219,25 +241,48 @@ Deno.serve(async (request) => {
   const playerInventoryRoute = readPlayerInventoryRoutePath(url.pathname);
 
   if (playerInventoryRoute) {
-    return handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "inventory",
+      () =>
+        handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerNotificationRoute = readPlayerNotificationRoutePath(url.pathname);
 
   if (playerNotificationRoute) {
-    return handlePlayerNotificationRequest(request, playerNotificationRoute, {
-      createServiceClient,
-    });
+    const endpointKey = playerNotificationRoute.kind === "markRead"
+      ? "notificationsRead"
+      : "notifications";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerNotificationRequest(
+          request,
+          playerNotificationRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
   }
 
   const playerLogoutRoute = readPlayerSessionLogoutRoutePath(url.pathname);
 
   if (playerLogoutRoute) {
-    return handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "logout",
+      () =>
+        handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerStockAssetListRoute = readPlayerStockAssetListRoutePath(
@@ -245,9 +290,20 @@ Deno.serve(async (request) => {
   );
 
   if (playerStockAssetListRoute) {
-    return handlePlayerStockAssetListRequest(
+    const endpointKey = playerStockAssetListRoute.kind === "assets"
+      ? "market"
+      : playerStockAssetListRoute.kind === "asset"
+      ? "marketAsset"
+      : "marketWatchlist";
+    return dispatchRateLimitedReviewedPlayerRequest(
       request,
-      playerStockAssetListRoute,
+      endpointKey,
+      () =>
+        handlePlayerStockAssetListRequest(
+          request,
+          playerStockAssetListRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -286,9 +342,15 @@ Deno.serve(async (request) => {
     readPlayerContractAcceptanceRoutePath(url.pathname);
 
   if (playerContractAcceptanceRoute) {
-    return handlePlayerContractAcceptanceRequest(
+    return dispatchRateLimitedReviewedPlayerRequest(
       request,
-      playerContractAcceptanceRoute,
+      "contractAccept",
+      () =>
+        handlePlayerContractAcceptanceRequest(
+          request,
+          playerContractAcceptanceRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
@@ -338,15 +400,23 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me")) {
-    return handlePlayerSessionBootstrapRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "bootstrap",
+      () =>
+        handlePlayerSessionBootstrapRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/login")) {
-    return handlePlayerLoginRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedPlayerLoginRequest(
+      request,
+      () => handlePlayerLoginRequest(request, { createServiceClient }),
+      { createServiceClient },
+    );
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);

@@ -1,6 +1,7 @@
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
 import {
   enforcePlayerRateLimit,
+  enforcePreAuthRateLimit,
   readPlayerRateLimitConfig,
 } from "./playerRateLimitService.ts";
 import type {
@@ -39,6 +40,52 @@ Deno.test("player rate-limit service consumes all server-derived dimensions once
     "ip",
   ]);
   assertNoScopeMaterial(repository.calls[0] ?? []);
+});
+
+Deno.test("pre-auth login limiter consumes only IP and action buckets once", async () => {
+  const repository = new RecordingRepository([ALLOWED]);
+  const decision = await enforcePreAuthRateLimit(
+    {
+      action: "player.login.attempt",
+      profile: "sensitive",
+      request: new Request("https://example.test/players/login", {
+        method: "POST",
+        headers: { "x-real-ip": "203.0.113.42" },
+        body: JSON.stringify({
+          gameJoinCode: "MUST-NOT-BE-KEYED",
+          playerIdentifier: "PLAYER-NOT-KEYED",
+          accessCode: "CODE-NOT-KEYED",
+        }),
+      }),
+    },
+    {} as EdgeSupabaseClient,
+    {
+      readConfig: () => ({
+        hmacSecret: SECRET,
+        trustedIpHeader: "x-real-ip",
+      }),
+      createRepository: () => repository,
+    },
+  );
+
+  assertEquals(decision, ALLOWED);
+  assertEquals(repository.calls.length, 1);
+  assertEquals(repository.calls[0]?.map((bucket) => bucket.dimension), [
+    "action",
+    "ip",
+  ]);
+  const serialized = JSON.stringify(repository.calls[0]);
+  for (
+    const forbidden of [
+      "MUST-NOT-BE-KEYED",
+      "PLAYER-NOT-KEYED",
+      "CODE-NOT-KEYED",
+      "identity",
+      "game",
+    ]
+  ) {
+    assert(!serialized.includes(forbidden));
+  }
 });
 
 Deno.test("player rate-limit service counts replays and concurrent attempts without client idempotency bypass", async () => {

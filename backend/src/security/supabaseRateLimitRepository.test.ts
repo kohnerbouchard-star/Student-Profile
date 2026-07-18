@@ -54,6 +54,38 @@ Deno.test("rate-limit repository calls the atomic RPC once and maps its decision
   });
 });
 
+Deno.test("pre-auth rate-limit repository uses only the dedicated two-bucket RPC", async () => {
+  const calls: unknown[] = [];
+  const buckets = BUCKETS.filter((bucket) =>
+    bucket.dimension === "action" || bucket.dimension === "ip"
+  );
+  const repository = new SupabaseRateLimitRepository(
+    {
+      rpc: (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return Promise.resolve({
+          data: [{
+            allowed: true,
+            retry_after_seconds: 0,
+            limiting_dimension: null,
+            limit_count: 10,
+            remaining_count: 9,
+            reset_at: "2026-07-18T00:01:00.000Z",
+          }],
+          error: null,
+        });
+      },
+    } as unknown as EdgeSupabaseClient,
+    "consume_pre_auth_request_rate_limits_v1",
+  );
+
+  await repository.consume(buckets);
+  assertEquals(calls, [{
+    name: "consume_pre_auth_request_rate_limits_v1",
+    args: { p_buckets: buckets },
+  }]);
+});
+
 Deno.test("rate-limit repository fails closed on RPC errors and malformed results", async () => {
   for (
     const response of [

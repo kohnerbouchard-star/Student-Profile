@@ -1,5 +1,6 @@
 import {
   buildPlayerRateLimitBuckets,
+  buildPreAuthRateLimitBuckets,
   hmacSha256Hex,
   normalizeIpAddress,
   readTrustedClientIp,
@@ -65,6 +66,30 @@ Deno.test("rate-limit keys isolate games and actions without changing identity o
   assertEquals(key(base, "game"), key(otherAction, "game"));
   assertEquals(key(base, "identity"), key(otherAction, "identity"));
   assertEquals(key(base, "ip"), key(otherAction, "ip"));
+});
+
+Deno.test("pre-auth login keying uses only IP and action-per-IP buckets", async () => {
+  const buckets = await buildPreAuthRateLimitBuckets({
+    action: "player.login.attempt",
+    ipAddress: "203.0.113.42",
+    profile: "sensitive",
+  }, SECRET);
+
+  assertEquals(buckets.map((bucket) => bucket.dimension), ["action", "ip"]);
+  assertEquals(buckets.map((bucket) => bucket.limit), [10, 30]);
+  const serialized = JSON.stringify(buckets);
+  assert(!serialized.includes("203.0.113.42"));
+  assert(!serialized.includes("player.login.attempt"));
+  assert(!serialized.includes("identity"));
+  assert(!serialized.includes("game"));
+
+  const otherIp = await buildPreAuthRateLimitBuckets({
+    action: "player.login.attempt",
+    ipAddress: "203.0.113.43",
+    profile: "sensitive",
+  }, SECRET);
+  assertNotEquals(key(buckets, "action"), key(otherIp, "action"));
+  assertNotEquals(key(buckets, "ip"), key(otherIp, "ip"));
 });
 
 Deno.test("trusted client IP parsing normalizes IPv4 and IPv6 and rejects untrusted shapes", () => {

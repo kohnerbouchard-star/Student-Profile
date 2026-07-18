@@ -17,13 +17,19 @@ interface RateLimitRpcRow {
 }
 
 export class SupabaseRateLimitRepository implements RateLimitRepository {
-  constructor(private readonly client: EdgeSupabaseClient) {}
+  constructor(
+    private readonly client: EdgeSupabaseClient,
+    private readonly rpcName:
+      | "consume_request_rate_limits_v1"
+      | "consume_pre_auth_request_rate_limits_v1" =
+        "consume_request_rate_limits_v1",
+  ) {}
 
   async consume(
     buckets: readonly RateLimitBucketInput[],
   ): Promise<RateLimitDecision> {
     const response = await this.client.rpc<RateLimitRpcRow[] | RateLimitRpcRow>(
-      "consume_request_rate_limits_v1",
+      this.rpcName,
       { p_buckets: buckets },
     );
 

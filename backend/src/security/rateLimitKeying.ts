@@ -22,6 +22,12 @@ export interface PlayerRateLimitContext {
   readonly profile: PlayerRateLimitProfile;
 }
 
+export interface PreAuthRateLimitContext {
+  readonly action: string;
+  readonly ipAddress: string;
+  readonly profile: PlayerRateLimitProfile;
+}
+
 const ACTION_PATTERN =
   /^player\.[a-z][a-z0-9_-]{1,31}\.[a-z][a-z0-9_-]{1,31}$/u;
 const UUID_PATTERN =
@@ -47,6 +53,30 @@ export async function buildPlayerRateLimitBuckets(
   const policy = PLAYER_RATE_LIMIT_POLICIES[context.profile];
 
   return Promise.all(RATE_LIMIT_DIMENSIONS.map(async (dimension) => ({
+    dimension,
+    keyHash: await hmacSha256Hex(
+      hmacSecret,
+      `econovaria-rate-limit-v1\u0000${dimension}\u0000${rawKeys[dimension]}`,
+    ),
+    ...policy[dimension],
+  })));
+}
+
+export async function buildPreAuthRateLimitBuckets(
+  context: PreAuthRateLimitContext,
+  hmacSecret: string,
+): Promise<readonly RateLimitBucketInput[]> {
+  validatePreAuthContext(context);
+  validateHmacSecret(hmacSecret);
+
+  const normalizedIp = normalizeIpAddress(context.ipAddress);
+  const policy = PLAYER_RATE_LIMIT_POLICIES[context.profile];
+  const rawKeys = {
+    action: `${context.action}\u0000${normalizedIp}`,
+    ip: normalizedIp,
+  } as const;
+
+  return Promise.all((["action", "ip"] as const).map(async (dimension) => ({
     dimension,
     keyHash: await hmacSha256Hex(
       hmacSecret,
@@ -143,6 +173,15 @@ function validateContext(context: PlayerRateLimitContext): void {
     !UUID_PATTERN.test(context.gameUuid)
   ) {
     throw invalidContext("Rate limit ownership scope is invalid.");
+  }
+  if (!(context.profile in PLAYER_RATE_LIMIT_POLICIES)) {
+    throw invalidContext("Rate limit policy profile is invalid.");
+  }
+}
+
+function validatePreAuthContext(context: PreAuthRateLimitContext): void {
+  if (!ACTION_PATTERN.test(context.action)) {
+    throw invalidContext("Rate limit action is not a reviewed server action.");
   }
   if (!(context.profile in PLAYER_RATE_LIMIT_POLICIES)) {
     throw invalidContext("Rate limit policy profile is invalid.");

@@ -2,6 +2,7 @@ import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.t
 import type { PlayerRequestScope } from "../domains/players/api/playerRequestScope.ts";
 import {
   buildPlayerRateLimitBuckets,
+  buildPreAuthRateLimitBuckets,
   type PlayerRateLimitContext,
   readTrustedClientIp,
   TRUSTED_IP_HEADERS,
@@ -33,6 +34,12 @@ export interface EnforcePlayerRateLimitInput {
   readonly scope: PlayerRequestScope;
 }
 
+export interface EnforcePreAuthRateLimitInput {
+  readonly action: string;
+  readonly profile: PlayerRateLimitProfile;
+  readonly request: Request;
+}
+
 export interface PlayerRateLimitServiceDependencies {
   readonly readConfig?: () => PlayerRateLimitRuntimeConfig;
   readonly createRepository?: (
@@ -58,6 +65,27 @@ export async function enforcePlayerRateLimit(
   const repository = dependencies.createRepository
     ? dependencies.createRepository(client)
     : new SupabaseRateLimitRepository(client);
+  return repository.consume(buckets);
+}
+
+export async function enforcePreAuthRateLimit(
+  input: EnforcePreAuthRateLimitInput,
+  client: EdgeSupabaseClient,
+  dependencies: PlayerRateLimitServiceDependencies = {},
+): Promise<RateLimitDecision> {
+  const config = (dependencies.readConfig ?? readPlayerRateLimitConfig)();
+  const ipAddress = readTrustedClientIp(input.request, config.trustedIpHeader);
+  const buckets = await buildPreAuthRateLimitBuckets({
+    action: input.action,
+    ipAddress,
+    profile: input.profile,
+  }, config.hmacSecret);
+  const repository = dependencies.createRepository
+    ? dependencies.createRepository(client)
+    : new SupabaseRateLimitRepository(
+      client,
+      "consume_pre_auth_request_rate_limits_v1",
+    );
   return repository.consume(buckets);
 }
 
