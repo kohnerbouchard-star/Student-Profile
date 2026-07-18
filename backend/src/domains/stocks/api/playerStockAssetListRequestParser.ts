@@ -23,8 +23,8 @@ export function parsePlayerStockAssetListRequest(
   request: Request,
   route: PlayerStockAssetListRoute,
 ): PlayerStockAssetListQuery {
-  if (route.kind === "malformed") {
-    throw invalidRequest("Market asset list paths do not accept extra segments.");
+  if (route.kind !== "assets") {
+    throw invalidRequest("Market asset collection paths do not accept an assetId.");
   }
 
   const url = new URL(request.url);
