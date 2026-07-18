@@ -24,6 +24,19 @@ This document is the controlling roadmap for the remaining seed-data work. Miles
 9. Fixture data remains isolated from classroom and production definitions.
 10. The arrival class system remains Milestone 11.
 
+## Current checkpoint
+
+Completed in the current execution pass:
+
+- Northreach 24-instrument active candidate selected;
+- Northreach 21-issuer enrichment completed;
+- all 24 Northreach instruments received candidate financial, lifecycle, and exposure records;
+- Northreach structural and arithmetic validation passed;
+- Yrethia, Thaloris, and Solvend 24-instrument candidates and issuer registries created;
+- a reproducible Northreach market simulation was executed with 250 seeds, 60 cycles, and six scenarios;
+- simulation code, run manifest, checksums, integrity results, and review were committed;
+- no asset or country is authorized for activation.
+
 ## Milestone 1 — Ingest the 3,200-instrument universe
 
 Status: in progress
@@ -46,9 +59,9 @@ Acceptance gate:
 
 Immediate execution:
 
-- establish a 240-instrument active-subset candidate;
-- establish its issuer registry;
-- use that bounded package to define financial enrichment, simulation, importer, and UI requirements while the full JSONL universe is ingested.
+- continue ingesting the ten full country files;
+- preserve the 240-instrument active-subset candidate as a separate bounded layer;
+- do not confuse active-candidate records with the full reusable universe.
 
 ## Milestone 2 — Market reference and issuer system
 
@@ -71,9 +84,17 @@ Acceptance gate:
 - every benchmark is explicitly tradable or reference-only;
 - maturity, suspension, default, retirement, and deactivation behavior is defined.
 
+Current progress:
+
+- Northreach issuer enrichment: candidate-complete;
+- Yrethia issuer registry: selected, financial enrichment pending;
+- Thaloris issuer registry: selected, financial enrichment pending;
+- Solvend issuer registry: selected, financial enrichment pending;
+- remaining six countries: queued.
+
 ## Milestone 3 — Bounded active market and financial enrichment
 
-Status: started
+Status: in progress
 
 First review package:
 
@@ -107,6 +128,22 @@ Acceptance gate:
 - assumptions are simulation-ready;
 - event sensitivities are explainable;
 - selected assets represent each country’s canonical economy.
+
+Current progress:
+
+- Northreach: financial enrichment and first simulation complete with blockers;
+- Yrethia: selection complete, enrichment next;
+- Thaloris: selection complete, enrichment queued;
+- Solvend: selection complete, enrichment queued;
+- Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, Syndalis: selection queued.
+
+Northreach simulation findings requiring correction:
+
+- the current defensive portfolio is vulnerable to inflation and rate shocks;
+- broad recovery after crisis is too weak;
+- strategic wartime exposure may be too attractive;
+- long-end sovereign curve references are missing;
+- bank, default, recovery, refinancing, liquidity, and real-return mechanics remain incomplete.
 
 ## Milestone 4 — Canonical geography
 
@@ -202,33 +239,35 @@ Acceptance gate:
 
 ## Milestone 8 — Reproducible simulation and calibration
 
-Status: input contract exists; no run completed
+Status: Northreach pilot executed; global simulation pending
 
-Required simulation domains:
+Northreach evidence:
 
+- 250 deterministic seeds;
+- 60 market cycles;
+- baseline, inflation/rate, Meridian disruption, war, commodity boom, and crisis-recovery scenarios;
+- no guaranteed-positive instrument or portfolio case in the final run;
+- zero non-finite results;
+- raw-output checksums recorded;
+- code and review committed.
+
+Remaining simulation domains:
+
+- all nine additional country markets;
+- cross-country currency, trade, and event propagation;
 - starting-package viability;
-- active-market behavior;
-- inflation, interest-rate, currency, shipping, commodity, and war shocks;
 - reward sources and price sinks;
 - lending affordability and default recovery;
 - concentration and exploit strategies;
 - long-session recovery;
 - class-country matrix after Milestone 11.
 
-Required evidence:
-
-- committed source and versioned inputs;
-- multiple deterministic seeds;
-- raw outputs and checksums;
-- integrity report;
-- exact run command;
-- generated summary.
-
 Acceptance gate:
 
 - every approved value traces to reproducible evidence;
 - exploit and non-viability thresholds pass;
-- no unsupported numerical claim remains.
+- no unsupported numerical claim remains;
+- raw evidence is stored in the repository or an immutable artifact store.
 
 ## Milestone 9 — Staging importer, fixtures, and rollback
 
@@ -248,94 +287,61 @@ Deliverables:
 Acceptance gate:
 
 - exact replay produces no duplicates;
-- wrong-environment, checksum-conflict, missing-reference, and fixture-leakage tests fail safely;
-- rollback preserves referenced runtime history.
+- invalid references and checksums are rejected;
+- fixtures cannot enter classroom or production environments;
+- rollback preserves referenced history and runtime records.
 
-## Milestone 10 — Bounded staging activation and end-to-end verification
+## Milestone 10 — Bounded staging and cross-surface verification
 
-Status: blocked by Milestones 1–9
+Status: blocked
 
-Verification includes:
+Deliverables:
 
-- Admin list, search, filtering, detail, status, and audit views;
-- Player market, country, Contract, inventory, notification, and tutorial views;
-- empty, loading, error, unavailable, and suspended states;
-- pagination and performance;
-- desktop, compact, and narrow rendering;
-- keyboard and accessible naming;
-- no internal UUID or credential exposure;
-- rollback evidence.
+- selected staging content pack;
+- Admin read and lifecycle verification;
+- Player list, detail, search, filtering, pagination, empty, unavailable, and loading verification;
+- responsive and accessibility verification;
+- performance checks for the bounded market;
+- staged deactivation and rollback verification.
 
 Acceptance gate:
 
-- staging subset renders and behaves correctly;
-- all activated capabilities are authoritative;
-- rollback succeeds;
-- verification evidence is attached to the release candidate.
+- no unsupported feature appears operational;
+- no private UUID or ownership field reaches the browser;
+- market and player-economy states remain game scoped;
+- all required evidence is retained.
 
 ## Milestone 11 — Arrival class system
 
-Status: deliberately deferred
+Status: deferred by design
 
-Player flow:
+Deliverables:
 
-1. Answer a short arrival questionnaire.
-2. Receive an explainable class recommendation.
-3. Review advantages and trade-offs.
-4. Accept or override the recommendation.
-5. Receive a country-specific class variant.
-6. Retain access to retraining or later economic-path changes.
-
-Requirements:
-
-- six to eight balanced base classes;
+- arrival questionnaire;
+- six to eight base classes;
 - ten country-specific variants per class;
 - deterministic scoring;
-- no sensitive demographic questions;
-- no objectively superior class;
-- no permanent path lockout;
-- idempotent grants;
-- player/session-scoped state;
-- simulation of every class-country combination.
+- recommendation explanation;
+- player override;
+- starting grants and trade-offs;
+- retraining or career movement;
+- class-country simulation matrix.
 
 Acceptance gate:
 
-- class choice changes strategy without determining success;
-- questionnaire language is clear and non-discriminatory;
-- every class is viable in every country;
-- classes, starting packages, Contracts, progression, Store items, and banking remain balanced together.
+- no sensitive demographic questions;
+- no objectively superior class;
+- no permanent lockout from alternative economic paths;
+- every class-country pairing remains viable;
+- grants are idempotent and session scoped.
 
-## Current checkpoint
+## Immediate next execution order
 
-Completed or started:
-
-- 3,200-instrument allocation and generated library;
-- market reference taxonomy;
-- 50 candidate locations and route concepts;
-- ten arrival-package definitions;
-- design-manifest scaffold;
-- fixture matrix;
-- simulation input contract;
-- staging and UI verification plan;
-- deferred class-system requirements;
-- deterministic 240-instrument active-subset selection;
-- active-subset issuer-registry generation.
-
-Blocked:
-
-- production prices and yields;
-- final map coordinates and adjacency;
-- approved starting economic values;
-- executable importer;
-- staging activation;
-- class implementation.
-
-## Next three execution actions
-
-1. Commit and validate the 240-instrument active-subset candidate and its issuer registry.
-2. Complete a Northreach financial-enrichment pilot, then generalize the model across all ten countries.
-3. Complete the full 3,200-record repository ingest and reconcile its manifest and checksums.
-
-## Change control
-
-Update this tracker whenever a milestone changes state, quantity targets change, a capability becomes authoritative, values are recalibrated, or a staging/production release candidate is created.
+1. Financially enrich Yrethia’s 24-instrument candidate.
+2. Run Yrethia structural validation.
+3. Recalibrate Northreach defensive and recovery assumptions.
+4. Add five-year and ten-year Northreach curve references.
+5. Financially enrich Thaloris and Solvend.
+6. Select the remaining six country candidates.
+7. Continue full 3,200-record repository ingestion.
+8. Begin cross-country simulation only after at least four country markets are enriched.
