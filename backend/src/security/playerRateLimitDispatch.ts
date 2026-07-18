@@ -76,6 +76,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
   }),
+  contracts: byMethod({
+    GET: operation("player.contracts.read", "read"),
+  }),
   countries: byMethod({
     GET: operation("player.countries.read", "read"),
   }),
@@ -147,7 +150,6 @@ export async function dispatchRateLimitedPlayerLoginRequest(
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
   if (request.method !== "POST") return next();
-
   const limited = await guardPlayerLoginRequest(request, dependencies);
   return limited ?? next();
 }
