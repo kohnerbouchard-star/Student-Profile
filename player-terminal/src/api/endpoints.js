@@ -40,7 +40,8 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   progressionUnlock: { method: "POST", path: "/progression/skills/:skillId/unlock" },
   progressionClaim: { method: "POST", path: "/progression/rewards/:rewardId/claim" },
   notifications: { method: "GET", path: "/notifications" },
-  notificationsRead: { method: "POST", path: "/notifications/read" }
+  notificationsRead: { method: "POST", path: "/notifications/read" },
+  logout: { method: "POST", path: "/session/logout" }
 });
 
 export function resolveEndpoint(endpoint, params = {}) {
