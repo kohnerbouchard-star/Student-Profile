@@ -9,6 +9,7 @@ const PLAYER = "00000000-0000-4000-8000-000000000021";
 const HOLDING = "00000000-0000-4000-8000-000000000101";
 const ITEM = "00000000-0000-4000-8000-000000000201";
 const NOW = "2026-07-18T07:00:00.000Z";
+const LIMIT = 200;
 
 Deno.test("inventory repository joins scoped holdings to Store metadata", async () => {
   const repository = new SupabasePlayerInventoryReadRepository(client({
@@ -39,6 +40,7 @@ Deno.test("inventory repository joins scoped holdings to Store metadata", async 
   const result = await repository.readInventory({
     gameId: GAME,
     playerUuid: PLAYER,
+    limit: LIMIT,
   });
 
   assertEquals(result.gameId, GAME);
@@ -73,6 +75,7 @@ Deno.test("inventory repository returns a valid empty result without querying it
   const result = await repository.readInventory({
     gameId: GAME,
     playerUuid: PLAYER,
+    limit: LIMIT,
   });
 
   assertEquals(result.records, []);
@@ -96,7 +99,8 @@ Deno.test("inventory repository fails closed for missing metadata and persistenc
   await assertRejects(() => missingMetadata.readInventory({
     gameId: GAME,
     playerUuid: PLAYER,
-  }), "player_inventory_read_failed");
+    limit: LIMIT,
+  }), "player_inventory_metadata_missing");
 
   const unavailable = new SupabasePlayerInventoryReadRepository(client({
     inventory_holdings: [],
@@ -105,6 +109,7 @@ Deno.test("inventory repository fails closed for missing metadata and persistenc
   await assertRejects(() => unavailable.readInventory({
     gameId: GAME,
     playerUuid: PLAYER,
+    limit: LIMIT,
   }), "player_inventory_schema_not_applied");
 });
 
@@ -142,11 +147,19 @@ class FakeBuilder implements PromiseLike<{
     return this;
   }
 
+  gt(): FakeBuilder {
+    return this;
+  }
+
   in(): FakeBuilder {
     return this;
   }
 
   order(): FakeBuilder {
+    return this;
+  }
+
+  limit(): FakeBuilder {
     return this;
   }
 
