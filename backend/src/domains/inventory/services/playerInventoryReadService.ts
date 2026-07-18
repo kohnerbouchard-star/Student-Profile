@@ -83,6 +83,12 @@ function toItemDto(record: PlayerInventoryRecord): PlayerInventoryItemDto {
 
   const quantityAvailable = record.quantityOwned - record.quantityReserved;
   const publicItemId = record.itemKey;
+  const availableActions =
+    record.itemStatus === "active" &&
+      record.itemVisibility === "visible" &&
+      quantityAvailable > 0
+      ? ["inventory.use"] as const
+      : [] as const;
 
   return {
     id: publicItemId,
@@ -99,8 +105,7 @@ function toItemDto(record: PlayerInventoryRecord): PlayerInventoryItemDto {
     currencyCode: record.currencyCode,
     itemStatus: record.itemStatus,
     itemVisibility: record.itemVisibility === "visible" ? "player" : "hidden",
-    // Generic item use remains disabled until the redemption contract is implemented.
-    availableActions: [],
+    availableActions,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
