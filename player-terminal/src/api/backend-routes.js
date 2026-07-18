@@ -190,11 +190,9 @@ const ROUTE_BUILDERS = Object.freeze({
     path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 })
   }),
 
-  contracts: ({ session }) => ({
+  contracts: () => ({
     method: "GET",
-    path: queryPath("/players/me/contracts", {
-      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "contracts")
-    })
+    path: "/players/me/contracts"
   }),
 
   contractAccept: ({ params = {}, payload = {} }) => ({
