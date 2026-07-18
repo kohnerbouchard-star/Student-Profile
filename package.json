@@ -17,7 +17,7 @@
     "audit:seed-content": "npm run audit:seed-content-universe && npm run audit:seed-content-editorial && npm run audit:seed-content-identities && npm run audit:seed-content-issuers && npm run audit:seed-content-financial && npm run test:seed-content-preflight && npm run preflight:seed-content",
     "audit:seed-content-editorial": "node scripts/seed-content-universe-editorial-audit.mjs --check",
     "audit:seed-content-financial": "node scripts/seed-content-solvend-financial-audit.mjs",
-    "audit:seed-content-identities": "node scripts/seed-market-identity-reconciliation-audit.mjs --check",
+    "audit:seed-content-identities": "node scripts/seed-market-identity-reconciliation-summary.mjs --check",
     "audit:seed-content-issuers": "node scripts/seed-content-issuer-audit.mjs",
     "audit:seed-content-universe": "node scripts/generate-seed-market-universe.mjs --check",
     "preflight:seed-content": "node scripts/seed-content-preflight.mjs --environment test --mode design",
