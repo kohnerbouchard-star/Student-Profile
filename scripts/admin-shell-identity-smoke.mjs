@@ -20,6 +20,7 @@ const expectedScripts = [
   "./classroom-write-fallback.js",
   "./create-action-adapter.js",
   "./player-access-code-bridge.js",
+  "./modal-accessibility.js",
   "./player-create-lifecycle.js",
   "./player-drawer-wiring.js",
   "./player-identity-wiring.js",
@@ -50,6 +51,7 @@ const assetWiring = readFileSync(resolve(adminRoot, "asset-wiring.js"), "utf8");
 const fallback = readFileSync(resolve(adminRoot, "classroom-write-fallback.js"), "utf8");
 const createAdapter = readFileSync(resolve(adminRoot, "create-action-adapter.js"), "utf8");
 const credentialBridge = readFileSync(resolve(adminRoot, "player-access-code-bridge.js"), "utf8");
+const modalAccessibility = readFileSync(resolve(adminRoot, "modal-accessibility.js"), "utf8");
 const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle.js"), "utf8");
 const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
@@ -76,12 +78,22 @@ assert(!html.includes("player-identity-transport.js"), "Header-stripping identit
 assert(!html.includes("player-identity-roster-transport.js"), "Unsafe roster DOM replacement transport is still loaded.");
 assert(credentialBridge.includes("updatePlayerIdentity"), "Existing-player identity write bridge is missing.");
 assert(credentialBridge.includes("`${LOCAL_API_PREFIX}/games/"), "Existing-player identity updates do not use the authenticated local admin route.");
-assert(credentialBridge.includes("showCredentialDialog"), "Edit Player Profile cannot suppress the create-only credential dialog.");
+assert(credentialBridge.includes("econovaria:player-access-code-issued"), "Credential bridge no longer emits the one-time credential event.");
+assert(!credentialBridge.includes("renderAccessCodeDialog"), "Credential bridge recreates the duplicate credential dialog.");
+assert(!credentialBridge.includes("data-admin-player-access-code-dialog"), "Credential bridge still owns credential presentation markup.");
+assert(!credentialBridge.includes("style.cssText"), "Credential bridge still creates inline-styled presentation UI.");
 assert(createLifecycle.includes("econovaria:player-access-code-issued"), "Create lifecycle does not observe successful credential saves.");
 assert(createLifecycle.includes("data-admin-terminal-player-form"), "Create lifecycle is not bounded to the Add Player modal.");
 assert(createLifecycle.includes("guardDelegatedCreateAction"), "Delegated create actions do not enforce form validation.");
 assert(!createLifecycle.includes("markExpandedPlayerDetail"), "Create lifecycle still mutates the player drawer.");
 assert(!createLifecycle.includes("mountExpandedPlayerSettings"), "Create lifecycle still mounts removed inline settings.");
+
+assert(modalAccessibility.includes("focusableElements"), "Admin modal controller has no focusable-control boundary.");
+assert(modalAccessibility.includes('event.key === "Tab"'), "Admin modal controller does not trap keyboard focus.");
+assert(modalAccessibility.includes('event.key === "Escape"'), "Admin modal controller does not define Escape behavior.");
+assert(modalAccessibility.includes("restoreFocus"), "Admin modal controller does not restore focus.");
+assert(!modalAccessibility.includes("MutationObserver"), "Admin modal controller adds unnecessary DOM observation.");
+assert(!modalAccessibility.includes("window.fetch ="), "Admin modal controller adds a request wrapper.");
 
 assert(drawerWiring.includes("admin-terminal-player-drawer-tabs-v301"), "Original v606 player drawer shell is not restored.");
 assert(drawerWiring.includes("data-admin-terminal-player-drawer"), "Player drawer is missing the original delegated-event boundary.");
@@ -100,7 +112,7 @@ assert(identityWiring.includes("data-admin-player-profile-identity-editor"), "Ed
 assert(identityWiring.includes("confirm-player-settings-save"), "Edit Player Profile save action is not wired.");
 assert(identityWiring.includes("Player ID / RFID card"), "Edit Player Profile does not expose the configurable RFID value.");
 assert(identityWiring.includes("Leave blank to keep the current Access Code"), "Edit Player Profile does not preserve an unchanged Access Code.");
-assert(identityWiring.includes("showCredentialDialog: false"), "Edit Player Profile still opens a second credential popup.");
+assert(identityWiring.includes("showCredentialDialog: false"), "Edit Player Profile no longer declares its no-popup intent at the bridge boundary.");
 assert(!identityWiring.includes("data-admin-player-identity-settings-form"), "Removed inline player identity form is still present.");
 assert(!identityWiring.includes('setAttribute("data-admin-player-identity-manager"'), "Standalone Player IDs action is still created.");
 assert(!identityWiring.includes("openIdentityManager"), "Standalone identity manager workflow returned.");
@@ -113,7 +125,10 @@ assert(playerCreateUx.includes('removeAttribute("required")'), "Blank credential
 assert(playerCreateUx.includes("Leave blank to auto-generate"), "Add Player does not explain automatic credential generation.");
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation modal is missing.");
 assert(playerCreateUx.includes("admin-terminal-modal-backdrop"), "Player confirmation does not use the v606 modal system.");
-assert(playerCreateUx.includes("[data-admin-player-access-code-dialog]"), "Legacy credential overlay is not suppressed.");
+assert(playerCreateUx.includes("EconovariaAdminModalAccessibility"), "Player confirmation does not use the bounded modal controller.");
+assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement with Escape.");
+assert(playerCreateUx.includes("dismissOnBackdrop: false"), "One-time credentials can be dismissed by accidental backdrop click.");
+assert(playerCreateUx.includes("lastCreateOpener"), "Player confirmation does not retain its opening control for focus restoration.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
 
 assert(stabilization.includes("reconcileKnownButtons"), "Admin glyph reconciliation is missing.");
@@ -158,4 +173,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, admin wiring, validation, request states, skeleton loading, scanner lifecycle, and completed-control restoration passed.");
+console.log("Original v606 shell, single credential presentation, modal accessibility, admin wiring, validation, request states, skeleton loading, scanner lifecycle, and completed-control restoration passed.");

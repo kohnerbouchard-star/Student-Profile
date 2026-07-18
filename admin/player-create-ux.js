@@ -3,10 +3,13 @@
 
   const FORM_SELECTOR = "[data-admin-terminal-player-form]";
   const CREATE_ACTION_SELECTOR = '[data-admin-terminal-action="create-player"]';
+  const OPEN_ACTION_SELECTOR = '[data-admin-terminal-action="add-player"]';
   const LEGACY_DIALOG_SELECTOR = "[data-admin-player-access-code-dialog]";
   const CONFIRMATION_SELECTOR = "[data-admin-player-created-confirmation]";
   const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let lastCreateContext = null;
+  let lastCreateOpener = null;
+  let activeConfirmation = null;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -126,8 +129,10 @@
     return card;
   }
 
-  function renderConfirmation(detail, context) {
+  function renderConfirmation(detail, context, opener = lastCreateOpener) {
     if (!document.body || !text(detail?.studentCode)) return;
+    activeConfirmation?.destroy?.({ restoreFocus: false });
+    activeConfirmation = null;
     removeLegacyDialog();
     document.querySelector(CONFIRMATION_SELECTOR)?.remove();
 
@@ -136,12 +141,14 @@
     backdrop.setAttribute("data-admin-terminal-modal-backdrop", "");
     backdrop.setAttribute("data-modal-id", "player-created-confirmation");
     backdrop.setAttribute("data-admin-player-created-confirmation", "");
+    backdrop.setAttribute("data-admin-modal-requires-acknowledgement", "true");
 
     const modal = document.createElement("section");
     modal.className = "admin-terminal-modal admin-terminal-player-created-modal";
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
     modal.setAttribute("aria-labelledby", "adminPlayerCreatedTitle");
+    modal.setAttribute("aria-describedby", "adminPlayerCreatedDescription");
 
     const header = document.createElement("header");
     header.className = "admin-terminal-modal-head";
@@ -152,6 +159,7 @@
     title.id = "adminPlayerCreatedTitle";
     title.textContent = text(detail.displayName) || "New player";
     const description = document.createElement("p");
+    description.id = "adminPlayerCreatedDescription";
     description.textContent = context.generatedIdentifier || context.generatedAccessCode
       ? "The player was created successfully. Generated sign-in credentials are shown below."
       : "The player was created successfully with the sign-in credentials you entered.";
@@ -203,14 +211,49 @@
 
     modal.append(header, body, actions);
     backdrop.append(modal);
+    document.body.append(backdrop);
+
+    const modalAccessibility = window.EconovariaAdminModalAccessibility;
+    if (modalAccessibility && typeof modalAccessibility.activate === "function") {
+      activeConfirmation = modalAccessibility.activate({
+        backdrop,
+        dialog: modal,
+        initialFocus: copy,
+        opener,
+        dismissOnEscape: false,
+        dismissOnBackdrop: false,
+        onClose() {
+          backdrop.remove();
+          activeConfirmation = null;
+          lastCreateOpener = null;
+        },
+      });
+    } else {
+      copy.focus();
+      activeConfirmation = {
+        close() {
+          backdrop.remove();
+          activeConfirmation = null;
+          if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+          lastCreateOpener = null;
+        },
+        destroy() {
+          backdrop.remove();
+          activeConfirmation = null;
+        },
+      };
+    }
+
     backdrop.addEventListener("click", (event) => {
       const control = event.target instanceof Element
         ? event.target.closest("[data-admin-terminal-modal-close], [data-admin-player-created-done]")
         : null;
-      if (event.target === backdrop || control) backdrop.remove();
+      if (!control) return;
+      event.preventDefault();
+      activeConfirmation?.close?.(
+        control.hasAttribute("data-admin-player-created-done") ? "acknowledged" : "close-button",
+      );
     });
-    document.body.append(backdrop);
-    copy.focus();
   }
 
   function configureWithin(root = document) {
@@ -237,7 +280,11 @@
   }
 
   document.addEventListener("click", (event) => {
-    const action = event.target instanceof Element ? event.target.closest(CREATE_ACTION_SELECTOR) : null;
+    const target = event.target instanceof Element ? event.target : null;
+    const opener = target?.closest(OPEN_ACTION_SELECTOR);
+    if (opener instanceof HTMLElement) lastCreateOpener = opener;
+
+    const action = target?.closest(CREATE_ACTION_SELECTOR);
     if (!action) return;
     const form = action.closest(FORM_SELECTOR) || document.querySelector(FORM_SELECTOR);
     if (form) prepareCreateCredentials(form);
@@ -252,10 +299,11 @@
     const context = lastCreateContext;
     if (!context) return;
     const detail = event?.detail || {};
+    const opener = lastCreateOpener;
     lastCreateContext = null;
     window.setTimeout(() => {
       removeLegacyDialog();
-      renderConfirmation(detail, context);
+      renderConfirmation(detail, context, opener);
     }, 0);
   }, { capture: true });
 
