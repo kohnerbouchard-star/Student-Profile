@@ -4,9 +4,10 @@
   const MAIN_SELECTOR = ".admin-terminal-shell-main";
   const OVERLAY_SELECTOR = ":scope > .admin-qol-page-skeleton";
   const ACCOUNT_PAGE_SELECTOR = ".admin-terminal-account-page";
-  const ACCOUNT_SETTLE_MS = 180;
+  const ACCOUNT_SETTLE_MS = 520;
+  const ACCOUNT_FORCE_RENDER_MS = 1500;
   const ACCOUNT_VISIBLE_MS = 760;
-  const REQUIRED_STABLE_FRAMES = 4;
+  const REQUIRED_STABLE_FRAMES = 2;
   const MONITOR_WINDOW_MS = 5000;
 
   const ROUTE_BY_ACTION = Object.freeze({
@@ -164,13 +165,10 @@
         else state.stableFrames = signature ? 1 : 0;
         state.lastSignature = signature;
 
-        if (
-          signature &&
-          performance.now() - startedAt >= ACCOUNT_SETTLE_MS &&
-          state.stableFrames >= REQUIRED_STABLE_FRAMES
-        ) {
-          renderStableAccountSkeleton(route, state);
-        }
+        const elapsed = performance.now() - startedAt;
+        const stable = elapsed >= ACCOUNT_SETTLE_MS && state.stableFrames >= REQUIRED_STABLE_FRAMES;
+        const forced = elapsed >= ACCOUNT_FORCE_RENDER_MS;
+        if (signature && (stable || forced)) renderStableAccountSkeleton(route, state);
       } else {
         completeAccountLoading(route, token, state);
       }
