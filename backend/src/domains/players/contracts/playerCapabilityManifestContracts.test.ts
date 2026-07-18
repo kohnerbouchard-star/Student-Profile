@@ -8,6 +8,7 @@ import {
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
 import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
+import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
@@ -41,16 +42,16 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.actions.marketWatchlist, true);
   assertEquals(manifest.capabilities.actions.notificationsRead, true);
   assertEquals(manifest.capabilities.actions.logout, true);
+  assertEquals(manifest.capabilities.actions.contractAccept, true);
   assertEquals(manifest.capabilities.actions.marketOrder, false);
-  assertEquals(manifest.capabilities.actions.contractAccept, false);
   assertEquals(manifest.capabilities.actions.contractSubmit, false);
   assertEquals(manifest.capabilities.actions.storePurchase, false);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
   assertEquals(endpointKeys.includes("capabilities"), true);
+  assertEquals(endpointKeys.includes("contractAccept"), true);
   assertEquals(endpointKeys.includes("marketOrder" as never), false);
-  assertEquals(endpointKeys.includes("contractAccept" as never), false);
   assertEquals(endpointKeys.includes("store" as never), false);
 });
 
@@ -71,6 +72,7 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
     endpoint.operations.map((operation) => ({
       key: endpoint.key,
       path: operation.pathTemplate
+        .replace(":contractKey", "arrival-orientation")
         .replace(":countryCode", "NR")
         .replace(":ticker", "AURA"),
     }))
@@ -79,6 +81,8 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
   for (const operation of operations) {
     const parsed = operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
+      : operation.key === "contractAccept"
+      ? readPlayerContractAcceptanceRoutePath(operation.path)
       : operation.key === "countries" || operation.key === "country" ||
           operation.key === "news"
       ? readPlayerWorldRoutePath(operation.path)
