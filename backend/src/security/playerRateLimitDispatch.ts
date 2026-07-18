@@ -36,7 +36,8 @@ export interface ReviewedPlayerRateLimitOperation {
 
 export type ReviewedPlayerRateLimitEndpointKey =
   | PlayerCapabilityEndpointKey
-  | "bootstrap";
+  | "bootstrap"
+  | "inventoryRedemption";
 
 export interface PlayerRateLimitDispatchDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -54,6 +55,11 @@ export interface PlayerRateLimitDispatchDependencies {
     client: EdgeSupabaseClient,
   ) => Promise<RateLimitDecision>;
 }
+
+const redemptionOperations = byMethod({
+  GET: operation("player.inventory.redemptions.read", "read"),
+  POST: operation("player.inventory.redemptions.request", "write"),
+});
 
 const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   Record<
@@ -79,10 +85,8 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   inventory: byMethod({
     GET: operation("player.inventory.read", "read"),
   }),
-  inventoryRedemptions: byMethod({
-    GET: operation("player.inventory.redemptions.read", "read"),
-    POST: operation("player.inventory.redemptions.request", "write"),
-  }),
+  inventoryRedemption: redemptionOperations,
+  inventoryRedemptions: redemptionOperations,
   logout: byMethod({
     POST: operation("player.session.logout", "sensitive"),
   }),
