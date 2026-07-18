@@ -29,27 +29,29 @@ This document is the controlling roadmap for the remaining seed-data work. Miles
 Completed in the current execution pass:
 
 - the complete 3,200-instrument design universe is committed as ten deterministic JSONL files with 320 records per country;
-- the universe manifest now records per-file SHA-256 checksums, 3,200 unique stable IDs, 3,200 unique symbols, 3,200 unique names, and 1,610 stable issuer or administrator IDs;
+- the universe manifest records per-file SHA-256 checksums, 3,200 unique stable IDs, 3,200 unique symbols, 3,200 unique names, and 1,610 stable issuer or administrator IDs;
 - `scripts/generate-seed-market-universe.mjs --check` reproduces and verifies every country file and the manifest, and Repository Quality invokes that check through `audit:seed-content-universe`;
+- the deterministic editorial screen compared all 3,200 records and 72 curated active-candidate issuers with zero blocking structural, identity, inappropriate-term, real-brand-term, symbol, currency, or length findings;
+- the editorial screen retained ten normalized cross-country institutional-role groups for human review and explicitly does not claim legal trademark clearance;
 - Northreach, Yrethia, Thaloris, and Solvend each have a separate validated 24-instrument bounded active-market candidate;
 - the four-country issuer audit verified 72 unique issuers or administrators in total: 21 Northreach and 17 each for Yrethia, Thaloris, and Solvend;
 - all 96 active-candidate instrument-to-issuer references and issuer-to-instrument backreferences are complete and bidirectionally consistent;
 - Northreach, Yrethia, Thaloris, and Solvend financial enrichment and reproducible pilot simulations are complete with documented balance blockers;
 - Solvend simulation evidence covers 250 deterministic seeds, 60 cycles, 22 tradable instruments, eight scenarios, and five portfolio strategies;
 - Northreach has a recalibrated long-end reference curve and v2 simulation evidence;
-- automated universe-drift, issuer-reference, Solvend financial, preflight, and simulation-checksum audits run through Repository Quality;
+- automated universe-drift, editorial-evidence, issuer-reference, Solvend financial, preflight, and simulation-checksum audits run through Repository Quality;
 - no asset, country, importer, or runtime capability is authorized for activation.
 
 ## Milestone 1 — Ingest the 3,200-instrument universe
 
-Status: structural gate complete; editorial approval pending
+Status: automated structural and lexical gates complete; human editorial approval pending
 
 Deliverables:
 
 - ten country JSONL files with 320 records each — complete;
 - universe manifest with counts and checksums — complete;
 - validation for IDs, symbols, names, countries, currencies, exchanges, types, sectors, and issuers — automated structural validation complete;
-- editorial collision report — pending;
+- editorial collision report — deterministic automated report complete; human review pending;
 - repository paths recorded in the design manifest — pending final manifest reconciliation.
 
 Acceptance gate:
@@ -59,11 +61,13 @@ Acceptance gate:
 - no ticker collision with official currency codes — passed structurally;
 - every exchange, country, currency, type, sector, and issuer reference is structurally valid — passed for the generated library;
 - all records remain `activationAuthorized: false` — passed;
-- editorial, resemblance, pronunciation, cultural-association, and trademark-risk review — pending.
+- automated lexical and active-issuer screen has zero blockers — passed;
+- editorial, resemblance, pronunciation, cultural-association, and trademark-risk review — pending human approval.
 
 Immediate execution:
 
-- generate and resolve the editorial collision and resemblance report across all 3,200 records;
+- review the ten shared institutional-role naming groups and either approve them as intentionally country-qualified terms or replace them with country-specific canonical names;
+- review the 15-root generated corporate naming matrix for repetition, pronunciation, country voice, resemblance, and cultural associations;
 - reconcile generated issuer identities against the curated active-subset issuers so selected active candidates do not create duplicate entities;
 - preserve the 240-instrument active-subset candidate as a separate bounded layer;
 - do not confuse the committed definition library with an approved or player-facing active market.
@@ -97,7 +101,7 @@ Current progress:
 - Thaloris issuer enrichment: candidate-complete, 17 verified issuers or administrators;
 - Solvend issuer enrichment: candidate-complete, 17 verified issuers or administrators;
 - issuer-reference regression audit: active in Repository Quality;
-- generated-to-curated issuer reconciliation: pending;
+- generated-to-curated issuer reconciliation: automated exact-name screen complete with zero identity conflicts; semantic and editorial reconciliation remains pending;
 - Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis bounded candidate selection: queued.
 
 ## Milestone 3 — Bounded active market and financial enrichment
@@ -358,10 +362,10 @@ Acceptance gate:
 
 ## Immediate next execution order
 
-1. Generate and resolve the 3,200-record editorial collision, pronunciation, resemblance, cultural-association, and trademark-risk review.
-2. Reconcile generated issuer identities with the four curated active-country issuer registries.
+1. Resolve or explicitly approve the ten shared institutional-role naming groups and complete human review of the 15-root corporate naming matrix.
+2. Complete semantic generated-to-curated issuer reconciliation beyond exact-name collision checks.
 3. Begin four-country cross-market calibration using the completed Northreach, Yrethia, Thaloris, and Solvend evidence sets.
 4. Harmonize factor definitions, especially cyber disruption, and compare concentration, resilience, recovery, and exploitability thresholds.
 5. Select the remaining six country candidates from the committed universe without creating duplicate issuer entities.
 6. Advance geography, arrival-package, and core-gameplay content in dependency-safe parallel tranches.
-7. Keep staging importer and runtime activation work blocked until calibration, capability mapping, editorial review, and rollback gates are satisfied.
+7. Keep staging importer and runtime activation work blocked until calibration, capability mapping, human editorial review, and rollback gates are satisfied.
