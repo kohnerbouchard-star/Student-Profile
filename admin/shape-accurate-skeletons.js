@@ -217,11 +217,9 @@
       }
 
       if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
-        node.disabled = true;
         node.classList.add("admin-shape-skeleton-control");
       }
       if (node instanceof HTMLButtonElement) {
-        node.disabled = true;
         node.classList.add("admin-shape-skeleton-control");
       }
       if (node instanceof HTMLImageElement) {
