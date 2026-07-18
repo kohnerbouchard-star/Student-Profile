@@ -1,24 +1,46 @@
 import {
   readPlayerStockAssetListRoutePath,
+  readPlayerStockAssetRoutePath,
 } from "./playerStockAssetListRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("player stock asset list route accepts only the collection path", () => {
+Deno.test("player stock asset routes accept collection and public ticker detail paths", () => {
   assertEquals(
-    readPlayerStockAssetListRoutePath(
+    readPlayerStockAssetRoutePath(
       "/functions/v1/classroom-api/players/me/stocks/assets",
     ),
     { kind: "assets" },
   );
   assertEquals(
-    readPlayerStockAssetListRoutePath("/players/me/stocks/assets/AURA"),
+    readPlayerStockAssetRoutePath("/players/me/stocks/assets/aura"),
+    { kind: "asset", assetId: "AURA" },
+  );
+  assertEquals(
+    readPlayerStockAssetListRoutePath("/players/me/stocks/assets/BRK.B"),
+    { kind: "asset", assetId: "BRK.B" },
+  );
+});
+
+Deno.test("player stock asset routes reject internal UUIDs and malformed detail paths", () => {
+  assertEquals(
+    readPlayerStockAssetRoutePath(
+      "/players/me/stocks/assets/00000000-0000-4000-8000-000000000101",
+    ),
     { kind: "malformed" },
   );
   assertEquals(
-    readPlayerStockAssetListRoutePath("/players/me/stocks/orders"),
+    readPlayerStockAssetRoutePath("/players/me/stocks/assets/AURA/extra"),
+    { kind: "malformed" },
+  );
+  assertEquals(
+    readPlayerStockAssetRoutePath("/players/me/stocks/assets/AURA%2FBETA"),
+    { kind: "malformed" },
+  );
+  assertEquals(
+    readPlayerStockAssetRoutePath("/players/me/stocks/orders"),
     null,
   );
 });
