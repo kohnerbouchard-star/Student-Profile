@@ -1,4 +1,4 @@
-const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/;
+const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function list(value) {
   return Array.isArray(value) ? value : [];
