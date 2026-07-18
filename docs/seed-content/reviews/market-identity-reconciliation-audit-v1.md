@@ -1,18 +1,18 @@
 # Market Identity Reconciliation Audit v1
 
-Status: **canonicalization-required**  
+Status: **canonical-identities-reconciled**  
 Production authorization: false
 
 ## Result
 
 - universe records checked: 3200;
 - curated active-candidate records checked: 96;
-- exact canonical matches: 0;
-- conflicting reused-symbol identities: 92;
-- missing universe symbols: 4;
+- exact canonical matches: 96;
+- conflicting reused-symbol identities: 0;
+- missing universe symbols: 0;
 - active-ID conflicts: 0;
 - exchange mismatches: 0;
-- blocking findings: **96**.
+- blocking findings: **0**.
 
 ## Coverage
 

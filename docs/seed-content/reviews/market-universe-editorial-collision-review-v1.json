@@ -7,10 +7,10 @@
   "productionAuthorized": false,
   "summary": {
     "universeRecords": 3200,
-    "generatedIssuerIds": 1610,
+    "generatedIssuerIds": 1675,
     "activeCandidateIssuersCompared": 72,
     "blockers": 0,
-    "warnings": 10,
+    "warnings": 11,
     "exactDuplicateNames": 0,
     "duplicateSymbols": 0,
     "symbolCurrencyCollisions": 0,
@@ -19,7 +19,7 @@
     "universeIssuerNameInconsistencies": 0,
     "activeCandidateIssuerInconsistencies": 0,
     "activeCandidateIdentityConflicts": 0,
-    "crossCountryNearDuplicateGroups": 10,
+    "crossCountryNearDuplicateGroups": 11,
     "longDisplayNames": 0
   },
   "reviewCandidates": {
@@ -122,18 +122,14 @@
       },
       {
         "normalizedName": "national treasury",
-        "issuerCount": 10,
+        "issuerCount": 6,
         "countries": [
           "dravenlok",
           "eldoran",
           "lumenor",
-          "northreach",
-          "solvend",
           "syndalis",
-          "thaloris",
           "valerion",
-          "xalvoria",
-          "yrethia"
+          "xalvoria"
         ]
       },
       {
@@ -183,13 +179,19 @@
           "xalvoria",
           "yrethia"
         ]
+      },
+      {
+        "normalizedName": "treasury",
+        "issuerCount": 4,
+        "countries": [
+          "northreach",
+          "solvend",
+          "thaloris",
+          "yrethia"
+        ]
       }
     ],
     "templateDensity": [
-      {
-        "root": "capital",
-        "issuerCount": 100
-      },
       {
         "root": "central",
         "issuerCount": 100
@@ -245,6 +247,10 @@
       {
         "root": "western",
         "issuerCount": 100
+      },
+      {
+        "root": "capital",
+        "issuerCount": 97
       }
     ]
   },

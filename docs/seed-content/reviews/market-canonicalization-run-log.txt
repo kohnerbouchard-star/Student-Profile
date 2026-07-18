@@ -1,50 +1,18 @@
 
 ## apply canonicalization
-Canonicalized scripts/generate-seed-market-universe.mjs
-Canonicalized docs/seed-content/markets/active-subsets/active-market-rollout-status-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-collective-reference-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-equity-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-fixed-income-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-issuer-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-issuer-registry-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-active-market-candidate-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/northreach-curve-and-recalibration-v2.json
-Canonicalized docs/seed-content/markets/active-subsets/solvend-active-collective-reference-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/solvend-active-equity-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/solvend-active-fixed-income-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/solvend-active-issuer-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/solvend-active-market-candidate-and-issuers-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-collective-reference-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-equity-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-fixed-income-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-issuer-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/thaloris-active-market-candidate-and-issuers-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-collective-reference-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-equity-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-fixed-income-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-issuer-enrichment-v1.json
-Canonicalized docs/seed-content/markets/active-subsets/yrethia-active-market-candidate-and-issuers-v1.json
 Applied seed-market canonicalization across the generator and active candidate records.
 exit=0
 
 ## generate universe
-file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236
-    if (knownIssuerName && knownIssuerName !== record.issuerName) throw new Error(`${record.issuerId} maps to inconsistent issuer names.`);
-                                                                        ^
-
-Error: issuer.northreach.public.01.v1 maps to inconsistent issuer names.
-    at validate (file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236:73)
-    at file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:258:20
-
-Node.js v22.23.1
-exit=1
+Generated 3,200 instruments across 10 country files; 1675 stable issuers or administrators.
+exit=0
 
 ## generate editorial evidence
-Generated editorial screen: 0 blockers and 10 warning groups.
+Generated editorial screen: 0 blockers and 11 warning groups.
 exit=0
 
 ## generate identity evidence
-Recorded 96 active identities with 96 blockers.
+Recorded 96 active identities with 0 blockers.
 exit=0
 
 ## check canonicalization
@@ -52,23 +20,15 @@ Verified seed-market canonicalization across the generator and active candidate 
 exit=0
 
 ## check universe
-file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236
-    if (knownIssuerName && knownIssuerName !== record.issuerName) throw new Error(`${record.issuerId} maps to inconsistent issuer names.`);
-                                                                        ^
-
-Error: issuer.northreach.public.01.v1 maps to inconsistent issuer names.
-    at validate (file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:236:73)
-    at file:///home/runner/work/Student-Profile/Student-Profile/scripts/generate-seed-market-universe.mjs:258:20
-
-Node.js v22.23.1
-exit=1
+Verified 3,200 instruments across 10 country files; 1675 stable issuers or administrators.
+exit=0
 
 ## check editorial evidence
-Verified editorial screen: 0 blockers and 10 warning groups.
+Verified editorial screen: 0 blockers and 11 warning groups.
 exit=0
 
 ## check identity evidence
-Verified 96 active identities with 96 blockers.
+Verified 96 active identities with 0 blockers.
 exit=0
 
 ## test seed preflight
@@ -80,7 +40,7 @@ TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
 not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 90.989474
+  duration_ms: 70.343015
   type: 'test'
   location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
   failureType: 'testCodeFailure'
@@ -102,19 +62,19 @@ not ok 1 - current PR \#163 design catalog is structurally valid and reports rea
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 118.27191
+  duration_ms: 88.47078
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 47.641545
+  duration_ms: 35.797096
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
 not ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 44.105086
+  duration_ms: 36.159632
   type: 'test'
   location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:44:1'
   failureType: 'testCodeFailure'
@@ -136,31 +96,31 @@ not ok 4 - staging mode remains blocked until executable content is complete
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.407272
+  duration_ms: 0.295773
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.174527
+  duration_ms: 0.108333
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.384801
+  duration_ms: 0.399384
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.24051
+  duration_ms: 0.173858
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.46472
+  duration_ms: 0.360684
   type: 'test'
   ...
 1..9
@@ -171,7 +131,7 @@ ok 9 - simulation manifests normalize both supported checksum schemas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 368.053964
+# duration_ms 282.385124
 exit=1
 
 ## design seed preflight
@@ -219,6 +179,8 @@ Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-exit=0
+docs/seed-content/reviews/market-identity-reconciliation-audit-v1.md:3: trailing whitespace.
++Status: **canonical-identities-reconciled**  
+exit=2
 
 finalStatus=1

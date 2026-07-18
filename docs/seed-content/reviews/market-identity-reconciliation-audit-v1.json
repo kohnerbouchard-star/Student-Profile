@@ -3,7 +3,7 @@
   "generatedAt": "2026-07-19",
   "sourceUniversePackId": "econovaria.market-universe.v1",
   "sourceUniverseVersion": "1.0.0-draft",
-  "reviewStatus": "canonicalization-required",
+  "reviewStatus": "canonical-identities-reconciled",
   "productionAuthorized": false,
   "decisions": {
     "overlappingSymbolAuthority": "curated-active-candidate",
@@ -20,18 +20,13 @@
       "thaloris",
       "yrethia"
     ],
-    "exactCanonicalMatches": 0,
-    "conflictingSymbolIdentities": 92,
-    "missingUniverseSymbols": 4,
+    "exactCanonicalMatches": 96,
+    "conflictingSymbolIdentities": 0,
+    "missingUniverseSymbols": 0,
     "activeIdConflicts": 0,
     "exchangeMismatches": 0,
-    "affectedCountries": [
-      "northreach",
-      "solvend",
-      "thaloris",
-      "yrethia"
-    ],
-    "blockers": 96,
+    "affectedCountries": [],
+    "blockers": 0,
     "activeRecordsByCountry": {
       "northreach": 24,
       "solvend": 24,
