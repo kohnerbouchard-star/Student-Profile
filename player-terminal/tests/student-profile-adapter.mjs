@@ -32,8 +32,76 @@ const rawDashboard = {
   public: { market: { stocks: [] }, news: [] }
 };
 
+const capabilityManifest = {
+  ok: true,
+  schemaVersion: 1,
+  manifestVersion: "2026-07-18.3",
+  service: "classroom-api",
+  capabilities: {
+    routes: {
+      news: true,
+      market: true,
+      inventory: true
+    },
+    actions: {
+      contractAccept: true,
+      inventoryUse: true,
+      logout: true,
+      marketWatchlist: true,
+      notificationsRead: true
+    }
+  },
+  endpoints: [
+    {
+      key: "capabilities",
+      operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }]
+    },
+    {
+      key: "contractAccept",
+      operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/accept" }]
+    },
+    {
+      key: "inventory",
+      operations: [{ method: "GET", pathTemplate: "/players/me/inventory" }]
+    },
+    {
+      key: "inventoryRedemptions",
+      operations: [
+        { method: "GET", pathTemplate: "/players/me/inventory/redemptions" },
+        { method: "POST", pathTemplate: "/players/me/inventory/:itemId/redemptions" },
+        { method: "GET", pathTemplate: "/players/me/inventory/redemptions/:requestId" }
+      ]
+    },
+    {
+      key: "logout",
+      operations: [{ method: "POST", pathTemplate: "/players/me/session/logout" }]
+    },
+    {
+      key: "market",
+      operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets" }]
+    },
+    {
+      key: "marketWatchlist",
+      operations: [
+        { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
+        { method: "PUT", pathTemplate: "/players/me/stocks/watchlist/:ticker" },
+        { method: "DELETE", pathTemplate: "/players/me/stocks/watchlist/:ticker" }
+      ]
+    },
+    {
+      key: "news",
+      operations: [{ method: "GET", pathTemplate: "/players/me/world/news" }]
+    },
+    {
+      key: "notificationsRead",
+      operations: [{ method: "POST", pathTemplate: "/players/me/notifications/read" }]
+    }
+  ]
+};
+
 const responses = {
   session: rawSession,
+  capabilities: capabilityManifest,
   dashboard: rawDashboard,
   store: {
     items: [{
@@ -132,12 +200,18 @@ function context(endpointKey, method, path, payload, extra = {}) {
   };
 }
 
+const sessionStart = calls.length;
 const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
-assert.equal(calls.at(-1).path, "/players/me");
-assert.equal(calls.at(-1).headers["x-player-session-token"], "token-1");
-assert.equal(calls.at(-1).headers["x-request-id"], "req-session");
+assert.equal(session.capabilitySchemaVersion, 1);
+assert.equal(session.capabilityManifestVersion, "2026-07-18.3");
+assert.equal(session.capabilityService, "classroom-api");
+assert.equal(calls[sessionStart].path, "/players/me");
+assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");
+assert.equal(calls[sessionStart].headers["x-request-id"], "req-session");
+assert.equal(calls[sessionStart + 1].path, "/players/me/capabilities");
+assert.equal(calls[sessionStart + 1].headers["x-player-session-token"], "token-1");
 
 const dashboard = await apiCall(context("dashboard", "GET", "/dashboard"));
 assert.equal(dashboard.netWorth, 1500);
@@ -213,4 +287,4 @@ await assert.rejects(
   "Player transfer remains visible but pending until the UUID-authoritative backend route exists."
 );
 
-console.log("Student-Profile adapter passed: canonical routes, UI read models, session headers, UUID ownership, and idempotent writes are valid.");
+console.log("Student-Profile adapter passed: canonical routes, capability preflight, UI read models, session headers, UUID ownership, and idempotent writes are valid.");

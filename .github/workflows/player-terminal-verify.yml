@@ -33,10 +33,11 @@ jobs:
       - name: Enforce isolated pull-request scope
         if: github.event_name == 'pull_request'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
         shell: bash
         run: |
-          git diff --name-only "$BASE_SHA"...HEAD > /tmp/player-terminal-changed-files.txt
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
 
           if grep -q '^player-terminal/' /tmp/player-terminal-changed-files.txt; then
             unexpected="$(awk '
