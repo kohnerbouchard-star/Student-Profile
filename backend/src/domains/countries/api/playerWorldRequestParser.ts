@@ -91,9 +91,11 @@ function rejectClientGameSelection(searchParams: URLSearchParams, headers: Heade
 }
 
 function rejectUnexpectedQuery(searchParams: URLSearchParams, allowed: ReadonlySet<string>): void {
-  for (const key of searchParams.keys()) {
-    if (!allowed.has(key)) throw invalidRequest(`Unsupported query parameter: ${key}.`);
-  }
+  let unsupported = "";
+  searchParams.forEach((_value, key) => {
+    if (!unsupported && !allowed.has(key)) unsupported = key;
+  });
+  if (unsupported) throw invalidRequest(`Unsupported query parameter: ${unsupported}.`);
 }
 
 function normalizeCountryCode(value: string): string {
