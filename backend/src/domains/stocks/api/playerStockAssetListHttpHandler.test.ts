@@ -61,7 +61,7 @@ Deno.test("player stock asset list rejects missing sessions and client game sele
   );
 });
 
-Deno.test("player stock asset list rejects runner secrets, malformed routes, and writes", async () => {
+Deno.test("player stock asset reads reject runner secrets, malformed paths, and writes", async () => {
   const secret = await handlePlayerStockAssetListRequest(
     request("/players/me/stocks/assets", { runnerSecret: "secret" }),
     { kind: "assets" },
@@ -70,14 +70,14 @@ Deno.test("player stock asset list rejects runner secrets, malformed routes, and
   await assertError(secret, 400, "stock_runner_secret_not_allowed");
 
   const malformed = await handlePlayerStockAssetListRequest(
-    request("/players/me/stocks/assets/AURA"),
+    request("/players/me/stocks/assets/AURA/extra"),
     { kind: "malformed" },
     dependencies(),
   );
   await assertError(
     malformed,
     400,
-    "invalid_player_stock_asset_list_request",
+    "invalid_player_stock_asset_detail_request",
   );
 
   const post = await handlePlayerStockAssetListRequest(
