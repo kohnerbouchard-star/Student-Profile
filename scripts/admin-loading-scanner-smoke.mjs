@@ -158,7 +158,7 @@ async function scannerSnapshot() {
   assertGeometry("scanner", result.loaded, result.skeleton);
   if (result.busy !== "true" || !result.focusPreserved) fail("Scanner skeleton semantics drifted.");
   await page.waitForTimeout(50);
-  await page.locator('[data-admin-terminal-modal-close="scan-attendance"]').click();
+  await page.locator('[data-admin-terminal-modal-close][aria-label="Close scanner"]').click();
   return result;
 }
 
