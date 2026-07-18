@@ -1,8 +1,8 @@
 # Generated Market Universe Files
 
-Status: generated and structurally validated; repository ingestion pending
+Status: committed and structurally validated; editorial and economic approval pending
 
-The `manifest-v1.json` file describes ten generated country catalogs:
+This directory contains ten deterministic country catalogs:
 
 - `northreach.jsonl`;
 - `yrethia.jsonl`;
@@ -15,28 +15,38 @@ The `manifest-v1.json` file describes ten generated country catalogs:
 - `dravenlok.jsonl`;
 - `syndalis.jsonl`.
 
-Each catalog contains 320 line-oriented JSON records, for 3,200 records total.
+Each catalog contains exactly 320 line-oriented JSON records, for 3,200 records total.
 
-The complete generated files currently exist in the accompanying review package as:
+## Reproducibility
 
-- `econovaria_market_universe_3200_v1.xlsx`;
-- `econovaria_market_universe_3200_v1.csv`;
-- `econovaria_market_universe_3200_v1.zip`, including all ten JSONL country catalogs.
+`scripts/generate-seed-market-universe.mjs` is the authoritative deterministic generator for this design-candidate universe.
 
-The ten large JSONL files are not yet checked into this GitHub branch. The connected repository writer used for this content pass does not accept local generated files as direct file uploads, and duplicating the records manually would create avoidable corruption risk.
+Run:
 
-This means:
+```bash
+node scripts/generate-seed-market-universe.mjs --check
+```
 
-- the allocation decision, schema, manifest, and validation record are committed;
-- the actual 3,200-row catalog is generated and available for review;
-- repository ingestion of the ten JSONL files remains a controlled follow-up step;
-- the catalog is not staging-ready or production-authorized.
+The check fails when any country source or `manifest-v1.json` differs from the deterministic output. The manifest records a SHA-256 checksum for every country JSONL file.
 
-Before repository ingestion:
+Repository validation currently proves:
 
-1. Review the workbook or CSV.
-2. Run editorial and resemblance checks.
-3. Preserve the manifest counts and stable identifiers.
-4. Verify every JSONL file against its recorded checksum.
-5. Add the files in one intentional market-content commit or dedicated data PR.
-6. Re-run uniqueness and reference validation after ingestion.
+- exactly 320 records per country and 3,200 globally;
+- globally unique stable IDs, symbols, and display names;
+- consistent issuer ID-to-name mappings;
+- required shared instrument fields;
+- non-tradable index and reference records;
+- fail-closed `activationAuthorized: false` state;
+- deterministic file contents and checksums.
+
+## Remaining review boundary
+
+The catalog is not staging-ready or production-authorized. Before selecting records for a bounded active market:
+
+1. Complete editorial, pronunciation, resemblance, cultural-association, and trademark-risk review.
+2. Reconcile the full issuer universe with the curated 24-instrument active-country candidates.
+3. Calibrate financial values, bond terms, fund holdings, index methods, benchmark units, and event exposures.
+4. Select and simulate a bounded staging subset rather than activating all 3,200 records.
+5. Verify capability compatibility, importer idempotency, deactivation, rollback, and cross-surface behavior.
+
+No JSONL record is authority for live ownership, pricing, trading, or session state.
