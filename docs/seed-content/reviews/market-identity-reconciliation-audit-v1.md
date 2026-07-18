@@ -8,10 +8,10 @@ Production authorization: false
 - universe records checked: 3200;
 - curated active-candidate records checked: 96;
 - exact canonical matches: 0;
-- conflicting reused-symbol identities: 96;
-- missing universe symbols: 0;
+- conflicting reused-symbol identities: 92;
+- missing universe symbols: 4;
 - active-ID conflicts: 0;
-- exchange mismatches: 24;
+- exchange mismatches: 69;
 - blocking findings: **96**.
 
 ## Coverage

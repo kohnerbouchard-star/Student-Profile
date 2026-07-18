@@ -21,10 +21,10 @@
       "yrethia"
     ],
     "exactCanonicalMatches": 0,
-    "conflictingSymbolIdentities": 96,
-    "missingUniverseSymbols": 0,
+    "conflictingSymbolIdentities": 92,
+    "missingUniverseSymbols": 4,
     "activeIdConflicts": 0,
-    "exchangeMismatches": 24,
+    "exchangeMismatches": 69,
     "affectedCountries": [
       "northreach",
       "solvend",
