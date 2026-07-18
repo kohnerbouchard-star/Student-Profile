@@ -147,7 +147,7 @@ for scenario_name in CONFIG["scenarios"]:
             summary["integrity"]["guaranteedPositivePortfolioCases"] += 1
 
 (ROOT / "summary-v1.json").write_text(
-    json.dumps(summary, indent=2) + "\n",
+    json.dumps(summary, separators=(",", ":")) + "\n",
     encoding="utf-8",
 )
 print(json.dumps(summary, indent=2))
