@@ -109,6 +109,12 @@ import {
   handlePlayerGameDashboardRequest,
 } from "../../../src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts";
 import {
+  handlePlayerWorldReadRequest,
+} from "../../../src/domains/countries/api/playerWorldReadHttpHandler.ts";
+import {
+  readPlayerWorldRoutePath,
+} from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -133,6 +139,14 @@ Deno.serve(async (request) => {
       ok: true,
       service: "classroom-api",
       status: "ready",
+    });
+  }
+
+  const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);
+
+  if (playerWorldRoute) {
+    return handlePlayerWorldReadRequest(request, playerWorldRoute, {
+      createServiceClient,
     });
   }
 
