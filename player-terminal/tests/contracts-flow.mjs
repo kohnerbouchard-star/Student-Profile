@@ -109,7 +109,7 @@ const accept = resolvePlayerBackendRequest({
   session
 });
 assert.equal(accept.path, "/players/me/contracts/contract-1/accept");
-assert.deepEqual(accept.payload, { gameSessionId: "game-1" });
+assert.equal(accept.payload, undefined, "Contract acceptance scope must be derived from the authenticated Player session.");
 const submit = resolvePlayerBackendRequest({
   endpointKey: "contractSubmit",
   method: "POST",
