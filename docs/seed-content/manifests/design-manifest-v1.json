@@ -1,0 +1,226 @@
+{
+  "packId": "content-pack.econovaria.seed-foundation.v1",
+  "version": "0.1.0-design",
+  "maturity": "design-manifest",
+  "sourcePr": 163,
+  "productionAuthorized": false,
+  "allowedEnvironments": [
+    "local",
+    "test",
+    "staging"
+  ],
+  "runtimeActivationAllowed": false,
+  "stableIdStrategy": "human-readable-versioned-content-id",
+  "currencyArchitecture": "adr-001",
+  "marketUniverseArchitecture": "adr-002",
+  "workstreamProgram": "15-seed-data-execution-program-v1.md",
+  "domains": [
+    {
+      "domain": "countries",
+      "targetCount": 10,
+      "currentState": "documented",
+      "activationState": "reference-only",
+      "blockingDependencies": [
+        "authoritative-backend-country-contract"
+      ]
+    },
+    {
+      "domain": "currencies",
+      "targetCount": 10,
+      "currentState": "documented-and-asset-mapped",
+      "activationState": "reference-only",
+      "blockingDependencies": [
+        "authoritative-currency-registry",
+        "session-currency-pair-authority"
+      ]
+    },
+    {
+      "domain": "market-instruments",
+      "targetCount": 3200,
+      "currentState": "generated-external-package-and-repository-specification",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "repository-ingestion",
+        "issuer-registry",
+        "instrument-capability-mapping",
+        "financial-calibration",
+        "market-simulation"
+      ]
+    },
+    {
+      "domain": "exchanges",
+      "targetCount": 10,
+      "currentState": "design-candidate",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "market-calendar-policy",
+        "backend-exchange-support"
+      ]
+    },
+    {
+      "domain": "issuers",
+      "targetCount": null,
+      "currentState": "taxonomy-started",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "issuer-master-generation",
+        "stable-id-ownership"
+      ]
+    },
+    {
+      "domain": "industries-and-commodities",
+      "targetCount": 38,
+      "currentState": "taxonomy-started",
+      "activationState": "definition-only",
+      "blockingDependencies": [
+        "subindustry-mapping",
+        "benchmark-review"
+      ]
+    },
+    {
+      "domain": "locations",
+      "targetCount": 50,
+      "currentState": "candidate-registry-created",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "map-coordinate-verification",
+        "adjacency-verification",
+        "runtime-location-schema"
+      ]
+    },
+    {
+      "domain": "routes",
+      "targetCount": 13,
+      "currentState": "proposed-network-created",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "map-verification",
+        "route-runtime-model"
+      ]
+    },
+    {
+      "domain": "arrival-packages",
+      "targetCount": 10,
+      "currentState": "schema-and-package-definitions-created",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "starting-value-calibration",
+        "housing-model",
+        "relationship-persistence",
+        "authoritative-instantiation-route"
+      ]
+    },
+    {
+      "domain": "arrival-classes",
+      "targetCount": null,
+      "currentState": "deferred-workstream-11",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "arrival-packages",
+        "skills-and-credentials",
+        "contract-families",
+        "progression-model",
+        "simulation"
+      ]
+    },
+    {
+      "domain": "contracts",
+      "targetCount": 50,
+      "currentState": "five-meridian-concepts",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "backend-contract-lifecycle",
+        "reward-calibration"
+      ]
+    },
+    {
+      "domain": "store-items",
+      "targetCount": 40,
+      "currentState": "framework-only",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "item-effect-capability-map",
+        "redemption-lifecycle",
+        "price-calibration"
+      ]
+    },
+    {
+      "domain": "banking-products",
+      "targetCount": 12,
+      "currentState": "framework-only",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "banking-write-capability",
+        "rate-and-affordability-simulation"
+      ]
+    },
+    {
+      "domain": "progression",
+      "targetCount": 30,
+      "currentState": "framework-only",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "progression-persistence",
+        "threshold-calibration"
+      ]
+    },
+    {
+      "domain": "events-news-interactions",
+      "targetCount": 115,
+      "currentState": "meridian-pilot-concepts",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "event-application-authority",
+        "narrative-persistence",
+        "recovery-content"
+      ]
+    },
+    {
+      "domain": "tutorials-and-notifications",
+      "targetCount": 42,
+      "currentState": "framework-only",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "route-capability-map",
+        "notification-deduplication"
+      ]
+    },
+    {
+      "domain": "simulation",
+      "targetCount": null,
+      "currentState": "protocol-only",
+      "activationState": "not-applicable",
+      "blockingDependencies": [
+        "committed-code",
+        "approved-input-contract"
+      ]
+    },
+    {
+      "domain": "staging-import",
+      "targetCount": 1,
+      "currentState": "specification-only",
+      "activationState": "blocked",
+      "blockingDependencies": [
+        "backend-baseline",
+        "stable-id-storage",
+        "machine-readable-records"
+      ]
+    }
+  ],
+  "validation": {
+    "schema": "pending",
+    "references": "pending",
+    "checksums": "pending",
+    "economic": "blocked",
+    "narrative": "partial",
+    "technical": "blocked",
+    "classroom": "pending",
+    "security": "partial"
+  },
+  "rollbackStrategy": "deactivate-pack",
+  "notes": [
+    "This file is a design scaffold, not an executable import manifest.",
+    "Counts combine targets and current candidate records and must be replaced by generated record descriptors before staging.",
+    "No record in this manifest is authorized for production activation."
+  ]
+}
