@@ -18,11 +18,13 @@ interface QueryResponse<T> {
 interface FilterBuilder
   extends PromiseLike<QueryResponse<readonly Record<string, unknown>[]>> {
   eq(column: string, value: unknown): FilterBuilder;
+  gt(column: string, value: unknown): FilterBuilder;
   in(column: string, values: readonly unknown[]): FilterBuilder;
   order(
     column: string,
     options?: { readonly ascending?: boolean },
   ): FilterBuilder;
+  limit(count: number): FilterBuilder;
 }
 
 interface QueryBuilder {
@@ -64,20 +66,27 @@ export class SupabasePlayerInventoryReadRepository
   async readInventory(input: {
     readonly gameId: string;
     readonly playerUuid: string;
+    readonly limit: number;
   }): Promise<PlayerInventoryRepositoryResult> {
     const holdingResponse = await this.client
       .from("inventory_holdings")
       .select(HOLDING_SELECT)
       .eq("game_session_id", input.gameId)
       .eq("player_id", input.playerUuid)
+      .gt("quantity_owned", 0)
       .order("updated_at", { ascending: false })
-      .order("id", { ascending: true });
+      .order("id", { ascending: true })
+      .limit(input.limit + 1);
 
     if (holdingResponse.error) {
       throw mapPersistenceError(holdingResponse.error);
     }
 
     const holdings = holdingResponse.data ?? [];
+    if (holdings.length > input.limit) {
+      throw readFailed();
+    }
+
     if (holdings.length === 0) {
       return {
         gameId: input.gameId,
@@ -95,14 +104,20 @@ export class SupabasePlayerInventoryReadRepository
       .eq("game_session_id", input.gameId)
       .in("id", storeItemUuids)
       .order("item_key", { ascending: true })
-      .order("id", { ascending: true });
+      .order("id", { ascending: true })
+      .limit(storeItemUuids.length + 1);
 
     if (itemResponse.error) {
       throw mapPersistenceError(itemResponse.error);
     }
 
+    const itemRows = itemResponse.data ?? [];
+    if (itemRows.length > storeItemUuids.length) {
+      throw readFailed();
+    }
+
     const itemByUuid = new Map(
-      (itemResponse.data ?? []).map((row) => [requireUuid(row.id), row]),
+      itemRows.map((row) => [requireUuid(row.id), row]),
     );
     const records = holdings.map((holding) =>
       toInventoryRecord(input, holding, itemByUuid)
@@ -142,8 +157,8 @@ function toInventoryRecord(
     category: requireText(item.category),
     unitValue: requireNonNegativeNumber(item.price),
     currencyCode: requireCurrencyCode(item.currency_code),
-    itemStatus: requireText(item.status).toLowerCase(),
-    itemVisibility: requireText(item.visibility).toLowerCase(),
+    itemStatus: requireStatus(item.status),
+    itemVisibility: requireVisibility(item.visibility),
     quantityOwned: requireNonNegativeInteger(holding.quantity_owned),
     quantityReserved: requireNonNegativeInteger(holding.quantity_reserved),
     createdAt: requireIsoDateTime(holding.created_at),
@@ -170,7 +185,7 @@ function mapPersistenceError(
 
 function metadataMissing(): PlayerInventoryReadPersistenceError {
   return new PlayerInventoryReadPersistenceError(
-    "player_inventory_read_failed",
+    "player_inventory_metadata_missing",
     "Inventory item metadata could not be loaded.",
   );
 }
@@ -201,7 +216,7 @@ function requireUuid(value: unknown): string {
 
 function requireItemKey(value: unknown): string {
   const text = requireText(value).toLowerCase();
-  if (!/^[a-z0-9_-]{1,64}$/.test(text)) throw readFailed();
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(text)) throw readFailed();
   return text;
 }
 
@@ -209,6 +224,22 @@ function requireCurrencyCode(value: unknown): string {
   const text = requireText(value).toUpperCase();
   if (!/^[A-Z0-9_]{3,16}$/.test(text)) throw readFailed();
   return text;
+}
+
+function requireStatus(value: unknown): "active" | "disabled" | "archived" {
+  const status = requireText(value).toLowerCase();
+  if (status === "active" || status === "disabled" || status === "archived") {
+    return status;
+  }
+  throw readFailed();
+}
+
+function requireVisibility(value: unknown): "visible" | "hidden" {
+  const visibility = requireText(value).toLowerCase();
+  if (visibility === "visible" || visibility === "hidden") {
+    return visibility;
+  }
+  throw readFailed();
 }
 
 function requireFiniteNumber(value: unknown): number {
