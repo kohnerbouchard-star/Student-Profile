@@ -80,6 +80,17 @@ function responseCode(body) {
   return String(body?.code || body?.error?.code || "REQUEST_FAILED").toUpperCase();
 }
 
+function authoritativeSessionExpiry(raw) {
+  const value = String(
+    raw?.session?.expiresAt ||
+    raw?.sessionExpiresAt ||
+    raw?.expiresAt ||
+    ""
+  ).trim();
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : "";
+}
+
 function retryAfterMs(response) {
   const value = response.headers?.get?.("retry-after");
   if (!value) return 0;
@@ -171,6 +182,16 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (context.endpointKey === "session") {
       rawSession = raw;
       snapshot = normalizeTerminalBootstrap(rawSession, {});
+      const sessionExpiresAt = authoritativeSessionExpiry(rawSession);
+      if (sessionExpiresAt) {
+        snapshot = {
+          ...snapshot,
+          session: {
+            ...snapshot.session,
+            sessionExpiresAt
+          }
+        };
+      }
       return snapshot.session;
     }
 
@@ -183,6 +204,16 @@ export function createStudentProfileApiCall({ request } = {}) {
         });
       }
       snapshot = normalizeTerminalBootstrap(rawSession, raw);
+      const sessionExpiresAt = authoritativeSessionExpiry(rawSession);
+      if (sessionExpiresAt) {
+        snapshot = {
+          ...snapshot,
+          session: {
+            ...snapshot.session,
+            sessionExpiresAt
+          }
+        };
+      }
       return snapshot.dashboard;
     }
 
