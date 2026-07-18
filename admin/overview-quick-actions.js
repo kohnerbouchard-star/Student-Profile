@@ -18,7 +18,19 @@
       !element.closest(".admin-shape-surface-overlay");
   }
 
+  function visible(element) {
+    if (!live(element) || element.hidden) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
+  }
+
+  function activeAccountSurface() {
+    return [...document.querySelectorAll(".admin-terminal-account-page")].find(visible) || null;
+  }
+
   function activeSection() {
+    if (activeAccountSurface()) return "Account";
     const active = [...document.querySelectorAll("[data-admin-section]")].find((element) => {
       return element.getAttribute("aria-current") === "page" ||
         element.getAttribute("aria-selected") === "true" ||
