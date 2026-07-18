@@ -9,6 +9,8 @@ import {
   type PlayerInventoryValueSummaryDto,
 } from "../contracts/playerInventoryReadContracts.ts";
 
+export const MAX_PLAYER_INVENTORY_HOLDINGS = 200;
+
 export class PlayerInventoryReadService {
   constructor(private readonly repository: PlayerInventoryReadRepository) {}
 
@@ -19,11 +21,13 @@ export class PlayerInventoryReadService {
       const result = await this.repository.readInventory({
         gameId: scope.gameId,
         playerUuid: scope.playerUuid,
+        limit: MAX_PLAYER_INVENTORY_HOLDINGS,
       });
 
       if (
         result.gameId !== scope.gameId ||
         result.playerUuid !== scope.playerUuid ||
+        result.records.length > MAX_PLAYER_INVENTORY_HOLDINGS ||
         result.records.some((record) =>
           record.gameId !== scope.gameId ||
           record.playerUuid !== scope.playerUuid
@@ -33,17 +37,18 @@ export class PlayerInventoryReadService {
       }
 
       const visibleRecords = result.records.filter((record) =>
-        record.quantityOwned > 0 || record.quantityReserved > 0
+        record.quantityOwned > 0
       );
-      const ordered = [...visibleRecords].sort((left, right) =>
-        left.itemKey.localeCompare(right.itemKey) ||
-        left.internalHoldingUuid.localeCompare(right.internalHoldingUuid)
-      );
-      const publicIds = ordered.map((record) => record.itemKey);
+      const publicIds = visibleRecords.map((record) => record.itemKey);
       if (new Set(publicIds).size !== publicIds.length) throw scopeViolation();
 
+      const ordered = [...visibleRecords].sort((left, right) =>
+        left.category.localeCompare(right.category) ||
+        left.name.localeCompare(right.name) ||
+        left.itemKey.localeCompare(right.itemKey)
+      );
       const items = ordered.map(toItemDto);
-      const categoryValues = [...new Set(items.map((item) => item.category))]
+      const categories = [...new Set(items.map((item) => item.category))]
         .sort((left, right) => left.localeCompare(right));
 
       return {
@@ -51,10 +56,10 @@ export class PlayerInventoryReadService {
         generatedAt: scope.effectiveAt,
         availability: "available",
         capacity: null,
-        categories: ["All", ...categoryValues.filter((value) => value !== "All")],
+        categories,
         summary: buildSummary(items),
         items,
-        emptyState: items.length === 0 ? { reason: "no_inventory" } : null,
+        emptyState: items.length === 0 ? { reason: "inventory_empty" } : null,
       };
     } catch (error) {
       if (error instanceof PlayerInventoryReadError) throw error;
@@ -93,7 +98,7 @@ function toItemDto(record: PlayerInventoryRecord): PlayerInventoryItemDto {
     totalOwnedValue: roundMoney(record.unitValue * record.quantityOwned),
     currencyCode: record.currencyCode,
     itemStatus: record.itemStatus,
-    itemVisibility: record.itemVisibility,
+    itemVisibility: record.itemVisibility === "visible" ? "player" : "hidden",
     // Generic item use remains disabled until the redemption contract is implemented.
     availableActions: [],
     createdAt: record.createdAt,
