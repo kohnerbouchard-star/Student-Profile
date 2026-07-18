@@ -10,7 +10,10 @@ a reviewed Git commit and promoted with the matching migrations and frontend.
 - player session and identity validation;
 - attendance clock-in and localized, idempotent reward issuance;
 - player-safe Store quoting and purchase execution;
-- contract reads, evidence submission, and game-scoped classroom operations;
+- player-scoped Inventory reads, atomic redemption reservation, and public-ID
+  redemption history/status reads;
+- contract reads, atomic/idempotent acceptance, evidence submission, and
+  game-scoped classroom operations;
 - thin HTTP adaptation into domain handlers and repository/RPC boundaries.
 
 ## Request boundary

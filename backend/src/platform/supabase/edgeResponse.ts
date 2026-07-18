@@ -44,15 +44,25 @@ export function jsonError(
   return jsonResponse<EdgeErrorBody>(status, {
     ok: false,
     error,
+  }, {
+    "cache-control": "private, no-store, max-age=0",
+    "pragma": "no-cache",
+    "vary": "authorization, x-player-session-token",
   });
 }
 
 export function jsonResponse<TBody>(
   status: number,
   body: TBody,
+  additionalHeaders: HeadersInit = {},
 ): Response {
+  const headers = new Headers(JSON_HEADERS);
+  new Headers(additionalHeaders).forEach((value, key) => {
+    headers.set(key, value);
+  });
+
   return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
-    headers: JSON_HEADERS,
+    headers,
   });
 }

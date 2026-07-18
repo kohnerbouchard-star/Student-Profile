@@ -53,7 +53,7 @@ const scopedRuntimeFiles = {
   "admin/modal-accessibility.js": ["focusableElements", 'event.key === "Tab"', 'event.key === "Escape"', "restoreFocus"],
   "admin/asset-wiring.js": ["ORIGINAL_CURRENCY_ICONS", "ORIGINAL_PLAYER_ACTION_ICONS", "ORIGINAL_MODAL_VIDEOS"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
-  "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton"],
+  "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
   "admin/interaction-quality-control-reset.js": ["restoreCompletedControl", "setScannerReady", 'removeAttribute("aria-disabled")', "Scan a player code. The result appears here."],
   "admin/shape-accurate-skeletons.js": ["ROUTE_ASSEMBLIES", "clonePage", "renderSurface", "beginRefresh", "endRefresh", "player-drawer", "contract-review", "scanner", "account-games"],
 };
@@ -138,8 +138,14 @@ const visualFinishCss = readText("admin/css/admin-stabilization-visual-finish.cs
 assert(visualFinishCss.includes("#adminPreview .admin-terminal-clickable-row::after"), "Clickable-row SVG affordance correction is missing.");
 assert(!visualFinishCss.includes("#adminPreview *"), "Final visual corrections contain a blanket page-shell selector.");
 
+const requestOwner = readText("admin/classroom-write-fallback.js");
+assert(requestOwner.includes("econovaria:admin-request-lifecycle"), "Authenticated request owner does not publish explicit lifecycle events.");
+assert(requestOwner.includes('phase: "started"') && requestOwner.includes('phase: committed ? "committed" : "failed"'), "Request lifecycle phases are incomplete.");
+assert(requestOwner.includes("requestId"), "Request lifecycle events are not request-correlated.");
 const interactionQuality = readText("admin/interaction-quality.js");
-assert(interactionQuality.includes("window.fetch = async function econovariaAdminQualityFetch"), "Interaction quality does not observe final admin request outcomes.");
+assert(!interactionQuality.includes("window.fetch ="), "Interaction quality still owns global transport interception.");
+assert(!interactionQuality.includes("MutationObserver"), "Interaction quality still observes the complete DOM subtree.");
+assert(interactionQuality.includes("econovaria:admin-request-lifecycle") && interactionQuality.includes("requestContexts"), "Interaction quality does not consume request-scoped lifecycle events.");
 assert(interactionQuality.includes("aria-invalid") && interactionQuality.includes("admin-qol-field-error"), "Field-level validation feedback is incomplete.");
 assert(interactionQuality.includes('"Scanning"') && interactionQuality.includes('"Completed"') && interactionQuality.includes('"Scan failed"'), "Scanner processing, completion, or error copy is missing.");
 const interactionControlReset = readText("admin/interaction-quality-control-reset.js");
@@ -160,4 +166,4 @@ assert(!shapeCss.includes("#adminPreview *"), "Shape skeleton CSS applies a blan
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, route-shaped skeletons, reduced motion, single credential presentation, modal accessibility, validation, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, route-shaped skeletons, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
