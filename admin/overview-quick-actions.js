@@ -7,7 +7,9 @@
     "add-player",
   ]);
   const STORE_ACTION = "add-store-item";
+  const MAX_BOOT_FRAMES = 240;
   const origins = new WeakMap();
+  let bootFrames = 0;
   let queued = false;
 
   function live(element) {
@@ -112,10 +114,11 @@
   function reconcile() {
     queued = false;
     const main = document.querySelector(".admin-terminal-shell-main");
-    if (!(main instanceof HTMLElement)) return;
+    if (!(main instanceof HTMLElement)) return false;
     const section = activeSection();
     if (section === "Overview") reconcileOverview(main);
     else reconcileOtherSection(main, section);
+    return true;
   }
 
   function schedule() {
@@ -124,6 +127,16 @@
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(reconcile);
     });
+  }
+
+  function boot() {
+    if (document.querySelector(".admin-terminal-shell-main")) {
+      schedule();
+      return;
+    }
+    if (bootFrames >= MAX_BOOT_FRAMES) return;
+    bootFrames += 1;
+    window.requestAnimationFrame(boot);
   }
 
   document.addEventListener("click", (event) => {
@@ -143,11 +156,11 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", schedule, { once: true });
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
-    schedule();
+    boot();
   }
-  window.addEventListener("load", schedule, { once: true });
+  window.addEventListener("load", boot, { once: true });
 
   window.EconovariaAdminOverviewQuickActions = Object.freeze({ reconcile: schedule });
 })();
