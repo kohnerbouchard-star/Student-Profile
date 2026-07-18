@@ -12,25 +12,28 @@
       "issuerRegistryStatus": "complete",
       "financialEnrichmentStatus": "candidate-complete",
       "structuralValidationStatus": "pass",
+      "simulationStatus": "v2-executed-partial-improvement-with-blockers",
+      "simulationSeeds": 250,
+      "simulationCycles": 60,
+      "recalibrationStatus": "recovery-improved-strategic-concentration-reduced-resilience-mix-rejected",
+      "activationAuthorized": false
+    },
+    {
+      "country": "yrethia",
+      "selectionStatus": "complete",
+      "issuerRegistryStatus": "corrected-complete-17-issuers",
+      "financialEnrichmentStatus": "candidate-complete",
+      "structuralValidationStatus": "pass",
       "simulationStatus": "executed-pilot-pass-with-blockers",
       "simulationSeeds": 250,
       "simulationCycles": 60,
       "activationAuthorized": false
     },
     {
-      "country": "yrethia",
-      "selectionStatus": "complete",
-      "issuerRegistryStatus": "complete",
-      "financialEnrichmentStatus": "not-started",
-      "structuralValidationStatus": "pending",
-      "simulationStatus": "not-run",
-      "activationAuthorized": false
-    },
-    {
       "country": "thaloris",
       "selectionStatus": "complete",
       "issuerRegistryStatus": "complete",
-      "financialEnrichmentStatus": "not-started",
+      "financialEnrichmentStatus": "in-progress",
       "structuralValidationStatus": "pending",
       "simulationStatus": "not-run",
       "activationAuthorized": false
