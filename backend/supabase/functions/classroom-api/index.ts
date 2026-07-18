@@ -61,6 +61,12 @@ import {
   handlePlayerSessionBootstrapRequest,
 } from "../../../src/domains/players/api/playerSessionBootstrapHttpHandler.ts";
 import {
+  handlePlayerSessionLogoutRequest,
+} from "../../../src/domains/players/api/playerSessionLogoutHttpHandler.ts";
+import {
+  readPlayerSessionLogoutRoutePath,
+} from "../../../src/domains/players/api/playerSessionLogoutRoutePaths.ts";
+import {
   handlePlayerLoginRequest,
 } from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
 import {
@@ -180,6 +186,14 @@ Deno.serve(async (request) => {
 
   if (playerNotificationRoute) {
     return handlePlayerNotificationRequest(request, playerNotificationRoute, {
+      createServiceClient,
+    });
+  }
+
+  const playerLogoutRoute = readPlayerSessionLogoutRoutePath(url.pathname);
+
+  if (playerLogoutRoute) {
+    return handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
       createServiceClient,
     });
   }
