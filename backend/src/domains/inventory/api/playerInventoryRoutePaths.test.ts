@@ -4,7 +4,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("player inventory route accepts the exact authenticated collection path", () => {
+Deno.test("player inventory route accepts exact direct and classroom-api paths", () => {
   assertEquals(
     readPlayerInventoryRoutePath(
       "/functions/v1/classroom-api/players/me/inventory",
@@ -17,7 +17,13 @@ Deno.test("player inventory route accepts the exact authenticated collection pat
   );
 });
 
-Deno.test("player inventory route rejects item and unrelated paths", () => {
+Deno.test("player inventory route rejects spoofed prefixes, item paths, and unrelated paths", () => {
+  assertEquals(
+    readPlayerInventoryRoutePath(
+      "/not-classroom-api/players/me/inventory",
+    ),
+    null,
+  );
   assertEquals(
     readPlayerInventoryRoutePath("/players/me/inventory/internal-id"),
     { kind: "malformed" },
