@@ -1,18 +1,19 @@
 import {
-  SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_URL,
   corsHeaders,
   ensureOwnedGame,
   gameDto,
   json,
   resolveContext,
   selectGame,
+  SUPABASE_ANON_KEY,
+  SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_URL,
 } from "./common.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
+import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 
 function routePath(url: URL): string {
   const marker = "/admin-api";
@@ -203,6 +204,23 @@ Deno.serve(async (request: Request) => {
         code: "game_not_found",
         message: "That game is not available to this administrator.",
       });
+    }
+
+    const redemptionOperation = await handleInventoryRedemptionOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (redemptionOperation.handled) {
+      return json(
+        request,
+        redemptionOperation.status || 500,
+        redemptionOperation.body,
+      );
     }
 
     const readResponse = await handleGameRead(

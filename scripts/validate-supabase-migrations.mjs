@@ -47,6 +47,7 @@ for (const file of [
   "20260717090000_harden_story_notification_scope_v1.sql",
   "20260718112000_accept_player_contract_by_key_v2.sql",
   "20260718113000_add_inventory_redemption_player_workflow_v1.sql",
+  "20260718123000_add_inventory_redemption_admin_review_v1.sql",
 ]) {
   if (!files.includes(file)) {
     failures.push(`${file}: required critical migration is missing`);
@@ -55,6 +56,37 @@ for (const file of [
   const source = (await readFile(path.join(MIGRATION_ROOT, file), "utf8")).trim().toLowerCase();
   if (!source.startsWith("begin;") || !source.endsWith("commit;")) {
     failures.push(`${file}: critical migration must be transaction wrapped`);
+  }
+}
+
+const inventoryRedemptionAdminFile =
+  "20260718123000_add_inventory_redemption_admin_review_v1.sql";
+if (files.includes(inventoryRedemptionAdminFile)) {
+  const source = (await readFile(
+    path.join(MIGRATION_ROOT, inventoryRedemptionAdminFile),
+    "utf8",
+  )).toLowerCase();
+  for (
+    const requiredFragment of [
+      "read_admin_inventory_redemptions_v1",
+      "review_inventory_redemption_atomic_v1",
+      "inventory_redemption_transitions_staff_idempotency_unique",
+      "for update of staff_row",
+      "for update",
+      "redemption_rejected",
+      "redemption_fulfilled",
+      "insert into public.audit_log",
+      "effectapplication', 'not_automated",
+      "security definer",
+      "set search_path = public, pg_temp",
+      "revoke all on function public.review_inventory_redemption_atomic_v1",
+      "grant execute on function public.review_inventory_redemption_atomic_v1",
+      "to service_role",
+    ]
+  ) {
+    if (!source.includes(requiredFragment)) {
+      failures.push(`${inventoryRedemptionAdminFile}: missing ${requiredFragment}`);
+    }
   }
 }
 
