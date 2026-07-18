@@ -11,7 +11,7 @@ Successful responses are `private, no-store` and vary by `authorization, x-playe
 ## Versioning
 
 - `schemaVersion`: integer shape version; currently `1`.
-- `manifestVersion`: reviewed capability mapping version; currently `2026-07-18.2`.
+- `manifestVersion`: reviewed capability mapping version; currently `2026-07-18.3`.
 - `service`: always `classroom-api` for this contract.
 
 Clients must reject unsupported schema versions. A manifest version change means the reviewed endpoint/capability mapping changed and must be reconciled with the adapter before connected execution.
@@ -26,12 +26,13 @@ The current version advertises only the UUID-private routes reviewed on PR #158:
 - market collection and ticker detail;
 - watchlist list, add, and remove;
 - Inventory read;
+- Inventory redemption request, collection history, and exact public-request-ID status read;
 - notification list and mark-read;
 - Player logout;
 - atomic Contract acceptance by public `contractKey`;
 - the capability route itself.
 
-Contract acceptance sets `actions.contractAccept` to `true`. The broader `routes.contracts` flag remains `false` because Contract list and submission still use legacy UUID-bearing contracts and require separate reconciliation.
+Contract acceptance sets `actions.contractAccept` to `true`. Inventory redemption sets `actions.inventoryUse` to `true`; each Inventory item still exposes `inventory.use` only when it is active, player-visible, and has positive unreserved quantity. The broader `routes.contracts` flag remains `false` because Contract list and submission still use legacy UUID-bearing contracts and require separate reconciliation.
 
 ## Fail-closed exclusions
 
@@ -39,18 +40,20 @@ The current manifest does not advertise the following even when older handlers e
 
 - legacy session/bootstrap, dashboard, portfolio, Banking, Store, Contract list, or Contract submission paths that still serialize or accept browser-owned internal identifiers;
 - market orders before public-ticker resolution is authoritative at the order boundary;
-- Inventory redemption before its migration, RPCs, and state machine exist;
+- automated item effects, equipment mutations, crafting, or direct item consumption outside the reviewed redemption workflow;
 - any expansion feature that is only represented by a Player Terminal surface.
 
 Unsupported route/action keys are returned as `false`. Unsupported endpoints are absent from `endpoints`.
 
 ## Privacy and security
 
-- no player, game, session, holding, Store-item, notification-row, delivery-row, watchlist-row, stock-row, Contract-row, or progress-row UUID appears in the response;
+- no player, game, session, holding, Store-item, notification-row, delivery-row, watchlist-row, stock-row, Contract-row, redemption-row, or progress-row UUID appears in the response;
 - no credentials, token hashes, or session tokens appear in the response;
+- Inventory redemption uses public item keys and `red_` public request IDs;
 - direct paths and `/functions/v1/classroom-api` paths are recognized exactly;
 - spoofed prefixes fail closed;
 - missing, expired, revoked, inactive, and cross-game sessions fail closed;
+- reviewed redemption GET/POST operations remain covered by the shared authenticated rate limiter;
 - successful responses contain static capability metadata only and perform no economic write.
 
 ## Reconciliation rule
