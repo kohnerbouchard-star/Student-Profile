@@ -176,7 +176,7 @@ The application is not yet approved for beta or production runtime cutover becau
 - [x] `BETA-AUTH-003` Verify both Player and Admin session expiry return safely to login. `VERIFIED_COMPLETE` through merged PRs #165, #166, and #167 with Player Terminal Verify #109, Admin Shell Smoke #594, Repository Quality #342/#329, and Branch Hygiene #16/#15.
 - [ ] `BETA-AUTH-004` Add final brute-force, replay, revoked-session, expired-session, and cross-game authorization matrix. `IMPLEMENTED_NOT_MERGED` QA foundation at `5944fd5127289c659909e6b608858345672fdd4d`; shared throttling and connected abuse evidence remain under `BETA-AUTH-005`.
 - [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action. Atomic HMAC-keyed four-dimension foundation is `IMPLEMENTED_NOT_MERGED` at `330a134a2c6681cfbf7200d67b01c844c66cb5cc`; authoritative route/login wiring, staging configuration, concurrency evidence, and tuning remain open.
-- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. Leak scanner and browser-payload regression suite are `IMPLEMENTED_NOT_MERGED` at `5944fd5127289c659909e6b608858345672fdd4d`; legacy login/bootstrap DTO UUID removal and staging/CI artifact evidence remain open.
+- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. Leak scanner and browser-payload regression suite are `IMPLEMENTED_NOT_MERGED` at `5944fd5127289c659909e6b608858345672fdd4d`; login/bootstrap internal-UUID removal and compatible Player adapters are `IMPLEMENTED_NOT_MERGED` at `d0dc57c74fd2b275a600c6c3626a4ed3053f7a10`. Staging network/log/trace and CI artifact evidence remain open.
 
 ### Authoritative capability manifest
 
@@ -364,11 +364,11 @@ The application is not yet approved for beta or production runtime cutover becau
 
 ### Required beta redemption workflow
 
-- [ ] `BETA-INV-003` Define redemption state machine.
-- [ ] `BETA-INV-004` Add migration for redemption request, transition, and audit history.
-- [ ] `BETA-INV-005` Add atomic request/reserve RPC.
-- [ ] `BETA-INV-006` Add Player redemption request route.
-- [ ] `BETA-INV-007` Add Player redemption history/status read.
+- [ ] `BETA-INV-003` Define redemption state machine. `IMPLEMENTED_NOT_MERGED` on PR #158 at `cd169634d507850d768638fdf7c89a842c92501c`; merge and connected lifecycle evidence remain.
+- [ ] `BETA-INV-004` Add migration for redemption request, transition, and audit history. `IMPLEMENTED_NOT_MERGED` in forward migration `20260718113000_add_inventory_redemption_player_workflow_v1.sql` at `cd169634d507850d768638fdf7c89a842c92501c`.
+- [ ] `BETA-INV-005` Add atomic request/reserve RPC. `IMPLEMENTED_NOT_MERGED` as service-role-only `request_inventory_redemption_atomic_v1(uuid, uuid, text, integer, text, text)` with row locking and idempotency at `cd169634d507850d768638fdf7c89a842c92501c`.
+- [ ] `BETA-INV-006` Add Player redemption request route. `IMPLEMENTED_NOT_MERGED` as `POST /players/me/inventory/:itemId/redemptions` at `cd169634d507850d768638fdf7c89a842c92501c`.
+- [ ] `BETA-INV-007` Add Player redemption history/status read. `IMPLEMENTED_NOT_MERGED` as collection and public-request-ID reads backed by `read_player_inventory_redemptions_v1` at `cd169634d507850d768638fdf7c89a842c92501c`.
 - [ ] `BETA-INV-008` Add Admin pending and historical queue.
 - [ ] `BETA-INV-009` Add approve action.
 - [ ] `BETA-INV-010` Add reject-with-reason action.
@@ -1003,6 +1003,15 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-18 — Player redemption reservation and browser UUID privacy on PR #158
+
+- `BETA-INV-003` through `BETA-INV-007` are `IMPLEMENTED_NOT_MERGED` on branch `agent/player-backend-reconciliation-v2`, PR #158, commit `cd169634d507850d768638fdf7c89a842c92501c`. Seventeen files add the pending/approved/rejected/fulfilled state machine; forward migration `20260718113000_add_inventory_redemption_player_workflow_v1.sql`; append-only request-transition, Inventory-event, and audit evidence; service-role-only RPCs `request_inventory_redemption_atomic_v1` and `read_player_inventory_redemptions_v1`; `POST /players/me/inventory/:itemId/redemptions`; and collection/exact history reads. Ownership is session-derived, browser identities are `item_key` and `red_` public IDs, holding updates are row-locked, reservations cannot exceed available quantity, and exact retries replay without a second reservation.
+- The standard Backend Inventory smoke gate now includes all six redemption test files. Local evidence: 36 Inventory/redemption tests passed, Backend TypeScript passed, migration audit passed with 62 unique forward migrations, root repository tests passed, and `git diff --check` passed. Local Edge typecheck was blocked before analysis by this sandbox refusing the pinned `esm.sh` download; GitHub Backend Typecheck and Database Replay are the required authoritative gates. No runtime migration or deployment was performed.
+- `BETA-AUTH-006` login/bootstrap DTO remediation is `IMPLEMENTED_NOT_MERGED` at `d0dc57c74fd2b275a600c6c3626a4ed3053f7a10`. Sixteen files remove internal game, Player, and session UUIDs from login/bootstrap output; retain the one-time login token only in the authenticated handoff; add private/no-store response controls; require a non-UUID public `playerIdentifier`; and update the existing frontend/Player Terminal adapters without changing the accepted visual systems. The standard request-scope smoke gate now runs the new privacy suites.
+- Privacy local evidence: 21 request-scope/login/bootstrap/browser-payload tests passed; Backend TypeScript passed; full Player Terminal verification passed; root repository tests passed; and `git diff --check` passed. Connected staging network/log/trace, screenshot, and CI artifact scans remain required, so `BETA-AUTH-006` is not complete.
+- No capability flag was enabled for redemption because Admin review/fulfillment and the connected lifecycle remain incomplete. No item is `VERIFIED_COMPLETE`; PR #158 is still draft and unmerged.
+- Next exact unblocked Backend item: `BETA-INV-008` Admin pending and historical redemption queue, followed by `BETA-INV-009` through `BETA-INV-012`. `BETA-AUTH-005` route/login limiter integration continues in parallel.
 
 ### 2026-07-18 — Executable seed preflight on PR #163
 
