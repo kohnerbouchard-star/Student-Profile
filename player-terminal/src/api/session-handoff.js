@@ -9,6 +9,7 @@ export function normalizePlayerSessionHandoff(input) {
   if (!input || typeof input !== "object") return null;
   const session = input.session && typeof input.session === "object" ? input.session : {};
   const playerSession = input.playerSession && typeof input.playerSession === "object" ? input.playerSession : {};
+  const gameSession = input.gameSession && typeof input.gameSession === "object" ? input.gameSession : {};
 
   const playerSessionToken = firstText(
     input.playerSessionToken,
@@ -28,6 +29,26 @@ export function normalizePlayerSessionHandoff(input) {
 
   return {
     playerSessionToken,
+    gameSessionId: firstText(
+      input.gameSessionId,
+      input.game_session_id,
+      gameSession.id,
+      gameSession.gameSessionId,
+      gameSession.game_session_id,
+      session.gameSessionId,
+      session.game_session_id,
+      playerSession.gameSessionId,
+      playerSession.game_session_id
+    ),
+    playerSessionId: firstText(
+      input.playerSessionId,
+      input.player_session_id,
+      session.playerSessionId,
+      session.player_session_id,
+      playerSession.id,
+      playerSession.playerSessionId,
+      playerSession.player_session_id
+    ),
     accessToken: firstText(input.accessToken, input.access_token, session.accessToken, session.access_token)
   };
 }
@@ -36,9 +57,8 @@ export function applyPlayerSessionHandoff(config, input) {
   const session = normalizePlayerSessionHandoff(input);
   if (!session) return false;
   config.playerSessionToken = session.playerSessionToken;
-  // Never carry legacy browser-supplied UUID scope into a new authenticated session.
-  config.gameSessionId = "";
-  config.playerSessionId = "";
+  if (session.gameSessionId) config.gameSessionId = session.gameSessionId;
+  if (session.playerSessionId) config.playerSessionId = session.playerSessionId;
   if (session.accessToken) config.accessToken = session.accessToken;
   return true;
 }

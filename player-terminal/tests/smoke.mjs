@@ -4,8 +4,7 @@ import { PLAYER_ENDPOINTS, resolveEndpoint } from "../src/api/endpoints.js";
 import { PreviewTransport } from "../src/api/preview-transport.js";
 import { ApiConnectionPendingError } from "../src/api/errors.js";
 import { AdapterTransport } from "../src/api/adapter-transport.js";
-import { normalizeApiResponse } from "../src/api/response-normalizer.js";
-import { applyPlayerSessionHandoff, normalizePlayerSessionHandoff } from "../src/api/session-handoff.js";
+import { normalizePlayerSessionHandoff } from "../src/api/session-handoff.js";
 import { ECONOVARIA_COUNTRY_REGIONS, ECONOVARIA_MAP_SIZE, countryRegionPath } from "../src/data/map-regions.js";
 
 import { renderDashboardPage } from "../src/pages/dashboard-page.js";
@@ -177,36 +176,9 @@ for (const request of [
 }
 
 
-const handoff = normalizePlayerSessionHandoff({
-  gameSession: { id: "00000000-0000-4000-8000-000000000001" },
-  session: { token: "ps_test", id: "00000000-0000-4000-8000-000000000011" }
-});
+const handoff = normalizePlayerSessionHandoff({ session: { token: "ps_test", gameSessionId: "game-1" } });
 assert.equal(handoff.playerSessionToken, "ps_test");
-assert.equal("gameSessionId" in handoff, false, "Legacy game UUID scope must not cross the handoff boundary.");
-assert.equal("playerSessionId" in handoff, false, "Legacy session UUIDs must not cross the handoff boundary.");
-
-const staleConfig = {
-  playerSessionToken: "old-token",
-  gameSessionId: "00000000-0000-4000-8000-000000000001",
-  playerSessionId: "00000000-0000-4000-8000-000000000011"
-};
-assert.equal(applyPlayerSessionHandoff(staleConfig, { session: { token: "ps_fresh" } }), true);
-assert.deepEqual(staleConfig, {
-  playerSessionToken: "ps_fresh",
-  gameSessionId: "",
-  playerSessionId: ""
-});
-
-assert.throws(
-  () => normalizeApiResponse("session", {
-    displayName: "Alex Rivera",
-    playerId: "CARD-200",
-    currencyCode: "ECO",
-    gameSessionId: "00000000-0000-4000-8000-000000000001"
-  }),
-  (error) => error.code === "INVALID_RESPONSE",
-  "A legacy UUID-bearing normalized session must fail closed."
-);
+assert.equal(handoff.gameSessionId, "game-1");
 
 let adapterContext = null;
 const adapter = new AdapterTransport(async (context) => {

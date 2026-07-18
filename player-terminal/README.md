@@ -63,7 +63,9 @@ The existing sign-in can also connect directly:
 
 ```js
 await window.Econovaria.playerTerminal.connectSession({
-  playerSessionToken: loginResult.session.token
+  playerSessionToken: loginResult.session.token,
+  gameSessionId: loginResult.gameSession.id,
+  playerSessionId: loginResult.session.id
 });
 ```
 

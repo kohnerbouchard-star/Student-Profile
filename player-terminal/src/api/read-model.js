@@ -190,16 +190,14 @@ function emptyTerminalData() {
 
 function normalizeSession(rawSession, rawDashboard, base) {
   const direct = object(rawSession);
-  if (direct.playerId || direct.displayName) {
+  if (direct.playerId || direct.gameSessionId) {
     const displayName = text(direct.displayName, base.displayName);
     return {
       ...base,
       ...direct,
-      playerId: playerFacingId(direct.playerId),
       displayName,
       initials: text(direct.initials, initials(displayName)),
-      gameSessionId: "",
-      playerSessionId: ""
+      playerSessionId: text(direct.playerSessionId, base.playerSessionId)
     };
   }
 
@@ -220,8 +218,8 @@ function normalizeSession(rawSession, rawDashboard, base) {
     playerId: playerFacingId(player.playerIdentifier, player.playerId, me.playerIdentifier),
     displayName,
     initials: initials(displayName),
-    gameSessionId: "",
-    playerSessionId: "",
+    gameSessionId: text(game.id || object(dashboard.gameSession).id),
+    playerSessionId: text(session.id),
     gameName: text(game.name || object(dashboard.gameSession).name, base.gameName),
     gameCode: text(direct.gameCode, base.gameCode),
     status: text(game.status || session.status, base.status).toUpperCase(),
@@ -823,9 +821,16 @@ function applyDashboardSnapshot(data, rawDashboard) {
 }
 
 export function readSessionContext(rawSession) {
+  const response = object(rawSession);
+  if (response.gameSessionId || response.playerSessionId) {
+    return {
+      gameSessionId: text(response.gameSessionId),
+      playerSessionId: text(response.playerSessionId)
+    };
+  }
   return {
-    gameSessionId: "",
-    playerSessionId: ""
+    gameSessionId: text(object(response.gameSession).id),
+    playerSessionId: text(object(response.session).id)
   };
 }
 

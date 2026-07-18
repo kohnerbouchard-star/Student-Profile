@@ -32,7 +32,6 @@ const MAX_ARRAY_LENGTH = 1000;
 const MAX_OBJECT_KEYS = 300;
 const MAX_STRING_LENGTH = 5000;
 const URL_KEY = /(?:image|imageUrl|avatar|photo|thumbnail|assetUrl|currencySymbolAsset)$/i;
-const INTERNAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function invalidResponse(endpointKey, requestId, path) {
   return new ApiRequestError("This section received incomplete data and could not be opened safely.", {
@@ -117,11 +116,8 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
   }
 
   if (endpointKey === "session") {
-    for (const key of ["displayName", "playerId", "currencyCode"]) {
+    for (const key of ["displayName", "gameSessionId", "currencyCode"]) {
       if (typeof value[key] !== "string" || !value[key].trim()) throw invalidResponse(endpointKey, context.requestId, context.path);
-    }
-    if (INTERNAL_UUID.test(String(value.gameSessionId || "")) || value.playerSessionId) {
-      throw invalidResponse(endpointKey, context.requestId, context.path);
     }
   }
   if (!ARRAY_READS.has(endpointKey)) {

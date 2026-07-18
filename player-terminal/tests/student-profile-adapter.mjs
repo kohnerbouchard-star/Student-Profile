@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
 const rawSession = {
-  gameSession: { name: "Econovaria Class", status: "active" },
+  gameSession: { id: "game-1", name: "Econovaria Class", status: "active" },
   player: {
+    id: "0c80fe6d-e1d9-4e90-90f4-1b174be727f1",
     playerIdentifier: "CARD-200",
     displayName: "Alex Rivera"
   },
-  session: { status: "active", expiresAt: "2026-07-19T12:00:00.000Z" },
+  session: { id: "player-session-1", status: "active" },
   balances: [{ accountType: "cash", currencyCode: "ECO", balance: 1250 }]
 };
 
@@ -134,8 +135,6 @@ function context(endpointKey, method, path, payload, extra = {}) {
 const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
-assert.equal(session.gameSessionId, "", "The browser read model must not retain an internal game UUID.");
-assert.equal(session.playerSessionId, "", "The browser read model must not retain an internal session UUID.");
 assert.equal(calls.at(-1).path, "/players/me");
 assert.equal(calls.at(-1).headers["x-player-session-token"], "token-1");
 assert.equal(calls.at(-1).headers["x-request-id"], "req-session");
