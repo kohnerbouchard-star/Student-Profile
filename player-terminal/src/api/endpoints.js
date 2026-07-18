@@ -1,5 +1,6 @@
 export const PLAYER_ENDPOINTS = Object.freeze({
   session: { method: "GET", path: "/session" },
+  capabilities: { method: "GET", path: "/capabilities" },
   dashboard: { method: "GET", path: "/dashboard" },
   countries: { method: "GET", path: "/world/countries" },
   country: { method: "GET", path: "/world/countries/:countryId" },
