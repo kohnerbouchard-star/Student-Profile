@@ -15,15 +15,16 @@
     "banking-read": "node tests/banking-read-model.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
     "realtime": "node tests/realtime-freshness.mjs",
+    "session-timeout": "node tests/session-timeout-safe-exit.mjs",
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store and Market transactions, Contracts lifecycle states, truthful Banking and Inventory, realtime freshness, and Chromium browser verification."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, capabilities, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store and Market transactions, Contracts lifecycle states, truthful Banking and Inventory, realtime freshness, safe session timeout exits, and Chromium browser verification."
 }
