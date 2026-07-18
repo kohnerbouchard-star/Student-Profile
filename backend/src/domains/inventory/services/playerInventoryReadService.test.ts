@@ -124,6 +124,23 @@ Deno.test("inventory service rejects cross-scope, duplicate public IDs, and inva
   );
 });
 
+Deno.test("inventory service fails closed above the 200-holding maximum", async () => {
+  const records = Array.from({ length: 201 }, (_value, index) => record({
+    holdingUuid: scopedUuid(index + 1000),
+    storeItemUuid: scopedUuid(index + 2000),
+    itemKey: `item_${index}`,
+  }));
+
+  await assertRejects(
+    () => new PlayerInventoryReadService(repository(records)).readInventory({
+      gameId: GAME,
+      playerUuid: PLAYER,
+      effectiveAt: NOW,
+    }),
+    "player_inventory_scope_violation",
+  );
+});
+
 function repository(records: readonly PlayerInventoryRecord[]): PlayerInventoryReadRepository {
   return {
     readInventory: (input) => Promise.resolve({
@@ -162,6 +179,10 @@ function record(options: {
     createdAt: NOW,
     updatedAt: NOW,
   };
+}
+
+function scopedUuid(value: number): string {
+  return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 }
 
 async function assertRejects(
