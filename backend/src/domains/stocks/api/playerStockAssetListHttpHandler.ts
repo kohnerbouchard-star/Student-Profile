@@ -14,15 +14,25 @@ import {
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
 import {
+  type PlayerStockAssetDetailRepository,
+  type PlayerStockAssetDetailResponseBody,
+  PlayerStockAssetDetailError,
+} from "../contracts/playerStockAssetDetailContracts.ts";
+import {
   type PlayerStockAssetListRepository,
   type PlayerStockAssetListResponseBody,
   type PlayerStockAssetListRoute,
   PlayerStockAssetListError,
 } from "../contracts/playerStockAssetListContracts.ts";
 import {
+  SupabasePlayerStockAssetDetailRepository,
+} from "../infrastructure/supabasePlayerStockAssetDetailRepository.ts";
+import {
   SupabasePlayerStockAssetListRepository,
 } from "../infrastructure/supabasePlayerStockAssetListRepository.ts";
+import { PlayerStockAssetDetailService } from "../services/playerStockAssetDetailService.ts";
 import { PlayerStockAssetListService } from "../services/playerStockAssetListService.ts";
+import { parsePlayerStockAssetDetailRequest } from "./playerStockAssetDetailRequestParser.ts";
 import { parsePlayerStockAssetListRequest } from "./playerStockAssetListRequestParser.ts";
 
 export interface PlayerStockAssetListHttpHandlerDependencies {
@@ -36,6 +46,9 @@ export interface PlayerStockAssetListHttpHandlerDependencies {
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerStockAssetListRepository;
+  readonly createDetailRepository?: (
+    client: EdgeSupabaseClient,
+  ) => PlayerStockAssetDetailRepository;
   readonly now?: () => Date;
 }
 
@@ -81,27 +94,34 @@ export async function handlePlayerStockAssetListRequest(
         ),
       now: () => now,
     });
-    const query = parsePlayerStockAssetListRequest(request, route);
-    const repository = dependencies.createRepository
-      ? dependencies.createRepository(client)
-      : new SupabasePlayerStockAssetListRepository(client as never);
-    const service = new PlayerStockAssetListService(repository);
-    const body = await service.listAssets(
-      {
-        gameId: scope.gameId,
-        playerUuid: scope.playerUuid,
-        effectiveAt: now.toISOString(),
-      },
-      query,
-    );
-    const response = jsonResponse<PlayerStockAssetListResponseBody>(200, body);
-    response.headers.set("cache-control", "private, no-store");
-    response.headers.set("vary", "authorization, x-player-session-token");
-    return response;
+    const readScope = {
+      gameId: scope.gameId,
+      playerUuid: scope.playerUuid,
+      effectiveAt: now.toISOString(),
+    };
+
+    if (route.kind === "assets") {
+      const query = parsePlayerStockAssetListRequest(request, route);
+      const repository = dependencies.createRepository
+        ? dependencies.createRepository(client)
+        : new SupabasePlayerStockAssetListRepository(client as never);
+      const service = new PlayerStockAssetListService(repository);
+      const body = await service.listAssets(readScope, query);
+      return playerMarketJsonResponse<PlayerStockAssetListResponseBody>(body);
+    }
+
+    const query = parsePlayerStockAssetDetailRequest(request, route);
+    const repository = dependencies.createDetailRepository
+      ? dependencies.createDetailRepository(client)
+      : new SupabasePlayerStockAssetDetailRepository(client as never);
+    const service = new PlayerStockAssetDetailService(repository);
+    const body = await service.readAsset(readScope, query);
+    return playerMarketJsonResponse<PlayerStockAssetDetailResponseBody>(body);
   } catch (error) {
     if (
       error instanceof EdgeActivationError ||
-      error instanceof PlayerStockAssetListError
+      error instanceof PlayerStockAssetListError ||
+      error instanceof PlayerStockAssetDetailError
     ) {
       return jsonError(error.status, {
         code: error.code,
@@ -111,9 +131,19 @@ export async function handlePlayerStockAssetListRequest(
     }
 
     return jsonError(500, {
-      code: "player_stock_asset_list_failed",
+      code: "player_stock_asset_read_failed",
       message: "Player stock assets could not be loaded.",
       retryable: false,
     });
   }
+}
+
+export const handlePlayerStockAssetReadRequest =
+  handlePlayerStockAssetListRequest;
+
+function playerMarketJsonResponse<TBody>(body: TBody): Response {
+  const response = jsonResponse<TBody>(200, body);
+  response.headers.set("cache-control", "private, no-store");
+  response.headers.set("vary", "authorization, x-player-session-token");
+  return response;
 }
