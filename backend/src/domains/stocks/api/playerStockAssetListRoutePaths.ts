@@ -1,10 +1,12 @@
 import type {
-  PlayerStockAssetListRoute,
+  PlayerStockAssetRoute,
 } from "../contracts/playerStockAssetListContracts.ts";
 
-export function readPlayerStockAssetListRoutePath(
+const PUBLIC_STOCK_ASSET_ID_PATTERN = /^[A-Z0-9][A-Z0-9.-]{0,15}$/;
+
+export function readPlayerStockAssetRoutePath(
   pathname: string,
-): PlayerStockAssetListRoute | null {
+): PlayerStockAssetRoute | null {
   const segments = pathname.split("/").filter(Boolean);
   const playersIndex = segments.lastIndexOf("players");
 
@@ -17,7 +19,26 @@ export function readPlayerStockAssetListRoutePath(
     return null;
   }
 
-  return playersIndex + 4 === segments.length
-    ? { kind: "assets" }
+  if (playersIndex + 4 === segments.length) {
+    return { kind: "assets" };
+  }
+
+  if (playersIndex + 5 !== segments.length) {
+    return { kind: "malformed" };
+  }
+
+  const encodedAssetId = segments[playersIndex + 4] ?? "";
+  let assetId = "";
+
+  try {
+    assetId = decodeURIComponent(encodedAssetId).trim().toUpperCase();
+  } catch {
+    return { kind: "malformed" };
+  }
+
+  return PUBLIC_STOCK_ASSET_ID_PATTERN.test(assetId)
+    ? { kind: "asset", assetId }
     : { kind: "malformed" };
 }
+
+export const readPlayerStockAssetListRoutePath = readPlayerStockAssetRoutePath;
