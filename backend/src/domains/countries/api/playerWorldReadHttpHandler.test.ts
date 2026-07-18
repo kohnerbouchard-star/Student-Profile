@@ -60,7 +60,7 @@ Deno.test("world handlers distinguish empty feeds from unavailable services", as
     }),
   );
   assertEquals(unavailable.status, 500);
-  assertEquals((await unavailable.json()).code, "player_world_read_failed");
+  assertEquals((await unavailable.json()).error.code, "player_world_read_failed");
 });
 
 Deno.test("world handlers reject missing, expired, revoked, and wrong-game sessions", async () => {
@@ -71,7 +71,7 @@ Deno.test("world handlers reject missing, expired, revoked, and wrong-game sessi
     dependencies(activeResolution(), repository),
   );
   assertEquals(missing.status, 401);
-  assertEquals((await missing.json()).code, "missing_player_session");
+  assertEquals((await missing.json()).error.code, "missing_player_session");
 
   for (const [resolution, code] of [
     [activeResolution({ expiresAt: "2026-07-17T00:00:00.000Z" }), "player_session_expired"],
@@ -83,7 +83,7 @@ Deno.test("world handlers reject missing, expired, revoked, and wrong-game sessi
       dependencies(resolution, repository),
     );
     assertEquals(response.status, 401);
-    assertEquals((await response.json()).code, code);
+    assertEquals((await response.json()).error.code, code);
   }
 
   const wrongGame = await handlePlayerWorldReadRequest(
@@ -92,7 +92,7 @@ Deno.test("world handlers reject missing, expired, revoked, and wrong-game sessi
     dependencies(activeResolution(), repository),
   );
   assertEquals(wrongGame.status, 401);
-  assertEquals((await wrongGame.json()).code, "invalid_player_session_scope");
+  assertEquals((await wrongGame.json()).error.code, "invalid_player_session_scope");
 });
 
 Deno.test("world handlers reject UUID ownership injection", async () => {
@@ -107,7 +107,7 @@ Deno.test("world handlers reject UUID ownership injection", async () => {
       dependencies(activeResolution(), worldRepository()),
     );
     assertEquals(response.status, 400);
-    assertEquals((await response.json()).code, "invalid_player_request");
+    assertEquals((await response.json()).error.code, "invalid_player_request");
   }
 });
 
