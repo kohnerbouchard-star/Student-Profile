@@ -95,12 +95,21 @@ function assertLoadingSemantics(label, result) {
 }
 
 async function assertLoadingCleared(label) {
-  await waitForPageSkeletonHidden();
-  const after = await page.evaluate(() => ({
-    busy: document.querySelector(".admin-terminal-shell-main")?.getAttribute("aria-busy") || "",
-    overlayHidden: document.querySelector(".admin-qol-page-skeleton")?.hidden === true,
-  }));
-  if (after.busy || !after.overlayHidden) fail(`${label} did not clear loading state.`);
+  try {
+    await page.waitForFunction(() => {
+      const main = document.querySelector(".admin-terminal-shell-main");
+      const overlay = document.querySelector(".admin-qol-page-skeleton");
+      return Boolean(overlay?.hidden) && !main?.hasAttribute("aria-busy");
+    }, null, { timeout: 5000 });
+  } catch (_) {
+    const state = await page.evaluate(() => ({
+      busy: document.querySelector(".admin-terminal-shell-main")?.getAttribute("aria-busy") || "",
+      overlayHidden: document.querySelector(".admin-qol-page-skeleton")?.hidden === true,
+      route: document.querySelector(".admin-qol-page-skeleton")?.getAttribute("data-admin-shape-skeleton-route") || "",
+      generation: document.querySelector(".admin-qol-page-skeleton")?.getAttribute("data-admin-shape-skeleton-generation") || "",
+    }));
+    fail(`${label} did not clear loading state: ${JSON.stringify(state)}.`);
+  }
 }
 
 async function measureRoute(route, label) {
