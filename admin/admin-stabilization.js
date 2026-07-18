@@ -267,11 +267,22 @@
       });
   }
 
+  function liveQueryRoot(root) {
+    return {
+      querySelectorAll(selector) {
+        const matches = root?.querySelectorAll?.(selector);
+        if (!matches) return [];
+        return [...matches].filter((node) => !node.closest?.("[data-admin-shape-skeleton-stage]"));
+      },
+    };
+  }
+
   function reconcile(root = document) {
-    reconcileKnownButtons(root);
-    reconcileResidualGlyphButtons(root);
-    reconcileAccessibleNames(root);
-    reconcileNumericFormatting(root);
+    const liveRoot = liveQueryRoot(root);
+    reconcileKnownButtons(liveRoot);
+    reconcileResidualGlyphButtons(liveRoot);
+    reconcileAccessibleNames(liveRoot);
+    reconcileNumericFormatting(liveRoot);
   }
 
   function scheduleReconcile() {

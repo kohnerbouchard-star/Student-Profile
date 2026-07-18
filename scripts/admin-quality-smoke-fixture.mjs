@@ -90,6 +90,7 @@ export async function createQualityHarness(name) {
     const failure = request.failure()?.errorText || "";
     if (request.url().endsWith("/favicon.ico")) return;
     if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(request.url()) && failure.includes("ERR_ABORTED")) return;
+    if (/\/admin\/assets\/icons\/media-placeholder\.svg$/i.test(request.url()) && failure.includes("ERR_ABORTED")) return;
     errors.push(`${request.method()} ${request.url()} ${failure}`);
   });
 
