@@ -1,0 +1,27 @@
+/* Overview quick actions belong to a content card, not the page header. */
+#adminPreview .admin-overview-quick-actions-card {
+  display: grid;
+  gap: 0;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+
+#adminPreview .admin-overview-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+}
+
+#adminPreview .admin-overview-quick-actions-grid > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  #adminPreview .admin-overview-quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
