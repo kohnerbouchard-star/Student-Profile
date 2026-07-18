@@ -11,6 +11,7 @@
   const retryStatuses = new Set([400, 404, 501]);
   const delegatedFetch = window.fetch.bind(window);
   const eventTarget = window.document || null;
+  const cryptoRuntime = window.crypto || globalThis.crypto || null;
   let requestSequence = 0;
 
   function record(value) {
@@ -84,7 +85,9 @@
   }
 
   function newRequestId() {
-    if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
+    if (typeof cryptoRuntime?.randomUUID === "function") {
+      return cryptoRuntime.randomUUID();
+    }
     requestSequence += 1;
     return `admin-request-${Date.now()}-${requestSequence}`;
   }
