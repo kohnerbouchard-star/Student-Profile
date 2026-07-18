@@ -233,6 +233,20 @@
     }
   }
 
+  function completeFromRequestLifecycle(detail) {
+    if (detail?.action !== "submit-attendance-scan") return;
+    const quality = window.EconovariaAdminInteractionQuality;
+    if (detail.phase === "committed") {
+      quality?.setScannerCompleted?.();
+      schedule("completed");
+      return;
+    }
+    if (["failed", "cancelled"].includes(detail.phase)) {
+      quality?.setScannerError?.(text(detail.message) || "Scan failed");
+      schedule("error");
+    }
+  }
+
   document.addEventListener("input", (event) => {
     const input = event.target instanceof Element
       ? event.target.closest("[data-admin-terminal-manual-scan-input], [data-admin-terminal-auto-scan-input]")
@@ -242,6 +256,12 @@
     const state = text(current?.consoleElement.dataset.adminQolScannerState).toLowerCase();
     if (["completed", "error"].includes(state)) setReady({ clearResult: false });
   }, true);
+
+  document.addEventListener("econovaria:admin-request-lifecycle", (event) => {
+    completeFromRequestLifecycle(
+      event.detail && typeof event.detail === "object" ? event.detail : {},
+    );
+  });
 
   window.fetch = async function econovariaScannerIdentityFetch(input, init) {
     const isAttendanceScan = attendanceScanRequest(input, init);
@@ -271,5 +291,6 @@
     prepareNextCard,
     presentPlayerIdentity,
     formatScanTimestamp,
+    completeFromRequestLifecycle,
   };
 })();
