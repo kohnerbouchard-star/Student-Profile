@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./css/admin-stabilization.css" />
   <link rel="stylesheet" href="./css/admin-stabilization-visual-finish.css" />
   <link rel="stylesheet" href="./css/interaction-quality.css" />
+  <link rel="stylesheet" href="./css/shape-accurate-skeletons.css" />
   <script defer src="./auth-session-manager.js"></script>
   <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>
@@ -37,12 +38,39 @@
   <script defer src="./interaction-quality.js"></script>
   <script defer src="./interaction-quality-control-reset.js" onload="void import('./scanner-auto-refresh.js').then(() =&gt; import('./scanner-reward-localization.js')).then(() =&gt; import('./attendance-reward-settings-route-bridge-v2.js')).then(() =&gt; import('./attendance-reward-save-controller-v3.js')).then(() =&gt; import('./attendance-reward-settings-v4.js')).then(() =&gt; import('./settings-simplified.js')).then(() =&gt; import('./settings-save-error-bridge.js'))"></script>
   <script defer src="./dist/admin-overview-boot.js"></script>
+  <script defer src="./shape-accurate-skeletons.js"></script>
 </head>
 <body>
-  <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite">
+  <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite" aria-label="Verifying administrator access">
     <div class="admin-session-skeleton" aria-hidden="true">
-      <div class="admin-session-skeleton__top"><i></i><i></i></div>
-      <div class="admin-session-skeleton__grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="admin-session-skeleton__shell">
+        <aside class="admin-session-skeleton__nav">
+          <div class="admin-session-skeleton__brand"></div>
+          <div class="admin-session-skeleton__nav-list">
+            <i class="admin-session-skeleton__nav-row"></i><i class="admin-session-skeleton__nav-row"></i>
+            <i class="admin-session-skeleton__nav-row"></i><i class="admin-session-skeleton__nav-row"></i>
+            <i class="admin-session-skeleton__nav-row"></i><i class="admin-session-skeleton__nav-row"></i>
+            <i class="admin-session-skeleton__nav-row"></i><i class="admin-session-skeleton__nav-row"></i>
+          </div>
+          <div class="admin-session-skeleton__game-code"></div>
+        </aside>
+        <section class="admin-session-skeleton__main">
+          <div class="admin-session-skeleton__topbar"></div>
+          <div class="admin-session-skeleton__metrics">
+            <i class="admin-session-skeleton__metric"></i><i class="admin-session-skeleton__metric"></i>
+            <i class="admin-session-skeleton__metric"></i><i class="admin-session-skeleton__metric"></i>
+          </div>
+          <div class="admin-session-skeleton__content">
+            <div class="admin-session-skeleton__panel admin-session-skeleton__table">
+              <i class="admin-session-skeleton__table-head"></i>
+              <i class="admin-session-skeleton__table-row"></i><i class="admin-session-skeleton__table-row"></i>
+              <i class="admin-session-skeleton__table-row"></i><i class="admin-session-skeleton__table-row"></i>
+              <i class="admin-session-skeleton__table-row"></i><i class="admin-session-skeleton__table-row"></i>
+            </div>
+            <div class="admin-session-skeleton__panel"></div>
+          </div>
+        </section>
+      </div>
     </div>
     <span class="admin-qol-sr-only">Verifying administrator access</span>
   </div>
