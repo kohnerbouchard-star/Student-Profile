@@ -1,39 +1,17 @@
-/* Component-specific calibration for dense Player Terminal loading shells. */
-
+/* Dense card calibration for Player Terminal card-level loading states. */
 .player-terminal-route-skeleton .player-terminal-marketplace-detail {
   height: 360px;
   min-height: 360px;
   align-self: start;
 }
 
-.player-terminal-route-skeleton .player-terminal-marketplace-detail .player-terminal-skeleton-panel-header {
-  min-height: 48px;
-}
-
 .player-terminal-route-skeleton .player-terminal-marketplace-detail .is-detail-hero {
-  min-height: 86px;
-}
-
-.player-terminal-route-skeleton .player-terminal-marketplace-detail .player-terminal-skeleton-lines {
-  gap: 6px;
-}
-
-.player-terminal-route-skeleton .player-terminal-marketplace-detail .player-terminal-skeleton-form {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px;
-  padding-top: 8px;
-}
-
-.player-terminal-route-skeleton .player-terminal-marketplace-detail .player-terminal-skeleton-field {
-  min-height: 44px;
-  padding: 0;
-  border-bottom: 0;
+  min-height: 96px;
 }
 
 .player-terminal-route-skeleton .player-terminal-inventory-card {
   display: grid !important;
-  grid-template-columns: 96px minmax(0, 1fr) 132px;
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   height: 178px;
@@ -51,38 +29,20 @@
   padding: 0;
 }
 
-.player-terminal-route-skeleton .player-terminal-inventory-card .player-terminal-skeleton-card-action {
-  display: grid;
-  justify-items: end;
-  align-content: center;
-  gap: 12px;
-  margin: 0;
-}
-
 @media (max-width: 720px) {
   .player-terminal-route-skeleton .player-terminal-marketplace-detail {
     height: auto;
-    min-height: 420px;
-  }
-
-  .player-terminal-route-skeleton .player-terminal-marketplace-detail .player-terminal-skeleton-form {
-    grid-template-columns: 1fr;
+    min-height: 360px;
   }
 
   .player-terminal-route-skeleton .player-terminal-inventory-card {
     grid-template-columns: 82px minmax(0, 1fr);
     height: auto;
-    min-height: 214px;
+    min-height: 190px;
   }
 
   .player-terminal-route-skeleton .player-terminal-inventory-card .is-card-image {
     width: 82px;
     min-height: 82px;
-  }
-
-  .player-terminal-route-skeleton .player-terminal-inventory-card .player-terminal-skeleton-card-action {
-    grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 1fr) auto;
-    justify-items: stretch;
   }
 }
