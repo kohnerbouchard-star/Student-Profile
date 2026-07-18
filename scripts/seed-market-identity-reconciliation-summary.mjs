@@ -32,9 +32,16 @@ async function loadActive() {
   const records = [];
   for (const fileName of fileNames) {
     const document = await readJson(path.join(activeRoot, fileName));
-    const country = document.country ?? document.market?.country;
-    const instruments = document.market?.instruments ?? document.instruments ?? [];
-    for (const instrument of instruments) records.push({ ...instrument, country: instrument.country ?? country });
+    const market = document.market ?? document;
+    const instruments = market.instruments ?? document.instruments ?? [];
+    for (const instrument of instruments) {
+      records.push({
+        ...instrument,
+        country: instrument.country ?? market.country ?? document.country,
+        currency: instrument.currency ?? market.currency ?? document.currency,
+        exchange: instrument.exchange ?? market.exchange ?? document.exchange,
+      });
+    }
   }
   return records;
 }
