@@ -226,27 +226,58 @@ function profileSkeleton() {
   </section>`;
 }
 
-const RENDERERS = Object.freeze({
-  dashboard: dashboardSkeleton,
-  news: newsSkeleton,
-  market: marketSkeleton,
-  portfolio: portfolioSkeleton,
-  store: storeSkeleton,
-  contracts: contractsSkeleton,
-  inventory: inventorySkeleton,
-  banking: bankingSkeleton,
-  messages: messagesSkeleton,
-  marketplace: marketplaceSkeleton,
-  business: businessSkeleton,
-  crafting: craftingSkeleton,
-  loans: loansSkeleton,
-  progression: progressionSkeleton,
-  profile: profileSkeleton
-});
+export const PLAYER_SKELETON_ROUTES = Object.freeze([
+  "dashboard",
+  "news",
+  "market",
+  "portfolio",
+  "store",
+  "contracts",
+  "inventory",
+  "banking",
+  "messages",
+  "marketplace",
+  "business",
+  "crafting",
+  "loans",
+  "progression",
+  "profile"
+]);
 
 export function renderRouteSkeleton(route = currentRoute()) {
   const normalizedRoute = route === "world" ? "dashboard" : ROUTE_META[route] ? route : "dashboard";
-  return RENDERERS[normalizedRoute]();
-}
 
-export const PLAYER_SKELETON_ROUTES = Object.freeze(Object.keys(RENDERERS));
+  switch (normalizedRoute) {
+    case "news":
+      return newsSkeleton();
+    case "market":
+      return marketSkeleton();
+    case "portfolio":
+      return portfolioSkeleton();
+    case "store":
+      return storeSkeleton();
+    case "contracts":
+      return contractsSkeleton();
+    case "inventory":
+      return inventorySkeleton();
+    case "banking":
+      return bankingSkeleton();
+    case "messages":
+      return messagesSkeleton();
+    case "marketplace":
+      return marketplaceSkeleton();
+    case "business":
+      return businessSkeleton();
+    case "crafting":
+      return craftingSkeleton();
+    case "loans":
+      return loansSkeleton();
+    case "progression":
+      return progressionSkeleton();
+    case "profile":
+      return profileSkeleton();
+    case "dashboard":
+    default:
+      return dashboardSkeleton();
+  }
+}
