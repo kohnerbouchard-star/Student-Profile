@@ -24,7 +24,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   contractAccept: { method: "POST", path: "/contracts/:contractId/accept" },
   contractSubmit: { method: "POST", path: "/contracts/:contractId/submissions" },
   inventory: { method: "GET", path: "/inventory" },
-  inventoryUse: { method: "POST", path: "/inventory/:inventoryItemId/use" },
+  inventoryUse: { method: "POST", path: "/inventory/:inventoryItemId/redemptions" },
   crafting: { method: "GET", path: "/crafting" },
   craftItem: { method: "POST", path: "/crafting/recipes/:recipeId/craft" },
   banking: { method: "GET", path: "/banking/summary" },
@@ -39,7 +39,8 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   progressionUnlock: { method: "POST", path: "/progression/skills/:skillId/unlock" },
   progressionClaim: { method: "POST", path: "/progression/rewards/:rewardId/claim" },
   notifications: { method: "GET", path: "/notifications" },
-  notificationsRead: { method: "POST", path: "/notifications/read" }
+  notificationsRead: { method: "POST", path: "/notifications/read" },
+  logout: { method: "POST", path: "/session/logout" }
 });
 
 export function resolveEndpoint(endpoint, params = {}) {
