@@ -43,10 +43,11 @@ Deno.test("inventory service returns deterministic UUID-private inventory summar
     effectiveAt: NOW,
   });
 
-  assertEquals(body.items.map((item) => item.id), ["data_chip", "field_permit"]);
-  assertEquals(body.items[1].quantityAvailable, 1);
-  assertEquals(body.items[1].storeItemId, "field_permit");
-  assertEquals(body.items[1].availableActions, []);
+  assertEquals(body.items.map((item) => item.id), ["field_permit", "data_chip"]);
+  assertEquals(body.items[0].quantityAvailable, 1);
+  assertEquals(body.items[0].storeItemId, "field_permit");
+  assertEquals(body.items[0].availableActions, []);
+  assertEquals(body.items[0].itemVisibility, "player");
   assertEquals(body.summary, {
     itemTypes: 2,
     quantityOwned: 5,
@@ -57,7 +58,7 @@ Deno.test("inventory service returns deterministic UUID-private inventory summar
       { currencyCode: "NRC", totalOwnedValue: 25 },
     ],
   });
-  assertEquals(body.categories, ["All", "access", "material"]);
+  assertEquals(body.categories, ["access", "material"]);
   assertEquals(body.emptyState, null);
   assertNoUuid(JSON.stringify(body));
 });
@@ -69,7 +70,7 @@ Deno.test("inventory service distinguishes empty inventory from persistence unav
     effectiveAt: NOW,
   });
   assertEquals(empty.items, []);
-  assertEquals(empty.emptyState, { reason: "no_inventory" });
+  assertEquals(empty.emptyState, { reason: "inventory_empty" });
 
   const unavailable = new PlayerInventoryReadService({
     readInventory: () => Promise.reject(
