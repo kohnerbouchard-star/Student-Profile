@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "TODO",
+  "targetEnvironment": "staging",
+  "source": {
+    "repository": "kohnerbouchard-star/Student-Profile",
+    "ref": "refs/heads/main",
+    "commit": "TODO",
+    "mergedIntoMain": true
+  },
+  "environments": {
+    "development": { "identity": "TODO" },
+    "staging": { "identity": "TODO", "dataPolicy": "synthetic-only" },
+    "production": { "identity": "TODO" }
+  },
+  "secrets": {
+    "configuredNames": [
+      "STOCK_MARKET_RUNNER_SECRET",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_URL"
+    ]
+  },
+  "migrations": {
+    "repositoryHead": "TODO",
+    "appliedHead": "TODO",
+    "repositoryCount": 0,
+    "appliedCount": 0,
+    "repositoryVersionSetSha256": "TODO",
+    "appliedVersionSetSha256": "TODO",
+    "appliedLedgerEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" },
+    "cleanReplayEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" },
+    "schemaComparisonEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" },
+    "schemaComparisonResult": "TODO"
+  },
+  "artifacts": {
+    "frontend": { "sha256": "TODO", "builtFromCommit": "TODO" },
+    "edgeFunctions": [
+      { "name": "admin-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "classroom-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "stock-market-player-read", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "stock-market-read", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "stock-market-runner", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "stock-market-seed-copy", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "stock-market-trading", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 }
+    ],
+    "manifestEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
+  },
+  "edgeRoutes": {
+    "functions": [
+      { "name": "admin-api", "entrypoint": "backend/supabase/functions/admin-api/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/admin-api/*"] },
+      { "name": "classroom-api", "entrypoint": "backend/supabase/functions/classroom-api/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/classroom-api/*"] },
+      { "name": "stock-market-player-read", "entrypoint": "backend/supabase/functions/stock-market-player-read/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/stock-market-player-read"] },
+      { "name": "stock-market-read", "entrypoint": "backend/supabase/functions/stock-market-read/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/stock-market-read"] },
+      { "name": "stock-market-runner", "entrypoint": "backend/supabase/functions/stock-market-runner/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-runner"] },
+      { "name": "stock-market-seed-copy", "entrypoint": "backend/supabase/functions/stock-market-seed-copy/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-seed-copy"] },
+      { "name": "stock-market-trading", "entrypoint": "backend/supabase/functions/stock-market-trading/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-trading"] }
+    ],
+    "placeholders": ["notification-worker"],
+    "inventoryEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
+  },
+  "configuration": {
+    "schemaVersion": 1,
+    "featureFlags": { "beta": false }
+  },
+  "legacyRuntimes": {
+    "services": [
+      { "id": "admin-api-staging", "disposition": "TODO", "owner": "TODO" },
+      { "id": "cloudflare-worker", "disposition": "TODO", "owner": "TODO" },
+      { "id": "make-server-0dbf686f", "disposition": "TODO", "owner": "TODO" },
+      { "id": "server", "disposition": "TODO", "owner": "TODO" }
+    ],
+    "inventoryEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
+  },
+  "rollback": {
+    "targetCommit": "TODO",
+    "procedureEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" },
+    "rehearsalEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
+  },
+  "restore": {
+    "result": "TODO",
+    "environmentIdentity": "TODO",
+    "rpoMinutes": 0,
+    "rtoMinutes": 0,
+    "observedRpoMinutes": 0,
+    "observedRtoMinutes": 0,
+    "evidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
+  },
+  "approval": {
+    "approver": "TODO",
+    "approvedAt": "TODO"
+  }
+}
