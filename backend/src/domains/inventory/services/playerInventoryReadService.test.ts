@@ -46,7 +46,7 @@ Deno.test("inventory service returns deterministic UUID-private inventory summar
   assertEquals(body.items.map((item) => item.id), ["field_permit", "data_chip"]);
   assertEquals(body.items[0].quantityAvailable, 1);
   assertEquals(body.items[0].storeItemId, "field_permit");
-  assertEquals(body.items[0].availableActions, []);
+  assertEquals(body.items[0].availableActions, ["inventory.use"]);
   assertEquals(body.items[0].itemVisibility, "player");
   assertEquals(body.summary, {
     itemTypes: 2,
