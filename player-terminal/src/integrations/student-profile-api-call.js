@@ -117,7 +117,8 @@ function applyCapabilityManifest(snapshot, manifest) {
       capabilities: manifest.capabilities,
       capabilitySchemaVersion: manifest.schemaVersion,
       capabilityManifestVersion: manifest.manifestVersion,
-      capabilityService: manifest.service
+      capabilityService: manifest.service,
+      capabilityEndpointKeys: manifest.endpoints.map((endpoint) => endpoint.key)
     }
   };
 }
