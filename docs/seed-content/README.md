@@ -1,51 +1,123 @@
 # Econovaria Seed Content Catalog
 
 Status: foundation tranche in progress
+Pull request: draft PR #163
 
-This directory is the authoritative planning and content-design workspace for production-grade seeded Econovaria content. It extends the existing country lore and current runtime contracts without changing database schema, migrations, Admin behavior, Player Terminal behavior, or game-session runtime state.
+This directory is the authoritative planning and content-design workspace for seeded Econovaria content.
+
+It does not change database schema, migrations, Admin behavior, Player Terminal behavior, Supabase data, or live game-session state.
+
+## Current narrative direction
+
+The player begins as a new immigrant in one of Econovaria's ten countries.
+
+They arrive during the Meridian economic boom with limited money, temporary status, one local contact, and the goal of building wealth, security, relationships, and belonging.
+
+Economic rivalry then escalates through shortages, cyber incidents, political hostility, and a major attack against Meridian infrastructure. The standard campaign may develop into open war.
+
+War is experienced primarily through civilian and economic consequences:
+
+- jobs;
+- prices;
+- shortages;
+- companies and markets;
+- housing;
+- borders;
+- residency;
+- financial controls;
+- relationships;
+- public trust;
+- reconstruction.
+
+The player is not automatically a national leader or battlefield commander. Influence must be earned through supported work, evidence, reputation, relationships, and economic activity.
+
+Personal wealth and world success are evaluated separately.
+
+Primary narrative references:
+
+- `story-arcs/global/immigrant-fortune-and-war-premise.md` — core player premise and arrival-to-war story spine.
+- `02-world-state-and-historical-timeline.md` — durable world history, Meridian boom, fracture, attack, and runtime war sequence.
+- `04-narrative-system-and-story-state.md` — player-centered choice, relationship, consequence, war, and ending rules.
+- `story-arcs/global/meridian-corridor.md` — central opening arc.
+- `briefings/global/meridian-player-briefing.md` — player-facing arrival and Meridian briefing.
 
 ## Operating rules
 
 1. Canonical lore and reusable templates may be global.
-2. Prices, holdings, active events, player choices, country conditions, story progress, and other mutable state must remain scoped to a game session.
-3. Display names are editable content. Stable content identifiers are not.
-4. Every seeded record must have a gameplay purpose, economic rationale, narrative purpose, learning purpose, administrative purpose, or test purpose.
+2. Prices, holdings, active events, player choices, relationships, residency, country conditions, war state, and story progress remain game-session scoped.
+3. Display names are editable content. Stable content identifiers are not reassigned after release.
+4. Every seeded record must have a gameplay, economic, narrative, learning, administrative, or test purpose.
 5. Test fixtures must be visibly and technically separated from classroom production content.
 6. Content must be idempotent, versioned, searchable, reviewable, and reversible before production import.
-7. This directory is documentation-only until the compatibility audit approves an implementation mapping.
+7. This directory remains documentation-only until an implementation mapping is approved.
+8. News, interactions, and authored documents are not authority to mutate economic or player state.
+9. Unsupported mechanics must remain labeled as planned.
+10. A prose simulation design is not evidence that a simulation ran.
 
 ## Catalog map
 
 ### Program control
 
 - `00-program-charter.md` — scope, governance, gates, tranche rules, and quality bar.
-- `01-canon-and-identifier-registry.md` — official entities, stable identifier conventions, ownership, and terminology.
-- `02-world-state-and-historical-timeline.md` — starting world, historical sequence, unresolved tensions, and session-opening state.
+- `01-canon-and-identifier-registry.md` — official entities, stable identifiers, ownership, and terminology.
+- `02-world-state-and-historical-timeline.md` — world history, player arrival, Meridian boom, fracture, and possible war.
 - `03-economic-system-and-balance-framework.md` — indicators, effect scales, currencies, rewards, prices, and balance controls.
-- `04-narrative-system-and-story-state.md` — story architecture, states, branches, continuity, and consequence rules.
+- `04-narrative-system-and-story-state.md` — player-centered story architecture, choices, relationships, and consequences.
 - `05-institutions-and-character-catalog.md` — institution and recurring-character design requirements.
-- `06-event-news-and-interaction-framework.md` — events, news, interaction trees, triggers, and follow-up logic.
-- `07-contract-content-framework.md` — contract families, narrative chains, rewards, approval, difficulty, and learning alignment.
-- `08-company-market-and-commodity-framework.md` — companies, equities, indexes, sectors, commodities, and market-event exposure.
+- `06-event-news-and-interaction-framework.md` — events, news, interaction trees, triggers, corrections, and follow-up logic.
+- `07-contract-content-framework.md` — Contract families, narrative chains, rewards, approval, difficulty, and learning alignment.
+- `08-company-market-and-commodity-framework.md` — companies, equities, sectors, commodities, and market-event exposure.
 - `09-store-inventory-banking-progression-framework.md` — products, ownership, redemption, banking, lending, achievements, and progression.
-- `10-locations-tutorials-notifications-framework.md` — map locations, instructional content, system language, and notification governance.
-- `11-seeding-environments-fixtures-and-validation.md` — production seed policy, staging, fixture separation, validation, rollback, and auditability.
-- `12-production-roadmap-and-definition-of-done.md` — tranche order, quantities, acceptance gates, backlog, and completion criteria.
+- `10-locations-tutorials-notifications-framework.md` — locations, instructional content, system language, and notifications.
+- `11-seeding-environments-fixtures-and-validation.md` — staging, fixture separation, validation, rollback, and auditability.
+- `12-production-roadmap-and-definition-of-done.md` — tranche order, acceptance gates, backlog, and completion criteria.
+- `13-current-system-compatibility-matrix.md` — code and capability mapping.
+- `14-country-baseline-and-viability-model.md` — candidate country baseline and future stress-test requirements.
+
+### Story
+
+- `story-arcs/global/immigrant-fortune-and-war-premise.md`
+- `story-arcs/global/meridian-corridor.md`
+- `story-arcs/global/meridian-resolution-model.md`
+- `story-arcs/global/meridian-classroom-operation.md`
+- `story-arcs/global/meridian-cancellation-matrix.md`
+- `story-arcs/global/meridian-outcome-reaction-matrix.md`
+- `story-arcs/cross-arc-concurrency-policy.md`
 
 ### Countries
 
-Country-specific narrative and economic planning lives in `countries/`. Each country has its own file so names, institutions, events, companies, contracts, locations, and dependencies can be searched independently.
+Country-specific narrative and economic planning lives in `countries/`. Each country has its own file so institutions, events, companies, Contracts, locations, dependencies, and future immigrant perspectives can be searched independently.
+
+### Player briefings
+
+- `briefings/global/meridian-player-briefing.md`
+- `briefings/global/meridian-models-briefing.md`
+- `briefings/countries/<country>.md`
+
+The country briefings still require revision so each one explains what arrival, opportunity, migration, escalation, and war mean from the player's adopted-country perspective.
 
 ### Reviews
 
-Independent review passes live in `reviews/`:
+Review passes live in `reviews/`:
 
 - economics and balance;
 - narrative continuity and choice quality;
 - gameplay and classroom learning;
-- technical compatibility and data safety.
+- technical compatibility and data safety;
+- future migration and representation review;
+- future war sensitivity review.
 
-A concept is not approved because it appears in the catalog. It is approved only when its review status is recorded and all blocking findings are resolved.
+These are documented workstreams, not independent external validation.
+
+A concept is not approved because it appears in the catalog. It is approved only when its review status is recorded and blocking findings are resolved.
+
+## Simulation status
+
+No economic simulation has been executed for this content foundation.
+
+`reviews/economic-simulation-review-v1.md` now contains a proposed reproducible protocol only.
+
+No reward, price, affordability, progression, concentration, currency, or wartime-economy value is simulation-validated.
 
 ## Content maturity states
 
@@ -62,30 +134,34 @@ A concept is not approved because it appears in the catalog. It is approved only
 
 Included:
 
-- consolidated production plan;
+- consolidated production planning;
 - content concepts and templates;
-- ten country narrative files;
-- opening Meridian Corridor arc;
-- economic, narrative, gameplay, and technical reviews;
+- ten-country world design;
+- immigrant fortune-and-war premise;
+- revised Meridian Corridor arc;
+- economic, narrative, gameplay, and technical review structures;
 - catalog structure and future implementation map.
 
 Excluded:
 
 - migrations;
 - seed SQL;
+- executable content packs;
 - API changes;
-- runtime event engine changes;
+- runtime event or war engine changes;
+- player-background or residency persistence;
+- relationship persistence;
 - Admin or Player Terminal UI changes;
 - Supabase deployment;
 - live classroom content import.
 
-## Existing canon references
+## Existing authority references
 
 This catalog must remain aligned with:
 
 - `docs/worldbuilding/econovaria-country-lore-v1.md`;
 - `frontend/src/assets/currency-symbols/currency-symbols.manifest.json`;
-- current backend country, stock, contract, inventory, notification, and capability contracts;
-- game-session scoping requirements documented in the existing market and country systems.
+- current backend country, stock, Contract, inventory, notification, and capability contracts;
+- game-session scoping requirements documented in existing systems.
 
-Where this catalog conflicts with authoritative code or applied migration history, the conflict must be recorded in the technical review rather than silently changing canon or implementation.
+Where this catalog conflicts with authoritative code or applied migration history, the conflict must be recorded in technical review rather than silently changing implementation.
