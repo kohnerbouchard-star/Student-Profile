@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "econovaria-market-identity-reconciliation-audit-v1",
+  "generatedAt": "2026-07-19",
+  "sourceUniversePackId": "econovaria.market-universe.v1",
+  "sourceUniverseVersion": "1.0.0-draft",
+  "reviewStatus": "canonicalization-required",
+  "productionAuthorized": false,
+  "decisions": {
+    "overlappingSymbolAuthority": "curated-active-candidate",
+    "publicInstitutionRoleFamilies": "approved-for-country-qualified-design-use",
+    "generatedCorporateRoots": "placeholder-only-not-approved-for-public-activation",
+    "activationRule": "No generated and curated records may coexist as separate instruments under one symbol."
+  },
+  "summary": {
+    "universeRecords": 3200,
+    "activeCandidateRecords": 96,
+    "countriesWithActiveCandidates": [
+      "northreach",
+      "solvend",
+      "thaloris",
+      "yrethia"
+    ],
+    "exactCanonicalMatches": 0,
+    "conflictingSymbolIdentities": 96,
+    "missingUniverseSymbols": 0,
+    "activeIdConflicts": 0,
+    "exchangeMismatches": 24,
+    "affectedCountries": [
+      "northreach",
+      "solvend",
+      "thaloris",
+      "yrethia"
+    ],
+    "blockers": 96,
+    "activeRecordsByCountry": {
+      "northreach": 24,
+      "solvend": 24,
+      "thaloris": 24,
+      "yrethia": 24
+    },
+    "activeRecordsByInstrumentType": {
+      "commodity_reference": 4,
+      "common_equity": 48,
+      "corporate_bond": 16,
+      "etf_fund": 8,
+      "index": 4,
+      "listed_trust": 4,
+      "preferred_convertible": 4,
+      "sovereign_public_bond": 8
+    }
+  },
+  "requiredResolution": [
+    "Overlay curated active-candidate identities into universe records keyed by country and symbol.",
+    "Preserve curated IDs referenced by enrichment and simulation evidence unless every reference is migrated atomically.",
+    "Regenerate country checksums and rerun universe, issuer, editorial, preflight, and simulation-reference audits.",
+    "Keep activationAuthorized false and runtimeSupport unverified."
+  ]
+}
