@@ -3,128 +3,110 @@
 Date: 2026-07-18  
 Target PR: #158  
 Donor PRs: #141 and #143  
-Policy: review and reconcile individual Backend behaviors; never merge or restore donor trees wholesale
+Policy: review and redesign bounded Backend behavior; never merge or restore donor trees wholesale
 
-## Current accounting status
+## Current accounting
 
-| Donor component | Classification | Result on PR #158 |
+| Donor component | Classification | PR #158 result |
 |---|---|---|
-| Player request scope | Replaced by a safer design | One authoritative `resolvePlayerRequestScope` derives immutable player UUID, active session, and game scope from `x-player-session-token` and rejects ownership injection. |
-| World countries, detail, and news | Reviewed and redesigned | Implemented through separate route, parser, handler, service, repository, DTO, and test layers. Internal database UUIDs are not published. |
-| Market asset collection | Reviewed and redesigned | Implemented at `GET /players/me/stocks/assets` with bounded pagination, ticker public IDs, one active-asset query, one latest-tick RPC, explicit empty state, and UUID-private DTOs. |
-| Market asset detail and history | Reviewed and redesigned | Implemented at `GET /players/me/stocks/assets/:assetId` with ticker resolution, a 500-point maximum, game/asset/ticker history scope, ascending chart output, and no internal UUID exposure. |
-| Stock watchlist | Pending | Requires ownership persistence, mutation validation, migration review, and public-ticker resolution before implementation. |
-| Inventory read | Pending | Must be reconciled independently against current Inventory and Store ownership semantics. |
-| Notifications and logout | Pending | Must be reconciled independently with current session and notification persistence. |
-| Contract acceptance | Pending manual reconciliation | Must preserve the merged Contract lifecycle, review, reward, and idempotency behavior. |
-| Capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise incomplete frontend actions. |
-| Inventory redemption | Pending migration and transaction review | Requires a fresh forward-only migration, restricted RPC grants, retry-safe transitions, and Backend-only routes. |
+| PR #141 player request scope | Replaced by a safer design | Complete. One authoritative token-derived player/game/session boundary rejects expired, revoked, inactive, wrong-game, and UUID-injected requests. |
+| PR #141 World reads | Reviewed and redesigned | Complete. Countries, country detail, and news use public identifiers, bounded parsing, separate service/repository layers, and UUID-private DTOs. |
+| PR #141 Market collection | Reviewed and redesigned | Complete. Public ticker IDs, bounded pagination, current tick volume, explicit empty/unavailable states, and no stock-table UUIDs. |
+| PR #141 Market detail/history | Reviewed and redesigned | Complete. Public ticker route, 1–500 history bound, same-game internal resolution, duplicate detection, deterministic ascending history. |
+| PR #141 stock watchlists | Reviewed and redesigned | Complete in the current tranche. Public ticker routes, token-derived ownership, deterministic reads, idempotent PUT/DELETE, forward-only migration, forced RLS, and browser privilege denial. |
+| PR #141 Inventory reads | Pending review | Must be reconciled independently after watchlists. |
+| PR #141 notifications | Pending review | List/read routes remain donor candidates. |
+| PR #141 logout | Pending review | Session revocation behavior remains a donor candidate. |
+| PR #141 atomic Contract acceptance | Pending manual reconciliation | Must preserve the merged submission, review, reward, and idempotency lifecycle. |
+| PR #143 capability manifest | Pending safer redesign | Must be generated from actual Backend support and must not advertise incomplete mutations. |
+| PR #143 Inventory redemption | Pending migration and transaction review | Requires a fresh migration, restricted RPC grants, retry-safe state transitions, and Backend-only player/Admin routes. |
 
-## World reconciliation
+## Behavior retained in redesigned form
 
-The useful donor concepts were reimplemented rather than copied:
+- authenticated player-session boundary;
+- service-role persistence behind Edge routes;
+- game-isolated reads and writes;
+- deterministic ordering and explicit bounds;
+- explicit service-unavailability mapping;
+- current stock pricing and latest-tick integration;
+- idempotent desired-state watchlist mutations.
 
-- one bounded route parser for country collection, country detail, and news;
-- service-role reads behind the authenticated player-session boundary;
-- active country profiles and latest effective per-game snapshots;
-- player country assignment derived from the authenticated player and game;
-- public and active news filtering;
-- deterministic cursor pagination and explicit limits;
-- safe media extraction and player-safe persistence errors.
+## Behavior intentionally changed
 
-Intentional changes:
+- Browser callers never select game, player, owner, session, or stock-table UUID scope.
+- Country detail uses a public country code.
+- Market assets and watchlists use normalized public tickers.
+- Internal player, session, game, assignment, watchlist, and stock-row UUIDs are not serialized.
+- Market detail history is capped at 500 and returned in ascending chart order.
+- Unsupported parameters fail closed.
+- A valid empty state is distinct from persistence unavailability.
+- Watchlist PUT and DELETE accept no body and use database constraints for idempotency.
+- The donor watchlist UUID route was rejected.
+- The donor migration timestamp was not reused; PR #158 uses a fresh forward-only version.
 
-- the browser cannot select the game;
-- country detail accepts a public country code, not a profile UUID;
-- browser DTOs omit player, game, assignment, profile, snapshot, and database event UUIDs;
-- empty news is a successful response while persistence failure is retryable unavailability;
-- unsupported query parameters fail closed.
+## Stock watchlist file accounting
 
-## Market collection reconciliation
-
-| Donor behavior | Classification | Current result |
+| Donor file or behavior | Classification | PR #158 result |
 |---|---|---|
-| Combined asset route parser | Redesigned | Collection and detail paths share an exact public-ticker route boundary. UUID-shaped identifiers, encoded slashes, and extra segments fail closed. |
-| Embedded list query parsing | Redesigned | `playerStockAssetListRequestParser.ts` validates bounded `limit` and `offset`, duplicates, unknown parameters, and game-scope injection. |
-| Collection handler | Redesigned | Uses the authoritative player request scope, prohibits the stock runner credential, and delegates mapping to a service. |
-| Asset contracts | Redesigned | Internal UUID-bearing records are separated from browser DTOs. Public `assetId` is the normalized ticker. |
-| Asset collection repository | Redesigned | Uses one authenticated-game active-asset query and one existing latest-tick RPC, with no per-asset query. |
-| Collection response | Redesigned | Deterministic ordering, bounded lookahead pagination, current volume, calculated change, sectors, and explicit empty/unavailable states. |
-| Stock-table UUID in browser response | Rejected | Internal stock-asset, game, player, and session UUIDs are never serialized. Duplicate public tickers fail closed. |
+| `playerStockMarketWatchlistRoutePaths.ts` | Redesigned | Replaced UUID paths with exact collection and public-ticker item routes. |
+| embedded watchlist parsing | Redesigned | Separate bounded parser rejects duplicate/unknown fields, identity injection, mutation query strings, and mutation bodies. |
+| watchlist HTTP handler | Redesigned | Uses `resolvePlayerRequestScope`, private no-store controls, shared error envelopes, and no client ownership inputs. |
+| `stockMarketWatchlistContracts.ts` | Redesigned | Separates internal UUID-bearing records from browser-safe ticker DTOs and exposes explicit idempotency state. |
+| `supabaseStockMarketWatchlistRepository.ts` | Redesigned | Resolves ticker inside the authenticated game, batches list assets, treats unique conflict and missing delete as idempotent, and permits stale-row removal after deactivation. |
+| donor watchlist migration | Redesigned | New migration `20260718064000_add_player_stock_watchlist_v1.sql`; composite FKs, unique ownership key, active-scope insert trigger, forced RLS, browser privilege revocation, service-role least privilege. |
+| donor dispatcher edits | Rejected wholesale | Current public stock-route facade was extended additively; the donor dispatcher was not restored. |
+| donor tests | Redesigned | Current route, parser, handler, service, repository, privacy, scope, idempotency, migration, and replay gates are authoritative. |
 
-## Market detail and history reconciliation
+## Watchlist database invariants
 
-| Donor behavior | Classification | Current result |
-|---|---|---|
-| UUID detail route | Rejected | The detail route accepts a public ticker only. The internal stock-row UUID is resolved after authentication. |
-| Detail query parsing embedded in handler | Redesigned | `playerStockAssetDetailRequestParser.ts` validates only `historyLimit`, default 200 and maximum 500, and rejects game-scope selection. |
-| Detail repository added to legacy board repository | Redesigned | A dedicated player-detail repository resolves one active game/ticker row and then reads history by game, resolved internal row, and ticker. |
-| Missing asset behavior | Redesigned | No history query occurs when the ticker is unavailable; the service returns a safe non-retryable 404. |
-| History ordering | Retained with stronger validation | Persistence reads newest-first under the SQL bound; the service validates scope and duplicate tick indices, then returns ascending chart order. |
-| Latest tick RPC plus history query | Simplified | Detail derives displayed volume and response tick from the newest bounded history point, avoiding an unnecessary extra RPC. |
-| Detail browser DTO | Redesigned | Reuses the collection DTO mapper and omits game, player, session, and internal stock-row UUIDs. |
-| Donor watchlist enrichment | Deferred | `isWatchlisted` remains absent until ownership persistence and watchlist routes are reconciled. |
+- one row per `(game_session_id, player_id, stock_asset_id)`;
+- player and asset composite foreign keys enforce same-game ownership;
+- PUT requires one active same-game asset;
+- insert trigger rechecks active player and asset under database locking;
+- DELETE can remove an existing same-game row after the asset becomes inactive;
+- direct browser table access is denied;
+- no update privilege is granted;
+- no production migration execution is authorized by this PR.
 
-## Behavior intentionally preserved
+## Remaining PR #141 candidates
 
-- the current stock-market calculation and tick tables;
-- the existing latest-tick RPC for collection reads;
-- the existing Market order settlement path;
-- active per-game asset visibility;
-- deterministic bounded reads;
-- player-safe service-unavailability mapping.
+- Inventory read handler, contracts, repository, and tests;
+- notification list/read parser, handler, repository, and tests;
+- player-session logout handler and repository;
+- atomic Contract acceptance and transaction tests.
 
-The Market mutation boundary must later resolve the public ticker to exactly one active internal stock row inside the authenticated game before invoking existing settlement. The settlement implementation itself must not be replaced from the donor branch.
+## PR #143 candidates
 
-## Remaining PR #141 candidate behavior
-
-- stock watchlist schema, repository, reads, and idempotent mutations;
-- Inventory read handler, DTO, repository, and tests;
-- notification list/read routes, parser, repository, and tests;
-- player session logout handler and repository;
-- atomic Contract acceptance behavior and transaction tests;
-- forward migrations for watchlists and Contract acceptance, subject to current migration-history review.
-
-## PR #143 candidate behavior
-
-- authoritative capability registry and bootstrap projection;
-- Inventory redemption request and review contracts;
-- player and Admin redemption routes;
-- forward-only redemption migration and restricted RPCs;
-- rolled-back database workflow verification.
-
-Required redesign remains:
-
-- capabilities must reflect actual Backend support;
-- Admin support must be exposed through Backend contracts only;
-- migrations must receive unique forward versions;
-- RPC grants, `search_path`, RLS, service-role access, and browser-role denial require explicit verification;
-- player ownership and game scope must come from the active player session;
-- Admin transitions must validate role, game ownership, idempotency, and deterministic pagination.
+- generated capability registry;
+- Inventory redemption schema and RPCs;
+- player redemption request routes;
+- Admin review and fulfillment routes;
+- rollback and replay smoke tests.
 
 ## Explicit exclusions
 
-- all donor `admin/**` changes;
-- all donor `player-terminal/**` changes;
-- root package, lockfile, workflow, and governance changes without an explicit lease;
-- historical migrations already represented on current `main`;
-- any migration version that conflicts with current forward history;
-- wholesale dispatcher, domain-directory, or repository replacement.
+- all donor `admin/**` files;
+- all donor `player-terminal/**` files;
+- donor root package/workflow changes without a lease;
+- historical or conflicting migration versions;
+- wholesale dispatcher, lockfile, or domain-tree restoration;
+- production migration execution, Edge deployment, Auth change, or runtime cutover.
 
-## Remaining extraction sequence
+## Planned extraction sequence
 
-1. Player request scope — **complete**.
-2. World countries, detail, and news — **complete**.
-3. Market asset collection — **complete**.
-4. Market asset detail and bounded history — **complete**.
-5. Stock watchlist reads and writes.
-6. Inventory read.
-7. Notifications list/read and player logout.
-8. Capability manifest generated from implemented support.
-9. Atomic Contract acceptance reconciled manually.
-10. Forward Inventory redemption migration, RPCs, player routes, and Admin routes.
-11. Security review, replay, runtime contract, staging documentation, and final verification.
+1. authoritative request scope — complete;
+2. World reads — complete;
+3. Market collection — complete;
+4. Market detail/history — complete;
+5. stock watchlist reads and writes — implemented; final gates pending;
+6. Inventory read;
+7. notifications list/read;
+8. player logout;
+9. generated capability manifest;
+10. atomic Contract acceptance;
+11. Inventory redemption schema, RPCs, and player/Admin routes;
+12. security, replay, runtime contract, staging documentation, and final verification.
 
 ## Donor closure rule
 
-PRs #141 and #143 remain open and unmerged until every candidate Backend change is classified as ported, already present, replaced by a safer design, intentionally unsupported, or rejected with rationale. Only then may the donor PRs be closed and their branches deleted.
+PRs #141 and #143 remain open and unmerged until every candidate Backend change is classified as ported, already present, replaced by a safer design, intentionally unsupported, or rejected with rationale. Only then may their branches be deleted.
