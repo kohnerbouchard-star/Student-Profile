@@ -10,6 +10,7 @@
   const LIFECYCLE_EVENT = "econovaria:admin-request-lifecycle";
   const retryStatuses = new Set([400, 404, 501]);
   const delegatedFetch = window.fetch.bind(window);
+  const eventTarget = window.document || null;
   let requestSequence = 0;
 
   function record(value) {
@@ -91,12 +92,12 @@
   function emitLifecycle(detail) {
     const EventConstructor = window.CustomEvent || globalThis.CustomEvent;
     if (
-      typeof document?.dispatchEvent !== "function" ||
+      typeof eventTarget?.dispatchEvent !== "function" ||
       typeof EventConstructor !== "function"
     ) {
       return;
     }
-    document.dispatchEvent(new EventConstructor(LIFECYCLE_EVENT, { detail }));
+    eventTarget.dispatchEvent(new EventConstructor(LIFECYCLE_EVENT, { detail }));
   }
 
   async function responseMessage(response, fallback) {
