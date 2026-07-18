@@ -4,8 +4,8 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
@@ -13,44 +13,22 @@ import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
 } from "./playerSessionHttpHelpers.ts";
+import {
+  isBrowserSafePlayerIdentifier,
+  type PlayerSessionBootstrapBody,
+} from "../contracts/playerBrowserSessionContracts.ts";
 
 interface PlayerSessionBootstrapDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly hashSessionToken?: typeof sha256Hex;
+  readonly now?: () => number;
 }
 
 interface AccountBalanceRow {
   readonly account_type: string;
   readonly balance: number | string;
   readonly currency_code: string;
-}
-
-interface PlayerSessionBootstrapBody {
-  readonly ok: true;
-  readonly gameSession: {
-    readonly id: string;
-    readonly name: string;
-    readonly status: string;
-  };
-  readonly player: {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly status: string;
-  };
-  readonly session: {
-    readonly id: string;
-    readonly status: "active";
-    readonly expiresAt: string;
-  };
-  readonly balances: readonly {
-    readonly accountType: string;
-    readonly balance: number;
-    readonly currencyCode: string;
-  }[];
-  readonly attendance: {
-    readonly status: "not_configured";
-  };
-  readonly availableActions: readonly string[];
 }
 
 export async function handlePlayerSessionBootstrapRequest(
@@ -66,7 +44,7 @@ export async function handlePlayerSessionBootstrapRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
@@ -82,7 +60,9 @@ export async function handlePlayerSessionBootstrapRequest(
       return invalidPlayerSessionResponse();
     }
 
-    const sessionTokenHash = await sha256Hex(sessionToken);
+    const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
+      sessionToken,
+    );
     const serviceClient = dependencies.createServiceClient(envResult.value);
 
     const sessionResponse = await serviceClient
@@ -112,7 +92,7 @@ export async function handlePlayerSessionBootstrapRequest(
       !session?.id ||
       session.status !== "active" ||
       session.revoked_at !== null ||
-      Date.parse(session.expires_at) <= Date.now()
+      Date.parse(session.expires_at) <= (dependencies.now ?? Date.now)()
     ) {
       return invalidPlayerSessionResponse();
     }
@@ -144,7 +124,7 @@ export async function handlePlayerSessionBootstrapRequest(
 
     const playerResponse = await serviceClient
       .from("players")
-      .select("id,display_name,roster_label,status")
+      .select("id,display_name,roster_label,player_identifier,status")
       .eq("game_session_id", session.game_session_id)
       .eq("id", session.player_id)
       .maybeSingle();
@@ -161,10 +141,15 @@ export async function handlePlayerSessionBootstrapRequest(
       readonly id: string;
       readonly display_name: string;
       readonly roster_label: string | null;
+      readonly player_identifier: string;
       readonly status: string;
     } | null;
 
-    if (!player?.id || player.status !== "active") {
+    if (
+      !player?.id ||
+      !isBrowserSafePlayerIdentifier(player.player_identifier) ||
+      player.status !== "active"
+    ) {
       return invalidPlayerSessionResponse();
     }
 
@@ -188,18 +173,16 @@ export async function handlePlayerSessionBootstrapRequest(
     return jsonResponse<PlayerSessionBootstrapBody>(200, {
       ok: true,
       gameSession: {
-        id: gameSession.id,
         name: gameSession.name,
         status: gameSession.status,
       },
       player: {
-        id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
+        playerIdentifier: player.player_identifier,
         status: player.status,
       },
       session: {
-        id: session.id,
         status: "active",
         expiresAt: session.expires_at,
       },
@@ -216,6 +199,10 @@ export async function handlePlayerSessionBootstrapRequest(
         "ledger.view",
         "STORE_PURCHASE",
       ],
+    }, {
+      "cache-control": "private, no-store, max-age=0",
+      "pragma": "no-cache",
+      "vary": "authorization, x-player-session-token",
     });
   } catch {
     return jsonError(500, {

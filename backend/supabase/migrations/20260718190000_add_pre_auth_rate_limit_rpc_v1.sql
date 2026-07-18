@@ -1,0 +1,230 @@
+begin;
+
+create or replace function public.consume_pre_auth_request_rate_limits_v1(
+  p_buckets jsonb
+)
+returns table (
+  allowed boolean,
+  retry_after_seconds integer,
+  limiting_dimension text,
+  limit_count integer,
+  remaining_count integer,
+  reset_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_now timestamptz := clock_timestamp();
+  v_bucket jsonb;
+  v_dimension text;
+  v_key_hash text;
+  v_limit integer;
+  v_window_seconds integer;
+  v_block_seconds integer;
+  v_window_started_at timestamptz;
+  v_window_ends_at timestamptz;
+  v_active_blocked_until timestamptz;
+  v_row public.request_rate_limit_buckets%rowtype;
+  v_allowed boolean := true;
+  v_retry_after integer := 0;
+  v_limiting_dimension text := null;
+  v_limiting_limit integer := 1;
+  v_limiting_remaining integer := 2147483647;
+  v_limiting_reset timestamptz := v_now;
+begin
+  if jsonb_typeof(p_buckets) <> 'array'
+    or jsonb_array_length(p_buckets) <> 2 then
+    raise exception using
+      errcode = '22023',
+      message = 'pre-auth rate limit request requires exactly two buckets';
+  end if;
+
+  if (
+    select array_agg(distinct bucket ->> 'dimension' order by bucket ->> 'dimension')
+    from jsonb_array_elements(p_buckets) as buckets(bucket)
+  ) <> array['action', 'ip']::text[] then
+    raise exception using
+      errcode = '22023',
+      message = 'pre-auth rate limit dimensions must be exactly action and ip';
+  end if;
+
+  for v_bucket in
+    select bucket
+    from jsonb_array_elements(p_buckets) as buckets(bucket)
+    order by bucket ->> 'dimension'
+  loop
+    if jsonb_typeof(v_bucket) <> 'object'
+      or jsonb_object_length(v_bucket) <> 5
+      or exists (
+        select 1
+        from jsonb_object_keys(v_bucket) as supplied_keys(supplied_key)
+        where supplied_key not in (
+          'blockSeconds',
+          'dimension',
+          'keyHash',
+          'limit',
+          'windowSeconds'
+        )
+      ) then
+      raise exception using
+        errcode = '22023',
+        message = 'pre-auth rate limit bucket shape is invalid';
+    end if;
+
+    v_dimension := v_bucket ->> 'dimension';
+    v_key_hash := v_bucket ->> 'keyHash';
+
+    begin
+      v_limit := (v_bucket ->> 'limit')::integer;
+      v_window_seconds := (v_bucket ->> 'windowSeconds')::integer;
+      v_block_seconds := (v_bucket ->> 'blockSeconds')::integer;
+    exception when others then
+      raise exception using
+        errcode = '22023',
+        message = 'pre-auth rate limit bucket values are invalid';
+    end;
+
+    if v_dimension not in ('action', 'ip')
+      or v_key_hash !~ '^[0-9a-f]{64}$'
+      or v_limit not between 1 and 1000000
+      or v_window_seconds not between 1 and 86400
+      or v_block_seconds not between 1 and 86400 then
+      raise exception using
+        errcode = '22023',
+        message = 'pre-auth rate limit bucket values are out of bounds';
+    end if;
+
+    v_window_started_at := to_timestamp(
+      floor(extract(epoch from v_now) / v_window_seconds) * v_window_seconds
+    );
+    v_window_ends_at := v_window_started_at
+      + make_interval(secs => v_window_seconds);
+
+    perform pg_advisory_xact_lock(
+      hashtextextended(v_dimension || ':' || v_key_hash, 0)
+    );
+
+    select max(blocked_until)
+    into v_active_blocked_until
+    from public.request_rate_limit_buckets
+    where dimension = v_dimension
+      and key_hash = v_key_hash
+      and blocked_until > v_now;
+
+    delete from public.request_rate_limit_buckets
+    where dimension = v_dimension
+      and key_hash = v_key_hash
+      and expires_at <= v_now;
+
+    insert into public.request_rate_limit_buckets (
+      dimension,
+      key_hash,
+      window_started_at,
+      window_seconds,
+      limit_count,
+      request_count,
+      blocked_until,
+      last_request_at,
+      expires_at
+    ) values (
+      v_dimension,
+      v_key_hash,
+      v_window_started_at,
+      v_window_seconds,
+      v_limit,
+      1,
+      v_active_blocked_until,
+      v_now,
+      greatest(
+        v_window_ends_at + make_interval(secs => v_block_seconds),
+        coalesce(
+          v_active_blocked_until + make_interval(secs => v_block_seconds),
+          v_window_ends_at
+        )
+      )
+    )
+    on conflict (dimension, key_hash, window_started_at, window_seconds)
+    do update set
+      limit_count = excluded.limit_count,
+      request_count = case
+        when request_rate_limit_buckets.blocked_until > v_now
+          then request_rate_limit_buckets.request_count
+        when request_rate_limit_buckets.request_count < 2147483647
+          then request_rate_limit_buckets.request_count + 1
+        else request_rate_limit_buckets.request_count
+      end,
+      blocked_until = case
+        when request_rate_limit_buckets.blocked_until > v_now
+          then request_rate_limit_buckets.blocked_until
+        when request_rate_limit_buckets.request_count + 1 > excluded.limit_count
+          then v_now + make_interval(secs => v_block_seconds)
+        else null
+      end,
+      last_request_at = v_now,
+      expires_at = greatest(
+        excluded.expires_at,
+        coalesce(request_rate_limit_buckets.blocked_until, v_window_ends_at)
+          + make_interval(secs => v_block_seconds)
+      )
+    returning * into v_row;
+
+    if v_row.blocked_until > v_now
+      or v_row.request_count > v_row.limit_count then
+      if ceil(extract(epoch from (
+        greatest(
+          coalesce(v_row.blocked_until, v_window_ends_at),
+          v_window_ends_at
+        ) - v_now
+      )))::integer >= v_retry_after then
+        v_allowed := false;
+        v_retry_after := greatest(
+          1,
+          ceil(extract(epoch from (
+            greatest(
+              coalesce(v_row.blocked_until, v_window_ends_at),
+              v_window_ends_at
+            ) - v_now
+          )))::integer
+        );
+        v_limiting_dimension := v_dimension;
+        v_limiting_limit := v_row.limit_count;
+        v_limiting_remaining := 0;
+        v_limiting_reset := greatest(
+          coalesce(v_row.blocked_until, v_window_ends_at),
+          v_window_ends_at
+        );
+      end if;
+    elsif v_allowed
+      and greatest(0, v_row.limit_count - v_row.request_count)
+        < v_limiting_remaining then
+      v_limiting_dimension := null;
+      v_limiting_limit := v_row.limit_count;
+      v_limiting_remaining := greatest(
+        0,
+        v_row.limit_count - v_row.request_count
+      );
+      v_limiting_reset := v_window_ends_at;
+    end if;
+  end loop;
+
+  return query select
+    v_allowed,
+    v_retry_after,
+    v_limiting_dimension,
+    v_limiting_limit,
+    v_limiting_remaining,
+    v_limiting_reset;
+end;
+$$;
+
+revoke all on function public.consume_pre_auth_request_rate_limits_v1(jsonb)
+  from public, anon, authenticated;
+grant execute on function public.consume_pre_auth_request_rate_limits_v1(jsonb)
+  to service_role;
+
+comment on function public.consume_pre_auth_request_rate_limits_v1(jsonb) is
+  'Atomically consumes exactly one IP and one action-per-IP bucket for unauthenticated requests. No submitted credential or browser-selected identity/game scope contributes to either key.';
+
+commit;

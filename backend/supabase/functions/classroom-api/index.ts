@@ -61,6 +61,18 @@ import {
   handlePlayerSessionBootstrapRequest,
 } from "../../../src/domains/players/api/playerSessionBootstrapHttpHandler.ts";
 import {
+  handlePlayerSessionLogoutRequest,
+} from "../../../src/domains/players/api/playerSessionLogoutHttpHandler.ts";
+import {
+  readPlayerSessionLogoutRoutePath,
+} from "../../../src/domains/players/api/playerSessionLogoutRoutePaths.ts";
+import {
+  handlePlayerCapabilityManifestRequest,
+} from "../../../src/domains/players/api/playerCapabilityManifestHttpHandler.ts";
+import {
+  readPlayerCapabilityManifestRoutePath,
+} from "../../../src/domains/players/api/playerCapabilityManifestRoutePaths.ts";
+import {
   handlePlayerLoginRequest,
 } from "../../../src/domains/players/api/playerLoginHttpHandler.ts";
 import {
@@ -86,6 +98,12 @@ import {
   handleStaffContractRequest,
 } from "../../../src/domains/contracts/api/staffContractHttpHandler.ts";
 import {
+  handlePlayerContractAcceptanceRequest,
+} from "../../../src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts";
+import {
+  readPlayerContractAcceptanceRoutePath,
+} from "../../../src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts";
+import {
   readPlayerContractRoutePath,
 } from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
 import {
@@ -106,14 +124,48 @@ import {
   handlePlayerStockMarketTradingRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts";
 import {
+  handlePlayerStockAssetListRequest,
+} from "../../../src/domains/stocks/api/playerStockAssetListHttpHandler.ts";
+import {
+  readPlayerStockAssetListRoutePath,
+} from "../../../src/domains/stocks/api/playerStockAssetListRoutePaths.ts";
+import {
   handlePlayerGameDashboardRequest,
 } from "../../../src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts";
+import {
+  handlePlayerWorldReadRequest,
+} from "../../../src/domains/countries/api/playerWorldReadHttpHandler.ts";
+import {
+  readPlayerWorldRoutePath,
+} from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
+import {
+  handlePlayerInventoryReadRequest,
+} from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
+import {
+  readPlayerInventoryRoutePath,
+} from "../../../src/domains/inventory/api/playerInventoryRoutePaths.ts";
+import {
+  handlePlayerInventoryRedemptionRequest,
+} from "../../../src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts";
+import {
+  readPlayerInventoryRedemptionRoutePath,
+} from "../../../src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts";
+import {
+  handlePlayerNotificationRequest,
+} from "../../../src/domains/notifications/api/playerNotificationHttpHandler.ts";
+import {
+  readPlayerNotificationRoutePath,
+} from "../../../src/domains/notifications/api/playerNotificationRoutePaths.ts";
 import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
   handleStaffDemoStorylineInitializationRequest,
 } from "../../../src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts";
+import {
+  dispatchRateLimitedPlayerLoginRequest,
+  dispatchRateLimitedReviewedPlayerRequest,
+} from "../../../src/security/playerRateLimitDispatch.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -134,6 +186,126 @@ Deno.serve(async (request) => {
       service: "classroom-api",
       status: "ready",
     });
+  }
+
+  const playerCapabilityManifestRoute = readPlayerCapabilityManifestRoutePath(
+    url.pathname,
+  );
+
+  if (playerCapabilityManifestRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "capabilities",
+      () =>
+        handlePlayerCapabilityManifestRequest(
+          request,
+          playerCapabilityManifestRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);
+
+  if (playerWorldRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      playerWorldRoute.kind,
+      () =>
+        handlePlayerWorldReadRequest(request, playerWorldRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerInventoryRedemptionRoute = readPlayerInventoryRedemptionRoutePath(
+    url.pathname,
+  );
+
+  if (playerInventoryRedemptionRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "inventoryRedemption",
+      () =>
+        handlePlayerInventoryRedemptionRequest(
+          request,
+          playerInventoryRedemptionRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerInventoryRoute = readPlayerInventoryRoutePath(url.pathname);
+
+  if (playerInventoryRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "inventory",
+      () =>
+        handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerNotificationRoute = readPlayerNotificationRoutePath(url.pathname);
+
+  if (playerNotificationRoute) {
+    const endpointKey = playerNotificationRoute.kind === "markRead"
+      ? "notificationsRead"
+      : "notifications";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerNotificationRequest(
+          request,
+          playerNotificationRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerLogoutRoute = readPlayerSessionLogoutRoutePath(url.pathname);
+
+  if (playerLogoutRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "logout",
+      () =>
+        handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerStockAssetListRoute = readPlayerStockAssetListRoutePath(
+    url.pathname,
+  );
+
+  if (playerStockAssetListRoute) {
+    const endpointKey = playerStockAssetListRoute.kind === "assets"
+      ? "market"
+      : playerStockAssetListRoute.kind === "asset"
+      ? "marketAsset"
+      : "marketWatchlist";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerStockAssetListRequest(
+          request,
+          playerStockAssetListRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/store/items")) {
@@ -164,6 +336,23 @@ Deno.serve(async (request) => {
     return handlePlayerGameDashboardRequest(request, {
       createServiceClient,
     });
+  }
+
+  const playerContractAcceptanceRoute =
+    readPlayerContractAcceptanceRoutePath(url.pathname);
+
+  if (playerContractAcceptanceRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "contractAccept",
+      () =>
+        handlePlayerContractAcceptanceRequest(
+          request,
+          playerContractAcceptanceRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
   }
 
   const playerContractRoute = readPlayerContractRoutePath(url.pathname);
@@ -211,15 +400,23 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me")) {
-    return handlePlayerSessionBootstrapRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "bootstrap",
+      () =>
+        handlePlayerSessionBootstrapRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/login")) {
-    return handlePlayerLoginRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedPlayerLoginRequest(
+      request,
+      () => handlePlayerLoginRequest(request, { createServiceClient }),
+      { createServiceClient },
+    );
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
