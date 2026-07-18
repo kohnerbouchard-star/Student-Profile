@@ -37,7 +37,7 @@ const progress = (contractId, status, overrides = {}) => ({
   contractId,
   playerId: PLAYER_ID,
   status,
-  evidencePayload: { submissionUrl: "https://example.com/evidence", note: `Evidence for ${contractId}` },
+  evidencePayload: { submissionUrl: "https://example.com/evidence", note: "Player-provided completion evidence." },
   resultPayload: {},
   submittedAt: "2026-07-18T10:00:00.000Z",
   completedAt: null,
