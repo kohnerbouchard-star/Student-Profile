@@ -4,8 +4,31 @@ import type {
 } from "./contractRepositoryContracts.ts";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const PRIVATE_KEY_PATTERN = /(?:^|_)(?:id|ids|uuid|uuids)$/i;
 const ANSWER_KEY_PATTERN = /^(?:correctAnswer|correctAnswers|correctChoice|correctChoices|answerKey|answerKeys|expectedAnswer|expectedAnswers|acceptedAnswer|acceptedAnswers)$/i;
+const PRIVATE_IDENTIFIER_EXACT = new Set([
+  "id",
+  "ids",
+  "uuid",
+  "uuids",
+  "gameSessionId",
+  "gameSessionIds",
+  "playerId",
+  "playerIds",
+  "playerUuid",
+  "playerUuids",
+  "playerSessionId",
+  "playerSessionIds",
+  "progressId",
+  "progressIds",
+  "contractId",
+  "contractIds",
+  "contractTemplateId",
+  "sourceId",
+  "createdByStaffId",
+  "staffId",
+  "itemId",
+  "itemIds",
+]);
 
 export interface PublicPlayerContractListItemDto {
   readonly contractKey: string;
@@ -130,11 +153,18 @@ function publicValue(value: unknown): unknown {
 
   const output: Record<string, unknown> = {};
   for (const [key, nested] of Object.entries(value)) {
-    if (PRIVATE_KEY_PATTERN.test(key) || ANSWER_KEY_PATTERN.test(key)) continue;
+    if (isPrivateIdentifierKey(key) || ANSWER_KEY_PATTERN.test(key)) continue;
     const sanitized = publicValue(nested);
     if (sanitized !== undefined) output[key] = sanitized;
   }
   return output;
+}
+
+function isPrivateIdentifierKey(key: string): boolean {
+  if (PRIVATE_IDENTIFIER_EXACT.has(key)) return true;
+  if (/^(?:id|ids|uuid|uuids)$/i.test(key)) return true;
+  if (/(?:_|-)(?:id|ids|uuid|uuids)$/i.test(key)) return true;
+  return /(?:Id|Ids|UUID|UUIDs|Uuid|Uuids)$/.test(key);
 }
 
 function publicString(value: unknown): string {
