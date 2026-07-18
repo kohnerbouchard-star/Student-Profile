@@ -14,6 +14,7 @@
     "logout": "node tests/player-logout-revocation.mjs",
     "store-flow": "node tests/store-purchase-flow.mjs",
     "contracts-flow": "node tests/contracts-flow.mjs",
+    "contracts-public": "node tests/contracts-public-list.mjs",
     "market-flow": "node tests/market-order-flow.mjs",
     "banking-read": "node tests/banking-read-model.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
@@ -22,7 +23,7 @@
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run contracts-flow && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run contracts-flow && npm run contracts-public && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
