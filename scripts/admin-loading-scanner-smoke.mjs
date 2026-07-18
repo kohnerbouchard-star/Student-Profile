@@ -72,7 +72,8 @@ async function verifySessionSkeleton(viewport) {
       shell: shellRect ? { width: shellRect.width, height: shellRect.height } : null,
       nav: navRect ? { width: navRect.width, height: navRect.height } : null,
       main: mainRect ? { width: mainRect.width, height: mainRect.height } : null,
-      metrics: metrics.length, rows: rows.length,
+      metrics: metrics.length,
+      rows: rows.length,
       overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
       label: document.querySelector("#adminSessionGate")?.getAttribute("aria-label") || "",
     };
@@ -85,6 +86,23 @@ async function verifySessionSkeleton(viewport) {
   return session;
 }
 
+function assertLoadingSemantics(label, result) {
+  if (result.ariaBusy !== "true" || result.overlayRole !== "status" || !result.overlayLabel) fail(`${label} lacks loading semantics.`);
+  if (result.cloneAriaHidden !== "true" || !result.cloneInert) fail(`${label} clone is not decorative and inert.`);
+  if (!result.focusPreservedWhileLoading) fail(`${label} moved keyboard focus while loading.`);
+  if (Math.abs(result.windowScrollBefore.y - result.windowScrollDuring.y) > 1 || Math.abs(result.mainScrollBefore - result.mainScrollDuring) > 1) fail(`${label} changed scroll position while loading.`);
+  if (result.overflow > 2) fail(`${label} overflows horizontally by ${result.overflow}px.`);
+}
+
+async function assertLoadingCleared(label) {
+  await waitForPageSkeletonHidden();
+  const after = await page.evaluate(() => ({
+    busy: document.querySelector(".admin-terminal-shell-main")?.getAttribute("aria-busy") || "",
+    overlayHidden: document.querySelector(".admin-qol-page-skeleton")?.hidden === true,
+  }));
+  if (after.busy || !after.overlayHidden) fail(`${label} did not clear loading state.`);
+}
+
 async function measureRoute(route, label) {
   const result = await page.evaluate(({ route, label }) => {
     const api = window.EconovariaAdminShapeSkeletons;
@@ -95,38 +113,68 @@ async function measureRoute(route, label) {
     const windowScrollBefore = { x: window.scrollX, y: window.scrollY };
     const mainScrollBefore = main?.scrollTop || 0;
     const controller = api.renderPage(route, { show: true });
-    const loaded = controller?.loadedGeometry || {};
-    const skeleton = controller?.measureSkeleton?.() || {};
     const overlay = document.querySelector(".admin-qol-page-skeleton");
     const textShape = overlay?.querySelector(".admin-shape-skeleton-text");
-    const motion = textShape ? getComputedStyle(textShape, "::after").animationName : "";
     const output = {
-      route, label, loaded, skeleton, motion,
+      route, label,
+      loaded: controller?.loadedGeometry || {},
+      skeleton: controller?.measureSkeleton?.() || {},
+      motion: textShape ? getComputedStyle(textShape, "::after").animationName : "",
       ariaBusy: main?.getAttribute("aria-busy") || "",
       overlayLabel: overlay?.getAttribute("aria-label") || "",
       overlayRole: overlay?.getAttribute("role") || "",
       cloneAriaHidden: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.getAttribute("aria-hidden") || "",
       cloneInert: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.hasAttribute("inert") || false,
       focusPreservedWhileLoading: document.activeElement === focusBefore,
-      windowScrollBefore, windowScrollDuring: { x: window.scrollX, y: window.scrollY },
-      mainScrollBefore, mainScrollDuring: main?.scrollTop || 0,
+      windowScrollBefore,
+      windowScrollDuring: { x: window.scrollX, y: window.scrollY },
+      mainScrollBefore,
+      mainScrollDuring: main?.scrollTop || 0,
       overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
     };
     controller?.hide?.();
     return output;
   }, { route, label });
   const shared = assertGeometryStable(label, result.loaded, result.skeleton);
-  if (result.ariaBusy !== "true" || result.overlayRole !== "status" || !result.overlayLabel) fail(`${label} lacks loading semantics.`);
-  if (result.cloneAriaHidden !== "true" || !result.cloneInert) fail(`${label} clone is not decorative and inert.`);
-  if (!result.focusPreservedWhileLoading) fail(`${label} moved keyboard focus while loading.`);
-  if (Math.abs(result.windowScrollBefore.y - result.windowScrollDuring.y) > 1 || Math.abs(result.mainScrollBefore - result.mainScrollDuring) > 1) fail(`${label} changed scroll position while loading.`);
-  if (result.overflow > 2) fail(`${label} overflows horizontally by ${result.overflow}px.`);
-  await waitForPageSkeletonHidden();
-  const after = await page.evaluate(() => ({
-    busy: document.querySelector(".admin-terminal-shell-main")?.getAttribute("aria-busy") || "",
-    overlayHidden: document.querySelector(".admin-qol-page-skeleton")?.hidden === true,
-  }));
-  if (after.busy || !after.overlayHidden) fail(`${label} did not clear loading state.`);
+  assertLoadingSemantics(label, result);
+  await assertLoadingCleared(label);
+  return { ...result, shared };
+}
+
+async function measureAutomaticAccountRoute(route, label) {
+  const overlay = page.locator(".admin-qol-page-skeleton");
+  await overlay.waitFor({ state: "visible", timeout: 3000 });
+  const result = await page.evaluate(({ route, label }) => {
+    const api = window.EconovariaAdminShapeSkeletons;
+    const controller = api.activePageController();
+    const main = document.querySelector(".admin-terminal-shell-main");
+    const overlay = document.querySelector(".admin-qol-page-skeleton");
+    const textShape = overlay?.querySelector(".admin-shape-skeleton-text");
+    const focusBefore = window.__adminAccountSkeletonFocusProbe;
+    const scrollBefore = window.__adminAccountSkeletonScrollProbe || { x: window.scrollX, y: window.scrollY, main: main?.scrollTop || 0 };
+    return {
+      route, label,
+      loaded: controller?.loadedGeometry || {},
+      skeleton: controller?.measureSkeleton?.() || {},
+      motion: textShape ? getComputedStyle(textShape, "::after").animationName : "",
+      ariaBusy: main?.getAttribute("aria-busy") || "",
+      overlayLabel: overlay?.getAttribute("aria-label") || "",
+      overlayRole: overlay?.getAttribute("role") || "",
+      cloneAriaHidden: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.getAttribute("aria-hidden") || "",
+      cloneInert: overlay?.querySelector("[data-admin-shape-skeleton-stage]")?.hasAttribute("inert") || false,
+      focusPreservedWhileLoading: document.activeElement === focusBefore,
+      windowScrollBefore: { x: scrollBefore.x, y: scrollBefore.y },
+      windowScrollDuring: { x: window.scrollX, y: window.scrollY },
+      mainScrollBefore: scrollBefore.main,
+      mainScrollDuring: main?.scrollTop || 0,
+      overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
+      generation: controller?.generation || 0,
+    };
+  }, { route, label });
+  if (!result.generation) fail(`${label} has no active automatic skeleton controller.`);
+  const shared = assertGeometryStable(label, result.loaded, result.skeleton);
+  assertLoadingSemantics(label, result);
+  await assertLoadingCleared(label);
   return { ...result, shared };
 }
 
@@ -149,9 +197,12 @@ async function auditAccountRoutes() {
     const control = page.locator(`[data-admin-terminal-action="${action}"]`).first();
     await control.waitFor({ state: "visible", timeout: 5000 });
     await control.click();
-    await page.waitForTimeout(500);
-    await waitForPageSkeletonHidden();
-    geometryResults.push({ viewport: "desktop", ...(await measureRoute(route, `desktop:${route}`)) });
+    await page.evaluate(() => {
+      const main = document.querySelector(".admin-terminal-shell-main");
+      window.__adminAccountSkeletonFocusProbe = document.activeElement;
+      window.__adminAccountSkeletonScrollProbe = { x: window.scrollX, y: window.scrollY, main: main?.scrollTop || 0 };
+    });
+    geometryResults.push({ viewport: "desktop", ...(await measureAutomaticAccountRoute(route, `desktop:${route}`)) });
     await page.locator('[data-admin-section="Overview"]').first().click();
     await page.waitForTimeout(500);
     await waitForPageSkeletonHidden();
@@ -173,8 +224,10 @@ async function auditBackgroundRefresh() {
     const scroll = { x: window.scrollX, y: window.scrollY };
     const indicator = api.beginRefresh("Refreshing current Admin data");
     const output = {
-      indicatorVisible: Boolean(indicator && !indicator.hidden), state: indicator?.dataset.state || "",
-      overlayHidden: overlay?.hidden === true, focusPreserved: document.activeElement === active,
+      indicatorVisible: Boolean(indicator && !indicator.hidden),
+      state: indicator?.dataset.state || "",
+      overlayHidden: overlay?.hidden === true,
+      focusPreserved: document.activeElement === active,
       scrollPreserved: window.scrollX === scroll.x && window.scrollY === scroll.y,
     };
     api.endRefresh("Admin data updated");
@@ -198,8 +251,10 @@ async function assertScannerButtonFits(button, expectedLabel) {
     const buttonRect = control.getBoundingClientRect();
     const statusRect = status?.getBoundingClientRect();
     return {
-      width: buttonRect.width, statusText: status?.textContent?.trim() || "",
-      statusClientWidth: status?.clientWidth || 0, statusScrollWidth: status?.scrollWidth || 0,
+      width: buttonRect.width,
+      statusText: status?.textContent?.trim() || "",
+      statusClientWidth: status?.clientWidth || 0,
+      statusScrollWidth: status?.scrollWidth || 0,
       contained: Boolean(statusRect && statusRect.left >= buttonRect.left - 1 && statusRect.right <= buttonRect.right + 1),
     };
   });
@@ -224,10 +279,15 @@ async function assertPlayerIdentityHierarchy(scanner) {
     const idStyle = playerId ? getComputedStyle(playerId) : null;
     const timeStyle = time ? getComputedStyle(time) : null;
     return {
-      name: name?.textContent?.trim() || "", playerId: playerId?.textContent?.trim() || "", time: time?.textContent?.trim() || "",
-      timeDateTime: time?.getAttribute("datetime") || "", timeWhiteSpace: timeStyle?.whiteSpace || "",
-      timeClientWidth: time?.clientWidth || 0, timeScrollWidth: time?.scrollWidth || 0,
-      nameFontSize: Number.parseFloat(nameStyle?.fontSize || "0"), idFontSize: Number.parseFloat(idStyle?.fontSize || "0"),
+      name: name?.textContent?.trim() || "",
+      playerId: playerId?.textContent?.trim() || "",
+      time: time?.textContent?.trim() || "",
+      timeDateTime: time?.getAttribute("datetime") || "",
+      timeWhiteSpace: timeStyle?.whiteSpace || "",
+      timeClientWidth: time?.clientWidth || 0,
+      timeScrollWidth: time?.scrollWidth || 0,
+      nameFontSize: Number.parseFloat(nameStyle?.fontSize || "0"),
+      idFontSize: Number.parseFloat(idStyle?.fontSize || "0"),
       nameSource: name?.getAttribute("data-admin-scanner-identity-source") || "",
     };
   });
@@ -279,7 +339,11 @@ try {
     const api = window.EconovariaAdminShapeSkeletons;
     const target = document.querySelector("[data-admin-terminal-scanner-console]");
     const controller = api.renderSurface("scanner", target);
-    const output = { loaded: controller.loadedGeometry, skeleton: controller.measureSkeleton(), busy: target?.getAttribute("aria-busy") || "" };
+    const output = {
+      loaded: controller.loadedGeometry,
+      skeleton: controller.measureSkeleton(),
+      busy: target?.getAttribute("aria-busy") || "",
+    };
     controller.hide({ immediate: true });
     return output;
   });
