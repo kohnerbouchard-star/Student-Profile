@@ -110,7 +110,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 ### 2026-07-18 repository reconciliation
 
 - `main` is `14adbc525995cc931998244c442a23b542f43c7a`, which includes merged session-expiry PRs #165, #166, and #167 and supersedes the original `c7c949482b78c5960173e25e487f3aba2448d10e` roadmap baseline.
-- PR #158 remains the only active Backend reconciliation authority. Its audited remote head before the current capability-manifest tranche is `67cc25cced3000fae9a624c71e8c1093879867a2`; it had green Backend Typecheck #970, Repository Quality #306, Admin API Check #584, and Database Replay #112 evidence. The current tranche synchronized the existing branch with `14adbc525995cc931998244c442a23b542f43c7a` before implementation.
+- PR #158 remains the only active Backend reconciliation authority. Its audited remote head before the current capability-manifest tranche was `67cc25cced3000fae9a624c71e8c1093879867a2`; it had green Backend Typecheck #970, Repository Quality #306, Admin API Check #584, and Database Replay #112 evidence. Commit `7d068bf31a67614bf31bc0ae45f564f4a18556a3` synchronized the existing branch with `14adbc525995cc931998244c442a23b542f43c7a` and published the capability-manifest tranche for PR verification.
 - PR #163 remains the only seed-content authority. It is still design/documentation work and does not yet provide an executable importer, an applied migration, a reproducible simulation run, or staging activation evidence.
 - PR #165 merged the Player proactive expiry exit with Player Terminal Verify #107 and Repository Quality #325 passing.
 - PR #166 merged the Admin expiry exit as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5`; head `5c66b23eddee12203caa932b61bcf28e93b07cae` passed Repository Quality #329, Admin Shell Smoke #594, and Branch Hygiene #15.
@@ -180,11 +180,11 @@ The application is not yet approved for beta or production runtime cutover becau
 
 ### Authoritative capability manifest
 
-- [ ] `BETA-CAP-001` Publish authenticated `GET /players/me/capabilities` from PR #158. `IMPLEMENTED_NOT_MERGED` on PR #158.
+- [ ] `BETA-CAP-001` Publish authenticated `GET /players/me/capabilities` from PR #158. `IMPLEMENTED_NOT_MERGED` on PR #158 at `7d068bf31a67614bf31bc0ae45f564f4a18556a3`.
 - [ ] `BETA-CAP-002` Version the manifest schema and capability mapping independently. `IMPLEMENTED_NOT_MERGED` with schema `1` and manifest `2026-07-18.1`.
 - [ ] `BETA-CAP-003` Advertise only reviewed, implemented Backend operations and represent unsupported operations as unavailable. `IMPLEMENTED_NOT_MERGED`; legacy UUID-bearing routes, market orders, Contract acceptance, redemption, and Store writes remain unavailable.
 - [ ] `BETA-CAP-004` Keep the manifest private/no-store, session-scoped, game-isolated, and free of internal UUIDs. `IMPLEMENTED_NOT_MERGED` with focused security coverage.
-- [ ] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `IMPLEMENTED_NOT_MERGED`; eight focused tests and 45 passing market-regression tests exist locally.
+- [ ] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `IMPLEMENTED_NOT_MERGED` at `7d068bf31a67614bf31bc0ae45f564f4a18556a3`; eight focused tests and 45 market-regression tests pass locally, with PR CI evidence pending.
 - [ ] `BETA-CAP-006` Reconcile the manifest after every later Phase 1 tranche and before PR #158 merges.
 
 ---
@@ -1002,6 +1002,18 @@ No item may be checked complete merely because code was written.
 
 Append entries in reverse chronological order.
 
+### 2026-07-18 — Player capability manifest tranche on PR #158
+
+- Addressed `BETA-CAP-001` through `BETA-CAP-005` on branch `agent/player-backend-reconciliation-v2`, PR #158, commit `7d068bf31a67614bf31bc0ae45f564f4a18556a3`; all remain `IMPLEMENTED_NOT_MERGED` until the PR is merged and required evidence exists.
+- Added authenticated, private/no-store `GET /players/me/capabilities`, schema version `1`, manifest version `2026-07-18.1`, and one reviewed endpoint allowlist that drives route/action capability flags. Unsupported legacy UUID-bearing routes, market orders, Contract acceptance, redemption, Store writes, and expansion systems remain fail-closed.
+- Hardened stock asset and watchlist route parsing so only exact direct and Edge Function prefixes are accepted; spoofed leading path segments are rejected.
+- Changed 17 capability-tranche files: the capability contract/handler/route modules and tests, Classroom API dispatch, stock route parsers and tests, Backend scripts, two Backend audit documents, two capability evidence documents, and this roadmap. The branch reconciliation also preserves the 11 current-`main` files from PRs #164 through #167.
+- Added no migrations, database functions, RPCs, scheduled jobs, deployment workflows, or runtime configuration. Added one HTTP route and no newly advertised economic write operation.
+- Local evidence: `npm test` passed; `npm --prefix player-terminal run verify` passed; `npm --prefix backend run test:player-capabilities` passed 8/8; `npm --prefix backend run test:player-market-assets` passed 45/45; `npm --prefix backend run typecheck` passed; `git diff --check` passed. Full local Backend smoke and `typecheck:all` reached the Admin API/Deno check but could not fetch the pinned `https://esm.sh/@supabase/supabase-js@2.108.2` import because the local sandbox blocks that host; no test assertion failed before the environmental fetch block.
+- Runtime evidence: none. Isolated staging, deployment, and live route probes remain required. PR CI evidence for this head is pending.
+- Remaining blockers for the capability tranche: required PR checks, review, merge to `main`, post-merge verification, and later `BETA-CAP-006` reconciliation after each subsequent Phase 1 tranche.
+- Next exact unblocked item: `BETA-CONTRACT-001` on PR #158, atomic `POST /players/me/contracts/:contractId/accept` with server-derived ownership, transactional/idempotent settlement, append-only ledger authority, UUID-private responses, and manifest reconciliation.
+
 ### 2026-07-18 — Repository reconciliation and Phase 1 continuation
 
 - Corrected the audited `main` baseline to `14adbc525995cc931998244c442a23b542f43c7a`.
@@ -1010,7 +1022,7 @@ Append entries in reverse chronological order.
 - Recorded implemented-not-merged evidence for market reads/watchlists, Inventory read, notifications, and Player logout on PR #158.
 - Added the capability ownership registry and bounded capability-manifest roadmap IDs.
 - Confirmed PR #163 remains non-executable and that staging, restore, and runtime-cutover evidence remain absent.
-- Next exact unblocked item: `BETA-CAP-001` through `BETA-CAP-005` on PR #158.
+- Superseded next item: `BETA-CAP-001` through `BETA-CAP-005` on PR #158, now implemented-not-merged at `7d068bf31a67614bf31bc0ae45f564f4a18556a3`.
 
 ### 2026-07-18 — Initial authoritative roadmap
 
