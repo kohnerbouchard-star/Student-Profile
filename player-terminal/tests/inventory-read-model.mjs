@@ -114,7 +114,7 @@ assert.ok(html.includes(">2<"));
 assert.ok(html.includes("Partially Reserved"));
 assert.ok(html.includes("ECO 50"));
 assert.ok(html.includes("LUM 30"), "Inventory values must use each item’s authoritative currency code.");
-assert.match(html, /data-player-inventory-use="holding-consumable"[^>]*data-capability-status="integration-pending"[^>]*disabled/, "Intended item-use controls must remain visible but pending when the backend advertises no action.");
+assert.ok(!html.includes('data-player-inventory-use="holding-consumable"'), "Items without an authoritative availableActions policy must not expose use controls.");
 assert.match(html, /data-player-inventory-use="holding-usable"(?![^>]*disabled)/, "Only an authoritative availableActions policy may enable item use.");
 assert.ok(!html.includes('data-player-inventory-use="holding-equipment"'), "Equipment must not be inferred as usable from presentation state.");
 assert.ok(html.includes("Item actions execute only when the backend publishes a supported policy"));
@@ -131,4 +131,4 @@ assert.equal(route.method, "GET");
 assert.equal(route.path, "/players/me/inventory");
 assert.equal(route.payload, undefined);
 
-console.log("Inventory read model passed: authoritative quantities, reservations, currencies, action policy, pending controls, and UUID privacy are valid.");
+console.log("Inventory read model passed: authoritative quantities, reservations, currencies, capability-gated actions, and UUID privacy are valid.");
