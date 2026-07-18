@@ -49,6 +49,11 @@ function notificationDeliveryIds(payload, endpointKey) {
 const ROUTE_BUILDERS = Object.freeze({
   session: () => ({ method: "GET", path: "/players/me" }),
 
+  capabilities: () => ({
+    method: "GET",
+    path: "/players/me/capabilities"
+  }),
+
   dashboard: ({ session }) => ({
     method: "GET",
     path: queryPath("/players/me/game/dashboard", {
@@ -166,6 +171,20 @@ const ROUTE_BUILDERS = Object.freeze({
 
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
 
+  inventoryUse: ({ params = {}, payload = {} }) => ({
+    method: "POST",
+    path: `/players/me/inventory/${encodeURIComponent(requiredText(
+      params.inventoryItemId || params.itemId || payload.itemId,
+      "itemId",
+      "inventoryUse"
+    ))}/redemptions`,
+    payload: {
+      quantity: Number(payload.quantity ?? 1),
+      note: typeof payload.note === "string" ? payload.note.trim() : "",
+      idempotencyKey: idempotencyKey(payload, "inventoryUse")
+    }
+  }),
+
   banking: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 })
@@ -178,16 +197,13 @@ const ROUTE_BUILDERS = Object.freeze({
     })
   }),
 
-  contractAccept: ({ params = {}, payload = {}, session }) => ({
+  contractAccept: ({ params = {}, payload = {} }) => ({
     method: "POST",
     path: `/players/me/contracts/${encodeURIComponent(requiredText(
-      params.contractId || payload.contractId,
-      "contractId",
+      params.contractKey || params.contractId || payload.contractKey || payload.contractId,
+      "contractKey",
       "contractAccept"
-    ))}/accept`,
-    payload: {
-      gameSessionId: gameSessionId(payload, session, "contractAccept")
-    }
+    ))}/accept`
   }),
 
   contractSubmit: ({ params = {}, payload = {}, session }) => ({

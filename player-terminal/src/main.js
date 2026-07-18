@@ -5,11 +5,12 @@ import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js"
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
+import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
 import { installPlayerInvalidationController } from "./realtime/player-invalidation-controller.js";
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
 
 const mount = document.getElementById("playerTerminal");
-const config = resolvePlayerTerminalConfig();
+const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());
 const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
