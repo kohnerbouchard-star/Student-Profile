@@ -16,18 +16,34 @@ Recorded 96 active identities with 0 blockers.
 exit=0
 
 ## check canonicalization
+
+> econovaria@0.0.0 audit:seed-content-canonicalization
+> node scripts/apply-seed-market-canonicalization.mjs --check
+
 Verified seed-market canonicalization across the generator and active candidate records.
 exit=0
 
 ## check universe
+
+> econovaria@0.0.0 audit:seed-content-universe
+> node scripts/generate-seed-market-universe.mjs --check
+
 Verified 3,200 instruments across 10 country files; 1675 stable issuers or administrators.
 exit=0
 
 ## check editorial evidence
+
+> econovaria@0.0.0 audit:seed-content-editorial
+> node scripts/seed-content-universe-editorial-audit.mjs --check
+
 Verified editorial screen: 0 blockers and 11 warning groups.
 exit=0
 
 ## check identity evidence
+
+> econovaria@0.0.0 audit:seed-content-identities
+> node scripts/seed-market-identity-reconciliation-summary.mjs --check
+
 Verified 96 active identities with 0 blockers.
 exit=0
 
@@ -38,101 +54,69 @@ exit=0
 
 TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 70.343015
+  duration_ms: 86.692293
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    The expression evaluated to a falsy value:
-    
-      assert.ok(codes.has("UNIVERSE_FILE_MISSING"))
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: true
-  actual: false
-  operator: '=='
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:22:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 88.47078
+  duration_ms: 139.78817
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 35.797096
+  duration_ms: 61.306533
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
-not ok 4 - staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 36.159632
+  duration_ms: 46.085036
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:44:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    The expression evaluated to a falsy value:
-    
-      assert.ok(report.issues.some((entry) => entry.code === "UNIVERSE_NOT_STAGING_READY"))
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: true
-  actual: false
-  operator: '=='
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:49:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.295773
+  duration_ms: 0.311913
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.108333
+  duration_ms: 0.156121
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.399384
+  duration_ms: 0.507279
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.173858
+  duration_ms: 0.25628
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.360684
+  duration_ms: 0.499925
   type: 'test'
   ...
 1..9
 # tests 9
 # suites 0
-# pass 7
-# fail 2
+# pass 9
+# fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 282.385124
-exit=1
+# duration_ms 403.373817
+exit=0
 
 ## design seed preflight
 
@@ -179,8 +163,6 @@ Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-docs/seed-content/reviews/market-identity-reconciliation-audit-v1.md:3: trailing whitespace.
-+Status: **canonical-identities-reconciled**  
-exit=2
+exit=0
 
-finalStatus=1
+finalStatus=0
