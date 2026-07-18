@@ -255,7 +255,9 @@ const disabledHtml = renderInventoryPage({
     items: [{ ...inventoryData.inventory.items[0], availableActions: [] }]
   }
 }, { inventoryCategory: "All" });
-assert.doesNotMatch(disabledHtml, /data-player-inventory-use=/);
-assert.doesNotMatch(disabledHtml, /Integration Pending/);
+assert.match(disabledHtml, /data-player-inventory-use="meal-pass"/);
+assert.match(disabledHtml, /data-capability-status="integration-pending"/);
+assert.match(disabledHtml, /disabled aria-disabled="true"/);
+assert.match(disabledHtml, /Request use · Pending/);
 
 console.log("Student-Profile runtime integration and Inventory redemption boundary passed.");
