@@ -14,6 +14,8 @@ assert.match(quickActions, /storeButton\.hidden = true/, "Add Store Item must be
 assert.match(quickActions, /section !== "Store"/, "Add Store Item may reappear only on the Store section.");
 assert.match(quickActions, /admin-overview-quick-actions-card/, "Overview actions must move into a content card.");
 assert.match(quickActions, /MAX_BOOT_FRAMES/, "Quick-action placement must tolerate a delayed v606 shell mount.");
+assert.match(quickActions, /function activeAccountSurface\(\)/, "Quick-action placement must detect active account surfaces.");
+assert.match(quickActions, /if \(activeAccountSurface\(\)\) return "Account"/, "Overview actions must be excluded while an account surface is open.");
 assert.doesNotMatch(quickActions, /MutationObserver|window\.fetch\s*=/, "The correction must not add another observer or transport wrapper.");
 
 assert.match(quickCss, /grid-template-columns:\s*repeat\(3/, "Desktop quick actions must render as a bounded three-column card.");
@@ -41,4 +43,4 @@ const interactionScriptIndex = index.indexOf("./interaction-quality.js");
 assert.ok(stabilizationScriptIndex >= 0 && quickScriptIndex > stabilizationScriptIndex, "Quick-action placement must load after Admin stabilization.");
 assert.ok(interactionScriptIndex > quickScriptIndex, "Quick-action placement must be installed before request/loading lifecycle reconciliation.");
 
-console.log("Admin loading scope and Overview quick-action contract passed.");
+console.log("Admin loading scope, account exclusion, and Overview quick-action contract passed.");
