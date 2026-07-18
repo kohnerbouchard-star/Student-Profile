@@ -127,6 +127,12 @@ import {
   readPlayerInventoryRoutePath,
 } from "../../../src/domains/inventory/api/playerInventoryRoutePaths.ts";
 import {
+  handlePlayerNotificationRequest,
+} from "../../../src/domains/notifications/api/playerNotificationHttpHandler.ts";
+import {
+  readPlayerNotificationRoutePath,
+} from "../../../src/domains/notifications/api/playerNotificationRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -166,6 +172,14 @@ Deno.serve(async (request) => {
 
   if (playerInventoryRoute) {
     return handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+      createServiceClient,
+    });
+  }
+
+  const playerNotificationRoute = readPlayerNotificationRoutePath(url.pathname);
+
+  if (playerNotificationRoute) {
+    return handlePlayerNotificationRequest(request, playerNotificationRoute, {
       createServiceClient,
     });
   }
