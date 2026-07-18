@@ -28,11 +28,12 @@ function endpointKeySet(session) {
 }
 
 export function createResourceSupport({ preview = false, session = null } = {}) {
+  const manifestBound = Array.isArray(session?.capabilityEndpointKeys);
   const advertised = endpointKeySet(session);
   return Object.freeze(Object.fromEntries(
     Object.entries(RESOURCE_ENDPOINT_KEYS).map(([resourceKey, endpointKey]) => [
       resourceKey,
-      preview || resourceKey === "session" || advertised.has(endpointKey)
+      preview || !manifestBound || resourceKey === "session" || advertised.has(endpointKey)
     ])
   ));
 }
