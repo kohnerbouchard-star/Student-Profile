@@ -42,6 +42,7 @@ Primary narrative references:
 - `04-narrative-system-and-story-state.md` — player-centered choice, relationship, consequence, war, and ending rules.
 - `story-arcs/global/meridian-corridor.md` — central opening arc.
 - `briefings/global/meridian-player-briefing.md` — player-facing arrival and Meridian briefing.
+- `reviews/map-location-canon-audit-v1.md` — map geometry, capital, profile, route, and location-registry audit.
 
 ## Operating rules
 
@@ -55,6 +56,7 @@ Primary narrative references:
 8. News, interactions, and authored documents are not authority to mutate economic or player state.
 9. Unsupported mechanics must remain labeled as planned.
 10. A prose simulation design is not evidence that a simulation ran.
+11. Location-dependent content is not staging-ready until a canonical location, adjacency, and route registry exists.
 
 ## Catalog map
 
@@ -133,8 +135,15 @@ Review passes live in `reviews/`:
 - narrative continuity and choice quality;
 - gameplay and classroom learning;
 - technical compatibility and data safety;
+- map location and canon alignment;
 - future migration and representation review;
 - future war sensitivity review.
+
+Current map review:
+
+- `reviews/map-location-canon-audit-v1.md`
+
+The map audit conditionally accepts the ten country polygons and broad placement, rejects the stale Lumenor and Xalvoria profile metadata, and blocks location-dependent executable content until capital-marker semantics, location nodes, adjacency, routes, and visual artwork are validated.
 
 These are documented workstreams, not independent external validation.
 
@@ -169,6 +178,7 @@ Included:
 - immigrant fortune-and-war premise;
 - revised Meridian Corridor arc;
 - ten distinct country immigrant openings;
+- structural map-location and canon audit;
 - economic, narrative, gameplay, and technical review structures;
 - catalog structure and future implementation map.
 
@@ -181,6 +191,8 @@ Excluded:
 - runtime event or war engine changes;
 - player-background or residency persistence;
 - relationship persistence;
+- Player Terminal map-data or artwork corrections;
+- location, adjacency, or route runtime implementation;
 - Admin or Player Terminal UI changes;
 - Supabase deployment;
 - live classroom content import.
