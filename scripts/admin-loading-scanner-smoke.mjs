@@ -1,7 +1,7 @@
 import { BASE_URL, createQualityHarness } from "./admin-quality-smoke-fixture.mjs";
 
 const h = await createQualityHarness("loading-scanner");
-const { page, state, errors, capture, finish } = h;
+const { page, browser, state, errors, capture, finish } = h;
 const fail = (message) => { throw new Error(message); };
 const buttonPresentations = [];
 const timing = {};
@@ -52,7 +52,13 @@ async function waitForPageSkeletonHidden() {
 }
 
 async function verifySessionSkeleton(viewport) {
-  const session = await page.evaluate(({ width, height }) => {
+  const staticContext = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    javaScriptEnabled: false,
+  });
+  const staticPage = await staticContext.newPage();
+  await staticPage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  const session = await staticPage.evaluate(({ width, height }) => {
     const shell = document.querySelector(".admin-session-skeleton__shell");
     const nav = document.querySelector(".admin-session-skeleton__nav");
     const main = document.querySelector(".admin-session-skeleton__main");
@@ -71,6 +77,7 @@ async function verifySessionSkeleton(viewport) {
       label: document.querySelector("#adminSessionGate")?.getAttribute("aria-label") || "",
     };
   }, viewport);
+  await staticContext.close();
   if (!session.shell || !session.nav || !session.main) fail(`Session shell is incomplete at ${viewport.name}.`);
   if (session.metrics !== 4 || session.rows < 6) fail(`Session shell lacks expected metric/table geometry at ${viewport.name}.`);
   if (session.shell.width > viewport.width + 1 || session.overflow > 2) fail(`Session shell overflows at ${viewport.name}: ${JSON.stringify(session)}.`);
@@ -252,18 +259,9 @@ async function assertReadyScanner(scanner, input) {
   if (await scanner.locator("[data-admin-terminal-last-scan-result]").isVisible()) fail("Prior scan result remained visible after refresh.");
 }
 
-await page.route("**/functions/v1/admin-api/**", async (route) => {
-  const pathname = new URL(route.request().url()).pathname;
-  if (pathname.endsWith("/session/bootstrap")) {
-    await new Promise((resolve) => setTimeout(resolve, 700));
-  }
-  await route.fallback();
-});
-
 try {
-  await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
-  await page.waitForSelector("#adminSessionGate .admin-session-skeleton__shell", { timeout: 5000 });
   const initialSession = await verifySessionSkeleton(VIEWPORTS[0]);
+  await page.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15000 });
   await waitForSkeletonApi();
   await waitForPageSkeletonHidden();
