@@ -151,7 +151,7 @@ async function section(name) {
 }
 
 async function modal(action) {
-  await section("Overview");
+  await section(action === "add-store-item" ? "Store" : "Overview");
   const button = page.locator(`[data-admin-terminal-action="${action}"]`).first();
   await button.waitFor({ state: "visible", timeout: 10000 });
   if (await button.isDisabled()) throw new Error(`${action} is disabled`);
