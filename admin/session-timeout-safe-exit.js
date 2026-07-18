@@ -83,16 +83,20 @@
   }
 
   async function validateAtExpiry() {
+    expiryTimer = 0;
     if (exiting || !sessionManager) return;
     const session = sessionManager.read();
     if (!session) return;
 
     try {
-      const usable = await sessionManager.getUsableSession({ minimumValidityMs: 0 });
+      const usable = await sessionManager.getUsableSession({
+        minimumValidityMs: REFRESH_SKEW_MS
+      });
       if (!usable) {
         exit("session-expired");
         return;
       }
+      scheduledExpiry = 0;
       schedule(usable);
     } catch (_) {
       exit("session-expired");
@@ -122,7 +126,7 @@
     if (document.visibilityState !== "visible") return;
     schedule();
     const session = sessionManager?.read();
-    if (session && sessionExpiresAt(session) <= Date.now()) {
+    if (session && sessionExpiresAt(session) <= Date.now() + REFRESH_SKEW_MS) {
       void validateAtExpiry();
     }
   }
