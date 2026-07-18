@@ -1,4 +1,8 @@
 import { buildPlayerCapabilityManifest } from "../domains/players/contracts/playerCapabilityManifestContracts.ts";
+import type {
+  PlayerLoginSuccessBody,
+  PlayerSessionBootstrapBody,
+} from "../domains/players/contracts/playerBrowserSessionContracts.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -49,6 +53,48 @@ Deno.test("browser payload privacy: generic public errors contain no request cre
   }
 });
 
+Deno.test("browser payload privacy: login exposes only the one-time session token and public player identifier", () => {
+  const body: PlayerLoginSuccessBody = {
+    ok: true,
+    gameSession: { name: "Period 2", status: "active" },
+    player: {
+      displayName: "Alex Rivera",
+      rosterLabel: "Table 4",
+      playerIdentifier: "CARD-200",
+      status: "active",
+    },
+    session: {
+      token: "ps_one_time_authenticated_token",
+      status: "active",
+      expiresAt: "2026-07-19T00:00:00.000Z",
+    },
+  };
+
+  assertBoundarySafe(body, new Set(["session.token"]));
+});
+
+Deno.test("browser payload privacy: bootstrap exposes no raw token or internal UUID", () => {
+  const body: PlayerSessionBootstrapBody = {
+    ok: true,
+    gameSession: { name: "Period 2", status: "active" },
+    player: {
+      displayName: "Alex Rivera",
+      rosterLabel: "Table 4",
+      playerIdentifier: "CARD-200",
+      status: "active",
+    },
+    session: {
+      status: "active",
+      expiresAt: "2026-07-19T00:00:00.000Z",
+    },
+    balances: [{ accountType: "cash", balance: 100, currencyCode: "ECO" }],
+    attendance: { status: "not_configured" },
+    availableActions: ["dashboard.view"],
+  };
+
+  assertBoundarySafe(body);
+});
+
 Deno.test("browser payload privacy: legacy UUID-bearing bootstrap shapes are detected as blockers", () => {
   const findings = inspectBoundary({
     ok: true,
@@ -81,23 +127,34 @@ Deno.test("browser payload privacy: credential, token-hash, and plaintext-token 
   ]);
 });
 
-function assertBoundarySafe(value: unknown): void {
-  const findings = inspectBoundary(value);
+function assertBoundarySafe(
+  value: unknown,
+  allowedSensitivePaths: ReadonlySet<string> = new Set(),
+): void {
+  const findings = inspectBoundary(value, allowedSensitivePaths);
   if (findings.length > 0) {
     throw new Error(`Unsafe browser payload: ${findings.join("; ")}`);
   }
 }
 
-function inspectBoundary(value: unknown): readonly string[] {
+function inspectBoundary(
+  value: unknown,
+  allowedSensitivePaths: ReadonlySet<string> = new Set(),
+): readonly string[] {
   const findings: string[] = [];
-  visit(value, "", findings);
+  visit(value, "", findings, allowedSensitivePaths);
   return findings;
 }
 
-function visit(value: unknown, path: string, findings: string[]): void {
+function visit(
+  value: unknown,
+  path: string,
+  findings: string[],
+  allowedSensitivePaths: ReadonlySet<string>,
+): void {
   if (Array.isArray(value)) {
     value.forEach((entry, index) =>
-      visit(entry, `${path}[${index}]`, findings)
+      visit(entry, `${path}[${index}]`, findings, allowedSensitivePaths)
     );
     return;
   }
@@ -111,14 +168,17 @@ function visit(value: unknown, path: string, findings: string[]): void {
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     const childPath = path ? `${path}.${key}` : key;
-    if (SENSITIVE_KEY_PATTERN.test(key)) {
+    if (
+      SENSITIVE_KEY_PATTERN.test(key) &&
+      !allowedSensitivePaths.has(childPath)
+    ) {
       findings.push(`${childPath} uses a sensitive field name`);
       continue;
     }
     if (INTERNAL_IDENTIFIER_KEY_PATTERN.test(childPath)) {
       findings.push(`${childPath} exposes an internal identifier`);
     }
-    visit(child, childPath, findings);
+    visit(child, childPath, findings, allowedSensitivePaths);
   }
 }
 

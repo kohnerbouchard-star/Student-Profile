@@ -104,15 +104,13 @@ async function handlePlayerLogin(event) {
       role: "STUDENT",
       token: result.session.token,
       authSource: "supabase-player",
-      gameSessionId: bootstrap.gameSession?.id || "",
+      gameSessionId: "",
       permissions: Array.isArray(bootstrap.availableActions) ? bootstrap.availableActions : []
     };
 
     state = Object.assign(emptyState(), {
       profile: createPlayerProfileFromBootstrap(bootstrap)
     });
-
-    await loadPlayerGameDashboardSnapshot({ bootstrap, subscribe: true });
 
     form.reset();
     document.getElementById("playerAccessCode").disabled = true;
@@ -679,10 +677,9 @@ async function refreshDashboard(options = {}) {
     if (currentSession.authSource === "supabase-player") {
       const result = await callPlayerBootstrapApi(currentSession.token);
       if (!result?.ok) throw new Error(cleanLoginError(result, "Refresh failed."));
-      currentSession.gameSessionId = result.gameSession?.id || currentSession.gameSessionId || "";
+      currentSession.gameSessionId = "";
       if (Array.isArray(result.availableActions)) currentSession.permissions = result.availableActions;
       state.profile = createPlayerProfileFromBootstrap(result);
-      await loadPlayerGameDashboardSnapshot({ bootstrap: result, subscribe: true });
     } else if (currentSession.authSource === "supabase-admin") {
       const selectedGameSessionId = currentSession.staffSession?.selectedGameSessionId || null;
       const result = await bootstrapStaffAdminSession(currentSession.token);

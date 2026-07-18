@@ -6,8 +6,8 @@ import {
 } from "../../../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
-  type SupabaseEnv,
   readSupabaseEnv,
+  type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
@@ -17,36 +17,23 @@ import {
 import { normalizeJoinCode } from "../../game-sessions/api/gameJoinCodeHttpHelpers.ts";
 import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
 import { normalizePlayerIdentifier } from "../domain/playerIdentifiers.ts";
+import {
+  isBrowserSafePlayerIdentifier,
+  type PlayerLoginSuccessBody,
+} from "../contracts/playerBrowserSessionContracts.ts";
 
 interface PlayerLoginDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly hashValue?: typeof sha256Hex;
+  readonly generateSessionToken?: () => string;
+  readonly now?: () => number;
 }
 
 interface PlayerLoginRequestBody {
   readonly gameJoinCode: string;
   readonly playerIdentifier: string;
   readonly accessCode: string;
-}
-
-interface PlayerLoginSuccessBody {
-  readonly ok: true;
-  readonly gameSession: {
-    readonly id: string;
-    readonly name: string;
-    readonly status: string;
-  };
-  readonly player: {
-    readonly id: string;
-    readonly displayName: string;
-    readonly rosterLabel: string | null;
-    readonly playerIdentifier: string;
-    readonly status: string;
-  };
-  readonly session: {
-    readonly token: string;
-    readonly status: "active";
-    readonly expiresAt: string;
-  };
 }
 
 export async function handlePlayerLoginRequest(
@@ -62,7 +49,7 @@ export async function handlePlayerLoginRequest(
   }
 
   try {
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
 
     if (!envResult.ok) {
       return jsonError(500, {
@@ -73,11 +60,14 @@ export async function handlePlayerLoginRequest(
     }
 
     const body = await readPlayerLoginRequestBody(request);
-    const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(body.gameJoinCode));
+    const hashValue = dependencies.hashValue ?? sha256Hex;
+    const gameJoinCodeHash = await hashValue(
+      normalizeJoinCode(body.gameJoinCode),
+    );
     const playerIdentifierNormalized = normalizePlayerIdentifier(
       body.playerIdentifier,
     );
-    const accessCodeHash = await sha256Hex(
+    const accessCodeHash = await hashValue(
       normalizeStudentCode(body.accessCode),
     );
     const serviceClient = dependencies.createServiceClient(envResult.value);
@@ -133,7 +123,11 @@ export async function handlePlayerLoginRequest(
       readonly status: string;
     } | null;
 
-    if (!player?.id || player.status !== "active") {
+    if (
+      !player?.id ||
+      !isBrowserSafePlayerIdentifier(player.player_identifier) ||
+      player.status !== "active"
+    ) {
       return invalidPlayerLoginResponse();
     }
 
@@ -168,6 +162,11 @@ export async function handlePlayerLoginRequest(
       serviceClient,
       gameSession.id,
       player.id,
+      {
+        generateSessionToken: dependencies.generateSessionToken,
+        hashValue,
+        now: dependencies.now,
+      },
     );
 
     if (!sessionResult.ok) {
@@ -177,12 +176,10 @@ export async function handlePlayerLoginRequest(
     return jsonResponse<PlayerLoginSuccessBody>(200, {
       ok: true,
       gameSession: {
-        id: gameSession.id,
         name: gameSession.name,
         status: gameSession.status,
       },
       player: {
-        id: player.id,
         displayName: player.display_name,
         rosterLabel: player.roster_label ?? null,
         playerIdentifier: player.player_identifier,
@@ -193,7 +190,7 @@ export async function handlePlayerLoginRequest(
         status: "active",
         expiresAt: sessionResult.expiresAt,
       },
-    });
+    }, privatePlayerResponseHeaders());
   } catch (error) {
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
@@ -247,7 +244,8 @@ export async function readPlayerLoginRequestBody(
       "playerIdentifier is required.",
     ),
     accessCode: parseRequiredText(
-      value.accessCode ?? value.studentCode ?? value.playerAccessCode ?? value.pin,
+      value.accessCode ?? value.studentCode ?? value.playerAccessCode ??
+        value.pin,
       "player_access_code_required",
       "accessCode is required.",
     ),
@@ -266,22 +264,30 @@ async function createPlayerSession(
   serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   playerId: string,
+  options: {
+    readonly generateSessionToken?: () => string;
+    readonly hashValue: typeof sha256Hex;
+    readonly now?: () => number;
+  },
 ): Promise<
   | {
-      readonly ok: true;
-      readonly sessionToken: string;
-      readonly expiresAt: string;
-    }
+    readonly ok: true;
+    readonly sessionToken: string;
+    readonly expiresAt: string;
+  }
   | {
-      readonly ok: false;
-      readonly status: number;
-      readonly error: EdgeErrorBody["error"];
-    }
+    readonly ok: false;
+    readonly status: number;
+    readonly error: EdgeErrorBody["error"];
+  }
 > {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const sessionToken = generateSessionToken();
-    const sessionTokenHash = await sha256Hex(sessionToken);
-    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+    const sessionToken =
+      (options.generateSessionToken ?? generateSessionToken)();
+    const sessionTokenHash = await options.hashValue(sessionToken);
+    const expiresAt = new Date(
+      (options.now ?? Date.now)() + 12 * 60 * 60 * 1000,
+    ).toISOString();
 
     const sessionResponse = await serviceClient
       .from("player_sessions")
@@ -340,4 +346,12 @@ function generateCompactCode(length: number): string {
   return [...bytes]
     .map((byte) => alphabet[byte % alphabet.length])
     .join("");
+}
+
+function privatePlayerResponseHeaders(): HeadersInit {
+  return {
+    "cache-control": "private, no-store, max-age=0",
+    "pragma": "no-cache",
+    "vary": "authorization, x-player-session-token",
+  };
 }
