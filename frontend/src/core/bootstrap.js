@@ -99,7 +99,7 @@ async function handlePlayerIdentityLogin(event) {
       role: "STUDENT",
       token: result.session.token,
       authSource: "supabase-player",
-      gameSessionId: "",
+      gameSessionId: bootstrap.gameSession?.id || "",
       permissions: Array.isArray(bootstrap.availableActions)
         ? bootstrap.availableActions
         : [],
@@ -108,6 +108,8 @@ async function handlePlayerIdentityLogin(event) {
     state = Object.assign(emptyState(), {
       profile: createPlayerProfileFromBootstrap(bootstrap),
     });
+
+    await loadPlayerGameDashboardSnapshot({ bootstrap, subscribe: true });
 
     form.reset();
     showLoginMessage(message, "Access granted.");
