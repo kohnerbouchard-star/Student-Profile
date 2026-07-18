@@ -98,6 +98,12 @@ import {
   handleStaffContractRequest,
 } from "../../../src/domains/contracts/api/staffContractHttpHandler.ts";
 import {
+  handlePlayerContractAcceptanceRequest,
+} from "../../../src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts";
+import {
+  readPlayerContractAcceptanceRoutePath,
+} from "../../../src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts";
+import {
   readPlayerContractRoutePath,
 } from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
 import {
@@ -256,6 +262,17 @@ Deno.serve(async (request) => {
     return handlePlayerGameDashboardRequest(request, {
       createServiceClient,
     });
+  }
+
+  const playerContractAcceptanceRoute =
+    readPlayerContractAcceptanceRoutePath(url.pathname);
+
+  if (playerContractAcceptanceRoute) {
+    return handlePlayerContractAcceptanceRequest(
+      request,
+      playerContractAcceptanceRoute,
+      { createServiceClient },
+    );
   }
 
   const playerContractRoute = readPlayerContractRoutePath(url.pathname);
