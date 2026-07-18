@@ -4,7 +4,7 @@ import path from "node:path";
 const ADMIN_ROOT = path.resolve("admin");
 const LIMITS = Object.freeze({
   fetchAssignments: 7,
-  mutationObservers: 12,
+  mutationObservers: 11,
 });
 
 async function listJavaScriptFiles(directory) {
@@ -47,5 +47,5 @@ console.log(JSON.stringify({
   status: "pass",
   measurements,
   limits: LIMITS,
-  note: "Interaction quality no longer owns a global fetch interceptor or broad DOM observer. These limits remain maximums, not targets.",
+  note: "Interaction quality no longer owns a global fetch interceptor or broad DOM observer, and the session gate now uses an explicit mounted event. These limits remain maximums, not targets.",
 }, null, 2));
