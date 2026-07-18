@@ -6,6 +6,7 @@ on:
       - agent/seed-content-foundation-v1
     paths:
       - scripts/generate-seed-market-universe.mjs
+      - scripts/seed-content-universe-editorial-audit.mjs
       - .github/workflows/seed-universe-materialization.yml
   workflow_dispatch:
 
@@ -36,21 +37,28 @@ jobs:
       - name: Generate country JSONL files and checksummed manifest
         run: node scripts/generate-seed-market-universe.mjs
 
-      - name: Verify generated files are deterministic
-        run: node scripts/generate-seed-market-universe.mjs --check
+      - name: Generate editorial and active-issuer reconciliation reports
+        run: node scripts/seed-content-universe-editorial-audit.mjs
+
+      - name: Verify deterministic outputs
+        run: |
+          node scripts/generate-seed-market-universe.mjs --check
+          node scripts/seed-content-universe-editorial-audit.mjs --check
 
       - name: Validate generated diff
         run: git diff --check
 
-      - name: Commit generated universe
+      - name: Commit generated universe evidence
         shell: bash
         run: |
-          if git diff --quiet -- docs/seed-content/markets/universe; then
-            echo "Universe files already match the deterministic generator."
+          if git diff --quiet -- docs/seed-content/markets/universe docs/seed-content/reviews/market-universe-editorial-collision-review-v1.json docs/seed-content/reviews/market-universe-editorial-collision-review-v1.md; then
+            echo "Universe files and editorial evidence already match the deterministic generators."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add docs/seed-content/markets/universe
-            git commit -m "feat(seed): materialize 3200-instrument universe [skip ci]"
+            git add docs/seed-content/reviews/market-universe-editorial-collision-review-v1.json
+            git add docs/seed-content/reviews/market-universe-editorial-collision-review-v1.md
+            git commit -m "test(seed): materialize universe editorial evidence [skip ci]"
             git push origin HEAD:agent/seed-content-foundation-v1
           fi
