@@ -13,7 +13,7 @@
     "typecheck:edge": "deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts",
     "typecheck:stock-edge": "deno check --config=supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/stock-market-player-read/index.ts supabase/functions/stock-market-read/index.ts supabase/functions/stock-market-runner/index.ts supabase/functions/stock-market-seed-copy/index.ts supabase/functions/stock-market-trading/index.ts",
     "typecheck:admin-edge": "deno check --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/index.ts",
-    "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge && npm run test:player-market-assets"
+    "typecheck:all": "npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge"
   },
   "devDependencies": {
     "typescript": "5.9.3"
