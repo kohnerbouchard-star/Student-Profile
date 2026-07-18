@@ -1,6 +1,9 @@
-export type PlayerStockAssetListRoute =
+export type PlayerStockAssetRoute =
   | { readonly kind: "assets" }
+  | { readonly kind: "asset"; readonly assetId: string }
   | { readonly kind: "malformed" };
+
+export type PlayerStockAssetListRoute = PlayerStockAssetRoute;
 
 export interface PlayerStockAssetListQuery {
   readonly limit: number;
