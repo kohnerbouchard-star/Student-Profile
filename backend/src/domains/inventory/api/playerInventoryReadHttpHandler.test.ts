@@ -22,6 +22,11 @@ Deno.test("inventory handler derives scope from the player session and returns U
   );
 
   assertEquals(response.status, 200);
+  assertEquals(response.headers.get("cache-control"), "private, no-store");
+  assertEquals(
+    response.headers.get("vary"),
+    "authorization, x-player-session-token",
+  );
   const body = await response.json();
   assertEquals(body.items[0].id, "data_chip");
   assertEquals(body.items[0].storeItemId, "data_chip");
@@ -29,7 +34,7 @@ Deno.test("inventory handler derives scope from the player session and returns U
   assertNoUuid(JSON.stringify(body));
 });
 
-Deno.test("inventory handler rejects missing, wrong-game, injected, and unsupported requests", async () => {
+Deno.test("inventory handler rejects missing, game-selected, injected, and unsupported requests", async () => {
   const missing = await handlePlayerInventoryReadRequest(
     request("/players/me/inventory", { token: null }),
     { kind: "inventory" },
@@ -38,13 +43,29 @@ Deno.test("inventory handler rejects missing, wrong-game, injected, and unsuppor
   assertEquals(missing.status, 401);
   assertEquals((await missing.json()).error.code, "missing_player_session");
 
-  const wrongGame = await handlePlayerInventoryReadRequest(
+  const gameQuery = await handlePlayerInventoryReadRequest(
     request(`/players/me/inventory?gameSessionId=${OTHER_GAME}`),
     { kind: "inventory" },
     dependencies(repository()),
   );
-  assertEquals(wrongGame.status, 401);
-  assertEquals((await wrongGame.json()).error.code, "invalid_player_session_scope");
+  assertEquals(gameQuery.status, 400);
+  assertEquals(
+    (await gameQuery.json()).error.code,
+    "invalid_player_inventory_request",
+  );
+
+  const gameHeader = await handlePlayerInventoryReadRequest(
+    request("/players/me/inventory", {
+      header: ["x-econovaria-game-session-id", OTHER_GAME],
+    }),
+    { kind: "inventory" },
+    dependencies(repository()),
+  );
+  assertEquals(gameHeader.status, 400);
+  assertEquals(
+    (await gameHeader.json()).error.code,
+    "invalid_player_inventory_request",
+  );
 
   const injected = await handlePlayerInventoryReadRequest(
     request("/players/me/inventory", {
