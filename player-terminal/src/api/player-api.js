@@ -12,6 +12,8 @@ import {
 import { createIdempotencyKey, createRequestId, stableOperationKey, stableRequestKey } from "./request-context.js";
 import { normalizeApiResponse } from "./response-normalizer.js";
 import { resolveCapabilities } from "./capabilities.js";
+import { createResourceSupport, isResourceSupported } from "./resource-support.js";
+import { unsupportedReadModel } from "./unsupported-read-models.js";
 import {
   IDEMPOTENT_WRITE_ENDPOINTS,
   SHELL_OPTIONAL_RESOURCES,
@@ -74,6 +76,15 @@ function unavailableResourceStatus(error) {
   });
 }
 
+function unsupportedResourceStatus() {
+  return Object.freeze({
+    state: "unavailable",
+    status: 0,
+    code: "CAPABILITY_UNAVAILABLE",
+    retryAfterMs: 0
+  });
+}
+
 export class PlayerApi {
   constructor(config) {
     this.config = config;
@@ -91,6 +102,7 @@ export class PlayerApi {
     this.sessionVersion = 0;
     this.sessionFingerprint = sessionFingerprint(config);
     this.sessionController = new AbortController();
+    this.resourceSupport = createResourceSupport({ preview: config.usePreviewData === true });
   }
 
   setSession(session) {
@@ -111,6 +123,7 @@ export class PlayerApi {
       this.inFlightWrites.clear();
       this.writeCompletedAt.clear();
       this.retryIdempotencyKeys.clear();
+      this.resourceSupport = createResourceSupport({ preview: this.config.usePreviewData === true });
       clearAllResourceInvalidations();
     }
   }
@@ -159,33 +172,67 @@ export class PlayerApi {
 
   async bootstrap({ force = false } = {}) {
     const session = await this.request("session", { force });
-    const dashboard = await this.request("dashboard", { force });
-    const optional = await Promise.allSettled(SHELL_OPTIONAL_RESOURCES.map((key) => this.request(key, { force })));
-    const data = { session, dashboard };
-    const resourceStatus = { session: readyResourceStatus(), dashboard: readyResourceStatus() };
-    SHELL_OPTIONAL_RESOURCES.forEach((key, index) => {
-      const result = optional[index];
-      if (result.status === "fulfilled") {
-        data[key] = result.value;
-        resourceStatus[key] = readyResourceStatus();
-      } else {
-        data[key] = [];
-        resourceStatus[key] = unavailableResourceStatus(result.reason);
+    this.resourceSupport = createResourceSupport({
+      preview: this.config.usePreviewData === true,
+      session
+    });
+
+    const data = { session };
+    const resourceStatus = { session: readyResourceStatus() };
+
+    if (isResourceSupported(this.resourceSupport, "dashboard")) {
+      data.dashboard = await this.request("dashboard", { force });
+      resourceStatus.dashboard = readyResourceStatus();
+    } else {
+      data.dashboard = unsupportedReadModel("dashboard");
+      resourceStatus.dashboard = unsupportedResourceStatus();
+    }
+
+    const optional = SHELL_OPTIONAL_RESOURCES.map(async (key) => {
+      if (!isResourceSupported(this.resourceSupport, key)) {
+        return { key, supported: false, value: unsupportedReadModel(key) };
+      }
+      try {
+        return { key, supported: true, value: await this.request(key, { force }) };
+      } catch (error) {
+        return { key, supported: true, error };
       }
     });
-    data.capabilities = resolveCapabilities({ config: this.config, session, dashboard });
+
+    for (const result of await Promise.all(optional)) {
+      if (!result.supported) {
+        data[result.key] = result.value;
+        resourceStatus[result.key] = unsupportedResourceStatus();
+      } else if (result.error) {
+        data[result.key] = unsupportedReadModel(result.key);
+        resourceStatus[result.key] = unavailableResourceStatus(result.error);
+      } else {
+        data[result.key] = result.value;
+        resourceStatus[result.key] = readyResourceStatus();
+      }
+    }
+
+    data.capabilities = resolveCapabilities({ config: this.config, session, dashboard: data.dashboard });
     data.resourceStatus = Object.freeze(resourceStatus);
     return data;
   }
 
   async loadResources(keys, { force = false } = {}) {
     const uniqueKeys = [...new Set(keys)];
-    const settled = await Promise.allSettled(uniqueKeys.map((key) => this.request(key, { force })));
+    const supportedKeys = uniqueKeys.filter((key) => isResourceSupported(this.resourceSupport, key));
+    const settled = await Promise.allSettled(supportedKeys.map((key) => this.request(key, { force })));
     const data = {};
     const errors = {};
     const resourceStatus = {};
+
+    uniqueKeys.forEach((key) => {
+      if (isResourceSupported(this.resourceSupport, key)) return;
+      data[key] = unsupportedReadModel(key);
+      resourceStatus[key] = unsupportedResourceStatus();
+    });
+
     settled.forEach((result, index) => {
-      const key = uniqueKeys[index];
+      const key = supportedKeys[index];
       if (result.status === "fulfilled") {
         data[key] = result.value;
         resourceStatus[key] = readyResourceStatus();
