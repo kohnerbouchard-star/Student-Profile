@@ -19,7 +19,7 @@ jobs:
           ref: agent/player-banking-public-read-v1
           fetch-depth: 0
 
-      - name: Execute deterministic integration patch
+      - name: Probe deterministic integration patch
         shell: bash
         run: |
           set +e
@@ -74,20 +74,25 @@ jobs:
           status=$?
           set -e
 
-          cat /tmp/player-banking-patch.log
           if [ "$status" -ne 0 ]; then
-            cp /tmp/player-banking-patch.log player-banking-patch-error-final.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add player-banking-patch-error-final.txt
-            git commit -m "chore(banking): record final integration failure" || true
-            git push origin HEAD:agent/player-banking-public-read-v1
-            false
+            cp /tmp/player-banking-patch.log player-banking-bootstrap-probe.txt
+          else
+            {
+              echo "PATCH_STATUS=success"
+              echo "--- git status --short ---"
+              git status --short
+              echo "--- git diff --name-only ---"
+              git diff --name-only
+              echo "--- git diff --check ---"
+              git diff --check || true
+              echo "--- git diff --stat ---"
+              git diff --stat
+            } > player-banking-bootstrap-probe.txt
           fi
 
-          rm -f player-banking-patch-error*.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat(banking): connect UUID-private paginated Player read"
+          git add player-banking-bootstrap-probe.txt
+          git commit -m "chore(banking): record post-patch probe" || true
           git push origin HEAD:agent/player-banking-public-read-v1
+          false
