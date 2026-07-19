@@ -1,6 +1,5 @@
 import {
-  SEOUL_STOCK_MARKET_TIME_ZONE,
-  resolveStockMarketWindowSettings,
+  readRequiredStockMarketTimeZone,
 } from "../calendars/stockMarketWindowSettings.ts";
 import {
   StockMarketRunnerError,
@@ -32,20 +31,51 @@ export async function readServerStockMarketTimeZone(
   });
 
   if (response.error) {
-    if (isSchemaNotAppliedError(response.error)) {
-      return SEOUL_STOCK_MARKET_TIME_ZONE;
-    }
+    throw mapTimeZoneError(response.error);
+  }
 
+  try {
+    return readRequiredStockMarketTimeZone({
+      timezone: response.data,
+    });
+  } catch {
     throw new StockMarketRunnerError(
       "stock_market_state_load_failed",
-      "Stock market timezone setting could not be loaded.",
+      "Stock market timezone is missing or invalid for this game.",
+      500,
+    );
+  }
+}
+
+function mapTimeZoneError(
+  error: SupabaseStockMarketTimeZoneError,
+): StockMarketRunnerError {
+  const normalized = error.message.toUpperCase();
+
+  if (
+    normalized.includes("STOCK_MARKET_TIMEZONE_REQUIRED") ||
+    normalized.includes("STOCK_MARKET_TIMEZONE_INVALID")
+  ) {
+    return new StockMarketRunnerError(
+      "stock_market_state_load_failed",
+      "Stock market timezone is missing or invalid for this game.",
       500,
     );
   }
 
-  return resolveStockMarketWindowSettings({
-    timezone: response.data,
-  }).timezone;
+  if (isSchemaNotAppliedError(error)) {
+    return new StockMarketRunnerError(
+      "stock_market_schema_not_applied",
+      "Stock market timezone schema is not applied.",
+      500,
+    );
+  }
+
+  return new StockMarketRunnerError(
+    "stock_market_state_load_failed",
+    "Stock market timezone setting could not be loaded.",
+    500,
+  );
 }
 
 function isSchemaNotAppliedError(
