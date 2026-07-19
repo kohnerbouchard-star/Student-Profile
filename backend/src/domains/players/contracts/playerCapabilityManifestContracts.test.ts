@@ -10,6 +10,7 @@ import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRout
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
 import { readPlayerContractPublicListRoutePath } from "../../contracts/api/playerContractPublicListRoutePaths.ts";
+import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/playerContractPublicSubmitRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerInventoryRedemptionRoutePath } from "../../inventory/api/playerInventoryRedemptionRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
@@ -45,15 +46,16 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.actions.notificationsRead, true);
   assertEquals(manifest.capabilities.actions.logout, true);
   assertEquals(manifest.capabilities.actions.contractAccept, true);
+  assertEquals(manifest.capabilities.actions.contractSubmit, true);
   assertEquals(manifest.capabilities.actions.inventoryUse, true);
   assertEquals(manifest.capabilities.actions.marketOrder, false);
-  assertEquals(manifest.capabilities.actions.contractSubmit, false);
   assertEquals(manifest.capabilities.actions.storePurchase, false);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
   assertEquals(endpointKeys.includes("capabilities"), true);
   assertEquals(endpointKeys.includes("contractAccept"), true);
+  assertEquals(endpointKeys.includes("contractSubmit"), true);
   assertEquals(endpointKeys.includes("contracts"), true);
   assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
   assertEquals(endpointKeys.includes("marketOrder" as never), false);
@@ -90,6 +92,8 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
       ? readPlayerCapabilityManifestRoutePath(operation.path)
       : operation.key === "contractAccept"
       ? readPlayerContractAcceptanceRoutePath(operation.path)
+      : operation.key === "contractSubmit"
+      ? readPlayerContractPublicSubmitRoutePath(operation.path)
       : operation.key === "contracts"
       ? readPlayerContractPublicListRoutePath(operation.path)
       : operation.key === "countries" || operation.key === "country" ||
