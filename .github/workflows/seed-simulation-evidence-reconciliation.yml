@@ -8,6 +8,7 @@ on:
       - package.json
       - scripts/build-northreach-simulation-input.mjs
       - scripts/reconcile-seed-simulation-evidence.mjs
+      - scripts/record-seed-simulation-artifact.mjs
       - scripts/apply-seed-simulation-retention-policy.mjs
       - scripts/seed-content-preflight.test.mjs
       - docs/seed-content/markets/active-subsets/**
@@ -26,7 +27,7 @@ jobs:
   reconcile:
     name: Reconcile retained simulation evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Check out seed authority branch
         uses: actions/checkout@v4
@@ -47,8 +48,8 @@ jobs:
       - name: Install bounded simulation dependency
         run: python -m pip install --disable-pip-version-check numpy==2.1.3
 
-      - name: Run simulations and retain diagnostics
-        id: reconciliation
+      - name: Generate deterministic raw evidence
+        id: generation
         shell: bash
         run: |
           set +e
@@ -74,6 +75,53 @@ jobs:
           run_step "run Solvend simulation" bash -lc 'cd docs/seed-content/simulation/solvend && python run_solvend_market_simulation_v1.py > /dev/null'
           run_step "reconcile retained evidence" node scripts/reconcile-seed-simulation-evidence.mjs
 
+          printf '\ngenerationStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload immutable raw simulation artifact
+        if: steps.generation.outputs.status == '0'
+        id: raw_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-seed-simulation-raw-${{ github.sha }}
+          path: |
+            docs/seed-content/simulation/northreach/output/**
+            docs/seed-content/simulation/thaloris/output/**
+            docs/seed-content/simulation/yrethia/output/**
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+
+      - name: Record artifact evidence and validate
+        if: steps.generation.outputs.status == '0'
+        id: validation
+        shell: bash
+        env:
+          SEED_RAW_ARTIFACT_NAME: econovaria-seed-simulation-raw-${{ github.sha }}
+          SEED_RAW_ARTIFACT_ID: ${{ steps.raw_artifact.outputs['artifact-id'] }}
+          SEED_RAW_ARTIFACT_URL: ${{ steps.raw_artifact.outputs['artifact-url'] }}
+          SEED_RAW_ARTIFACT_DIGEST: ${{ steps.raw_artifact.outputs['artifact-digest'] }}
+          SEED_RAW_SOURCE_COMMIT: ${{ github.sha }}
+          SEED_RAW_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          SEED_RAW_RETENTION_DAYS: "90"
+        run: |
+          set +e
+          LOG="docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "record immutable artifact" node scripts/record-seed-simulation-artifact.mjs
+
           rm -rf docs/seed-content/simulation/northreach/output
           rm -rf docs/seed-content/simulation/thaloris/output
           rm -rf docs/seed-content/simulation/yrethia/output
@@ -85,11 +133,12 @@ jobs:
           run_step "design seed preflight" npm run preflight:seed-content
           run_step "diff check" git diff --check
 
-          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          printf '\nvalidationStatus=%s\n' "$STATUS" | tee -a "$LOG"
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Commit retained evidence and diagnostics
+        if: always()
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -98,15 +147,17 @@ jobs:
           if git diff --cached --quiet; then
             echo "Simulation evidence is already reconciled."
           else
-            git commit -m "fix(seed): reconcile deterministic simulation evidence [skip ci]"
+            git commit -m "fix(seed): retain deterministic simulation evidence [skip ci]"
             git push origin HEAD:agent/seed-content-foundation-v1
           fi
 
       - name: Enforce reconciliation result
+        if: always()
         shell: bash
         run: |
-          STATUS="${{ steps.reconciliation.outputs.status }}"
-          if [ "$STATUS" -ne 0 ]; then
-            echo "Simulation evidence reconciliation failed with status $STATUS. See the committed diagnostic log."
+          GENERATION="${{ steps.generation.outputs.status }}"
+          VALIDATION="${{ steps.validation.outputs.status }}"
+          if [ "$GENERATION" != "0" ] || [ "$VALIDATION" != "0" ]; then
+            echo "Simulation evidence retention failed. See the committed diagnostic log."
             false
           fi
