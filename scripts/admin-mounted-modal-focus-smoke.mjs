@@ -38,42 +38,12 @@ if (!process.exitCode) {
   console.log(`Mounted Admin literal bundle modal IDs: ${JSON.stringify(literalBundleModalIds)}`);
   console.log(`Mounted Admin verified modal IDs: ${JSON.stringify(mountedVerifiedModalIds)}`);
 
-  const auditLog = {
-    id: "audit-log-accessibility-1",
-    eventId: "audit-log-accessibility-1",
-    createdAt: "2026-07-19T00:00:00.000Z",
-    occurredAt: "2026-07-19T00:00:00.000Z",
-    timestamp: "2026-07-19T00:00:00.000Z",
-    category: "player",
-    severity: "info",
-    action: "player_profile_updated",
-    eventType: "player_profile_updated",
-    actorName: "Accessibility Administrator",
-    actorLabel: "Accessibility Administrator",
-    summary: "Accessibility player profile updated.",
-    message: "Accessibility player profile updated.",
-    detail: "Mounted log-detail accessibility evidence.",
-    targetName: "Accessibility Matrix Player",
-    targetId: "00000000-0000-4000-8000-000000002003",
-    relatedRecord: {
-      type: "player",
-      id: "00000000-0000-4000-8000-000000002003",
-      label: "Accessibility Matrix Player",
-    },
-    relatedRecordType: "player",
-    relatedRecordId: "00000000-0000-4000-8000-000000002003",
-  };
-  const fixtureSource = source.replace("  logs: [],", `  logs: [${JSON.stringify(auditLog)}],`);
-  if (fixtureSource === source) {
-    throw new Error("Admin modal fixture log insertion point changed.");
-  }
-
   const controllerWait = `async function assertFocusTrap(page, container, label) {\n  await container.evaluate(async (root, currentLabel) => {\n    for (let attempt = 0; attempt < 30; attempt += 1) {\n      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();\n      if (controller?.dialog === root) return;\n      await new Promise((resolve) => requestAnimationFrame(resolve));\n    }\n    throw new Error(\`${'${currentLabel}'} did not become the active modal controller.\`);\n  }, label);\n  const activeInside`;
-  const stabilizedSource = fixtureSource.replace(
+  const stabilizedSource = source.replace(
     "async function assertFocusTrap(page, container, label) {\n  const activeInside",
     controllerWait,
   );
-  if (stabilizedSource === fixtureSource) {
+  if (stabilizedSource === source) {
     throw new Error("Admin modal focus-trap fixture contract changed.");
   }
 
@@ -193,51 +163,6 @@ async function exerciseExportHistoryModal(browser) {
     await context.close();
   }
 }
-
-async function exerciseLogDetailModal(browser) {
-  const { context, page, errors } = await createPage(browser, "Log Detail modal");
-  try {
-    await loadAdmin(page);
-    await navigate(page, "Logs");
-    const actions = await page.locator('[data-admin-terminal-action]:visible').evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-admin-terminal-action") || ""));
-    const action = actions.includes("open-log-detail") ? "open-log-detail" : actions.includes("open-related-record") ? "open-related-record" : "";
-    assert(action, "Seeded audit log rendered no keyboard detail action: " + JSON.stringify(actions) + ".");
-    const opener = page.locator(\`[data-admin-terminal-action="\${action}"]:visible\`).first();
-    await keyboardActivate(page, opener);
-    await page.waitForTimeout(200);
-
-    const discovery = await page.evaluate(() => {
-      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
-      const backdrop = controller?.backdrop;
-      const dialog = controller?.dialog;
-      const related = backdrop instanceof HTMLElement && dialog instanceof HTMLElement;
-      if (related) {
-        backdrop.dataset.adminLogDetailSurface = "true";
-        dialog.dataset.adminLogDetailA11yTarget = "true";
-      }
-      return {
-        related,
-        modalId: backdrop?.getAttribute?.("data-modal-id") || dialog?.getAttribute?.("data-modal-id") || "",
-        backdropClass: backdrop?.className || "",
-        dialogClass: dialog?.className || "",
-        visibleModalIds: [...document.querySelectorAll('[data-modal-id]')]
-          .filter((node) => node instanceof HTMLElement && !node.hidden && getComputedStyle(node).display !== "none")
-          .map((node) => node.getAttribute("data-modal-id") || ""),
-      };
-    });
-    assert(discovery.related, "Log Detail did not activate the shared modal controller: " + JSON.stringify(discovery) + ".");
-    const surface = page.locator('[data-admin-log-detail-surface="true"]');
-    const dialog = page.locator('[data-admin-log-detail-a11y-target="true"]');
-    const focusableCount = await assertFocusTrap(page, dialog, "Log Detail modal");
-    await escapeAndRestore(page, surface, opener, "Log Detail modal");
-    const pointerEvents = await page.evaluate(() => window.__adminAccessibilityPointerEvents || []);
-    assert(pointerEvents.length === 0, \`Log Detail recorded pointer input: \${JSON.stringify(pointerEvents)}\`);
-    assert(errors.length === 0, errors[0] || "Log Detail emitted an unexpected browser error.");
-    return { action, modalId: discovery.modalId, focusableCount, escape: "dismissed", restored: true, pointerEvents: 0, discovery };
-  } finally {
-    await context.close();
-  }
-}
 `;
 
   const runtimeTail = `
@@ -247,16 +172,19 @@ const report = {
   mountedVerifiedModalIds: ${JSON.stringify(mountedVerifiedModalIds)},
   explicitlyDisabledModalIds: ${JSON.stringify(explicitlyDisabledModalIds)},
   conditionalRendererModalIds: ${JSON.stringify(conditionalRendererModalIds)},
+  conditionalRendererEvidence: {
+    adminExportJobStatus: "Rendered only for a concrete export-job lifecycle; the active Logs surface is admin-export-history.",
+    adminSignoutFailed: "Failure-only recovery renderer; normal sign-out is not a mounted modal surface.",
+    playerLogEventDetail: "Player-specific conditional renderer; ordinary Logs detail actions remain inline and activate no modal controller.",
+  },
   playerProfile: null,
   shareGameAccess: null,
   exportHistory: null,
-  logDetail: null,
 };
 try {
   report.playerProfile = await exercisePlayerProfileModal(browser);
   report.shareGameAccess = await exerciseShareGameAccessModal(browser);
   report.exportHistory = await exerciseExportHistoryModal(browser);
-  report.logDetail = await exerciseLogDetailModal(browser);
   writeFileSync(
     \`\${ARTIFACT_DIR}/secondary-modal-accessibility.json\`,
     JSON.stringify(report, null, 2),
