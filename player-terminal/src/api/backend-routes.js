@@ -218,16 +218,21 @@ const ROUTE_BUILDERS = Object.freeze({
     ))}/accept`
   }),
 
-  contractSubmit: ({ params = {}, payload = {}, session }) => ({
+  contractSubmit: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
     path: `/players/me/contracts/${encodeURIComponent(requiredText(
-      params.contractId || payload.contractId,
-      "contractId",
+      params.contractKey ||
+        params.contractId ||
+        payload.contractKey ||
+        payload.contractId ||
+        resolvedPathValue(path, /^\/contracts\/([^/]+)\/submissions?$/),
+      "contractKey",
       "contractSubmit"
     ))}/submit`,
     payload: {
-      gameSessionId: gameSessionId(payload, session, "contractSubmit"),
-      evidencePayload: payload.evidencePayload && typeof payload.evidencePayload === "object"
+      evidencePayload: payload.evidencePayload &&
+          typeof payload.evidencePayload === "object" &&
+          !Array.isArray(payload.evidencePayload)
         ? payload.evidencePayload
         : {
             submissionUrl: typeof payload.submissionUrl === "string" ? payload.submissionUrl.trim() : "",
