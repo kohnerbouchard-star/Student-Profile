@@ -5,7 +5,7 @@
 **Authoritative path:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-19  
-**Current audited main baseline:** `b8d227d8d8d0cd178efc63935371ab53eee8b78b`
+**Current audited main baseline:** `249fc53a23ad23058d376e4e394524af0bdee265`
 
 ---
 
