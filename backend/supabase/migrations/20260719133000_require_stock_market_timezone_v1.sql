@@ -11,6 +11,22 @@ set stock_market_window = jsonb_set(
 )
 where nullif(btrim(stock_market_window ->> 'timezone'), '') is null;
 
+do $
+begin
+  if exists (
+    select 1
+    from public.game_settings settings
+    where not exists (
+      select 1
+      from pg_timezone_names zone
+      where zone.name = btrim(settings.stock_market_window ->> 'timezone')
+    )
+  ) then
+    raise exception 'STOCK_MARKET_EXISTING_TIMEZONE_INVALID';
+  end if;
+end;
+$;
+
 create or replace function public.validate_required_stock_market_timezone()
 returns trigger
 language plpgsql

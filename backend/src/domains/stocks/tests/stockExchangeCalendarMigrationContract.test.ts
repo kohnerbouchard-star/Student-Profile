@@ -20,6 +20,7 @@ Deno.test("one required game timezone gates all exchanges", async () => {
   assertIncludes(required, "validate_required_stock_market_timezone");
   assertIncludes(required, "STOCK_MARKET_TIMEZONE_REQUIRED");
   assertIncludes(required, "STOCK_MARKET_TIMEZONE_INVALID");
+  assertIncludes(required, "STOCK_MARKET_EXISTING_TIMEZONE_INVALID");
   assertIncludes(required, "from pg_timezone_names");
   assertIncludes(required, "p_game_session_id uuid");
   assertIncludes(
