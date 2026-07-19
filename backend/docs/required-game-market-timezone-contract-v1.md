@@ -37,3 +37,5 @@ A timezone change is an audited game-settings change. It applies prospectively a
 ## Validation ratchet
 
 CI must prove that exchange definitions contain no timezone field, one supplied game timezone governs every exchange, missing signup configuration is rejected before Auth creation, migration replay succeeds from zero, and the Create Game surface never infers the browser timezone.
+
+The authority branch must contain current `main` before review so the validation suite covers the active Store, Contract, Admin accessibility, and Player capability integrations together with the market-timezone boundary.
