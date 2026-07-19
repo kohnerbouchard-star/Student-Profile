@@ -34,6 +34,7 @@ jobs:
           import textwrap
 
           source = Path('.github/workflows/apply-player-notification-inbox-v1.yml').read_text()
+          source = source.replace("\n          readDeliveriesByPublicIds(input: {", "\n            readDeliveriesByPublicIds(input: {")
           start_marker = "          python3 <<'PY'\n"
           end_marker = "\n          PY\n"
           start = source.index(start_marker) + len(start_marker)
