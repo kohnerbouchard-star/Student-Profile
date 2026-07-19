@@ -17,7 +17,7 @@ if (!process.exitCode) {
     "add-contract",
     "add-player",
     "add-store-item",
-    "admin-export-job-status",
+    "admin-export-history",
     "attendance-scanner",
     "contract-submission-review",
     "dashboard-contract-profile",
@@ -30,21 +30,14 @@ if (!process.exitCode) {
     "admin-2fa-management",
     "google-classroom-connect",
   ];
-  const conditionalRecoveryModalIds = ["admin-signout-failed"];
+  const conditionalRendererModalIds = [
+    "admin-export-job-status",
+    "admin-signout-failed",
+  ];
 
   console.log(`Mounted Admin literal bundle modal IDs: ${JSON.stringify(literalBundleModalIds)}`);
   console.log(`Mounted Admin verified modal IDs: ${JSON.stringify(mountedVerifiedModalIds)}`);
 
-  const exportJob = {
-    id: "export-job-accessibility-1",
-    jobId: "export-job-accessibility-1",
-    status: "completed",
-    type: "audit_logs",
-    filename: "econovaria-audit-log-accessibility.csv",
-    downloadUrl: "data:text/csv;charset=utf-8,event%2Cstatus%0Aaccessibility%2Cpassed",
-    createdAt: "2026-07-19T00:00:00.000Z",
-    completedAt: "2026-07-19T00:00:01.000Z",
-  };
   const auditLog = {
     id: "audit-log-accessibility-1",
     eventId: "audit-log-accessibility-1",
@@ -70,10 +63,9 @@ if (!process.exitCode) {
     relatedRecordType: "player",
     relatedRecordId: "00000000-0000-4000-8000-000000002003",
   };
-  const fixtureInsertion = `  logs: [${JSON.stringify(auditLog)}],\n  exportJobs: [${JSON.stringify(exportJob)}],\n  logExportJobs: [${JSON.stringify(exportJob)}],\n  auditLogExports: [${JSON.stringify(exportJob)}],`;
-  const fixtureSource = source.replace("  logs: [],", fixtureInsertion);
+  const fixtureSource = source.replace("  logs: [],", `  logs: [${JSON.stringify(auditLog)}],`);
   if (fixtureSource === source) {
-    throw new Error("Admin modal fixture log/export insertion point changed.");
+    throw new Error("Admin modal fixture log insertion point changed.");
   }
 
   const controllerWait = `async function assertFocusTrap(page, container, label) {\n  await container.evaluate(async (root, currentLabel) => {\n    for (let attempt = 0; attempt < 30; attempt += 1) {\n      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();\n      if (controller?.dialog === root) return;\n      await new Promise((resolve) => requestAnimationFrame(resolve));\n    }\n    throw new Error(\`${'${currentLabel}'} did not become the active modal controller.\`);\n  }, label);\n  const activeInside`;
@@ -186,63 +178,10 @@ async function exerciseExportHistoryModal(browser) {
   try {
     await loadAdmin(page);
     await navigate(page, "Logs");
+    const opener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
+    await keyboardActivate(page, opener);
 
-    let opener = null;
-    let surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-    let statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
-
-    if (await surface.count() === 0 && await statusOpener.count() > 0) {
-      opener = statusOpener;
-      await keyboardActivate(page, opener);
-      surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-    }
-
-    if (await surface.count() === 0) {
-      const exportOpener = page.locator('[data-admin-terminal-action="export-logs"]:visible').first();
-      if (await exportOpener.count() > 0) {
-        opener = exportOpener;
-        await keyboardActivate(page, opener);
-        await page.waitForTimeout(350);
-        surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-        if (await surface.count() === 0) {
-          statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
-          if (await statusOpener.count() > 0) {
-            opener = statusOpener;
-            await keyboardActivate(page, opener);
-            surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-          }
-        }
-      }
-    }
-
-    if (await surface.count() === 0) {
-      const historyOpener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
-      assert(await historyOpener.count() > 0, "Logs rendered no export-history action.");
-      opener = historyOpener;
-      await keyboardActivate(page, opener);
-      await page.waitForTimeout(250);
-      surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-      if (await surface.count() === 0) {
-        statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
-        if (await statusOpener.count() > 0) {
-          opener = statusOpener;
-          await keyboardActivate(page, opener);
-          surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-        }
-      }
-    }
-
-    if (await surface.count() === 0) {
-      const diagnostic = await page.evaluate(() => ({
-        actions: [...document.querySelectorAll('[data-admin-terminal-action]')]
-          .filter((node) => node instanceof HTMLElement && !node.hidden)
-          .map((node) => node.getAttribute('data-admin-terminal-action') || ''),
-        activeAction: document.activeElement?.getAttribute?.('data-admin-terminal-action') || '',
-        activeModalId: window.EconovariaAdminModalAccessibility?.getActiveController?.()?.backdrop?.getAttribute?.('data-modal-id') || '',
-      }));
-      throw new Error("Export Job Status did not open: " + JSON.stringify(diagnostic) + ".");
-    }
-
+    const surface = page.locator('[data-modal-id="admin-export-history"]:visible').last();
     const target = await controllerDialogForSurface(page, surface, "adminExportHistoryA11yTarget", "Export History modal");
     const focusableCount = await assertFocusTrap(page, target.dialog, "Export History modal");
     await escapeAndRestore(page, surface, opener, "Export History modal");
@@ -286,7 +225,7 @@ const report = {
   literalBundleModalIds: ${JSON.stringify(literalBundleModalIds)},
   mountedVerifiedModalIds: ${JSON.stringify(mountedVerifiedModalIds)},
   explicitlyDisabledModalIds: ${JSON.stringify(explicitlyDisabledModalIds)},
-  conditionalRecoveryModalIds: ${JSON.stringify(conditionalRecoveryModalIds)},
+  conditionalRendererModalIds: ${JSON.stringify(conditionalRendererModalIds)},
   playerProfile: null,
   shareGameAccess: null,
   exportHistory: null,
