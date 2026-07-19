@@ -28,6 +28,7 @@ const expectedScripts = [
   "./game-code-wiring.js",
   "./admin-stabilization.js",
   "./interaction-quality.js",
+  "./data-state-contracts.js",
   "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
   "./shape-accurate-skeletons.js",
@@ -59,10 +60,12 @@ const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.j
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
 const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
+const dataStateContracts = readFileSync(resolve(adminRoot, "data-state-contracts.js"), "utf8");
 const interactionControlReset = readFileSync(resolve(adminRoot, "interaction-quality-control-reset.js"), "utf8");
 const shapeSkeletons = readFileSync(resolve(adminRoot, "shape-accurate-skeletons.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
 const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
+const dataStateCss = readFileSync(resolve(adminRoot, "css/data-state-contracts.css"), "utf8");
 const shapeSkeletonCss = readFileSync(resolve(adminRoot, "css/shape-accurate-skeletons.css"), "utf8");
 const skeletonMatrix = readFileSync(resolve(adminRoot, "docs/admin-shape-accurate-skeleton-matrix-2026-07-18.md"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
@@ -160,6 +163,21 @@ assert(interactionControlReset.includes("Scan a player code. The result appears 
 assert(interactionQualityCss.includes(".admin-qol-field-error"), "Field error styling is missing.");
 assert(interactionQualityCss.includes('[data-admin-qol-state="loading"]'), "Button processing styling is missing.");
 
+for (const state of ["loading", "loaded", "refreshing", "stale", "empty", "failed"]) {
+  assert(dataStateContracts.includes(`"${state}"`), `Admin data-state contract ${state} is missing.`);
+}
+assert(dataStateContracts.includes("econovaria:admin-request-lifecycle"), "Admin data states do not consume explicit request lifecycle events.");
+assert(dataStateContracts.includes("econovaria:admin-data-state-changed"), "Admin data states do not publish transition events.");
+assert(dataStateContracts.includes("detail.pageRead !== true"), "Admin data states are not bounded to page reads.");
+assert(!dataStateContracts.includes("window.fetch ="), "Admin data states add a global fetch wrapper.");
+assert(!dataStateContracts.includes("MutationObserver"), "Admin data states add a DOM observer.");
+assert(!dataStateContracts.includes("style.cssText"), "Admin data states create inline presentation.");
+assert(dataStateCss.includes('[data-state="stale"]'), "Admin stale-state styling is missing.");
+assert(dataStateCss.includes('[data-state="empty"]'), "Admin empty-state styling is missing.");
+assert(dataStateCss.includes('[data-state="failed"]'), "Admin failed-state styling is missing.");
+assert(html.includes("./css/data-state-contracts.css"), "Admin data-state stylesheet is not loaded.");
+assert(html.includes("./data-state-contracts.js"), "Admin data-state controller is not loaded.");
+
 for (const route of [
   "overview", "players", "contracts", "store", "marketplace", "attendance", "logs", "settings",
   "account-profile", "account-notifications", "account-security", "account-help", "account-games",
@@ -207,4 +225,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, route-shaped loading shells, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
+console.log("Original v606 shell, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
