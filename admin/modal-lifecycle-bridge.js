@@ -188,13 +188,19 @@
     const action = target.closest("[data-admin-terminal-action]");
     if (action instanceof HTMLElement && !closeControl) {
       lastOpener = action;
-      reconcileAfterCurrentEvent();
       scheduleSettledReconcile();
       return;
     }
 
     if (binding) scheduleSettledReconcile();
   }, true);
+
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const closeControl = target?.closest(CLOSE_SELECTOR);
+    const action = target?.closest("[data-admin-terminal-action]");
+    if (action instanceof HTMLElement && !closeControl) reconcileAfterCurrentEvent();
+  });
 
   for (const eventName of [
     "econovaria:admin-route-mounted",
