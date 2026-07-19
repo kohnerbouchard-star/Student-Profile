@@ -9,42 +9,10 @@ const simulationRoot = path.join(repoRoot, "docs", "seed-content", "simulation")
 const checkOnly = process.argv.includes("--check");
 
 const configs = [
-  {
-    country: "northreach",
-    simulationId: "econovaria.northreach.market-pilot.v1",
-    input: "northreach_active_instruments_v1.json",
-    script: "run_northreach_market_simulation_v1.py",
-    summary: "summary-v1.json",
-    rawFiles: ["output/raw_instrument_results.csv", "output/raw_paths.csv", "output/raw_portfolio_results.csv"],
-    exactCommand: "python run_northreach_market_simulation_v1.py --input northreach_active_instruments_v1.json --output output --seeds 250 --cycles 60",
-  },
-  {
-    country: "thaloris",
-    simulationId: "thaloris-market-simulation-v1",
-    input: "input-v1.json",
-    script: "run_thaloris_market_simulation_v1.py",
-    summary: "summary-v1.json",
-    rawFiles: ["output/instrument-results.csv", "output/portfolio-results.csv"],
-    exactCommand: "python run_thaloris_market_simulation_v1.py",
-  },
-  {
-    country: "yrethia",
-    simulationId: "yrethia-market-simulation-v1",
-    input: "input-v1.json",
-    script: "run_yrethia_market_simulation_v1.py",
-    summary: "summary-v1.json",
-    rawFiles: ["output/instrument-results.csv", "output/portfolio-results.csv"],
-    exactCommand: "python run_yrethia_market_simulation_v1.py",
-  },
-  {
-    country: "solvend",
-    simulationId: "solvend-market-simulation-v1",
-    input: "input-v1.json",
-    script: "run_solvend_market_simulation_v1.py",
-    summary: "summary-v1.json",
-    rawFiles: [],
-    exactCommand: "python run_solvend_market_simulation_v1.py",
-  },
+  { country: "northreach", simulationId: "econovaria.northreach.market-pilot.v1", input: "northreach_active_instruments_v1.json", script: "run_northreach_market_simulation_v1.py", summary: "summary-v1.json", rawFiles: ["output/raw_instrument_results.csv", "output/raw_paths.csv", "output/raw_portfolio_results.csv"], exactCommand: "python run_northreach_market_simulation_v1.py --input northreach_active_instruments_v1.json --output output --seeds 250 --cycles 60" },
+  { country: "thaloris", simulationId: "thaloris-market-simulation-v1", input: "input-v1.json", script: "run_thaloris_market_simulation_v1.py", summary: "summary-v1.json", rawFiles: ["output/instrument-results.csv", "output/portfolio-results.csv"], exactCommand: "python run_thaloris_market_simulation_v1.py" },
+  { country: "yrethia", simulationId: "yrethia-market-simulation-v1", input: "input-v1.json", script: "run_yrethia_market_simulation_v1.py", summary: "summary-v1.json", rawFiles: ["output/instrument-results.csv", "output/portfolio-results.csv"], exactCommand: "python run_yrethia_market_simulation_v1.py" },
+  { country: "solvend", simulationId: "solvend-market-simulation-v1", input: "input-v1.json", script: "run_solvend_market_simulation_v1.py", summary: "summary-v1.json", rawFiles: [], exactCommand: "python run_solvend_market_simulation_v1.py" },
 ];
 
 async function exists(filePath) {
@@ -70,11 +38,8 @@ function summarize(summary, input) {
       for (const strategy of Object.keys(value ?? {})) strategyNames.add(strategy);
     }
   }
-  for (const metric of summary.portfolioMetrics ?? []) {
-    if (metric.portfolio) strategyNames.add(metric.portfolio);
-  }
-  const instrumentIds = new Set();
-  for (const record of input.instruments ?? []) instrumentIds.add(record.id);
+  for (const metric of summary.portfolioMetrics ?? []) if (metric.portfolio) strategyNames.add(metric.portfolio);
+  const instrumentIds = new Set((input.instruments ?? []).map((record) => record.id));
   if (instrumentIds.size === 0 && Number.isInteger(summary.instrumentCount)) {
     for (let index = 0; index < summary.instrumentCount; index += 1) instrumentIds.add(`summary-${index}`);
   }
@@ -89,9 +54,8 @@ function summarize(summary, input) {
 }
 
 async function retainedFiles(config, countryRoot) {
-  const fileNames = [config.input, config.script, config.summary, "raw-evidence-manifest-v1.json"];
   const output = {};
-  for (const fileName of fileNames) {
+  for (const fileName of [config.input, config.script, config.summary, "raw-evidence-manifest-v1.json"]) {
     const filePath = path.join(countryRoot, fileName);
     if (!(await exists(filePath))) throw new Error(`${config.country} retained evidence is missing ${fileName}.`);
     output[fileName] = await sha256(filePath);
@@ -104,12 +68,7 @@ async function buildRawEvidence(config, countryRoot) {
   for (const relativePath of config.rawFiles) {
     const filePath = path.join(countryRoot, relativePath);
     if (!(await exists(filePath))) throw new Error(`${config.country} rerun did not produce ${relativePath}.`);
-    entries.push({
-      path: relativePath,
-      sha256: await sha256(filePath),
-      sizeBytes: (await stat(filePath)).size,
-      repositoryRetained: false,
-    });
+    entries.push({ path: relativePath, sha256: await sha256(filePath), sizeBytes: (await stat(filePath)).size, repositoryRetained: false, artifactRetained: false });
   }
   return {
     schemaVersion: "econovaria-simulation-raw-evidence-v1",
@@ -125,11 +84,11 @@ async function buildRawEvidence(config, countryRoot) {
 }
 
 function expectedManifest(config, summaryFacts, files, rawEvidence) {
+  const retained = rawEvidence.retentionStatus === "immutable-workflow-artifact-retained";
+  const pending = rawEvidence.retentionStatus === "immutable-artifact-pending";
   return {
     simulationId: config.simulationId,
-    status: rawEvidence.retentionStatus === "immutable-artifact-pending"
-      ? "executed-summary-retained-raw-artifact-pending"
-      : "executed-summary-retained",
+    status: retained ? "executed-summary-and-raw-artifact-retained" : pending ? "executed-summary-retained-raw-artifact-pending" : "executed-summary-retained",
     activationAuthorized: false,
     seeds: summaryFacts.seeds,
     cycles: summaryFacts.cycles,
@@ -142,7 +101,9 @@ function expectedManifest(config, summaryFacts, files, rawEvidence) {
       status: rawEvidence.retentionStatus,
       rawEvidenceManifest: "raw-evidence-manifest-v1.json",
       repositoryRetained: rawEvidence.files.every((entry) => entry.repositoryRetained === true),
+      immutableArtifactRetained: retained,
       requiredForApproval: rawEvidence.files.length > 0,
+      ...(retained ? { artifact: rawEvidence.artifact } : {}),
     },
     exactCommand: config.exactCommand,
   };
@@ -165,8 +126,8 @@ for (const config of configs) {
   const countryRoot = path.join(simulationRoot, config.country);
   const input = await readJson(path.join(countryRoot, config.input));
   const summary = await readJson(path.join(countryRoot, config.summary));
-  let rawEvidence;
   const rawEvidencePath = path.join(countryRoot, "raw-evidence-manifest-v1.json");
+  let rawEvidence;
   if (checkOnly) {
     rawEvidence = await readJson(rawEvidencePath);
   } else {
