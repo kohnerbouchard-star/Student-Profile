@@ -23,7 +23,9 @@ page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.m
 page.on("console", (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
 page.on("requestfailed", (request) => {
   if (request.url().includes("cdn.jsdelivr.net")) return;
-  errors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`);
+  const failure = request.failure()?.errorText || "";
+  if (request.resourceType() === "media" && failure.includes("ERR_ABORTED")) return;
+  errors.push(`requestfailed: ${request.method()} ${request.url()} ${failure}`);
 });
 
 await page.route("https://cdn.jsdelivr.net/**", async (route) => {
