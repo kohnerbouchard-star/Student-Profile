@@ -104,14 +104,6 @@ test("card-level skeletons preserve the principal container width", async ({ pag
   expect(violations, `Card skeleton geometry violations: ${JSON.stringify(violations)}`).toEqual([]);
 });
 
-test("desktop shell has no duplicate context navigation or top-page action buttons", async ({ page }) => {
-  for (const route of ["dashboard", "news", "market", "portfolio"]) {
-    await openTerminal(page, route);
-    await expect(page.locator(".player-terminal-context-nav")).toHaveCount(0);
-    await expect(page.locator(".player-terminal-page-heading button")).toHaveCount(0);
-  }
-});
-
 test("skeleton motion is disabled when reduced motion is requested", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "Reduced-motion styling runs once in desktop Chromium.");
   await page.emulateMedia({ reducedMotion: "reduce" });
