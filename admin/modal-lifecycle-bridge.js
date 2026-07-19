@@ -129,6 +129,7 @@
       },
     });
 
+    if (!(active instanceof HTMLElement)) binding.controller.focusFirst();
     backdrop.dataset.adminModalAccessibilityBound = "true";
     bindings.add(binding);
     backdrop.dispatchEvent(new CustomEvent("econovaria:admin-mounted-modal-bound", {
