@@ -1,4 +1,139 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 await import("./admin-mounted-operational-modal-focus-smoke.mjs");
 if (!process.exitCode) {
   await import("./admin-modal-drawer-accessibility-smoke.mjs");
+}
+
+if (!process.exitCode) {
+  const sourceUrl = new URL("./admin-modal-drawer-accessibility-smoke.mjs", import.meta.url);
+  const bundleUrl = new URL("../admin/dist/admin-overview-terminal.js", import.meta.url);
+  const source = readFileSync(sourceUrl, "utf8");
+  const bundle = readFileSync(bundleUrl, "utf8");
+  const modalIds = [...new Set(
+    [...bundle.matchAll(/data-modal-id=["']([^"'${}]+)["']/g)].map((match) => match[1]),
+  )].sort();
+
+  console.log(`Mounted Admin literal modal inventory: ${JSON.stringify(modalIds)}`);
+
+  const marker = "const browser = await chromium.launch({ headless: true });";
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) {
+    throw new Error("Admin modal fixture launch marker changed.");
+  }
+
+  const helpers = String.raw`
+async function exercisePlayerProfileModal(browser) {
+  const { context, page, errors } = await createPage(browser, "Edit Player Profile modal");
+  try {
+    await loadAdmin(page);
+    await navigate(page, "Players");
+
+    let opener = page.locator('[data-admin-terminal-action="player-settings"]:visible').first();
+    if (await opener.count() === 0) {
+      const playerSelector = page.locator(
+        \`[data-admin-terminal-action="select-player-panel"][data-player-id="\${PLAYER_ID}"]:visible\`,
+      ).first();
+      await keyboardActivate(page, playerSelector);
+      const drawer = page.locator("[data-admin-terminal-player-drawer]:visible").first();
+      await drawer.waitFor({ state: "visible", timeout: 5000 });
+      await page.keyboard.press("Escape");
+      await drawer.waitFor({ state: "hidden", timeout: 5000 }).catch(async () => {
+        await drawer.waitFor({ state: "detached", timeout: 5000 });
+      });
+      await page.waitForTimeout(150);
+      opener = page.locator('[data-admin-terminal-action="player-settings"]:visible').first();
+    }
+
+    await keyboardActivate(page, opener);
+    const backdrop = page.locator(
+      '[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]:visible',
+    ).last();
+    const dialog = backdrop.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    const focusableCount = await assertFocusTrap(page, dialog, "Edit Player Profile modal");
+    await escapeAndRestore(page, backdrop, opener, "Edit Player Profile modal");
+    const pointerEvents = await page.evaluate(() => window.__adminAccessibilityPointerEvents || []);
+    assert(pointerEvents.length === 0, \`Edit Player Profile recorded pointer input: \${JSON.stringify(pointerEvents)}\`);
+    assert(errors.length === 0, errors[0] || "Edit Player Profile emitted an unexpected browser error.");
+    return { focusableCount, escape: "dismissed", restored: true, pointerEvents: 0 };
+  } finally {
+    await context.close();
+  }
+}
+
+async function exerciseShareGameAccessModal(browser) {
+  const { context, page, errors } = await createPage(browser, "Share Game Access modal");
+  try {
+    await loadAdmin(page);
+    const opener = page.locator([
+      '[data-admin-terminal-action="share-current-game"]:visible',
+      '[data-admin-terminal-action="share-game-code"]:visible',
+      '[data-admin-terminal-share-button]:visible',
+    ].join(", ")).first();
+    await keyboardActivate(page, opener);
+
+    const backdrop = page.locator('[data-modal-id="share-game-access"]:visible').last();
+    const dialog = backdrop.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    const focusableCount = await assertFocusTrap(page, dialog, "Share Game Access modal");
+    await escapeAndRestore(page, backdrop, opener, "Share Game Access modal");
+    const pointerEvents = await page.evaluate(() => window.__adminAccessibilityPointerEvents || []);
+    assert(pointerEvents.length === 0, \`Share Game Access recorded pointer input: \${JSON.stringify(pointerEvents)}\`);
+    assert(errors.length === 0, errors[0] || "Share Game Access emitted an unexpected browser error.");
+    return { focusableCount, escape: "dismissed", restored: true, pointerEvents: 0 };
+  } finally {
+    await context.close();
+  }
+}
+`;
+
+  const runtimeTail = String.raw`
+const browser = await chromium.launch({ headless: true });
+const report = {
+  modalInventory: ${JSON.stringify(modalIds)},
+  playerProfile: null,
+  shareGameAccess: null,
+};
+try {
+  report.playerProfile = await exercisePlayerProfileModal(browser);
+  report.shareGameAccess = await exerciseShareGameAccessModal(browser);
+  writeFileSync(
+    \`\${ARTIFACT_DIR}/secondary-modal-accessibility.json\`,
+    JSON.stringify(report, null, 2),
+  );
+  console.log("Admin secondary modal focus, Escape, restoration, and zero-pointer matrix passed.");
+} catch (error) {
+  report.failure = error.stack || error.message || String(error);
+  writeFileSync(
+    \`\${ARTIFACT_DIR}/secondary-modal-accessibility.json\`,
+    JSON.stringify(report, null, 2),
+  );
+  console.error(report.failure);
+  process.exitCode = 1;
+} finally {
+  await browser.close();
+}
+`;
+
+  const generated = `${source.slice(0, markerIndex)}${helpers}${runtimeTail}`;
+  const prefix = join(dirname(fileURLToPath(import.meta.url)), ".admin-secondary-modal-");
+  const runtimeDir = mkdtempSync(prefix);
+  const runtimePath = join(runtimeDir, "runtime.mjs");
+
+  try {
+    writeFileSync(runtimePath, generated);
+    const result = spawnSync(process.execPath, [runtimePath], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "inherit",
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exitCode = result.status || 1;
+  } finally {
+    rmSync(runtimeDir, { recursive: true, force: true });
+  }
 }
