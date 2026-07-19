@@ -1,5 +1,5 @@
 -- Make stock-market timezone a persisted game setting. No browser or device
--- timezone is consulted. Missing or invalid values use the server fallback.
+-- timezone is consulted. Missing or invalid values fall back to Asia/Seoul.
 
 update public.game_settings
 set stock_market_window = jsonb_set(
@@ -25,7 +25,7 @@ set search_path = public, pg_temp
 as $$
 declare
   v_candidate text;
-  v_server_fallback constant text := 'Asia/Seoul';
+  v_seoul_fallback constant text := 'Asia/Seoul';
 begin
   if p_game_session_id is not null then
     select nullif(btrim(settings.stock_market_window ->> 'timezone'), '')
@@ -42,17 +42,21 @@ begin
     return v_candidate;
   end if;
 
-  return v_server_fallback;
+  return v_seoul_fallback;
 end;
 $$;
 
 comment on function public.resolve_stock_market_timezone(uuid) is
-  'Resolves game_settings.stock_market_window.timezone with an Asia/Seoul server fallback. Device timezone is never consulted.';
+  'Resolves game_settings.stock_market_window.timezone and falls back only to Asia/Seoul. Device timezone is never consulted.';
 
 revoke all on function public.resolve_stock_market_timezone(uuid)
 from public, anon, authenticated;
 grant execute on function public.resolve_stock_market_timezone(uuid)
 to service_role;
+
+-- Remove the initial one-argument calendar function so all runtime callers must
+-- provide the game session whose persisted timezone controls evaluation.
+drop function if exists public.is_stock_market_open_at(timestamptz);
 
 create or replace function public.is_stock_market_open_at(
   p_game_session_id uuid,
@@ -86,7 +90,7 @@ end;
 $$;
 
 comment on function public.is_stock_market_open_at(uuid, timestamptz) is
-  'Authoritative stock-session decision using the persisted game timezone and server fallback.';
+  'Authoritative stock-session decision using the persisted game timezone with Asia/Seoul fallback.';
 
 revoke all on function public.is_stock_market_open_at(uuid, timestamptz)
 from public, anon, authenticated;
@@ -155,7 +159,7 @@ comment on function public.execute_stock_market_order_calendar_gated(
   numeric,
   text
 ) is
-  'Rejects new immediate fills using the game stock-market timezone setting while preserving stored idempotent replay.';
+  'Rejects new immediate fills using the persisted game timezone with Asia/Seoul fallback while preserving stored idempotent replay.';
 
 revoke all on function public.execute_stock_market_order_calendar_gated(
   uuid,
