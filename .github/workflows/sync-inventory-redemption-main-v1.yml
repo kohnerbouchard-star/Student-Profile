@@ -1,0 +1,59 @@
+name: Sync Inventory Redemption With Main
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/sync-inventory-redemption-main-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.head_ref == 'agent/inventory-redemption-connected-lifecycle-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/inventory-redemption-connected-lifecycle-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Merge current main
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --no-tags origin main
+          git merge --no-ff origin/main -m "chore(sync): merge Banking main into Inventory lifecycle"
+          git diff --check
+      - name: Verify focused Backend lifecycle
+        working-directory: backend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run test:player-inventory
+          npm run typecheck
+      - name: Verify focused Player lifecycle and Banking preservation
+        working-directory: player-terminal
+        run: |
+          npm ci --no-audit --no-fund
+          npm run inventory-redemption-connected
+          npm run banking-read
+          npm run check
+      - name: Publish synchronized branch
+        shell: bash
+        run: |
+          rm .github/workflows/sync-inventory-redemption-main-v1.yml
+          git add -A
+          git commit --amend --no-edit
+          git push origin HEAD:agent/inventory-redemption-connected-lifecycle-v1
