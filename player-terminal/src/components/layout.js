@@ -112,11 +112,10 @@ function renderTopbar(route, data, ui, config) {
   </header>`;
 }
 
-function renderPageContent(pageHtml) {
-  return String(pageHtml || "").replace(
-    /<div class="player-terminal-heading-actions">([\s\S]*?)<\/div>/g,
-    (_match, content) => `<div class="player-terminal-heading-actions">${content.replace(/<button\b[\s\S]*?<\/button>/g, "")}</div>`,
-  );
+function renderContextNav(route, capabilities, preserveProductSurface) {
+  const group = activeGroupForRoute(route, capabilities, preserveProductSurface);
+  if (!group || group.routes.length <= 1) return "";
+  return `<nav class="player-terminal-context-nav" aria-label="${escapeHtml(group.label)} sections">${group.routes.map((item) => `<button type="button" data-route="${item.route}" class="${item.route === route ? "active" : ""}${item.enabled ? "" : " is-pending"}"${pendingAttributes(item.enabled, item.label)}${item.route === route ? ' aria-current="page"' : ""}>${escapeHtml(item.label)}${item.enabled ? "" : " · Pending"}</button>`).join("")}</nav>`;
 }
 
 function renderMobileNavigation(route, data, open, preserveProductSurface) {
@@ -148,7 +147,8 @@ export function renderShell({ route, data, pageHtml, ui, config }) {
       ${renderSidebar(route, data, ui.sidebarCollapsed, preserveProductSurface)}
       <main id="player-main-content" class="player-terminal-shell-main" tabindex="-1">
         ${renderTopbar(route, data, ui, config)}
-        <div class="player-terminal-page-host">${renderPageContent(pageHtml)}</div>
+        ${renderContextNav(route, data.capabilities, preserveProductSurface)}
+        <div class="player-terminal-page-host">${pageHtml}</div>
       </main>
     </div>
     ${renderMobileNavigation(route, data, ui.mobileMenuOpen, preserveProductSurface)}
