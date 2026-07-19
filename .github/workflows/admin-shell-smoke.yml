@@ -25,6 +25,8 @@ on:
       - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
       - "scripts/admin-keyboard-workflows-smoke.mjs"
       - "scripts/admin-keyboard-focus-order-smoke.mjs"
+      - "scripts/admin-inventory-redemption-queue-contract.mjs"
+      - "scripts/admin-inventory-redemption-queue-ui-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -72,6 +74,8 @@ on:
       - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
       - "scripts/admin-keyboard-workflows-smoke.mjs"
       - "scripts/admin-keyboard-focus-order-smoke.mjs"
+      - "scripts/admin-inventory-redemption-queue-contract.mjs"
+      - "scripts/admin-inventory-redemption-queue-ui-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -141,6 +145,9 @@ jobs:
       - name: Validate player access code issuance
         run: node scripts/admin-player-access-code-smoke.mjs
 
+      - name: Validate inventory redemption queue contracts
+        run: node scripts/admin-inventory-redemption-queue-contract.mjs
+
       - name: Validate Admin modal accessibility contracts
         run: node scripts/admin-modal-accessibility-source-smoke.mjs
 
@@ -169,6 +176,12 @@ jobs:
 
       - name: Audit mounted Admin operational modal focus
         run: node scripts/admin-mounted-modal-focus-smoke.mjs
+
+      - name: Exercise inventory redemption review queue
+        run: |
+          mkdir -p admin-browser-smoke-artifacts/redemptions
+          set -o pipefail
+          node scripts/admin-inventory-redemption-queue-ui-smoke.mjs 2>&1 | tee admin-browser-smoke-artifacts/redemptions/run.log
 
       - name: Audit mounted keyboard-only Admin navigation
         run: node scripts/admin-mounted-keyboard-navigation-smoke.mjs
