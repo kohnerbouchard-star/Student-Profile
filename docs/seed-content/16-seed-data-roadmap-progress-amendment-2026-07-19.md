@@ -55,7 +55,7 @@ Static counts are only the definition foundation. They do not prove that a one-y
 
 ## Authoritative duration and market-cadence constraints
 
-`17-one-year-real-time-content-and-market-cadence-contract-v1.md` is now a controlling seed and simulation dependency.
+`17-one-year-real-time-content-and-market-cadence-contract-v1.md` is a controlling seed and simulation dependency.
 
 - one game lasts one real-world year;
 - the simulation follows wall-clock time;
@@ -66,7 +66,34 @@ Static counts are only the definition foundation. They do not prove that a one-y
 - orders, missed-minute replay, and realtime publication must be calendar-gated and idempotent;
 - one-year content approval requires recurrence, stateful chains, seasonal scheduling, procedural variants, cooldowns, deduplication, and consequence memory.
 
-The legacy implementation contains explicit market hours, but the current dashboard currently maps an active game session directly to `marketStatus: open`. That behavior is not adequate for the one-year runtime and must be replaced by an authoritative exchange-calendar service.
+### Seed exchange registry
+
+- `markets/exchanges/exchange-calendar-registry-v1.json` defines ten stable country exchanges;
+- the initial baseline preserves the existing runtime policy: `Asia/Seoul`, Monday-Friday, 08:00 inclusive to 17:00 exclusive;
+- closed-session prices hold the last authoritative close;
+- new immediate fills are rejected while closed;
+- overnight information uses a bounded opening-gap policy;
+- all exchange records remain activation disabled;
+- the exchange audit and all nine seed-preflight tests pass;
+- holiday dates, approved early closes, emergency closures, and divergent exchange timezones remain pending.
+
+### Runtime companion
+
+PR #204, `feat(stocks): enforce real-time exchange calendar`, is the bounded Backend runtime companion.
+
+Implemented and branch-verified on PR #204:
+
+- pure exchange-calendar evaluation and next-transition reporting;
+- closed-session runner rejection before market-state load or persistence;
+- service-role database gating for new immediate order fills;
+- terminal order replay preserved across later market closure;
+- dashboard market status derived from the server calendar rather than game-session activity;
+- exchange-scoped UTC minute keys for future deterministic catch-up;
+- 33 focused tests passing;
+- all Backend and Edge typechecks passing;
+- migration source audit, drift check, and whitespace check passing.
+
+PR #204 remains draft pending repository pull-request checks and does not authorize deployment.
 
 ## Current preflight result
 
@@ -77,16 +104,16 @@ The latest deterministic design preflight reports:
 - zero warnings;
 - all nine seed-preflight tests passing.
 
-The previous blockers for missing universe files, incomplete active-country selection, incomplete arrival references, stale simulation checksums, falsely declared missing simulation files, and unretained raw simulation evidence are closed.
+The previous blockers for missing universe files, incomplete active-country selection, incomplete arrival references, stale simulation checksums, falsely declared missing simulation files, unretained raw simulation evidence, and missing exchange definitions are closed at the design layer.
 
 ## Remaining blocker classes
 
-1. Fifteen design domains remain definition-only or blocked while Backend capability, persistence, calendar, calibration, and staging dependencies are unresolved.
+1. Fifteen design domains remain definition-only or blocked while Backend capability, persistence, approved holiday data, calibration, and staging dependencies are unresolved.
 2. Fifty location records still require pixel-level verification against the active map artwork before coordinates can be approved.
 3. Six active markets require financial enrichment and exchange-calendar-aware simulation.
 4. Numerical arrival-package viability requires a full-year simulation across country and difficulty conditions.
 5. Static content counts require one-year pacing, repetition, opportunity, recovery, and notification-load analysis.
-6. No environment-restricted importer, idempotent replay proof, rollback rehearsal, or bounded staging activation exists.
+6. Queued GTC execution, deterministic missed-open-minute replay, emergency closure control, environment-restricted import, rollback rehearsal, and bounded staging activation remain incomplete.
 
 ## Map-coordinate decision
 
@@ -94,9 +121,10 @@ Do not invent map points from prose or inferred geography. Coordinate approval r
 
 ## Immediate execution order
 
-1. Add exchange-calendar definitions and update the simulation protocol to process only eligible open-market minutes.
-2. Enrich and simulate Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis.
-3. Run a complete one-year content schedule simulation covering recurrence, pacing, cooldowns, variants, inactivity recovery, and repetition.
-4. Run arrival-package viability and reward-price-sink calibration over the full year.
-5. Complete map artwork verification before assigning coordinates or adjacency.
-6. Build the environment-restricted importer only after stable-ID storage, Backend capability mapping, calendar authority, replay, and rollback are approved.
+1. Complete PR #204 pull-request validation and merge the initial exchange-calendar boundary after review.
+2. Add approved holiday, early-close, and emergency-closure records and deterministic missed-open-minute replay.
+3. Enrich and simulate Eldoran, Valerion, Lumenor, Xalvoria, Dravenlok, and Syndalis using eligible open-market minutes only.
+4. Run a complete one-year content schedule simulation covering recurrence, pacing, cooldowns, variants, inactivity recovery, and repetition.
+5. Run arrival-package viability and reward-price-sink calibration over the full year.
+6. Complete map artwork verification before assigning coordinates or adjacency.
+7. Build the environment-restricted importer only after stable-ID storage, Backend capability mapping, calendar authority, replay, and rollback are approved.
