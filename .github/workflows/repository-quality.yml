@@ -43,15 +43,12 @@ jobs:
           grep -Fq '20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
           grep -Fq '`BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome. `IN_PROGRESS`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
 
-      - name: Remove one-time helpers and publish permanent diff
+      - name: Publish validated roadmap content
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main --prune
-          git checkout origin/main -- .github/workflows/repository-quality.yml
-          rm scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
-          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md .github/workflows/repository-quality.yml scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
           git diff --cached --check
           git commit -m "docs(roadmap): record Banking ledger invariant authority"
           git push origin HEAD:agent/banking-ledger-roadmap-evidence-v1
