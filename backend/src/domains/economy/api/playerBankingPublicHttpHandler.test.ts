@@ -47,6 +47,7 @@ Deno.test("Player Banking returns cross-currency public data and a safe next cur
     "LUM",
   ]);
   assertEquals(body.pagination, {
+    cursor: null,
     limit: 2,
     hasMore: true,
     nextCursor: "offset_2",
@@ -75,6 +76,7 @@ Deno.test("Player Banking cursor advances response-local public keys", async () 
     "ledger_3",
     "ledger_4",
   ]);
+  assertEquals(body.pagination.cursor, "offset_2");
   assertEquals(repository.inputs[0].offset, 2);
   assertNoUuid(body);
 });
@@ -104,7 +106,7 @@ Deno.test("Player Banking rejects malformed pagination and browser-owned scope",
     request("GET", "/players/me/ledger?limit=2&limit=3"),
     request("GET", "/players/me/ledger?gameSessionId=anything"),
     request("GET", "/players/me/ledger", undefined, { "x-player-id": PLAYER_ID }),
-    request("GET", "/players/me/ledger", { playerId: PLAYER_ID }),
+    requestWithGetBody("/players/me/ledger", { playerId: PLAYER_ID }),
   ];
 
   for (const candidate of cases) {
@@ -191,6 +193,19 @@ function request(
     init.body = JSON.stringify(body);
   }
   return new Request(`https://example.test${path}`, init);
+}
+
+function requestWithGetBody(path: string, body: unknown): Request {
+  const headers = new Headers({
+    "x-player-session-token": "player-token",
+    "content-type": "application/json",
+  });
+  return {
+    method: "GET",
+    url: `https://example.test${path}`,
+    headers,
+    text: () => Promise.resolve(JSON.stringify(body)),
+  } as unknown as Request;
 }
 
 function assertNoUuid(value: unknown): void {
