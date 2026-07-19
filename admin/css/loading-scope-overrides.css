@@ -1,0 +1,64 @@
+/* Limit Admin route loading masks to substantive data containers. */
+.admin-qol-page-skeleton[data-admin-shape-skeleton="page"] {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+.admin-qol-page-skeleton[data-admin-shape-skeleton="page"] > .admin-shape-skeleton-stage,
+.admin-shape-surface-overlay > .admin-shape-skeleton-stage {
+  visibility: hidden;
+  background: transparent !important;
+}
+
+.admin-shape-skeleton-stage :is(
+  [data-admin-skeleton-component="metrics"],
+  [data-admin-skeleton-component="activity"],
+  [data-admin-skeleton-component="roster"],
+  [data-admin-skeleton-component="list"],
+  [data-admin-skeleton-component="review"],
+  [data-admin-skeleton-component="grid"],
+  [data-admin-skeleton-component="card"],
+  [data-admin-skeleton-component="summary"],
+  [data-admin-skeleton-component="surface"],
+  [data-admin-skeleton-component="records"],
+  [data-admin-skeleton-component="table"],
+  [data-admin-skeleton-component="sections"],
+  [data-admin-skeleton-component="content"],
+  [data-admin-skeleton-component="body"],
+  [data-admin-skeleton-component="viewport"],
+  [data-admin-skeleton-component="result"]
+) {
+  visibility: visible;
+}
+
+.admin-shape-skeleton-stage :is(
+  [data-admin-skeleton-component="heading"],
+  [data-admin-skeleton-component="toolbar"],
+  [data-admin-skeleton-component="actions"],
+  [data-admin-skeleton-component="controls"],
+  [data-admin-skeleton-component="tabs"],
+  [data-admin-skeleton-component="pagination"],
+  [data-admin-skeleton-component="footer"]
+) {
+  visibility: hidden !important;
+}
+
+.admin-shape-skeleton-stage :where(
+  button,
+  input,
+  textarea,
+  select,
+  option,
+  summary,
+  [role="button"],
+  [role="tab"],
+  .admin-shape-skeleton-control
+) {
+  visibility: hidden !important;
+  animation: none !important;
+}
+
+.admin-shape-surface-overlay {
+  background: transparent !important;
+  pointer-events: none !important;
+}
