@@ -44,14 +44,20 @@ jobs:
           grep -Fq '`BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome. `IN_PROGRESS`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
 
       - name: Publish validated roadmap content
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: agent/banking-ledger-roadmap-evidence-v1
+          ROADMAP_PATH: docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-          git diff --cached --check
-          git commit -m "docs(roadmap): record Banking ledger invariant authority"
-          git push origin HEAD:agent/banking-ledger-roadmap-evidence-v1
+          blob_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}?ref=${TARGET_BRANCH}" --jq .sha)"
+          content="$(base64 -w 0 "${ROADMAP_PATH}")"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}" \
+            -f message='docs(roadmap): record Banking ledger invariant authority' \
+            -f branch="${TARGET_BRANCH}" \
+            -f sha="${blob_sha}" \
+            -f content="${content}" \
+            --silent
 
   quality:
     runs-on: ubuntu-latest
