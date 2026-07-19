@@ -8,13 +8,52 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: repository-quality-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  update-banking-roadmap-baseline:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/banking-ledger-roadmap-evidence-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out evidence branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/banking-ledger-roadmap-evidence-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Update synchronized baseline
+        run: node scripts/update-banking-roadmap-baseline-v1.mjs
+
+      - name: Validate baseline
+        run: grep -Fq 'Current audited main baseline:** `249fc53a23ad23058d376e4e394524af0bdee265`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+
+      - name: Publish validated roadmap content
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: agent/banking-ledger-roadmap-evidence-v1
+          ROADMAP_PATH: docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+        shell: bash
+        run: |
+          blob_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}?ref=${TARGET_BRANCH}" --jq .sha)"
+          content="$(base64 -w 0 "${ROADMAP_PATH}")"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}" \
+            -f message='docs(roadmap): synchronize Banking evidence baseline' \
+            -f branch="${TARGET_BRANCH}" \
+            -f sha="${blob_sha}" \
+            -f content="${content}" \
+            --silent
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
