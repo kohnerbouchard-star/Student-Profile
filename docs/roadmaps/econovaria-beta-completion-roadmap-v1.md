@@ -230,11 +230,11 @@ The application is not yet approved for beta or production runtime cutover becau
 
 ### Remaining beta work
 
-- [ ] `BETA-ADMIN-001` Complete keyboard-only navigation coverage.
-- [ ] `BETA-ADMIN-002` Complete focus trap, Escape, and focus restoration for every major modal and drawer.
+- [x] `BETA-ADMIN-001` Complete keyboard-only navigation coverage. `VERIFIED_COMPLETE` through PR #178 merged as `8ae4fc3dc9233b2e826c409680cd362c61509033` with mounted three-viewport, workflow, focus-order, and pointer-free evidence.
+- [x] `BETA-ADMIN-002` Complete focus trap, Escape, and focus restoration for every major modal and drawer. `VERIFIED_COMPLETE` through foundation PR #197 merged as `ff9c6207ae2f7284fe753f0a719b0aa0c18017ff` plus corrective exhaustive current-main inventory PR #209.
 - [ ] `BETA-ADMIN-003` Remove remaining obsolete credential-dialog renderer if still present.
 - [x] `BETA-ADMIN-004` Remove the first global request interception layer and lower the architecture ratchet. `VERIFIED_COMPLETE` via PR #168 merged as `1d487afc766146b5e3e19f718252b3eff9a1168e`; Repository Quality #421, Admin Shell Smoke #606, and Branch Hygiene #17 passed, and the ratchet decreased to 7 fetch assignments / 12 mutation observers.
-- [ ] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event.
+- [x] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event. `VERIFIED_COMPLETE` through PR #193 merged as `8e9ff38270248d3ce0a46afd4179b371379e5da3`.
 - [ ] `BETA-ADMIN-006` Add explicit loading, loaded, refreshing, stale, empty, and failed data-state contracts.
 - [ ] `BETA-ADMIN-007` Add staging-backed Admin smoke after isolated staging exists.
 - [ ] `BETA-ADMIN-008` Add the inventory-redemption review queue after Backend handoff.
