@@ -261,6 +261,7 @@ try {
   await page.waitForFunction(() => document.activeElement?.id === "fallback-close");
   await page.evaluate(() => window.__adminModalTest.fallbackController.close("close-button"));
   await page.waitForFunction(() => !document.querySelector("#fallback-backdrop") && window.EconovariaAdminModalAccessibility.getStackDepth() === 0);
+  await page.waitForFunction(() => Boolean(document.activeElement?.closest?.("#adminPreview")), null, { timeout: 3000 });
   report.fallback.active = await page.evaluate(() => ({
     id: document.activeElement?.id || "",
     section: document.activeElement?.getAttribute?.("data-admin-section") || "",
