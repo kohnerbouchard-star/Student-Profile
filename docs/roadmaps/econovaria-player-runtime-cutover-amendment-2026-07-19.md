@@ -3,7 +3,8 @@
 **Date:** 2026-07-19  
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Runtime-cutover pull request:** `#217`, merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`  
-**Physical-cleanup pull request:** `#222`  
+**Physical-cleanup pull request:** `#222`, merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`  
+**Evidence-reconciliation pull request:** `#225`  
 **Status:** `IN_PROGRESS` — repository cutover and physical cleanup merged; connected operational evidence remains open
 
 ## Scope decision
