@@ -12,6 +12,7 @@ on:
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
+      - scripts/fix-shared-game-timezone-smoke-v1.mjs
       - scripts/shared-game-timezone-ui-smoke.mjs
       - .github/workflows/configurable-stock-market-timezone-v1.yml
   workflow_dispatch:
@@ -74,8 +75,9 @@ jobs:
           run_step "apply calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
           run_step "apply RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
           run_step "apply Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
+          run_step "fix Create Game smoke" node scripts/fix-shared-game-timezone-smoke-v1.mjs
           run_step "calendar tests" npm --prefix backend run test:stock-market-calendar
-          run_step "staff signup timezone tests" deno test --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
+          run_step "staff signup timezone tests" env SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno test --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
           run_step "Create Game timezone smoke" node scripts/shared-game-timezone-ui-smoke.mjs
           run_step "backend typecheck" npm --prefix backend run typecheck:all
 
@@ -83,6 +85,7 @@ jobs:
           run_step "replay calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
           run_step "replay RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
           run_step "replay Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
+          run_step "replay Create Game smoke fix" node scripts/fix-shared-game-timezone-smoke-v1.mjs
           git diff --binary > /tmp/timezone-after-replay.patch
           run_step "combined integration idempotency" cmp /tmp/timezone-before-replay.patch /tmp/timezone-after-replay.patch
           run_step "whitespace" git diff --check
