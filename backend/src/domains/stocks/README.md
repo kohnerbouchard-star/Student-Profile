@@ -350,3 +350,7 @@ Closed sessions keep the last authoritative price. Market news and non-exchange
 game systems may continue, but regular-session price ticks and immediate trade
 fills do not. The minute key helper provides an exchange-scoped UTC idempotency
 key for later missed-open-minute replay.
+
+## Required Game Timezone
+
+Every game must store one valid IANA timezone at `game_settings.stock_market_window.timezone`. The same timezone governs every Econovaria exchange. Browser and device timezones are prohibited. Existing games receive a one-time `Asia/Seoul` migration value; after migration there is no runtime fallback. Missing or invalid settings fail closed at the request, database, runner, dashboard, and order-execution boundaries.

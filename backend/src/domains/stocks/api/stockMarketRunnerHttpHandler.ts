@@ -25,10 +25,8 @@ import {
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
 import {
-  DEFAULT_STOCK_EXCHANGE_CODE,
-  evaluateStockMarketSession,
-  type StockMarketSessionState,
-} from "../calendars/stockMarketExchangeCalendar.ts";
+  readStockMarketOpenState,
+} from "../infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   StockMarketChartPoint,
   StockMarketEngineInput,
@@ -98,7 +96,11 @@ interface StockMarketRunnerHttpDependencies {
   ) => StockMarketNewsRepository;
   readonly calculateNextTick?: CalculateStockMarketTick;
   readonly now?: () => Date;
-  readonly evaluateMarketSession?: (at: Date) => StockMarketSessionState;
+  readonly readMarketOpenState?: (
+    client: EdgeSupabaseClient,
+    gameSessionId: string,
+    at: Date,
+  ) => Promise<boolean>;
   readonly createPublicRealtimePublisher?: (
     client: EdgeSupabaseClient,
   ) => StockMarketRunnerPublicRealtimePublisher;
@@ -211,18 +213,17 @@ export async function handleStockMarketRunnerRequest(
       });
     }
 
-    const marketSession = (dependencies.evaluateMarketSession ??
-      ((at: Date) =>
-        evaluateStockMarketSession(DEFAULT_STOCK_EXCHANGE_CODE, at)))(
-          (dependencies.now ?? (() => new Date()))(),
-        );
+    const marketOpen = await (dependencies.readMarketOpenState ??
+      readStockMarketOpenState)(
+        serviceClient,
+        body.gameSessionId,
+        (dependencies.now ?? (() => new Date()))(),
+      );
 
-    if (marketSession.status !== "open") {
+    if (!marketOpen) {
       throw new StockMarketRunnerError(
         "stock_market_closed",
-        marketSession.nextTransitionAt
-          ? `Stock market is closed. The next calendar transition is ${marketSession.nextTransitionAt}.`
-          : "Stock market is closed.",
+        "Stock market is closed in the configured game timezone.",
         409,
       );
     }

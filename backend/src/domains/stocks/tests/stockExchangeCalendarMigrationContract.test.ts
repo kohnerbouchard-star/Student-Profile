@@ -3,26 +3,40 @@ declare const Deno: {
   readTextFile(path: string): Promise<string>;
 };
 
-const MIGRATION =
+const BASE_MIGRATION =
   "supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql";
+const REQUIRED_TIMEZONE_MIGRATION =
+  "supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql";
 
-Deno.test("exchange calendar migration gates new market orders at the database boundary", async () => {
-  const source = await Deno.readTextFile(MIGRATION);
-  assertIncludes(source, "create or replace function public.is_stock_market_open_at");
-  assertIncludes(source, "at time zone 'Asia/Seoul'");
-  assertIncludes(source, "time '08:00'");
-  assertIncludes(source, "time '17:00'");
-  assertIncludes(source, "create or replace function public.execute_stock_market_order_calendar_gated");
-  assertIncludes(source, "STOCK_TRADING_MARKET_CLOSED");
-  assertIncludes(source, "from public.stock_orders existing_order");
-  assertIncludes(source, "existing_order.idempotency_key = btrim(coalesce(p_idempotency_key, ''))");
-  assertIncludes(source, "if not exists (");
-  assertIncludes(source, ") and not public.is_stock_market_open_at(now()) then");
-  assertIncludes(source, "grant execute on function public.execute_stock_market_order_calendar_gated");
+Deno.test("one required game timezone gates all exchanges", async () => {
+  const base = await Deno.readTextFile(BASE_MIGRATION);
+  const required = await Deno.readTextFile(REQUIRED_TIMEZONE_MIGRATION);
+
+  assertIncludes(
+    base,
+    "create or replace function public.execute_stock_market_order_calendar_gated",
+  );
+  assertIncludes(required, "to_jsonb('Asia/Seoul'::text)");
+  assertIncludes(required, "validate_required_stock_market_timezone");
+  assertIncludes(required, "STOCK_MARKET_TIMEZONE_REQUIRED");
+  assertIncludes(required, "STOCK_MARKET_TIMEZONE_INVALID");
+  assertIncludes(required, "from pg_timezone_names");
+  assertIncludes(required, "p_game_session_id uuid");
+  assertIncludes(
+    required,
+    "public.is_stock_market_open_at(p_game_session_id, now())",
+  );
+  assertNotIncludes(required, "coalesce(v_timezone");
 });
 
 function assertIncludes(source: string, expected: string): void {
   if (!source.includes(expected)) {
     throw new Error(`Expected migration to include: ${expected}`);
+  }
+}
+
+function assertNotIncludes(source: string, unexpected: string): void {
+  if (source.includes(unexpected)) {
+    throw new Error(`Expected migration to exclude: ${unexpected}`);
   }
 }

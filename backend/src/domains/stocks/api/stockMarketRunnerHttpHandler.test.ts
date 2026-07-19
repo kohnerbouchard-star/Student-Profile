@@ -89,7 +89,7 @@ Deno.test("stock market runner rejects ticks while the market is closed", async 
     request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
     dependencies({
       repository,
-      now: () => new Date("2026-07-19T00:00:00.000Z"),
+      readMarketOpenState: async () => false,
     }),
   );
   const body = await readJson(response);
@@ -363,6 +363,7 @@ function dependencies(options: {
   readonly repository?: StockMarketRunnerRepository;
   readonly readRunnerSecret?: () => string | undefined;
   readonly now?: () => Date;
+  readonly readMarketOpenState?: () => Promise<boolean>;
   readonly calculateNextTick?: (
     input: StockMarketEngineInput,
   ) => StockMarketEngineResult;
@@ -412,6 +413,7 @@ function dependencies(options: {
     }),
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
     now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),
+    readMarketOpenState: options.readMarketOpenState ?? (async () => true),
     createRepository: () => repository,
     createNewsRepository: () =>
       options.newsRepository ?? new MockMarketNewsRepository(),

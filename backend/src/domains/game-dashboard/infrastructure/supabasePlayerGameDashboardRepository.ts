@@ -1,7 +1,6 @@
 import {
-  DEFAULT_STOCK_EXCHANGE_CODE,
-  evaluateStockMarketSession,
-} from "../../stocks/calendars/stockMarketExchangeCalendar.ts";
+  readStockMarketOpenState,
+} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   PlayerGameDashboardCashBalanceDto,
   PlayerGameDashboardInventoryItemDto,
@@ -314,6 +313,7 @@ export class SupabasePlayerGameDashboardRepository
     );
     const [
       gameSession,
+      marketOpen,
       publicMarket,
       players,
       countryByPlayerId,
@@ -329,6 +329,7 @@ export class SupabasePlayerGameDashboardRepository
       contractProgress,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
+      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
@@ -386,11 +387,8 @@ export class SupabasePlayerGameDashboardRepository
         id: gameSession.id,
         name: gameSession.name,
         status: gameSession.status,
-        marketStatus: gameSession.status === "active"
-          ? evaluateStockMarketSession(
-            DEFAULT_STOCK_EXCHANGE_CODE,
-            this.now(),
-          ).status
+        marketStatus: gameSession.status === "active" && marketOpen
+          ? "open"
           : "closed",
         currentTick: publicMarket.tickIndex,
         updatedAt: gameSession.updated_at ?? null,
