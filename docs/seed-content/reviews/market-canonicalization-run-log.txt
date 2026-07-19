@@ -54,101 +54,69 @@ exit=0
 
 TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 85.635713
+  duration_ms: 82.85583
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-    
-    true !== false
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: false
-  actual: true
-  operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:24:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 108.225101
+  duration_ms: 108.602468
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 49.171328
+  duration_ms: 47.388836
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
-not ok 4 - staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 52.508763
+  duration_ms: 45.043066
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:45:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    The expression evaluated to a falsy value:
-    
-      assert.ok(report.issues.some((entry) => entry.code === "SIMULATION_RAW_EVIDENCE_NOT_RETAINED"))
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: true
-  actual: false
-  operator: '=='
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:51:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.464149
+  duration_ms: 0.397983
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.146384
+  duration_ms: 0.133208
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.493364
+  duration_ms: 0.466124
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.239279
+  duration_ms: 0.25526
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.509824
+  duration_ms: 0.564741
   type: 'test'
   ...
 1..9
 # tests 9
 # suites 0
-# pass 7
-# fail 2
+# pass 9
+# fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 363.700027
-exit=1
+# duration_ms 357.227028
+exit=0
 
 ## design seed preflight
 
@@ -158,8 +126,8 @@ exit=1
 Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.1.0-design
 Environment: test
 Mode: design
-JSON files checked: 58
-Errors: 0; blockers: 31; warnings: 0
+JSON files checked: 64
+Errors: 0; blockers: 21; warnings: 0
 [BLOCKER] ACTIVE_MARKET_COUNTRIES_INCOMPLETE docs/seed-content/markets/active-subsets/active-market-rollout-status-v1.json: 4 country candidates are committed; 10 are required.
 [BLOCKER] ARRIVAL_PACKAGES_INCOMPLETE docs/seed-content/players/arrival-packages-v1.json: 10 arrival packages lack one or more required mechanical values or introductory references.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-packages, skills-and-credentials, contract-families, progression-model, simulation.
@@ -178,31 +146,13 @@ Errors: 0; blockers: 31; warnings: 0
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is blocked; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is blocked; dependencies: route-capability-map, notification-deduplication.
 [BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
-[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/northreach/run-manifest-v1.json: run_northreach_market_simulation_v1.py does not match its recorded SHA-256.
-[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/thaloris/run-manifest-v1.json: input-v1.json does not match its recorded SHA-256.
-[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/thaloris/run-manifest-v1.json: summary-v1.json does not match its recorded SHA-256.
-[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/yrethia/run-manifest-v1.json: input-v1.json does not match its recorded SHA-256.
-[BLOCKER] SIMULATION_CHECKSUM_MISMATCH docs/seed-content/simulation/yrethia/run-manifest-v1.json: run_yrethia_market_simulation_v1.py does not match its recorded SHA-256.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: northreach_active_instruments_v1.json is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_instrument_results.csv is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_paths.csv is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/raw_portfolio_results.csv is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/northreach/run-manifest-v1.json: output/summary.json is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: instrument-results.csv is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: portfolio-results.csv is recorded but absent from the repository.
-[BLOCKER] SIMULATION_DECLARED_FILE_MISSING docs/seed-content/simulation/yrethia/run-manifest-v1.json: summary.json is recorded but absent from the repository.
+[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/northreach/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
+[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/thaloris/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
+[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/yrethia/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
 Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-docs/seed-content/reviews/market-canonicalization-run-log.txt:65: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:67: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:99: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:101: trailing whitespace.
-+    
-exit=2
+exit=0
 
-finalStatus=1
+finalStatus=0
