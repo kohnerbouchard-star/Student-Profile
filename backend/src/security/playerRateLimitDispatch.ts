@@ -76,6 +76,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
   }),
+  contractSubmit: byMethod({
+    POST: operation("player.contracts.submit", "write"),
+  }),
   contracts: byMethod({
     GET: operation("player.contracts.read", "read"),
   }),

@@ -54,13 +54,11 @@ assert.ok(geometryCss.includes(".player-terminal-inventory-card"), "Inventory ca
 assert.ok(geometryCss.includes("grid-template-columns: 96px minmax(0, 1fr)"), "Inventory skeleton must retain its two-column card footprint.");
 
 const layoutSource = await readFile(new URL("../src/components/layout.js", import.meta.url), "utf8");
-assert.doesNotMatch(layoutSource, /renderContextNav|player-terminal-context-nav/, "Desktop context navigation must not duplicate the sidebar.");
-assert.match(layoutSource, /function renderPageContent\(pageHtml\)/, "Page rendering must normalize heading actions before mounting.");
-assert.match(layoutSource, /player-terminal-heading-actions/, "Heading action normalization must target only the page-heading action region.");
-assert.match(layoutSource, /<button\\b/, "Heading action normalization must remove buttons while preserving informational status content.");
+assert.match(layoutSource, /renderContextNav|player-terminal-context-nav/, "Skeleton work must preserve the existing Player context navigation.");
+assert.doesNotMatch(layoutSource, /function renderPageContent\(pageHtml\)/, "Skeleton work must not rewrite page-heading actions.");
 
 const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
 assert.ok(index.includes("css/player-terminal-skeletons.css"), "Skeleton stylesheet must be loaded by index.html.");
 assert.ok(index.includes("css/player-terminal-skeleton-geometry.css"), "Card geometry calibration must load after the base skeleton stylesheet.");
 
-console.log(`Skeleton registry passed: ${expectedRoutes.length} routes preserve headings, skeletonize only principal data containers, avoid fake controls, respect reduced motion, and remove redundant desktop header navigation.`);
+console.log(`Skeleton registry passed: ${expectedRoutes.length} routes preserve the existing shell and actions, skeletonize only principal data containers, avoid fake controls, and respect reduced motion.`);

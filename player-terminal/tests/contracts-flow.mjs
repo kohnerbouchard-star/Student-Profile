@@ -127,16 +127,36 @@ const accept = resolvePlayerBackendRequest({
 });
 assert.equal(accept.path, `/players/me/contracts/${publicKey}/accept`);
 assert.equal(accept.payload, undefined, "Contract acceptance scope must be derived from the authenticated Player session.");
+
+const normalizedSubmitPayload = normalizeWritePayload("contractSubmit", {
+  gameSessionId: GAME_SESSION_ID,
+  playerId: PLAYER_ID,
+  playerSessionId: session.playerSessionId,
+  contractId: "private-contract-id",
+  submissionUrl: "https://example.com/evidence",
+  note: "Completed response"
+});
+assert.deepEqual(normalizedSubmitPayload, {
+  submissionUrl: "https://example.com/evidence",
+  note: "Completed response"
+});
 const submit = resolvePlayerBackendRequest({
   endpointKey: "contractSubmit",
   method: "POST",
-  path: "/contracts/contract-1/submissions",
-  params: { contractId: "contract-1" },
-  payload: { submissionUrl: "https://example.com/evidence", note: "Completed response" },
+  path: `/contracts/${publicKey}/submissions`,
+  params: { contractId: publicKey },
+  payload: normalizedSubmitPayload,
   session
 });
-assert.equal(submit.path, "/players/me/contracts/contract-1/submit");
-assert.deepEqual(submit.payload.evidencePayload, { submissionUrl: "https://example.com/evidence", note: "Completed response" });
-assert.equal("playerId" in submit.payload, false, "Contract identity must be derived from the authenticated player session.");
+assert.equal(submit.path, `/players/me/contracts/${publicKey}/submit`);
+assert.deepEqual(submit.payload, {
+  evidencePayload: {
+    submissionUrl: "https://example.com/evidence",
+    note: "Completed response"
+  }
+});
+for (const privateField of ["gameSessionId", "playerId", "playerSessionId", "contractId"]) {
+  assert.equal(privateField in submit.payload, false, `Contract submission must not forward ${privateField}.`);
+}
 
-console.log("Contracts flow passed: public-key acceptance, scope stripping, lifecycle states, rewards, and UUID privacy are valid.");
+console.log("Contracts flow passed: public-key acceptance and submission, scope stripping, lifecycle states, rewards, and UUID privacy are valid.");
