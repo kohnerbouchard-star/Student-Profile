@@ -25,7 +25,9 @@ test("current PR #163 design catalog is structurally valid and reports readiness
   assert.equal(codes.has("ARRIVAL_PACKAGES_INCOMPLETE"), false);
   assert.equal(codes.has("SIMULATION_CHECKSUM_MISMATCH"), false);
   assert.equal(codes.has("SIMULATION_DECLARED_FILE_MISSING"), false);
-  assert.ok(codes.has("SIMULATION_RAW_EVIDENCE_NOT_RETAINED"));
+  assert.equal(codes.has("SIMULATION_RAW_EVIDENCE_NOT_RETAINED"), false);
+  assert.equal(codes.has("SIMULATION_RAW_EVIDENCE_RETENTION_UNRESOLVED"), false);
+  assert.equal(codes.has("SIMULATION_ARTIFACT_EVIDENCE_INVALID"), false);
   assert.ok(codes.has("LOCATION_MAP_PENDING"));
 });
 
@@ -49,7 +51,8 @@ test("staging mode remains blocked until executable content is complete", async 
   assert.ok(report.issues.some((entry) => entry.code === "RUNTIME_ACTIVATION_DISABLED"));
   assert.equal(report.issues.some((entry) => entry.code === "ACTIVE_MARKET_COUNTRIES_INCOMPLETE"), false);
   assert.equal(report.issues.some((entry) => entry.code === "ARRIVAL_PACKAGES_INCOMPLETE"), false);
-  assert.ok(report.issues.some((entry) => entry.code === "SIMULATION_RAW_EVIDENCE_NOT_RETAINED"));
+  assert.equal(report.issues.some((entry) => entry.code === "SIMULATION_RAW_EVIDENCE_NOT_RETAINED"), false);
+  assert.equal(report.issues.some((entry) => entry.code === "SIMULATION_ARTIFACT_EVIDENCE_INVALID"), false);
   assert.equal(report.issues.some((entry) => entry.code === "UNIVERSE_NOT_STAGING_READY"), false);
 });
 
