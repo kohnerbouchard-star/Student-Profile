@@ -36,6 +36,16 @@ function normalizeString(key, value, endpointKey) {
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
   if (endpointKey === "contractAccept") return {};
+  if (endpointKey === "contractSubmit") {
+    const payload = {};
+    if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") {
+      payload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
+    }
+    if (raw.note !== undefined && raw.note !== null && raw.note !== "") {
+      payload.note = normalizeString("note", raw.note, endpointKey);
+    }
+    return payload;
+  }
   const payload = {};
 
   for (const [key, value] of Object.entries(raw).slice(0, 80)) {
