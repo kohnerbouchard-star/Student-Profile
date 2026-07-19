@@ -25,7 +25,6 @@ jobs:
           set +e
           python3 <<'PY' > /tmp/player-banking-patch.log 2>&1
           from pathlib import Path
-          import re
           import textwrap
           import traceback
 
@@ -65,12 +64,12 @@ jobs:
               definition_start = code.index("def replace_once(path, old, new):")
               definition_end = code.index("\n\nreplace_once(", definition_start)
               code = code[:definition_start] + textwrap.dedent(flexible_definition) + code[definition_end:]
-              code = re.sub(
-                  r'\nreplace_once\(\n\s+"player-terminal/src/pages/banking-page[.]js",.*?\n\)\n',
-                  "\n",
-                  code,
-                  flags=re.S,
-              )
+              page_marker = '"player-terminal/src/pages/banking-page.js"'
+              while page_marker in code:
+                  marker_index = code.index(page_marker)
+                  call_start = code.rfind("\nreplace_once(", 0, marker_index)
+                  call_end = code.index("\n)", marker_index) + 2
+                  code = code[:call_start] + "\n" + code[call_end:]
               exec(compile(code, 'apply-player-banking-public-read-v1', 'exec'))
           except Exception:
               traceback.print_exc()
