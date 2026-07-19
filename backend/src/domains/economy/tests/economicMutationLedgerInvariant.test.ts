@@ -142,7 +142,7 @@ Deno.test("Contract cash rewards issue one ledger write while invalid and alread
       });
     },
   };
-  const writer = new ContractRewardLedgerRpcWriter(client);
+  const writer = new ContractRewardLedgerRpcWriter(client as never);
   const applied = await issueContractRewards({
     gameSessionId: GAME,
     contractId: "00000000-0000-4000-8000-000000000051",
