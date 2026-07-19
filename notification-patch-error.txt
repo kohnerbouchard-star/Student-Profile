@@ -1,1 +1,1 @@
-Expected exactly one match in backend/src/domains/notifications/contracts/playerNotificationContracts.ts: '  }): Promise<readonly PlayerNotificationRecord[]>;\n\nreadDeliveriesByPublicIds(input: {'; found 0
+Expected exactly one match in backend/src/domains/notifications/contracts/playerNotificationContracts.ts: '  readonly page: {\n  readonly returned: number;\n  readonly hasMore: boolean;\n  readonly nextCursor: string | null;\n};\nre'; found 0
