@@ -111,15 +111,32 @@ async function exerciseExportHistoryModal(browser) {
     const opener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
     await keyboardActivate(page, opener);
 
-    const backdrop = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
-    const dialog = backdrop.locator('[role="dialog"]').first();
-    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    const surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+    await surface.waitFor({ state: "visible", timeout: 5000 });
+    const ownership = await surface.evaluate((root) => {
+      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+      const dialog = controller?.dialog;
+      const related = dialog instanceof HTMLElement && (
+        dialog === root || root.contains(dialog) || dialog.contains(root)
+      );
+      if (related) dialog.dataset.adminExportHistoryA11yTarget = "true";
+      return {
+        related,
+        surfaceTag: root.tagName,
+        surfaceClass: root.className,
+        surfaceRole: root.getAttribute("role") || "",
+        controllerDialogTag: dialog?.tagName || "",
+        controllerDialogClass: dialog?.className || "",
+      };
+    });
+    assert(ownership.related, `Export History is not owned by the shared modal controller: ${'${JSON.stringify(ownership)}'}.`);
+    const dialog = page.locator('[data-admin-export-history-a11y-target="true"]');
     const focusableCount = await assertFocusTrap(page, dialog, "Export History modal");
-    await escapeAndRestore(page, backdrop, opener, "Export History modal");
+    await escapeAndRestore(page, surface, opener, "Export History modal");
     const pointerEvents = await page.evaluate(() => window.__adminAccessibilityPointerEvents || []);
     assert(pointerEvents.length === 0, \`Export History recorded pointer input: \${JSON.stringify(pointerEvents)}\`);
     assert(errors.length === 0, errors[0] || "Export History emitted an unexpected browser error.");
-    return { focusableCount, escape: "dismissed", restored: true, pointerEvents: 0 };
+    return { focusableCount, escape: "dismissed", restored: true, pointerEvents: 0, ownership };
   } finally {
     await context.close();
   }
