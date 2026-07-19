@@ -1,5 +1,6 @@
 name: Exchange Calendar Runtime
 
+# Validation revision 2: type assertion and idempotent ratchet fixes.
 on:
   push:
     branches:
