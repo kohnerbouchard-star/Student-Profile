@@ -117,6 +117,11 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
   },
   {
+    key: "banking",
+    operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }],
+    routeCapabilities: ["banking"],
+  },
+  {
     key: "contractAccept",
     operations: [{
       method: "POST",
