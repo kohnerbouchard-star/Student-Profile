@@ -91,3 +91,13 @@ This tranche does not:
 ## Next exact action
 
 Complete all pull-request gates, confirm the final diff remains isolated and mergeable, then merge the runtime cutover. Connected isolated-staging and live Cloudflare shutdown evidence remain separate post-merge operational requirements before either item becomes `VERIFIED_COMPLETE`.
+
+
+## Physical legacy-source removal
+
+**Branch:** `agent/legacy-player-source-removal-v1`  
+**Status:** `IMPLEMENTED_NOT_MERGED`
+
+This bounded cleanup deletes the dormant root-shell Player implementation, its feature modules, obsolete realtime adapter and test, compatibility marker, unused Player CSS screens/layouts, and the old behavior-preserving refactor note. The root authentication surface, Admin runtime, Player Terminal, Supabase API bridge, operational Cloudflare-retirement evidence, and seed-content authority remain intact.
+
+The permanent runtime-cutover smoke now fails if any retired path returns or if active sources restore `appShell`, `submitAction`, `workers.dev`, or the legacy Cloudflare hostname.
