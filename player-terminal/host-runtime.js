@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "econovaria.player.auth.v1";
   const CLASSROOM_API_URL = "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/classroom-api";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
   const SESSION_INVALID_EVENT = "econovaria:player-session-invalid";
   const SESSION_REQUIRED_EVENT = "econovaria:player-session-required";
   const LOGOUT_COMPLETED_EVENT = "econovaria:player-logout-completed";
@@ -28,8 +29,7 @@
       return {
         playerSessionToken,
         sessionExpiresAt: expiresAt,
-        player: value?.player || null,
-        gameSession: value?.gameSession || null
+        accessToken: SUPABASE_PUBLISHABLE_KEY
       };
     } catch (_) {
       runtime.sessionStorage.removeItem(STORAGE_KEY);
@@ -68,6 +68,7 @@
     studentProfileMode: true,
     studentProfileApiBaseUrl: CLASSROOM_API_URL,
     apiBaseUrl: CLASSROOM_API_URL,
+    accessToken: SUPABASE_PUBLISHABLE_KEY,
     playerSessionToken: session?.playerSessionToken || "",
     sessionProvider: () => readStoredSession(),
     sessionExitUrl: loginUrl("logged-out"),
@@ -81,9 +82,7 @@
   };
 
   runtime.addEventListener(LOGOUT_COMPLETED_EVENT, clearStoredSession);
-  runtime.addEventListener(SESSION_INVALID_EVENT, () => {
-    clearStoredSession();
-  });
+  runtime.addEventListener(SESSION_INVALID_EVENT, clearStoredSession);
   runtime.addEventListener(SESSION_REQUIRED_EVENT, () => {
     if (!development && !readStoredSession()) redirectToLogin("session-invalid");
   });
