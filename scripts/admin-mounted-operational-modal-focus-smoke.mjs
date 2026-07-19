@@ -192,6 +192,27 @@ async function tabTo(page, sectionControl, target, label) {
   throw new Error(`${label} was not reachable through sequential Tab navigation.`);
 }
 
+async function liveFocusBoundary(modal, mode = "read") {
+  return modal.evaluate((dialog, requestedMode) => {
+    const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+    const describe = (node) => ({
+      action: node?.getAttribute?.("data-admin-terminal-action") || "",
+      ariaLabel: node?.getAttribute?.("aria-label") || "",
+      tag: node?.tagName || "",
+      text: (node?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 80),
+    });
+    if (requestedMode === "focus-last") controls.at(-1)?.focus({ preventScroll: true });
+    return {
+      count: controls.length,
+      first: describe(controls[0]),
+      last: describe(controls.at(-1)),
+      activeIsFirst: document.activeElement === controls[0],
+      activeIsLast: document.activeElement === controls.at(-1),
+      active: describe(document.activeElement),
+    };
+  }, mode);
+}
+
 async function exerciseSurface(browser, surface) {
   const { context, page, errors } = await createPage(browser);
   try {
@@ -215,32 +236,14 @@ async function exerciseSurface(browser, surface) {
       inside: Boolean(document.activeElement?.closest?.(".admin-terminal-modal")),
     }));
 
-    const bounds = await modal.evaluate((dialog) => {
-      const selector = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
-      const controls = [...dialog.querySelectorAll(selector)].filter((node) => {
-        if (!(node instanceof HTMLElement) || node.hidden || node.getAttribute("aria-hidden") === "true") return false;
-        if (node.closest("[hidden], [inert], [aria-hidden='true']")) return false;
-        if (node.getAttribute("aria-disabled") === "true") return false;
-        const style = getComputedStyle(node);
-        const rect = node.getBoundingClientRect();
-        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0 && node.tabIndex >= 0;
-      });
-      return {
-        count: controls.length,
-        first: controls[0]?.getAttribute("data-admin-terminal-action") || controls[0]?.getAttribute("aria-label") || controls[0]?.tagName || "",
-        last: controls[controls.length - 1]?.getAttribute("data-admin-terminal-action") || controls[controls.length - 1]?.getAttribute("aria-label") || controls[controls.length - 1]?.tagName || "",
-      };
-    });
+    const bounds = await liveFocusBoundary(modal, "focus-last");
     assert(bounds.count > 0, `${surface.action} modal contains no focusable controls.`);
-
-    const focusables = modal.locator('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"], [tabindex]:not([tabindex="-1"])').filter({ visible: true });
-    const first = focusables.first();
-    const last = focusables.last();
-    await last.focus();
     await page.keyboard.press("Tab");
-    assert(await first.evaluate((node) => document.activeElement === node), `${surface.action} forward Tab did not wrap to first control.`);
+    const forward = await liveFocusBoundary(modal);
+    assert(forward.activeIsFirst, `${surface.action} forward Tab did not wrap to live first control: ${JSON.stringify(forward)}.`);
     await page.keyboard.press("Shift+Tab");
-    assert(await last.evaluate((node) => document.activeElement === node), `${surface.action} reverse Tab did not wrap to last control.`);
+    const reverse = await liveFocusBoundary(modal);
+    assert(reverse.activeIsLast, `${surface.action} reverse Tab did not wrap to live last control: ${JSON.stringify(reverse)}.`);
 
     await page.keyboard.press("Escape");
     await modal.waitFor({ state: "hidden", timeout: 5000 });
@@ -257,7 +260,7 @@ async function exerciseSurface(browser, surface) {
     assert(keyboard.pointerEvents.length === 0, `${surface.action} emitted pointer input: ${JSON.stringify(keyboard.pointerEvents)}.`);
     assert(errors.length === 0, `${surface.action} emitted browser errors: ${errors[0]}`);
 
-    return { ...surface, openerTabs, initial, bounds, restored: true, keyboard };
+    return { ...surface, openerTabs, initial, bounds, forward, reverse, restored: true, keyboard };
   } catch (error) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/${surface.action}-failure.png`, fullPage: true });
     throw error;
