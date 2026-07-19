@@ -97,12 +97,10 @@ begin
     raise exception 'STOCK_RUNNER_FUTURE_MARKET_MINUTE';
   end if;
 
-  if not public.is_stock_market_open_at(v_market_minute) then
+  if not public.is_stock_market_open_at(p_game_session_id, v_market_minute) then
     raise exception 'STOCK_RUNNER_MARKET_MINUTE_CLOSED';
   end if;
 
-  -- Serialize one game/exchange/minute across scheduler retries and concurrent
-  -- workers before any asset state is changed.
   perform pg_advisory_xact_lock(
     hashtextextended(
       p_game_session_id::text || ':' || v_exchange_code || ':' || v_market_minute::text,
