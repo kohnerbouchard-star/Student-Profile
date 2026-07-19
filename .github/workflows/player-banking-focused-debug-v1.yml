@@ -11,7 +11,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,13 +27,22 @@ jobs:
       - name: Install Backend dependencies
         working-directory: backend
         run: npm ci
-      - name: Run focused Banking tests
+      - name: Run Banking integration suites
         id: focused
         working-directory: backend
         shell: bash
         run: |
           set +e
-          npm run test:player-banking-public 2>&1 | tee "$RUNNER_TEMP/player-banking-focused.log"
+          {
+            npm run test:player-capabilities
+            capabilities=$?
+            npm run test:player-security
+            security=$?
+            npm run test:player-banking-public
+            banking=$?
+            echo "capabilities=$capabilities security=$security banking=$banking"
+            test "$capabilities" -eq 0 && test "$security" -eq 0 && test "$banking" -eq 0
+          } 2>&1 | tee "$RUNNER_TEMP/player-banking-focused.log"
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
