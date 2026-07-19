@@ -14,6 +14,7 @@ interface QueryError {
 interface QueryResponse<T> {
   readonly data: T | null;
   readonly error: QueryError | null;
+  readonly count?: number | null;
 }
 
 interface FilterBuilder
@@ -39,7 +40,10 @@ interface UpdateBuilder
 }
 
 interface QueryBuilder {
-  select(columns: string): FilterBuilder;
+  select(
+    columns: string,
+    options?: { readonly count?: "exact"; readonly head?: boolean },
+  ): FilterBuilder;
   update(values: unknown): UpdateBuilder;
 }
 
@@ -99,15 +103,19 @@ export class SupabasePlayerNotificationRepository
       .order("delivered_at", { ascending: false })
       .order("public_delivery_id", { ascending: false })
       .limit(input.limit);
-    if (deliveryResponse.error) throw mapPersistenceError(deliveryResponse.error);
+    if (deliveryResponse.error) {
+      throw mapPersistenceError(deliveryResponse.error);
+    }
 
     const deliveries = deliveryResponse.data ?? [];
     if (deliveries.length === 0) return [];
     assertDeliveryScope(deliveries, input.gameId, input.playerUuid);
 
-    const internalNotificationUuids = [...new Set(
-      deliveries.map((row) => requireUuid(row.notification_id)),
-    )];
+    const internalNotificationUuids = [
+      ...new Set(
+        deliveries.map((row) => requireUuid(row.notification_id)),
+      ),
+    ];
     const notificationResponse = await this.client
       .from("notifications")
       .select(NOTIFICATION_SELECT)
@@ -127,7 +135,9 @@ export class SupabasePlayerNotificationRepository
     );
     if (
       internalNotificationUuids.some((id) => !notificationByUuid.has(id)) ||
-      notificationRows.some((row) => requireUuid(row.game_session_id) !== input.gameId)
+      notificationRows.some((row) =>
+        requireUuid(row.game_session_id) !== input.gameId
+      )
     ) {
       throw metadataMissing();
     }
@@ -139,6 +149,26 @@ export class SupabasePlayerNotificationRepository
       if (!notification) throw metadataMissing();
       return toNotificationRecord(delivery, notification);
     });
+  }
+  async countUnreadNotifications(input: {
+    readonly gameId: string;
+    readonly playerUuid: string;
+  }): Promise<number> {
+    const response = await this.client
+      .from("notification_deliveries")
+      .select("id", { count: "exact", head: true })
+      .eq("game_session_id", input.gameId)
+      .eq("player_id", input.playerUuid)
+      .is("seen_at", null)
+      .is("dismissed_at", null);
+    if (response.error) throw mapPersistenceError(response.error);
+    if (
+      typeof response.count !== "number" ||
+      !Number.isSafeInteger(response.count) || response.count < 0
+    ) {
+      throw readFailed();
+    }
+    return response.count;
   }
 
   async readDeliveriesByPublicIds(input: {
@@ -155,7 +185,9 @@ export class SupabasePlayerNotificationRepository
       .eq("player_id", input.playerUuid)
       .in("public_delivery_id", input.publicDeliveryIds)
       .limit(input.publicDeliveryIds.length + 1);
-    if (deliveryResponse.error) throw mapPersistenceError(deliveryResponse.error);
+    if (deliveryResponse.error) {
+      throw mapPersistenceError(deliveryResponse.error);
+    }
 
     const deliveries = deliveryResponse.data ?? [];
     if (deliveries.length > input.publicDeliveryIds.length) throw readFailed();
@@ -179,11 +211,15 @@ export class SupabasePlayerNotificationRepository
       .in("public_delivery_id", input.publicDeliveryIds)
       .is("seen_at", null)
       .select(DELIVERY_SELECT);
-    if (deliveryResponse.error) throw mapPersistenceError(deliveryResponse.error, true);
+    if (deliveryResponse.error) {
+      throw mapPersistenceError(deliveryResponse.error, true);
+    }
 
     const deliveries = deliveryResponse.data ?? [];
     assertDeliveryScope(deliveries, input.gameId, input.playerUuid);
-    if (deliveries.some((row) => requireIsoDateTime(row.seen_at) !== input.seenAt)) {
+    if (
+      deliveries.some((row) => requireIsoDateTime(row.seen_at) !== input.seenAt)
+    ) {
       throw writeFailed();
     }
     return await this.attachPublicNotificationIds(deliveries, input.gameId);
@@ -194,9 +230,11 @@ export class SupabasePlayerNotificationRepository
     gameId: string,
   ): Promise<readonly PlayerNotificationDeliveryStateRecord[]> {
     if (deliveries.length === 0) return [];
-    const internalNotificationUuids = [...new Set(
-      deliveries.map((row) => requireUuid(row.notification_id)),
-    )];
+    const internalNotificationUuids = [
+      ...new Set(
+        deliveries.map((row) => requireUuid(row.notification_id)),
+      ),
+    ];
     const notificationResponse = await this.client
       .from("notifications")
       .select("id,public_notification_id,game_session_id")
@@ -211,8 +249,13 @@ export class SupabasePlayerNotificationRepository
     if (rows.length > internalNotificationUuids.length) throw readFailed();
     const publicIdByUuid = new Map(
       rows.map((row) => {
-        if (requireUuid(row.game_session_id) !== gameId) throw metadataMissing();
-        return [requireUuid(row.id), requirePublicNotificationId(row.public_notification_id)];
+        if (requireUuid(row.game_session_id) !== gameId) {
+          throw metadataMissing();
+        }
+        return [
+          requireUuid(row.id),
+          requirePublicNotificationId(row.public_notification_id),
+        ];
       }),
     );
     if (internalNotificationUuids.some((id) => !publicIdByUuid.has(id))) {
@@ -350,7 +393,10 @@ function requireText(value: unknown): string {
 
 function requireUuid(value: unknown): string {
   const text = requireText(value).toLowerCase();
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(text)) {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      .test(text)
+  ) {
     throw readFailed();
   }
   return text;

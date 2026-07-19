@@ -4,7 +4,7 @@ function requiredText(value, fieldName, endpointKey) {
   const text = typeof value === "string" ? value.trim() : "";
   if (text) return text;
   throw new ApiRequestError(`${fieldName} is required for ${endpointKey}.`, {
-    body: { code: "player_route_context_missing", fieldName, endpointKey }
+    body: { code: "player_route_context_missing", fieldName, endpointKey },
   });
 }
 
@@ -37,7 +37,7 @@ function gameSessionId(payload, session, endpointKey) {
   return requiredText(
     payload?.gameSessionId || session?.gameSessionId,
     "gameSessionId",
-    endpointKey
+    endpointKey,
   );
 }
 
@@ -45,15 +45,22 @@ function notificationDeliveryIds(payload, endpointKey) {
   const rawIds = Array.isArray(payload?.deliveryIds)
     ? payload.deliveryIds
     : Array.isArray(payload?.notificationIds)
-      ? payload.notificationIds
-      : [];
-  const deliveryIds = [...new Set(rawIds.map((value) =>
-    typeof value === "string" ? value.trim().toLowerCase() : ""
-  ).filter(Boolean))];
+    ? payload.notificationIds
+    : [];
+  const deliveryIds = [
+    ...new Set(
+      rawIds.map((value) =>
+        typeof value === "string" ? value.trim().toLowerCase() : ""
+      ).filter(Boolean),
+    ),
+  ];
   if (deliveryIds.length >= 1 && deliveryIds.length <= 50) return deliveryIds;
-  throw new ApiRequestError("Provide between 1 and 50 notification delivery IDs.", {
-    body: { code: "player_notification_delivery_ids_invalid", endpointKey }
-  });
+  throw new ApiRequestError(
+    "Provide between 1 and 50 notification delivery IDs.",
+    {
+      body: { code: "player_notification_delivery_ids_invalid", endpointKey },
+    },
+  );
 }
 
 const ROUTE_BUILDERS = Object.freeze({
@@ -61,70 +68,89 @@ const ROUTE_BUILDERS = Object.freeze({
 
   capabilities: () => ({
     method: "GET",
-    path: "/players/me/capabilities"
+    path: "/players/me/capabilities",
   }),
 
   dashboard: ({ session }) => ({
     method: "GET",
     path: queryPath("/players/me/game/dashboard", {
-      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "dashboard")
-    })
+      gameSessionId: requiredText(
+        session?.gameSessionId,
+        "gameSessionId",
+        "dashboard",
+      ),
+    }),
   }),
 
   countries: () => ({
     method: "GET",
-    path: "/players/me/world/countries"
+    path: "/players/me/world/countries",
   }),
 
   country: ({ params = {}, payload = {} }) => ({
     method: "GET",
-    path: `/players/me/world/countries/${encodeURIComponent(requiredText(
-      params.countryId || payload.countryId,
-      "countryId",
-      "country"
-    ))}`
+    path: `/players/me/world/countries/${
+      encodeURIComponent(requiredText(
+        params.countryId || payload.countryId,
+        "countryId",
+        "country",
+      ))
+    }`,
   }),
 
   news: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/world/news", {
       limit: payload.limit ?? 100,
-      category: payload.category
-    })
+      category: payload.category,
+    }),
   }),
 
   portfolio: ({ session }) => ({
     method: "GET",
     path: queryPath("/players/me/stocks/portfolio", {
-      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "portfolio"),
-      playerSessionId: requiredText(session?.playerSessionId, "playerSessionId", "portfolio")
-    })
+      gameSessionId: requiredText(
+        session?.gameSessionId,
+        "gameSessionId",
+        "portfolio",
+      ),
+      playerSessionId: requiredText(
+        session?.playerSessionId,
+        "playerSessionId",
+        "portfolio",
+      ),
+    }),
   }),
 
   market: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/stocks/assets", {
       limit: payload.limit ?? 100,
-      offset: payload.offset ?? 0
-    })
+      offset: payload.offset ?? 0,
+    }),
   }),
 
   marketAsset: ({ params = {}, payload = {} }) => ({
     method: "GET",
-    path: queryPath(`/players/me/stocks/assets/${encodeURIComponent(requiredText(
-      params.assetId || payload.assetId,
-      "assetId",
-      "marketAsset"
-    ))}`, {
-      historyLimit: payload.historyLimit ?? 200
-    })
+    path: queryPath(
+      `/players/me/stocks/assets/${
+        encodeURIComponent(requiredText(
+          params.assetId || payload.assetId,
+          "assetId",
+          "marketAsset",
+        ))
+      }`,
+      {
+        historyLimit: payload.historyLimit ?? 200,
+      },
+    ),
   }),
 
   marketOrder: ({ payload = {}, session }) => {
     if (String(payload.orderType || "market").toLowerCase() !== "market") {
       throw new ApiRequestError(
         "Limit orders are not supported by the current player stock-order route.",
-        { body: { code: "player_limit_orders_not_supported" } }
+        { body: { code: "player_limit_orders_not_supported" } },
       );
     }
     return {
@@ -132,27 +158,39 @@ const ROUTE_BUILDERS = Object.freeze({
       path: "/players/me/stocks/orders",
       payload: {
         gameSessionId: gameSessionId(payload, session, "marketOrder"),
-        stockAssetId: requiredText(payload.stockAssetId || payload.assetId, "stockAssetId", "marketOrder"),
+        stockAssetId: requiredText(
+          payload.stockAssetId || payload.assetId,
+          "stockAssetId",
+          "marketOrder",
+        ),
         side: requiredText(payload.side, "side", "marketOrder").toLowerCase(),
         quantity: Number(payload.quantity),
-        idempotencyKey: idempotencyKey(payload, "marketOrder")
-      }
+        idempotencyKey: idempotencyKey(payload, "marketOrder"),
+      },
     };
   },
 
   marketWatchlist: ({ params = {}, payload = {} }) => {
     if (typeof payload.enabled !== "boolean") {
-      throw new ApiRequestError("enabled must be a boolean for marketWatchlist.", {
-        body: { code: "player_watchlist_state_invalid", endpointKey: "marketWatchlist" }
-      });
+      throw new ApiRequestError(
+        "enabled must be a boolean for marketWatchlist.",
+        {
+          body: {
+            code: "player_watchlist_state_invalid",
+            endpointKey: "marketWatchlist",
+          },
+        },
+      );
     }
     return {
       method: payload.enabled ? "PUT" : "DELETE",
-      path: `/players/me/stocks/watchlist/${encodeURIComponent(requiredText(
-        params.assetId || payload.assetId,
-        "assetId",
-        "marketWatchlist"
-      ))}`
+      path: `/players/me/stocks/watchlist/${
+        encodeURIComponent(requiredText(
+          params.assetId || payload.assetId,
+          "assetId",
+          "marketWatchlist",
+        ))
+      }`,
     };
   },
 
@@ -163,8 +201,8 @@ const ROUTE_BUILDERS = Object.freeze({
     path: "/players/me/store/quotes",
     payload: {
       itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"),
-      quantity: Number(payload.quantity ?? 1)
-    }
+      quantity: Number(payload.quantity ?? 1),
+    },
   }),
 
   storePurchase: ({ payload = {} }) => ({
@@ -175,107 +213,134 @@ const ROUTE_BUILDERS = Object.freeze({
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
       clientSubmittedAt: typeof payload.clientSubmittedAt === "string"
         ? payload.clientSubmittedAt
-        : null
-    }
+        : null,
+    },
   }),
 
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
 
   inventoryUse: ({ params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/inventory/${encodeURIComponent(requiredText(
-      params.inventoryItemId || params.itemId || payload.itemId,
-      "itemId",
-      "inventoryUse"
-    ))}/redemptions`,
+    path: `/players/me/inventory/${
+      encodeURIComponent(requiredText(
+        params.inventoryItemId || params.itemId || payload.itemId,
+        "itemId",
+        "inventoryUse",
+      ))
+    }/redemptions`,
     payload: {
       quantity: Number(payload.quantity ?? 1),
       note: typeof payload.note === "string" ? payload.note.trim() : "",
-      idempotencyKey: idempotencyKey(payload, "inventoryUse")
-    }
+      idempotencyKey: idempotencyKey(payload, "inventoryUse"),
+    },
   }),
 
   banking: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 })
+    path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 }),
   }),
 
   contracts: () => ({
     method: "GET",
-    path: "/players/me/contracts"
+    path: "/players/me/contracts",
   }),
 
   contractAccept: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/contracts/${encodeURIComponent(requiredText(
-      params.contractKey ||
-        params.contractId ||
-        payload.contractKey ||
-        payload.contractId ||
-        resolvedPathValue(path, /^\/contracts\/([^/]+)\/accept$/),
-      "contractKey",
-      "contractAccept"
-    ))}/accept`
+    path: `/players/me/contracts/${
+      encodeURIComponent(requiredText(
+        params.contractKey ||
+          params.contractId ||
+          payload.contractKey ||
+          payload.contractId ||
+          resolvedPathValue(path, /^\/contracts\/([^/]+)\/accept$/),
+        "contractKey",
+        "contractAccept",
+      ))
+    }/accept`,
   }),
 
   contractSubmit: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/contracts/${encodeURIComponent(requiredText(
-      params.contractKey ||
-        params.contractId ||
-        payload.contractKey ||
-        payload.contractId ||
-        resolvedPathValue(path, /^\/contracts\/([^/]+)\/submissions?$/),
-      "contractKey",
-      "contractSubmit"
-    ))}/submit`,
+    path: `/players/me/contracts/${
+      encodeURIComponent(requiredText(
+        params.contractKey ||
+          params.contractId ||
+          payload.contractKey ||
+          payload.contractId ||
+          resolvedPathValue(path, /^\/contracts\/([^/]+)\/submissions?$/),
+        "contractKey",
+        "contractSubmit",
+      ))
+    }/submit`,
     payload: {
       evidencePayload: payload.evidencePayload &&
           typeof payload.evidencePayload === "object" &&
           !Array.isArray(payload.evidencePayload)
         ? payload.evidencePayload
         : {
-            submissionUrl: typeof payload.submissionUrl === "string" ? payload.submissionUrl.trim() : "",
-            note: typeof payload.note === "string" ? payload.note.trim() : ""
-          }
-    }
+          submissionUrl: typeof payload.submissionUrl === "string"
+            ? payload.submissionUrl.trim()
+            : "",
+          note: typeof payload.note === "string" ? payload.note.trim() : "",
+        },
+    },
   }),
-
   notifications: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/notifications", {
       status: payload.status ?? "unread",
       limit: payload.limit ?? 50,
-      cursor: payload.cursor
-    })
+      cursor: payload.cursor,
+    }),
+  }),
+
+  notificationsPage: ({ payload = {} }) => ({
+    method: "GET",
+    path: queryPath("/players/me/notifications", {
+      status: payload.status ?? "unread",
+      limit: payload.limit ?? 20,
+      cursor: payload.cursor,
+    }),
   }),
 
   notificationsRead: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/notifications/read",
     payload: {
-      deliveryIds: notificationDeliveryIds(payload, "notificationsRead")
-    }
+      deliveryIds: notificationDeliveryIds(payload, "notificationsRead"),
+    },
   }),
 
-  logout: () => ({ method: "POST", path: "/players/me/session/logout" })
+  logout: () => ({ method: "POST", path: "/players/me/session/logout" }),
 });
 
-export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(Object.keys(ROUTE_BUILDERS));
+export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(
+  Object.keys(ROUTE_BUILDERS),
+);
 
 export function hasPlayerBackendRoute(endpointKey) {
   return Object.hasOwn(ROUTE_BUILDERS, endpointKey);
 }
 
-export function resolvePlayerBackendRequest({ endpointKey, method, path, payload, params, session }) {
+export function resolvePlayerBackendRequest(
+  { endpointKey, method, path, payload, params, session },
+) {
   const builder = ROUTE_BUILDERS[endpointKey];
   if (!builder) return null;
-  const resolved = builder({ endpointKey, method, path, payload, params, session });
+  const resolved = builder({
+    endpointKey,
+    method,
+    path,
+    payload,
+    params,
+    session,
+  });
   return {
     endpointKey,
     method: resolved.method,
     path: resolved.path,
     payload: Object.hasOwn(resolved, "payload") ? resolved.payload : undefined,
-    provisional: { method, path, payload }
+    provisional: { method, path, payload },
   };
 }
