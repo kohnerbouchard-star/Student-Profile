@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { PlayerApi } from "../src/api/player-api.js";
+import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 
 const manifest = {
@@ -151,9 +152,16 @@ const initial = await api.loadRoute("contracts", { force: true });
 assert.equal(initial.data.contracts.items[0].id, "arrival-orientation");
 assert.equal(initial.data.contracts.items[0].status, "Available");
 
+const normalizedAcceptance = normalizeWritePayload("contractAccept", {
+  gameSessionId: "browser-owned-scope",
+  playerId: "browser-owned-player",
+  playerSessionId: "browser-owned-session"
+});
+assert.deepEqual(normalizedAcceptance, {});
+
 const operation = await api.execute(
   "contractAccept",
-  { gameSessionId: "browser-owned-scope", playerId: "browser-owned-player" },
+  normalizedAcceptance,
   { contractId: "arrival-orientation" }
 );
 assert.equal(operation.result.contract.contractKey, "arrival-orientation");
