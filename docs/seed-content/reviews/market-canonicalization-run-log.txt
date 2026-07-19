@@ -56,55 +56,55 @@ TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
 ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 82.85583
+  duration_ms: 92.583499
   type: 'test'
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 108.602468
+  duration_ms: 121.236887
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 47.388836
+  duration_ms: 50.979496
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
 ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 45.043066
+  duration_ms: 49.199744
   type: 'test'
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.397983
+  duration_ms: 0.409041
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.133208
+  duration_ms: 0.148095
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.466124
+  duration_ms: 0.464215
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.25526
+  duration_ms: 0.286403
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.564741
+  duration_ms: 0.560232
   type: 'test'
   ...
 1..9
@@ -115,7 +115,7 @@ ok 9 - simulation manifests normalize both supported checksum schemas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 357.227028
+# duration_ms 386.983503
 exit=0
 
 ## design seed preflight
