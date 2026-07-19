@@ -1,0 +1,60 @@
+
+## apply exchange calendar integration
+Applied exchange-calendar runtime integration.
+exit=0
+
+## focused exchange calendar tests
+
+> test:stock-market-calendar
+> deno test --allow-read=supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts
+[0m[32mCheck[0m src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+[0m[1mTS2352 [0m[ERROR]: Conversion of type '{ [k: string]: Readonly<{ exchangeCode: "FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX"; countryCode: "NORTHREACH" | "YRETHIA" | "THALORIS" | "SOLVEND" | "ELDORAN" | ... 4 more ... | "SYNDALIS"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' to type 'Record<"FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX", StockExchangeCalendarDefinition>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ [k: string]: Readonly<{ exchangeCode: "FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX"; countryCode: "NORTHREACH" | "YRETHIA" | "THALORIS" | "SOLVEND" | "ELDORAN" | ... 4 more ... | "SYNDALIS"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' is missing the following properties from type 'Record<"FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX", StockExchangeCalendarDefinition>': FGX, SBX, DHM, AUX, and 6 more.
+> = Object.freeze(Object.fromEntries(
+[0m[31m                  ^[0m
+    at [0m[36mfile:///home/runner/work/Student-Profile/Student-Profile/backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.ts[0m:[0m[33m77[0m:[0m[33m19[0m
+
+[0m[1m[31merror[0m: Type checking failed.
+
+  [33minfo:[39m The program failed type-checking, but it still might work correctly.
+  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
+exit=1
+
+## backend typecheck
+
+> typecheck:all
+> npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge
+
+
+> typecheck
+> tsc --noEmit -p tsconfig.json
+
+src/domains/stocks/calendars/stockMarketExchangeCalendar.ts(77,19): error TS2352: Conversion of type '{ [k: string]: Readonly<{ exchangeCode: "AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX"; countryCode: "DRAVENLOK" | "ELDORAN" | "LUMENOR" | "NORTHREACH" | "SOLVEND" | ... 4 more ... | "YRETHIA"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' to type 'Record<"AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX", StockExchangeCalendarDefinition>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ [k: string]: Readonly<{ exchangeCode: "AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX"; countryCode: "DRAVENLOK" | "ELDORAN" | "LUMENOR" | "NORTHREACH" | "SOLVEND" | ... 4 more ... | "YRETHIA"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' is missing the following properties from type 'Record<"AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX", StockExchangeCalendarDefinition>': AUX, BDX, CMX, DHM, and 6 more.
+exit=1
+
+## migration source audit
+
+> econovaria@0.0.0 audit:migrations
+> node scripts/validate-supabase-migrations.mjs
+
+{
+  "status": "pass",
+  "migrationCount": 65,
+  "uniqueVersions": 65,
+  "canonicalTableCreations": 48
+}
+exit=0
+
+## integration drift check
+Exchange-calendar patch drift: backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
+exit=1
+
+## diff whitespace check
+exit=0
+
+finalStatus=1

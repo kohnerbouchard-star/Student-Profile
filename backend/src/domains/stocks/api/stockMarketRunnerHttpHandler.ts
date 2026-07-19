@@ -24,6 +24,11 @@ import {
 } from "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
+import {
+  DEFAULT_STOCK_EXCHANGE_CODE,
+  evaluateStockMarketSession,
+  type StockMarketSessionState,
+} from "../calendars/stockMarketExchangeCalendar.ts";
 import type {
   StockMarketChartPoint,
   StockMarketEngineInput,
@@ -92,6 +97,8 @@ interface StockMarketRunnerHttpDependencies {
     client: EdgeSupabaseClient,
   ) => StockMarketNewsRepository;
   readonly calculateNextTick?: CalculateStockMarketTick;
+  readonly now?: () => Date;
+  readonly evaluateMarketSession?: (at: Date) => StockMarketSessionState;
   readonly createPublicRealtimePublisher?: (
     client: EdgeSupabaseClient,
   ) => StockMarketRunnerPublicRealtimePublisher;
@@ -204,6 +211,22 @@ export async function handleStockMarketRunnerRequest(
       });
     }
 
+    const marketSession = (dependencies.evaluateMarketSession ??
+      ((at: Date) =>
+        evaluateStockMarketSession(DEFAULT_STOCK_EXCHANGE_CODE, at)))(
+          (dependencies.now ?? (() => new Date()))(),
+        );
+
+    if (marketSession.status !== "open") {
+      throw new StockMarketRunnerError(
+        "stock_market_closed",
+        marketSession.nextTransitionAt
+          ? `Stock market is closed. The next calendar transition is ${marketSession.nextTransitionAt}.`
+          : "Stock market is closed.",
+        409,
+      );
+    }
+
     const storylineRunnerAfterTick = dependencies.runStorylineEventsAfterTick ??
       (dependencies.createStorylineRunnerAfterTick
         ? dependencies.createStorylineRunnerAfterTick(serviceClient)
@@ -246,7 +269,7 @@ export async function handleStockMarketRunnerRequest(
       return jsonError(error.status, {
         code: error.code,
         message: error.message,
-        retryable: false,
+        retryable: error.code === "stock_market_closed",
       });
     }
 

@@ -83,6 +83,23 @@ Deno.test("stock market runner rejects multiple game session request shapes", as
   assertEquals(response.status, 400);
 });
 
+Deno.test("stock market runner rejects ticks while the market is closed", async () => {
+  const repository = new MockRunnerRepository();
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    dependencies({
+      repository,
+      now: () => new Date("2026-07-19T00:00:00.000Z"),
+    }),
+  );
+  const body = await readJson(response);
+
+  assertEquals(response.status, 409);
+  assertEquals(body.error.code, "stock_market_closed");
+  assertEquals(body.error.retryable, true);
+  assertEquals(repository.loadedGameSessionIds, []);
+});
+
 Deno.test("stock market runner returns success shape", async () => {
   const response = await handleStockMarketRunnerRequest(
     request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
@@ -345,6 +362,7 @@ function dependencies(options: {
   readonly createServiceClient?: () => unknown;
   readonly repository?: StockMarketRunnerRepository;
   readonly readRunnerSecret?: () => string | undefined;
+  readonly now?: () => Date;
   readonly calculateNextTick?: (
     input: StockMarketEngineInput,
   ) => StockMarketEngineResult;
@@ -393,6 +411,7 @@ function dependencies(options: {
       },
     }),
     readRunnerSecret: options.readRunnerSecret ?? (() => SECRET),
+    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),
     createRepository: () => repository,
     createNewsRepository: () =>
       options.newsRepository ?? new MockMarketNewsRepository(),

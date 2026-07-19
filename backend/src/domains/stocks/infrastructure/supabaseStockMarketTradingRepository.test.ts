@@ -18,7 +18,7 @@ const ORDER_ID = "00000000-0000-4000-8000-000000000201";
 
 Deno.test("stock trading repository calls execute order RPC with one game and player session", async () => {
   const client = new FakeClient({
-    execute_stock_market_order: [orderRow()],
+    execute_stock_market_order_calendar_gated: [orderRow()],
   });
   const repository = new SupabaseStockMarketTradingRepository(client as any);
   await repository.executeOrder({
@@ -30,7 +30,7 @@ Deno.test("stock trading repository calls execute order RPC with one game and pl
     idempotencyKey: "order-1",
   });
 
-  assertEquals(client.calls[0].functionName, "execute_stock_market_order");
+  assertEquals(client.calls[0].functionName, "execute_stock_market_order_calendar_gated");
   assertEquals(client.calls[0].args, {
     p_game_session_id: GAME_SESSION_ID,
     p_player_session_id: PLAYER_SESSION_ID,
@@ -44,7 +44,7 @@ Deno.test("stock trading repository calls execute order RPC with one game and pl
 Deno.test("stock trading repository maps filled buy response with actual cash balance", async () => {
   const repository = new SupabaseStockMarketTradingRepository(
     new FakeClient({
-      execute_stock_market_order: [orderRow()],
+      execute_stock_market_order_calendar_gated: [orderRow()],
     }) as any,
   );
   const result = await repository.executeOrder(orderInput());
@@ -78,7 +78,7 @@ Deno.test("stock trading repository maps filled buy response with actual cash ba
 Deno.test("stock trading repository maps filled sell response with actual cash balance", async () => {
   const repository = new SupabaseStockMarketTradingRepository(
     new FakeClient({
-      execute_stock_market_order: [orderRow({
+      execute_stock_market_order_calendar_gated: [orderRow({
         side: "sell",
         quantity: 2,
         gross_value: 210,
@@ -105,7 +105,7 @@ Deno.test("stock trading repository maps insufficient cash to 409", async () => 
     () =>
       new SupabaseStockMarketTradingRepository(
         new FakeClient({
-          execute_stock_market_order: [orderRow({
+          execute_stock_market_order_calendar_gated: [orderRow({
             status: "rejected",
             rejection_reason: "insufficient_cash",
           })],
@@ -121,7 +121,7 @@ Deno.test("stock trading repository maps insufficient shares to 409", async () =
     () =>
       new SupabaseStockMarketTradingRepository(
         new FakeClient({
-          execute_stock_market_order: [orderRow({
+          execute_stock_market_order_calendar_gated: [orderRow({
             side: "sell",
             status: "rejected",
             rejection_reason: "insufficient_shares",
@@ -157,6 +157,16 @@ Deno.test("stock trading repository maps missing game, player, and stock to 404"
   );
 });
 
+Deno.test("stock trading repository rejects execution while the market is closed", async () => {
+  await assertRejectsWithCodeAndStatus(
+    () =>
+      repositoryWithError("STOCK_TRADING_MARKET_CLOSED")
+        .executeOrder(orderInput()),
+    "stock_market_closed",
+    409,
+  );
+});
+
 Deno.test("stock trading repository maps missing schema to schema-not-applied", async () => {
   await assertRejectsWithCodeAndStatus(
     () =>
@@ -173,7 +183,7 @@ Deno.test("stock trading repository maps missing schema to schema-not-applied", 
 
 Deno.test("stock trading repository forwards idempotency key", async () => {
   const client = new FakeClient({
-    execute_stock_market_order: [orderRow()],
+    execute_stock_market_order_calendar_gated: [orderRow()],
   });
   const repository = new SupabaseStockMarketTradingRepository(client as any);
   await repository.executeOrder(
@@ -185,25 +195,25 @@ Deno.test("stock trading repository forwards idempotency key", async () => {
 
 Deno.test("stock trading repository does not call initialize portfolio RPC", async () => {
   const client = new FakeClient({
-    execute_stock_market_order: [orderRow()],
+    execute_stock_market_order_calendar_gated: [orderRow()],
   });
   const repository = new SupabaseStockMarketTradingRepository(client as any);
   await repository.executeOrder(orderInput());
 
   assertEquals(client.calls.map((call) => call.functionName), [
-    "execute_stock_market_order",
+    "execute_stock_market_order_calendar_gated",
   ]);
 });
 
 Deno.test("stock trading repository does not call runner, read, or seed RPCs", async () => {
   const client = new FakeClient({
-    execute_stock_market_order: [orderRow()],
+    execute_stock_market_order_calendar_gated: [orderRow()],
   });
   const repository = new SupabaseStockMarketTradingRepository(client as any);
   await repository.executeOrder(orderInput());
 
   assertEquals(client.calls.map((call) => call.functionName), [
-    "execute_stock_market_order",
+    "execute_stock_market_order_calendar_gated",
   ]);
 });
 
