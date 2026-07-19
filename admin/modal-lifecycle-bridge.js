@@ -23,6 +23,44 @@
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
   }
 
+  function enabled(element) {
+    if (!(element instanceof HTMLElement)) return false;
+    return !("disabled" in element && element.disabled === true) && element.getAttribute("aria-disabled") !== "true";
+  }
+
+  function semanticOpenerTarget(opener) {
+    if (!(opener instanceof HTMLElement)) return null;
+    if (opener.isConnected && visible(opener) && enabled(opener)) return opener;
+    const selectors = [];
+    const action = opener.getAttribute("data-admin-terminal-action");
+    const section = opener.getAttribute("data-admin-section");
+    if (action) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"]`);
+    if (section) selectors.push(`[data-admin-section="${CSS.escape(section)}"]`);
+    if (opener.id) selectors.push(`#${CSS.escape(opener.id)}`);
+    for (const selector of selectors) {
+      const candidate = [...document.querySelectorAll(selector)].find((element) => {
+        return element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element);
+      });
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
+  function restoreOpenerAfterBundleClose(opener) {
+    function focusResolvedOpener() {
+      const target = semanticOpenerTarget(opener);
+      if (!(target instanceof HTMLElement)) return;
+      const activeController = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+      if (activeController?.dialog instanceof HTMLElement && !activeController.dialog.contains(target)) return;
+      target.focus({ preventScroll: true });
+    }
+
+    window.requestAnimationFrame(focusResolvedOpener);
+    window.setTimeout(focusResolvedOpener, 0);
+    window.setTimeout(focusResolvedOpener, 120);
+    window.setTimeout(focusResolvedOpener, 360);
+  }
+
   function liveBackdrop(dialog) {
     const backdrop = dialog.closest(BACKDROP_SELECTOR);
     return backdrop instanceof HTMLElement && visible(backdrop) ? backdrop : null;
@@ -42,7 +80,7 @@
 
   function existingCloseControl(dialog) {
     return [...dialog.querySelectorAll(CLOSE_SELECTOR)].find((control) => {
-      return control instanceof HTMLElement && visible(control) && !("disabled" in control && control.disabled);
+      return control instanceof HTMLElement && visible(control) && enabled(control);
     }) || null;
   }
 
@@ -78,14 +116,16 @@
       dismissOnBackdrop: !acknowledgementRequired,
       onClose(reason) {
         bindings.delete(binding);
-        if (!backdrop.isConnected || reason === "close-button") return;
-        const closeControl = existingCloseControl(dialog);
-        if (closeControl) {
-          binding.closingThroughBundle = true;
-          closeControl.click();
-          binding.closingThroughBundle = false;
+        if (backdrop.isConnected && reason !== "close-button") {
+          const closeControl = existingCloseControl(dialog);
+          if (closeControl) {
+            binding.closingThroughBundle = true;
+            closeControl.click();
+            binding.closingThroughBundle = false;
+          }
+          if (backdrop.isConnected) backdrop.remove();
         }
-        if (backdrop.isConnected) backdrop.remove();
+        restoreOpenerAfterBundleClose(binding.opener);
       },
     });
 
