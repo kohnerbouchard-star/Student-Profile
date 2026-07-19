@@ -7,8 +7,12 @@ on:
   pull_request:
     paths:
       - backend/**
+      - frontend/**
+      - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
+      - scripts/apply-shared-game-timezone-ui-v1.mjs
+      - scripts/shared-game-timezone-ui-smoke.mjs
       - .github/workflows/configurable-stock-market-timezone-v1.yml
   workflow_dispatch:
 
@@ -67,14 +71,18 @@ jobs:
             if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
           }
 
-          run_step "apply integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "apply calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
           run_step "apply RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
-          run_step "focused tests" npm --prefix backend run test:stock-market-calendar
+          run_step "apply Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
+          run_step "calendar tests" npm --prefix backend run test:stock-market-calendar
+          run_step "staff signup timezone tests" deno test --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
+          run_step "Create Game timezone smoke" node scripts/shared-game-timezone-ui-smoke.mjs
           run_step "backend typecheck" npm --prefix backend run typecheck:all
 
           git diff --binary > /tmp/timezone-before-replay.patch
-          run_step "replay integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "replay calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
           run_step "replay RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          run_step "replay Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
           git diff --binary > /tmp/timezone-after-replay.patch
           run_step "combined integration idempotency" cmp /tmp/timezone-before-replay.patch /tmp/timezone-after-replay.patch
           run_step "whitespace" git diff --check
@@ -106,7 +114,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "feat(stocks): require one game market timezone"
+          git commit -m "feat(stocks): require one shared game timezone"
           git push origin HEAD:agent/exchange-calendar-config-v1
 
       - name: Enforce validation result
