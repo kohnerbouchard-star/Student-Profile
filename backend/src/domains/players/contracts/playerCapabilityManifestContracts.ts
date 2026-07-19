@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-19.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-19.3" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -69,7 +69,10 @@ export type PlayerCapabilityEndpointKey =
   | "marketWatchlist"
   | "news"
   | "notifications"
-  | "notificationsRead";
+  | "notificationsRead"
+  | "store"
+  | "storeQuote"
+  | "storePurchase";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -177,6 +180,23 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketWatchlist"],
+  },
+  {
+    key: "store",
+    operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }],
+    routeCapabilities: ["store"],
+  },
+  {
+    key: "storeQuote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }],
+  },
+  {
+    key: "storePurchase",
+    operations: [
+      { method: "GET", pathTemplate: "/players/me/store/purchases" },
+      { method: "POST", pathTemplate: "/players/me/store/purchases" },
+    ],
+    actionCapabilities: ["storePurchase"],
   },
   {
     key: "inventory",

@@ -160,9 +160,9 @@ const ROUTE_BUILDERS = Object.freeze({
 
   storeQuote: ({ payload = {} }) => ({
     method: "POST",
-    path: "/players/me/store/quote",
+    path: "/players/me/store/quotes",
     payload: {
-      itemId: requiredText(payload.itemId || payload.storeItemId, "itemId", "storeQuote"),
+      itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"),
       quantity: Number(payload.quantity ?? 1)
     }
   }),
@@ -171,7 +171,7 @@ const ROUTE_BUILDERS = Object.freeze({
     method: "POST",
     path: "/players/me/store/purchases",
     payload: {
-      quoteId: requiredText(payload.quoteId, "quoteId", "storePurchase"),
+      quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
       clientSubmittedAt: typeof payload.clientSubmittedAt === "string"
         ? payload.clientSubmittedAt
