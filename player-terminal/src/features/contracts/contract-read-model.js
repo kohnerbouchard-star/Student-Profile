@@ -134,12 +134,15 @@ function timeline(contract, progress, status) {
 
 export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
   const body = object(response);
-  const progressByContract = new Map(list(body.progress).map((entry) => [text(entry.contractId), object(entry)]));
+  const progressByContract = new Map(list(body.progress).map((entryValue) => {
+    const entry = object(entryValue);
+    return [text(entry.contractKey || entry.contractId), entry];
+  }));
   const items = list(body.contracts).flatMap((contractValue) => {
     const contract = object(contractValue);
     const id = publicContractKey(contract);
     if (!id) return [];
-    const progress = progressByContract.get(internalContractId(contract)) || {};
+    const progress = progressByContract.get(id) || progressByContract.get(internalContractId(contract)) || {};
     const status = statusFrom(contract, progress, now);
     const reward = rewardFields(contract.rewardPayload);
     const metadata = object(contract.metadata);

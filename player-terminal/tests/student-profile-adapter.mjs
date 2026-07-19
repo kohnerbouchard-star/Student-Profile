@@ -35,12 +35,13 @@ const rawDashboard = {
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
-  manifestVersion: "2026-07-18.3",
+  manifestVersion: "2026-07-19.1",
   service: "classroom-api",
   capabilities: {
     routes: {
       news: true,
       market: true,
+      contracts: true,
       inventory: true
     },
     actions: {
@@ -59,6 +60,10 @@ const capabilityManifest = {
     {
       key: "contractAccept",
       operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/accept" }]
+    },
+    {
+      key: "contracts",
+      operations: [{ method: "GET", pathTemplate: "/players/me/contracts" }]
     },
     {
       key: "inventory",
@@ -103,6 +108,30 @@ const responses = {
   session: rawSession,
   capabilities: capabilityManifest,
   dashboard: rawDashboard,
+  contracts: {
+    ok: true,
+    contracts: [{
+      contractKey: "arrival-orientation",
+      sourceType: "staff",
+      title: "Arrival orientation",
+      description: "Review the national economy.",
+      instructions: "Submit a short response.",
+      category: "Orientation",
+      status: "active",
+      visibility: "public",
+      targetingPayload: { countryCodes: ["ELD"] },
+      requirementsPayload: { items: [{ label: "Read the briefing" }] },
+      rewardPayload: { cashAmount: 25, currencyCode: "ECO" },
+      completionMode: "manual_review",
+      publishedAt: "2026-07-18T00:00:00.000Z",
+      deadlineAt: "2026-07-21T00:00:00.000Z",
+      expiresAt: "2026-07-22T00:00:00.000Z",
+      metadata: { issuer: "Immigration Office" },
+      createdAt: "2026-07-18T00:00:00.000Z",
+      updatedAt: "2026-07-19T00:00:00.000Z"
+    }],
+    progress: []
+  },
   store: {
     items: [{
       id: "item-1",
@@ -205,7 +234,7 @@ const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
 assert.equal(session.capabilitySchemaVersion, 1);
-assert.equal(session.capabilityManifestVersion, "2026-07-18.3");
+assert.equal(session.capabilityManifestVersion, "2026-07-19.1");
 assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");
@@ -218,6 +247,12 @@ assert.equal(dashboard.netWorth, 1500);
 assert.ok(Array.isArray(dashboard.worldEvents));
 assert.ok(Array.isArray(dashboard.marketPulse));
 assert.equal(calls.at(-1).path, "/players/me/game/dashboard?gameSessionId=game-1");
+
+const contracts = await apiCall(context("contracts", "GET", "/contracts"));
+assert.equal(contracts.items[0].id, "arrival-orientation");
+assert.equal(contracts.items[0].status, "Available");
+assert.equal(calls.at(-1).path, "/players/me/contracts");
+assert.equal(calls.at(-1).payload, undefined);
 
 const store = await apiCall(context("store", "GET", "/store/items"));
 assert.equal(store.items[0].name, "Market Lens");
@@ -287,4 +322,4 @@ await assert.rejects(
   "Player transfer remains visible but pending until the UUID-authoritative backend route exists."
 );
 
-console.log("Student-Profile adapter passed: canonical routes, capability preflight, UI read models, session headers, UUID ownership, and idempotent writes are valid.");
+console.log("Student-Profile adapter passed: canonical routes, capability preflight, UUID-private Contracts, UI read models, session headers, UUID ownership, and idempotent writes are valid.");

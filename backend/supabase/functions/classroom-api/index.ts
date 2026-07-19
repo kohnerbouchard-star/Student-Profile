@@ -104,6 +104,12 @@ import {
   readPlayerContractAcceptanceRoutePath,
 } from "../../../src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts";
 import {
+  handlePlayerContractPublicListRequest,
+} from "../../../src/domains/contracts/api/playerContractPublicListHttpHandler.ts";
+import {
+  readPlayerContractPublicListRoutePath,
+} from "../../../src/domains/contracts/api/playerContractPublicListRoutePaths.ts";
+import {
   readPlayerContractRoutePath,
 } from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
 import {
@@ -351,6 +357,21 @@ Deno.serve(async (request) => {
           playerContractAcceptanceRoute,
           { createServiceClient },
         ),
+      { createServiceClient },
+    );
+  }
+
+  const playerContractPublicListRoute =
+    readPlayerContractPublicListRoutePath(url.pathname);
+
+  if (playerContractPublicListRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "contracts",
+      () =>
+        handlePlayerContractPublicListRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }

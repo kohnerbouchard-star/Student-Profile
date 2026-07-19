@@ -7,6 +7,7 @@ const SUPPORTED_SERVICE = "classroom-api";
 const ENDPOINT_COVERAGE = Object.freeze({
   capabilities: Object.freeze(["capabilities"]),
   contractAccept: Object.freeze(["contractAccept"]),
+  contracts: Object.freeze(["contracts"]),
   countries: Object.freeze(["countries"]),
   country: Object.freeze(["country"]),
   inventory: Object.freeze(["inventory"]),
@@ -23,6 +24,7 @@ const ENDPOINT_COVERAGE = Object.freeze({
 const ROUTE_REQUIREMENTS = Object.freeze({
   news: "news",
   market: "market",
+  contracts: "contracts",
   inventory: "inventory"
 });
 

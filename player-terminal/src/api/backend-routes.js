@@ -8,6 +8,16 @@ function requiredText(value, fieldName, endpointKey) {
   });
 }
 
+function resolvedPathValue(path, pattern) {
+  const match = String(path || "").match(pattern);
+  if (!match?.[1]) return "";
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return "";
+  }
+}
+
 function queryPath(path, values) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
@@ -190,17 +200,19 @@ const ROUTE_BUILDERS = Object.freeze({
     path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 })
   }),
 
-  contracts: ({ session }) => ({
+  contracts: () => ({
     method: "GET",
-    path: queryPath("/players/me/contracts", {
-      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "contracts")
-    })
+    path: "/players/me/contracts"
   }),
 
-  contractAccept: ({ params = {}, payload = {} }) => ({
+  contractAccept: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
     path: `/players/me/contracts/${encodeURIComponent(requiredText(
-      params.contractKey || params.contractId || payload.contractKey || payload.contractId,
+      params.contractKey ||
+        params.contractId ||
+        payload.contractKey ||
+        payload.contractId ||
+        resolvedPathValue(path, /^\/contracts\/([^/]+)\/accept$/),
       "contractKey",
       "contractAccept"
     ))}/accept`
