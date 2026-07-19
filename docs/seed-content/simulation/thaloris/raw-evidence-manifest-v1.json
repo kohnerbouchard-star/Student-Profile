@@ -3,7 +3,7 @@
   "simulationId": "thaloris-market-simulation-v1",
   "generatedAt": "2026-07-19",
   "activationAuthorized": false,
-  "retentionStatus": "immutable-artifact-pending",
+  "retentionStatus": "immutable-workflow-artifact-retained",
   "repositoryPolicy": "Large raw simulation rows are excluded from Git; retain them in an immutable workflow artifact before approval.",
   "files": [
     {
@@ -11,14 +11,25 @@
       "sha256": "07ab9cc5ca61f0fbb2e53ea352f557abec7e71c8092e6a5b0e2cc7e57af99540",
       "sizeBytes": 3515856,
       "repositoryRetained": false,
-      "artifactRetained": false
+      "artifactRetained": true
     },
     {
       "path": "output/portfolio-results.csv",
       "sha256": "ce4a2ccb85c30104f2788a5a32bdc191c9de9a1b449534dc565987aec4f06d99",
       "sizeBytes": 404583,
       "repositoryRetained": false,
-      "artifactRetained": false
+      "artifactRetained": true
     }
-  ]
+  ],
+  "artifact": {
+    "provider": "github-actions",
+    "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "artifactId": "8436033290",
+    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8436033290",
+    "artifactDigest": "04b0fd8e3f6be54e08d24e95da77253077461a71f27f6c22268f9ffac5482f2f",
+    "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "workflowRunId": "29667017728",
+    "retentionDays": 90,
+    "retainedAt": "2026-07-19"
+  }
 }

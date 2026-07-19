@@ -1,6 +1,6 @@
 
 ## install retention policy
-Installed current simulation evidence retention policy.
+Simulation evidence retention policy is already current.
 exit=0
 
 ## build Northreach input
@@ -23,6 +23,12 @@ exit=0
 Reconciled retained evidence for 4 market simulations.
 exit=0
 
+generationStatus=0
+
+## record immutable artifact
+Recorded immutable artifact 8436033290 for 3 simulation evidence packages.
+exit=0
+
 ## check retention policy
 Verified simulation evidence retention policy.
 exit=0
@@ -42,101 +48,69 @@ exit=0
 
 TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 110.964741
+  duration_ms: 105.497781
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-    
-    true !== false
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: false
-  actual: true
-  operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:28:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 144.8317
+  duration_ms: 134.271018
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 62.634374
+  duration_ms: 62.402859
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
-not ok 4 - staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 57.93335
+  duration_ms: 56.52652
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:47:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-    
-    true !== false
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: false
-  actual: true
-  operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:54:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.501157
+  duration_ms: 0.434799
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.230752
+  duration_ms: 0.15045
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.470099
+  duration_ms: 0.517143
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.256279
+  duration_ms: 0.249654
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.55111
+  duration_ms: 0.570061
   type: 'test'
   ...
 1..9
 # tests 9
 # suites 0
-# pass 7
-# fail 2
+# pass 9
+# fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 448.22162
-exit=1
+# duration_ms 432.041027
+exit=0
 
 ## design seed preflight
 
@@ -147,7 +121,7 @@ Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.1.0-design
 Environment: test
 Mode: design
 JSON files checked: 81
-Errors: 0; blockers: 19; warnings: 0
+Errors: 0; blockers: 16; warnings: 0
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-packages, skills-and-credentials, contract-families, progression-model, simulation.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is blocked; dependencies: starting-value-calibration, housing-model, relationship-persistence, authoritative-instantiation-route.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: banking-products is blocked; dependencies: banking-write-capability, rate-and-affordability-simulation.
@@ -164,21 +138,10 @@ Errors: 0; blockers: 19; warnings: 0
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is blocked; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is blocked; dependencies: route-capability-map, notification-deduplication.
 [BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
-[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/northreach/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
-[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/thaloris/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
-[BLOCKER] SIMULATION_RAW_EVIDENCE_NOT_RETAINED docs/seed-content/simulation/yrethia/run-manifest-v1.json: The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.
 Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt:53: trailing whitespace.
-+    
-docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt:55: trailing whitespace.
-+    
-docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt:87: trailing whitespace.
-+    
-docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt:89: trailing whitespace.
-+    
-exit=2
+exit=0
 
-finalStatus=1
+validationStatus=0

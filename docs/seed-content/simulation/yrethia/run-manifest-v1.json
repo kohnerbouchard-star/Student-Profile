@@ -1,6 +1,6 @@
 {
   "simulationId": "yrethia-market-simulation-v1",
-  "status": "executed-summary-retained-raw-artifact-pending",
+  "status": "executed-summary-and-raw-artifact-retained",
   "activationAuthorized": false,
   "seeds": 250,
   "cycles": 60,
@@ -16,14 +16,25 @@
     "input-v1.json": "a382a1e86b6e616b50f2b532ac5e3e2c4f32ec7667023f00d8f9e2939875c2a6",
     "run_yrethia_market_simulation_v1.py": "5b160c217826d0a7218777711125e58d1e74ae8bc5dfa8d11d2046b06f3005df",
     "summary-v1.json": "5f6195563c0ba6963f6819f8aae486683b12833fade0e9debdee743c6b536da2",
-    "raw-evidence-manifest-v1.json": "e82ca84a69f8a21427b775862ad8c9d73dfe1f26108ce2a551639c32eabb16ce"
+    "raw-evidence-manifest-v1.json": "3bef11df7bfd7fbd86c0fb73b432d33ebc22d225c18942626ec7b037a54e4808"
   },
   "evidenceRetention": {
-    "status": "immutable-artifact-pending",
+    "status": "immutable-workflow-artifact-retained",
     "rawEvidenceManifest": "raw-evidence-manifest-v1.json",
     "repositoryRetained": false,
-    "immutableArtifactRetained": false,
-    "requiredForApproval": true
+    "immutableArtifactRetained": true,
+    "requiredForApproval": true,
+    "artifact": {
+      "provider": "github-actions",
+      "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
+      "artifactId": "8436033290",
+      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8436033290",
+      "artifactDigest": "04b0fd8e3f6be54e08d24e95da77253077461a71f27f6c22268f9ffac5482f2f",
+      "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
+      "workflowRunId": "29667017728",
+      "retentionDays": 90,
+      "retainedAt": "2026-07-19"
+    }
   },
   "exactCommand": "python run_yrethia_market_simulation_v1.py"
 }

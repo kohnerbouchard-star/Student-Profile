@@ -3,7 +3,7 @@
   "simulationId": "yrethia-market-simulation-v1",
   "generatedAt": "2026-07-19",
   "activationAuthorized": false,
-  "retentionStatus": "immutable-artifact-pending",
+  "retentionStatus": "immutable-workflow-artifact-retained",
   "repositoryPolicy": "Large raw simulation rows are excluded from Git; retain them in an immutable workflow artifact before approval.",
   "files": [
     {
@@ -11,14 +11,25 @@
       "sha256": "98263327a7308b275c06ee10fe000da6a041a6b0caf7267c519e854bd9e7b223",
       "sizeBytes": 3386105,
       "repositoryRetained": false,
-      "artifactRetained": false
+      "artifactRetained": true
     },
     {
       "path": "output/portfolio-results.csv",
       "sha256": "4d2de7ca38f9c31a8416b2e04453c8419249a346aff99e77574323fff7939f87",
       "sizeBytes": 380644,
       "repositoryRetained": false,
-      "artifactRetained": false
+      "artifactRetained": true
     }
-  ]
+  ],
+  "artifact": {
+    "provider": "github-actions",
+    "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "artifactId": "8436033290",
+    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8436033290",
+    "artifactDigest": "04b0fd8e3f6be54e08d24e95da77253077461a71f27f6c22268f9ffac5482f2f",
+    "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "workflowRunId": "29667017728",
+    "retentionDays": 90,
+    "retainedAt": "2026-07-19"
+  }
 }
