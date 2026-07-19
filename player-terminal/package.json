@@ -36,5 +36,5 @@
   "devDependencies": {
     "@playwright/test": "1.59.1"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, truthful Banking and Inventory, realtime freshness, safe session timeout exits, and Chromium browser verification."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, connected Inventory redemption committed-success behavior, truthful Banking and Inventory, realtime freshness, safe session timeout exits, and Chromium browser verification."
 }
