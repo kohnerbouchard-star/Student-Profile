@@ -30,7 +30,7 @@ assert.match(source, /focusInside\(lastFocusedInside\)/, "Blocked dismissal and 
 for (const required of [
   "window.EconovariaAdminModalAccessibility",
   "accessibility.activate",
-  "data-admin-modal-accessibility-bound",
+  "backdrop.dataset.adminModalAccessibilityBound",
   "econovaria:admin-mounted-modal-bound",
   "econovaria:admin-request-lifecycle",
   "econovaria:admin-route-mounted",
@@ -40,6 +40,8 @@ for (const required of [
   assert.ok(bridge.includes(required), `Admin modal lifecycle bridge must include ${required}.`);
 }
 assert.match(bridge, /document\.addEventListener\("click"/, "Bundle-owned modal binding must use delegated click lifecycle evidence.");
+assert.match(bridge, /action instanceof HTMLElement && !closeControl/, "Nested modal actions must remain eligible as child restoration openers.");
+assert.doesNotMatch(bridge, /action instanceof HTMLElement && !action\.closest\(DIALOG_SELECTOR\)/, "Actions inside parent dialogs must not be excluded from child opener capture.");
 assert.match(bridge, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(reconcile\)\)/, "Modal binding must reconcile after mounted renderer frames.");
 assert.ok(index.includes("import('./modal-lifecycle-bridge.js').then(() =&gt; import('./keyboard-navigation.js'))"), "Admin index must load the modal lifecycle bridge before keyboard navigation.");
 
