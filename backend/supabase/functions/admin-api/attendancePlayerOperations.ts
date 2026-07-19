@@ -1,3 +1,4 @@
+import { handleIdempotentLedgerOperation } from "./idempotentLedgerOperations.ts";
 import { handleAttendanceOperation } from "./attendanceOperations.ts";
 import {
   handlePlayerOperation,
@@ -16,6 +17,8 @@ export async function handleAttendancePlayerOperation(
     body: Record<string, any>;
   },
 ): Promise<any> {
+  const ledger = await handleIdempotentLedgerOperation(service, input);
+  if (ledger.handled) return ledger;
   const attendance = await handleAttendanceOperation(service, input);
   if (attendance.handled) return attendance;
   return handlePlayerOperation(service, input);

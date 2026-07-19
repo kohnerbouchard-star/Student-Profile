@@ -71,8 +71,34 @@ jobs:
           status="$(cat /tmp/backend-typecheck.status)"
           if [ "$status" != "0" ]; then
             echo "Backend typecheck failed. Download the backend-typecheck-diagnostics artifact."
-            exit 1
+            false
           fi
 
       - name: Run backend smoke tests
-        run: npm run smoke
+        shell: bash
+        run: |
+          set +e
+          npm run smoke > /tmp/backend-smoke.log 2>&1
+          echo $? > /tmp/backend-smoke.status
+          tail -n 200 /tmp/backend-smoke.log
+          exit 0
+
+      - name: Upload backend smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-smoke-diagnostics
+          path: |
+            /tmp/backend-smoke.log
+            /tmp/backend-smoke.status
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce backend smoke tests
+        shell: bash
+        run: |
+          status="$(cat /tmp/backend-smoke.status)"
+          if [ "$status" != "0" ]; then
+            echo "Backend smoke failed. Download the backend-smoke-diagnostics artifact."
+            false
+          fi
