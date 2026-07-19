@@ -14,7 +14,7 @@ const QUICK_ACTIONS = [
   { action: "add-player", key: "Enter", section: "Overview" },
   { action: "add-contract", key: "Space", section: "Overview" },
   { action: "scan-attendance", key: "Space", section: "Overview" },
-  { action: "add-store-item", key: "Enter", section: "Store" },
+  { action: "add-store-item", key: "Enter", section: "Overview" },
 ];
 const EXCLUDED_SELECTOR = [
   "[hidden]",
@@ -322,8 +322,7 @@ async function exerciseNavigation(browser, viewport) {
 }
 
 async function waitForAuthoritativeAction(page, item) {
-  await page.evaluate(() => window.EconovariaAdminOverviewQuickActions?.reconcile?.());
-  await page.waitForFunction(({ action, section }) => {
+  await page.waitForFunction(({ action }) => {
     const controls = [...document.querySelectorAll(`[data-admin-terminal-action="${CSS.escape(action)}"]`)];
     const control = controls.find((node) => {
       if (!(node instanceof HTMLElement) || node.hidden) return false;
@@ -332,15 +331,9 @@ async function waitForAuthoritativeAction(page, item) {
       const rect = node.getBoundingClientRect();
       return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
     });
-    if (!(control instanceof HTMLElement)) return false;
-    if (section === "Overview") {
-      return Boolean(control.closest("[data-admin-overview-quick-actions]"));
-    }
-    if (action === "add-store-item" && section === "Store") {
-      return !control.hasAttribute("data-admin-overview-hidden") &&
-        !control.closest(".admin-overview-quick-actions-card");
-    }
-    return true;
+    return control instanceof HTMLElement &&
+      !control.closest(".admin-overview-quick-actions-card, [data-admin-overview-quick-actions]") &&
+      !control.hasAttribute("data-admin-overview-hidden");
   }, item, { timeout: 10_000 });
 }
 
@@ -380,6 +373,7 @@ async function exerciseQuickActions(browser) {
       }, item.section, { timeout: 5000 });
       await waitForAuthoritativeAction(page, item);
 
+      assert(await page.locator(".admin-overview-quick-actions-card").count() === 0, "Loader work created a Quick Actions relocation card.");
       const control = page.locator(`[data-admin-terminal-action="${item.action}"]:visible`).first();
       await control.waitFor({ state: "visible", timeout: 10_000 });
       const disabled = await control.evaluate((node) =>
@@ -410,7 +404,7 @@ try {
   }
   report.quickActions = await exerciseQuickActions(browser);
   writeFileSync(`${ARTIFACT_DIR}/mounted-keyboard-navigation.json`, JSON.stringify(report, null, 2));
-  console.log("Mounted Admin keyboard-only navigation and authoritative quick-action smoke passed.");
+  console.log("Mounted Admin keyboard-only navigation and original header-action smoke passed.");
 } catch (error) {
   report.failure = error.stack || error.message || String(error);
   writeFileSync(`${ARTIFACT_DIR}/mounted-keyboard-navigation.json`, JSON.stringify(report, null, 2));
