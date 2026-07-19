@@ -37,8 +37,8 @@ jobs:
               cleaned = []
               inside_literal = False
               for line in code.splitlines():
-                  if inside_literal and line.startswith("          "):
-                      line = line[10:]
+                  if inside_literal and line.startswith("        "):
+                      line = line[8:]
                   cleaned.append(line)
                   if line.count("'''") % 2 == 1:
                       inside_literal = not inside_literal
@@ -57,7 +57,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add player-banking-patch-error.txt
-            git commit -m "chore(banking): record integration patch failure"
+            git commit -m "chore(banking): record integration patch failure" || true
             git push origin HEAD:agent/player-banking-public-read-v1
             false
           fi
