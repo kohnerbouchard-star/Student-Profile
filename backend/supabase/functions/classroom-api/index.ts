@@ -30,8 +30,11 @@ import {
   readStaffPlayerLedgerHistoryRoutePath,
 } from "../../../src/domains/economy/api/economyRoutePaths.ts";
 import {
-  handlePlayerLedgerHistoryRequest,
-} from "../../../src/domains/economy/api/playerLedgerHistoryHttpHandler.ts";
+handlePlayerBankingPublicRequest,
+} from "../../../src/domains/economy/api/playerBankingPublicHttpHandler.ts";
+import {
+readPlayerBankingPublicRoutePath,
+} from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
@@ -430,10 +433,18 @@ Deno.serve(async (request) => {
     });
   }
 
-  if (url.pathname.endsWith("/players/me/ledger")) {
-    return handlePlayerLedgerHistoryRequest(request, {
-      createServiceClient,
-    });
+  const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);
+
+  if (playerBankingRoute) {
+  return dispatchRateLimitedReviewedPlayerRequest(
+  request,
+  "banking",
+  () =>
+  handlePlayerBankingPublicRequest(request, {
+  createServiceClient,
+  }),
+  { createServiceClient },
+  );
   }
 
   if (url.pathname.endsWith("/players/me")) {

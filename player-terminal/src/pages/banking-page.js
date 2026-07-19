@@ -27,6 +27,8 @@ function renderTransaction(transaction, fallbackCurrencyCode) {
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
+  const checkingCurrencyCode = bank.checking?.currencyCode || currencyCode;
+  const savingsCurrencyCode = bank.savings?.currencyCode || currencyCode;
   const savingsConfigured = bank.savings?.configured !== false && hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true && hasNumericValue(bank.creditScore);
   const transfersConfigured = bank.transfersConfigured === true;
@@ -37,12 +39,12 @@ export function renderBankingPage(data) {
   return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
     <header class="player-terminal-page-heading">
       <div><small>PLAYER LEDGER & BANKING</small><h2>Banking</h2><p>Review authoritative cash balances and posted ledger activity. Additional account and transfer tools remain visible as backend capabilities are added.</p></div>
-      <div class="player-terminal-heading-actions">${creditConfigured ? renderStatusPill(`CREDIT ${bank.creditScore}`, "green") : renderStatusPill("CREDIT NOT CONFIGURED", "amber")}</div>
+      <div class="player-terminal-heading-actions">${bank.stale ? renderStatusPill("STALE DATA", "amber") : ""}${creditConfigured ? renderStatusPill(`CREDIT ${bank.creditScore}`, "green") : renderStatusPill("CREDIT NOT CONFIGURED", "amber")}</div>
     </header>
 
     <div class="player-terminal-bank-accounts">
-      <article class="player-terminal-bank-card is-checking"><div>${icon("wallet")}<span><small>CASH ACCOUNT</small><strong>${escapeHtml(bank.checking.accountId || "CASH")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.checking.balance, currencyCode, "Unavailable"))}</h3><p>${escapeHtml(optionalCurrency(bank.checking.available, currencyCode, "Unavailable"))} available</p></article>
-      <article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>${escapeHtml(savingsConfigured ? bank.savings.accountId : "NOT CONFIGURED")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.savings?.balance, currencyCode))}</h3><p>${savingsConfigured ? `${escapeHtml(optionalPercent(bank.savings.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings.interestEarned, currencyCode, "Interest unavailable"))} earned` : "The current backend has not provisioned a savings account for this player."}</p></article>
+      <article class="player-terminal-bank-card is-checking"><div>${icon("wallet")}<span><small>CASH ACCOUNT</small><strong>${escapeHtml(bank.checking.accountId || "CASH")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.checking.balance, checkingCurrencyCode, "Unavailable"))}</h3><p>${escapeHtml(optionalCurrency(bank.checking.available, checkingCurrencyCode, "Unavailable"))} available</p></article>
+      <article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>${escapeHtml(savingsConfigured ? bank.savings.accountId : "NOT CONFIGURED")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.savings?.balance, savingsCurrencyCode))}</h3><p>${savingsConfigured ? `${escapeHtml(optionalPercent(bank.savings.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings.interestEarned, savingsCurrencyCode, "Interest unavailable"))} earned` : "The current backend has not provisioned a savings account for this player."}</p></article>
       <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
     </div>
 

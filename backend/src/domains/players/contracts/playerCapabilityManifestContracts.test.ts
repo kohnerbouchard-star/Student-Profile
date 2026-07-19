@@ -6,6 +6,7 @@ import {
   PLAYER_ROUTE_CAPABILITY_KEYS,
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
+import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
 import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
@@ -40,7 +41,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.routes.inventory, true);
   assertEquals(manifest.capabilities.routes.dashboard, false);
   assertEquals(manifest.capabilities.routes.store, true);
-  assertEquals(manifest.capabilities.routes.banking, false);
+  assertEquals(manifest.capabilities.routes.banking, true);
   assertEquals(manifest.capabilities.routes.profile, false);
 
   assertEquals(manifest.capabilities.actions.marketWatchlist, true);
@@ -55,6 +56,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
   assertEquals(endpointKeys.includes("capabilities"), true);
+  assertEquals(endpointKeys.includes("banking"), true);
   assertEquals(endpointKeys.includes("contractAccept"), true);
   assertEquals(endpointKeys.includes("contractSubmit"), true);
   assertEquals(endpointKeys.includes("contracts"), true);
@@ -93,6 +95,8 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
   for (const operation of operations) {
     const parsed = operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
+      : operation.key === "banking"
+      ? readPlayerBankingPublicRoutePath(operation.path)
       : operation.key === "contractAccept"
       ? readPlayerContractAcceptanceRoutePath(operation.path)
       : operation.key === "contractSubmit"

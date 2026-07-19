@@ -142,6 +142,11 @@ function emptyTerminalData() {
       transfersConfigured: false,
       creditScore: null,
       transferLimit: null,
+      balances: [],
+      generatedAt: "",
+      staleAt: "",
+      stale: false,
+      pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 50 },
       transactions: []
     },
     business: {
@@ -522,13 +527,39 @@ function normalizeBankingRead(response, currentBanking) {
   const checking = balances.find((item) => ["cash", "checking"].includes(text(item.accountType).toLowerCase())) || balances[0] || {};
   const savings = balances.find((item) => text(item.accountType).toLowerCase() === "savings");
   const checkingBalance = number(checking.balance);
+  const page = object(body.pagination);
+  const incoming = list(body.ledgerEntries).map((entry) => {
+    const amount = number(entry.amount);
+    const entryType = text(entry.entryType).toLowerCase();
+    return {
+      id: text(entry.entryKey),
+      description: transactionDescription(entry),
+      date: shortDate(entry.createdAt, "Recorded"),
+      category: text(entry.sourceDomain, "Ledger"),
+      amount: entryType === "debit" ? -Math.abs(amount) : entryType === "credit" ? Math.abs(amount) : amount,
+      status: "Posted",
+      accountType: text(entry.accountType),
+      currencyCode: text(entry.currencyCode)
+    };
+  });
+  const append = Boolean(text(page.cursor));
+  const transactions = append ? [...list(current.transactions), ...incoming] : incoming;
+  const uniqueTransactions = [...new Map(transactions.map((entry) => [entry.id, entry])).values()];
+  const staleAt = text(body.staleAt);
+  const staleTimestamp = Date.parse(staleAt);
   return {
     ...current,
+    balances: balances.map((balance) => ({
+      accountType: text(balance.accountType),
+      balance: number(balance.balance),
+      currencyCode: text(balance.currencyCode)
+    })),
     checking: {
       accountId: text(checking.accountType, "CASH").toUpperCase(),
       balance: checkingBalance,
       available: checkingBalance,
-      pending: 0
+      pending: 0,
+      currencyCode: text(checking.currencyCode)
     },
     savings: savings ? {
       configured: true,
@@ -536,33 +567,31 @@ function normalizeBankingRead(response, currentBanking) {
       balance: number(savings.balance),
       available: number(savings.balance),
       interestRate: null,
-      interestEarned: null
+      interestEarned: null,
+      currencyCode: text(savings.currencyCode)
     } : {
       configured: false,
       accountId: "NOT CONFIGURED",
       balance: null,
       available: null,
       interestRate: null,
-      interestEarned: null
+      interestEarned: null,
+      currencyCode: ""
     },
     creditConfigured: false,
     transfersConfigured: false,
     creditScore: null,
     transferLimit: null,
-    transactions: list(body.ledgerEntries).map((entry) => {
-      const amount = number(entry.amount);
-      const entryType = text(entry.entryType).toLowerCase();
-      return {
-        id: text(entry.id),
-        description: transactionDescription(entry),
-        date: shortDate(entry.createdAt, "Recorded"),
-        category: text(entry.sourceDomain, "Ledger"),
-        amount: entryType === "debit" ? -Math.abs(amount) : entryType === "credit" ? Math.abs(amount) : amount,
-        status: "Posted",
-        accountType: text(entry.accountType),
-        currencyCode: text(entry.currencyCode)
-      };
-    })
+    generatedAt: text(body.generatedAt),
+    staleAt,
+    stale: body.stale === true || (Number.isFinite(staleTimestamp) && staleTimestamp <= Date.now()),
+    pagination: {
+      cursor: text(page.cursor) || null,
+      nextCursor: text(page.nextCursor) || null,
+      hasMore: page.hasMore === true,
+      limit: number(page.limit, 50)
+    },
+    transactions: uniqueTransactions
   };
 }
 

@@ -237,7 +237,10 @@ const ROUTE_BUILDERS = Object.freeze({
 
   banking: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 }),
+    path: queryPath("/players/me/ledger", {
+      limit: payload.limit ?? 50,
+      cursor: payload.cursor,
+    }),
   }),
 
   contracts: () => ({
