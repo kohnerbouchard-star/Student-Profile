@@ -8,6 +8,7 @@ on:
       - package.json
       - scripts/generate-core-gameplay-content.mjs
       - scripts/seed-core-content-coverage-audit.mjs
+      - docs/seed-content/manifests/design-manifest-v1.json
       - docs/seed-content/contracts/**
       - docs/seed-content/banking/**
       - docs/seed-content/progression/**
