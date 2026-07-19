@@ -42,7 +42,9 @@ jobs:
         run: npm ci
 
       - name: Apply configurable timezone patch
-        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs
+        run: |
+          node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          node scripts/finalize-seoul-market-timezone-fallback-v1.mjs
 
       - name: Run focused tests
         run: npm --prefix backend run test:stock-market-calendar
@@ -50,8 +52,8 @@ jobs:
       - name: Run backend typecheck
         run: npm --prefix backend run typecheck:all
 
-      - name: Check patch drift
-        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
+      - name: Check finalized timezone drift
+        run: node scripts/finalize-seoul-market-timezone-fallback-v1.mjs --check
 
       - name: Check whitespace
         run: git diff --check
