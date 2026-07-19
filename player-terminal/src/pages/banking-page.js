@@ -24,10 +24,17 @@ function renderTransaction(transaction, fallbackCurrencyCode) {
   </article>`;
 }
 
+function renderBalanceCard(balance, index) {
+  const accountType = String(balance.accountType || "cash").trim() || "cash";
+  const currencyCode = String(balance.currencyCode || "ECO").trim().toUpperCase() || "ECO";
+  const accountLabel = accountType.replace(/[_-]+/g, " ").toUpperCase();
+  const tone = accountType.toLowerCase() === "savings" ? "is-savings" : index === 0 ? "is-checking" : "is-credit";
+  return `<article class="player-terminal-bank-card ${tone}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(accountType.toLowerCase() === "savings" ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3><p>Authoritative ${escapeHtml(currencyCode)} balance</p></article>`;
+}
+
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
-  const checkingCurrencyCode = bank.checking?.currencyCode || currencyCode;
   const savingsCurrencyCode = bank.savings?.currencyCode || currencyCode;
   const savingsConfigured = bank.savings?.configured !== false && hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true && hasNumericValue(bank.creditScore);
@@ -35,6 +42,15 @@ export function renderBankingPage(data) {
   const transferLimitAvailable = hasNumericValue(bank.transferLimit);
   const transferLimit = transferLimitAvailable ? Number(bank.transferLimit) : null;
   const transferMax = transferLimitAvailable && transferLimit > 0 ? ` max="${escapeHtml(transferLimit)}"` : "";
+  const balances = Array.isArray(bank.balances) && bank.balances.length
+    ? bank.balances
+    : [{
+      accountType: bank.checking?.accountId || "cash",
+      balance: bank.checking?.balance,
+      currencyCode: bank.checking?.currencyCode || currencyCode,
+    }];
+  const hasSavingsBalance = balances.some((balance) => String(balance.accountType || "").toLowerCase() === "savings");
+  const canLoadMore = bank.pagination?.hasMore === true && Boolean(bank.pagination?.nextCursor);
 
   return `<section class="player-terminal-page player-terminal-banking-page" data-page="banking">
     <header class="player-terminal-page-heading">
@@ -42,9 +58,9 @@ export function renderBankingPage(data) {
       <div class="player-terminal-heading-actions">${bank.stale ? renderStatusPill("STALE DATA", "amber") : ""}${creditConfigured ? renderStatusPill(`CREDIT ${bank.creditScore}`, "green") : renderStatusPill("CREDIT NOT CONFIGURED", "amber")}</div>
     </header>
 
-    <div class="player-terminal-bank-accounts">
-      <article class="player-terminal-bank-card is-checking"><div>${icon("wallet")}<span><small>CASH ACCOUNT</small><strong>${escapeHtml(bank.checking.accountId || "CASH")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.checking.balance, checkingCurrencyCode, "Unavailable"))}</h3><p>${escapeHtml(optionalCurrency(bank.checking.available, checkingCurrencyCode, "Unavailable"))} available</p></article>
-      <article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>${escapeHtml(savingsConfigured ? bank.savings.accountId : "NOT CONFIGURED")}</strong></span></div><h3>${escapeHtml(optionalCurrency(bank.savings?.balance, savingsCurrencyCode))}</h3><p>${savingsConfigured ? `${escapeHtml(optionalPercent(bank.savings.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings.interestEarned, savingsCurrencyCode, "Interest unavailable"))} earned` : "The current backend has not provisioned a savings account for this player."}</p></article>
+    <div class="player-terminal-bank-accounts" aria-label="Current balances">
+      ${balances.map(renderBalanceCard).join("")}
+      ${hasSavingsBalance ? "" : `<article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>NOT CONFIGURED</strong></span></div><h3>Not configured</h3><p>The current backend has not provisioned a savings account for this player.</p></article>`}
       <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
     </div>
 
@@ -73,6 +89,7 @@ export function renderBankingPage(data) {
       <section class="player-terminal-panel player-terminal-transactions-panel">
         <header class="player-terminal-panel-header"><div><span>POSTED LEDGER ACTIVITY</span><strong>${escapeHtml(bank.transactions.length)} transactions</strong></div><button class="player-terminal-compact-button" type="button" data-player-local-action="download-transactions">Export</button></header>
         <div class="player-terminal-transaction-list">${bank.transactions.length ? bank.transactions.map((transaction) => renderTransaction(transaction, currencyCode)).join("") : renderEmptyState({ title: "No transactions yet", detail: "Posted purchases, rewards, trades, and future transfers will appear here.", iconName: "banking" })}</div>
+        <footer class="player-terminal-panel-footer"><p class="player-terminal-inline-error" role="alert" aria-live="assertive" data-player-banking-page-error hidden></p>${canLoadMore ? `<button class="player-terminal-compact-button" type="button" data-player-banking-load-more>Load more activity</button>` : `<small>All available activity loaded</small>`}</footer>
       </section>
     </div>
   </section>`;
