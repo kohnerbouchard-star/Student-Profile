@@ -1,0 +1,229 @@
+.admin-game-lifecycle {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid rgba(117, 223, 216, 0.2);
+  border-radius: 14px;
+  background: rgba(5, 20, 34, 0.76);
+  color: #edf8fb;
+}
+
+.admin-game-lifecycle__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-game-lifecycle__header small {
+  display: block;
+  margin-bottom: 7px;
+  color: #76d7d1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.admin-game-lifecycle h2,
+.admin-game-lifecycle p {
+  margin-top: 0;
+}
+
+.admin-game-lifecycle__header p {
+  max-width: 720px;
+  margin-bottom: 0;
+  color: #9fb8c4;
+  line-height: 1.5;
+}
+
+.admin-game-lifecycle__status {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid rgba(145, 179, 194, 0.28);
+  border-radius: 999px;
+  background: rgba(12, 35, 51, 0.88);
+  color: #dcecf1;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.admin-game-lifecycle__status.is-active {
+  border-color: rgba(94, 219, 157, 0.5);
+  color: #91e7b9;
+}
+
+.admin-game-lifecycle__status.is-paused,
+.admin-game-lifecycle__status.is-draft {
+  border-color: rgba(244, 193, 92, 0.55);
+  color: #f4cd79;
+}
+
+.admin-game-lifecycle__status.is-ended,
+.admin-game-lifecycle__status.is-archived {
+  border-color: rgba(232, 112, 112, 0.5);
+  color: #f0a0a0;
+}
+
+.admin-game-lifecycle__facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.admin-game-lifecycle__facts > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(145, 179, 194, 0.14);
+  border-radius: 10px;
+  background: rgba(4, 15, 27, 0.52);
+}
+
+.admin-game-lifecycle__facts dt {
+  color: #7897a7;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-game-lifecycle__facts dd {
+  margin: 7px 0 0;
+  overflow-wrap: anywhere;
+  color: #f4fbfd;
+  font-weight: 700;
+}
+
+.admin-game-lifecycle__controls,
+.admin-game-lifecycle-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-game-lifecycle__button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(82, 216, 207, 0.48);
+  border-radius: 9px;
+  background: rgba(20, 79, 89, 0.68);
+  color: #f4ffff;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-game-lifecycle__button:hover,
+.admin-game-lifecycle__button:focus-visible {
+  border-color: rgba(102, 237, 226, 0.9);
+  background: rgba(27, 101, 110, 0.82);
+}
+
+.admin-game-lifecycle__button.is-warning {
+  border-color: rgba(244, 193, 92, 0.52);
+  background: rgba(100, 71, 17, 0.62);
+}
+
+.admin-game-lifecycle__button.is-danger {
+  border-color: rgba(232, 112, 112, 0.55);
+  background: rgba(102, 32, 37, 0.68);
+}
+
+.admin-game-lifecycle__button.is-secondary {
+  border-color: rgba(145, 179, 194, 0.3);
+  background: rgba(22, 42, 56, 0.74);
+}
+
+.admin-game-lifecycle__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.admin-game-lifecycle__live {
+  min-height: 1.4em;
+  margin: 14px 0 0;
+  color: #9edbd6;
+}
+
+.admin-game-lifecycle-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 6, 12, 0.78);
+}
+
+.admin-game-lifecycle-modal {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100dvh - 48px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(232, 112, 112, 0.38);
+  border-radius: 14px;
+  background: #091c2b;
+  color: #eef8fb;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.admin-game-lifecycle-modal h2 {
+  margin: 0 0 10px;
+}
+
+.admin-game-lifecycle-modal p {
+  color: #aac0ca;
+  line-height: 1.5;
+}
+
+.admin-game-lifecycle-modal label {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  color: #dcecf1;
+  font-weight: 700;
+}
+
+.admin-game-lifecycle-modal input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(145, 179, 194, 0.4);
+  border-radius: 8px;
+  background: rgba(2, 12, 21, 0.84);
+  color: #ffffff;
+  font: inherit;
+}
+
+.admin-game-lifecycle-modal__live {
+  min-height: 1.5em;
+  color: #f4cd79;
+}
+
+@media (max-width: 1100px) {
+  .admin-game-lifecycle__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-game-lifecycle {
+    padding: 18px;
+  }
+
+  .admin-game-lifecycle__header {
+    flex-direction: column;
+  }
+
+  .admin-game-lifecycle__facts {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-game-lifecycle__controls,
+  .admin-game-lifecycle-modal__actions {
+    flex-direction: column;
+  }
+
+  .admin-game-lifecycle__button {
+    width: 100%;
+  }
+}
