@@ -43,7 +43,7 @@ export class SupabaseStockMarketTradingRepository
     };
     const response = await this.client.rpc<
       readonly ExecuteStockMarketOrderRpcRow[]
-    >("execute_stock_market_order", args);
+    >("execute_stock_market_order_calendar_gated", args);
 
     if (response.error) {
       throw mapTradingError(response.error);
@@ -150,6 +150,14 @@ function mapTradingError(
       "stock_asset_not_found",
       "Stock asset could not be found in this game session.",
       404,
+    );
+  }
+
+  if (upperMessage.includes("STOCK_TRADING_MARKET_CLOSED")) {
+    return new StockMarketTradingError(
+      "stock_market_closed",
+      "Stock market is closed. The order was not executed.",
+      409,
     );
   }
 

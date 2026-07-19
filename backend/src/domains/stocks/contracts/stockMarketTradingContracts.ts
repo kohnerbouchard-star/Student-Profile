@@ -105,6 +105,7 @@ export type StockMarketTradingErrorCode =
   | "game_session_not_found"
   | "player_session_not_found"
   | "stock_asset_not_found"
+  | "stock_market_closed"
   | "insufficient_cash"
   | "insufficient_shares"
   | "invalid_stock_market_trading_state"

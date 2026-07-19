@@ -1,0 +1,149 @@
+
+## apply exchange calendar integration
+Applied exchange-calendar runtime integration.
+exit=0
+
+## focused exchange calendar tests
+
+> test:stock-market-calendar
+> deno test --allow-read=supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts
+[0m[32mCheck[0m src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+[0m[38;5;245mrunning 11 tests from ./src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts[0m
+stock trading repository calls execute order RPC with one game and player session ... [0m[32mok[0m [0m[38;5;245m(812µs)[0m
+stock trading repository maps filled buy response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(195µs)[0m
+stock trading repository maps filled sell response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(150µs)[0m
+stock trading repository maps insufficient cash to 409 ... [0m[32mok[0m [0m[38;5;245m(358µs)[0m
+stock trading repository maps insufficient shares to 409 ... [0m[32mok[0m [0m[38;5;245m(166µs)[0m
+stock trading repository maps missing game, player, and stock to 404 ... [0m[32mok[0m [0m[38;5;245m(328µs)[0m
+stock trading repository rejects execution while the market is closed ... [0m[32mok[0m [0m[38;5;245m(121µs)[0m
+stock trading repository maps missing schema to schema-not-applied ... [0m[32mok[0m [0m[38;5;245m(125µs)[0m
+stock trading repository forwards idempotency key ... [0m[32mok[0m [0m[38;5;245m(118µs)[0m
+stock trading repository does not call initialize portfolio RPC ... [0m[32mok[0m [0m[38;5;245m(118µs)[0m
+stock trading repository does not call runner, read, or seed RPCs ... [0m[32mok[0m [0m[38;5;245m(97µs)[0m
+[0m[38;5;245mrunning 6 tests from ./src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts[0m
+all ten countries map to a stable exchange ... [0m[32mok[0m [0m[38;5;245m(556µs)[0m
+market opens at 08:00 Asia Seoul on a weekday ... [0m[32mok[0m [0m[38;5;245m(25ms)[0m
+market is closed before open and reports the next transition ... [0m[32mok[0m [0m[38;5;245m(310µs)[0m
+market closes at 17:00 Asia Seoul ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+weekends do not generate open market minutes ... [0m[32mok[0m [0m[38;5;245m(14ms)[0m
+minute keys are stable and exchange scoped ... [0m[32mok[0m [0m[38;5;245m(167µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts[0m
+exchange calendar migration gates new market orders at the database boundary ... [0m[32mok[0m [0m[38;5;245m(750µs)[0m
+[0m[38;5;245mrunning 15 tests from ./src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts[0m
+stock market runner rejects non-POST requests ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+stock market runner rejects missing configured secret ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock market runner rejects missing or invalid request secret ... [0m[32mok[0m [0m[38;5;245m(802µs)[0m
+stock market runner rejects missing gameSessionId ... [0m[32mok[0m [0m[38;5;245m(731µs)[0m
+stock market runner rejects multiple game session request shapes ... [0m[32mok[0m [0m[38;5;245m(369µs)[0m
+stock market runner rejects ticks while the market is closed ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+stock market runner returns success shape ... [0m[32mok[0m [0m[38;5;245m(6ms)[0m
+stock market runner publishes one public stock tick after persistence ... [0m[32mok[0m [0m[38;5;245m(6ms)[0m
+stock market runner posts market news and broadcasts public event ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock market runner keeps successful tick response when realtime publish fails ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner keeps successful tick response when realtime publisher throws ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner creates storyline hook from factory after successful tick ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner invokes storyline hook after successful tick ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+stock market runner keeps successful tick response when storyline hook fails ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner derives the default seed from one game session ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+
+[0m[32mok[0m | 33 passed | 0 failed [0m[38;5;245m(225ms)[0m
+
+exit=0
+
+## backend typecheck
+
+> typecheck:all
+> npm run typecheck && npm run typecheck:edge && npm run typecheck:stock-edge && npm run typecheck:admin-edge
+
+
+> typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> typecheck:edge
+> deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts
+
+[0m[32mDownload[0m https://esm.sh/@supabase/supabase-js@2.108.2
+[0m[32mDownload[0m https://esm.sh/@supabase/supabase-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/postgrest-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/storage-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/FunctionsClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimeClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimeChannel.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimePresence.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/websocket-factory.d.ts
+[0m[32mDownload[0m https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/GoTrueAdminApi.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/GoTrueClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/AuthAdminApi.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/AuthClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/errors.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/locks.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/serializer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/phoenix/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/constants.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/fetch.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/helpers.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/web3/ethereum.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/web3/solana.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.dom.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/error-codes.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/channel.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/longpoll.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/presence.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/push.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/serializer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/socket.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/timer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.errors.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/constants.d.ts
+[0m[32mCheck[0m supabase/functions/classroom-api/index.ts
+
+> typecheck:stock-edge
+> deno check --config=supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/stock-market-player-read/index.ts supabase/functions/stock-market-read/index.ts supabase/functions/stock-market-runner/index.ts supabase/functions/stock-market-seed-copy/index.ts supabase/functions/stock-market-trading/index.ts
+
+[0m[32mCheck[0m supabase/functions/stock-market-player-read/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-read/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-runner/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-seed-copy/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-trading/index.ts
+
+> typecheck:admin-edge
+> deno check --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/index.ts
+
+[0m[32mCheck[0m supabase/functions/admin-api/index.ts
+exit=0
+
+## migration source audit
+
+> econovaria@0.0.0 audit:migrations
+> node scripts/validate-supabase-migrations.mjs
+
+{
+  "status": "pass",
+  "migrationCount": 65,
+  "uniqueVersions": 65,
+  "canonicalTableCreations": 48
+}
+exit=0
+
+## integration drift check
+Verified exchange-calendar runtime integration.
+exit=0
+
+## diff whitespace check
+exit=0
+
+finalStatus=0

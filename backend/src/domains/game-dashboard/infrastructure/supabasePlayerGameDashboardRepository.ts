@@ -1,3 +1,7 @@
+import {
+  DEFAULT_STOCK_EXCHANGE_CODE,
+  evaluateStockMarketSession,
+} from "../../stocks/calendars/stockMarketExchangeCalendar.ts";
 import type {
   PlayerGameDashboardCashBalanceDto,
   PlayerGameDashboardInventoryItemDto,
@@ -297,7 +301,10 @@ const MARKET_NEWS_SELECT = [
 
 export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
-  constructor(private readonly client: SupabasePlayerGameDashboardClient) {}
+  constructor(
+    private readonly client: SupabasePlayerGameDashboardClient,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async read(
     input: PlayerGameDashboardReadInput,
@@ -379,7 +386,12 @@ export class SupabasePlayerGameDashboardRepository
         id: gameSession.id,
         name: gameSession.name,
         status: gameSession.status,
-        marketStatus: gameSession.status === "active" ? "open" : "closed",
+        marketStatus: gameSession.status === "active"
+          ? evaluateStockMarketSession(
+            DEFAULT_STOCK_EXCHANGE_CODE,
+            this.now(),
+          ).status
+          : "closed",
         currentTick: publicMarket.tickIndex,
         updatedAt: gameSession.updated_at ?? null,
       },
