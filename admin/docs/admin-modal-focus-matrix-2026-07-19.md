@@ -1,10 +1,9 @@
 # Admin modal and drawer focus matrix
 
 **Roadmap item:** `BETA-ADMIN-002`  
-**Corrective branch:** `agent/admin-modal-inventory-correction-v1`  
-**Corrective pull request:** `#209`  
 **Foundation pull request:** `#197`, merged as `ff9c6207ae2f7284fe753f0a719b0aa0c18017ff`  
-**Status:** `VERIFIED_COMPLETE_NOT_MERGED`  
+**Corrective pull request:** `#209`, merged as `bd0fe30a51e96ced7b9ea1924748f1f352d9f994`  
+**Status:** `VERIFIED_COMPLETE`  
 **Visual boundary:** preserve the accepted Admin v606 shell
 
 ## Acceptance contract
@@ -65,7 +64,7 @@ The following real v606 surfaces pass their applicable initial-focus, focus-cont
 
 ## Exhaustive renderer classification
 
-The accepted bundle contains three additional literal modal renderers that are not active major surfaces in the current capability state:
+The accepted bundle contains additional literal modal renderers that are not active major surfaces in the current capability state:
 
 | Renderer | Classification | Reason |
 |---|---|---|
@@ -76,6 +75,16 @@ The accepted bundle contains three additional literal modal renderers that are n
 | `player-log-event-detail` | Conditional player-specific renderer | Ordinary Logs detail and related-record actions remain inline and activate no modal controller. |
 
 Disabled and conditional renderers remain covered by the shared controller source contract when mounted. They are not counted as active major current-main surfaces, and the matrix does not fabricate mounted evidence for states that the accepted runtime did not render.
+
+## Immutable completion evidence
+
+Corrective PR #209 was validated on exact head `2a8cd971fa320e6d63534b5a5a6832cd44e358d9` and merged into `main` as `bd0fe30a51e96ced7b9ea1924748f1f352d9f994`.
+
+- Repository Quality #805 passed.
+- Admin Shell Smoke #802 passed all 83 stages.
+- Retained browser diagnostics: `admin-browser-smoke-0894be73054829217f58fb35bff4de8b49920b1a`.
+- Artifact digest: `sha256:d810c600f2cefce12f462b9d974da9e251b9e133ee2978f3b016785399d30afc`.
+- No separate pull-request workflow run was emitted for the immutable squash-merge commit; the exact reviewed head is the validated source of the merged four-file diff.
 
 ## Scope boundary
 
@@ -97,4 +106,4 @@ PR #177 owns the future inventory-redemption drawer and confirmation dialogs und
 
 ## Completion boundary
 
-The current-main active major modal and drawer inventory is exhausted with mounted keyboard evidence. `BETA-ADMIN-002` becomes `VERIFIED_COMPLETE` when corrective PR #209 merges and its immutable merge SHA and post-merge workflow evidence are recorded.
+The current-main active major modal and drawer inventory is exhausted with mounted keyboard evidence. `BETA-ADMIN-002` is `VERIFIED_COMPLETE` through foundation PR #197 and corrective PR #209.
