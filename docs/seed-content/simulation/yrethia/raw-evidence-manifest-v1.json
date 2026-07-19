@@ -10,13 +10,15 @@
       "path": "output/instrument-results.csv",
       "sha256": "98263327a7308b275c06ee10fe000da6a041a6b0caf7267c519e854bd9e7b223",
       "sizeBytes": 3386105,
-      "repositoryRetained": false
+      "repositoryRetained": false,
+      "artifactRetained": false
     },
     {
       "path": "output/portfolio-results.csv",
       "sha256": "4d2de7ca38f9c31a8416b2e04453c8419249a346aff99e77574323fff7939f87",
       "sizeBytes": 380644,
-      "repositoryRetained": false
+      "repositoryRetained": false,
+      "artifactRetained": false
     }
   ]
 }

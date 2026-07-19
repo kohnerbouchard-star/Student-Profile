@@ -22,6 +22,7 @@
     "status": "summary-only-model-no-raw-output",
     "rawEvidenceManifest": "raw-evidence-manifest-v1.json",
     "repositoryRetained": true,
+    "immutableArtifactRetained": false,
     "requiredForApproval": false
   },
   "exactCommand": "python run_solvend_market_simulation_v1.py"

@@ -16,12 +16,13 @@
     "northreach_active_instruments_v1.json": "4e7783ee9267bdb467cf561cdd78ccb622b80001b14276a157fc7ab6a7de42c8",
     "run_northreach_market_simulation_v1.py": "d6652769c8d3905adb53e4a1aab60ef9b5ff8e04f006614fb06654ca6acdabb8",
     "summary-v1.json": "d83574f71edd581eb140a094ca31309e8c2034ecccddd1443165b11c963a156b",
-    "raw-evidence-manifest-v1.json": "26eaaa650d6948936785fb3c93405b541abd09ea2f70e39b18345a438bfc7f27"
+    "raw-evidence-manifest-v1.json": "a65479dbecffd35233554157792662496d68f1cb3f54eaf7bb8ac3bb28d78bf5"
   },
   "evidenceRetention": {
     "status": "immutable-artifact-pending",
     "rawEvidenceManifest": "raw-evidence-manifest-v1.json",
     "repositoryRetained": false,
+    "immutableArtifactRetained": false,
     "requiredForApproval": true
   },
   "exactCommand": "python run_northreach_market_simulation_v1.py --input northreach_active_instruments_v1.json --output output --seeds 250 --cycles 60"
