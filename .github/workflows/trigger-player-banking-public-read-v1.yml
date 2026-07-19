@@ -31,8 +31,13 @@ jobs:
           flexible_definition = r'''def replace_once(path, old, new):
               file = Path(path)
               text = file.read_text()
-              source_lines = text.splitlines()
               old_lines = old.splitlines()
+              if len(old_lines) == 1:
+                  target = old.strip()
+                  if target in text:
+                      file.write_text(text.replace(target, new.strip(), 1))
+                      return
+              source_lines = text.splitlines()
               expected = [line.strip() for line in old_lines]
               for index in range(0, len(source_lines) - len(old_lines) + 1):
                   candidate = source_lines[index:index + len(old_lines)]
