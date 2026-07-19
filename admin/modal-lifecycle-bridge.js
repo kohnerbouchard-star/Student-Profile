@@ -57,7 +57,7 @@
     if (accessibility.getActiveController?.()?.backdrop === backdrop) return null;
 
     const acknowledgementRequired = Boolean(backdrop.closest(ACKNOWLEDGEMENT_SELECTOR) || backdrop.matches(ACKNOWLEDGEMENT_SELECTOR));
-    const opener = lastOpener instanceof HTMLElement && lastOpener.isConnected ? lastOpener : null;
+    const opener = lastOpener instanceof HTMLElement ? lastOpener : null;
     const active = document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)
       ? document.activeElement
       : null;
