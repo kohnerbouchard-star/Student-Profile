@@ -1,4 +1,4 @@
-export const DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE = "Asia/Seoul";
+export const SEOUL_STOCK_MARKET_TIME_ZONE = "Asia/Seoul";
 
 export interface StockMarketWindowSettingsSource {
   readonly timezone?: unknown;
@@ -6,16 +6,12 @@ export interface StockMarketWindowSettingsSource {
 
 export interface ResolvedStockMarketWindowSettings {
   readonly timezone: string;
-  readonly source: "game_setting" | "server_fallback";
+  readonly source: "game_setting" | "seoul_fallback";
 }
 
 export function resolveStockMarketWindowSettings(
   value: unknown,
-  serverFallbackTimeZone: string = DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
 ): ResolvedStockMarketWindowSettings {
-  const fallback = isValidIanaTimeZone(serverFallbackTimeZone)
-    ? serverFallbackTimeZone.trim()
-    : DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE;
   const candidate = readTimeZoneCandidate(value);
 
   if (candidate && isValidIanaTimeZone(candidate)) {
@@ -26,8 +22,8 @@ export function resolveStockMarketWindowSettings(
   }
 
   return {
-    timezone: fallback,
-    source: "server_fallback",
+    timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
+    source: "seoul_fallback",
   };
 }
 
