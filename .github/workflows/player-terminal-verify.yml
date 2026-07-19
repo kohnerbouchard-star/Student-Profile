@@ -53,6 +53,7 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
+              $0 == ".github/workflows/repository-quality.yml" { next }
               $0 == "index.html" { next }
               $0 == "package.json" { next }
               $0 == "frontend/src/core/constants.js" { next }
