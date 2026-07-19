@@ -1,0 +1,88 @@
+name: Seed Exchange Calendar Registry
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - package.json
+      - scripts/seed-exchange-calendar-audit.mjs
+      - docs/seed-content/markets/exchanges/**
+      - docs/seed-content/17-one-year-real-time-content-and-market-cadence-contract-v1.md
+      - .github/workflows/seed-exchange-calendar-registry.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-exchange-calendar-registry-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate seed exchange calendars
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out seed authority branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate registry and retain diagnostics
+        id: validation
+        shell: bash
+        run: |
+          set +e
+          LOG="docs/seed-content/reviews/exchange-calendar-registry-run-log.txt"
+          : > "$LOG"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "exchange calendar audit" node scripts/seed-exchange-calendar-audit.mjs
+          run_step "seed preflight tests" npm run test:seed-content-preflight
+          run_step "design seed preflight" npm run preflight:seed-content
+          run_step "diff whitespace check" git diff --check
+
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit validation evidence
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/seed-content/reviews/exchange-calendar-registry-run-log.txt
+          if git diff --cached --quiet; then
+            echo "Exchange calendar evidence is already current."
+          else
+            git commit -m "test(seed): retain exchange calendar validation [skip ci]"
+            git push origin HEAD:agent/seed-content-foundation-v1
+          fi
+
+      - name: Enforce validation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.validation.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Seed exchange calendar validation failed. See the committed diagnostic log."
+            false
+          fi
