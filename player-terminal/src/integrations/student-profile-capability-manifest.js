@@ -7,6 +7,7 @@ const SUPPORTED_SERVICE = "classroom-api";
 const ENDPOINT_COVERAGE = Object.freeze({
   capabilities: Object.freeze(["capabilities"]),
   contractAccept: Object.freeze(["contractAccept"]),
+  contractSubmit: Object.freeze(["contractSubmit"]),
   contracts: Object.freeze(["contracts"]),
   countries: Object.freeze(["countries"]),
   country: Object.freeze(["country"]),
@@ -30,6 +31,7 @@ const ROUTE_REQUIREMENTS = Object.freeze({
 
 const ACTION_REQUIREMENTS = Object.freeze({
   contractAccept: "contractAccept",
+  contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
   logout: "logout",
   marketWatchlist: "marketWatchlist",
