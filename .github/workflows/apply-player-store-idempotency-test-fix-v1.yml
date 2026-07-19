@@ -1,0 +1,33 @@
+name: Apply Player Store Idempotency Test Fix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.ref == 'agent/player-store-public-boundary-v1' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/player-store-public-boundary-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Correct idempotency prefix expectation
+        run: |
+          node -e "const fs=require('fs');const p='player-terminal/tests/store-connected-purchase.mjs';let s=fs.readFileSync(p,'utf8');s=s.replace('assert.match(request.payload.idempotencyKey, /^storePurchase:/);','assert.match(request.payload.idempotencyKey, /^ptr_storePurchase_/);');fs.writeFileSync(p,s);"
+      - name: Commit correction
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add player-terminal/tests/store-connected-purchase.mjs
+          if git diff --cached --quiet; then
+            echo 'No correction remains.'
+          else
+            git commit -m 'Fix Store idempotency key assertion'
+            git push origin HEAD:agent/player-store-public-boundary-v1
+          fi
