@@ -211,11 +211,18 @@ const quote = await api.execute("storeQuote", {
 });
 assert.equal(quote.result.quote.quoteKey, quoteKey);
 
+await assert.rejects(
+  api.execute("storePurchase", {
+    quoteKey,
+    playerId: "browser-owned-player"
+  }),
+  (error) => error.code === "INVALID_REQUEST"
+);
+
 const purchase = await api.execute("storePurchase", {
   quoteKey,
   clientSubmittedAt: "2026-07-19T03:00:30.000Z",
-  quoteId: "browser-owned-quote",
-  playerId: "browser-owned-player"
+  quoteId: "browser-owned-quote"
 });
 assert.equal(purchase.result.receipt.receiptKey, receiptKey);
 assert.deepEqual(purchase.invalidatedResources, ["dashboard", "store", "inventory", "banking"]);
@@ -240,4 +247,4 @@ for (const privateField of ["quoteId", "gameSessionId", "playerId", "playerSessi
 assert.equal("x-game-session-id" in purchaseRequest.headers, false);
 assert.equal("x-player-id" in purchaseRequest.headers, false);
 
-console.log("Connected Store purchase passed: manifest gating, public item/quote/receipt keys, committed settlement, and authoritative Store/Inventory/Banking refresh are valid.");
+console.log("Connected Store purchase passed: manifest gating, ownership rejection, public item/quote/receipt keys, committed settlement, and authoritative Store/Inventory refresh are valid.");
