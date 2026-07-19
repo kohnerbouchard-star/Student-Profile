@@ -22,7 +22,7 @@ if (!process.exitCode) {
     throw new Error("Admin modal fixture launch marker changed.");
   }
 
-  const helpers = String.raw`
+  const helpers = `
 async function exercisePlayerProfileModal(browser) {
   const { context, page, errors } = await createPage(browser, "Edit Player Profile modal");
   try {
@@ -88,7 +88,7 @@ async function exerciseShareGameAccessModal(browser) {
 }
 `;
 
-  const runtimeTail = String.raw`
+  const runtimeTail = `
 const browser = await chromium.launch({ headless: true });
 const report = {
   modalInventory: ${JSON.stringify(modalIds)},
