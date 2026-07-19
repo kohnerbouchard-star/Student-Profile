@@ -43,10 +43,13 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
+              $0 == "backend/package.json" { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/contracts\/playerContractPublicListContracts([.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/players\/contracts\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
+              $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
+              $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
               { print }
             ' /tmp/player-terminal-changed-files.txt)"
