@@ -28,7 +28,8 @@ assert.match(source, /stableFocusTarget\(opener\)/, "Close and destroy paths mus
 assert.match(source, /focusInside\(lastFocusedInside\)/, "Blocked dismissal and nested resume must retain the last valid focus target.");
 
 for (const required of [
-  "EconovariaAdminModalAccessibility.activate",
+  "window.EconovariaAdminModalAccessibility",
+  "accessibility.activate",
   "data-admin-modal-accessibility-bound",
   "econovaria:admin-mounted-modal-bound",
   "econovaria:admin-request-lifecycle",
