@@ -200,7 +200,8 @@
         return;
       }
 
-      if (!trapFocus || event.key !== "Tab") return;
+      const isTab = event.key === "Tab";
+      if (!trapFocus || !isTab) return;
       const controls = focusableElements(dialog);
       if (!controls.length) {
         event.preventDefault();
