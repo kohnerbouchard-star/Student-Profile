@@ -110,9 +110,10 @@ export async function handlePlayerBankingPublicRequest(
       currentBalances: page.balances,
       ledgerEntries,
       pagination: {
-        limit,
-        hasMore: page.hasMore,
-        nextCursor: page.hasMore ? `offset_${nextOffset}` : null,
+      cursor: offset > 0 ? `offset_${offset}` : null,
+      limit,
+      hasMore: page.hasMore,
+      nextCursor: page.hasMore ? `offset_${nextOffset}` : null,
       },
     });
   } catch (error) {

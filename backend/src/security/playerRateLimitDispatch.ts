@@ -71,7 +71,10 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     GET: operation("player.session.read", "read"),
   }),
   capabilities: byMethod({
-    GET: operation("player.capabilities.read", "read"),
+  GET: operation("player.capabilities.read", "read"),
+  }),
+  banking: byMethod({
+  GET: operation("player.banking.read", "read"),
   }),
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),

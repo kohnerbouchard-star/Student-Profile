@@ -21,6 +21,7 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
   const expected = {
     "bootstrap:GET": ["player.session.read", "read"],
     "capabilities:GET": ["player.capabilities.read", "read"],
+    "banking:GET": ["player.banking.read", "read"],
     "contractAccept:POST": ["player.contracts.accept", "write"],
     "contractSubmit:POST": ["player.contracts.submit", "write"],
     "contracts:GET": ["player.contracts.read", "read"],
