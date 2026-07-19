@@ -25,10 +25,11 @@
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}",
-    "store-connected": "node tests/store-connected-purchase.mjs"
+    "store-connected": "node tests/store-connected-purchase.mjs",
+    "store-negative": "node tests/store-connected-negative-states.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"
