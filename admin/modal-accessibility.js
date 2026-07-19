@@ -39,8 +39,27 @@
     });
   }
 
+  function semanticFocusReplacement(preferred) {
+    if (!(preferred instanceof HTMLElement)) return null;
+    const selectors = [];
+    const action = preferred.getAttribute("data-admin-terminal-action");
+    const section = preferred.getAttribute("data-admin-section");
+    if (action) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"]`);
+    if (section) selectors.push(`[data-admin-section="${CSS.escape(section)}"]`);
+    if (preferred.id) selectors.push(`#${CSS.escape(preferred.id)}`);
+    for (const selector of selectors) {
+      const candidate = [...document.querySelectorAll(selector)].find((element) => {
+        return element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element);
+      });
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
   function stableFocusTarget(preferred) {
     if (preferred instanceof HTMLElement && preferred.isConnected && visible(preferred) && enabled(preferred)) return preferred;
+    const replacement = semanticFocusReplacement(preferred);
+    if (replacement) return replacement;
     return [
       document.querySelector('[data-admin-section][aria-current="page"]'),
       document.querySelector('[data-admin-section][aria-selected="true"]'),
