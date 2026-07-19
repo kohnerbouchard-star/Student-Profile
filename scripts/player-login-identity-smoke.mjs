@@ -3,11 +3,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE_URL = process.env.PLAYER_LOGIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/";
 const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts";
-const GAME_ID = "00000000-0000-4000-8000-000000000101";
-const PLAYER_UUID = "00000000-0000-4000-8000-000000000102";
 const PLAYER_IDENTIFIER = "RFID:04A1B2C3D4";
 const ACCESS_CODE = "PLAYER-4826";
 const GAME_CODE = "SMOKE1";
+const PLAYER_SESSION_TOKEN = "ps_identity_smoke_session_token";
+const PLAYER_STORAGE_KEY = "econovaria.player.auth.v1";
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
@@ -58,16 +59,15 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
       headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
       body: JSON.stringify({
         ok: true,
-        gameSession: { id: GAME_ID, name: "Identity Smoke Game", status: "active" },
+        gameSession: { name: "Identity Smoke Game", status: "active" },
         player: {
-          id: PLAYER_UUID,
           displayName: "Identity Smoke Player",
           rosterLabel: "GRADE-10-01",
           playerIdentifier: PLAYER_IDENTIFIER,
           status: "active",
         },
         session: {
-          token: "ps_identity_smoke_session_token",
+          token: PLAYER_SESSION_TOKEN,
           status: "active",
           expiresAt: new Date(Date.now() + 43_200_000).toISOString(),
         },
@@ -83,42 +83,36 @@ await page.route("**/functions/v1/classroom-api/**", async (route) => {
       headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
       body: JSON.stringify({
         ok: true,
-        gameSession: { id: GAME_ID, name: "Identity Smoke Game", status: "active" },
+        gameSession: { name: "Identity Smoke Game", status: "active" },
         player: {
-          id: PLAYER_UUID,
           displayName: "Identity Smoke Player",
           rosterLabel: "GRADE-10-01",
           playerIdentifier: PLAYER_IDENTIFIER,
           status: "active",
         },
-        availableActions: [],
-        accountBalances: [],
-        inventory: [],
-        holdings: [],
+        session: {
+          status: "active",
+          expiresAt: new Date(Date.now() + 43_200_000).toISOString(),
+        },
+        balances: [],
+        attendance: { status: "not_configured" },
+        availableActions: ["dashboard.view"],
       }),
     });
     return;
   }
 
   await route.fulfill({
-    status: 200,
+    status: 503,
     contentType: "application/json",
     headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
     body: JSON.stringify({
-      ok: true,
-      gameSession: { id: GAME_ID, name: "Identity Smoke Game", status: "active" },
-      player: {
-        id: PLAYER_UUID,
-        displayName: "Identity Smoke Player",
-        rosterLabel: "GRADE-10-01",
-        playerIdentifier: PLAYER_IDENTIFIER,
-        status: "active",
+      ok: false,
+      error: {
+        code: "smoke_route_not_stubbed",
+        message: "This identity smoke only verifies the authenticated Player Terminal handoff.",
+        retryable: false,
       },
-      dashboard: {},
-      balances: [],
-      holdings: [],
-      inventory: [],
-      activity: [],
     }),
   });
 });
@@ -154,9 +148,8 @@ try {
   await page.locator("#playerAccessCode").fill(ACCESS_CODE);
   await page.locator("#playerForm button[type='submit']").click();
 
-  await page.waitForFunction(() => document.getElementById("appShell")?.classList.contains("hidden") === false, null, {
-    timeout: 10_000,
-  });
+  await page.waitForURL("**/player-terminal/", { timeout: 10_000 });
+  await page.waitForSelector("#playerTerminal", { timeout: 10_000 });
 
   if (loginRequests.length !== 1) {
     throw new Error(`Expected exactly one login request, received ${loginRequests.length}.`);
@@ -168,27 +161,54 @@ try {
     login.playerIdentifier !== PLAYER_IDENTIFIER ||
     login.accessCode !== ACCESS_CODE ||
     "studentCode" in login ||
-    "playerUuid" in login
+    "playerUuid" in login ||
+    "gameSessionId" in login
   ) {
     throw new Error(`Player login sent the wrong identity contract: ${JSON.stringify(login)}.`);
   }
 
-  const identity = await page.evaluate(() => ({
-    name: document.getElementById("identityName")?.textContent?.trim() || "",
-    meta: document.getElementById("identityMeta")?.textContent?.trim() || "",
-  }));
+  const handoff = await page.evaluate((storageKey) => {
+    const raw = sessionStorage.getItem(storageKey);
+    return {
+      raw,
+      value: raw ? JSON.parse(raw) : null,
+      href: location.href,
+      terminalMounted: Boolean(document.getElementById("playerTerminal")),
+      legacyShellMounted: Boolean(document.getElementById("appShell")),
+    };
+  }, PLAYER_STORAGE_KEY);
+
+  if (
+    !handoff.terminalMounted ||
+    handoff.legacyShellMounted ||
+    handoff.value?.playerSessionToken !== PLAYER_SESSION_TOKEN ||
+    !handoff.value?.sessionExpiresAt
+  ) {
+    throw new Error(`Player Terminal handoff is incomplete: ${JSON.stringify(handoff)}.`);
+  }
+
+  if (UUID_PATTERN.test(handoff.raw || "")) {
+    throw new Error("Player login handoff persisted an internal UUID in browser storage.");
+  }
 
   writeFileSync(`${ARTIFACT_DIR}/player-login-identity-runtime.json`, JSON.stringify({
     formState,
     loginRequests,
-    identity,
+    handoff: {
+      href: handoff.href,
+      terminalMounted: handoff.terminalMounted,
+      legacyShellMounted: handoff.legacyShellMounted,
+      hasOpaqueSessionToken: handoff.value?.playerSessionToken === PLAYER_SESSION_TOKEN,
+      hasExpiry: Boolean(handoff.value?.sessionExpiresAt),
+      containsUuid: UUID_PATTERN.test(handoff.raw || ""),
+    },
     errors,
     consoleMessages,
   }, null, 2));
   await page.screenshot({ path: `${ARTIFACT_DIR}/player-login-identity.png`, fullPage: true });
 
   if (errors.length) throw new Error(errors[0]);
-  console.log("Player Game Code + Player ID + Access Code smoke passed.");
+  console.log("Player Game Code + Player ID + Access Code → Player Terminal handoff smoke passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/player-login-identity-runtime.json`, JSON.stringify({
     loginRequests,
