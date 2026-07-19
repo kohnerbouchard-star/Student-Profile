@@ -218,10 +218,7 @@
     const target = event.target instanceof Element ? event.target : null;
     const closeControl = target?.closest(CLOSE_SELECTOR);
     const action = target?.closest("[data-admin-terminal-action]");
-    if (action instanceof HTMLElement && !closeControl) {
-      reconcile();
-      reconcileAfterCurrentEvent();
-    }
+    if (action instanceof HTMLElement && !closeControl) reconcileAfterCurrentEvent();
   });
 
   for (const eventName of [
