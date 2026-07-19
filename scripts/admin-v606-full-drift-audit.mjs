@@ -32,7 +32,7 @@ const expectedScripts = [
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
   "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
   "./player-create-ux.js", "./game-code-wiring.js", "./admin-stabilization.js",
-  "./interaction-quality.js", "./interaction-quality-control-reset.js",
+  "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);
@@ -43,7 +43,7 @@ const expectedStyles = [
   "./css/session-gate.css", "./css/player-runtime-integration.css", "./css/player-create-confirmation.css",
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
   "./css/overview-quick-actions.css", "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
-  "./css/loading-scope-overrides.css", "./css/keyboard-navigation.css",
+  "./css/loading-scope-overrides.css", "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
 assert(html.includes("import('./keyboard-navigation.js')"), "Keyboard navigation is not loaded through the accepted script order.");
@@ -59,6 +59,7 @@ const scopedRuntimeFiles = {
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
   "admin/overview-quick-actions.js": ["OVERVIEW_ACTIONS", "scan-attendance", "add-contract", "add-player", "add-store-item", "admin-overview-quick-actions-card", "MAX_BOOT_FRAMES"],
   "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
+  "admin/data-state-contracts.js": ["CANONICAL_STATES", "loading", "loaded", "refreshing", "stale", "empty", "failed", "econovaria:admin-data-state-changed", "detail.pageRead !== true"],
   "admin/interaction-quality-control-reset.js": ["restoreCompletedControl", "setScannerReady", 'removeAttribute("aria-disabled")', "Scan a player code. The result appears here."],
   "admin/shape-accurate-skeletons.js": ["ROUTE_ASSEMBLIES", "clonePage", "renderSurface", "beginRefresh", "endRefresh", "player-drawer", "contract-review", "scanner", "account-games"],
 };
@@ -123,6 +124,16 @@ assert(!skeletonRuntime.includes("style.cssText"), "Shape skeleton controller wr
 assert(skeletonRuntime.includes('setAttribute("aria-busy", "true")'), "Shape skeleton hosts do not expose busy state.");
 assert(skeletonRuntime.includes('setAttribute("aria-hidden", "true")') && skeletonRuntime.includes('setAttribute("inert", "")'), "Skeleton clones are not decorative and inert.");
 
+const dataStateRuntime = readText("admin/data-state-contracts.js");
+assert(!dataStateRuntime.includes("window.fetch ="), "Data-state controller adds a network wrapper.");
+assert(!dataStateRuntime.includes("MutationObserver"), "Data-state controller adds DOM observation.");
+assert(!dataStateRuntime.includes('createElement("style")') && !dataStateRuntime.includes("style.cssText"), "Data-state controller injects runtime CSS.");
+assert(dataStateRuntime.includes("econovaria:admin-request-lifecycle"), "Data-state controller does not consume explicit request lifecycle events.");
+assert(dataStateRuntime.includes("econovaria:admin-data-state-changed"), "Data-state controller does not publish state transitions.");
+for (const state of ["loading", "loaded", "refreshing", "stale", "empty", "failed"]) {
+  assert(dataStateRuntime.includes(`"${state}"`), `Data-state controller is missing ${state}.`);
+}
+
 const stabilization = readText("admin/admin-stabilization.js");
 assert(!stabilization.includes("window.fetch ="), "Admin stabilization adds a network wrapper.");
 assert(!stabilization.includes('createElement("style")'), "Admin stabilization injects runtime CSS.");
@@ -135,7 +146,7 @@ for (const [glyph, iconName] of [["↻", "history"], ["⇩", "download"], ["←"
 for (const path of [
   "admin/css/session-gate.css", "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css", "admin/css/admin-stabilization-visual-finish.css", "admin/css/overview-quick-actions.css",
-  "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css", "admin/css/loading-scope-overrides.css", "admin/css/keyboard-navigation.css",
+  "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css", "admin/css/loading-scope-overrides.css", "admin/css/data-state-contracts.css", "admin/css/keyboard-navigation.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [/(^|[},\s])body\s*\{/m, /(^|[},\s])html\s*\{/m, /\.admin-terminal-shell\s*\{/m, /\[data-admin-section\]\s*\{/m]) {
@@ -186,10 +197,15 @@ assert(loadingScopeCss.includes('[data-admin-skeleton-component="metrics"]') && 
 assert(loadingScopeCss.includes('[data-admin-skeleton-component="heading"]') && loadingScopeCss.includes('[data-admin-skeleton-component="toolbar"]'), "Loading scope does not suppress heading and toolbar clones.");
 assert(loadingScopeCss.includes("background: transparent !important"), "Loading scope still paints an opaque full-page overlay.");
 assert(!loadingScopeCss.includes("#adminPreview *"), "Loading scope CSS applies a blanket page-shell selector.");
+const dataStateCss = readText("admin/css/data-state-contracts.css");
+for (const token of ['[data-state="stale"]', '[data-state="empty"]', '[data-state="failed"]']) {
+  assert(dataStateCss.includes(token), `Data-state CSS is missing ${token}.`);
+}
+assert(!dataStateCss.includes("#adminPreview *"), "Data-state CSS applies a blanket page-shell selector.");
 const keyboardCss = readText("admin/css/keyboard-navigation.css");
 assert(keyboardCss.includes(":focus-visible") && keyboardCss.includes("forced-colors: active"), "Keyboard focus CSS is incomplete.");
 assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a blanket page-shell selector.");
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
