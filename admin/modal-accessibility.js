@@ -45,10 +45,17 @@
       document.querySelector('[data-admin-section][aria-current="page"]'),
       document.querySelector('[data-admin-section][aria-selected="true"]'),
       document.querySelector('[data-admin-section].active, [data-admin-section].is-active'),
+      document.querySelector('[data-admin-section]'),
       document.querySelector('[data-admin-terminal-action="add-player"]'),
       document.querySelector(".admin-terminal-shell-main"),
       document.querySelector("#adminPreview"),
     ].find((element) => element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element)) || null;
+  }
+
+  function focusStableTarget(target) {
+    if (!(target instanceof HTMLElement) || !target.isConnected || !visible(target) || !enabled(target)) return;
+    if (target.tabIndex < 0 && !target.matches(FOCUSABLE_SELECTOR)) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
   }
 
   function stackTop() {
@@ -110,7 +117,7 @@
     function restoreFocus() {
       const target = stableFocusTarget(opener);
       if (!target) return;
-      window.requestAnimationFrame(() => target.focus({ preventScroll: true }));
+      window.requestAnimationFrame(() => focusStableTarget(target));
     }
 
     function addListeners() {
