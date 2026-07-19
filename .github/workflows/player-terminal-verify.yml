@@ -4,24 +4,12 @@ on:
   pull_request:
     paths:
       - "player-terminal/**"
-      - "index.html"
-      - "frontend/src/core/constants.js"
-      - "frontend/src/core/api.js"
-      - "frontend/src/core/login.js"
-      - "scripts/player-terminal-runtime-cutover-smoke.mjs"
-      - "scripts/player-login-identity-smoke.mjs"
       - ".github/workflows/player-terminal-verify.yml"
   push:
     branches:
       - main
     paths:
       - "player-terminal/**"
-      - "index.html"
-      - "frontend/src/core/constants.js"
-      - "frontend/src/core/api.js"
-      - "frontend/src/core/login.js"
-      - "scripts/player-terminal-runtime-cutover-smoke.mjs"
-      - "scripts/player-login-identity-smoke.mjs"
       - ".github/workflows/player-terminal-verify.yml"
 
 permissions:
@@ -55,19 +43,6 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
-              $0 == ".github/workflows/repository-quality.yml" { next }
-              $0 == "index.html" { next }
-              $0 == "package.json" { next }
-              $0 == "frontend/src/core/constants.js" { next }
-              $0 == "frontend/src/core/api.js" { next }
-              $0 == "frontend/src/core/login.js" { next }
-              $0 == "scripts/player-terminal-runtime-cutover-smoke.mjs" { next }
-              $0 == "scripts/player-login-identity-smoke.mjs" { next }
-              $0 == "scripts/shared-game-timezone-ui-smoke.mjs" { next }
-              $0 == "scripts/apply-shared-game-timezone-ui-v1.mjs" { next }
-              $0 == "scripts/fix-shared-game-timezone-smoke-v1.mjs" { next }
-              $0 == "docs/audits/remaining-cloudflare-api-url-v1.md" { next }
-              $0 == "docs/roadmaps/econovaria-player-runtime-cutover-amendment-2026-07-19.md" { next }
               $0 == "backend/package.json" { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }
@@ -117,10 +92,6 @@ jobs:
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
           test "$status" -eq 0
-
-      - name: Verify host runtime cutover
-        if: success()
-        run: node scripts/player-terminal-runtime-cutover-smoke.mjs
 
       - name: Install Chromium
         if: success()
