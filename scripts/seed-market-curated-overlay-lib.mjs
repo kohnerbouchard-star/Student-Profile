@@ -1,6 +1,13 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+const legacyCuratedFiles = new Set([
+  "northreach-active-market-candidate-v1.json",
+  "solvend-active-market-candidate-and-issuers-v1.json",
+  "thaloris-active-market-candidate-and-issuers-v1.json",
+  "yrethia-active-market-candidate-and-issuers-v1.json",
+]);
+
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
@@ -8,6 +15,7 @@ async function readJson(filePath) {
 function candidateShape(document) {
   const market = document.market ?? document;
   return {
+    identityAuthority: document.identityAuthority ?? market.identityAuthority ?? null,
     country: market.country ?? document.country,
     currency: market.currency ?? document.currency,
     exchange: market.exchange ?? document.exchange,
@@ -35,14 +43,20 @@ function curatedIdentity(instrument, candidate, sourceFile) {
 }
 
 export async function overlayCuratedActiveIdentities({ countryRecords, activeRoot }) {
-  const candidateFiles = (await readdir(activeRoot))
+  const allCandidateFiles = (await readdir(activeRoot))
     .filter((name) => name.includes("active-market-candidate") && name.endsWith(".json"))
     .sort();
   const overlays = [];
+  const curatedSourceFiles = [];
   const canonicalNamesForSharedIssuerIds = new Map();
 
-  for (const fileName of candidateFiles) {
-    const candidate = candidateShape(await readJson(path.join(activeRoot, fileName)));
+  for (const fileName of allCandidateFiles) {
+    const document = await readJson(path.join(activeRoot, fileName));
+    const candidate = candidateShape(document);
+    const authority = candidate.identityAuthority ?? (legacyCuratedFiles.has(fileName) ? "curated-active-candidate" : null);
+    if (authority !== "curated-active-candidate") continue;
+    curatedSourceFiles.push(fileName);
+
     if (!candidate.country || !countryRecords.has(candidate.country)) {
       throw new Error(`${fileName} does not identify a generated country.`);
     }
@@ -122,7 +136,7 @@ export async function overlayCuratedActiveIdentities({ countryRecords, activeRoo
     propagatedIssuerNameCount,
     sharedIssuerIdsReconciled: [...canonicalNamesForSharedIssuerIds.keys()].sort(),
     countries: [...new Set(overlays.map((entry) => entry.country))].sort(),
-    sourceFiles: candidateFiles,
+    sourceFiles: curatedSourceFiles,
     activationAuthorized: false,
   };
 }
