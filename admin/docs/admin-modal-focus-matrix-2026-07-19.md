@@ -88,7 +88,7 @@ Corrective PR #209 was validated on exact head `2a8cd971fa320e6d63534b5a5a6832cd
 
 ## Scope boundary
 
-PR #177 owns the future inventory-redemption drawer and confirmation dialogs under `BETA-ADMIN-008`. Those unmerged surfaces are not part of the current-main `BETA-ADMIN-002` inventory. Their accessibility evidence must remain with PR #177 and be reconciled after that capability merges.
+PR #177 subsequently added the inventory-redemption drawer and confirmation dialogs under `BETA-ADMIN-008` and merged as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`. Those additive surfaces retain their own merged accessibility and browser evidence. They do not alter the immutable `BETA-ADMIN-002` completion proof recorded in this matrix.
 
 ## Active files
 
@@ -106,4 +106,4 @@ PR #177 owns the future inventory-redemption drawer and confirmation dialogs und
 
 ## Completion boundary
 
-The current-main active major modal and drawer inventory is exhausted with mounted keyboard evidence. `BETA-ADMIN-002` is `VERIFIED_COMPLETE` through foundation PR #197 and corrective PR #209.
+The current-main active major modal and drawer inventory covered by `BETA-ADMIN-002` is exhausted with mounted keyboard evidence. `BETA-ADMIN-002` is `VERIFIED_COMPLETE` through foundation PR #197 and corrective PR #209.
