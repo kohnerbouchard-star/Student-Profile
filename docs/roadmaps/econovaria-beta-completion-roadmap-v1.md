@@ -4,8 +4,8 @@
 **Repository:** `kohnerbouchard-star/Student-Profile`  
 **Authoritative path:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
-**Last baseline audit:** 2026-07-18  
-**Current audited main baseline:** `3b74340830da8db4fdabe2926915c3a32471b7c8`
+**Last baseline audit:** 2026-07-19  
+**Current audited main baseline:** `249fc53a23ad23058d376e4e394524af0bdee265`
 
 ---
 
@@ -106,6 +106,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Player Terminal capability tranche | `VERIFIED_COMPLETE` for frontend behavior only | PR #156 merged |
 | Contracts, attendance rewards, and Admin stabilization | `VERIFIED_COMPLETE` | PR #138 merged |
 | Store quote/purchase flow | `VERIFIED_COMPLETE` for frontend behavior | PR #145 merged |
+| Banking reads and exactly-once ledger invariants | `IN_PROGRESS` | PR #213 merged as `aee11e06c44dc9b6cd3ee2a386be215cef3c5536`; correction PR #221 merged as `26eecaa1ed04e3aa0909c75be269491a975fad70`; invariant PR #230 merged as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`; isolated-staging migration application remains open |
 | Production integration donor | `IMPLEMENTED_NOT_MERGED`; donor only | PR #141 |
 | Inventory-redemption donor | `IMPLEMENTED_NOT_MERGED`; donor only | PR #143 or successor donor work |
 | Staging and release readiness | `IN_PROGRESS` | PR #169, branch `agent/staging-readiness-preflight-v1` |
@@ -128,6 +129,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 - PR #177 merged the Admin inventory-redemption review queue as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`.
 - PR #217 merged the Player Terminal host-runtime cutover and removed the Cloudflare browser transport as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`.
 - PR #222 physically removed the now-unmounted legacy Player source and installed a repository ratchet preventing its return as `3b74340830da8db4fdabe2926915c3a32471b7c8`; final head `9073afaf58b16da3831fb3e7d67da6922acbf4c5` passed Repository Quality #909, Player Runtime Cutover Verify #12, Admin Shell Smoke #836, Exchange Calendar Runtime #156, and Required Game Market Timezone #168.
+- PR #213 merged the authenticated Player Banking read boundary as `aee11e06c44dc9b6cd3ee2a386be215cef3c5536`; PR #221 completed connected pagination and full cross-currency balance display as `26eecaa1ed04e3aa0909c75be269491a975fad70`; PR #230 merged the economic mutation-to-ledger invariant matrix and idempotent staff-adjustment RPC as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`. Final PR #230 head `1050d8bf8b667d627c032cf72b891f6a31b1c380` passed Backend Typecheck #1214 with complete smoke, Database Replay #306, Admin Shell Smoke #854, Admin API Check #696, Admin Bundle Contract Audit #556, Repository Quality #945, Exchange Calendar Runtime #171, and Required Game Market Timezone #188.
 
 ### Current release condition
 
@@ -136,6 +138,7 @@ The application is not yet approved for beta or production runtime cutover becau
 - connected isolated-staging Player and Admin verification;
 - production traffic evidence and credential rotation before live Cloudflare Worker shutdown;
 - executable seed content and staging activation;
+- apply migration `20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql` in isolated staging and verify connected Admin/Classroom retry replay before runtime promotion;
 - migration-history reconciliation;
 - backup and restore rehearsal;
 - final end-to-end beta verification.
@@ -238,7 +241,7 @@ The application is not yet approved for beta or production runtime cutover becau
 - [x] `BETA-ADMIN-003` Remove remaining obsolete credential-dialog renderer if still present. `VERIFIED_COMPLETE` through PR #227 merged as `322db9d25fbfc581be59ae0fbe80ca20ce89b42d`; the access-code bridge is event-only, dead Player-create suppression code was removed, the source ratchet prevents return, Repository Quality #931 passed, and Admin Shell Smoke #840 passed all 87 stages.
 - [x] `BETA-ADMIN-004` Remove the first global request interception layer and lower the architecture ratchet. `VERIFIED_COMPLETE` via PR #168 merged as `1d487afc766146b5e3e19f718252b3eff9a1168e`; Repository Quality #421, Admin Shell Smoke #606, and Branch Hygiene #17 passed, and the ratchet decreased to 7 fetch assignments / 12 mutation observers.
 - [x] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event. `VERIFIED_COMPLETE` through PR #193 merged as `8e9ff38270248d3ce0a46afd4179b371379e5da3`.
-- [ ] `BETA-ADMIN-006` Add explicit loading, loaded, refreshing, stale, empty, and failed data-state contracts.
+- [x] `BETA-ADMIN-006` Add explicit loading, loaded, refreshing, stale, empty, and failed data-state contracts. `VERIFIED_COMPLETE` through PR #231 merged as `249fc53a23ad23058d376e4e394524af0bdee265`; synchronized head `c0f482914ec34352b924d8220cabb1c87a79a23b` passed Repository Quality #949 and Admin Shell Smoke #858 with all 89 stages, including mounted six-state lifecycle, content-preserving refresh/stale behavior, accessibility, and zero-pointer evidence.
 - [ ] `BETA-ADMIN-007` Add staging-backed Admin smoke after isolated staging exists.
 - [x] `BETA-ADMIN-008` Add the inventory-redemption review queue after Backend handoff. `VERIFIED_COMPLETE` through PR #177 merged as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`; Repository Quality #885, Staging Readiness Preflight #58, Database Replay #296, and Admin Shell Smoke #827 with all 87 stages passed.
 - [ ] `BETA-ADMIN-009` Add emergency game mutation pause/resume controls.
@@ -461,7 +464,7 @@ The application is not yet approved for beta or production runtime cutover becau
 
 ## 13. Banking, ledger, savings, transfers, loans, and credit
 
-**Overall status:** `VERIFIED_COMPLETE` for cash and ledger reads; expansion remains planned.
+**Overall status:** `VERIFIED_COMPLETE` for authenticated cash and ledger read surfaces; exactly-once mutation invariants are merged and replay-verified, while the new staff-adjustment RPC remains pending isolated-staging deployment.
 
 ### Complete
 
@@ -479,12 +482,12 @@ The application is not yet approved for beta or production runtime cutover becau
 - [x] Per-entry currency preservation.
 - [x] Fake unsupported savings, credit, and transfer behavior removed from connected Player UI.
 
-### Remaining beta work
+### Beta completion and deployment boundary
 
-- [ ] `BETA-BANK-001` Merge authoritative ledger route.
-- [ ] `BETA-BANK-002` Connect Player Terminal Banking read model.
-- [ ] `BETA-BANK-003` Verify cross-currency display, pagination, stale state, and empty state.
-- [ ] `BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome.
+- [x] `BETA-BANK-001` Merge authoritative ledger route. `VERIFIED_COMPLETE` through PR #213 merged as `aee11e06c44dc9b6cd3ee2a386be215cef3c5536`; the authenticated `GET /players/me/ledger` boundary is private/no-store, UUID-private, rate-limited, game-scoped, and cursor-bounded.
+- [x] `BETA-BANK-002` Connect Player Terminal Banking read model. `VERIFIED_COMPLETE` through PR #213 plus correction PR #221 merged as `26eecaa1ed04e3aa0909c75be269491a975fad70`.
+- [x] `BETA-BANK-003` Verify cross-currency display, pagination, stale state, and empty state. `VERIFIED_COMPLETE` through PRs #213 and #221 with Player Terminal Verify #298, complete Node verification, and desktop/mobile Chromium evidence.
+- [ ] `BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome. `IN_PROGRESS`: repository and migration authority merged through PR #230 as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`. The mandatory invariant matrix covers automatic and manual Attendance rewards, Contract cash rewards, Store purchases, stock buy/sell settlement, Admin/Classroom adjustments, exact balance projection, replay, conflicting-key reuse, rejection, locked state, invalid input, and cross-game zero-write behavior. Migration `20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql` replayed from zero twice and linted cleanly in Database Replay #306. Per the roadmap completion rule, this item remains open until that migration is applied and the connected retry/replay path is verified in isolated staging.
 
 ### Expansion
 

@@ -15,8 +15,11 @@ import {
   normalizeCurrencyCode,
   parseOptionalText,
   parseRequiredText,
-  readBalanceNumber,
 } from "../../../platform/supabase/edgeParsing.ts";
+import {
+  IdempotentStaffLedgerAdjustmentError,
+  recordIdempotentStaffLedgerAdjustment,
+} from "../services/idempotentStaffLedgerAdjustment.ts";
 
 interface StaffLedgerAdjustmentDependencies {
   readonly resolveStaffForRequest: (
@@ -26,9 +29,7 @@ interface StaffLedgerAdjustmentDependencies {
   ) => Promise<
     | {
         readonly ok: true;
-        readonly staff: {
-          readonly id: string;
-        };
+        readonly staff: { readonly id: string };
         readonly serviceClient: EdgeSupabaseClient;
       }
     | {
@@ -48,6 +49,7 @@ interface StaffLedgerAdjustmentRequestBody {
 
 interface StaffLedgerAdjustmentSuccessBody {
   readonly ok: true;
+  readonly outcome: "applied" | "replayed";
   readonly player: {
     readonly id: string;
     readonly displayName: string;
@@ -62,15 +64,6 @@ interface StaffLedgerAdjustmentSuccessBody {
     readonly currencyCode: string;
     readonly createdAt: string;
   };
-}
-
-interface StaffLedgerAdjustmentRpcRow {
-  readonly ledger_entry_id: string;
-  readonly account_balance_id: string;
-  readonly account_type: string;
-  readonly balance: number | string;
-  readonly currency_code: string;
-  readonly created_at: string;
 }
 
 export async function handleStaffLedgerAdjustmentRequest(
@@ -89,7 +82,6 @@ export async function handleStaffLedgerAdjustmentRequest(
 
   try {
     const envResult = readSupabaseEnv();
-
     if (!envResult.ok) {
       return jsonError(500, {
         code: "missing_edge_runtime_config",
@@ -102,10 +94,10 @@ export async function handleStaffLedgerAdjustmentRequest(
       request,
       envResult.value,
       {
-        missingMessage: "A verified Supabase Auth user is required to create ledger adjustments.",
+        missingMessage:
+          "A verified Supabase Auth user is required to create ledger adjustments.",
       },
     );
-
     if (!staffResult.ok) {
       return jsonError(staffResult.status, staffResult.error);
     }
@@ -115,13 +107,12 @@ export async function handleStaffLedgerAdjustmentRequest(
       gameSessionId,
       staffResult.staff.id,
     );
-
     if (!ownershipResult.ok) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
+    const idempotencyKey = readIdempotencyKey(request);
     const body = await readStaffLedgerAdjustmentRequestBody(request);
-
     const playerResponse = await staffResult.serviceClient
       .from("players")
       .select("id,display_name,roster_label,status")
@@ -130,11 +121,7 @@ export async function handleStaffLedgerAdjustmentRequest(
       .maybeSingle();
 
     if (playerResponse.error) {
-      return jsonError(500, {
-        code: "ledger_adjustment_failed",
-        message: "Ledger adjustment failed.",
-        retryable: false,
-      });
+      return ledgerFailure();
     }
 
     const player = playerResponse.data as {
@@ -143,7 +130,6 @@ export async function handleStaffLedgerAdjustmentRequest(
       readonly roster_label: string | null;
       readonly status: string;
     } | null;
-
     if (!player?.id) {
       return jsonError(404, {
         code: "player_not_found",
@@ -151,7 +137,6 @@ export async function handleStaffLedgerAdjustmentRequest(
         retryable: false,
       });
     }
-
     if (player.status !== "active") {
       return jsonError(409, {
         code: "player_not_active",
@@ -160,52 +145,32 @@ export async function handleStaffLedgerAdjustmentRequest(
       });
     }
 
-    const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
-
-    const ledgerResponse = await staffResult.serviceClient.rpc(
-      "record_player_ledger_entry",
+    const ledger = await recordIdempotentStaffLedgerAdjustment(
+      staffResult.serviceClient,
       {
-        p_game_session_id: gameSessionId,
-        p_player_id: playerId,
-        p_account_type: body.accountType,
-        p_amount: body.amount,
-        p_currency_code: body.currencyCode,
-        p_entry_type: "adjustment",
-        p_source_domain: "ledger",
-        p_source_action: "staff_player_balance_adjustment",
-        p_source_id: null,
-        p_created_by_type: "staff_user",
-        p_created_by_id: staffResult.staff.id,
-        p_audit_metadata: {
-          requestId,
+        gameSessionId,
+        playerId,
+        staffUserId: staffResult.staff.id,
+        routeKey: "staff.players.ledger_adjustment",
+        idempotencyKey,
+        accountType: body.accountType,
+        amount: body.amount,
+        currencyCode: body.currencyCode,
+        entryType: body.amount > 0 ? "credit" : "debit",
+        sourceDomain: "ledger",
+        sourceAction: "staff_player_balance_adjustment",
+        sourceId: null,
+        auditMetadata: {
+          requestId: idempotencyKey,
           reason: body.reason,
           source: "classroom_api_edge_staff_ledger_adjustment",
         },
       },
     );
 
-    if (ledgerResponse.error) {
-      const safeError = mapLedgerRpcError(ledgerResponse.error.message);
-
-      return jsonError(safeError.status, {
-        code: safeError.code,
-        message: safeError.message,
-        retryable: safeError.retryable,
-      });
-    }
-
-    const ledgerRow = readLedgerAdjustmentRpcRow(ledgerResponse.data);
-
-    if (!ledgerRow) {
-      return jsonError(500, {
-        code: "ledger_adjustment_failed",
-        message: "Ledger adjustment failed.",
-        retryable: false,
-      });
-    }
-
     return jsonResponse<StaffLedgerAdjustmentSuccessBody>(200, {
       ok: true,
+      outcome: ledger.outcome,
       player: {
         id: player.id,
         displayName: player.display_name,
@@ -213,15 +178,22 @@ export async function handleStaffLedgerAdjustmentRequest(
         status: player.status,
       },
       ledgerEntry: {
-        id: ledgerRow.ledger_entry_id,
-        accountType: ledgerRow.account_type,
+        id: ledger.ledgerEntryId,
+        accountType: ledger.accountType,
         amount: body.amount,
-        balance: readBalanceNumber(ledgerRow.balance),
-        currencyCode: ledgerRow.currency_code,
-        createdAt: ledgerRow.created_at,
+        balance: ledger.balance,
+        currencyCode: ledger.currencyCode,
+        createdAt: ledger.createdAt,
       },
     });
   } catch (error) {
+    if (error instanceof IdempotentStaffLedgerAdjustmentError) {
+      return jsonError(error.status, {
+        code: error.code,
+        message: error.message,
+        retryable: false,
+      });
+    }
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
         code: error.code,
@@ -229,20 +201,39 @@ export async function handleStaffLedgerAdjustmentRequest(
         retryable: error.retryable,
       });
     }
-
-    return jsonError(500, {
-      code: "ledger_adjustment_failed",
-      message: "Ledger adjustment failed.",
-      retryable: false,
-    });
+    return ledgerFailure();
   }
+}
+
+function readIdempotencyKey(request: Request): string {
+  const key = String(
+    request.headers.get("x-idempotency-key") ||
+      request.headers.get("x-request-id") ||
+      "",
+  ).trim();
+  if (!key) {
+    throw new EdgeActivationError(
+      "ledger_idempotency_key_required",
+      "X-Idempotency-Key is required for ledger adjustments.",
+      400,
+      false,
+    );
+  }
+  if (key.length > 200) {
+    throw new EdgeActivationError(
+      "ledger_idempotency_key_invalid",
+      "X-Idempotency-Key must not exceed 200 characters.",
+      400,
+      false,
+    );
+  }
+  return key;
 }
 
 async function readStaffLedgerAdjustmentRequestBody(
   request: Request,
 ): Promise<StaffLedgerAdjustmentRequestBody> {
   let value: unknown;
-
   try {
     value = await request.json();
   } catch {
@@ -252,7 +243,6 @@ async function readStaffLedgerAdjustmentRequestBody(
       400,
     );
   }
-
   if (!isRecord(value)) {
     throw new EdgeActivationError(
       "invalid_request_body",
@@ -260,7 +250,6 @@ async function readStaffLedgerAdjustmentRequestBody(
       400,
     );
   }
-
   return {
     amount: parseLedgerAmount(value.amount),
     reason: parseRequiredText(
@@ -269,13 +258,14 @@ async function readStaffLedgerAdjustmentRequestBody(
       "reason is required.",
     ),
     accountType: parseOptionalText(value.accountType) ?? "cash",
-    currencyCode: normalizeCurrencyCode(parseOptionalText(value.currencyCode) ?? "ECO"),
+    currencyCode: normalizeCurrencyCode(
+      parseOptionalText(value.currencyCode) ?? "ECO",
+    ),
   };
 }
 
 function parseLedgerAmount(value: unknown): number {
   const amount = typeof value === "number" ? value : Number(value);
-
   if (!Number.isFinite(amount) || amount === 0) {
     throw new EdgeActivationError(
       "ledger_amount_required",
@@ -283,87 +273,13 @@ function parseLedgerAmount(value: unknown): number {
       400,
     );
   }
-
   return Math.round(amount * 100) / 100;
 }
 
-function readLedgerAdjustmentRpcRow(
-  value: unknown,
-): StaffLedgerAdjustmentRpcRow | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const row = value[0];
-
-  if (!isRecord(row)) {
-    return null;
-  }
-
-  if (
-    typeof row.ledger_entry_id !== "string" ||
-    typeof row.account_balance_id !== "string" ||
-    typeof row.account_type !== "string" ||
-    typeof row.currency_code !== "string" ||
-    typeof row.created_at !== "string"
-  ) {
-    return null;
-  }
-
-  if (
-    typeof row.balance !== "number" &&
-    typeof row.balance !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    ledger_entry_id: row.ledger_entry_id,
-    account_balance_id: row.account_balance_id,
-    account_type: row.account_type,
-    balance: row.balance,
-    currency_code: row.currency_code,
-    created_at: row.created_at,
-  };
-}
-
-function mapLedgerRpcError(message: string): {
-  readonly code: string;
-  readonly message: string;
-  readonly status: number;
-  readonly retryable: boolean;
-} {
-  switch (message.trim().toUpperCase()) {
-    case "GAME_SESSION_REQUIRED":
-    case "PLAYER_REQUIRED":
-    case "ACCOUNT_TYPE_REQUIRED":
-    case "LEDGER_AMOUNT_REQUIRED":
-    case "INVALID_CURRENCY_CODE":
-    case "INVALID_LEDGER_ENTRY_TYPE":
-    case "SOURCE_DOMAIN_REQUIRED":
-    case "SOURCE_ACTION_REQUIRED":
-    case "INVALID_CREATED_BY_TYPE":
-      return {
-        code: "invalid_ledger_adjustment",
-        message: "Ledger adjustment request is invalid.",
-        status: 400,
-        retryable: false,
-      };
-
-    case "PLAYER_NOT_FOUND":
-      return {
-        code: "player_not_found",
-        message: "Player was not found for this game session.",
-        status: 404,
-        retryable: false,
-      };
-
-    default:
-      return {
-        code: "ledger_adjustment_failed",
-        message: "Ledger adjustment failed.",
-        status: 500,
-        retryable: false,
-      };
-  }
+function ledgerFailure(): Response {
+  return jsonError(500, {
+    code: "ledger_adjustment_failed",
+    message: "Ledger adjustment failed.",
+    retryable: false,
+  });
 }

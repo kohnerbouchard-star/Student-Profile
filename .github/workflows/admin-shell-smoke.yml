@@ -32,6 +32,7 @@ on:
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-loading-scope-contract.mjs"
+      - "scripts/admin-data-state-contracts-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -81,6 +82,7 @@ on:
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
       - "scripts/admin-loading-scope-contract.mjs"
+      - "scripts/admin-data-state-contracts-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -170,6 +172,9 @@ jobs:
           done
           cat /tmp/admin-smoke-server.log
           false
+
+      - name: Exercise Admin data-state contracts
+        run: node scripts/admin-data-state-contracts-smoke.mjs
 
       - name: Exercise nested Admin modal accessibility
         run: node scripts/admin-modal-accessibility-smoke.mjs
