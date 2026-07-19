@@ -219,11 +219,14 @@ const ROUTE_BUILDERS = Object.freeze({
 
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
 
-  inventoryUse: ({ params = {}, payload = {} }) => ({
+  inventoryUse: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
     path: `/players/me/inventory/${
       encodeURIComponent(requiredText(
-        params.inventoryItemId || params.itemId || payload.itemId,
+        params.inventoryItemId ||
+          params.itemId ||
+          payload.itemId ||
+          resolvedPathValue(path, /^\/inventory\/([^/]+)\/redemptions$/),
         "itemId",
         "inventoryUse",
       ))
