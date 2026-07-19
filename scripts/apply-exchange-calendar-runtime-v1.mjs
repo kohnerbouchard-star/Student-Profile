@@ -33,10 +33,13 @@ async function patch(relativePath, transform) {
 let differences = 0;
 
 if (await patch("backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts", (source) => {
-  let expected = source.replaceAll(
-    "execute_stock_market_order",
-    "execute_stock_market_order_calendar_gated",
-  );
+  let expected = source;
+  if (!expected.includes("execute_stock_market_order_calendar_gated")) {
+    expected = expected.replaceAll(
+      "execute_stock_market_order",
+      "execute_stock_market_order_calendar_gated",
+    );
+  }
   expected = replaceOnce(
     expected,
     'Deno.test("stock trading repository maps missing schema to schema-not-applied", async () => {',
