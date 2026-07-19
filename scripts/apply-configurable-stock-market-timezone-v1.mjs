@@ -19,12 +19,15 @@ async function writeExpected(relativePath, expected) {
   } catch {
     current = null;
   }
+
   if (current === expected) return;
   differences += 1;
+
   if (checkOnly) {
-    console.error(`Configurable market-timezone drift: ${relativePath}`);
+    console.error(`Required market-timezone drift: ${relativePath}`);
     return;
   }
+
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, expected, "utf8");
 }
@@ -35,7 +38,7 @@ async function patch(relativePath, transform) {
   await writeExpected(relativePath, expected);
 }
 
-function replaceOnce(source, before, after, label) {
+function replaceRequired(source, before, after, label) {
   if (source.includes(after)) return source;
   if (!source.includes(before)) {
     throw new Error(`Patch anchor not found for ${label}.`);
@@ -43,14 +46,16 @@ function replaceOnce(source, before, after, label) {
   return source.replace(before, after);
 }
 
-const configModule = `export const DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE = "Asia/Seoul";
-
-export interface StockMarketWindowConfig {
-  readonly timeZone: string;
-  readonly source: "game_setting" | "server_fallback";
+function replaceRegexRequired(source, pattern, replacement, label) {
+  if (typeof replacement === "string" && source.includes(replacement)) return source;
+  if (!pattern.test(source)) {
+    throw new Error(`Patch pattern not found for ${label}.`);
+  }
+  pattern.lastIndex = 0;
+  return source.replace(pattern, replacement);
 }
 
-export class StockMarketWindowConfigError extends Error {
+const configModule = `export class StockMarketWindowConfigError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "StockMarketWindowConfigError";
@@ -59,6 +64,7 @@ export class StockMarketWindowConfigError extends Error {
 
 export function isValidStockMarketTimeZone(value: unknown): value is string {
   if (typeof value !== "string" || !value.trim()) return false;
+
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: value.trim() }).format(new Date());
     return true;
@@ -67,50 +73,81 @@ export function isValidStockMarketTimeZone(value: unknown): value is string {
   }
 }
 
-export function normalizeServerStockMarketTimeZone(value: unknown): string {
-  return isValidStockMarketTimeZone(value)
-    ? value.trim()
-    : DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE;
-}
-
-export function readStockMarketWindowConfig(
+export function normalizeRequiredStockMarketWindowSetting(
   value: unknown,
-  serverFallbackTimeZone: string = DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
-): StockMarketWindowConfig {
-  const fallback = normalizeServerStockMarketTimeZone(serverFallbackTimeZone);
-  const record = isRecord(value) ? value : {};
-  const rawTimeZone = record.timezone;
-
-  if (rawTimeZone === undefined || rawTimeZone === null || rawTimeZone === "") {
-    return { timeZone: fallback, source: "server_fallback" };
-  }
-
-  if (!isValidStockMarketTimeZone(rawTimeZone)) {
-    throw new StockMarketWindowConfigError(
-      "stockMarketWindow.timezone must be a valid IANA timezone.",
-    );
-  }
-
-  return { timeZone: rawTimeZone.trim(), source: "game_setting" };
-}
-
-export function normalizeStockMarketWindowSetting(
-  value: Record<string, unknown>,
 ): Record<string, unknown> {
-  const rawTimeZone = value.timezone;
-  if (rawTimeZone === undefined || rawTimeZone === null || rawTimeZone === "") {
-    return { ...value };
-  }
-  if (!isValidStockMarketTimeZone(rawTimeZone)) {
+  if (!isRecord(value)) {
     throw new StockMarketWindowConfigError(
-      "stockMarketWindow.timezone must be a valid IANA timezone.",
+      "stockMarketWindow is required and must be a JSON object.",
     );
   }
-  return { ...value, timezone: rawTimeZone.trim() };
+
+  const rawTimeZone = value.timezone;
+  if (!isValidStockMarketTimeZone(rawTimeZone)) {
+    throw new StockMarketWindowConfigError(
+      "stockMarketWindow.timezone is required and must be a valid IANA timezone.",
+    );
+  }
+
+  return {
+    ...value,
+    timezone: rawTimeZone.trim(),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+`;
+
+const configTest = `import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "./stockMarketWindowConfig.ts";
+
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
+
+Deno.test("one explicit game timezone is required", () => {
+  assertThrows(() => normalizeRequiredStockMarketWindowSetting(undefined));
+  assertThrows(() => normalizeRequiredStockMarketWindowSetting({}));
+  assertThrows(() =>
+    normalizeRequiredStockMarketWindowSetting({ timezone: "Browser/Local" })
+  );
+});
+
+Deno.test("valid IANA timezone is normalized and retained", () => {
+  assertEquals(
+    normalizeRequiredStockMarketWindowSetting({
+      timezone: " Europe/London ",
+      opensAt: "08:00",
+      closesAt: "17:00",
+    }),
+    {
+      timezone: "Europe/London",
+      opensAt: "08:00",
+      closesAt: "17:00",
+    },
+  );
+});
+
+function assertThrows(run: () => unknown): void {
+  try {
+    run();
+  } catch (error) {
+    if (error instanceof StockMarketWindowConfigError) return;
+    throw error;
+  }
+  throw new Error("Expected StockMarketWindowConfigError.");
+}
+
+function assertEquals(actual: unknown, expected: unknown): void {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(
+      \`Assertion failed. Actual: \${JSON.stringify(actual)} Expected: \${JSON.stringify(expected)}\`,
+    );
+  }
 }
 `;
 
@@ -144,7 +181,9 @@ export async function readStockMarketOpenState(
   at: Date = new Date(),
 ): Promise<boolean> {
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) {
-    throw new StockMarketOpenStateReadError("A valid market evaluation time is required.");
+    throw new StockMarketOpenStateReadError(
+      "A valid server market-evaluation time is required.",
+    );
   }
 
   const response = await client.rpc<boolean>("is_stock_market_open_at", {
@@ -154,7 +193,7 @@ export async function readStockMarketOpenState(
 
   if (response.error || typeof response.data !== "boolean") {
     throw new StockMarketOpenStateReadError(
-      "Authoritative stock market session state could not be read.",
+      "Authoritative game market-session state could not be read.",
     );
   }
 
@@ -162,57 +201,38 @@ export async function readStockMarketOpenState(
 }
 `;
 
-const configTest = `import {
-  DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
-  normalizeServerStockMarketTimeZone,
-  normalizeStockMarketWindowSetting,
-  readStockMarketWindowConfig,
-  StockMarketWindowConfigError,
-} from "./stockMarketWindowConfig.ts";
+const openStateTest = `import {
+  readStockMarketOpenState,
+} from "./supabaseStockMarketWindowRepository.ts";
 
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
 
-Deno.test("missing timezone uses the server-owned fallback", () => {
-  assertEquals(readStockMarketWindowConfig({}), {
-    timeZone: DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
-    source: "server_fallback",
-  });
-  assertEquals(readStockMarketWindowConfig({}, "America/New_York"), {
-    timeZone: "America/New_York",
-    source: "server_fallback",
-  });
+Deno.test("market status is evaluated with game scope and server time", async () => {
+  const client = new FakeClient(true);
+  const at = new Date("2026-07-20T00:00:00.000Z");
+  const result = await readStockMarketOpenState(client, "game-1", at);
+
+  assertEquals(result, true);
+  assertEquals(client.calls, [{
+    functionName: "is_stock_market_open_at",
+    args: {
+      p_game_session_id: "game-1",
+      p_at: at.toISOString(),
+    },
+  }]);
 });
 
-Deno.test("configured IANA timezone is authoritative", () => {
-  assertEquals(readStockMarketWindowConfig({ timezone: " Europe/London " }), {
-    timeZone: "Europe/London",
-    source: "game_setting",
-  });
-  assertEquals(normalizeStockMarketWindowSetting({ timezone: "America/Chicago" }), {
-    timezone: "America/Chicago",
-  });
-});
+class FakeClient {
+  readonly calls: unknown[] = [];
 
-Deno.test("invalid configured timezone fails instead of trusting a client clock", () => {
-  assertThrows(() => readStockMarketWindowConfig({ timezone: "Browser/Local" }));
-  assertThrows(() => normalizeStockMarketWindowSetting({ timezone: "UTC+9" }));
-});
+  constructor(private readonly result: boolean) {}
 
-Deno.test("invalid server fallback resolves to the server default", () => {
-  assertEquals(
-    normalizeServerStockMarketTimeZone("not-a-timezone"),
-    DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
-  );
-});
-
-function assertThrows(run: () => unknown): void {
-  try {
-    run();
-  } catch (error) {
-    if (error instanceof StockMarketWindowConfigError) return;
-    throw error;
+  async rpc(functionName: string, args: unknown) {
+    this.calls.push({ functionName, args });
+    return { data: this.result, error: null };
   }
-  throw new Error("Expected StockMarketWindowConfigError.");
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
@@ -224,40 +244,9 @@ function assertEquals(actual: unknown, expected: unknown): void {
 }
 `;
 
-const openStateTest = `import { readStockMarketOpenState } from "./supabaseStockMarketWindowRepository.ts";
-
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
-
-Deno.test("market open-state reader uses game scope and server time", async () => {
-  const client = new FakeClient(true);
-  const at = new Date("2026-07-20T00:00:00.000Z");
-  const result = await readStockMarketOpenState(client, "game-1", at);
-  assertEquals(result, true);
-  assertEquals(client.calls, [{
-    functionName: "is_stock_market_open_at",
-    args: { p_game_session_id: "game-1", p_at: at.toISOString() },
-  }]);
-});
-
-class FakeClient {
-  readonly calls: unknown[] = [];
-  constructor(private readonly result: boolean) {}
-  async rpc(functionName: string, args: unknown) {
-    this.calls.push({ functionName, args });
-    return { data: this.result, error: null };
-  }
-}
-
-function assertEquals(actual: unknown, expected: unknown): void {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(\`Assertion failed: \${JSON.stringify(actual)} !== \${JSON.stringify(expected)}\`);
-  }
-}
-`;
-
-const migration = `-- Make the stock-market timezone an explicit per-game setting.
--- The browser/device timezone is never consulted. Existing and legacy games use
--- the server-owned Asia/Seoul fallback until staff saves stockMarketWindow.timezone.
+const migration = `-- Require one explicit game-level timezone for every stock exchange.
+-- Existing rows receive a one-time Asia/Seoul migration value. Runtime contains
+-- no fallback and never reads a browser or device timezone.
 
 update public.game_settings
 set stock_market_window = jsonb_set(
@@ -267,6 +256,52 @@ set stock_market_window = jsonb_set(
   true
 )
 where nullif(btrim(stock_market_window ->> 'timezone'), '') is null;
+
+create or replace function public.validate_required_stock_market_timezone()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  v_timezone text;
+begin
+  if jsonb_typeof(new.stock_market_window) <> 'object' then
+    raise exception 'STOCK_MARKET_TIMEZONE_REQUIRED';
+  end if;
+
+  v_timezone := nullif(btrim(new.stock_market_window ->> 'timezone'), '');
+
+  if v_timezone is null then
+    raise exception 'STOCK_MARKET_TIMEZONE_REQUIRED';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_timezone_names zone
+    where zone.name = v_timezone
+  ) then
+    raise exception 'STOCK_MARKET_TIMEZONE_INVALID';
+  end if;
+
+  new.stock_market_window := jsonb_set(
+    new.stock_market_window,
+    '{timezone}',
+    to_jsonb(v_timezone),
+    true
+  );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists validate_required_stock_market_timezone
+on public.game_settings;
+
+create trigger validate_required_stock_market_timezone
+before insert or update of stock_market_window
+on public.game_settings
+for each row
+execute function public.validate_required_stock_market_timezone();
 
 create or replace function public.stock_market_timezone_for_game(
   p_game_session_id uuid
@@ -285,12 +320,16 @@ begin
   from public.game_settings settings
   where settings.game_session_id = p_game_session_id;
 
-  v_timezone := coalesce(v_timezone, 'Asia/Seoul');
+  if v_timezone is null then
+    raise exception 'STOCK_MARKET_TIMEZONE_REQUIRED';
+  end if;
 
   if not exists (
-    select 1 from pg_timezone_names zone where zone.name = v_timezone
+    select 1
+    from pg_timezone_names zone
+    where zone.name = v_timezone
   ) then
-    raise exception 'STOCK_MARKET_INVALID_TIMEZONE_SETTING';
+    raise exception 'STOCK_MARKET_TIMEZONE_INVALID';
   end if;
 
   return v_timezone;
@@ -323,9 +362,10 @@ begin
   end if;
 
   if not exists (
-    select 1 from public.game_sessions session
-    where session.id = p_game_session_id
-      and session.status = 'active'
+    select 1
+    from public.game_sessions game_session
+    where game_session.id = p_game_session_id
+      and game_session.status = 'active'
   ) then
     return false;
   end if;
@@ -342,7 +382,7 @@ end;
 $$;
 
 comment on function public.is_stock_market_open_at(uuid, timestamptz) is
-  'Authoritative game-scoped stock-session decision using game_settings.stock_market_window.timezone and a server-owned fallback.';
+  'Authoritative game-scoped market-session decision. One required game timezone applies to every exchange.';
 
 revoke all on function public.is_stock_market_open_at(uuid, timestamptz)
 from public, anon, authenticated;
@@ -404,10 +444,20 @@ end;
 $$;
 
 revoke all on function public.execute_stock_market_order_calendar_gated(
-  uuid, uuid, uuid, text, numeric, text
+  uuid,
+  uuid,
+  uuid,
+  text,
+  numeric,
+  text
 ) from public, anon, authenticated;
 grant execute on function public.execute_stock_market_order_calendar_gated(
-  uuid, uuid, uuid, text, numeric, text
+  uuid,
+  uuid,
+  uuid,
+  text,
+  numeric,
+  text
 ) to service_role;
 `;
 
@@ -418,20 +468,28 @@ const migrationTest = `declare const Deno: {
 
 const BASE_MIGRATION =
   "supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql";
-const CONFIG_MIGRATION =
-  "supabase/migrations/20260719133000_make_stock_market_timezone_configurable_v1.sql";
+const REQUIRED_TIMEZONE_MIGRATION =
+  "supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql";
 
-Deno.test("exchange calendar migrations gate orders with a game-configured timezone", async () => {
+Deno.test("one required game timezone gates all exchanges", async () => {
   const base = await Deno.readTextFile(BASE_MIGRATION);
-  const config = await Deno.readTextFile(CONFIG_MIGRATION);
-  assertIncludes(base, "create or replace function public.execute_stock_market_order_calendar_gated");
-  assertIncludes(config, "stock_market_window ->> 'timezone'");
-  assertIncludes(config, "from pg_timezone_names");
-  assertIncludes(config, "create or replace function public.is_stock_market_open_at(");
-  assertIncludes(config, "p_game_session_id uuid");
-  assertIncludes(config, "public.is_stock_market_open_at(p_game_session_id, now())");
-  assertIncludes(config, "STOCK_TRADING_MARKET_CLOSED");
-  assertIncludes(config, "to_jsonb('Asia/Seoul'::text)");
+  const required = await Deno.readTextFile(REQUIRED_TIMEZONE_MIGRATION);
+
+  assertIncludes(
+    base,
+    "create or replace function public.execute_stock_market_order_calendar_gated",
+  );
+  assertIncludes(required, "to_jsonb('Asia/Seoul'::text)");
+  assertIncludes(required, "validate_required_stock_market_timezone");
+  assertIncludes(required, "STOCK_MARKET_TIMEZONE_REQUIRED");
+  assertIncludes(required, "STOCK_MARKET_TIMEZONE_INVALID");
+  assertIncludes(required, "from pg_timezone_names");
+  assertIncludes(required, "p_game_session_id uuid");
+  assertIncludes(
+    required,
+    "public.is_stock_market_open_at(p_game_session_id, now())",
+  );
+  assertNotIncludes(required, "coalesce(v_timezone");
 });
 
 function assertIncludes(source: string, expected: string): void {
@@ -439,165 +497,265 @@ function assertIncludes(source: string, expected: string): void {
     throw new Error(\`Expected migration to include: \${expected}\`);
   }
 }
+
+function assertNotIncludes(source: string, unexpected: string): void {
+  if (source.includes(unexpected)) {
+    throw new Error(\`Expected migration to exclude: \${unexpected}\`);
+  }
+}
 `;
 
-await writeExpected("backend/src/domains/stocks/calendars/stockMarketWindowConfig.ts", configModule);
-await writeExpected("backend/src/domains/stocks/calendars/stockMarketWindowConfig.test.ts", configTest);
-await writeExpected("backend/src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.ts", openStateModule);
-await writeExpected("backend/src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.test.ts", openStateTest);
-await writeExpected("backend/supabase/migrations/20260719133000_make_stock_market_timezone_configurable_v1.sql", migration);
-await writeExpected("backend/src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts", migrationTest);
+await writeExpected(
+  "backend/src/domains/stocks/calendars/stockMarketWindowConfig.ts",
+  configModule,
+);
+await writeExpected(
+  "backend/src/domains/stocks/calendars/stockMarketWindowConfig.test.ts",
+  configTest,
+);
+await writeExpected(
+  "backend/src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.ts",
+  openStateModule,
+);
+await writeExpected(
+  "backend/src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.test.ts",
+  openStateTest,
+);
+await writeExpected(
+  "backend/supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql",
+  migration,
+);
+await writeExpected(
+  "backend/src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts",
+  migrationTest,
+);
 
-await patch("backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.ts", (source) => {
-  let expected = replaceOnce(
-    source,
-    "export const STOCK_EXCHANGE_CODES = [",
-    `import { isValidStockMarketTimeZone } from "./stockMarketWindowConfig.ts";\n\nexport const STOCK_EXCHANGE_CODES = [`,
-    "calendar timezone validator import",
-  );
-  expected = replaceOnce(
-    expected,
-    `export interface StockMarketSessionState {`,
-    `export interface StockMarketCalendarOverrides {\n  readonly timeZone?: string;\n}\n\nexport interface StockMarketSessionState {`,
-    "calendar override contract",
-  );
-  expected = replaceOnce(
-    expected,
-    `export function evaluateStockMarketSession(\n  exchangeCode: StockExchangeCode,\n  at: Date = new Date(),\n): StockMarketSessionState {\n  assertValidDate(at);\n  const calendar = getStockExchangeCalendar(exchangeCode);`,
-    `export function evaluateStockMarketSession(\n  exchangeCode: StockExchangeCode,\n  at: Date = new Date(),\n  overrides: StockMarketCalendarOverrides = {},\n): StockMarketSessionState {\n  assertValidDate(at);\n  const calendar = resolveCalendar(exchangeCode, overrides);`,
-    "calendar configured evaluation",
-  );
-  expected = replaceOnce(
-    expected,
-    `export function isStockMarketOpenAt(\n  at: Date,\n  exchangeCode: StockExchangeCode = DEFAULT_STOCK_EXCHANGE_CODE,\n): boolean {\n  assertValidDate(at);\n  return evaluateCore(getStockExchangeCalendar(exchangeCode), at).status ===\n    "open";\n}\n\nfunction evaluateCore(`,
-    `export function isStockMarketOpenAt(\n  at: Date,\n  exchangeCode: StockExchangeCode = DEFAULT_STOCK_EXCHANGE_CODE,\n  overrides: StockMarketCalendarOverrides = {},\n): boolean {\n  assertValidDate(at);\n  return evaluateCore(resolveCalendar(exchangeCode, overrides), at).status ===\n    "open";\n}\n\nfunction resolveCalendar(\n  exchangeCode: StockExchangeCode,\n  overrides: StockMarketCalendarOverrides,\n): StockExchangeCalendarDefinition {\n  const calendar = getStockExchangeCalendar(exchangeCode);\n  if (overrides.timeZone === undefined) return calendar;\n  if (!isValidStockMarketTimeZone(overrides.timeZone)) {\n    throw new Error("A valid IANA market timezone is required.");\n  }\n  return { ...calendar, timeZone: overrides.timeZone.trim() };\n}\n\nfunction evaluateCore(`,
-    "calendar override resolver",
-  );
-  return expected;
-});
+await patch(
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+  (source) => {
+    let expected = source;
 
-await patch("backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts", (source) => replaceOnce(
-  source,
-  `Deno.test("minute keys are stable and exchange scoped", () => {`,
-  `Deno.test("configured timezone changes the authoritative session", () => {\n  const at = new Date("2026-07-20T13:00:00.000Z");\n  assertEquals(evaluateStockMarketSession("FGX", at).status, "closed");\n  assertEquals(\n    evaluateStockMarketSession("FGX", at, { timeZone: "America/New_York" }).status,\n    "open",\n  );\n});\n\nDeno.test("minute keys are stable and exchange scoped", () => {`,
-  "calendar timezone override test",
-));
+    if (!expected.includes("supabaseStockMarketWindowRepository.ts")) {
+      expected = replaceRegexRequired(
+        expected,
+        /import \{\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n  type StockMarketSessionState,\n\} from "\.\.\/calendars\/stockMarketExchangeCalendar\.ts";/,
+        `import {\n  readStockMarketOpenState,\n} from "../infrastructure/supabaseStockMarketWindowRepository.ts";`,
+        "runner authoritative market-state import",
+      );
+    }
 
-await patch("backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts", (source) => {
-  let expected = source.replace(
-    `import {\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n  type StockMarketSessionState,\n} from "../calendars/stockMarketExchangeCalendar.ts";`,
-    `import {\n  readStockMarketOpenState,\n} from "../infrastructure/supabaseStockMarketWindowRepository.ts";`,
-  );
-  expected = replaceOnce(
-    expected,
-    `  readonly now?: () => Date;\n  readonly evaluateMarketSession?: (at: Date) => StockMarketSessionState;`,
-    `  readonly now?: () => Date;\n  readonly readMarketOpenState?: (\n    client: EdgeSupabaseClient,\n    gameSessionId: string,\n    at: Date,\n  ) => Promise<boolean>;`,
-    "runner open-state dependency",
-  );
-  expected = replaceOnce(
-    expected,
-    `    const marketSession = (dependencies.evaluateMarketSession ??\n      ((at: Date) =>\n        evaluateStockMarketSession(DEFAULT_STOCK_EXCHANGE_CODE, at)))(\n          (dependencies.now ?? (() => new Date()))(),\n        );\n\n    if (marketSession.status !== "open") {\n      throw new StockMarketRunnerError(\n        "stock_market_closed",\n        marketSession.nextTransitionAt\n          ? \`Stock market is closed. The next calendar transition is \${marketSession.nextTransitionAt}.\`\n          : "Stock market is closed.",\n        409,\n      );\n    }`,
-    `    const marketOpen = await (dependencies.readMarketOpenState ??\n      readStockMarketOpenState)(\n        serviceClient,\n        body.gameSessionId,\n        (dependencies.now ?? (() => new Date()))(),\n      );\n\n    if (!marketOpen) {\n      throw new StockMarketRunnerError(\n        "stock_market_closed",\n        "Stock market is closed for the configured game timezone.",\n        409,\n      );\n    }`,
-    "runner game-configured gate",
-  );
-  return expected;
-});
+    if (!expected.includes("readonly readMarketOpenState?:")) {
+      expected = replaceRequired(
+        expected,
+        `  readonly now?: () => Date;\n  readonly evaluateMarketSession?: (at: Date) => StockMarketSessionState;`,
+        `  readonly now?: () => Date;\n  readonly readMarketOpenState?: (\n    client: EdgeSupabaseClient,\n    gameSessionId: string,\n    at: Date,\n  ) => Promise<boolean>;`,
+        "runner market-state dependency",
+      );
+    }
 
-await patch("backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts", (source) => {
-  let expected = replaceOnce(
-    source,
-    `  readonly now?: () => Date;\n  readonly calculateNextTick?: (`,
-    `  readonly now?: () => Date;\n  readonly readMarketOpenState?: () => Promise<boolean>;\n  readonly calculateNextTick?: (`,
-    "runner test open-state option",
-  );
-  expected = replaceOnce(
-    expected,
-    `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    createRepository: () => repository,`,
-    `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
-    "runner test default open state",
-  );
-  expected = expected.replace(
-    `      now: () => new Date("2026-07-19T00:00:00.000Z"),`,
-    `      readMarketOpenState: async () => false,`,
-  );
-  return expected;
-});
+    if (!expected.includes("const marketOpen = await")) {
+      expected = replaceRegexRequired(
+        expected,
+        /    const marketSession = \(dependencies\.evaluateMarketSession \?\?[\s\S]*?    }\n\n    const storylineRunnerAfterTick/,
+        `    const marketOpen = await (dependencies.readMarketOpenState ??\n      readStockMarketOpenState)(\n        serviceClient,\n        body.gameSessionId,\n        (dependencies.now ?? (() => new Date()))(),\n      );\n\n    if (!marketOpen) {\n      throw new StockMarketRunnerError(\n        "stock_market_closed",\n        "Stock market is closed in the configured game timezone.",\n        409,\n      );\n    }\n\n    const storylineRunnerAfterTick`,
+        "runner game-scoped market gate",
+      );
+    }
 
-await patch("backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts", (source) => {
-  let expected = source.replace(
-    `import {\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n} from "../../stocks/calendars/stockMarketExchangeCalendar.ts";`,
-    `import {\n  readStockMarketOpenState,\n} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";`,
-  );
-  expected = replaceOnce(
-    expected,
-    `      gameSession,\n      publicMarket,`,
-    `      gameSession,\n      marketOpen,\n      publicMarket,`,
-    "dashboard market-open destructuring",
-  );
-  expected = replaceOnce(
-    expected,
-    `      this.readGameSession(input.gameSessionId),\n      this.readPublicStockMarket(input.gameSessionId),`,
-    `      this.readGameSession(input.gameSessionId),\n      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),\n      this.readPublicStockMarket(input.gameSessionId),`,
-    "dashboard authoritative market-state read",
-  );
-  expected = replaceOnce(
-    expected,
-    `        marketStatus: gameSession.status === "active"\n          ? evaluateStockMarketSession(\n            DEFAULT_STOCK_EXCHANGE_CODE,\n            this.now(),\n          ).status\n          : "closed",`,
-    `        marketStatus: gameSession.status === "active" && marketOpen\n          ? "open"\n          : "closed",`,
-    "dashboard configured market status",
-  );
-  return expected;
-});
+    return expected;
+  },
+);
 
-await patch("backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts", (source) => {
-  let expected = replaceOnce(
-    source,
-    `import {\n  isRecord,`,
-    `import {\n  normalizeStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig.ts";\nimport {\n  isRecord,`,
-    "settings timezone config import",
-  );
-  expected = replaceOnce(
-    expected,
-    `    if (error instanceof EdgeActivationError) {`,
-    `    if (error instanceof StockMarketWindowConfigError) {\n      return jsonError(400, {\n        code: "invalid_stock_market_timezone",\n        message: error.message,\n        retryable: false,\n      });\n    }\n\n    if (error instanceof EdgeActivationError) {`,
-    "settings invalid timezone response",
-  );
-  expected = replaceOnce(
-    expected,
-    `    payload.stock_market_window = body.stockMarketWindow;`,
-    `    payload.stock_market_window = normalizeStockMarketWindowSetting(\n      body.stockMarketWindow,\n    );`,
-    "settings timezone validation",
-  );
-  return expected;
-});
+await patch(
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+  (source) => {
+    let expected = source;
 
-await patch("backend/src/domains/game-sessions/application/createGame.ts", (source) => {
-  let expected = replaceOnce(
-    source,
-    `import type { GameSessionRecord, UUID } from "../../../auth/types";`,
-    `import type { GameSessionRecord, UUID } from "../../../auth/types";\nimport {\n  DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,\n  normalizeStockMarketWindowSetting,\n} from "../../stocks/calendars/stockMarketWindowConfig";`,
-    "create game timezone import",
-  );
-  expected = replaceOnce(
-    expected,
-    `    stockMarketWindow: normalizeJsonObject(input.stockMarketWindow),`,
-    `    stockMarketWindow: normalizeStockMarketWindow(input.stockMarketWindow),`,
-    "create game timezone default",
-  );
-  expected = replaceOnce(
-    expected,
-    `function normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-    `function normalizeStockMarketWindow(\n  value: JsonObject | null | undefined,\n): JsonObject {\n  try {\n    return normalizeStockMarketWindowSetting(\n      value ?? { timezone: DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE },\n    ) as JsonObject;\n  } catch {\n    throw new CreateGameValidationError(\n      "stockMarketWindow.timezone must be a valid IANA timezone.",\n    );\n  }\n}\n\nfunction normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-    "create game timezone normalizer",
-  );
-  return expected;
-});
+    if (!expected.includes("readonly readMarketOpenState?:")) {
+      expected = replaceRequired(
+        expected,
+        `  readonly now?: () => Date;\n  readonly calculateNextTick?: (`,
+        `  readonly now?: () => Date;\n  readonly readMarketOpenState?: () => Promise<boolean>;\n  readonly calculateNextTick?: (`,
+        "runner test market-state option",
+      );
+    }
+
+    if (!expected.includes("readMarketOpenState: options.readMarketOpenState")) {
+      expected = replaceRequired(
+        expected,
+        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
+        "runner test default market-state reader",
+      );
+    }
+
+    expected = expected.replace(
+      `      now: () => new Date("2026-07-19T00:00:00.000Z"),`,
+      `      readMarketOpenState: async () => false,`,
+    );
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+  (source) => {
+    let expected = source;
+
+    if (!expected.includes("supabaseStockMarketWindowRepository.ts")) {
+      expected = replaceRegexRequired(
+        expected,
+        /import \{\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n\} from "\.\.\/\.\.\/stocks\/calendars\/stockMarketExchangeCalendar\.ts";/,
+        `import {\n  readStockMarketOpenState,\n} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";`,
+        "dashboard authoritative market-state import",
+      );
+    }
+
+    if (!expected.includes("      marketOpen,\n      publicMarket,")) {
+      expected = replaceRequired(
+        expected,
+        `      gameSession,\n      publicMarket,`,
+        `      gameSession,\n      marketOpen,\n      publicMarket,`,
+        "dashboard market-state result",
+      );
+    }
+
+    if (!expected.includes("readStockMarketOpenState(this.client")) {
+      expected = replaceRequired(
+        expected,
+        `      this.readGameSession(input.gameSessionId),\n      this.readPublicStockMarket(input.gameSessionId),`,
+        `      this.readGameSession(input.gameSessionId),\n      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),\n      this.readPublicStockMarket(input.gameSessionId),`,
+        "dashboard market-state query",
+      );
+    }
+
+    if (!expected.includes("gameSession.status === \"active\" && marketOpen")) {
+      expected = replaceRegexRequired(
+        expected,
+        /        marketStatus: gameSession\.status === "active"[\s\S]*?          : "closed",/,
+        `        marketStatus: gameSession.status === "active" && marketOpen\n          ? "open"\n          : "closed",`,
+        "dashboard market status",
+      );
+    }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
+  (source) => {
+    let expected = source;
+
+    if (!expected.includes("StockMarketWindowConfigError")) {
+      expected = replaceRequired(
+        expected,
+        `import {\n  isRecord,`,
+        `import {\n  normalizeRequiredStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig.ts";\nimport {\n  isRecord,`,
+        "settings timezone validator import",
+      );
+    }
+
+    if (!expected.includes("invalid_stock_market_timezone")) {
+      expected = replaceRequired(
+        expected,
+        `  } catch (error) {\n    if (error instanceof EdgeActivationError) {`,
+        `  } catch (error) {\n    if (error instanceof StockMarketWindowConfigError) {\n      return jsonError(400, {\n        code: "invalid_stock_market_timezone",\n        message: error.message,\n        retryable: false,\n      });\n    }\n\n    if (error instanceof EdgeActivationError) {`,
+        "settings timezone validation response",
+      );
+    }
+
+    if (!expected.includes("normalizeRequiredStockMarketWindowSetting(")) {
+      expected = replaceRequired(
+        expected,
+        `    payload.stock_market_window = body.stockMarketWindow;`,
+        `    payload.stock_market_window = normalizeRequiredStockMarketWindowSetting(\n      body.stockMarketWindow,\n    );`,
+        "settings required timezone persistence",
+      );
+    }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/game-sessions/application/createGame.ts",
+  (source) => {
+    let expected = source;
+
+    if (!expected.includes("normalizeRequiredStockMarketWindowSetting")) {
+      expected = replaceRequired(
+        expected,
+        `import type { GameSessionRecord, UUID } from "../../../auth/types";`,
+        `import type { GameSessionRecord, UUID } from "../../../auth/types";\nimport {\n  normalizeRequiredStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig";`,
+        "create-game timezone validator import",
+      );
+    }
+
+    if (!expected.includes("stockMarketWindow: normalizeRequiredStockMarketWindow(")) {
+      expected = replaceRequired(
+        expected,
+        `    stockMarketWindow: normalizeJsonObject(input.stockMarketWindow),`,
+        `    stockMarketWindow: normalizeRequiredStockMarketWindow(\n      input.stockMarketWindow,\n    ),`,
+        "create-game required timezone",
+      );
+    }
+
+    if (!expected.includes("function normalizeRequiredStockMarketWindow(")) {
+      expected = replaceRequired(
+        expected,
+        `function normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
+        `function normalizeRequiredStockMarketWindow(\n  value: JsonObject | null | undefined,\n): JsonObject {\n  try {\n    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;\n  } catch (error) {\n    if (error instanceof StockMarketWindowConfigError) {\n      throw new CreateGameValidationError(error.message);\n    }\n    throw error;\n  }\n}\n\nfunction normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
+        "create-game required timezone normalizer",
+      );
+    }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/licensing/contracts/activationRequestParser.ts",
+  (source) => {
+    let expected = source;
+
+    if (!expected.includes("normalizeRequiredStockMarketWindowSetting")) {
+      expected = replaceRequired(
+        expected,
+        `import type { JsonObject } from "../../../supabase/tableTypes.ts";`,
+        `import type { JsonObject } from "../../../supabase/tableTypes.ts";\nimport {\n  normalizeRequiredStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig.ts";`,
+        "activation timezone validator import",
+      );
+    }
+
+    if (!expected.includes("stockMarketWindow: parseRequiredStockMarketWindow(")) {
+      expected = replaceRequired(
+        expected,
+        `    stockMarketWindow: parseOptionalJsonObject(value.stockMarketWindow),`,
+        `    stockMarketWindow: parseRequiredStockMarketWindow(\n      value.stockMarketWindow,\n    ),`,
+        "activation required timezone",
+      );
+    }
+
+    if (!expected.includes("function parseRequiredStockMarketWindow(")) {
+      expected = replaceRequired(
+        expected,
+        `function parseOptionalJsonObject(value: unknown): JsonObject | null {`,
+        `function parseRequiredStockMarketWindow(value: unknown): JsonObject {\n  try {\n    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;\n  } catch (error) {\n    if (error instanceof StockMarketWindowConfigError) {\n      throw new LicensingActivationRequestParseError(\n        "invalid_activation_settings",\n        error.message,\n      );\n    }\n    throw error;\n  }\n}\n\nfunction parseOptionalJsonObject(value: unknown): JsonObject | null {`,
+        "activation required timezone parser",
+      );
+    }
+
+    return expected;
+  },
+);
 
 await patch("backend/package.json", (source) => {
   const document = JSON.parse(source);
   document.scripts["test:stock-market-calendar"] = [
     "deno test",
-    "--allow-read=supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql,supabase/migrations/20260719133000_make_stock_market_timezone_configurable_v1.sql",
+    "--allow-read=supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql,supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql",
     "--config supabase/functions/deno.json",
     "--lock=supabase/functions/deno.lock",
     "--frozen",
@@ -611,25 +769,17 @@ await patch("backend/package.json", (source) => {
   return `${JSON.stringify(document, null, 2)}\n`;
 });
 
-await patch(".github/workflows/exchange-calendar-runtime-v1.yml", (source) => {
-  let expected = source.replaceAll(
-    "scripts/apply-exchange-calendar-runtime-v1.mjs",
-    "scripts/apply-configurable-stock-market-timezone-v1.mjs",
-  );
-  expected = expected.replace(
-    "integration drift check",
-    "configurable timezone drift check",
-  );
-  return expected;
-});
-
 await patch("backend/src/domains/stocks/README.md", (source) => {
-  if (source.includes("### Configurable game timezone")) return source;
-  return `${source.trimEnd()}\n\n### Configurable game timezone\n\nThe authoritative timezone is stored at \`game_settings.stock_market_window.timezone\` as an IANA timezone. Browser and device timezones are never used for market decisions. Existing games and missing settings use the server-owned \`Asia/Seoul\` fallback. Game creation writes the fallback into the setting, staff PATCH requests validate configured values, and the runner, dashboard, and order RPC all read the game-scoped server decision.\n`;
+  const marker = "## Required Game Timezone";
+  if (source.includes(marker)) return source;
+
+  return `${source.trimEnd()}\n\n${marker}\n\nEvery game must store one valid IANA timezone at \`game_settings.stock_market_window.timezone\`. The same timezone governs every Econovaria exchange. Browser and device timezones are prohibited. Existing games receive a one-time \`Asia/Seoul\` migration value; after migration there is no runtime fallback. Missing or invalid settings fail closed at the request, database, runner, dashboard, and order-execution boundaries.\n`;
 });
 
 if (checkOnly && differences > 0) {
   process.exitCode = 1;
 } else {
-  console.log(`${checkOnly ? "Verified" : "Applied"} configurable stock-market timezone integration.`);
+  console.log(
+    `${checkOnly ? "Verified" : "Applied"} required game market timezone integration.`,
+  );
 }
