@@ -54,69 +54,101 @@ exit=0
 
 TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 92.474044
+  duration_ms: 96.91855
   type: 'test'
+  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:25:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 133.393239
+  duration_ms: 129.096965
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 54.141045
+  duration_ms: 55.451728
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
-ok 4 - staging mode remains blocked until executable content is complete
+not ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 57.685481
+  duration_ms: 56.072933
   type: 'test'
+  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:51:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.333305
+  duration_ms: 0.479197
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.156242
+  duration_ms: 0.217226
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.470321
+  duration_ms: 0.45959
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.308217
+  duration_ms: 0.24615
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.599442
+  duration_ms: 0.576909
   type: 'test'
   ...
 1..9
 # tests 9
 # suites 0
-# pass 9
-# fail 0
+# pass 7
+# fail 2
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 408.094692
-exit=0
+# duration_ms 406.852433
+exit=1
 
 ## design seed preflight
 
@@ -152,6 +184,14 @@ Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-exit=0
+docs/seed-content/reviews/market-canonicalization-run-log.txt:65: trailing whitespace.
++    
+docs/seed-content/reviews/market-canonicalization-run-log.txt:67: trailing whitespace.
++    
+docs/seed-content/reviews/market-canonicalization-run-log.txt:99: trailing whitespace.
++    
+docs/seed-content/reviews/market-canonicalization-run-log.txt:101: trailing whitespace.
++    
+exit=2
 
-finalStatus=0
+finalStatus=1
