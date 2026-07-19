@@ -284,6 +284,7 @@ export function installNotificationInboxFlow({ mount, terminal, config }) {
         hasMore: false,
         nextCursor: null,
       };
+      loading = false;
       await loadPage();
       restore("Completed");
       setTimeout(() => restore(), 900);
