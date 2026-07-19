@@ -14,6 +14,9 @@ import {
   parseOptionalJsonObject,
   parseOptionalText,
 } from "../../../platform/supabase/edgeParsing.ts";
+import {
+  validateStockMarketWindowSettings,
+} from "../../stocks/calendars/stockMarketWindowSettings.ts";
 
 interface GameSettingsDependencies {
   readonly resolveStaffForRequest: (
@@ -260,7 +263,21 @@ function buildGameSettingsUpdatePayload(
   }
 
   if (body.stockMarketWindow !== undefined && body.stockMarketWindow !== null) {
-    payload.stock_market_window = body.stockMarketWindow;
+    try {
+      validateStockMarketWindowSettings(body.stockMarketWindow);
+    } catch (error) {
+      throw new EdgeActivationError(
+        "invalid_stock_market_timezone",
+        error instanceof Error
+          ? error.message
+          : "stockMarketWindow.timezone is invalid.",
+        400,
+      );
+    }
+
+    payload.stock_market_window = normalizeStockMarketWindowSettings(
+      body.stockMarketWindow,
+    );
   }
 
   if (body.newsSchedule !== undefined && body.newsSchedule !== null) {
@@ -268,6 +285,19 @@ function buildGameSettingsUpdatePayload(
   }
 
   return payload;
+}
+
+function normalizeStockMarketWindowSettings(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  if (typeof value.timezone !== "string") {
+    return value;
+  }
+
+  return {
+    ...value,
+    timezone: value.timezone.trim(),
+  };
 }
 
 function readJsonObjectSetting(value: unknown): Record<string, unknown> {
