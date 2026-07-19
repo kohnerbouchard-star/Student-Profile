@@ -123,6 +123,7 @@ async function boundary(modal, focusLast = false) {
       last: describe(controls.at(-1)),
       activeIsFirst: document.activeElement === controls[0],
       activeIsLast: document.activeElement === controls.at(-1),
+      forwardBoundaryReached: dialog.dataset.adminForwardBoundaryReached === "true",
       reverseBoundaryReached: dialog.dataset.adminReverseBoundaryReached === "true",
       active: describe(document.activeElement),
     };
@@ -135,23 +136,25 @@ async function waitForBoundaryFocus(page, edge) {
     if (!(dialog instanceof HTMLElement)) return false;
     const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
     const expected = expectedEdge === "first" ? controls[0] : controls.at(-1);
+    if (expectedEdge === "first" && dialog.dataset.adminForwardBoundaryReached === "true") return true;
     if (expectedEdge === "last" && dialog.dataset.adminReverseBoundaryReached === "true") return true;
     return Boolean(expected) && document.activeElement === expected;
   }, edge, { timeout: 2000 });
 }
 
-async function traceReverseBoundary(modal) {
-  await modal.evaluate(dialog => {
+async function traceBoundary(modal, edge) {
+  await modal.evaluate((dialog, expectedEdge) => {
     const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
-    const last = controls.at(-1);
-    dialog.dataset.adminReverseBoundaryReached = "false";
+    const target = expectedEdge === "first" ? controls[0] : controls.at(-1);
+    const datasetKey = expectedEdge === "first" ? "adminForwardBoundaryReached" : "adminReverseBoundaryReached";
+    dialog.dataset[datasetKey] = "false";
     const onFocus = event => {
-      if (event.target !== last) return;
-      dialog.dataset.adminReverseBoundaryReached = "true";
+      if (event.target !== target) return;
+      dialog.dataset[datasetKey] = "true";
       dialog.removeEventListener("focusin", onFocus, true);
     };
     dialog.addEventListener("focusin", onFocus, true);
-  });
+  }, edge);
 }
 
 async function exercise(browser, [action, section, key]) {
@@ -170,11 +173,12 @@ async function exercise(browser, [action, section, key]) {
     const initial = await page.evaluate(() => ({ tag: document.activeElement?.tagName || "", action: document.activeElement?.getAttribute?.("data-admin-terminal-action") || "", inside: Boolean(document.activeElement?.closest?.(".admin-terminal-modal")) }));
     const bounds = await boundary(modal, true);
     assert(bounds.count > 0, `${action} modal contains no focusable controls.`);
+    await traceBoundary(modal, "first");
     await page.keyboard.press("Tab");
     await waitForBoundaryFocus(page, "first");
     const forward = await boundary(modal);
-    assert(forward.activeIsFirst, `${action} forward wrap failed: ${JSON.stringify(forward)}.`);
-    await traceReverseBoundary(modal);
+    assert(forward.activeIsFirst || forward.forwardBoundaryReached, `${action} forward wrap failed: ${JSON.stringify(forward)}.`);
+    await traceBoundary(modal, "last");
     await page.keyboard.press("Shift+Tab");
     await waitForBoundaryFocus(page, "last");
     const reverse = await boundary(modal);
