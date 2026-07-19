@@ -4,7 +4,6 @@
   const FORM_SELECTOR = "[data-admin-terminal-player-form]";
   const CREATE_ACTION_SELECTOR = '[data-admin-terminal-action="create-player"]';
   const OPEN_ACTION_SELECTOR = '[data-admin-terminal-action="add-player"]';
-  const LEGACY_DIALOG_SELECTOR = "[data-admin-player-access-code-dialog]";
   const CONFIRMATION_SELECTOR = "[data-admin-player-created-confirmation]";
   const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let lastCreateContext = null;
@@ -101,10 +100,6 @@
     return lastCreateContext;
   }
 
-  function removeLegacyDialog() {
-    document.querySelectorAll(LEGACY_DIALOG_SELECTOR).forEach((node) => node.remove());
-  }
-
   async function copyCredentials(detail, button) {
     const value = `Player ID: ${text(detail.playerIdentifier)}\nAccess Code: ${text(detail.studentCode)}`;
     try {
@@ -133,7 +128,6 @@
     if (!document.body || !text(detail?.studentCode)) return;
     activeConfirmation?.destroy?.({ restoreFocus: false });
     activeConfirmation = null;
-    removeLegacyDialog();
     document.querySelector(CONFIRMATION_SELECTOR)?.remove();
 
     const backdrop = document.createElement("div");
@@ -274,7 +268,6 @@
           }
         }
       }
-      removeLegacyDialog();
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }
@@ -302,7 +295,6 @@
     const opener = lastCreateOpener;
     lastCreateContext = null;
     window.setTimeout(() => {
-      removeLegacyDialog();
       renderConfirmation(detail, context, opener);
     }, 0);
   }, { capture: true });

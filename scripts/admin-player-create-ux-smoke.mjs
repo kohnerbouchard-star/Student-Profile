@@ -36,6 +36,9 @@ assert(
 assert(!bridgeSource.includes("renderAccessCodeDialog"), "Legacy credential dialog renderer remains in the access-code bridge.");
 assert(!bridgeSource.includes("data-admin-player-access-code-dialog"), "Legacy credential dialog marker remains in the access-code bridge.");
 assert(!bridgeSource.includes("style.cssText"), "Access-code bridge still creates inline-styled credential UI.");
+assert(!createUxSource.includes("LEGACY_DIALOG_SELECTOR"), "Player create UX still declares a legacy credential-dialog selector.");
+assert(!createUxSource.includes("removeLegacyDialog"), "Player create UX still suppresses a legacy credential dialog at runtime.");
+assert(!createUxSource.includes("data-admin-player-access-code-dialog"), "Player create UX still references the obsolete credential dialog marker.");
 assert(createUxSource.includes("dismissOnEscape: false"), "One-time credential confirmation does not protect acknowledgement on Escape.");
 assert(createUxSource.includes("dismissOnBackdrop: false"), "One-time credential confirmation can still be dismissed accidentally through the backdrop.");
 
