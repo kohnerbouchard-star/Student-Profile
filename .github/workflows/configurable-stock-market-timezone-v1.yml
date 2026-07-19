@@ -1,0 +1,70 @@
+name: Configurable Stock Market Timezone
+
+on:
+  push:
+    branches:
+      - agent/exchange-calendar-config-v1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: configurable-stock-market-timezone-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/exchange-calendar-config-v1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply configurable timezone patch
+        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs
+
+      - name: Run focused tests
+        run: npm --prefix backend run test:stock-market-calendar
+
+      - name: Run backend typecheck
+        run: npm --prefix backend run typecheck:all
+
+      - name: Check patch drift
+        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
+
+      - name: Check whitespace
+        run: git diff --check
+
+      - name: Commit generated integration
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(stocks): make market timezone configurable"
+          git push origin HEAD:agent/exchange-calendar-config-v1
