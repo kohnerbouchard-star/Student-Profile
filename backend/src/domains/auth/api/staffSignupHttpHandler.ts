@@ -3,6 +3,11 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
+import type { JsonObject } from "../../../supabase/tableTypes.ts";
+import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "../../stocks/calendars/stockMarketWindowConfig.ts";
 import {
   type EdgeSupabaseClient,
   readSupabaseEnv,
@@ -34,6 +39,7 @@ interface StaffSignupInput {
   readonly purchaseCode: string;
   readonly gameName: string;
   readonly difficultyPreset: string;
+  readonly stockMarketWindow: JsonObject;
 }
 
 const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
@@ -92,6 +98,7 @@ export async function handleStaffSignupRequest(
           purchaseCode: input.purchaseCode,
           gameName: input.gameName,
           difficultyPreset: input.difficultyPreset,
+          stockMarketWindow: input.stockMarketWindow,
         },
         {
           staffUserId: staff.id,
@@ -168,6 +175,9 @@ function parseStaffSignupInput(value: unknown): StaffSignupInput {
     "difficulty_required",
     "difficultyPreset is required.",
   ).toLowerCase();
+  const stockMarketWindow = parseRequiredStockMarketWindow(
+    value.stockMarketWindow,
+  );
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new EdgeActivationError("invalid_email", "email must be valid.", 400);
@@ -208,7 +218,23 @@ function parseStaffSignupInput(value: unknown): StaffSignupInput {
       "gameName is required.",
     ),
     difficultyPreset,
+    stockMarketWindow,
   };
+}
+
+function parseRequiredStockMarketWindow(value: unknown): JsonObject {
+  try {
+    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;
+  } catch (error) {
+    if (error instanceof StockMarketWindowConfigError) {
+      throw new EdgeActivationError(
+        "invalid_stock_market_timezone",
+        error.message,
+        400,
+      );
+    }
+    throw error;
+  }
 }
 
 function requiredText(

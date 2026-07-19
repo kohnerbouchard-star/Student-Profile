@@ -25,6 +25,7 @@ function init() {
   bindLoginModeToggle();
   initLoginClock();
   initLoginAudio();
+  initializeGameTimeZoneOptions();
   const query = new URLSearchParams(window.location.search);
   const requestedLoginMode = query.get("mode");
   setLoginMode(LOGIN_MODES.has(requestedLoginMode) ? requestedLoginMode : "player");
@@ -38,6 +39,26 @@ function init() {
     );
     window.history.replaceState({}, document.title, window.location.pathname);
   }
+}
+
+function initializeGameTimeZoneOptions() {
+  const select = document.getElementById("gameTimeZone");
+  if (!select || typeof Intl.supportedValuesOf !== "function") return;
+
+  const existing = new Set(
+    Array.from(select.options).map((option) => option.value).filter(Boolean)
+  );
+  const fragment = document.createDocumentFragment();
+
+  for (const timeZone of Intl.supportedValuesOf("timeZone")) {
+    if (existing.has(timeZone)) continue;
+    const option = document.createElement("option");
+    option.value = timeZone;
+    option.textContent = timeZone.replaceAll("_", " ");
+    fragment.appendChild(option);
+  }
+
+  select.appendChild(fragment);
 }
 
 function bindLoginModeToggle() {
@@ -244,6 +265,7 @@ async function handleStaffSignup(event) {
   const displayName = document.getElementById("createDisplayName")?.value.trim() || "";
   const gameName = document.getElementById("sessionName")?.value.trim() || "";
   const difficulty = document.getElementById("difficultyLevel")?.value || "";
+  const timeZone = document.getElementById("gameTimeZone")?.value || "";
   const password = document.getElementById("createAccessCode")?.value || "";
   const confirmPassword = document.getElementById("confirmAccessCode")?.value || "";
   const message = document.getElementById("createMessage");
@@ -251,7 +273,7 @@ async function handleStaffSignup(event) {
   clearLoginMessage(message);
   if (isButtonLoading(button)) return;
 
-  if (!licenseCode || !email || !displayName || !gameName || !password || !confirmPassword || !VALID_DIFFICULTIES.has(difficulty)) {
+  if (!licenseCode || !email || !displayName || !gameName || !timeZone || !password || !confirmPassword || !VALID_DIFFICULTIES.has(difficulty)) {
     return showLoginMessage(message, "Complete every field and select a valid difficulty.", "bad");
   }
 
@@ -276,7 +298,8 @@ async function handleStaffSignup(event) {
       displayName,
       purchaseCode: licenseCode,
       gameName,
-      difficultyPreset: difficulty
+      difficultyPreset: difficulty,
+      timeZone
     });
 
     if (!signup?.ok || !signup.activation?.gameSessionId) {
