@@ -19,6 +19,9 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-keyboard-navigation-source-smoke.mjs"
       - "scripts/admin-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-keyboard-workflows-smoke.mjs"
+      - "scripts/admin-keyboard-focus-order-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -60,6 +63,9 @@ on:
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-keyboard-navigation-source-smoke.mjs"
       - "scripts/admin-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-keyboard-workflows-smoke.mjs"
+      - "scripts/admin-keyboard-focus-order-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
@@ -148,6 +154,15 @@ jobs:
           done
           cat /tmp/admin-smoke-server.log
           false
+
+      - name: Audit mounted keyboard-only Admin navigation
+        run: node scripts/admin-mounted-keyboard-navigation-smoke.mjs
+
+      - name: Exercise keyboard-only Admin create and scanner workflows
+        run: node scripts/admin-keyboard-workflows-smoke.mjs
+
+      - name: Prove page focus order and in-flight keyboard exclusion
+        run: node scripts/admin-keyboard-focus-order-smoke.mjs
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs

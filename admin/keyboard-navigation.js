@@ -4,13 +4,29 @@
   const SECTION_SELECTOR = "[data-admin-section]";
   const ACTION_SELECTOR = "[data-admin-terminal-action]";
   const TAB_SELECTOR = '[role="tab"]';
+  const EXCLUDED_ANCESTOR_SELECTOR = [
+    "[hidden]",
+    "[inert]",
+    '[aria-hidden="true"]',
+    '[data-admin-stale="true"]',
+    "[data-admin-shape-skeleton-route]",
+    "[data-admin-shape-skeleton-stage]",
+    "[data-admin-shape-surface-overlay]",
+    ".admin-qol-page-skeleton",
+    ".admin-shape-skeleton-stage",
+    ".admin-shape-surface-overlay",
+  ].join(", ");
   const ACTIVATION_KEYS = new Set(["Enter", " ", "Spacebar"]);
   const FORWARD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
   const BACKWARD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
 
+  function excluded(element) {
+    if (!(element instanceof HTMLElement)) return true;
+    return Boolean(element.closest(EXCLUDED_ANCESTOR_SELECTOR));
+  }
+
   function visible(element) {
-    if (!(element instanceof HTMLElement) || element.hidden) return false;
-    if (element.getAttribute("aria-hidden") === "true") return false;
+    if (!(element instanceof HTMLElement) || excluded(element)) return false;
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
@@ -113,6 +129,9 @@
   document.addEventListener("pointerdown", markPointerModality, true);
 
   window.EconovariaAdminKeyboardNavigation = Object.freeze({
+    excluded,
+    visible,
+    enabled,
     sectionControls,
     tabControls,
     moveWithin,
