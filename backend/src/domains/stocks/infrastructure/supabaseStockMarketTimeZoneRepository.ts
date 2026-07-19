@@ -1,5 +1,5 @@
 import {
-  DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
+  SEOUL_STOCK_MARKET_TIME_ZONE,
   resolveStockMarketWindowSettings,
 } from "../calendars/stockMarketWindowSettings.ts";
 import {
@@ -33,7 +33,7 @@ export async function readServerStockMarketTimeZone(
 
   if (response.error) {
     if (isSchemaNotAppliedError(response.error)) {
-      return DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE;
+      return SEOUL_STOCK_MARKET_TIME_ZONE;
     }
 
     throw new StockMarketRunnerError(
