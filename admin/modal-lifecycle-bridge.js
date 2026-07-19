@@ -160,7 +160,7 @@
 
   function scheduleSettledReconcile() {
     schedule();
-    window.setTimeout(schedule, 0);
+    window.setTimeout(reconcile, 0);
     window.setTimeout(schedule, 120);
     window.setTimeout(schedule, 360);
   }
