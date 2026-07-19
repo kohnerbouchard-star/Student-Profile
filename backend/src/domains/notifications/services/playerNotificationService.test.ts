@@ -6,7 +6,9 @@ import {
 } from "../contracts/playerNotificationContracts.ts";
 import { PlayerNotificationService } from "./playerNotificationService.ts";
 
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
@@ -55,15 +57,21 @@ Deno.test("notification service distinguishes empty and unavailable reads", asyn
   assertEquals(empty.hasMore, false);
 
   await assertRejects(
-    () => new PlayerNotificationService({
-      ...repository({}),
-      listNotifications: () => Promise.reject(
-        new PlayerNotificationPersistenceError(
-          "player_notification_read_failed",
-          "unavailable",
-        ),
-      ),
-    }).listNotifications(scope(), { status: "unread", limit: 20, cursor: null }),
+    () =>
+      new PlayerNotificationService({
+        ...repository({}),
+        listNotifications: () =>
+          Promise.reject(
+            new PlayerNotificationPersistenceError(
+              "player_notification_read_failed",
+              "unavailable",
+            ),
+          ),
+      }).listNotifications(scope(), {
+        status: "unread",
+        limit: 20,
+        cursor: null,
+      }),
     "player_notification_service_unavailable",
   );
 });
@@ -82,7 +90,10 @@ Deno.test("notification service reports the exact unread total independently fro
 
 Deno.test("notification read acknowledgement is idempotent and ordered", async () => {
   const existing = [
-    delivery({ publicDeliveryId: DELIVERY_A, publicNotificationId: NOTIFICATION_A }),
+    delivery({
+      publicDeliveryId: DELIVERY_A,
+      publicNotificationId: NOTIFICATION_A,
+    }),
     delivery({
       publicDeliveryId: DELIVERY_B,
       publicNotificationId: NOTIFICATION_B,
@@ -90,30 +101,42 @@ Deno.test("notification read acknowledgement is idempotent and ordered", async (
     }),
   ];
   const repo = statefulRepository(existing);
-  const result = await new PlayerNotificationService(repo).markNotificationsRead(
-    scope(),
-    { publicDeliveryIds: [DELIVERY_B, DELIVERY_A] },
-  );
+  const result = await new PlayerNotificationService(repo)
+    .markNotificationsRead(
+      scope(),
+      { publicDeliveryIds: [DELIVERY_B, DELIVERY_A] },
+    );
 
   assertEquals(result.requestedCount, 2);
   assertEquals(result.newlyReadCount, 1);
   assertEquals(result.alreadyReadCount, 1);
-  assertEquals(result.deliveries.map((item) => item.deliveryId), [DELIVERY_B, DELIVERY_A]);
+  assertEquals(result.deliveries.map((item) => item.deliveryId), [
+    DELIVERY_B,
+    DELIVERY_A,
+  ]);
   assertEquals(result.deliveries[1].seenAt, NOW);
   assertNoUuid(JSON.stringify(result));
 });
 
 Deno.test("notification service fails closed for missing and cross-scope deliveries", async () => {
   await assertRejects(
-    () => new PlayerNotificationService(repository({ read: [] }))
-      .markNotificationsRead(scope(), { publicDeliveryIds: [DELIVERY_A] }),
+    () =>
+      new PlayerNotificationService(repository({ read: [] }))
+        .markNotificationsRead(scope(), { publicDeliveryIds: [DELIVERY_A] }),
     "player_notification_deliveries_not_found",
   );
 
   await assertRejects(
-    () => new PlayerNotificationService(repository({
-      list: [notification({ gameId: "00000000-0000-4000-8000-000000000002" })],
-    })).listNotifications(scope(), { status: "unread", limit: 20, cursor: null }),
+    () =>
+      new PlayerNotificationService(repository({
+        list: [
+          notification({ gameId: "00000000-0000-4000-8000-000000000002" }),
+        ],
+      })).listNotifications(scope(), {
+        status: "unread",
+        limit: 20,
+        cursor: null,
+      }),
     "player_notification_scope_violation",
   );
 });
@@ -140,9 +163,12 @@ function statefulRepository(
   let values = initial.map((item) => ({ ...item }));
   return {
     listNotifications: () => Promise.resolve([]),
-    readDeliveriesByPublicIds: (input) => Promise.resolve(
-      values.filter((item) => input.publicDeliveryIds.includes(item.publicDeliveryId)),
-    ),
+    readDeliveriesByPublicIds: (input) =>
+      Promise.resolve(
+        values.filter((item) =>
+          input.publicDeliveryIds.includes(item.publicDeliveryId)
+        ),
+      ),
     markDeliveriesRead: (input) => {
       const changed: PlayerNotificationDeliveryStateRecord[] = [];
       values = values.map((item) => {
@@ -225,13 +251,18 @@ async function assertRejects(
 }
 
 function assertNoUuid(value: string): void {
-  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(value)) {
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(value)
+  ) {
     throw new Error(`UUID leaked: ${value}`);
   }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
+    throw new Error(
+      `Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
+    );
   }
 }

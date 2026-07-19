@@ -122,17 +122,18 @@ export async function handlePlayerNotificationRequest(
         filter: {
           status: listQuery.status,
           limit: listQuery.limit,
-        },        page: {
-        returned: result.items.length,
-        hasMore: result.hasMore,
-        nextCursor: result.nextCursor
-          ? encodePlayerNotificationCursor(result.nextCursor)
-          : null,
-      },
-      summary: {
-        unreadCount: result.unreadCount,
-      },
-      items: result.items,
+        },
+        page: {
+          returned: result.items.length,
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor
+            ? encodePlayerNotificationCursor(result.nextCursor)
+            : null,
+        },
+        summary: {
+          unreadCount: result.unreadCount,
+        },
+        items: result.items,
         emptyState: result.items.length === 0
           ? { reason: "notifications_empty" }
           : null,

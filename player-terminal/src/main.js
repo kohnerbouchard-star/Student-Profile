@@ -17,11 +17,15 @@ const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
-  sessionInvalidEvent: config.sessionInvalidEvent
+  sessionInvalidEvent: config.sessionInvalidEvent,
 });
 
 const terminal = createPlayerTerminal({ mount, config });
-const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
+const sessionSafeExit = installPlayerSessionSafeExit({
+  terminal,
+  config,
+  mount,
+});
 const logout = installPlayerLogoutController({ terminal, config, mount });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });

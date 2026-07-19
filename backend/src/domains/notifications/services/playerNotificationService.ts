@@ -4,12 +4,12 @@ import {
   PlayerNotificationError,
   type PlayerNotificationItemDto,
   type PlayerNotificationListQuery,
+  PlayerNotificationPersistenceError,
   type PlayerNotificationReadCommand,
   type PlayerNotificationReadResponseBody,
   type PlayerNotificationRecord,
   type PlayerNotificationRepository,
   type PlayerNotificationScope,
-  PlayerNotificationPersistenceError,
 } from "../contracts/playerNotificationContracts.ts";
 
 export interface PlayerNotificationListServiceResult {
@@ -26,26 +26,29 @@ export class PlayerNotificationService {
     scope: PlayerNotificationScope,
     query: PlayerNotificationListQuery,
   ): Promise<PlayerNotificationListServiceResult> {
-    try {      const [records, unreadCount] = await Promise.all([
-      this.repository.listNotifications({
-        gameId: scope.gameId,
-        playerUuid: scope.playerUuid,
-        status: query.status,
-        limit: query.limit + 1,
-        cursor: query.cursor,
-      }),
-      this.repository.countUnreadNotifications
-        ? this.repository.countUnreadNotifications({
+    try {
+      const [records, unreadCount] = await Promise.all([
+        this.repository.listNotifications({
           gameId: scope.gameId,
           playerUuid: scope.playerUuid,
-        })
-        : Promise.resolve<number | null>(null),
-    ]);
-    validateRecordScope(records, scope);
+          status: query.status,
+          limit: query.limit + 1,
+          cursor: query.cursor,
+        }),
+        this.repository.countUnreadNotifications
+          ? this.repository.countUnreadNotifications({
+            gameId: scope.gameId,
+            playerUuid: scope.playerUuid,
+          })
+          : Promise.resolve<number | null>(null),
+      ]);
+      validateRecordScope(records, scope);
 
       const ordered = [...records].sort(compareNotifications);
       if (ordered.length > query.limit + 1) throw scopeViolation();
-      const publicDeliveryIds = ordered.map((record) => record.publicDeliveryId);
+      const publicDeliveryIds = ordered.map((record) =>
+        record.publicDeliveryId
+      );
       if (new Set(publicDeliveryIds).size !== publicDeliveryIds.length) {
         throw scopeViolation();
       }
@@ -53,20 +56,21 @@ export class PlayerNotificationService {
 
       const hasMore = ordered.length > query.limit;
       const page = ordered.slice(0, query.limit);
-      const last = page.at(-1);      const fallbackUnreadCount = query.status === "unread" && !hasMore
-      ? page.length
-      : 0;
-    return {
-      items: page.map(toItemDto),
-      unreadCount: requireUnreadCount(unreadCount ?? fallbackUnreadCount),
-      hasMore,
-      nextCursor: hasMore && last
-        ? {
-          deliveredAt: last.deliveredAt,
-          publicDeliveryId: last.publicDeliveryId,
-        }
-        : null,
-    };
+      const last = page.at(-1);
+      const fallbackUnreadCount = query.status === "unread" && !hasMore
+        ? page.length
+        : 0;
+      return {
+        items: page.map(toItemDto),
+        unreadCount: requireUnreadCount(unreadCount ?? fallbackUnreadCount),
+        hasMore,
+        nextCursor: hasMore && last
+          ? {
+            deliveredAt: last.deliveredAt,
+            publicDeliveryId: last.publicDeliveryId,
+          }
+          : null,
+      };
     } catch (error) {
       throw mapServiceError(error);
     }
@@ -153,7 +157,9 @@ export class PlayerNotificationService {
   }
 }
 
-function toItemDto(record: PlayerNotificationRecord): PlayerNotificationItemDto {
+function toItemDto(
+  record: PlayerNotificationRecord,
+): PlayerNotificationItemDto {
   return {
     id: record.publicDeliveryId,
     deliveryId: record.publicDeliveryId,
@@ -186,8 +192,10 @@ function compareNotifications(
   left: PlayerNotificationRecord,
   right: PlayerNotificationRecord,
 ): number {
-  const timeOrder = Date.parse(right.deliveredAt) - Date.parse(left.deliveredAt);
-  return timeOrder || right.publicDeliveryId.localeCompare(left.publicDeliveryId);
+  const timeOrder = Date.parse(right.deliveredAt) -
+    Date.parse(left.deliveredAt);
+  return timeOrder ||
+    right.publicDeliveryId.localeCompare(left.publicDeliveryId);
 }
 
 function validateStatus(
@@ -259,7 +267,9 @@ function mapServiceError(error: unknown): Error {
       true,
     );
   }
-  return error instanceof Error ? error : new Error("Player notification failure.");
+  return error instanceof Error
+    ? error
+    : new Error("Player notification failure.");
 }
 
 function scopeViolation(): PlayerNotificationError {
