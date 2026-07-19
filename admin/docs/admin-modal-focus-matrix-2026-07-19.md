@@ -31,40 +31,47 @@ Every major Admin modal and drawer must provide evidence for the applicable beha
 | Single modal initial focus | Verified | `admin-modal-accessibility-smoke.mjs` |
 | Forward and reverse focus wrapping | Verified | shared fixture and mounted operational matrix |
 | `focusin` containment | Verified | `admin-modal-accessibility-smoke.mjs` |
-| Nested modal stack | Verified at controller level | shared parent/child Escape scenario |
-| Parent suspension and resume | Verified at controller level | child close restores the parent opener and trap |
+| Nested modal stack | Verified | shared fixture and mounted Contract profile/review stack |
+| Parent suspension and resume | Verified | child close restores the parent opener and trap |
 | Connected opener restoration | Verified | parent close scenario |
-| Rerendered semantic opener restoration | Verified | Add Player, Add Contract, Add Store Item, and Scanner mounted evidence |
+| Rerendered semantic opener restoration | Verified | operational modal and Store rerender evidence |
 | Disconnected opener fallback | Verified | Admin section fallback scenario |
 | Configurable Escape policy | Verified | source and browser smoke |
-| Blocked acknowledgement dismissal | Verified at controller level | locked modal scenario |
+| Blocked acknowledgement dismissal | Verified | shared fixture and protected credential confirmation |
 | Configurable backdrop policy | Verified | controller source contract |
-| Bundle-owned modal lifecycle bridge | Implemented | explicit click/request/route lifecycle events; no DOM observer |
-| Optional nonmodal drawer trapping | Implemented at controller API | `trapFocus: false`; mounted drawer evidence remains |
+| Bundle-owned modal lifecycle bridge | Verified | explicit click/request/route lifecycle events; no DOM observer |
+| Shared-backdrop nested dialog ownership | Verified | Contract profile and submission-review stack |
+| Player drawer trapping | Verified | dedicated drawer controller and combined mounted matrix |
 | Architecture boundaries | Verified | no transport wrapper, DOM observer, runtime stylesheet, or inline visual mutation |
 
-## Verified mounted operational surfaces
+## Verified mounted surfaces
 
-The following real v606 operational surfaces now pass initial focus, live forward and reverse focus wrapping, Escape dismissal, semantic opener restoration, and zero recorded pointer events:
+The following real v606 surfaces pass their applicable initial-focus, focus-containment, Escape or blocked-Escape, nested restoration, semantic opener restoration, and zero-pointer contracts.
 
-| Surface | Opener ownership | Evidence state |
+| Surface | Verified behavior | Evidence |
 |---|---|---|
-| Add Player | Overview quick actions | Verified |
-| Add Contract | Overview quick actions | Verified |
-| Add Store Item | Store section | Verified |
-| Attendance Scanner | Overview quick actions | Verified, including its dynamic live focus boundary |
+| Add Player | Initial focus, live Tab boundaries, Escape, opener restoration | `admin-mounted-operational-modal-focus-smoke.mjs` |
+| Add Contract | Initial focus, live Tab boundaries, Escape, opener restoration | `admin-mounted-operational-modal-focus-smoke.mjs` |
+| Add Store Item | Initial focus, live Tab boundaries, Escape, rerendered opener restoration | `admin-mounted-operational-modal-focus-smoke.mjs` |
+| Attendance Scanner | Dynamic live focus boundary, Escape, opener restoration | `admin-mounted-operational-modal-focus-smoke.mjs` |
+| Contract profile | Parent trap, Escape, table-opener restoration | `admin-modal-drawer-accessibility-smoke.mjs` |
+| Contract submission review | Child initial focus, shared-backdrop trap, Escape to parent review opener | `admin-modal-drawer-accessibility-smoke.mjs` |
+| Player drawer | Selected-tab initial focus, Tab containment, Escape, player-row opener restoration | `admin-modal-drawer-accessibility-smoke.mjs` |
+| Player-created credential confirmation | Acknowledgement focus, Escape blocked, explicit acknowledgement close, opener restoration | `admin-modal-drawer-accessibility-smoke.mjs` |
 
-Evidence: `scripts/admin-mounted-operational-modal-focus-smoke.mjs`.
+Checkpoint evidence on head `f328407132ba8d98e3cff5cf947ecc7842e969ef`:
+
+- Repository Quality #717 — passed.
+- Admin Shell Smoke #764 — every source, modal, drawer, keyboard, layout, Contract, Player, Attendance, Settings, and Scanner step passed.
 
 ## Remaining mounted surface inventory
 
 | Surface family | Representative surfaces | Current state |
 |---|---|---|
-| Player management | Player drawer, identity editor, Access Code reset, archive confirmation | In progress in combined modal/drawer matrix |
-| Contract administration | Contract profile, submission review, accept/revision/reject confirmation, duplicate, archive | Contract profile verified; nested review initial-focus integration in progress |
+| Player management | Identity editor, Access Code reset, archive confirmation | Pending mounted inventory |
+| Contract administration | Accept/revision/reject confirmation, duplicate, archive | Profile and review stack verified; remaining action confirmations pending |
 | Store administration | Edit, restock, reprice, status, archive | Create modal verified; remaining edit/destructive surfaces pending |
 | Attendance administration | Correction, notes, reward adjustment, day lock/unlock | Scanner verified; remaining administrative dialogs pending |
-| Player-created credentials | Acknowledgement-required credential confirmation | Existing dedicated evidence present; consolidation in combined matrix pending |
 | Game/session controls | Join-code reset and lifecycle confirmations that currently exist | Pending source and mounted inventory |
 | Account and settings | Destructive reset or confirmation surfaces that currently exist | Pending source and mounted inventory |
 | Inventory redemption | PR #177 review drawer and confirmation dialogs | Owned by PR #177 until merge; integrate evidence afterward without duplicating its implementation |
@@ -73,6 +80,7 @@ Evidence: `scripts/admin-mounted-operational-modal-focus-smoke.mjs`.
 
 - `admin/modal-accessibility.js`
 - `admin/modal-lifecycle-bridge.js`
+- `admin/player-drawer-accessibility.js`
 - `admin/index.html`
 - `scripts/admin-modal-accessibility-source-smoke.mjs`
 - `scripts/admin-modal-accessibility-smoke.mjs`
@@ -83,4 +91,4 @@ Evidence: `scripts/admin-mounted-operational-modal-focus-smoke.mjs`.
 
 ## Completion boundary
 
-The shared controller and four primary operational modals are verified. `BETA-ADMIN-002` remains `IN_PROGRESS` until the mounted Contract stack, Player drawer, protected credential confirmation, remaining administrative dialogs, and PR #177 redemption surfaces are exhausted with browser evidence.
+The shared controller, four primary operational modals, nested Contract stack, Player drawer, and protected credential confirmation are verified. `BETA-ADMIN-002` remains `IN_PROGRESS` until the remaining Player, Contract-action, Store, Attendance, game/session, account/settings, and PR #177 redemption surfaces are exhausted with mounted browser evidence.
