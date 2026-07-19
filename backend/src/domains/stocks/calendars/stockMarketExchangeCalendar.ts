@@ -92,7 +92,7 @@ export const STOCK_EXCHANGE_CALENDARS: Readonly<
       }),
     ],
   ),
-) as Record<StockExchangeCode, StockExchangeCalendarDefinition>);
+) as unknown as Record<StockExchangeCode, StockExchangeCalendarDefinition>);
 
 interface LocalDateTimeParts {
   readonly date: string;
