@@ -46,23 +46,50 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Apply required timezone integration
-        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - name: Apply and validate required timezone integration
+        id: validation
+        shell: bash
+        run: |
+          set +e
+          LOG="/tmp/required-game-market-timezone.log"
+          PATCH="/tmp/required-game-market-timezone.patch"
+          : > "$LOG"
+          STATUS=0
 
-      - name: Run focused tests
-        run: npm --prefix backend run test:stock-market-calendar
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
 
-      - name: Run backend typecheck
-        run: npm --prefix backend run typecheck:all
+          run_step "apply integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "focused tests" npm --prefix backend run test:stock-market-calendar
+          run_step "backend typecheck" npm --prefix backend run typecheck:all
+          run_step "integration drift" node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
+          run_step "whitespace" git diff --check
 
-      - name: Check integration drift
-        run: node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
+          git diff --binary > "$PATCH"
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
 
-      - name: Check whitespace
-        run: git diff --check
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: required-game-market-timezone-diagnostics
+          path: |
+            /tmp/required-game-market-timezone.log
+            /tmp/required-game-market-timezone.patch
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Commit generated integration
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.validation.outputs.status == '0'
         shell: bash
         run: |
           if git diff --quiet; then
@@ -74,3 +101,12 @@ jobs:
           git add -A
           git commit -m "feat(stocks): require one game market timezone"
           git push origin HEAD:agent/exchange-calendar-config-v1
+
+      - name: Enforce validation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.validation.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Required game market timezone validation failed."
+            false
+          fi
