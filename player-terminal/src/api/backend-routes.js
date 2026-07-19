@@ -239,16 +239,23 @@ const ROUTE_BUILDERS = Object.freeze({
             note: typeof payload.note === "string" ? payload.note.trim() : ""
           }
     }
-  }),
+  }),  notifications: ({ payload = {} }) => ({
+  method: "GET",
+  path: queryPath("/players/me/notifications", {
+    status: payload.status ?? "unread",
+    limit: payload.limit ?? 50,
+    cursor: payload.cursor
+  })
+}),
 
-  notifications: ({ payload = {} }) => ({
-    method: "GET",
-    path: queryPath("/players/me/notifications", {
-      status: payload.status ?? "unread",
-      limit: payload.limit ?? 50,
-      cursor: payload.cursor
-    })
-  }),
+notificationsPage: ({ payload = {} }) => ({
+  method: "GET",
+  path: queryPath("/players/me/notifications", {
+    status: payload.status ?? "unread",
+    limit: payload.limit ?? 20,
+    cursor: payload.cursor
+  })
+}),
 
   notificationsRead: ({ payload = {} }) => ({
     method: "POST",

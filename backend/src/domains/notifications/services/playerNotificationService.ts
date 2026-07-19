@@ -14,6 +14,7 @@ import {
 
 export interface PlayerNotificationListServiceResult {
   readonly items: readonly PlayerNotificationItemDto[];
+  readonly unreadCount: number;
   readonly hasMore: boolean;
   readonly nextCursor: PlayerNotificationCursor | null;
 }
@@ -25,15 +26,22 @@ export class PlayerNotificationService {
     scope: PlayerNotificationScope,
     query: PlayerNotificationListQuery,
   ): Promise<PlayerNotificationListServiceResult> {
-    try {
-      const records = await this.repository.listNotifications({
+    try {      const [records, unreadCount] = await Promise.all([
+      this.repository.listNotifications({
         gameId: scope.gameId,
         playerUuid: scope.playerUuid,
         status: query.status,
         limit: query.limit + 1,
         cursor: query.cursor,
-      });
-      validateRecordScope(records, scope);
+      }),
+      this.repository.countUnreadNotifications
+        ? this.repository.countUnreadNotifications({
+          gameId: scope.gameId,
+          playerUuid: scope.playerUuid,
+        })
+        : Promise.resolve<number | null>(null),
+    ]);
+    validateRecordScope(records, scope);
 
       const ordered = [...records].sort(compareNotifications);
       if (ordered.length > query.limit + 1) throw scopeViolation();
@@ -45,17 +53,20 @@ export class PlayerNotificationService {
 
       const hasMore = ordered.length > query.limit;
       const page = ordered.slice(0, query.limit);
-      const last = page.at(-1);
-      return {
-        items: page.map(toItemDto),
-        hasMore,
-        nextCursor: hasMore && last
-          ? {
-            deliveredAt: last.deliveredAt,
-            publicDeliveryId: last.publicDeliveryId,
-          }
-          : null,
-      };
+      const last = page.at(-1);      const fallbackUnreadCount = query.status === "unread" && !hasMore
+      ? page.length
+      : 0;
+    return {
+      items: page.map(toItemDto),
+      unreadCount: requireUnreadCount(unreadCount ?? fallbackUnreadCount),
+      hasMore,
+      nextCursor: hasMore && last
+        ? {
+          deliveredAt: last.deliveredAt,
+          publicDeliveryId: last.publicDeliveryId,
+        }
+        : null,
+    };
     } catch (error) {
       throw mapServiceError(error);
     }
@@ -164,6 +175,11 @@ function toItemDto(record: PlayerNotificationRecord): PlayerNotificationItemDto 
     dismissedAt: record.dismissedAt,
     acknowledgedAt: record.acknowledgedAt,
   };
+}
+
+function requireUnreadCount(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) throw scopeViolation();
+  return value;
 }
 
 function compareNotifications(

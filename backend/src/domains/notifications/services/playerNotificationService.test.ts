@@ -68,6 +68,18 @@ Deno.test("notification service distinguishes empty and unavailable reads", asyn
   );
 });
 
+Deno.test("notification service reports the exact unread total independently from page size", async () => {
+  const service = new PlayerNotificationService({
+    ...repository({ list: [] }),
+    countUnreadNotifications: () => Promise.resolve(17),
+  });
+  const result = await service.listNotifications(
+    scope(),
+    { status: "all", limit: 1, cursor: null },
+  );
+  assertEquals(result.unreadCount, 17);
+});
+
 Deno.test("notification read acknowledgement is idempotent and ordered", async () => {
   const existing = [
     delivery({ publicDeliveryId: DELIVERY_A, publicNotificationId: NOTIFICATION_A }),

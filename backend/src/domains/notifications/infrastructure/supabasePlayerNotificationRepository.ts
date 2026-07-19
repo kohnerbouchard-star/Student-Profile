@@ -14,6 +14,7 @@ interface QueryError {
 interface QueryResponse<T> {
   readonly data: T | null;
   readonly error: QueryError | null;
+  readonly count?: number | null;
 }
 
 interface FilterBuilder
@@ -39,7 +40,10 @@ interface UpdateBuilder
 }
 
 interface QueryBuilder {
-  select(columns: string): FilterBuilder;
+  select(
+    columns: string,
+    options?: { readonly count?: "exact"; readonly head?: boolean },
+  ): FilterBuilder;
   update(values: unknown): UpdateBuilder;
 }
 
@@ -139,10 +143,26 @@ export class SupabasePlayerNotificationRepository
       if (!notification) throw metadataMissing();
       return toNotificationRecord(delivery, notification);
     });
+  }  async countUnreadNotifications(input: {
+  readonly gameId: string;
+  readonly playerUuid: string;
+}): Promise<number> {
+  const response = await this.client
+    .from("notification_deliveries")
+    .select("id", { count: "exact", head: true })
+    .eq("game_session_id", input.gameId)
+    .eq("player_id", input.playerUuid)
+    .is("seen_at", null)
+    .is("dismissed_at", null);
+  if (response.error) throw mapPersistenceError(response.error);
+  if (typeof response.count !== "number" || !Number.isSafeInteger(response.count) || response.count < 0) {
+    throw readFailed();
   }
+  return response.count;
+}
 
-  async readDeliveriesByPublicIds(input: {
-    readonly gameId: string;
+async readDeliveriesByPublicIds(input: {
+  readonly gameId: string;
     readonly playerUuid: string;
     readonly publicDeliveryIds: readonly string[];
   }): Promise<readonly PlayerNotificationDeliveryStateRecord[]> {

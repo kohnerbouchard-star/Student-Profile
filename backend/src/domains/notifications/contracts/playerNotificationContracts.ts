@@ -73,10 +73,14 @@ export interface PlayerNotificationRepository {
     readonly playerUuid: string;
     readonly status: PlayerNotificationStatus;
     readonly limit: number;
-    readonly cursor: PlayerNotificationCursor | null;
-  }): Promise<readonly PlayerNotificationRecord[]>;
+    readonly cursor: PlayerNotificationCursor | null;  }): Promise<readonly PlayerNotificationRecord[]>;
 
-  readDeliveriesByPublicIds(input: {
+countUnreadNotifications?(input: {
+  readonly gameId: string;
+  readonly playerUuid: string;
+}): Promise<number>;
+
+readDeliveriesByPublicIds(input: {
     readonly gameId: string;
     readonly playerUuid: string;
     readonly publicDeliveryIds: readonly string[];
@@ -115,13 +119,15 @@ export interface PlayerNotificationListResponseBody {
   readonly filter: {
     readonly status: PlayerNotificationStatus;
     readonly limit: number;
-  };
-  readonly page: {
-    readonly returned: number;
-    readonly hasMore: boolean;
-    readonly nextCursor: string | null;
-  };
-  readonly items: readonly PlayerNotificationItemDto[];
+  };  readonly page: {
+  readonly returned: number;
+  readonly hasMore: boolean;
+  readonly nextCursor: string | null;
+};
+readonly summary: {
+  readonly unreadCount: number;
+};
+readonly items: readonly PlayerNotificationItemDto[];
   readonly emptyState: {
     readonly reason: "notifications_empty";
   } | null;

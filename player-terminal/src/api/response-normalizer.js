@@ -4,7 +4,7 @@ const ARRAY_READS = new Set(["countries", "notifications"]);
 const READ_ENDPOINTS = new Set([
   "session", "dashboard", "countries", "country", "news", "market", "portfolio", "business",
   "store", "marketplace", "contracts", "inventory", "crafting", "banking", "loans", "messages",
-  "progression", "notifications"
+  "progression", "notifications", "notificationsPage"
 ]);
 const REQUIRED_ARRAY_FIELDS = Object.freeze({
   dashboard: Object.freeze(["worldEvents", "marketPulse"]),
@@ -20,12 +20,14 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
   banking: Object.freeze(["transactions"]),
   loans: Object.freeze(["offers", "activeLoans", "schedule"]),
   messages: Object.freeze(["threads"]),
-  progression: Object.freeze(["reputation", "milestones", "skills", "achievements", "licenses"])
+  progression: Object.freeze(["reputation", "milestones", "skills", "achievements", "licenses"]),
+  notificationsPage: Object.freeze(["items"])
 });
 const REQUIRED_OBJECT_FIELDS = Object.freeze({
   business: Object.freeze(["company", "operations"]),
   banking: Object.freeze(["checking", "savings"]),
-  loans: Object.freeze(["nextPayment"])
+  loans: Object.freeze(["nextPayment"]),
+  notificationsPage: Object.freeze(["page", "summary"])
 });
 const MAX_DEPTH = 12;
 const MAX_ARRAY_LENGTH = 1000;
@@ -100,6 +102,18 @@ function validateEndpointShape(endpointKey, value, context) {
   }
   for (const key of REQUIRED_OBJECT_FIELDS[endpointKey] || []) {
     if (!value[key] || typeof value[key] !== "object" || Array.isArray(value[key])) {
+      throw invalidResponse(endpointKey, context.requestId, context.path);
+    }
+  }
+  if (endpointKey === "notificationsPage") {
+    const unreadCount = value.summary.unreadCount;
+    const returned = value.page.returned;
+    const hasMore = value.page.hasMore;
+    const nextCursor = value.page.nextCursor;
+    if (!Number.isSafeInteger(unreadCount) || unreadCount < 0 ||
+        !Number.isSafeInteger(returned) || returned < 0 || returned !== value.items.length ||
+        typeof hasMore !== "boolean" ||
+        !(nextCursor === null || typeof nextCursor === "string")) {
       throw invalidResponse(endpointKey, context.requestId, context.path);
     }
   }
