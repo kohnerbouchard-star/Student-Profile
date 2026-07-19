@@ -9,8 +9,8 @@
   },
   "summary": {
     "domainsChecked": 11,
-    "domainsMeetingMachineReadableTarget": 1,
-    "totalMachineReadableGap": 208
+    "domainsMeetingMachineReadableTarget": 11,
+    "totalMachineReadableGap": 0
   },
   "itemCatalog": {
     "totalItemDefinitions": 144,
@@ -22,15 +22,20 @@
   "coverage": {
     "contracts": {
       "targetMin": 50,
-      "machineReadableRecords": 10,
+      "machineReadableRecords": 50,
       "proseDefinitions": 5,
-      "machineReadableGap": 40,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
         {
           "path": "contracts/arrival/arrival-contracts-v1.json",
           "type": "machine-readable",
           "count": 10
+        },
+        {
+          "path": "contracts/core/core-contracts-v1.json",
+          "type": "machine-readable",
+          "count": 40
         },
         {
           "path": "contracts/meridian/analyze-country-exposure.md",
@@ -62,35 +67,58 @@
     "bankingProducts": {
       "targetMin": 8,
       "targetMax": 12,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 10,
       "proseDefinitions": 0,
-      "machineReadableGap": 8,
-      "status": "below-target",
-      "sources": []
+      "machineReadableGap": 0,
+      "status": "target-met",
+      "sources": [
+        {
+          "path": "banking/banking-products-v1.json",
+          "type": "machine-readable",
+          "count": 10
+        }
+      ]
     },
     "levels": {
       "targetMin": 10,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 10,
       "proseDefinitions": 0,
-      "machineReadableGap": 10,
-      "status": "below-target",
-      "sources": []
+      "machineReadableGap": 0,
+      "status": "target-met",
+      "sources": [
+        {
+          "path": "progression/progression-v1.json",
+          "type": "machine-readable",
+          "count": 10
+        }
+      ]
     },
     "achievements": {
       "targetMin": 20,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 20,
       "proseDefinitions": 0,
-      "machineReadableGap": 20,
-      "status": "below-target",
-      "sources": []
+      "machineReadableGap": 0,
+      "status": "target-met",
+      "sources": [
+        {
+          "path": "progression/progression-v1.json",
+          "type": "machine-readable",
+          "count": 20
+        }
+      ]
     },
     "standaloneEvents": {
       "targetMin": 25,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 25,
       "proseDefinitions": 8,
-      "machineReadableGap": 25,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
+        {
+          "path": "events/core-event-catalog-v1.json",
+          "type": "machine-readable",
+          "count": 25
+        },
         {
           "path": "events/effect-band-mapping-v1.md",
           "type": "prose-definition",
@@ -135,11 +163,16 @@
     },
     "eventChains": {
       "targetMin": 10,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 10,
       "proseDefinitions": 8,
-      "machineReadableGap": 10,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
+        {
+          "path": "events/core-event-catalog-v1.json",
+          "type": "machine-readable",
+          "count": 10
+        },
         {
           "path": "events/effect-band-mapping-v1.md",
           "type": "prose-definition",
@@ -184,11 +217,16 @@
     },
     "crisisArcs": {
       "targetMin": 5,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 5,
       "proseDefinitions": 8,
-      "machineReadableGap": 5,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
+        {
+          "path": "events/core-event-catalog-v1.json",
+          "type": "machine-readable",
+          "count": 5
+        },
         {
           "path": "events/effect-band-mapping-v1.md",
           "type": "prose-definition",
@@ -234,11 +272,16 @@
     "interactions": {
       "targetMin": 40,
       "targetMax": 60,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 50,
       "proseDefinitions": 10,
-      "machineReadableGap": 40,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
+        {
+          "path": "interactions/core-interactions-v1.json",
+          "type": "machine-readable",
+          "count": 50
+        },
         {
           "path": "interactions/meridian/alternate-route-offer.md",
           "type": "prose-definition",
@@ -294,11 +337,16 @@
     "newsTemplates": {
       "targetMin": 25,
       "targetMax": 30,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 30,
       "proseDefinitions": 12,
-      "machineReadableGap": 25,
-      "status": "below-target",
+      "machineReadableGap": 0,
+      "status": "target-met",
       "sources": [
+        {
+          "path": "news/core-news-templates-v1.json",
+          "type": "machine-readable",
+          "count": 30
+        },
         {
           "path": "news/meridian/customs-security-intrusion.md",
           "type": "prose-definition",
@@ -379,11 +427,17 @@
     "notificationTemplates": {
       "targetMin": 25,
       "targetMax": 30,
-      "machineReadableRecords": 0,
+      "machineReadableRecords": 30,
       "proseDefinitions": 0,
-      "machineReadableGap": 25,
-      "status": "below-target",
-      "sources": []
+      "machineReadableGap": 0,
+      "status": "target-met",
+      "sources": [
+        {
+          "path": "notifications/notification-templates-v1.json",
+          "type": "machine-readable",
+          "count": 30
+        }
+      ]
     }
   }
 }
