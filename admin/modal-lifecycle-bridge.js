@@ -57,6 +57,7 @@
 
     window.requestAnimationFrame(focusResolvedOpener);
     window.setTimeout(focusResolvedOpener, 0);
+    window.setTimeout(focusResolvedOpener, 80);
     window.setTimeout(focusResolvedOpener, 120);
     window.setTimeout(focusResolvedOpener, 360);
   }
