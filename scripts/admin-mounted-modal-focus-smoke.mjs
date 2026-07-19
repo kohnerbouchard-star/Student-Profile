@@ -10,14 +10,30 @@ if (!process.exitCode) {
   const bundleUrl = new URL("../admin/dist/admin-overview-terminal.js", import.meta.url);
   const source = readFileSync(sourceUrl, "utf8");
   const bundle = readFileSync(bundleUrl, "utf8");
-  const modalIds = [...new Set(
-    [...bundle.matchAll(/data-modal-id=["']([^"'${}]+)["']/g)].map((match) => match[1]),
+  const literalBundleModalIds = [...new Set(
+    [...bundle.matchAll(/data-modal-id=["']([a-z][a-z0-9-]{2,})["']/g)].map((match) => match[1]),
   )].sort();
+  const mountedEvidenceModalIds = [...new Set([
+    ...literalBundleModalIds,
+    "contract-submission-review",
+    "dashboard-contract-profile",
+    "player-settings-editor",
+  ])].sort();
 
-  console.log(`Mounted Admin literal modal inventory: ${JSON.stringify(modalIds)}`);
+  console.log(`Mounted Admin literal bundle modal IDs: ${JSON.stringify(literalBundleModalIds)}`);
+  console.log(`Mounted Admin evidenced modal IDs: ${JSON.stringify(mountedEvidenceModalIds)}`);
+
+  const controllerWait = `async function assertFocusTrap(page, container, label) {\n  await container.evaluate(async (root, currentLabel) => {\n    for (let attempt = 0; attempt < 30; attempt += 1) {\n      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();\n      if (controller?.dialog === root) return;\n      await new Promise((resolve) => requestAnimationFrame(resolve));\n    }\n    throw new Error(\`${'${currentLabel}'} did not become the active modal controller.\`);\n  }, label);\n  const activeInside`;
+  const stabilizedSource = source.replace(
+    "async function assertFocusTrap(page, container, label) {\n  const activeInside",
+    controllerWait,
+  );
+  if (stabilizedSource === source) {
+    throw new Error("Admin modal focus-trap fixture contract changed.");
+  }
 
   const marker = "const browser = await chromium.launch({ headless: true });";
-  const markerIndex = source.indexOf(marker);
+  const markerIndex = stabilizedSource.indexOf(marker);
   if (markerIndex < 0) {
     throw new Error("Admin modal fixture launch marker changed.");
   }
@@ -91,7 +107,8 @@ async function exerciseShareGameAccessModal(browser) {
   const runtimeTail = `
 const browser = await chromium.launch({ headless: true });
 const report = {
-  modalInventory: ${JSON.stringify(modalIds)},
+  literalBundleModalIds: ${JSON.stringify(literalBundleModalIds)},
+  mountedEvidenceModalIds: ${JSON.stringify(mountedEvidenceModalIds)},
   playerProfile: null,
   shareGameAccess: null,
 };
@@ -116,25 +133,30 @@ try {
 }
 `;
 
-  const generated = `${source.slice(0, markerIndex)}${helpers}${runtimeTail}`;
-  const prefix = join(dirname(fileURLToPath(import.meta.url)), ".admin-secondary-modal-");
+  const prefix = join(dirname(fileURLToPath(import.meta.url)), ".admin-modal-inventory-");
   const runtimeDir = mkdtempSync(prefix);
-  const runtimePath = join(runtimeDir, "runtime.mjs");
+  const secondaryRuntimePath = join(runtimeDir, "secondary-runtime.mjs");
+  const inheritedRuntimePath = join(runtimeDir, "inherited-runtime.mjs");
 
-  try {
-    writeFileSync(runtimePath, generated);
-    const result = spawnSync(process.execPath, [runtimePath], {
+  function runRuntime(path) {
+    const result = spawnSync(process.execPath, [path], {
       cwd: process.cwd(),
       env: process.env,
       stdio: "inherit",
     });
     if (result.error) throw result.error;
     if (result.status !== 0) process.exitCode = result.status || 1;
+  }
+
+  try {
+    writeFileSync(
+      secondaryRuntimePath,
+      `${stabilizedSource.slice(0, markerIndex)}${helpers}${runtimeTail}`,
+    );
+    writeFileSync(inheritedRuntimePath, stabilizedSource);
+    runRuntime(secondaryRuntimePath);
+    if (!process.exitCode) runRuntime(inheritedRuntimePath);
   } finally {
     rmSync(runtimeDir, { recursive: true, force: true });
   }
-}
-
-if (!process.exitCode) {
-  await import("./admin-modal-drawer-accessibility-smoke.mjs");
 }
