@@ -1,0 +1,59 @@
+name: Run Player Notification Inbox v1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/player-notification-inbox-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/player-notification-inbox-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Execute staged patch
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/apply-player-notification-inbox-v1.yml').read_text()
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = source.index(start_marker) + len(start_marker)
+          end = source.index(end_marker, start)
+          script = textwrap.dedent(source[start:end])
+          exec(compile(script, 'notification-inbox-patch.py', 'exec'), {'__name__': '__main__'})
+          PY
+      - name: Install Player dependencies
+        working-directory: player-terminal
+        run: npm ci
+      - name: Verify notification Backend
+        working-directory: backend
+        run: npm run test:player-notifications && npm run typecheck
+      - name: Verify Player notification inbox
+        working-directory: player-terminal
+        run: npm run notifications-inbox && npm run adapter && npm run connected-reads && npm run check
+      - name: Publish bounded patch
+        shell: bash
+        run: |
+          rm .github/workflows/apply-player-notification-inbox-v1.yml
+          rm .github/workflows/run-player-notification-inbox-v1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(notifications): add paginated Player inbox"
+          git push origin HEAD:agent/player-notification-inbox-v1
