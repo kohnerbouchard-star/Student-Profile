@@ -76,6 +76,11 @@ export interface PlayerNotificationRepository {
     readonly cursor: PlayerNotificationCursor | null;
   }): Promise<readonly PlayerNotificationRecord[]>;
 
+  countUnreadNotifications?(input: {
+    readonly gameId: string;
+    readonly playerUuid: string;
+  }): Promise<number>;
+
   readDeliveriesByPublicIds(input: {
     readonly gameId: string;
     readonly playerUuid: string;
@@ -120,6 +125,9 @@ export interface PlayerNotificationListResponseBody {
     readonly returned: number;
     readonly hasMore: boolean;
     readonly nextCursor: string | null;
+  };
+  readonly summary: {
+    readonly unreadCount: number;
   };
   readonly items: readonly PlayerNotificationItemDto[];
   readonly emptyState: {
