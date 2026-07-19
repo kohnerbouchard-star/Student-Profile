@@ -1,11 +1,6 @@
 name: Apply Contract Submit Dispatcher Patch
 
 on:
-  push:
-    branches:
-      - agent/player-contract-submission-public-key-v1
-    paths:
-      - ".github/workflows/apply-contract-submit-dispatcher-patch.yml"
   pull_request:
     types: [opened, reopened, synchronize]
 
@@ -62,13 +57,6 @@ jobs:
               '    "contractAccept:POST": ["player.contracts.accept", "write"],\n',
               '    "contractAccept:POST": ["player.contracts.accept", "write"],\n    "contractSubmit:POST": ["player.contracts.submit", "write"],\n',
           )
-
-          workflow = ".github/workflows/player-terminal-verify.yml"
-          replace_once(
-              workflow,
-              '              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }\n',
-              '              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }\n              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }\n',
-          )
           PY
 
       - name: Commit bounded patch
@@ -77,7 +65,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/supabase/functions/classroom-api/index.ts \
             backend/src/security/classroomApiRateLimitDispatch.test.ts \
-            backend/src/security/playerRateLimitDispatch.test.ts \
-            .github/workflows/player-terminal-verify.yml
+            backend/src/security/playerRateLimitDispatch.test.ts
           git commit -m "Wire public Contract submission dispatcher"
           git push origin HEAD:agent/player-contract-submission-public-key-v1
