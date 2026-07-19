@@ -34,12 +34,27 @@ jobs:
           import textwrap
 
           source = Path('.github/workflows/apply-player-notification-inbox-v1.yml').read_text()
-          source = source.replace("\n          readDeliveriesByPublicIds(input: {", "\n            readDeliveriesByPublicIds(input: {")
           start_marker = "          python3 <<'PY'\n"
           end_marker = "\n          PY\n"
           start = source.index(start_marker) + len(start_marker)
           end = source.index(end_marker, start)
           script = textwrap.dedent(source[start:end])
+          override = '''def replace_once(path, old, new):
+              import re
+              content = read(path)
+              if content.count(old) == 1:
+                  write(path, content.replace(old, new, 1))
+                  return
+              pieces = re.split(r"(\\s+)", old)
+              pattern = "".join(r"\\s+" if piece.isspace() else re.escape(piece) for piece in pieces if piece)
+              matches = list(re.finditer(pattern, content, flags=re.MULTILINE))
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected one token-equivalent match in {path}: {old[:120]!r}; found {len(matches)}")
+              match = matches[0]
+              write(path, content[:match.start()] + new + content[match.end():])
+
+          '''
+          script = script.replace('# Backend: expose one exact unread total beside the existing cursor page.', override + '# Backend: expose one exact unread total beside the existing cursor page.', 1)
           exec(compile(script, 'notification-inbox-patch.py', 'exec'), {'__name__': '__main__'})
           PY
       - name: Publish patch error evidence
