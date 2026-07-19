@@ -1,3 +1,5 @@
+export {};
+
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
   readTextFile(path: string): Promise<string>;
