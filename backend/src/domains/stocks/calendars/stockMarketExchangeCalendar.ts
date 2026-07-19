@@ -1,3 +1,8 @@
+import {
+  DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
+  resolveStockMarketWindowSettings,
+} from "./stockMarketWindowSettings.ts";
+
 export const STOCK_EXCHANGE_CODES = [
   "FGX",
   "SBX",
@@ -52,10 +57,15 @@ export interface StockExchangeCalendarDefinition {
   readonly holidayCalendarStatus: "pending" | "approved";
 }
 
+export interface StockMarketCalendarRuntimeSettings {
+  readonly timeZone: string;
+}
+
 export interface StockMarketSessionState {
   readonly exchangeCode: StockExchangeCode;
   readonly countryCode: StockMarketCountryCode;
   readonly calendarVersion: string;
+  readonly timeZone: string;
   readonly status: StockMarketSessionStatus;
   readonly reason: StockMarketClosureReason;
   readonly evaluatedAt: string;
@@ -65,7 +75,6 @@ export interface StockMarketSessionState {
 }
 
 const DEFAULT_CALENDAR_VERSION = "2026.1";
-const DEFAULT_TIME_ZONE = "Asia/Seoul";
 const DEFAULT_OPEN = "08:00";
 const DEFAULT_CLOSE = "17:00";
 const DEFAULT_TRADING_DAYS = Object.freeze([1, 2, 3, 4, 5]);
@@ -82,7 +91,7 @@ export const STOCK_EXCHANGE_CALENDARS: Readonly<
         exchangeCode,
         countryCode: countryCode as StockMarketCountryCode,
         calendarVersion: DEFAULT_CALENDAR_VERSION,
-        timeZone: DEFAULT_TIME_ZONE,
+        timeZone: DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
         regularTradingDays: DEFAULT_TRADING_DAYS,
         opensAt: DEFAULT_OPEN,
         closesAt: DEFAULT_CLOSE,
@@ -115,8 +124,18 @@ const formatterByTimeZone = new Map<string, Intl.DateTimeFormat>();
 
 export function getStockExchangeCalendar(
   exchangeCode: StockExchangeCode,
+  runtime?: StockMarketCalendarRuntimeSettings,
 ): StockExchangeCalendarDefinition {
-  return STOCK_EXCHANGE_CALENDARS[exchangeCode];
+  const base = STOCK_EXCHANGE_CALENDARS[exchangeCode];
+  if (!runtime) return base;
+
+  const resolved = resolveStockMarketWindowSettings({
+    timezone: runtime.timeZone,
+  });
+  return {
+    ...base,
+    timeZone: resolved.timezone,
+  };
 }
 
 export function getStockExchangeCodeForCountry(
@@ -137,15 +156,17 @@ export function stockMarketMinuteKey(
 export function evaluateStockMarketSession(
   exchangeCode: StockExchangeCode,
   at: Date = new Date(),
+  runtime?: StockMarketCalendarRuntimeSettings,
 ): StockMarketSessionState {
   assertValidDate(at);
-  const calendar = getStockExchangeCalendar(exchangeCode);
+  const calendar = getStockExchangeCalendar(exchangeCode, runtime);
   const core = evaluateCore(calendar, at);
 
   return {
     exchangeCode,
     countryCode: calendar.countryCode,
     calendarVersion: calendar.calendarVersion,
+    timeZone: calendar.timeZone,
     status: core.status,
     reason: core.reason,
     evaluatedAt: at.toISOString(),
@@ -158,9 +179,10 @@ export function evaluateStockMarketSession(
 export function isStockMarketOpenAt(
   at: Date,
   exchangeCode: StockExchangeCode = DEFAULT_STOCK_EXCHANGE_CODE,
+  runtime?: StockMarketCalendarRuntimeSettings,
 ): boolean {
   assertValidDate(at);
-  return evaluateCore(getStockExchangeCalendar(exchangeCode), at).status ===
+  return evaluateCore(getStockExchangeCalendar(exchangeCode, runtime), at).status ===
     "open";
 }
 
