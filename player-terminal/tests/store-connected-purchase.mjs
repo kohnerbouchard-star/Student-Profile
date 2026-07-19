@@ -121,7 +121,7 @@ const apiCall = createStudentProfileApiCall({
     }
     if (request.method === "POST" && request.path === "/players/me/store/purchases") {
       assert.equal(request.payload.quoteKey, quoteKey);
-      assert.match(request.payload.idempotencyKey, /^storePurchase:/);
+      assert.match(request.payload.idempotencyKey, /^ptr_storePurchase_/);
       assert.equal("quoteId" in request.payload, false);
       assert.equal("gameSessionId" in request.payload, false);
       purchased = true;
