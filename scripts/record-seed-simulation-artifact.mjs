@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -46,8 +47,15 @@ for (const country of countries) {
   rawEvidence.retentionStatus = "immutable-workflow-artifact-retained";
   rawEvidence.artifact = artifact;
   rawEvidence.files = rawEvidence.files.map((entry) => ({ ...entry, artifactRetained: true }));
+  const rawContent = `${JSON.stringify(rawEvidence, null, 2)}\n`;
+  await writeFile(rawPath, rawContent, "utf8");
+  const rawChecksum = createHash("sha256").update(rawContent).digest("hex");
 
   runManifest.status = "executed-summary-and-raw-artifact-retained";
+  runManifest.files = {
+    ...(runManifest.files ?? {}),
+    "raw-evidence-manifest-v1.json": rawChecksum,
+  };
   runManifest.evidenceRetention = {
     ...(runManifest.evidenceRetention ?? {}),
     status: "immutable-workflow-artifact-retained",
@@ -58,7 +66,6 @@ for (const country of countries) {
     artifact,
   };
 
-  await writeFile(rawPath, `${JSON.stringify(rawEvidence, null, 2)}\n`, "utf8");
   await writeFile(runPath, `${JSON.stringify(runManifest, null, 2)}\n`, "utf8");
 }
 
