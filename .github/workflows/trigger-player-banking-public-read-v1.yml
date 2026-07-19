@@ -48,7 +48,7 @@ jobs:
                       else:
                           content = line.split("'''", 1)[1]
                           first_indent = len(content) - len(content.lstrip(" "))
-                          literal_strip = max(0, 8 - first_indent)
+                          literal_strip = max(0, 6 - first_indent)
                           inside_literal = True
               code = "\n".join(cleaned) + "\n"
               exec(compile(code, 'apply-player-banking-public-read-v1', 'exec'))
