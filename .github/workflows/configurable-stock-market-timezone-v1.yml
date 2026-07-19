@@ -8,6 +8,7 @@ on:
     paths:
       - backend/**
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - .github/workflows/configurable-stock-market-timezone-v1.yml
   workflow_dispatch:
 
@@ -67,9 +68,11 @@ jobs:
           }
 
           run_step "apply integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "apply RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
           run_step "focused tests" npm --prefix backend run test:stock-market-calendar
           run_step "backend typecheck" npm --prefix backend run typecheck:all
           run_step "integration drift" node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
+          run_step "RPC fixture drift" node scripts/fix-required-timezone-rpc-fixture-v1.mjs --check
           run_step "whitespace" git diff --check
 
           git diff --binary > "$PATCH"
