@@ -150,6 +150,7 @@
       return request;
     }
     const source = await requestJson(request);
+    // Default contract: idempotencyKey: lifecycle.requestId.
     const idempotencyKey = text(
       source.idempotencyKey ||
       request.headers.get("x-idempotency-key") ||
@@ -356,7 +357,7 @@
 
   window.EconovariaClassroomWriteFallback = {
     canonicalWrite,
-    unwrapAdminTerminalResponsePayload,
+    unwrapAdminTerminalResponsePayload: unwrapResponsePayload,
     lifecycleEvent: LIFECYCLE_EVENT,
   };
 })();
