@@ -1,0 +1,48 @@
+name: Format Player Notification Inbox v1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.head_ref == 'agent/player-notification-inbox-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/player-notification-inbox-v1
+          fetch-depth: 0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Format bounded source files
+        run: |
+          deno fmt \
+            backend/src/domains/notifications/api/playerNotificationHttpHandler.ts \
+            backend/src/domains/notifications/contracts/playerNotificationContracts.ts \
+            backend/src/domains/notifications/infrastructure/supabasePlayerNotificationRepository.ts \
+            backend/src/domains/notifications/services/playerNotificationService.ts \
+            backend/src/domains/notifications/services/playerNotificationService.test.ts \
+            player-terminal/src/api/backend-routes.js \
+            player-terminal/src/api/endpoints.js \
+            player-terminal/src/api/response-normalizer.js \
+            player-terminal/src/features/notifications/notification-inbox-flow.js \
+            player-terminal/src/main.js \
+            player-terminal/tests/notification-inbox-flow.mjs
+      - name: Remove helper and publish formatting
+        run: |
+          rm .github/workflows/format-player-notification-inbox-v1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No formatting changes were required."
+          else
+            git commit -m "style(notifications): format inbox integration"
+            git push origin HEAD:agent/player-notification-inbox-v1
+          fi
