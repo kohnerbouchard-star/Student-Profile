@@ -4,9 +4,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 await import("./admin-mounted-operational-modal-focus-smoke.mjs");
-if (!process.exitCode) {
-  await import("./admin-modal-drawer-accessibility-smoke.mjs");
-}
 
 if (!process.exitCode) {
   const sourceUrl = new URL("./admin-modal-drawer-accessibility-smoke.mjs", import.meta.url);
@@ -136,4 +133,8 @@ try {
   } finally {
     rmSync(runtimeDir, { recursive: true, force: true });
   }
+}
+
+if (!process.exitCode) {
+  await import("./admin-modal-drawer-accessibility-smoke.mjs");
 }
