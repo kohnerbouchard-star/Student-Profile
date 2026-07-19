@@ -6,12 +6,15 @@ on:
       - agent/player-contract-submission-public-key-v1
     paths:
       - ".github/workflows/apply-contract-submit-dispatcher-patch.yml"
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -20,8 +23,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply bounded dispatcher and ratchet edits
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           def replace_once(path, old, new):
@@ -45,11 +49,7 @@ jobs:
           )
 
           dispatch_test = "backend/src/security/classroomApiRateLimitDispatch.test.ts"
-          replace_once(
-              dispatch_test,
-              '    10,\n',
-              '    11,\n',
-          )
+          replace_once(dispatch_test, '    10,\n', '    11,\n')
           replace_once(
               dispatch_test,
               '      "return handlePlayerContractAcceptanceRequest(",\n',
@@ -69,6 +69,7 @@ jobs:
               '              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }\n',
               '              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }\n              $0 ~ /^backend\\/src\\/domains\\/contracts\\/api\\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }\n',
           )
+          PY
 
       - name: Commit bounded patch
         run: |
