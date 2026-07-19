@@ -26,6 +26,12 @@
         }
       }
 
+      runtime.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        playerSessionToken,
+        sessionExpiresAt: expiresAt,
+        storedAt: String(value?.storedAt || new Date().toISOString())
+      }));
+
       return {
         playerSessionToken,
         sessionExpiresAt: expiresAt,
