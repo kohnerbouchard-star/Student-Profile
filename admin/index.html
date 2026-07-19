@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="./css/loading-scope-overrides.css" />
   <link rel="stylesheet" href="./css/data-state-contracts.css" />
   <link rel="stylesheet" href="./css/keyboard-navigation.css" />
-  <link rel="stylesheet" href="./css/game-lifecycle-controls.css" />
+  <link rel="preload" as="style" href="./css/game-lifecycle-controls.css" onload="this.onload=null;this.rel='stylesheet'" />
   <script defer src="./auth-session-manager.js" onload="void import('./session-timeout-safe-exit.js')"></script>
   <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>
