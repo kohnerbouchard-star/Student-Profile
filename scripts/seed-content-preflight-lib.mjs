@@ -578,6 +578,15 @@ async function validateSimulations({ repoRoot, seedRoot, mode, issues, documents
         issues.push(issue(mismatchSeverity, "SIMULATION_CHECKSUM_MISMATCH", displayPath, `${descriptor.declaredPath} does not match its recorded SHA-256.`));
       }
     }
+
+    if (manifest?.evidenceRetention?.status === "immutable-artifact-pending") {
+      issues.push(issue(
+        "blocker",
+        "SIMULATION_RAW_EVIDENCE_NOT_RETAINED",
+        displayPath,
+        "The deterministic summary is retained, but raw simulation rows still require immutable workflow-artifact retention.",
+      ));
+    }
   }
 }
 

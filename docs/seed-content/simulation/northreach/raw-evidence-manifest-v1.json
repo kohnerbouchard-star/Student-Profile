@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "econovaria-simulation-raw-evidence-v1",
+  "simulationId": "econovaria.northreach.market-pilot.v1",
+  "generatedAt": "2026-07-19",
+  "activationAuthorized": false,
+  "retentionStatus": "immutable-artifact-pending",
+  "repositoryPolicy": "Large raw simulation rows are excluded from Git; retain them in an immutable workflow artifact before approval.",
+  "files": [
+    {
+      "path": "output/raw_instrument_results.csv",
+      "sha256": "2d23e3fb08d4c060c9a4e9ddf25af0ad0e39fe9c21bed69177bf16c79ab7f4cb",
+      "sizeBytes": 2450420,
+      "repositoryRetained": false
+    },
+    {
+      "path": "output/raw_paths.csv",
+      "sha256": "4f2abb1cfcfa03fa396cbfe9b01a0a81b3a79ba2f964a216fe0806e2c12c03cc",
+      "sizeBytes": 105377521,
+      "repositoryRetained": false
+    },
+    {
+      "path": "output/raw_portfolio_results.csv",
+      "sha256": "4ca9f01479ac2b707673123319881eb7389edd7e7ef99b4736c67823dd14ebc9",
+      "sizeBytes": 489145,
+      "repositoryRetained": false
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "simulationId": "solvend-market-simulation-v1",
-  "status": "executed-pass-with-blockers",
+  "status": "executed-summary-retained",
   "activationAuthorized": false,
   "seeds": 250,
   "cycles": 60,
@@ -15,7 +15,14 @@
   "files": {
     "input-v1.json": "f18ccd1054e8542ee804f9843c2ea7222fc40fc92e6e714f6b7f09b75e5d4e0b",
     "run_solvend_market_simulation_v1.py": "326d84b83de209755684db8cdc5048b83d7d7d00c6919321ae3b71e7788f63c6",
-    "summary-v1.json": "7c97d0f892829fc8e56c4037add626f360865c67c311665095a1685817700eea"
+    "summary-v1.json": "7c97d0f892829fc8e56c4037add626f360865c67c311665095a1685817700eea",
+    "raw-evidence-manifest-v1.json": "aaeeafd2a34b1308f193ec22927dd8edc66c8097d477877b8718c1a34316f8cf"
+  },
+  "evidenceRetention": {
+    "status": "summary-only-model-no-raw-output",
+    "rawEvidenceManifest": "raw-evidence-manifest-v1.json",
+    "repositoryRetained": true,
+    "requiredForApproval": false
   },
   "exactCommand": "python run_solvend_market_simulation_v1.py"
 }

@@ -1,6 +1,6 @@
 {
   "simulationId": "yrethia-market-simulation-v1",
-  "status": "executed-pass-with-blockers",
+  "status": "executed-summary-retained-raw-artifact-pending",
   "activationAuthorized": false,
   "seeds": 250,
   "cycles": 60,
@@ -13,11 +13,16 @@
     "guaranteedPositivePortfolioCases": 0
   },
   "files": {
-    "input-v1.json": "c980ac73cdec82b63cfb193e1426149c0f896c1363a4a7f5f9ba218082f286ba",
-    "run_yrethia_market_simulation_v1.py": "5d59478126b12d53c5d8d5efca92e3092b478cb822eeb68ce34df68d0eac4058",
-    "instrument-results.csv": "98263327a7308b275c06ee10fe000da6a041a6b0caf7267c519e854bd9e7b223",
-    "portfolio-results.csv": "4d2de7ca38f9c31a8416b2e04453c8419249a346aff99e77574323fff7939f87",
-    "summary.json": "5f6195563c0ba6963f6819f8aae486683b12833fade0e9debdee743c6b536da2"
+    "input-v1.json": "a382a1e86b6e616b50f2b532ac5e3e2c4f32ec7667023f00d8f9e2939875c2a6",
+    "run_yrethia_market_simulation_v1.py": "5b160c217826d0a7218777711125e58d1e74ae8bc5dfa8d11d2046b06f3005df",
+    "summary-v1.json": "5f6195563c0ba6963f6819f8aae486683b12833fade0e9debdee743c6b536da2",
+    "raw-evidence-manifest-v1.json": "e81198a79db8669c92269f6425a2747c71670c38da94828f4fab7cdcb10147a6"
+  },
+  "evidenceRetention": {
+    "status": "immutable-artifact-pending",
+    "rawEvidenceManifest": "raw-evidence-manifest-v1.json",
+    "repositoryRetained": false,
+    "requiredForApproval": true
   },
   "exactCommand": "python run_yrethia_market_simulation_v1.py"
 }
