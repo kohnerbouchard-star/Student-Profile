@@ -52,7 +52,8 @@ assert.doesNotMatch(bridge, /lastOpener instanceof HTMLElement && lastOpener\.is
 assert.match(bridge, /action instanceof HTMLElement && !closeControl/, "Nested modal actions must remain eligible as child restoration openers.");
 assert.doesNotMatch(bridge, /action instanceof HTMLElement && !action\.closest\(DIALOG_SELECTOR\)/, "Actions inside parent dialogs must not be excluded from child opener capture.");
 assert.match(bridge, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(reconcile\)\)/, "Modal binding must reconcile after mounted renderer frames.");
-assert.match(bridge, /reconcile\(\);[\s\S]*?reconcileAfterCurrentEvent\(\)/, "Synchronous child dialogs must bind before click dispatch completes with a bounded microtask follow-up.");
+assert.match(bridge, /if \(action instanceof HTMLElement && !closeControl\) reconcileAfterCurrentEvent\(\)/, "Nested child reconciliation must be deferred through the post-handler microtask path.");
+assert.doesNotMatch(bridge, /if \(action instanceof HTMLElement && !closeControl\) \{\s*reconcile\(\);/, "Admin actions must not trigger a synchronous full-dialog scan that can hide request lifecycle states.");
 
 for (const required of [
   "EconovariaAdminModalAccessibility",
