@@ -90,7 +90,7 @@ const nextPageRoute = resolvePlayerBackendRequest({
   params: {},
   session: { playerSessionToken: "token-1" }
 });
-assert.equal(nextPageRoute.path, "/players/me/ledger?cursor=offset_50&limit=25");
+assert.equal(nextPageRoute.path, "/players/me/ledger?limit=25&cursor=offset_50");
 assert.equal(nextPageRoute.path.includes("gameSessionId"), false);
 assert.equal(nextPageRoute.path.includes("playerId"), false);
 
