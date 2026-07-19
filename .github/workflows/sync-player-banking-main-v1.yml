@@ -1,0 +1,102 @@
+name: Sync Player Banking With Main v1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.head_ref == 'agent/player-banking-public-read-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/player-banking-public-read-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Merge current main and resolve bounded shared files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --no-tags origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+
+          conflicts="$(git diff --name-only --diff-filter=U || true)"
+          unexpected="$(printf '%s\n' "$conflicts" | grep -v -E '^(|player-terminal/src/api/backend-routes\.js|\.github/workflows/player-terminal-verify\.yml)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected merge conflicts:"
+            echo "$unexpected"
+            false
+          fi
+
+          if printf '%s\n' "$conflicts" | grep -qx 'player-terminal/src/api/backend-routes.js'; then
+            git checkout --theirs player-terminal/src/api/backend-routes.js
+          fi
+          python3 <<'PY'
+          from pathlib import Path
+
+          route_path = Path('player-terminal/src/api/backend-routes.js')
+          route = route_path.read_text()
+          if 'notificationsPage:' not in route:
+              raise SystemExit('notification page route was not preserved from main')
+          if 'path: queryPath("/players/me/ledger", {\n      limit: payload.limit ?? 50,\n      cursor: payload.cursor,\n    }),' not in route:
+              old = 'path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50 }),' 
+              new = 'path: queryPath("/players/me/ledger", {\n      limit: payload.limit ?? 50,\n      cursor: payload.cursor,\n    }),' 
+              if route.count(old) != 1:
+                  raise SystemExit('unable to apply Banking cursor to reconciled route map')
+              route = route.replace(old, new, 1)
+          route_path.write_text(route)
+
+          workflow_path = Path('.github/workflows/player-terminal-verify.yml')
+          workflow = workflow_path.read_text()
+          notification_rule = '              $0 ~ /^backend\\/src\\/domains\\/notifications\\/(api|contracts|infrastructure|services)\\/[A-Za-z0-9.-]*[.]ts$/ { next }\n'
+          banking_rules = (
+              '              $0 ~ /^backend\\/src\\/domains\\/economy\\/api\\/playerBankingPublic[A-Za-z0-9.-]*[.]ts$/ { next }\n'
+              '              $0 ~ /^backend\\/src\\/domains\\/economy\\/contracts\\/playerBankingPublicContracts[.]ts$/ { next }\n'
+              '              $0 ~ /^backend\\/src\\/domains\\/economy\\/infrastructure\\/supabasePlayerBankingPublicRepository([.]test)?[.]ts$/ { next }\n'
+          )
+          if notification_rule not in workflow:
+              raise SystemExit('notification scope allowance was not preserved from main')
+          if banking_rules not in workflow:
+              workflow = workflow.replace(notification_rule, notification_rule + banking_rules, 1)
+          workflow_path.write_text(workflow)
+          PY
+
+          git add player-terminal/src/api/backend-routes.js .github/workflows/player-terminal-verify.yml
+          if [ "$merge_status" -ne 0 ] && git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Conflicts remain after bounded resolution."
+            git diff --name-only --diff-filter=U
+            false
+          fi
+          grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' player-terminal/src/api/backend-routes.js .github/workflows/player-terminal-verify.yml && false || true
+      - name: Verify reconciled Backend boundaries
+        working-directory: backend
+        run: npm ci --no-audit --no-fund && npm run test:player-banking-public && npm run test:player-notifications && npm run typecheck
+      - name: Verify reconciled Player boundaries
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund && npm run banking-read && npm run notifications-inbox && npm run adapter && npm run connected-reads && npm run check
+      - name: Publish merge commit without helper
+        shell: bash
+        run: |
+          rm .github/workflows/sync-player-banking-main-v1.yml
+          git add -A
+          git commit -m "merge: reconcile Banking with notification mainline"
+          git push origin HEAD:agent/player-banking-public-read-v1
