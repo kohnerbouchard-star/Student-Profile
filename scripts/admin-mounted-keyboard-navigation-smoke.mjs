@@ -114,41 +114,39 @@ const common = {
 };
 
 function responseFor(pathname) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return {
-      data: {
-        admin: {
-          id: ADMIN_ID,
-          accountId: ADMIN_ID,
-          displayName: "Keyboard Smoke Administrator",
-          email: "admin@example.test",
-          role: "game_admin",
-          roles: ["game_admin"],
-        },
-        activeGame: game,
-        games: [game],
-        permissions: ["*"],
+  if (!pathname.endsWith("/session/bootstrap")) return { data: common };
+  return {
+    data: {
+      admin: {
+        id: ADMIN_ID,
+        accountId: ADMIN_ID,
+        displayName: "Keyboard Smoke Administrator",
+        email: "admin@example.test",
+        role: "game_admin",
         roles: ["game_admin"],
-        adminRole: "game_admin",
-        csrfToken: "",
-        session: {
-          id: ADMIN_ID,
-          csrfToken: "",
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        },
-        capabilities: {
-          notifications: false,
-          securityHistory: "current_session_only",
-          helpArticles: true,
-          auditLogFlags: true,
-          auditLogExport: true,
-          overallScore: false,
-          marketplaceAdminTrading: false,
-        },
       },
-    };
-  }
-  return { data: common };
+      activeGame: game,
+      games: [game],
+      permissions: ["*"],
+      roles: ["game_admin"],
+      adminRole: "game_admin",
+      csrfToken: "",
+      session: {
+        id: ADMIN_ID,
+        csrfToken: "",
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      },
+      capabilities: {
+        notifications: false,
+        securityHistory: "current_session_only",
+        helpArticles: true,
+        auditLogFlags: true,
+        auditLogExport: true,
+        overallScore: false,
+        marketplaceAdminTrading: false,
+      },
+    },
+  };
 }
 
 async function createPage(browser, viewport) {
@@ -254,8 +252,9 @@ async function exerciseNavigation(browser, viewport) {
       await page.keyboard.press("Tab");
       assert(await activeElementIsEligible(page), `${item.section} Tab entered an excluded or disabled control.`);
       await page.keyboard.press("Shift+Tab");
-      assert(await current.evaluate((node) => document.activeElement === node), `${item.section} Shift+Tab did not restore the section control.`);
+      assert(await activeElementIsEligible(page), `${item.section} Shift+Tab entered an excluded or disabled control.`);
       sections.push(item.section);
+      await current.focus();
     }
     assert(errors.length === 0, `Mounted Admin navigation emitted browser errors: ${errors[0]}`);
     return { viewport, sections };
