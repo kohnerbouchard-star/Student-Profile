@@ -324,6 +324,33 @@ function mapPurchaseError(message: string): PlayerStorePublicError {
       true,
     );
   }
+  if (code.includes("GAME_SESSION_DISABLED")) {
+    return new PlayerStorePublicError(
+      "store_game_paused",
+      "Store purchases are paused for this game.",
+      409,
+      true,
+    );
+  }
+  if (code.includes("GAME_SESSION_ARCHIVED")) {
+    return new PlayerStorePublicError(
+      "store_game_ended",
+      "Store purchases are closed because this game has ended.",
+      409,
+      false,
+    );
+  }
+  if (
+    code.includes("GAME_SESSION_NOT_ACTIVE") ||
+    code.includes("GAME_SESSION_NOT_FOUND")
+  ) {
+    return new PlayerStorePublicError(
+      "store_game_unavailable",
+      "Store purchases are unavailable for this game.",
+      409,
+      false,
+    );
+  }
   return new PlayerStorePublicError(
     "player_store_purchase_failed",
     "Store purchase could not be completed.",
