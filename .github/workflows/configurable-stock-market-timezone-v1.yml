@@ -71,8 +71,12 @@ jobs:
           run_step "apply RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
           run_step "focused tests" npm --prefix backend run test:stock-market-calendar
           run_step "backend typecheck" npm --prefix backend run typecheck:all
-          run_step "integration drift" node scripts/apply-configurable-stock-market-timezone-v1.mjs --check
-          run_step "RPC fixture drift" node scripts/fix-required-timezone-rpc-fixture-v1.mjs --check
+
+          git diff --binary > /tmp/timezone-before-replay.patch
+          run_step "replay integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "replay RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          git diff --binary > /tmp/timezone-after-replay.patch
+          run_step "combined integration idempotency" cmp /tmp/timezone-before-replay.patch /tmp/timezone-after-replay.patch
           run_step "whitespace" git diff --check
 
           git diff --binary > "$PATCH"
