@@ -13,6 +13,8 @@
     "connected-reads": "node tests/connected-read-surface-gating.mjs",
     "logout": "node tests/player-logout-revocation.mjs",
     "store-flow": "node tests/store-purchase-flow.mjs",
+    "store-connected": "node tests/store-connected-purchase.mjs",
+    "store-negative": "node tests/store-negative-state-matrix.mjs",
     "contracts-flow": "node tests/contracts-flow.mjs",
     "contracts-public": "node tests/contracts-public-list.mjs",
     "contracts-connected": "node tests/contracts-connected-acceptance.mjs",
@@ -25,13 +27,12 @@
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run realtime && npm run session-timeout && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
-    "dev": "python3 -m http.server ${PORT:-4173}",
-    "store-connected": "node tests/store-connected-purchase.mjs"
+    "dev": "python3 -m http.server ${PORT:-4173}"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store and Market transactions, Contracts lifecycle states, truthful Banking and Inventory, realtime freshness, safe session timeout exits, and Chromium browser verification."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, truthful Banking and Inventory, realtime freshness, safe session timeout exits, and Chromium browser verification."
 }
