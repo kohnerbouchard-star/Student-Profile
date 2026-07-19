@@ -136,9 +136,10 @@
     }
 
     function restoreFocus() {
-      const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
-      if (!(target instanceof HTMLElement)) return;
-      window.requestAnimationFrame(() => focusStableTarget(target));
+      window.requestAnimationFrame(() => {
+        const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+        focusStableTarget(target);
+      });
     }
 
     function addListeners() {
