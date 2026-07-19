@@ -333,21 +333,56 @@ async function loadSection(page, section = "Overview") {
     );
     return active?.getAttribute("data-admin-section") === expectedSection;
   }, section, { timeout: 5000 });
-  await page.waitForTimeout(350);
+  return sectionControl;
+}
+
+async function waitForAuthoritativeAction(page, action, section) {
+  await page.evaluate(() => window.EconovariaAdminOverviewQuickActions?.reconcile?.());
+  await page.waitForFunction(({ action, section }) => {
+    const controls = [...document.querySelectorAll(`[data-admin-terminal-action="${CSS.escape(action)}"]`)];
+    const control = controls.find((node) => {
+      if (!(node instanceof HTMLElement) || node.hidden) return false;
+      if (node.closest("[data-admin-shape-skeleton-stage], .admin-shape-surface-overlay")) return false;
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
+    });
+    if (!(control instanceof HTMLElement)) return false;
+    if (section === "Overview") return Boolean(control.closest("[data-admin-overview-quick-actions]"));
+    if (action === "add-store-item" && section === "Store") {
+      return !control.hasAttribute("data-admin-overview-hidden") &&
+        !control.closest(".admin-overview-quick-actions-card");
+    }
+    return true;
+  }, { action, section }, { timeout: 10_000 });
+}
+
+async function tabToControl(page, sectionControl, control, action) {
+  await sectionControl.focus();
+  assert(
+    await sectionControl.evaluate((node) => document.activeElement === node),
+    `${action} section control did not regain focus.`,
+  );
+  for (let tabs = 0; tabs <= 40; tabs += 1) {
+    if (await control.evaluate((node) => document.activeElement === node)) return tabs;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`${action} was not reachable through sequential keyboard navigation.`);
 }
 
 async function openAction(page, action, key = "Enter", section = "Overview") {
-  await loadSection(page, section);
+  const sectionControl = await loadSection(page, section);
+  await waitForAuthoritativeAction(page, action, section);
   const control = page.locator(`[data-admin-terminal-action="${action}"]:visible`).first();
   await control.waitFor({ state: "visible", timeout: 10_000 });
-  await control.focus();
-  assert(await control.evaluate((node) => document.activeElement === node), `${action} did not receive focus.`);
+  const tabs = await tabToControl(page, sectionControl, control, action);
   await page.keyboard.press(key);
   await page.waitForSelector(".admin-terminal-modal:visible", { timeout: 5000 });
   assert(
     await page.evaluate(() => document.documentElement.getAttribute("data-admin-input-modality")) === "keyboard",
     `${action} did not retain keyboard modality.`,
   );
+  return tabs;
 }
 
 async function keyboardReplace(page, locator, value) {
@@ -415,7 +450,7 @@ async function exercisePlayer(browser) {
   const runtime = await createPage(browser, "player");
   const { context, page, errors, writes } = runtime;
   try {
-    await openAction(page, "add-player", "Enter");
+    const tabs = await openAction(page, "add-player", "Enter");
     const form = page.locator("[data-admin-terminal-player-form]");
     await keyboardReplace(page, form.locator('[name="displayName"]'), "Keyboard Workflow Player");
     await keyboardReplace(page, form.locator('[name="rosterLabel"]'), "KEYBOARD-CREATE");
@@ -431,7 +466,7 @@ async function exercisePlayer(browser) {
     assert(payload.startingLocation === "NORTHREACH", `Player starting location was not preserved: ${JSON.stringify(payload)}.`);
     const keyboard = await assertKeyboardOnly(page, "Add Player");
     assert(errors.length === 0, `Add Player emitted browser errors: ${errors[0]}`);
-    return { action: "create-player", write, keyboard };
+    return { action: "create-player", tabs, write, keyboard };
   } catch (error) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/keyboard-player-failure.png`, fullPage: true });
     throw error;
@@ -444,7 +479,7 @@ async function exerciseContract(browser) {
   const runtime = await createPage(browser, "contract");
   const { context, page, errors, writes } = runtime;
   try {
-    await openAction(page, "add-contract", "Space");
+    const tabs = await openAction(page, "add-contract", "Space");
     const form = page.locator("[data-admin-terminal-contract-form]");
     await keyboardReplace(page, form.locator('[name="title"]'), "Keyboard Workflow Contract");
     await keyboardReplace(page, form.locator('[name="objective"]'), "Verify keyboard-only Contract creation.");
@@ -459,7 +494,7 @@ async function exerciseContract(browser) {
     assert(payload.publishNow === true, `Contract publish state was not preserved: ${JSON.stringify(payload)}.`);
     const keyboard = await assertKeyboardOnly(page, "Add Contract");
     assert(errors.length === 0, `Add Contract emitted browser errors: ${errors[0]}`);
-    return { action: "create-contract", write, keyboard };
+    return { action: "create-contract", tabs, write, keyboard };
   } catch (error) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/keyboard-contract-failure.png`, fullPage: true });
     throw error;
@@ -472,7 +507,7 @@ async function exerciseStore(browser) {
   const runtime = await createPage(browser, "store");
   const { context, page, errors, writes } = runtime;
   try {
-    await openAction(page, "add-store-item", "Enter", "Store");
+    const tabs = await openAction(page, "add-store-item", "Enter", "Store");
     const form = page.locator("[data-admin-terminal-store-form]");
     await keyboardReplace(page, form.locator('[name="itemName"]'), "Keyboard Workflow Item");
     await keyboardReplace(page, form.locator('[name="description"]'), "Keyboard-created store item.");
@@ -493,7 +528,7 @@ async function exerciseStore(browser) {
     assert(payload.price === 25 && payload.stockQuantity === 10, `Store numeric values were not normalized: ${JSON.stringify(payload)}.`);
     const keyboard = await assertKeyboardOnly(page, "Add Store Item");
     assert(errors.length === 0, `Add Store Item emitted browser errors: ${errors[0]}`);
-    return { action: "save-store-item", write, keyboard };
+    return { action: "save-store-item", tabs, write, keyboard };
   } catch (error) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/keyboard-store-failure.png`, fullPage: true });
     throw error;
@@ -506,7 +541,7 @@ async function exerciseScanner(browser) {
   const runtime = await createPage(browser, "scanner");
   const { context, page, errors, writes } = runtime;
   try {
-    await openAction(page, "scan-attendance", "Space");
+    const tabs = await openAction(page, "scan-attendance", "Space");
     await keyboardActivate(page, page.locator('[data-admin-terminal-set-mode="manual"]'), "Enter");
     const panel = page.locator("[data-admin-terminal-manual-panel]");
     await panel.waitFor({ state: "visible", timeout: 5000 });
@@ -547,7 +582,7 @@ async function exerciseScanner(browser) {
     assert(classroomWrites.length === 1, `Scanner expected one Classroom API retry: ${JSON.stringify(writes)}.`);
     const keyboard = await assertKeyboardOnly(page, "Attendance scanner");
     assert(errors.length === 0, `Attendance scanner emitted browser errors: ${errors[0]}`);
-    return { action: "submit-attendance-scan", writes, completed, recovered: true, keyboard };
+    return { action: "submit-attendance-scan", tabs, writes, completed, recovered: true, keyboard };
   } catch (error) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/keyboard-scanner-failure.png`, fullPage: true });
     throw error;
