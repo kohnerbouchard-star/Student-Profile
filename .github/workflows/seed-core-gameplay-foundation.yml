@@ -1,0 +1,96 @@
+name: Seed Core Gameplay Foundation
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - package.json
+      - scripts/generate-core-gameplay-content.mjs
+      - scripts/seed-core-content-coverage-audit.mjs
+      - docs/seed-content/contracts/**
+      - docs/seed-content/banking/**
+      - docs/seed-content/progression/**
+      - docs/seed-content/events/**
+      - docs/seed-content/interactions/**
+      - docs/seed-content/news/**
+      - docs/seed-content/notifications/**
+      - .github/workflows/seed-core-gameplay-foundation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-core-gameplay-foundation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    name: Materialize core gameplay content
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out seed authority branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+
+      - name: Generate registries and retain diagnostics
+        id: core
+        shell: bash
+        run: |
+          set +e
+          LOG="docs/seed-content/reviews/core-gameplay-foundation-run-log.txt"
+          : > "$LOG"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "generate core gameplay" node scripts/generate-core-gameplay-content.mjs
+          run_step "generate coverage evidence" node scripts/seed-core-content-coverage-audit.mjs
+          run_step "check core gameplay" npm run audit:seed-content-core-gameplay
+          run_step "check coverage evidence" npm run audit:seed-content-core-coverage
+          run_step "test seed preflight" npm run test:seed-content-preflight
+          run_step "design seed preflight" npm run preflight:seed-content
+          run_step "diff check" git diff --check
+
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit core registries and evidence
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/seed-content/contracts/core docs/seed-content/banking docs/seed-content/progression docs/seed-content/events/core-event-catalog-v1.json docs/seed-content/interactions/core-interactions-v1.json docs/seed-content/news/core-news-templates-v1.json docs/seed-content/notifications docs/seed-content/reviews/core-content-coverage-audit-v1.json docs/seed-content/reviews/core-content-coverage-audit-v1.md docs/seed-content/reviews/core-gameplay-foundation-run-log.txt
+          if git diff --cached --quiet; then
+            echo "Core gameplay registries are already current."
+          else
+            git commit -m "feat(seed): add core gameplay definition registries [skip ci]"
+            git push origin HEAD:agent/seed-content-foundation-v1
+          fi
+
+      - name: Enforce generation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.core.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Core gameplay generation failed with status $STATUS. See the committed diagnostic log."
+            false
+          fi
