@@ -1,147 +1,85 @@
-# Remaining Cloudflare API_URL Audit v1
+# Cloudflare Player Runtime Retirement Audit
 
-## Context
+**Status:** Repository runtime retired on `agent/player-terminal-runtime-cutover-v1`; merge and connected staging evidence remain required.
 
-PR #33 merged the approved Eco Novaria login UI and Supabase classroom-api integration into main.
+## Decision
 
-The frontend now has Supabase-specific helpers for:
-- Player login
-- Player bootstrap
-- Staff/admin bootstrap
-- Licensing activation
-- Admin store catalog management
+The legacy Cloudflare Worker is no longer an approved Player browser dependency.
 
-However, the legacy Cloudflare Worker URL is still present in frontend/src/core/constants.js as API_URL.
+The root Econovaria document now owns authentication only. Successful Player authentication stores an opaque Player session handoff in `sessionStorage` and navigates to `player-terminal/`. The Player Terminal then loads its own authoritative session, capability manifest, and feature read models through the Supabase `classroom-api` boundary.
 
-## Audit Scope
+## Retired active chain
 
-Searched for:
-- API_URL
-- getApiUrl
-- callApi
-- submitAction
-- silent-haze-ca17
-- kohner.workers.dev
-- LOGOUT
-- GET_SNAPSHOT
-- USE_ITEM
-- SUBMIT_RATING
-- STOCK_TRADE
-- STORE_PURCHASE
+The following active browser chain has been removed:
 
-## Current Legacy API Chain
-
+```text
 API_URL
 → getApiUrl()
 → callApiOnce()
 → callApi()
 → submitAction()
-→ feature callers
+→ legacy Player feature mutations
+```
 
-## Confirmed Legacy Callers
+The active runtime no longer contains or loads:
 
-### frontend/src/features/auth/auth.js
+- the `silent-haze-ca17.kohner.workers.dev` URL;
+- `API_URL`;
+- `callApi()` or `callApiOnce()`;
+- `submitAction()`;
+- the legacy `#appShell` Player dashboard;
+- legacy Store, Trading, Forecast, Inventory, Portfolio, Market, Dashboard, or realtime script tags.
 
-Uses legacy callApi() only for non-Supabase sessions:
-- LOGOUT
-- GET_SNAPSHOT
+## Current Player runtime
 
-Supabase player refresh now uses /players/me.
+```text
+index.html
+→ frontend/src/core/login.js
+→ POST /players/login
+→ sessionStorage opaque token handoff
+→ player-terminal/
+→ player-terminal/host-runtime.js
+→ player-terminal/src/main.js
+→ /functions/v1/classroom-api
+```
 
-Supabase admin refresh now uses staff bootstrap.
+The login request includes all three required credentials:
 
-### frontend/src/features/store/store.js
+- Game / Session Code;
+- Player ID / RFID identifier;
+- Access Code.
 
-Still uses submitAction("STORE_PURCHASE", ...).
+The handoff uses the server-issued Player session token. Player and game ownership remain server-derived; the terminal does not submit Player UUID ownership fields.
 
-### frontend/src/features/trading/trading.js
+## Admin and Create Game containment
 
-Still uses submitAction("STOCK_TRADE", ...).
+The root login controller preserves:
 
-### frontend/src/features/forecasts/forecasts.js
+- Admin Supabase password authentication;
+- staff bootstrap;
+- active-game selection;
+- Admin session and selected-game handoff to `admin/`;
+- password recovery;
+- licensed staff signup and initial game creation;
+- explicit game timezone selection.
 
-Still uses submitAction("SUBMIT_RATING", ...).
+No Admin terminal implementation or Backend route ownership was refactored in this tranche.
 
-### frontend/src/features/inventory/inventory.js
+## Live Cloudflare service boundary
 
-Still uses submitAction("USE_ITEM", ...).
+This repository change does **not** disable, delete, redeploy, or rotate the externally deployed Cloudflare Worker. Live retirement still requires service-owner confirmation, traffic evidence, credential rotation, a maintenance window, monitoring, and rollback ownership under `docs/operations/legacy-service-containment.md`.
 
-## Supabase Routes Found
+Repository references retained in historical documentation or release manifests are evidence only and must not be treated as executable configuration.
 
-The Supabase classroom-api router currently wires routes including:
-- GET /health
-- POST /players/login
-- GET /players/me
-- GET /players/me/ledger
-- GET /staff/bootstrap
-- POST /licensing/activate
-- game join code reset routes
-- game settings routes
-- staff store catalog routes
-- player roster routes
-- player access code reset routes
-- staff attendance routes
-- player attendance clock-in route
-- initial balance seed route
-- staff player ledger history route
-- staff ledger adjustment route
+## Verification
 
-## Supabase Routes Not Found
+The branch adds `scripts/player-terminal-runtime-cutover-smoke.mjs`, which fails if the root page remounts the legacy shell, reloads legacy feature scripts, restores a Worker URL to active sources, omits the Player Access Code, or loads the Player Terminal before its host-session runtime.
 
-No existing Supabase classroom-api route was found for:
-- STORE_PURCHASE
-- STOCK_TRADE
-- SUBMIT_RATING
-- USE_ITEM
+Required before `VERIFIED_COMPLETE`:
 
-## Migration Map
-
-| Legacy Action | Current Caller | Current Behavior | Supabase Replacement | Risk | Safe Without Backend Changes |
-|---|---|---|---|---|---|
-| LOGOUT | frontend/src/features/auth/auth.js | Legacy logout for non-Supabase sessions | None needed for Supabase sessions | Low | No change needed |
-| GET_SNAPSHOT | frontend/src/features/auth/auth.js | Legacy dashboard refresh for non-Supabase sessions | /players/me and /staff/bootstrap already used for Supabase sessions | Medium | No change needed |
-| STORE_PURCHASE | frontend/src/features/store/store.js | Purchases item; likely updates balance, inventory, store stock, and transaction history | Not found | High | No |
-| STOCK_TRADE | frontend/src/features/trading/trading.js | Places buy/sell order; likely updates balance, portfolio, and trade history | Not found | High | No |
-| SUBMIT_RATING | frontend/src/features/forecasts/forecasts.js | Saves forecast/rating and possible reward state | Not found | Medium/High | No |
-| USE_ITEM | frontend/src/features/inventory/inventory.js | Requests item use and likely updates inventory/request state | Not found | Medium/High | No |
-
-## Conclusion
-
-API_URL, callApi(), and submitAction() are not dead code.
-
-They must remain until Supabase backend routes exist for the student runtime mutation actions.
-
-Do not remove the old Cloudflare Worker URL yet.
-
-Do not migrate submitAction() to Supabase blindly.
-
-Do not change the four student mutation callers until backend route contracts exist.
-
-## Recommended Next Step
-
-Create a separate backend planning task for Supabase student runtime mutation routes:
-
-1. Store purchase route
-2. Stock trade route
-3. Analyst forecast/rating route
-4. Inventory item-use request route
-
-Each route should define:
-- route path
-- HTTP method
-- request body
-- authentication/session resolution
-- database transaction boundaries
-- snapshot response shape
-- permission checks
-- audit/ledger behavior
-- frontend migration plan
-
-## Non-Blocking Cleanup
-
-frontend/src/core/api.js contains a harmless duplicate key in callPlayerLoginApi():
-
-token: publishableKey,
-token: publishableKey,
-
-This can be removed in a later cleanup PR.
+1. merge the cutover PR into `main`;
+2. pass Repository Quality and Player Terminal verification;
+3. verify Player login → terminal bootstrap → capability manifest in isolated staging;
+4. verify logout, expiry, revoked-session, and invalid-session return to the root login;
+5. confirm no production browser traffic reaches the Cloudflare Worker;
+6. obtain explicit approval before disabling or deleting the live Worker.
