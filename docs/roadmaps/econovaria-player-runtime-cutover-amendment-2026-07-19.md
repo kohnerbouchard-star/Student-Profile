@@ -4,7 +4,7 @@
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Runtime-cutover pull request:** `#217`, merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`  
 **Physical-cleanup pull request:** `#222`  
-**Status:** `IN_PROGRESS` — repository cutover merged; physical cleanup implemented and awaiting merge; connected operational evidence remains open
+**Status:** `IN_PROGRESS` — repository cutover and physical cleanup merged; connected operational evidence remains open
 
 ## Scope decision
 
@@ -44,7 +44,7 @@ Remaining acceptance evidence:
 
 ## `BETA-LEGACY-001` — Retire the Cloudflare Player browser path
 
-**Status:** `IN_PROGRESS` — browser dependency removed; physical source cleanup awaiting merge; live service shutdown pending
+**Status:** `IN_PROGRESS` — browser dependency and dormant repository source removed; live service shutdown pending
 
 Merged through PR #217:
 
@@ -68,7 +68,8 @@ The runtime cutover did not change Banking or notification feature implementatio
 **Branch:** `agent/legacy-player-source-removal-v1`  
 **Pull request:** `#222`  
 **Base main:** `26eecaa1ed04e3aa0909c75be269491a975fad70`  
-**Status:** `IMPLEMENTED_NOT_MERGED`
+**Merge commit:** `3b74340830da8db4fdabe2926915c3a32471b7c8`  
+**Status:** `VERIFIED_COMPLETE`
 
 PR #222 physically removes 38 dormant legacy paths, including:
 
@@ -88,13 +89,16 @@ It preserves:
 
 The root stylesheet now imports only shared base rules and login-specific components. The permanent runtime-cutover smoke fails if any retired path returns or if active sources restore `appShell`, `submitAction`, `callApiOnce`, `workers.dev`, or the retired Cloudflare hostname.
 
-Pre-review reconciliation evidence:
+Completion evidence:
 
-- the bounded cleanup application completed successfully;
-- the complete repository test chain passed after deletion;
-- the complete Player Terminal package verification passed unchanged;
-- the cleanup and ledger reconciliation workflows removed their own temporary helpers;
-- the effective PR diff contains only permanent source removals, the login stylesheet reduction, the permanent regression ratchet, and roadmap evidence.
+- final reviewed head: `9073afaf58b16da3831fb3e7d67da6922acbf4c5`;
+- squash merge: `3b74340830da8db4fdabe2926915c3a32471b7c8`;
+- Repository Quality #909 passed;
+- Player Runtime Cutover Verify #12 passed the source-removal ratchet, complete Player Terminal package verification, Chromium startup, and authenticated handoff;
+- Admin Shell Smoke #836 passed all 87 stages;
+- Exchange Calendar Runtime #156 and Required Game Market Timezone #168 passed;
+- the bounded cleanup and ledger reconciliation workflows passed and removed their own temporary helpers;
+- the effective merged diff contains only permanent source removals, the login stylesheet reduction, the permanent regression ratchet, and roadmap evidence.
 
 ## Exclusions
 
@@ -110,4 +114,4 @@ This work does not:
 
 ## Next exact action
 
-Pass the full normal workflow suite on the final PR #222 head, confirm the permanent diff remains isolated, then squash-merge PR #222. After merge, complete connected isolated-staging verification and the controlled live Cloudflare Worker retirement procedure.
+Complete connected isolated-staging verification for Player and Admin flows, confirm production browser traffic no longer reaches the Cloudflare Worker, then perform the controlled credential rotation and live Worker retirement procedure.
