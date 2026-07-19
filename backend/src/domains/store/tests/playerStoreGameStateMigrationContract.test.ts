@@ -25,6 +25,7 @@ Deno.test("public Store settlement gates new writes while preserving completed r
     "v_game_status <> 'active'",
     "GAME_SESSION_NOT_ACTIVE",
     "from public.purchase_quoted_store_item(",
+    "from public, anon, authenticated",
     "to service_role",
   ]) {
     assertIncludes(source, expected);
@@ -36,18 +37,11 @@ Deno.test("public Store settlement gates new writes while preserving completed r
     "from public.game_sessions game",
     "from public.purchase_quoted_store_item(",
   ]);
-  assertNotIncludes(source, "grant execute on function public.purchase_quoted_store_item_public_v1");
 });
 
 function assertIncludes(source: string, expected: string): void {
   if (!source.includes(expected)) {
     throw new Error(`Expected Store game-state migration to include: ${expected}`);
-  }
-}
-
-function assertNotIncludes(source: string, unexpected: string): void {
-  if (source.includes(unexpected)) {
-    throw new Error(`Expected Store game-state migration to exclude: ${unexpected}`);
   }
 }
 
