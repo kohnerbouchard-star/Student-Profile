@@ -10,6 +10,7 @@ for (const required of [
   "document.addEventListener(\"focusin\"",
   "parentController?.suspend?.()",
   "parent?.resume?.()",
+  "semanticFocusReplacement",
   "econovaria:admin-modal-dismiss-blocked",
   "econovaria:admin-modal-activated",
   "econovaria:admin-modal-closed",
@@ -25,6 +26,7 @@ assert.match(source, /dismissOnEscape = options\.dismissOnEscape !== false/, "Es
 assert.match(source, /dismissOnBackdrop = options\.dismissOnBackdrop !== false/, "Backdrop dismissal must remain configurable.");
 assert.match(source, /trapFocus = options\.trapFocus !== false/, "Focus trapping must remain configurable for drawer-style surfaces.");
 assert.match(source, /stableFocusTarget\(opener\)/, "Close and destroy paths must restore a stable opener or fallback target.");
+assert.match(source, /window\.requestAnimationFrame\(\(\) => \{[\s\S]*?stableFocusTarget\(opener\)[\s\S]*?focusStableTarget\(target\)/, "Rerendered opener replacement must be resolved inside the scheduled restoration frame.");
 assert.match(source, /focusInside\(lastFocusedInside\)/, "Blocked dismissal and nested resume must retain the last valid focus target.");
 
 for (const required of [
