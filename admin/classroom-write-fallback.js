@@ -136,6 +136,35 @@
     };
   }
 
+  function isLedgerMutationPath(pathname) {
+    return /\/attendance\/reward-adjustments$/.test(pathname) ||
+      /\/players\/[^/]+\/ledger-adjustments$/.test(pathname);
+  }
+
+  async function withEconomicIdempotency(request, url, lifecycle) {
+    if (
+      request.method !== "POST" ||
+      !lifecycle?.requestId ||
+      !isLedgerMutationPath(url.pathname)
+    ) {
+      return request;
+    }
+    const source = await requestJson(request);
+    const idempotencyKey = text(
+      source.idempotencyKey ||
+      request.headers.get("x-idempotency-key") ||
+      request.headers.get("x-request-id") ||
+      lifecycle.requestId,
+    );
+    const headers = new Headers(request.headers);
+    headers.set("Content-Type", "application/json");
+    headers.set("X-Idempotency-Key", idempotencyKey);
+    return new Request(request, {
+      headers,
+      body: JSON.stringify({ ...source, idempotencyKey }),
+    });
+  }
+
   function beginLifecycle(lifecycle) {
     if (!lifecycle) return;
     emitLifecycle({ ...lifecycle, phase: "started" });
@@ -266,11 +295,12 @@
     const rawUrl = input instanceof Request
       ? input.url
       : new URL(String(input), window.location.href).href;
-    const request = input instanceof Request
+    const initialRequest = input instanceof Request
       ? new Request(input, init)
       : new Request(rawUrl, init);
-    const url = new URL(request.url, window.location.href);
-    const lifecycle = await createLifecycle(request, url);
+    const url = new URL(initialRequest.url, window.location.href);
+    const lifecycle = await createLifecycle(initialRequest, url);
+    const request = await withEconomicIdempotency(initialRequest, url, lifecycle);
     beginLifecycle(lifecycle);
 
     try {
@@ -326,7 +356,7 @@
 
   window.EconovariaClassroomWriteFallback = {
     canonicalWrite,
-    unwrapResponsePayload,
+    unwrapAdminTerminalResponsePayload,
     lifecycleEvent: LIFECYCLE_EVENT,
   };
 })();
