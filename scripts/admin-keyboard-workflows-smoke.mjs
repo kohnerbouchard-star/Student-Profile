@@ -336,10 +336,9 @@ async function loadSection(page, section = "Overview") {
   return sectionControl;
 }
 
-async function waitForAuthoritativeAction(page, action, section) {
-  await page.evaluate(() => window.EconovariaAdminOverviewQuickActions?.reconcile?.());
-  await page.waitForFunction(({ action, section }) => {
-    const controls = [...document.querySelectorAll(`[data-admin-terminal-action="${CSS.escape(action)}"]`)];
+async function waitForAuthoritativeAction(page, action) {
+  await page.waitForFunction((expectedAction) => {
+    const controls = [...document.querySelectorAll(`[data-admin-terminal-action="${CSS.escape(expectedAction)}"]`)];
     const control = controls.find((node) => {
       if (!(node instanceof HTMLElement) || node.hidden) return false;
       if (node.closest("[data-admin-shape-skeleton-stage], .admin-shape-surface-overlay")) return false;
@@ -347,14 +346,10 @@ async function waitForAuthoritativeAction(page, action, section) {
       const rect = node.getBoundingClientRect();
       return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
     });
-    if (!(control instanceof HTMLElement)) return false;
-    if (section === "Overview") return Boolean(control.closest("[data-admin-overview-quick-actions]"));
-    if (action === "add-store-item" && section === "Store") {
-      return !control.hasAttribute("data-admin-overview-hidden") &&
-        !control.closest(".admin-overview-quick-actions-card");
-    }
-    return true;
-  }, { action, section }, { timeout: 10_000 });
+    return control instanceof HTMLElement &&
+      !control.closest(".admin-overview-quick-actions-card, [data-admin-overview-quick-actions]") &&
+      !control.hasAttribute("data-admin-overview-hidden");
+  }, action, { timeout: 10_000 });
 }
 
 async function tabToControl(page, sectionControl, control, action) {
@@ -372,7 +367,7 @@ async function tabToControl(page, sectionControl, control, action) {
 
 async function openAction(page, action, key = "Enter", section = "Overview") {
   const sectionControl = await loadSection(page, section);
-  await waitForAuthoritativeAction(page, action, section);
+  await waitForAuthoritativeAction(page, action);
   const control = page.locator(`[data-admin-terminal-action="${action}"]:visible`).first();
   await control.waitFor({ state: "visible", timeout: 10_000 });
   const tabs = await tabToControl(page, sectionControl, control, action);
@@ -507,7 +502,7 @@ async function exerciseStore(browser) {
   const runtime = await createPage(browser, "store");
   const { context, page, errors, writes } = runtime;
   try {
-    const tabs = await openAction(page, "add-store-item", "Enter", "Store");
+    const tabs = await openAction(page, "add-store-item", "Enter");
     const form = page.locator("[data-admin-terminal-store-form]");
     await keyboardReplace(page, form.locator('[name="itemName"]'), "Keyboard Workflow Item");
     await keyboardReplace(page, form.locator('[name="description"]'), "Keyboard-created store item.");
