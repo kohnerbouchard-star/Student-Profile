@@ -7,7 +7,7 @@ Production authorization: false
 
 - 3200 universe records;
 - 1675 generated issuer or administrator IDs;
-- 72 curated active-candidate issuers compared.
+- 180 curated active-candidate issuers compared.
 
 ## Automated result
 

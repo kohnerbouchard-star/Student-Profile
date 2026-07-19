@@ -14,17 +14,24 @@
   },
   "summary": {
     "universeRecords": 3200,
-    "activeCandidateRecords": 96,
+    "activeCandidateRecords": 240,
     "recordsByIdentityAuthority": {
-      "curated-active-candidate": 96
+      "curated-active-candidate": 96,
+      "universe-derived-selection": 144
     },
     "countriesWithActiveCandidates": [
+      "dravenlok",
+      "eldoran",
+      "lumenor",
       "northreach",
       "solvend",
+      "syndalis",
       "thaloris",
+      "valerion",
+      "xalvoria",
       "yrethia"
     ],
-    "exactCanonicalMatches": 96,
+    "exactCanonicalMatches": 240,
     "conflictingSymbolIdentities": 0,
     "missingUniverseSymbols": 0,
     "activeIdConflicts": 0,
@@ -32,20 +39,26 @@
     "affectedCountries": [],
     "blockers": 0,
     "activeRecordsByCountry": {
+      "dravenlok": 24,
+      "eldoran": 24,
+      "lumenor": 24,
       "northreach": 24,
       "solvend": 24,
+      "syndalis": 24,
       "thaloris": 24,
+      "valerion": 24,
+      "xalvoria": 24,
       "yrethia": 24
     },
     "activeRecordsByInstrumentType": {
-      "commodity_reference": 4,
-      "common_equity": 48,
-      "corporate_bond": 16,
-      "etf_fund": 8,
-      "index": 4,
-      "listed_trust": 4,
-      "preferred_convertible": 4,
-      "sovereign_public_bond": 8
+      "commodity_reference": 10,
+      "common_equity": 120,
+      "corporate_bond": 40,
+      "etf_fund": 20,
+      "index": 10,
+      "listed_trust": 10,
+      "preferred_convertible": 10,
+      "sovereign_public_bond": 20
     }
   },
   "requiredInvariants": [
