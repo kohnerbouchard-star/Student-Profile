@@ -186,26 +186,63 @@ async function exerciseExportHistoryModal(browser) {
   try {
     await loadAdmin(page);
     await navigate(page, "Logs");
-    const historyOpener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
-    await keyboardActivate(page, historyOpener);
-    await page.waitForTimeout(250);
 
-    let statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
+    let opener = null;
     let surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+    let statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
+
     if (await surface.count() === 0 && await statusOpener.count() > 0) {
-      await keyboardActivate(page, statusOpener);
+      opener = statusOpener;
+      await keyboardActivate(page, opener);
       surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
     }
+
     if (await surface.count() === 0) {
       const exportOpener = page.locator('[data-admin-terminal-action="export-logs"]:visible').first();
-      await keyboardActivate(page, exportOpener);
-      await page.waitForTimeout(250);
-      statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
-      if (await statusOpener.count() > 0) await keyboardActivate(page, statusOpener);
-      surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+      if (await exportOpener.count() > 0) {
+        opener = exportOpener;
+        await keyboardActivate(page, opener);
+        await page.waitForTimeout(350);
+        surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+        if (await surface.count() === 0) {
+          statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
+          if (await statusOpener.count() > 0) {
+            opener = statusOpener;
+            await keyboardActivate(page, opener);
+            surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+          }
+        }
+      }
     }
 
-    const opener = await statusOpener.count() > 0 ? statusOpener : historyOpener;
+    if (await surface.count() === 0) {
+      const historyOpener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
+      assert(await historyOpener.count() > 0, "Logs rendered no export-history action.");
+      opener = historyOpener;
+      await keyboardActivate(page, opener);
+      await page.waitForTimeout(250);
+      surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+      if (await surface.count() === 0) {
+        statusOpener = page.locator('[data-admin-terminal-action="open-export-job-status"]:visible').first();
+        if (await statusOpener.count() > 0) {
+          opener = statusOpener;
+          await keyboardActivate(page, opener);
+          surface = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+        }
+      }
+    }
+
+    if (await surface.count() === 0) {
+      const diagnostic = await page.evaluate(() => ({
+        actions: [...document.querySelectorAll('[data-admin-terminal-action]')]
+          .filter((node) => node instanceof HTMLElement && !node.hidden)
+          .map((node) => node.getAttribute('data-admin-terminal-action') || ''),
+        activeAction: document.activeElement?.getAttribute?.('data-admin-terminal-action') || '',
+        activeModalId: window.EconovariaAdminModalAccessibility?.getActiveController?.()?.backdrop?.getAttribute?.('data-modal-id') || '',
+      }));
+      throw new Error("Export Job Status did not open: " + JSON.stringify(diagnostic) + ".");
+    }
+
     const target = await controllerDialogForSurface(page, surface, "adminExportHistoryA11yTarget", "Export History modal");
     const focusableCount = await assertFocusTrap(page, target.dialog, "Export History modal");
     await escapeAndRestore(page, surface, opener, "Export History modal");
