@@ -1,14 +1,10 @@
 {
   "packId": "content-pack.econovaria.seed-foundation.v1",
-  "version": "0.1.0-design",
-  "maturity": "design-manifest",
+  "version": "0.2.0-design",
+  "maturity": "validated-design-definition-pack",
   "sourcePr": 163,
   "productionAuthorized": false,
-  "allowedEnvironments": [
-    "local",
-    "test",
-    "staging"
-  ],
+  "allowedEnvironments": ["local", "test", "staging"],
   "runtimeActivationAllowed": false,
   "stableIdStrategy": "human-readable-versioned-content-id",
   "currencyArchitecture": "adr-001",
@@ -18,209 +14,144 @@
     {
       "domain": "countries",
       "targetCount": 10,
-      "currentState": "documented",
+      "currentState": "documented-and-cross-referenced",
       "activationState": "reference-only",
-      "blockingDependencies": [
-        "authoritative-backend-country-contract"
-      ]
+      "blockingDependencies": ["authoritative-backend-country-contract"]
     },
     {
       "domain": "currencies",
       "targetCount": 10,
-      "currentState": "documented-and-asset-mapped",
+      "currentState": "documented-asset-mapped-and-market-reconciled",
       "activationState": "reference-only",
-      "blockingDependencies": [
-        "authoritative-currency-registry",
-        "session-currency-pair-authority"
-      ]
+      "blockingDependencies": ["authoritative-currency-registry", "session-currency-pair-authority"]
     },
     {
       "domain": "market-instruments",
       "targetCount": 3200,
-      "currentState": "generated-external-package-and-repository-specification",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "repository-ingestion",
-        "issuer-registry",
-        "instrument-capability-mapping",
-        "financial-calibration",
-        "market-simulation"
-      ]
+      "currentState": "repository-ingested-identity-reconciled-and-all-country-selection-complete",
+      "activationState": "definition-only",
+      "blockingDependencies": ["instrument-capability-mapping", "financial-calibration-six-countries", "market-simulation-six-countries", "bounded-active-market-approval"]
     },
     {
       "domain": "exchanges",
       "targetCount": 10,
-      "currentState": "design-candidate",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "market-calendar-policy",
-        "backend-exchange-support"
-      ]
+      "currentState": "canonical-reference-registry-complete",
+      "activationState": "definition-only",
+      "blockingDependencies": ["market-calendar-policy", "backend-exchange-support"]
     },
     {
       "domain": "issuers",
-      "targetCount": null,
-      "currentState": "taxonomy-started",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "issuer-master-generation",
-        "stable-id-ownership"
-      ]
+      "targetCount": 1675,
+      "currentState": "stable-id-universe-and-ten-candidate-registries-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["financial-profile-enrichment-six-countries", "issuer-runtime-schema"]
     },
     {
       "domain": "industries-and-commodities",
       "targetCount": 38,
-      "currentState": "taxonomy-started",
+      "currentState": "parent-sector-taxonomy-and-country-benchmarks-created",
       "activationState": "definition-only",
-      "blockingDependencies": [
-        "subindustry-mapping",
-        "benchmark-review"
-      ]
+      "blockingDependencies": ["subindustry-editorial-review", "benchmark-methodology-review"]
     },
     {
       "domain": "locations",
       "targetCount": 50,
-      "currentState": "candidate-registry-created",
+      "currentState": "stable-id-candidate-registry-created",
       "activationState": "blocked",
-      "blockingDependencies": [
-        "map-coordinate-verification",
-        "adjacency-verification",
-        "runtime-location-schema"
-      ]
+      "blockingDependencies": ["active-map-artwork", "map-coordinate-verification", "adjacency-verification", "runtime-location-schema"]
     },
     {
       "domain": "routes",
       "targetCount": 13,
       "currentState": "proposed-network-created",
       "activationState": "blocked",
-      "blockingDependencies": [
-        "map-verification",
-        "route-runtime-model"
-      ]
+      "blockingDependencies": ["map-verification", "route-runtime-model"]
     },
     {
       "domain": "arrival-packages",
       "targetCount": 10,
-      "currentState": "schema-and-package-definitions-created",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "starting-value-calibration",
-        "housing-model",
-        "relationship-persistence",
-        "authoritative-instantiation-route"
-      ]
+      "currentState": "mechanical-bands-messages-tutorials-and-stabilization-contracts-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["starting-value-calibration", "housing-cost-simulation", "relationship-persistence", "authoritative-instantiation-route"]
     },
     {
       "domain": "arrival-classes",
       "targetCount": null,
       "currentState": "deferred-workstream-11",
       "activationState": "blocked",
-      "blockingDependencies": [
-        "arrival-packages",
-        "skills-and-credentials",
-        "contract-families",
-        "progression-model",
-        "simulation"
-      ]
+      "blockingDependencies": ["arrival-package-viability-simulation", "skills-and-credentials", "class-scoring-model", "progression-persistence"]
     },
     {
       "domain": "contracts",
       "targetCount": 50,
-      "currentState": "five-meridian-concepts",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "backend-contract-lifecycle",
-        "reward-calibration"
-      ]
+      "currentState": "fifty-machine-readable-definitions-plus-five-meridian-prose-concepts",
+      "activationState": "definition-only",
+      "blockingDependencies": ["backend-contract-lifecycle", "reward-calibration", "targeting-capability-map"]
     },
     {
       "domain": "store-items",
-      "targetCount": 40,
-      "currentState": "framework-only",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "item-effect-capability-map",
-        "redemption-lifecycle",
-        "price-calibration"
-      ]
+      "targetCount": 144,
+      "currentState": "one-hundred-forty-four-item-catalog-and-recipe-graph-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["item-effect-capability-map", "redemption-lifecycle", "price-calibration", "recipe-approval"]
     },
     {
       "domain": "banking-products",
-      "targetCount": 12,
-      "currentState": "framework-only",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "banking-write-capability",
-        "rate-and-affordability-simulation"
-      ]
+      "targetCount": 10,
+      "currentState": "ten-machine-readable-products-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["banking-write-capability", "rate-and-affordability-simulation"]
     },
     {
       "domain": "progression",
       "targetCount": 30,
-      "currentState": "framework-only",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "progression-persistence",
-        "threshold-calibration"
-      ]
+      "currentState": "ten-levels-and-twenty-achievements-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["progression-persistence", "threshold-calibration"]
     },
     {
       "domain": "events-news-interactions",
-      "targetCount": 115,
-      "currentState": "meridian-pilot-concepts",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "event-application-authority",
-        "narrative-persistence",
-        "recovery-content"
-      ]
+      "targetCount": 120,
+      "currentState": "twenty-five-events-ten-chains-five-crisis-arcs-fifty-interactions-and-thirty-news-templates-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["event-application-authority", "narrative-persistence", "effect-capability-map"]
     },
     {
       "domain": "tutorials-and-notifications",
-      "targetCount": 42,
-      "currentState": "framework-only",
-      "activationState": "blocked",
-      "blockingDependencies": [
-        "route-capability-map",
-        "notification-deduplication"
-      ]
+      "targetCount": 40,
+      "currentState": "ten-tutorials-and-thirty-notification-templates-created",
+      "activationState": "definition-only",
+      "blockingDependencies": ["route-capability-map", "notification-deduplication", "tutorial-completion-persistence"]
     },
     {
       "domain": "simulation",
-      "targetCount": null,
-      "currentState": "protocol-only",
+      "targetCount": 10,
+      "currentState": "four-country-pilots-rerun-with-summaries-checksums-and-immutable-raw-artifact",
       "activationState": "not-applicable",
-      "blockingDependencies": [
-        "committed-code",
-        "approved-input-contract"
-      ]
+      "blockingDependencies": ["six-country-financial-enrichment", "six-country-simulations", "cross-market-calibration", "acceptance-threshold-approval"]
     },
     {
       "domain": "staging-import",
       "targetCount": 1,
-      "currentState": "specification-only",
+      "currentState": "specification-created-and-machine-readable-records-complete",
       "activationState": "blocked",
-      "blockingDependencies": [
-        "backend-baseline",
-        "stable-id-storage",
-        "machine-readable-records"
-      ]
+      "blockingDependencies": ["backend-baseline", "stable-id-storage", "import-schema-mapping", "rollback-rehearsal"]
     }
   ],
   "validation": {
-    "schema": "pending",
-    "references": "pending",
-    "checksums": "pending",
-    "economic": "blocked",
-    "narrative": "partial",
-    "technical": "blocked",
-    "classroom": "pending",
-    "security": "partial"
+    "schema": "design-structural-valid",
+    "references": "automated-core-references-valid",
+    "checksums": "universe-and-four-simulation-evidence-valid",
+    "economic": "partial-four-markets-complete-six-markets-and-arrival-values-pending",
+    "narrative": "machine-readable-coverage-targets-complete-runtime-pending",
+    "technical": "definition-layer-valid-runtime-blocked",
+    "classroom": "editorial-pedagogy-and-map-review-pending",
+    "security": "fail-closed-no-runtime-ownership-fields"
   },
   "rollbackStrategy": "deactivate-pack",
   "notes": [
-    "This file is a design scaffold, not an executable import manifest.",
-    "Counts combine targets and current candidate records and must be replaced by generated record descriptors before staging.",
+    "This file describes a validated design-definition pack, not an executable import manifest.",
+    "Machine-readable base-game coverage targets are complete, but numerical calibration and runtime capability gates remain unresolved.",
     "No record in this manifest is authorized for production activation."
   ]
 }
