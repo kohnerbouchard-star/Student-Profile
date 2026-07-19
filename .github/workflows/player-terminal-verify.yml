@@ -44,6 +44,7 @@ jobs:
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
               $0 == "backend/package.json" { next }
+              $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/contracts\/playerContractPublicListContracts([.]test)?[.]ts$/ { next }
