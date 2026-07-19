@@ -1,5 +1,5 @@
 import {
-  DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
+  SEOUL_STOCK_MARKET_TIME_ZONE,
   resolveStockMarketWindowSettings,
   validateStockMarketWindowSettings,
 } from "./stockMarketWindowSettings.ts";
@@ -15,23 +15,19 @@ Deno.test("configured game timezone is authoritative", () => {
   );
 });
 
-Deno.test("missing or invalid game timezone uses the server fallback", () => {
+Deno.test("missing or invalid game timezone falls back to Seoul", () => {
   assertEquals(
-    resolveStockMarketWindowSettings({}, "UTC"),
-    { timezone: "UTC", source: "server_fallback" },
-  );
-  assertEquals(
-    resolveStockMarketWindowSettings({ timezone: "device-local" }, "UTC"),
-    { timezone: "UTC", source: "server_fallback" },
-  );
-});
-
-Deno.test("invalid server fallback uses the stable server default", () => {
-  assertEquals(
-    resolveStockMarketWindowSettings({}, "not-a-timezone"),
+    resolveStockMarketWindowSettings({}),
     {
-      timezone: DEFAULT_SERVER_STOCK_MARKET_TIME_ZONE,
-      source: "server_fallback",
+      timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
+      source: "seoul_fallback",
+    },
+  );
+  assertEquals(
+    resolveStockMarketWindowSettings({ timezone: "device-local" }),
+    {
+      timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
+      source: "seoul_fallback",
     },
   );
 });
