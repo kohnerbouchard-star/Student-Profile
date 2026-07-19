@@ -129,7 +129,7 @@ async function exerciseExportHistoryModal(browser) {
         controllerDialogClass: dialog?.className || "",
       };
     });
-    assert(ownership.related, `Export History is not owned by the shared modal controller: ${'${JSON.stringify(ownership)}'}.`);
+    assert(ownership.related, "Export History is not owned by the shared modal controller: " + JSON.stringify(ownership) + ".");
     const dialog = page.locator('[data-admin-export-history-a11y-target="true"]');
     const focusableCount = await assertFocusTrap(page, dialog, "Export History modal");
     await escapeAndRestore(page, surface, opener, "Export History modal");
