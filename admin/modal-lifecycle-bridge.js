@@ -152,6 +152,14 @@
     dialogs.forEach(bindDialog);
   }
 
+  function reconcileAfterCurrentEvent() {
+    if (typeof window.queueMicrotask === "function") {
+      window.queueMicrotask(reconcile);
+      return;
+    }
+    Promise.resolve().then(reconcile);
+  }
+
   function schedule() {
     if (queued) return;
     queued = true;
@@ -180,6 +188,7 @@
     const action = target.closest("[data-admin-terminal-action]");
     if (action instanceof HTMLElement && !closeControl) {
       lastOpener = action;
+      reconcileAfterCurrentEvent();
       scheduleSettledReconcile();
       return;
     }
