@@ -31,7 +31,7 @@ concurrency:
 jobs:
   replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
@@ -53,9 +53,31 @@ jobs:
         run: npm run audit:migrations
 
       - name: Start disposable Supabase stack
-        run: >-
-          npx supabase start --workdir backend
-          --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor
+        shell: bash
+        run: |
+          LOG="/tmp/database-replay-startup.log"
+          : > "$LOG"
+          STATUS=1
+
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Supabase startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend \
+              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
+              2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+
+          exit "$STATUS"
 
       - name: Replay migrations from zero twice
         run: |
@@ -67,7 +89,23 @@ jobs:
 
       - name: Capture local service diagnostics
         if: failure()
-        run: npx supabase status --workdir backend || true
+        shell: bash
+        run: |
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/database-replay-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/database-replay-docker.log || true
+          docker system df 2>&1 | tee -a /tmp/database-replay-docker.log || true
+
+      - name: Upload replay diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-replay-diagnostics
+          path: |
+            /tmp/database-replay-startup.log
+            /tmp/database-replay-status.log
+            /tmp/database-replay-docker.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Stop disposable stack
         if: always()
