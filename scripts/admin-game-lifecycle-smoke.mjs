@@ -133,22 +133,22 @@ async function exerciseViewport(viewport) {
     await root.waitFor({ state: "visible", timeout: 12_000 });
     await page.waitForFunction(() => document.querySelector("[data-admin-game-lifecycle]")?.getAttribute("aria-busy") !== "true");
 
-    assert(await root.getByText("Not started", { exact: true }).isVisible(), `${viewport.name}: lifecycle did not load draft state.`);
+    assert(await root.locator(".admin-game-lifecycle__status", { hasText: "Not started" }).isVisible(), `${viewport.name}: lifecycle did not load draft state.`);
     assert(await root.getByRole("button", { name: "Start game" }).isVisible(), `${viewport.name}: start control missing.`);
     await assertLayout(page, root, viewport.name);
 
     if (viewport.fullFlow) {
       await activateAction(page, root, "Start game");
       await confirmModal(page, "Start game");
-      await root.getByText("Active", { exact: true }).waitFor({ state: "visible" });
+      await root.locator(".admin-game-lifecycle__status", { hasText: "Active" }).waitFor({ state: "visible" });
 
       await activateAction(page, root, "Pause mutations");
       await confirmModal(page, "Pause mutations");
-      await root.getByText("Paused", { exact: true }).waitFor({ state: "visible" });
+      await root.locator(".admin-game-lifecycle__status", { hasText: "Paused" }).waitFor({ state: "visible" });
 
       await activateAction(page, root, "Resume game");
       await confirmModal(page, "Resume game");
-      await root.getByText("Active", { exact: true }).waitFor({ state: "visible" });
+      await root.locator(".admin-game-lifecycle__status", { hasText: "Active" }).waitFor({ state: "visible" });
 
       await activateAction(page, root, "Revoke Player sessions");
       await confirmModal(page, "Revoke Player sessions", "REVOKE");
@@ -156,11 +156,11 @@ async function exerciseViewport(viewport) {
 
       await activateAction(page, root, "End game");
       await confirmModal(page, "End game", "END");
-      await root.getByText("Ended", { exact: true }).waitFor({ state: "visible" });
+      await root.locator(".admin-game-lifecycle__status", { hasText: "Ended" }).waitFor({ state: "visible" });
 
       await activateAction(page, root, "Archive game");
       await confirmModal(page, "Archive game", "ARCHIVE");
-      await root.getByText("Archived", { exact: true }).waitFor({ state: "visible" });
+      await root.locator(".admin-game-lifecycle__status", { hasText: "Archived" }).waitFor({ state: "visible" });
 
       assert(mutationRequests.map((item) => item.action).join(",") === "start,pause,resume,revoke_sessions,end,archive", "Lifecycle mutation order was incorrect.");
       for (const item of mutationRequests) {
