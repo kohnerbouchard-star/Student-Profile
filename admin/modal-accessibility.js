@@ -44,6 +44,8 @@
     const selectors = [];
     const action = preferred.getAttribute("data-admin-terminal-action");
     const section = preferred.getAttribute("data-admin-section");
+    const playerId = preferred.getAttribute("data-player-id");
+    if (action && playerId) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"][data-player-id="${CSS.escape(playerId)}"]`);
     if (action) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"]`);
     if (section) selectors.push(`[data-admin-section="${CSS.escape(section)}"]`);
     if (preferred.id) selectors.push(`#${CSS.escape(preferred.id)}`);
@@ -105,13 +107,14 @@
     const dismissOnEscape = options.dismissOnEscape !== false;
     const dismissOnBackdrop = options.dismissOnBackdrop !== false;
     const trapFocus = options.trapFocus !== false;
+    const applyDialogSemantics = options.applyDialogSemantics !== false;
     let closed = false;
     let listening = false;
     let redirectingFocus = false;
     let lastFocusedInside = null;
 
-    if (!dialog.hasAttribute("role")) dialog.setAttribute("role", "dialog");
-    if (trapFocus && !dialog.hasAttribute("aria-modal")) dialog.setAttribute("aria-modal", "true");
+    if (applyDialogSemantics && !dialog.hasAttribute("role")) dialog.setAttribute("role", "dialog");
+    if (applyDialogSemantics && trapFocus && !dialog.hasAttribute("aria-modal")) dialog.setAttribute("aria-modal", "true");
 
     function rememberInsideFocus() {
       const active = document.activeElement;
