@@ -1,0 +1,63 @@
+name: Finalize Legacy Player Cleanup Ledger Once
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/finalize-legacy-player-cleanup-ledger-v1.mjs"
+      - ".github/workflows/finalize-legacy-player-cleanup-ledger-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: legacy-player-cleanup-ledger-${{ github.head_ref }}
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: github.head_ref == 'agent/legacy-player-source-removal-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/legacy-player-source-removal-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: npm ci --no-audit --no-fund
+
+      - name: Reconcile cleanup ledger metadata
+        run: node scripts/finalize-legacy-player-cleanup-ledger-v1.mjs
+
+      - name: Verify repository after metadata correction
+        run: npm test
+
+      - name: Remove one-time helpers
+        run: |
+          rm -f scripts/finalize-legacy-player-cleanup-ledger-v1.mjs
+          rm -f .github/workflows/finalize-legacy-player-cleanup-ledger-once.yml
+
+      - name: Commit final ledger correction
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No ledger correction was produced."
+            false
+          fi
+          git commit -m "docs(player): reconcile legacy cleanup ledger"
+          git push origin HEAD:agent/legacy-player-source-removal-v1
