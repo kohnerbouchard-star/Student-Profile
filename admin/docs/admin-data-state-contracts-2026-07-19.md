@@ -1,8 +1,8 @@
 # Admin data-state contracts
 
 **Roadmap item:** `BETA-ADMIN-006`  
-**Branch:** `agent/admin-data-state-contracts-v1`  
-**Status:** `IN_PROGRESS`  
+**Implementation pull request:** `#231`, merged as `249fc53a23ad23058d376e4e394524af0bdee265`  
+**Status:** `VERIFIED_COMPLETE`  
 **Visual boundary:** preserve the accepted Admin v606 shell and shape-accurate skeleton geometry
 
 ## Canonical states
@@ -55,17 +55,19 @@ This tranche introduces no:
 - accepted v606 shell movement;
 - Backend, database, Auth, Player Terminal, or deployment change.
 
-## Verification boundary
+## Verified evidence
 
-`scripts/admin-data-state-contracts-smoke.mjs` must prove:
+The synchronized implementation candidate was validated on exact head `c0f482914ec34352b924d8220cabb1c87a79a23b`, nine commits ahead and zero behind then-current `main`.
 
-1. all six canonical source contracts;
-2. initial `loading` and committed `loaded`;
-3. background `refreshing` without hiding current data or exposing the page skeleton;
-4. failed refresh to `stale` while preserving data;
-5. explicit successful `empty`;
-6. first-load `failed` with an alert;
-7. state-change events, `aria-busy`, and zero pointer input;
-8. permanent workflow registration and architecture guards.
+- Repository Quality #949 passed.
+- Admin Shell Smoke #858 passed all 89 stages.
+- The mounted six-state smoke passed `loading`, `loaded`, `refreshing`, `stale`, `empty`, and `failed` behavior.
+- Background refresh and stale states preserved current rendered data.
+- `aria-busy`, transition events, initial-failure alerts, explicit empty results, and zero pointer input passed.
+- Retained artifact: `admin-browser-smoke-f871fa9ad768014963f85f3d832f0f93e43186c4`.
+- Artifact digest: `sha256:390e9615b61296f156a151b18563d81305323073434eb6ebe68fb2c3da935830`.
+- PR #231 was squash-merged into `main` as `249fc53a23ad23058d376e4e394524af0bdee265`.
 
-`BETA-ADMIN-006` remains incomplete until the exact synchronized PR head passes Repository Quality and the full Admin Shell workflow and the immutable merge evidence is recorded.
+## Completion boundary
+
+`BETA-ADMIN-006` is `VERIFIED_COMPLETE` at the merged repository boundary. Connected isolated-staging verification remains separately owned by `BETA-ADMIN-007`; this item does not claim a staging or production deployment.
