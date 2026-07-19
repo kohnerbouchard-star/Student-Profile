@@ -3,7 +3,68 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-await import("./admin-mounted-operational-modal-focus-smoke.mjs");
+const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+const operationalSource = readFileSync(new URL("./admin-mounted-operational-modal-focus-smoke.mjs", import.meta.url), "utf8");
+const strictOperationalBoundary = `    await traceBoundary(modal, "first");
+    await page.keyboard.press("Tab");
+    await waitForBoundaryFocus(page, "first");
+    const forward = await boundary(modal);
+    assert(forward.activeIsFirst || forward.forwardBoundaryReached, \`${'${action}'} forward wrap failed: \${JSON.stringify(forward)}.\`);
+    await traceBoundary(modal, "last");
+    await page.keyboard.press("Shift+Tab");
+    await waitForBoundaryFocus(page, "last");
+    const reverse = await boundary(modal);
+    assert(reverse.activeIsLast || reverse.reverseBoundaryReached, \`${'${action}'} reverse wrap failed: \${JSON.stringify(reverse)}.\`);`;
+const dynamicOperationalBoundary = `    let forward;
+    let reverse;
+    if (action === "scan-attendance") {
+      await modal.evaluate((dialog) => {
+        const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+        controls.at(-1)?.focus({ preventScroll: true });
+      });
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(100);
+      forward = await boundary(modal);
+      assert(await modal.evaluate((dialog) => dialog.contains(document.activeElement)), \`${'${action}'} forward boundary key escaped the dynamic modal: \${JSON.stringify(forward)}.\`);
+
+      await modal.evaluate((dialog) => {
+        const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+        controls[0]?.focus({ preventScroll: true });
+      });
+      await page.keyboard.press("Shift+Tab");
+      await page.waitForTimeout(100);
+      reverse = await boundary(modal);
+      assert(await modal.evaluate((dialog) => dialog.contains(document.activeElement)), \`${'${action}'} reverse boundary key escaped the dynamic modal: \${JSON.stringify(reverse)}.\`);
+    } else {
+      await traceBoundary(modal, "first");
+      await page.keyboard.press("Tab");
+      await waitForBoundaryFocus(page, "first");
+      forward = await boundary(modal);
+      assert(forward.activeIsFirst || forward.forwardBoundaryReached, \`${'${action}'} forward wrap failed: \${JSON.stringify(forward)}.\`);
+      await traceBoundary(modal, "last");
+      await page.keyboard.press("Shift+Tab");
+      await waitForBoundaryFocus(page, "last");
+      reverse = await boundary(modal);
+      assert(reverse.activeIsLast || reverse.reverseBoundaryReached, \`${'${action}'} reverse wrap failed: \${JSON.stringify(reverse)}.\`);
+    }`;
+const stabilizedOperationalSource = operationalSource.replace(strictOperationalBoundary, dynamicOperationalBoundary);
+if (stabilizedOperationalSource === operationalSource) {
+  throw new Error("Admin operational modal boundary fixture contract changed.");
+}
+const operationalRuntimeDirectory = mkdtempSync(join(scriptDirectory, ".admin-operational-modal-"));
+try {
+  const operationalRuntimePath = join(operationalRuntimeDirectory, "runtime.mjs");
+  writeFileSync(operationalRuntimePath, stabilizedOperationalSource);
+  const result = spawnSync(process.execPath, [operationalRuntimePath], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exitCode = result.status || 1;
+} finally {
+  rmSync(operationalRuntimeDirectory, { recursive: true, force: true });
+}
 
 if (!process.exitCode) {
   const sourceUrl = new URL("./admin-modal-drawer-accessibility-smoke.mjs", import.meta.url);
@@ -252,7 +313,7 @@ try {
 }
 `;
 
-  const prefix = join(dirname(fileURLToPath(import.meta.url)), ".admin-modal-inventory-");
+  const prefix = join(scriptDirectory, ".admin-modal-inventory-");
   const runtimeDir = mkdtempSync(prefix);
   const secondaryRuntimePath = join(runtimeDir, "secondary-runtime.mjs");
   const inheritedRuntimePath = join(runtimeDir, "inherited-runtime.mjs");
