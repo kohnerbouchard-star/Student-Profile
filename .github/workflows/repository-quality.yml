@@ -8,57 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: repository-quality-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  reconcile-banking-roadmap:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/banking-ledger-roadmap-evidence-v1'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out evidence branch
-        uses: actions/checkout@v7
-        with:
-          ref: agent/banking-ledger-roadmap-evidence-v1
-          fetch-depth: 0
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22.23.1"
-
-      - name: Apply exact Banking roadmap evidence
-        run: node scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
-
-      - name: Validate reconciled ledger
-        shell: bash
-        run: |
-          grep -Fq 'Current audited main baseline:** `b8d227d8d8d0cd178efc63935371ab53eee8b78b`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-          grep -Fq 'PR #230 as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-          grep -Fq '20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-          grep -Fq '`BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome. `IN_PROGRESS`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-
-      - name: Publish validated roadmap content
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TARGET_BRANCH: agent/banking-ledger-roadmap-evidence-v1
-          ROADMAP_PATH: docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
-        shell: bash
-        run: |
-          blob_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}?ref=${TARGET_BRANCH}" --jq .sha)"
-          content="$(base64 -w 0 "${ROADMAP_PATH}")"
-          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${ROADMAP_PATH}" \
-            -f message='docs(roadmap): record Banking ledger invariant authority' \
-            -f branch="${TARGET_BRANCH}" \
-            -f sha="${blob_sha}" \
-            -f content="${content}" \
-            --silent
-
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
