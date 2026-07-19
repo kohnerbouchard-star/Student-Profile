@@ -1,6 +1,5 @@
 import {
-  SEOUL_STOCK_MARKET_TIME_ZONE,
-  resolveStockMarketWindowSettings,
+  readRequiredStockMarketTimeZone,
   validateStockMarketWindowSettings,
 } from "./stockMarketWindowSettings.ts";
 
@@ -10,33 +9,27 @@ declare const Deno: {
 
 Deno.test("configured game timezone is authoritative", () => {
   assertEquals(
-    resolveStockMarketWindowSettings({ timezone: "America/New_York" }),
-    { timezone: "America/New_York", source: "game_setting" },
+    readRequiredStockMarketTimeZone({ timezone: "America/New_York" }),
+    "America/New_York",
   );
 });
 
-Deno.test("missing or invalid game timezone falls back to Seoul", () => {
-  assertEquals(
-    resolveStockMarketWindowSettings({}),
-    {
-      timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
-      source: "seoul_fallback",
-    },
-  );
-  assertEquals(
-    resolveStockMarketWindowSettings({ timezone: "device-local" }),
-    {
-      timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
-      source: "seoul_fallback",
-    },
-  );
+Deno.test("timezone values are normalized before persistence or evaluation", () => {
+  const settings: Record<string, unknown> = {
+    timezone: "  Asia/Seoul  ",
+  };
+  validateStockMarketWindowSettings(settings);
+  assertEquals(settings.timezone, "Asia/Seoul");
 });
 
-Deno.test("settings validation accepts omitted timezone and rejects invalid timezone", () => {
-  validateStockMarketWindowSettings({});
-  validateStockMarketWindowSettings({ timezone: "Europe/London" });
+Deno.test("missing, empty, device-derived, and invalid timezones fail closed", () => {
+  assertThrows(() => readRequiredStockMarketTimeZone({}));
+  assertThrows(() => readRequiredStockMarketTimeZone({ timezone: "" }));
   assertThrows(() =>
-    validateStockMarketWindowSettings({ timezone: "browser-device-zone" })
+    readRequiredStockMarketTimeZone({ timezone: "device-local" })
+  );
+  assertThrows(() =>
+    readRequiredStockMarketTimeZone({ timezone: "browser-device-zone" })
   );
 });
 
