@@ -1,5 +1,5 @@
-import { handleAttendanceOperation } from "./attendanceOperations.ts";
 import { handleIdempotentLedgerOperation } from "./idempotentLedgerOperations.ts";
+import { handleAttendanceOperation } from "./attendanceOperations.ts";
 import {
   handlePlayerOperation,
   loadPlayerHistoryAudit,
