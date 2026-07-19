@@ -32,8 +32,8 @@ function renderStorePurchaseModal(modal) {
           <dl class="player-terminal-connector-meta">
             <div><dt>QUANTITY</dt><dd>${escapeHtml(quote.quantity || modal.quantity || 1)}</dd></div>
             <div><dt>TOTAL PAID</dt><dd>${escapeHtml(formatCurrency(total, currencyCode))}</dd></div>
-            <div><dt>PURCHASE ID</dt><dd><code>${escapeHtml(receipt.purchaseId || "Recorded")}</code></dd></div>
-            <div><dt>QUOTE ID</dt><dd><code>${escapeHtml(receipt.quoteId || quote.quoteId || "—")}</code></dd></div>
+            <div><dt>RECEIPT KEY</dt><dd><code>${escapeHtml(receipt.receiptKey || "Recorded")}</code></dd></div>
+            <div><dt>QUOTE KEY</dt><dd><code>${escapeHtml(receipt.quoteKey || quote.quoteKey || "—")}</code></dd></div>
           </dl>
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-route="inventory" data-player-local-action="close-modal">${icon("inventory")} Open inventory</button><button class="player-terminal-primary-button" type="button" data-player-local-action="close-modal">Close receipt</button></footer>
@@ -53,7 +53,7 @@ function renderStorePurchaseModal(modal) {
             <div><dt>UNIT PRICE</dt><dd>${escapeHtml(formatCurrency(quote.finalUnitPrice, currencyCode))}</dd></div>
             <div><dt>FINAL TOTAL</dt><dd>${escapeHtml(formatCurrency(quote.finalTotalPrice, currencyCode))}</dd></div>
             <div><dt>QUOTE EXPIRES</dt><dd>${escapeHtml(quoteExpiry(quote.expiresAt))}</dd></div>
-            <div><dt>QUOTE ID</dt><dd><code>${escapeHtml(quote.quoteId || "—")}</code></dd></div>
+            <div><dt>QUOTE KEY</dt><dd><code>${escapeHtml(quote.quoteKey || "—")}</code></dd></div>
           </dl>
           ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
         </div>

@@ -122,13 +122,11 @@ import {
   handlePlayerContractRequest,
 } from "../../../src/domains/contracts/api/playerContractHttpHandler.ts";
 import {
-  handlePlayerStoreCatalogRequest,
-} from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
+  handlePlayerStorePublicRequest,
+} from "../../../src/domains/store/api/playerStorePublicHttpHandler.ts";
 import {
-  handlePlayerStorePurchaseHistoryRequest,
-  handlePlayerStorePurchaseRequest,
-  handlePlayerStoreQuoteRequest,
-} from "../../../src/domains/store/api/playerStorePurchaseHttpHandler.ts";
+  readPlayerStorePublicRoutePath,
+} from "../../../src/domains/store/api/playerStorePublicRoutePaths.ts";
 import {
   handlePlayerStockMarketReadRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketReadHttpHandler.ts";
@@ -320,28 +318,23 @@ Deno.serve(async (request) => {
     );
   }
 
-  if (url.pathname.endsWith("/players/me/store/items")) {
-    return handlePlayerStoreCatalogRequest(request, {
-      createServiceClient,
-    });
-  }
+  const playerStoreRoute = readPlayerStorePublicRoutePath(url.pathname);
 
-  if (url.pathname.endsWith("/players/me/store/quote")) {
-    return handlePlayerStoreQuoteRequest(request, {
-      createServiceClient,
-    });
-  }
-
-  if (url.pathname.endsWith("/players/me/store/purchases")) {
-    if (request.method === "GET") {
-      return handlePlayerStorePurchaseHistoryRequest(request, {
-        createServiceClient,
-      });
-    }
-
-    return handlePlayerStorePurchaseRequest(request, {
-      createServiceClient,
-    });
+  if (playerStoreRoute) {
+    const endpointKey = playerStoreRoute.kind === "items"
+      ? "store"
+      : playerStoreRoute.kind === "quotes"
+      ? "storeQuote"
+      : "storePurchase";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerStorePublicRequest(request, playerStoreRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/game/dashboard")) {

@@ -66,7 +66,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const state = terminal.getState();
     if (!isEndpointEnabled(state.data?.capabilities, "storeQuote")) return;
     const itemId = button.dataset.playerPurchase;
-    const item = state.data?.store?.items?.find((candidate) => String(candidate.id) === String(itemId));
+    const item = state.data?.store?.items?.find((candidate) => String(candidate.itemKey || candidate.id) === String(itemId));
     if (!item) return;
     opener = button;
     transaction = {
@@ -96,7 +96,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     try {
       api.setSession(config);
       const operation = await api.execute("storeQuote", {
-        storeItemId: transaction.item.id,
+        itemKey: transaction.item.itemKey || transaction.item.id,
         quantity
       });
       transaction = {
@@ -123,7 +123,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
 
   async function confirmPurchase(button) {
     const quote = transaction?.quote;
-    if (!quote?.quoteId) {
+    if (!quote?.quoteKey) {
       transaction = { ...transaction, stage: "select", error: "Request a current Store quote before confirming the purchase." };
       renderTransaction();
       return;
@@ -139,7 +139,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     try {
       api.setSession(config);
       operation = await api.execute("storePurchase", {
-        quoteId: quote.quoteId,
+        quoteKey: quote.quoteKey,
         clientSubmittedAt: new Date().toISOString()
       });
     } catch (error) {
@@ -152,7 +152,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     transaction = {
       ...transaction,
       stage: "receipt",
-      receipt: operation.result,
+      receipt: operation.result?.receipt || operation.result,
       error: "",
       refreshWarning: ""
     };

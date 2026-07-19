@@ -570,11 +570,13 @@ function storeItemsFromSnapshot(snapshot) {
   const store = object(object(snapshot.me).store);
   const inventoryByItem = new Map(list(store.inventory).map((holding) => [holding.itemId, holding]));
   return list(store.listings).map((item) => ({
-    id: text(item.id || item.itemId),
+    id: text(item.itemKey || item.id || item.itemId),
+    itemKey: text(item.itemKey || item.id || item.itemId),
     name: text(item.name, "Unnamed item"),
     category: text(item.category, "Other"),
     price: number(item.price),
     stock: number(item.stockQuantity),
+    currencyCode: text(item.currencyCode),
     owned: number(inventoryByItem.get(item.id || item.itemId)?.quantityOwned),
     image: categoryImage(item),
     description: text(item.description, "No description is available.")

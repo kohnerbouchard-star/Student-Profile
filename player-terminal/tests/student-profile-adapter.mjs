@@ -35,21 +35,23 @@ const rawDashboard = {
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
-  manifestVersion: "2026-07-19.1",
+  manifestVersion: "2026-07-19.3",
   service: "classroom-api",
   capabilities: {
     routes: {
       news: true,
       market: true,
       contracts: true,
-      inventory: true
+      inventory: true,
+      store: true
     },
     actions: {
       contractAccept: true,
       inventoryUse: true,
       logout: true,
       marketWatchlist: true,
-      notificationsRead: true
+      notificationsRead: true,
+      storePurchase: true
     }
   },
   endpoints: [
@@ -64,6 +66,21 @@ const capabilityManifest = {
     {
       key: "contracts",
       operations: [{ method: "GET", pathTemplate: "/players/me/contracts" }]
+    },
+    {
+      key: "store",
+      operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }]
+    },
+    {
+      key: "storeQuote",
+      operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }]
+    },
+    {
+      key: "storePurchase",
+      operations: [
+        { method: "GET", pathTemplate: "/players/me/store/purchases" },
+        { method: "POST", pathTemplate: "/players/me/store/purchases" }
+      ]
     },
     {
       key: "inventory",
@@ -178,21 +195,32 @@ const responses = {
   },
   storeQuote: {
     ok: true,
-    quoteId: "quote-1",
-    itemId: "item-1",
-    itemName: "Market Lens",
-    quantity: 1,
-    finalUnitPrice: 50,
-    finalTotalPrice: 50,
-    currencyCode: "ECO",
-    expiresAt: "2026-07-17T12:05:00.000Z"
+    quote: {
+      quoteKey: "quote_11111111111111111111111111111111",
+      itemKey: "market-lens",
+      itemName: "Market Lens",
+      quantity: 1,
+      finalUnitPrice: 50,
+      finalTotalPrice: 50,
+      currencyCode: "ECO",
+      expiresAt: "2026-07-17T12:05:00.000Z"
+    }
   },
   storePurchase: {
     ok: true,
-    purchaseId: "purchase-1",
-    quoteId: "quote-1",
-    finalTotalPrice: 50,
-    currencyCode: "ECO",
+    receipt: {
+      receiptKey: "receipt_22222222222222222222222222222222",
+      quoteKey: "quote_11111111111111111111111111111111",
+      itemKey: "market-lens",
+      itemName: "Market Lens",
+      quantity: 1,
+      finalUnitPrice: 50,
+      finalTotalPrice: 50,
+      currencyCode: "ECO",
+      inventoryQuantityOwned: 2,
+      completedAt: "2026-07-17T12:01:00.000Z",
+      alreadyCompleted: false
+    },
     refreshRequired: true
   },
   marketOrder: {
@@ -234,7 +262,7 @@ const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
 assert.equal(session.capabilitySchemaVersion, 1);
-assert.equal(session.capabilityManifestVersion, "2026-07-19.1");
+assert.equal(session.capabilityManifestVersion, "2026-07-19.3");
 assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");
@@ -270,18 +298,18 @@ assert.equal(banking.transactions[0].amount, 25);
 assert.equal(calls.at(-1).path, "/players/me/ledger?limit=50");
 
 const quote = await apiCall(context("storeQuote", "POST", "/store/quotes", {
-  storeItemId: "item-1",
+  itemKey: "market-lens",
   quantity: 1
 }));
-assert.equal(quote.quoteId, "quote-1");
-assert.deepEqual(calls.at(-1).payload, { itemId: "item-1", quantity: 1 });
-assert.equal(calls.at(-1).path, "/players/me/store/quote");
+assert.equal(quote.quote.quoteKey, "quote_11111111111111111111111111111111");
+assert.deepEqual(calls.at(-1).payload, { itemKey: "market-lens", quantity: 1 });
+assert.equal(calls.at(-1).path, "/players/me/store/quotes");
 
 const purchase = await apiCall(context("storePurchase", "POST", "/store/purchases", {
-  quoteId: "quote-1",
+  quoteKey: "quote_11111111111111111111111111111111",
   clientSubmittedAt: "2026-07-17T12:01:00.000Z"
 }, { idempotencyKey: "idem-purchase-1" }));
-assert.equal(purchase.purchaseId, "purchase-1");
+assert.equal(purchase.receipt.receiptKey, "receipt_22222222222222222222222222222222");
 assert.equal(calls.at(-1).payload.idempotencyKey, "idem-purchase-1");
 assert.equal(calls.at(-1).headers["idempotency-key"], "idem-purchase-1");
 

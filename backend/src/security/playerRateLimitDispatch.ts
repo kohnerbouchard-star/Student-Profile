@@ -116,6 +116,16 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   notificationsRead: byMethod({
     POST: operation("player.notifications.write", "write"),
   }),
+  store: byMethod({
+    GET: operation("player.store.read", "read"),
+  }),
+  storeQuote: byMethod({
+    POST: operation("player.store.quote", "write"),
+  }),
+  storePurchase: byMethod({
+    GET: operation("player.store.purchases.read", "read"),
+    POST: operation("player.store.purchase", "sensitive"),
+  }),
 });
 
 export function readReviewedPlayerRateLimitOperation(
