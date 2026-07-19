@@ -4,13 +4,19 @@ on:
   push:
     branches:
       - agent/exchange-calendar-config-v1
+  pull_request:
+    paths:
+      - backend/**
+      - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/finalize-seoul-market-timezone-fallback-v1.mjs
+      - .github/workflows/configurable-stock-market-timezone-v1.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: configurable-stock-market-timezone-v1-${{ github.ref }}
+  group: configurable-stock-market-timezone-v1-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -59,6 +65,7 @@ jobs:
         run: git diff --check
 
       - name: Commit generated integration
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           if git diff --quiet; then
