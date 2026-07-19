@@ -235,12 +235,12 @@ The application is not yet approved for beta or production runtime cutover becau
 
 - [x] `BETA-ADMIN-001` Complete keyboard-only navigation coverage. `VERIFIED_COMPLETE` through PR #178 merged as `8ae4fc3dc9233b2e826c409680cd362c61509033` with mounted three-viewport, workflow, focus-order, and pointer-free evidence.
 - [x] `BETA-ADMIN-002` Complete focus trap, Escape, and focus restoration for every major modal and drawer. `VERIFIED_COMPLETE` through foundation PR #197 merged as `ff9c6207ae2f7284fe753f0a719b0aa0c18017ff` plus corrective exhaustive current-main inventory PR #209.
-- [ ] `BETA-ADMIN-003` Remove remaining obsolete credential-dialog renderer if still present.
+- [x] `BETA-ADMIN-003` Remove remaining obsolete credential-dialog renderer if still present. `VERIFIED_COMPLETE` through PR #227 merged as `322db9d25fbfc581be59ae0fbe80ca20ce89b42d`; the access-code bridge is event-only, dead Player-create suppression code was removed, the source ratchet prevents return, Repository Quality #931 passed, and Admin Shell Smoke #840 passed all 87 stages.
 - [x] `BETA-ADMIN-004` Remove the first global request interception layer and lower the architecture ratchet. `VERIFIED_COMPLETE` via PR #168 merged as `1d487afc766146b5e3e19f718252b3eff9a1168e`; Repository Quality #421, Admin Shell Smoke #606, and Branch Hygiene #17 passed, and the ratchet decreased to 7 fetch assignments / 12 mutation observers.
 - [x] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event. `VERIFIED_COMPLETE` through PR #193 merged as `8e9ff38270248d3ce0a46afd4179b371379e5da3`.
 - [ ] `BETA-ADMIN-006` Add explicit loading, loaded, refreshing, stale, empty, and failed data-state contracts.
 - [ ] `BETA-ADMIN-007` Add staging-backed Admin smoke after isolated staging exists.
-- [ ] `BETA-ADMIN-008` Add the inventory-redemption review queue after Backend handoff.
+- [x] `BETA-ADMIN-008` Add the inventory-redemption review queue after Backend handoff. `VERIFIED_COMPLETE` through PR #177 merged as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`; Repository Quality #885, Staging Readiness Preflight #58, Database Replay #296, and Admin Shell Smoke #827 with all 87 stages passed.
 - [ ] `BETA-ADMIN-009` Add emergency game mutation pause/resume controls.
 - [ ] `BETA-ADMIN-010` Verify start, pause, resume, end, archive, session revoke, and join-code reset lifecycle.
 
