@@ -12,17 +12,47 @@ exit=0
 [0m[32mCheck[0m src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts
 [0m[32mCheck[0m src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts
 [0m[32mCheck[0m src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
-[0m[1mTS2352 [0m[ERROR]: Conversion of type '{ [k: string]: Readonly<{ exchangeCode: "FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX"; countryCode: "NORTHREACH" | "YRETHIA" | "THALORIS" | "SOLVEND" | "ELDORAN" | ... 4 more ... | "SYNDALIS"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' to type 'Record<"FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX", StockExchangeCalendarDefinition>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Type '{ [k: string]: Readonly<{ exchangeCode: "FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX"; countryCode: "NORTHREACH" | "YRETHIA" | "THALORIS" | "SOLVEND" | "ELDORAN" | ... 4 more ... | "SYNDALIS"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' is missing the following properties from type 'Record<"FGX" | "SBX" | "DHM" | "AUX" | "CMX" | "GFX" | "SCX" | "ECX" | "IHX" | "BDX", StockExchangeCalendarDefinition>': FGX, SBX, DHM, AUX, and 6 more.
-> = Object.freeze(Object.fromEntries(
-[0m[31m                  ^[0m
-    at [0m[36mfile:///home/runner/work/Student-Profile/Student-Profile/backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.ts[0m:[0m[33m77[0m:[0m[33m19[0m
+[0m[38;5;245mrunning 11 tests from ./src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts[0m
+stock trading repository calls execute order RPC with one game and player session ... [0m[32mok[0m [0m[38;5;245m(641µs)[0m
+stock trading repository maps filled buy response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(201µs)[0m
+stock trading repository maps filled sell response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(143µs)[0m
+stock trading repository maps insufficient cash to 409 ... [0m[32mok[0m [0m[38;5;245m(304µs)[0m
+stock trading repository maps insufficient shares to 409 ... [0m[32mok[0m [0m[38;5;245m(196µs)[0m
+stock trading repository maps missing game, player, and stock to 404 ... [0m[32mok[0m [0m[38;5;245m(365µs)[0m
+stock trading repository rejects execution while the market is closed ... [0m[32mok[0m [0m[38;5;245m(129µs)[0m
+stock trading repository maps missing schema to schema-not-applied ... [0m[32mok[0m [0m[38;5;245m(157µs)[0m
+stock trading repository forwards idempotency key ... [0m[32mok[0m [0m[38;5;245m(109µs)[0m
+stock trading repository does not call initialize portfolio RPC ... [0m[32mok[0m [0m[38;5;245m(109µs)[0m
+stock trading repository does not call runner, read, or seed RPCs ... [0m[32mok[0m [0m[38;5;245m(91µs)[0m
+[0m[38;5;245mrunning 6 tests from ./src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts[0m
+all ten countries map to a stable exchange ... [0m[32mok[0m [0m[38;5;245m(451µs)[0m
+market opens at 08:00 Asia Seoul on a weekday ... [0m[32mok[0m [0m[38;5;245m(28ms)[0m
+market is closed before open and reports the next transition ... [0m[32mok[0m [0m[38;5;245m(229µs)[0m
+market closes at 17:00 Asia Seoul ... [0m[32mok[0m [0m[38;5;245m(6ms)[0m
+weekends do not generate open market minutes ... [0m[32mok[0m [0m[38;5;245m(16ms)[0m
+minute keys are stable and exchange scoped ... [0m[32mok[0m [0m[38;5;245m(114µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts[0m
+exchange calendar migration gates market orders at the database boundary ... [0m[32mok[0m [0m[38;5;245m(777µs)[0m
+[0m[38;5;245mrunning 15 tests from ./src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts[0m
+stock market runner rejects non-POST requests ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+stock market runner rejects missing configured secret ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock market runner rejects missing or invalid request secret ... [0m[32mok[0m [0m[38;5;245m(680µs)[0m
+stock market runner rejects missing gameSessionId ... [0m[32mok[0m [0m[38;5;245m(727µs)[0m
+stock market runner rejects multiple game session request shapes ... [0m[32mok[0m [0m[38;5;245m(370µs)[0m
+stock market runner rejects ticks while the market is closed ... [0m[32mok[0m [0m[38;5;245m(11ms)[0m
+stock market runner returns success shape ... [0m[32mok[0m [0m[38;5;245m(7ms)[0m
+stock market runner publishes one public stock tick after persistence ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+stock market runner posts market news and broadcasts public event ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock market runner keeps successful tick response when realtime publish fails ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner keeps successful tick response when realtime publisher throws ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner creates storyline hook from factory after successful tick ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner invokes storyline hook after successful tick ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner keeps successful tick response when storyline hook fails ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+stock market runner derives the default seed from one game session ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
 
-[0m[1m[31merror[0m: Type checking failed.
+[0m[32mok[0m | 33 passed | 0 failed [0m[38;5;245m(236ms)[0m
 
-  [33minfo:[39m The program failed type-checking, but it still might work correctly.
-  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
-exit=1
+exit=0
 
 ## backend typecheck
 
@@ -33,9 +63,68 @@ exit=1
 > typecheck
 > tsc --noEmit -p tsconfig.json
 
-src/domains/stocks/calendars/stockMarketExchangeCalendar.ts(77,19): error TS2352: Conversion of type '{ [k: string]: Readonly<{ exchangeCode: "AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX"; countryCode: "DRAVENLOK" | "ELDORAN" | "LUMENOR" | "NORTHREACH" | "SOLVEND" | ... 4 more ... | "YRETHIA"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' to type 'Record<"AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX", StockExchangeCalendarDefinition>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Type '{ [k: string]: Readonly<{ exchangeCode: "AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX"; countryCode: "DRAVENLOK" | "ELDORAN" | "LUMENOR" | "NORTHREACH" | "SOLVEND" | ... 4 more ... | "YRETHIA"; ... 7 more ...; holidayCalendarStatus: "pending"; }>; }' is missing the following properties from type 'Record<"AUX" | "BDX" | "CMX" | "DHM" | "ECX" | "FGX" | "GFX" | "IHX" | "SBX" | "SCX", StockExchangeCalendarDefinition>': AUX, BDX, CMX, DHM, and 6 more.
-exit=1
+
+> typecheck:edge
+> deno check --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/classroom-api/index.ts
+
+[0m[32mDownload[0m https://esm.sh/@supabase/supabase-js@2.108.2
+[0m[32mDownload[0m https://esm.sh/@supabase/supabase-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/postgrest-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/storage-js@2.108.2/dist/index.d.mts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/FunctionsClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/dist/module/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimeClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimeChannel.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/RealtimePresence.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/websocket-factory.d.ts
+[0m[32mDownload[0m https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/GoTrueAdminApi.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/GoTrueClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/AuthAdminApi.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/AuthClient.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/errors.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/locks.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/serializer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/phoenix/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/dist/module/lib/constants.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/index.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/fetch.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/helpers.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/web3/ethereum.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/web3/solana.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.dom.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/error-codes.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/channel.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/longpoll.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/presence.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/push.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/serializer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/socket.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/timer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/dist/module/lib/webauthn.errors.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.2/priv/static/types/constants.d.ts
+[0m[32mCheck[0m supabase/functions/classroom-api/index.ts
+
+> typecheck:stock-edge
+> deno check --config=supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/stock-market-player-read/index.ts supabase/functions/stock-market-read/index.ts supabase/functions/stock-market-runner/index.ts supabase/functions/stock-market-seed-copy/index.ts supabase/functions/stock-market-trading/index.ts
+
+[0m[32mCheck[0m supabase/functions/stock-market-player-read/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-read/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-runner/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-seed-copy/index.ts
+[0m[32mCheck[0m supabase/functions/stock-market-trading/index.ts
+
+> typecheck:admin-edge
+> deno check --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/index.ts
+
+[0m[32mCheck[0m supabase/functions/admin-api/index.ts
+exit=0
 
 ## migration source audit
 
@@ -51,10 +140,10 @@ exit=1
 exit=0
 
 ## integration drift check
-Exchange-calendar patch drift: backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
-exit=1
+Verified exchange-calendar runtime integration.
+exit=0
 
 ## diff whitespace check
 exit=0
 
-finalStatus=1
+finalStatus=0
