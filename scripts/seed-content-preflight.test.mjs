@@ -22,11 +22,11 @@ test("current PR #163 design catalog is structurally valid and reports readiness
   assert.equal(codes.has("UNIVERSE_FILE_MISSING"), false);
   assert.equal(codes.has("UNIVERSE_CLAIMS_UNVERIFIED"), false);
   assert.equal(codes.has("ACTIVE_MARKET_COUNTRIES_INCOMPLETE"), false);
+  assert.equal(codes.has("ARRIVAL_PACKAGES_INCOMPLETE"), false);
   assert.equal(codes.has("SIMULATION_CHECKSUM_MISMATCH"), false);
   assert.equal(codes.has("SIMULATION_DECLARED_FILE_MISSING"), false);
   assert.ok(codes.has("SIMULATION_RAW_EVIDENCE_NOT_RETAINED"));
   assert.ok(codes.has("LOCATION_MAP_PENDING"));
-  assert.ok(codes.has("ARRIVAL_PACKAGES_INCOMPLETE"));
 });
 
 test("preflight report is deterministic for unchanged inputs", async () => {
@@ -48,6 +48,7 @@ test("staging mode remains blocked until executable content is complete", async 
   assert.ok(report.summary.blockers > 0 || report.summary.errors > 0);
   assert.ok(report.issues.some((entry) => entry.code === "RUNTIME_ACTIVATION_DISABLED"));
   assert.equal(report.issues.some((entry) => entry.code === "ACTIVE_MARKET_COUNTRIES_INCOMPLETE"), false);
+  assert.equal(report.issues.some((entry) => entry.code === "ARRIVAL_PACKAGES_INCOMPLETE"), false);
   assert.ok(report.issues.some((entry) => entry.code === "SIMULATION_RAW_EVIDENCE_NOT_RETAINED"));
   assert.equal(report.issues.some((entry) => entry.code === "UNIVERSE_NOT_STAGING_READY"), false);
 });
