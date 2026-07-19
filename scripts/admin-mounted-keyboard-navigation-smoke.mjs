@@ -253,8 +253,9 @@ async function exerciseNavigation(browser, viewport) {
       await current.focus();
       await page.keyboard.press("Tab");
       assert(await activeElementIsEligible(page), `${item.section} Tab entered an excluded or disabled control.`);
+      await page.keyboard.press("Shift+Tab");
+      assert(await current.evaluate((node) => document.activeElement === node), `${item.section} Shift+Tab did not restore the section control.`);
       sections.push(item.section);
-      await current.focus();
     }
     assert(errors.length === 0, `Mounted Admin navigation emitted browser errors: ${errors[0]}`);
     return { viewport, sections };
