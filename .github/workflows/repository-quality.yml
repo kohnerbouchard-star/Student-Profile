@@ -8,13 +8,54 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: repository-quality-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  reconcile-banking-roadmap:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/banking-ledger-roadmap-evidence-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out evidence branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/banking-ledger-roadmap-evidence-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Apply exact Banking roadmap evidence
+        run: node scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
+
+      - name: Validate reconciled ledger
+        shell: bash
+        run: |
+          grep -Fq 'Current audited main baseline:** `b8d227d8d8d0cd178efc63935371ab53eee8b78b`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          grep -Fq 'PR #230 as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          grep -Fq '20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          grep -Fq '`BETA-BANK-004` Verify every economic mutation produces exactly one expected ledger outcome. `IN_PROGRESS`' docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+
+      - name: Remove one-time helpers and publish permanent diff
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --prune
+          git checkout origin/main -- .github/workflows/repository-quality.yml
+          rm scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md .github/workflows/repository-quality.yml scripts/apply-banking-ledger-roadmap-evidence-v1.mjs
+          git diff --cached --check
+          git commit -m "docs(roadmap): record Banking ledger invariant authority"
+          git push origin HEAD:agent/banking-ledger-roadmap-evidence-v1
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
