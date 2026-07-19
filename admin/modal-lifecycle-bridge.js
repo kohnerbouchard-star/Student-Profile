@@ -136,7 +136,7 @@
     }
 
     const action = target.closest("[data-admin-terminal-action]");
-    if (action instanceof HTMLElement && !action.closest(DIALOG_SELECTOR)) {
+    if (action instanceof HTMLElement && !closeControl) {
       lastOpener = action;
       scheduleSettledReconcile();
       return;
