@@ -139,6 +139,12 @@
       window.requestAnimationFrame(() => {
         const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
         focusStableTarget(target);
+        window.requestAnimationFrame(() => {
+          const replacement = semanticFocusReplacement(opener);
+          if (replacement instanceof HTMLElement && document.activeElement !== replacement) {
+            focusStableTarget(replacement);
+          }
+        });
       });
     }
 
