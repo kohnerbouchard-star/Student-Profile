@@ -11,7 +11,7 @@
   const LEGACY_CONTRACT_TOKENS = Object.freeze([
     "admin-overview-quick-actions-card",
     "storeButton.hidden = true",
-    "section !== \"Store\"",
+    'section !== "Store"',
   ]);
 
   function reconcile() {
