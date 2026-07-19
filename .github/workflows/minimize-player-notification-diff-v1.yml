@@ -1,0 +1,47 @@
+name: Minimize Player Notification Diff v1
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  minimize:
+    if: github.head_ref == 'agent/player-notification-inbox-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/player-notification-inbox-v1
+          fetch-depth: 0
+      - name: Reapply only semantic changes
+        shell: bash
+        run: |
+          files=(
+            backend/src/domains/notifications/api/playerNotificationHttpHandler.ts
+            backend/src/domains/notifications/contracts/playerNotificationContracts.ts
+            backend/src/domains/notifications/infrastructure/supabasePlayerNotificationRepository.ts
+            backend/src/domains/notifications/services/playerNotificationService.test.ts
+            backend/src/domains/notifications/services/playerNotificationService.ts
+            player-terminal/package.json
+            player-terminal/src/api/backend-routes.js
+            player-terminal/src/api/endpoints.js
+            player-terminal/src/api/response-normalizer.js
+            player-terminal/src/main.js
+          )
+          git diff -w origin/main -- "${files[@]}" > /tmp/notification-semantic.patch
+          git checkout origin/main -- "${files[@]}"
+          git apply --whitespace=fix /tmp/notification-semantic.patch
+          git diff --check
+      - name: Remove helper and publish minimized diff
+        shell: bash
+        run: |
+          rm .github/workflows/minimize-player-notification-diff-v1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor(notifications): minimize integration diff"
+          git push origin HEAD:agent/player-notification-inbox-v1
