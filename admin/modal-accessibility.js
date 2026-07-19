@@ -53,7 +53,9 @@
   }
 
   function focusStableTarget(target) {
-    if (!(target instanceof HTMLElement) || !target.isConnected || !visible(target) || !enabled(target)) return;
+    if (!(target instanceof HTMLElement) || !target.isConnected || !enabled(target)) return;
+    const isAdminRoot = target.id === "adminPreview" || target.classList.contains("admin-terminal-shell-main");
+    if (!isAdminRoot && !visible(target)) return;
     if (target.tabIndex < 0 && !target.matches(FOCUSABLE_SELECTOR)) target.tabIndex = -1;
     target.focus({ preventScroll: true });
   }
@@ -115,8 +117,8 @@
     }
 
     function restoreFocus() {
-      const target = stableFocusTarget(opener);
-      if (!target) return;
+      const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+      if (!(target instanceof HTMLElement)) return;
       window.requestAnimationFrame(() => focusStableTarget(target));
     }
 
