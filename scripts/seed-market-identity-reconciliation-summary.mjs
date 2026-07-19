@@ -30,20 +30,24 @@ async function loadUniverse() {
 async function loadActive() {
   const fileNames = (await readdir(activeRoot)).filter((name) => name.includes("active-market-candidate") && name.endsWith(".json")).sort();
   const records = [];
+  const authorities = new Map();
   for (const fileName of fileNames) {
     const document = await readJson(path.join(activeRoot, fileName));
     const market = document.market ?? document;
     const instruments = market.instruments ?? document.instruments ?? [];
+    const authority = document.identityAuthority ?? market.identityAuthority ?? "curated-active-candidate";
+    authorities.set(authority, (authorities.get(authority) ?? 0) + instruments.length);
     for (const instrument of instruments) {
       records.push({
         ...instrument,
         country: instrument.country ?? market.country ?? document.country,
         currency: instrument.currency ?? market.currency ?? document.currency,
         exchange: instrument.exchange ?? market.exchange ?? document.exchange,
+        identityAuthority: authority,
       });
     }
   }
-  return records;
+  return { records, authorities };
 }
 
 function counts(records, field) {
@@ -64,7 +68,7 @@ function buildReport(universe, active) {
   let exchangeMismatches = 0;
   const affectedCountries = new Set();
 
-  for (const record of active) {
+  for (const record of active.records) {
     const match = bySymbol.get(record.symbol);
     if (!match) {
       missing += 1;
@@ -91,18 +95,20 @@ function buildReport(universe, active) {
     generatedAt: "2026-07-19",
     sourceUniversePackId: universe.manifest.packId,
     sourceUniverseVersion: universe.manifest.version,
-    reviewStatus: blockers === 0 ? "canonical-identities-reconciled" : "canonicalization-required",
+    reviewStatus: blockers === 0 ? "active-identities-reconciled" : "canonicalization-required",
     productionAuthorized: false,
     decisions: {
-      overlappingSymbolAuthority: "curated-active-candidate",
+      curatedPackAuthority: "Curated active candidates override generated identity fields for their overlapping symbols.",
+      universeDerivedPackAuthority: "Universe-derived selections inherit canonical universe identity without remapping.",
       publicInstitutionRoleFamilies: "approved-for-country-qualified-design-use",
       generatedCorporateRoots: "placeholder-only-not-approved-for-public-activation",
-      activationRule: "No generated and curated records may coexist as separate instruments under one symbol.",
+      activationRule: "No candidate may diverge from its canonical universe identity or coexist as a second instrument under one symbol.",
     },
     summary: {
       universeRecords: universe.records.length,
-      activeCandidateRecords: active.length,
-      countriesWithActiveCandidates: [...new Set(active.map((record) => record.country))].sort(),
+      activeCandidateRecords: active.records.length,
+      recordsByIdentityAuthority: Object.fromEntries([...active.authorities.entries()].sort(([a], [b]) => a.localeCompare(b))),
+      countriesWithActiveCandidates: [...new Set(active.records.map((record) => record.country))].sort(),
       exactCanonicalMatches: exact,
       conflictingSymbolIdentities: conflicts,
       missingUniverseSymbols: missing,
@@ -110,14 +116,14 @@ function buildReport(universe, active) {
       exchangeMismatches,
       affectedCountries: [...affectedCountries].sort(),
       blockers,
-      activeRecordsByCountry: counts(active, "country"),
-      activeRecordsByInstrumentType: counts(active, "instrumentType"),
+      activeRecordsByCountry: counts(active.records, "country"),
+      activeRecordsByInstrumentType: counts(active.records, "instrumentType"),
     },
-    requiredResolution: [
-      "Overlay curated active-candidate identities into universe records keyed by country and symbol.",
+    requiredInvariants: [
       "Preserve curated IDs referenced by enrichment and simulation evidence unless every reference is migrated atomically.",
-      "Regenerate country checksums and rerun universe, issuer, editorial, preflight, and simulation-reference audits.",
-      "Keep activationAuthorized false and runtimeSupport unverified.",
+      "Require universe-derived candidates to remain byte-equivalent on canonical identity fields.",
+      "Regenerate country checksums and rerun universe, issuer, editorial, preflight, and simulation-reference audits after identity changes.",
+      "Keep activationAuthorized false and runtimeSupport unverified until runtime capability and calibration gates pass.",
     ],
   };
 }
@@ -125,7 +131,8 @@ function buildReport(universe, active) {
 function markdown(report) {
   const s = report.summary;
   const rows = Object.entries(s.activeRecordsByCountry).map(([country, count]) => `| ${country} | ${count} |`).join("\n");
-  return `# Market Identity Reconciliation Audit v1\n\nStatus: **${report.reviewStatus}**\nProduction authorization: false\n\n## Result\n\n- universe records checked: ${s.universeRecords};\n- curated active-candidate records checked: ${s.activeCandidateRecords};\n- exact canonical matches: ${s.exactCanonicalMatches};\n- conflicting reused-symbol identities: ${s.conflictingSymbolIdentities};\n- missing universe symbols: ${s.missingUniverseSymbols};\n- active-ID conflicts: ${s.activeIdConflicts};\n- exchange mismatches: ${s.exchangeMismatches};\n- blocking findings: **${s.blockers}**.\n\n## Coverage\n\n| Country | Active records |\n|---|---:|\n${rows}\n\n## Decision\n\nThe curated active-candidate identity is canonical for every overlapping symbol because enrichment and simulation evidence already reference those IDs. Generated identities are placeholders and may not coexist as separate instruments under the same symbol.\n\nThe ten country-qualified public-institution role families are approved for design use. The fifteen generated corporate roots remain placeholder taxonomy and are not approved for public activation.\n\n## Required correction\n\n1. Overlay curated active IDs, names, issuer IDs, issuer names, exchanges, and compatible identity fields into matching universe records.\n2. Preserve active enrichment and simulation references or migrate them atomically.\n3. Regenerate checksums and rerun all seed-content audits.\n4. Keep runtime activation disabled.\n`;
+  const authorityRows = Object.entries(s.recordsByIdentityAuthority).map(([authority, count]) => `| ${authority} | ${count} |`).join("\n");
+  return `# Market Identity Reconciliation Audit v1\n\nStatus: **${report.reviewStatus}**\nProduction authorization: false\n\n## Result\n\n- universe records checked: ${s.universeRecords};\n- active-candidate records checked: ${s.activeCandidateRecords};\n- exact canonical matches: ${s.exactCanonicalMatches};\n- conflicting reused-symbol identities: ${s.conflictingSymbolIdentities};\n- missing universe symbols: ${s.missingUniverseSymbols};\n- active-ID conflicts: ${s.activeIdConflicts};\n- exchange mismatches: ${s.exchangeMismatches};\n- blocking findings: **${s.blockers}**.\n\n## Identity authority\n\n| Authority | Records |\n|---|---:|\n${authorityRows}\n\nCurated active candidates override generated identity fields for their symbols because enrichment and simulation evidence already references those IDs. Universe-derived selections inherit canonical identity directly and do not override the universe.\n\n## Coverage\n\n| Country | Active records |\n|---|---:|\n${rows}\n\n## Required invariants\n\n1. Preserve curated IDs or migrate every reference atomically.\n2. Keep universe-derived selections identical on canonical identity fields.\n3. Regenerate checksums and rerun all seed-content audits after identity changes.\n4. Keep runtime activation disabled until capability, enrichment, simulation, and release gates pass.\n`;
 }
 
 async function compareOrWrite(filePath, expected) {
