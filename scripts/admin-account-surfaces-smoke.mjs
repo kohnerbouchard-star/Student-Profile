@@ -136,6 +136,12 @@ await page.addInitScript(({ accessToken, gameId, adminId }) => {
     user: { id: adminId, email: "admin@example.test" },
   }));
   sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+  window.__adminKeyboardPointerEvents = [];
+  for (const type of ["pointerdown", "mousedown", "touchstart"]) {
+    window.addEventListener(type, (event) => {
+      window.__adminKeyboardPointerEvents.push({ type: event.type, target: event.target?.tagName || "" });
+    }, true);
+  }
 }, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
 
 await page.route("**/functions/v1/admin-api/**", async (route) => {
@@ -167,6 +173,13 @@ const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 async function capture(name) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
   writeFileSync(`${ARTIFACT_DIR}/${name}.html`, await page.content());
+}
+
+async function keyboardActivate(locator, key = "Enter") {
+  await locator.waitFor({ state: "visible", timeout: 5000 });
+  await locator.focus();
+  assert(await locator.evaluate((node) => document.activeElement === node), `Keyboard target did not receive focus: ${await locator.textContent()}`);
+  await page.keyboard.press(key);
 }
 
 async function inspect(action, label) {
@@ -208,12 +221,11 @@ try {
 
   for (const [actionName, label, expected] of surfaces) {
     const user = page.locator("[data-admin-terminal-user]").first();
-    await user.click();
+    await keyboardActivate(user, "Enter");
     const menu = page.locator("[data-admin-terminal-user-menu]").first();
     await menu.waitFor({ state: "visible", timeout: 5000 });
     const action = menu.locator(`[data-admin-terminal-action="${actionName}"]`).first();
-    await action.waitFor({ state: "visible", timeout: 5000 });
-    await action.click();
+    await keyboardActivate(action, actionName === "open-admin-notifications" ? "Space" : "Enter");
     await page.waitForTimeout(700);
 
     assert(errors.length === 0, errors[0] || `${label} emitted a browser error.`);
@@ -228,13 +240,18 @@ try {
     await capture(`account-${slug(label)}`);
 
     const overview = page.locator('[data-admin-section="Overview"]').first();
-    await overview.waitFor({ state: "visible", timeout: 5000 });
-    await overview.click();
+    await keyboardActivate(overview, "Enter");
     await page.waitForTimeout(350);
   }
 
-  writeFileSync(`${ARTIFACT_DIR}/account-page-summary.json`, JSON.stringify(summaries, null, 2));
-  console.log("All six accepted v606 account surfaces passed.");
+  const keyboardEvidence = await page.evaluate(() => ({
+    modality: document.documentElement.getAttribute("data-admin-input-modality"),
+    pointerEvents: window.__adminKeyboardPointerEvents || [],
+  }));
+  assert(keyboardEvidence.modality === "keyboard", "Account surfaces lost keyboard modality.");
+  assert(keyboardEvidence.pointerEvents.length === 0, `Account surfaces emitted pointer input: ${JSON.stringify(keyboardEvidence.pointerEvents)}.`);
+  writeFileSync(`${ARTIFACT_DIR}/account-page-summary.json`, JSON.stringify({ summaries, keyboardEvidence }, null, 2));
+  console.log("All six accepted v606 account surfaces passed by keyboard.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/account-page-summary.json`, JSON.stringify({ summaries, errors, failure: error.message }, null, 2));
   await capture("account-surface-failure");

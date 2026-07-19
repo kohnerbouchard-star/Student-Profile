@@ -153,7 +153,7 @@ try {
       summaryRows: summary?.querySelectorAll(".admin-terminal-settings-summary-list > div").length || 0,
       toggleText: toggle?.textContent?.trim() || "",
       toggleExpanded: toggle?.getAttribute("aria-expanded") || "",
-      saveBarHidden: Boolean(saveBar?.hidden || getComputedStyle(saveBar).display === "none"),
+      saveBarHidden: !saveBar || saveBar.hidden || getComputedStyle(saveBar).display === "none",
       sectionCount: cards.length,
       sectionClasses: cards.map((card) => card.className),
       economyGroupExists: Boolean(pageRoot?.querySelector("[data-settings-economy-group]")),
@@ -235,6 +235,9 @@ try {
     return pageRoot?.classList.contains("has-unsaved-settings") &&
       bar && !bar.hidden && button && !button.disabled;
   }, null, { timeout: 5_000 });
+  await page.waitForFunction(() =>
+    /unsaved/i.test(document.querySelector("[data-settings-save-status]")?.textContent || ""),
+  null, { timeout: 5_000 });
 
   const formula = await page.locator("[data-attendance-reward-formula]").innerText();
   const summaryAfterChange = await page.locator("[data-settings-config-summary]").innerText();
@@ -354,7 +357,7 @@ try {
         ?.getAttribute("data-settings-ux-ready") || "",
       baselineReady: document.querySelector(".admin-terminal-settings-page")
         ?.getAttribute("data-settings-ux-baseline-ready") || "",
-      saveBarHidden: Boolean(saveBar?.hidden || getComputedStyle(saveBar).display === "none"),
+      saveBarHidden: !saveBar || saveBar.hidden || getComputedStyle(saveBar).display === "none",
     };
   });
   if (

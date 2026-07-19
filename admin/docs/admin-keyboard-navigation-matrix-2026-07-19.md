@@ -1,38 +1,52 @@
 # Admin keyboard navigation matrix
 
 **Roadmap item:** `BETA-ADMIN-001`  
-**Branch:** `agent/admin-keyboard-navigation-v1`  
-**Status:** `IN_PROGRESS`  
+**Current branch:** `agent/admin-keyboard-navigation-v2`  
+**Pull request:** `#178`  
+**Status:** `IMPLEMENTED_NOT_MERGED`  
+**Acceptance state:** all `BETA-ADMIN-001` implementation and browser-evidence requirements satisfied  
 **Visual boundary:** preserve the accepted Admin v606 shell
 
-## First bounded tranche
+## Consolidated implementation
 
-This tranche adds a transport-independent keyboard controller for the existing Admin shell. It does not redesign the Admin console, replace delegated click handling, intercept requests, observe the DOM, or add runtime styles.
+PR #173 merged the first bounded tranche into `main`. It established the transport-independent keyboard controller, primary-section arrow navigation, tablist navigation, non-native Enter/Space activation, explicit input modality, external `:focus-visible` treatment, forced-colors support, and repository architecture guards.
+
+PR #178 completes the remaining `BETA-ADMIN-001` evidence without redesigning the Admin console or replacing its delegated click authority.
 
 | Surface | Keyboard contract | Automated evidence |
 |---|---|---|
-| Primary Admin sections | Arrow Up/Down/Left/Right moves focus with wrapping; Home/End moves to the boundary; existing Enter/Space activation remains authoritative | `admin-keyboard-navigation-smoke.mjs` and existing three-viewport Admin browser smoke |
-| Admin tablists | Arrow keys and Home/End move and activate the selected tab | `admin-keyboard-navigation-smoke.mjs` |
-| Non-native delegated Admin actions | Enter and Space dispatch the existing click contract only when enabled | `admin-keyboard-navigation-smoke.mjs` |
-| Input modality | Keyboard and pointer modality are explicit and do not depend on DOM observation | source and browser smoke |
-| Visible focus | Focus-visible treatment is external CSS and includes forced-colors support | source and browser smoke |
-| Architecture | No `window.fetch` assignment, `MutationObserver`, inline style, runtime style element, or generated visual shell | source smoke and architecture audits |
+| Primary Admin pages | Arrow navigation and Enter activation cover Overview, Attendance, Players, Contracts, Store, Marketplace, Settings, and Logs | `admin-mounted-keyboard-navigation-smoke.mjs` |
+| Sequential focus | Tab and Shift+Tab remain eligible and reversible at desktop, compact, and narrow widths | `admin-mounted-keyboard-navigation-smoke.mjs` |
+| Page-specific order | Stable focus sequences are recorded for every primary page, including filters, presets, exports, and quick actions | `admin-keyboard-focus-order-smoke.mjs` |
+| Add Player | Enter opens the workflow; keyboard input sets text and select fields; Enter submits one normalized request | `admin-keyboard-workflows-smoke.mjs` |
+| Add Contract | Space opens the workflow; keyboard input completes required fields; Enter submits the published Contract request | `admin-keyboard-workflows-smoke.mjs` |
+| Add Store Item | Enter opens the workflow; keyboard input completes text, numeric, and select fields; Space submits the normalized catalog request | `admin-keyboard-workflows-smoke.mjs` |
+| Attendance scanner | Space opens the scanner; Enter selects manual mode; keyboard entry submits; success resets to Ready with an empty refocused input | `admin-keyboard-workflows-smoke.mjs` |
+| Contract review | Keyboard navigation opens the review workspace, follows the modal focus trap to Accept, follows the confirmation trap, and submits one authenticated decision | `admin-contract-review-smoke.mjs` |
+| Player drawer | Keyboard opens the native player row toggle and ArrowRight traverses all six authoritative drawer tabs | `admin-player-drawer-smoke.mjs` |
+| Account surfaces | Profile, Settings, Notifications, Security, Help, and Games open through keyboard activation | `admin-account-surfaces-smoke.mjs` |
+| In-flight protection | A delayed create request disables the action; a repeated Enter produces no duplicate write | `admin-keyboard-focus-order-smoke.mjs` |
+| Excluded controls | Hidden, inert, explicitly stale, disabled, and skeleton-owned controls are rejected; `aria-busy` remains distinct from stale or disabled state | controller and mounted source/browser evidence |
+| Pointer exclusion | Browser tests record pointerdown, mousedown, and touchstart and require zero events | keyboard workflow, focus-order, Contract review, Player drawer, and account reports |
+| Helper exclusion | Keyboard evidence may not use `.click()`, `.fill()`, `selectOption()`, mouse helpers, or touchscreen taps | `admin-keyboard-navigation-source-smoke.mjs` |
+| Architecture | No `window.fetch` assignment, `MutationObserver`, inline style, runtime style element, replacement event system, or accepted v606 shell change | source smoke and accepted v606 audit |
 
-## Current implementation files
+## Implementation and evidence files
 
 - `admin/keyboard-navigation.js`
 - `admin/css/keyboard-navigation.css`
 - `scripts/admin-keyboard-navigation-source-smoke.mjs`
 - `scripts/admin-keyboard-navigation-smoke.mjs`
+- `scripts/admin-mounted-keyboard-navigation-smoke.mjs`
+- `scripts/admin-keyboard-workflows-smoke.mjs`
+- `scripts/admin-keyboard-focus-order-smoke.mjs`
+- `scripts/admin-contract-review-smoke.mjs`
+- `scripts/admin-player-drawer-smoke.mjs`
+- `scripts/admin-account-surfaces-smoke.mjs`
 - `.github/workflows/admin-shell-smoke.yml`
 
-## Remaining before `BETA-ADMIN-001` can be complete
+## Completion boundary
 
-- Prove sequential Tab and Shift+Tab order across every primary Admin page.
-- Exercise every quick action through keyboard-only activation.
-- Exercise Add Player, Add Contract, Add Store Item, scanner, Contract review, player drawer, and account entry without pointer input.
-- Verify no hidden, inert, disabled, skeleton, or stale controls enter the tab order.
-- Verify keyboard operation at desktop, compact, and narrow widths in the mounted Admin application.
-- Complete the separate `BETA-ADMIN-002` modal and drawer focus-trap, Escape, and focus-restoration matrix.
+`BETA-ADMIN-001` is implementation-complete on PR #178 and awaits merge into `main` before the authoritative roadmap may label it `VERIFIED_COMPLETE`.
 
-This first tranche must remain `IN_PROGRESS`; passing the focused browser test alone does not establish complete keyboard-only coverage of every Admin workflow.
+`BETA-ADMIN-002` remains a separate open item. Its completion requires the exhaustive modal/drawer focus-trap, Escape, and opener-focus-restoration matrix; this document does not claim that separate item is complete.

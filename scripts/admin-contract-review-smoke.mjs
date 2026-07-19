@@ -110,6 +110,12 @@ page.on("requestfailed", (request) => {
 await page.addInitScript(({ accessToken, gameId, adminId }) => {
   sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({ accessToken, refreshToken: "review-smoke-refresh", user: { id: adminId, email: "admin@example.test" } }));
   sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+  window.__adminKeyboardPointerEvents = [];
+  for (const type of ["pointerdown", "mousedown", "touchstart"]) {
+    window.addEventListener(type, (event) => {
+      window.__adminKeyboardPointerEvents.push({ type: event.type, target: event.target?.tagName || "" });
+    }, true);
+  }
 }, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID });
 
 await page.route("**/functions/v1/admin-api/**", async (route) => {
@@ -143,24 +149,43 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
   await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*", "cache-control": "no-store" }, body: JSON.stringify(body) });
 });
 
+async function keyboardActivate(locator, key = "Enter") {
+  await locator.waitFor({ state: "visible", timeout: 8000 });
+  await locator.focus();
+  if (!(await locator.evaluate((node) => document.activeElement === node))) {
+    throw new Error(`Keyboard target did not receive focus: ${await locator.getAttribute("data-admin-terminal-action") || await locator.textContent()}`);
+  }
+  await page.keyboard.press(key);
+}
+
+async function keyboardTabToAndActivate(locator, key = "Enter", maxTabs = 40) {
+  await locator.waitFor({ state: "visible", timeout: 8000 });
+  for (let tabs = 0; tabs <= maxTabs; tabs += 1) {
+    if (await locator.evaluate((node) => document.activeElement === node)) {
+      await page.keyboard.press(key);
+      return tabs;
+    }
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`Keyboard Tab path did not reach: ${await locator.getAttribute("data-admin-terminal-action") || await locator.textContent()}`);
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
-  await page.locator('[data-admin-section="Assignments"]').first().click();
+  await keyboardActivate(page.locator('[data-admin-section="Assignments"]').first(), "Enter");
   await page.waitForTimeout(800);
 
   const focus = page.locator(
     `[data-admin-terminal-action="focus-contract"][data-contract-title="${CONTRACT_TITLE}"]`,
   ).first();
-  await focus.waitFor({ state: "visible", timeout: 8000 });
-  await focus.click();
+  await keyboardActivate(focus, "Enter");
   await page.waitForTimeout(300);
 
   const review = page.locator(
     `[data-admin-terminal-action="review-contract-submissions"][data-contract-id="${CONTRACT_ID}"]:visible`,
   ).first();
-  await review.waitFor({ state: "visible", timeout: 8000 });
-  await review.click();
+  await keyboardActivate(review, "Enter");
   const modal = page.locator(".admin-terminal-contract-submissions-modal-v470").first();
   await modal.waitFor({ state: "visible", timeout: 8000 });
   const modalText = await modal.innerText();
@@ -168,10 +193,10 @@ try {
     throw new Error(`Submission modal omitted player evidence: ${modalText}`);
   }
 
-  await modal.locator('[data-admin-terminal-action="contract-submission-accept"]').first().click();
-  const decision = modal.locator('[data-admin-terminal-action="contract-submission-confirm-decision"]').first();
-  await decision.waitFor({ state: "visible", timeout: 5000 });
-  await decision.click();
+  const accept = modal.locator('[data-admin-terminal-action="contract-submission-accept"]').first();
+  const acceptTabs = await keyboardTabToAndActivate(accept, "Space");
+  const decision = page.locator('[data-admin-terminal-action="contract-submission-confirm-decision"]:visible').first();
+  const decisionTabs = await keyboardTabToAndActivate(decision, "Enter");
   await page.waitForTimeout(900);
 
   const decisionWrites = writes.filter((write) => write.pathname.endsWith(`/games/${GAME_ID}/contract-submissions/${PROGRESS_ID}/decision`));
@@ -194,11 +219,25 @@ try {
     throw new Error("Decision request omitted authenticated admin headers.");
   }
 
-  writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-runtime.json`, JSON.stringify({ writes, errors, modalText }, null, 2));
+  const keyboardEvidence = await page.evaluate(() => ({
+    modality: document.documentElement.getAttribute("data-admin-input-modality"),
+    pointerEvents: window.__adminKeyboardPointerEvents || [],
+  }));
+  if (keyboardEvidence.modality !== "keyboard" || keyboardEvidence.pointerEvents.length !== 0) {
+    throw new Error(`Contract review was not keyboard-only: ${JSON.stringify(keyboardEvidence)}`);
+  }
+
+  writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-runtime.json`, JSON.stringify({
+    writes,
+    errors,
+    modalText,
+    keyboardEvidence,
+    focusPath: { acceptTabs, decisionTabs },
+  }, null, 2));
   writeFileSync(`${ARTIFACT_DIR}/admin-contract-review.html`, await page.content());
   await page.screenshot({ path: `${ARTIFACT_DIR}/admin-contract-review.png`, fullPage: true });
   if (errors.length) throw new Error(errors[0]);
-  console.log("Accepted admin contract review flow passed.");
+  console.log("Keyboard-only accepted admin Contract review flow passed.");
 } catch (error) {
   writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-runtime.json`, JSON.stringify({ writes, errors, failure: error.message }, null, 2));
   writeFileSync(`${ARTIFACT_DIR}/admin-contract-review-failure.html`, await page.content());
