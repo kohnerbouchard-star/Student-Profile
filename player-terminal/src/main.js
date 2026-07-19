@@ -2,6 +2,7 @@ import { installCountryFocusController } from "./accessibility/country-focus-con
 import { installSkipLinkController } from "./accessibility/skip-link-controller.js";
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
+import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
@@ -29,6 +30,7 @@ const sessionSafeExit = installPlayerSessionSafeExit({
 const logout = installPlayerLogoutController({ terminal, config, mount });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
+const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
@@ -37,6 +39,7 @@ terminal.destroy = () => {
   sessionSafeExit.destroy();
   invalidations.destroy();
   notifications.destroy();
+  bankingReads.destroy();
   marketOrders.destroy();
   storePurchases.destroy();
   formDrafts.destroy();

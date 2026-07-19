@@ -5,7 +5,7 @@
 **Authoritative path:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-18  
-**Current audited main baseline:** `1d487afc766146b5e3e19f718252b3eff9a1168e`
+**Current audited main baseline:** `26eecaa1ed04e3aa0909c75be269491a975fad70`
 
 ---
 
@@ -95,8 +95,9 @@ The first beta must prove this loop end to end with authoritative persistence.
 
 | Program | Current status | Authority |
 |---|---|---|
-| Backend player reconciliation | `IN_PROGRESS` | PR #158, branch `agent/player-backend-reconciliation-v2` |
+| Backend player reconciliation | `VERIFIED_COMPLETE` | PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac` |
 | Seed-content foundation | `IN_PROGRESS` | PR #163, branch `agent/seed-content-foundation-v1` |
+| Player runtime cutover and legacy source removal | `IMPLEMENTED_NOT_MERGED` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; cleanup PR #222 |
 | Player safe session-expiry exit | `VERIFIED_COMPLETE` | PR #165 merged as `4e20a5993da925463887bc23cc707be5679ccd20`; suspended-session correction PR #167 merged as `14adbc525995cc931998244c442a23b542f43c7a` |
 | Admin safe session-expiry exit | `VERIFIED_COMPLETE` | PR #166 merged as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5` |
 | Admin explicit request lifecycle | `VERIFIED_COMPLETE` | PR #168 merged as `1d487afc766146b5e3e19f718252b3eff9a1168e` |
@@ -121,19 +122,22 @@ The first beta must prove this loop end to end with authoritative persistence.
 - PRs #141 and #143 remain donor/reference work only. Their branches do not become authority through direct merge.
 - No isolated staging deployment, restore rehearsal, or current runtime-cutover evidence was found during this audit; all staging-dependent items remain open.
 
+### 2026-07-19 runtime reconciliation
+
+- PR #158 merged the authoritative Player backend boundary, logout, capability manifest, Contract acceptance, Inventory reads, notifications, and redemption Backend workflow as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`.
+- PR #177 merged the Admin inventory-redemption review queue as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`.
+- PR #217 merged the Player Terminal host-runtime cutover and removed the Cloudflare browser transport as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`.
+- PR #222 physically removes the now-unmounted legacy Player source and installs a repository ratchet preventing its return.
+
 ### Current release condition
 
 The application is not yet approved for beta or production runtime cutover because the following remain unresolved:
 
-- authoritative backend reconciliation;
-- Player Terminal runtime adapter installation;
-- capability manifest validation;
-- Contract acceptance;
-- inventory redemption;
-- executable seed content;
+- merge and verify the physical legacy Player source-removal tranche;
+- connected isolated-staging Player and Admin verification;
+- production traffic evidence and credential rotation before live Cloudflare Worker shutdown;
+- executable seed content and staging activation;
 - migration-history reconciliation;
-- legacy runtime containment;
-- isolated staging;
 - backup and restore rehearsal;
 - final end-to-end beta verification.
 
