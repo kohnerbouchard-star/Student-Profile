@@ -165,8 +165,12 @@ async function loadSection(page, section) {
 }
 
 async function waitForAction(page, action, section) {
-  await page.evaluate(() => window.EconovariaAdminOverviewQuickActions?.reconcile?.());
+  await page.waitForFunction(() => {
+    return typeof window.EconovariaAdminOverviewQuickActions?.reconcile === "function";
+  }, null, { timeout: 15_000 });
+
   await page.waitForFunction(({ action, section }) => {
+    window.EconovariaAdminOverviewQuickActions?.reconcile?.();
     const control = [...document.querySelectorAll(`[data-admin-terminal-action="${CSS.escape(action)}"]`)].find((node) => {
       if (!(node instanceof HTMLElement) || node.hidden) return false;
       if (node.closest("[data-admin-shape-skeleton-stage], .admin-shape-surface-overlay")) return false;
@@ -180,7 +184,7 @@ async function waitForAction(page, action, section) {
       return !control.hasAttribute("data-admin-overview-hidden") && !control.closest(".admin-overview-quick-actions-card");
     }
     return true;
-  }, { action, section }, { timeout: 10_000 });
+  }, { action, section }, { timeout: 15_000, polling: 100 });
 }
 
 async function tabTo(page, sectionControl, target, label) {
