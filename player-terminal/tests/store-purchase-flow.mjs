@@ -11,7 +11,7 @@ const capabilities = resolveCapabilities({
 });
 assert.equal(isEndpointEnabled(capabilities, "storeQuote"), true, "Store quotes must use the Store purchase capability boundary.");
 
-const item = { id: "item-1", name: "Market Lens", price: 50, stock: 8, owned: 1 };
+const item = { id: "market-lens", itemKey: "market-lens", name: "Market Lens", price: 50, stock: 8, owned: 1 };
 const select = renderModal({ type: "storePurchase", stage: "select", item, quantity: 1, currencyCode: "ECO" });
 assert.ok(select.includes("QUOTE REQUIRED"));
 assert.ok(select.includes("data-player-store-quantity"));
@@ -19,7 +19,7 @@ assert.ok(select.includes("data-player-store-review"));
 assert.ok(!select.includes("data-player-store-confirm"), "Purchase confirmation must not exist before an authoritative quote.");
 
 const quote = {
-  quoteId: "quote-1",
+  quoteKey: "quote_11111111111111111111111111111111",
   itemName: "Market Lens",
   quantity: 2,
   finalUnitPrice: 55,
@@ -31,7 +31,7 @@ const review = renderModal({ type: "storePurchase", stage: "review", item, quant
 assert.ok(review.includes("AUTHORITATIVE QUOTE"));
 assert.ok(review.includes("CONFIRMATION REQUIRED"));
 assert.ok(review.includes("data-player-store-confirm"));
-assert.ok(review.includes("quote-1"));
+assert.ok(review.includes("quote_11111111111111111111111111111111"));
 
 const receipt = renderModal({
   type: "storePurchase",
@@ -39,11 +39,11 @@ const receipt = renderModal({
   item,
   quantity: 2,
   quote,
-  receipt: { purchaseId: "purchase-1", quoteId: "quote-1", finalTotalPrice: 110, currencyCode: "ECO" }
+  receipt: { receiptKey: "receipt_22222222222222222222222222222222", quoteKey: "quote_11111111111111111111111111111111", finalTotalPrice: 110, currencyCode: "ECO" }
 });
 assert.ok(receipt.includes("PURCHASE RECEIPT"));
 assert.ok(receipt.includes("COMPLETED"));
-assert.ok(receipt.includes("purchase-1"));
+assert.ok(receipt.includes("receipt_22222222222222222222222222222222"));
 
 const refreshPendingReceipt = renderModal({
   type: "storePurchase",
@@ -51,7 +51,7 @@ const refreshPendingReceipt = renderModal({
   item,
   quantity: 2,
   quote,
-  receipt: { purchaseId: "purchase-1", quoteId: "quote-1", finalTotalPrice: 110, currencyCode: "ECO" },
+  receipt: { receiptKey: "receipt_22222222222222222222222222222222", quoteKey: "quote_11111111111111111111111111111111", finalTotalPrice: 110, currencyCode: "ECO" },
   refreshWarning: "Purchase completed, refresh pending."
 });
 assert.ok(refreshPendingReceipt.includes("COMPLETED · REFRESH PENDING"));

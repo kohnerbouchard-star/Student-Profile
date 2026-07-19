@@ -128,8 +128,15 @@ function dependencies(repository: CapturingRepository) {
     resolveScope: () => Promise.resolve({
       gameId: GAME_ID,
       playerUuid: PLAYER_ID,
-      playerSessionId: "00000000-0000-4000-8000-000000000003",
-      sessionTokenHash: "hash",
+      activeSessionId: "00000000-0000-4000-8000-000000000003",
+      sessionValid: true,
+      sessionExpiresAt: "2026-07-20T00:00:00.000Z",
+      authorizationContext: {
+        actorType: "player",
+        source: "player_session",
+        gameScope: "session",
+        resourceScope: "own_player",
+      },
     }),
     createRepository: () => repository,
     now: () => "2026-07-19T02:00:00.000Z",

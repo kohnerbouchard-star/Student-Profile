@@ -33,8 +33,15 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
     resolveScope: () => Promise.resolve({
       gameId: GAME_ID,
       playerUuid: PLAYER_ID,
-      playerSessionId: "00000000-0000-4000-8000-000000000003",
-      sessionTokenHash: "hash",
+      activeSessionId: "00000000-0000-4000-8000-000000000003",
+      sessionValid: true,
+      sessionExpiresAt: "2026-07-20T00:00:00.000Z",
+      authorizationContext: {
+        actorType: "player",
+        source: "player_session",
+        gameScope: "session",
+        resourceScope: "own_player",
+      },
     }),
     createRepository: () => repository,
     now: () => "2026-07-19T03:00:00.000Z",
@@ -133,8 +140,10 @@ Deno.test("public Player Store lifecycle settles once and refreshes catalog, rec
   for (const body of playerBodies) assertNoUuid(body);
 });
 
+type MutableStoreItem = Omit<PlayerStorePublicItemDto, "stockQuantity"> & { stockQuantity: number };
+
 class SharedStoreRepository implements PlayerStorePublicRepository {
-  readonly items: PlayerStorePublicItemDto[] = [{
+  readonly items: MutableStoreItem[] = [{
     itemKey: ITEM_KEY,
     name: "Field Permit",
     description: "A permit used for field operations.",
