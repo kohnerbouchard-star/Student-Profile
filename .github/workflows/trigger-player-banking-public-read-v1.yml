@@ -34,6 +34,15 @@ jobs:
               start = workflow.index(marker) + len(marker)
               end = workflow.index("\n          PY\n", start)
               code = textwrap.dedent(workflow[start:end])
+              cleaned = []
+              inside_literal = False
+              for line in code.splitlines():
+                  if inside_literal and line.startswith("          "):
+                      line = line[10:]
+                  cleaned.append(line)
+                  if line.count("'''") % 2 == 1:
+                      inside_literal = not inside_literal
+              code = "\n".join(cleaned) + "\n"
               exec(compile(code, 'apply-player-banking-public-read-v1', 'exec'))
           except Exception:
               traceback.print_exc()
@@ -53,6 +62,7 @@ jobs:
             false
           fi
 
+          git rm -f player-banking-patch-error.txt
           git rm .github/workflows/apply-player-banking-public-read-v1.yml
           git rm .github/workflows/trigger-player-banking-public-read-v1.yml
           git diff --check
