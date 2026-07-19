@@ -91,4 +91,8 @@ assert.doesNotMatch(source, /\bfetch\s*\(/);
 assert.doesNotMatch(source, /innerHTML\s*=\s*JSON\.stringify/);
 assert.match(source, /api\.request\("notificationsPage"/);
 assert.match(source, /api\.execute\("notificationsRead"/);
+assert.match(
+  source,
+  /loading = false;\s*await loadPage\(\);\s*restore\("Completed"\)/,
+);
 console.log("notification inbox flow checks passed");
