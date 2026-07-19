@@ -1,4 +1,7 @@
-import { isRecord, readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
+import {
+  isRecord,
+  readBalanceNumber,
+} from "../../../platform/supabase/edgeParsing.ts";
 
 export interface IdempotentStaffLedgerAdjustmentInput {
   readonly gameSessionId: string;
@@ -94,15 +97,22 @@ export async function recordIdempotentStaffLedgerAdjustment(
   return row;
 }
 
-function readResult(value: unknown): IdempotentStaffLedgerAdjustmentResult | null {
+function readResult(
+  value: unknown,
+): IdempotentStaffLedgerAdjustmentResult | null {
   if (!Array.isArray(value) || !isRecord(value[0])) return null;
   const row = value[0];
-  const outcome = row.outcome === "replayed" ? "replayed" : row.outcome === "applied" ? "applied" : null;
+  const outcome = row.outcome === "replayed"
+    ? "replayed"
+    : row.outcome === "applied"
+    ? "applied"
+    : null;
   if (
     !outcome ||
     typeof row.ledger_entry_id !== "string" ||
     typeof row.account_balance_id !== "string" ||
     typeof row.account_type !== "string" ||
+    (typeof row.balance !== "number" && typeof row.balance !== "string") ||
     typeof row.currency_code !== "string" ||
     typeof row.created_at !== "string"
   ) return null;
