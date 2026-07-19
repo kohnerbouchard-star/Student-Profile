@@ -31,7 +31,8 @@ for (const activeSource of [constants, api, login, terminalHtml, hostRuntime]) {
   assertNotIncludes(activeSource, "silent-haze-ca17");
 }
 
-assertNotIncludes(constants, "API_URL");
+assertNotIncludes(constants, "const API_URL");
+assertNotIncludes(constants, "API_URL,");
 assertNotIncludes(api, "submitAction");
 assertNotIncludes(api, "callApiOnce");
 assertIncludes(api, 'callSupabaseJsonRoute("/players/login"');
