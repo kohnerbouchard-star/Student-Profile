@@ -3,17 +3,21 @@
   "generatedAt": "2026-07-19",
   "sourceUniversePackId": "econovaria.market-universe.v1",
   "sourceUniverseVersion": "1.0.0-draft",
-  "reviewStatus": "canonical-identities-reconciled",
+  "reviewStatus": "active-identities-reconciled",
   "productionAuthorized": false,
   "decisions": {
-    "overlappingSymbolAuthority": "curated-active-candidate",
+    "curatedPackAuthority": "Curated active candidates override generated identity fields for their overlapping symbols.",
+    "universeDerivedPackAuthority": "Universe-derived selections inherit canonical universe identity without remapping.",
     "publicInstitutionRoleFamilies": "approved-for-country-qualified-design-use",
     "generatedCorporateRoots": "placeholder-only-not-approved-for-public-activation",
-    "activationRule": "No generated and curated records may coexist as separate instruments under one symbol."
+    "activationRule": "No candidate may diverge from its canonical universe identity or coexist as a second instrument under one symbol."
   },
   "summary": {
     "universeRecords": 3200,
     "activeCandidateRecords": 96,
+    "recordsByIdentityAuthority": {
+      "curated-active-candidate": 96
+    },
     "countriesWithActiveCandidates": [
       "northreach",
       "solvend",
@@ -44,10 +48,10 @@
       "sovereign_public_bond": 8
     }
   },
-  "requiredResolution": [
-    "Overlay curated active-candidate identities into universe records keyed by country and symbol.",
+  "requiredInvariants": [
     "Preserve curated IDs referenced by enrichment and simulation evidence unless every reference is migrated atomically.",
-    "Regenerate country checksums and rerun universe, issuer, editorial, preflight, and simulation-reference audits.",
-    "Keep activationAuthorized false and runtimeSupport unverified."
+    "Require universe-derived candidates to remain byte-equivalent on canonical identity fields.",
+    "Regenerate country checksums and rerun universe, issuer, editorial, preflight, and simulation-reference audits after identity changes.",
+    "Keep activationAuthorized false and runtimeSupport unverified until runtime capability and calibration gates pass."
   ]
 }
