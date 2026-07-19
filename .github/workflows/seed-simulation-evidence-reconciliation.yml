@@ -1,0 +1,112 @@
+name: Seed Simulation Evidence Reconciliation
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - package.json
+      - scripts/build-northreach-simulation-input.mjs
+      - scripts/reconcile-seed-simulation-evidence.mjs
+      - scripts/apply-seed-simulation-retention-policy.mjs
+      - scripts/seed-content-preflight.test.mjs
+      - docs/seed-content/markets/active-subsets/**
+      - docs/seed-content/simulation/**
+      - .github/workflows/seed-simulation-evidence-reconciliation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-simulation-evidence-reconciliation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile retained simulation evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out seed authority branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bounded simulation dependency
+        run: python -m pip install --disable-pip-version-check numpy==2.1.3
+
+      - name: Run simulations and retain diagnostics
+        id: reconciliation
+        shell: bash
+        run: |
+          set +e
+          LOG="docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt"
+          : > "$LOG"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "install retention policy" node scripts/apply-seed-simulation-retention-policy.mjs
+          run_step "build Northreach input" node scripts/build-northreach-simulation-input.mjs
+          run_step "run Northreach simulation" bash -lc 'cd docs/seed-content/simulation/northreach && python run_northreach_market_simulation_v1.py --input northreach_active_instruments_v1.json --output output --seeds 250 --cycles 60 && cp output/summary.json summary-v1.json'
+          run_step "run Thaloris simulation" bash -lc 'cd docs/seed-content/simulation/thaloris && python run_thaloris_market_simulation_v1.py > /dev/null && cp output/summary.json summary-v1.json'
+          run_step "run Yrethia simulation" bash -lc 'cd docs/seed-content/simulation/yrethia && python run_yrethia_market_simulation_v1.py > /dev/null && cp output/summary.json summary-v1.json'
+          run_step "run Solvend simulation" bash -lc 'cd docs/seed-content/simulation/solvend && python run_solvend_market_simulation_v1.py > /dev/null'
+          run_step "reconcile retained evidence" node scripts/reconcile-seed-simulation-evidence.mjs
+
+          rm -rf docs/seed-content/simulation/northreach/output
+          rm -rf docs/seed-content/simulation/thaloris/output
+          rm -rf docs/seed-content/simulation/yrethia/output
+
+          run_step "check retention policy" node scripts/apply-seed-simulation-retention-policy.mjs --check
+          run_step "check Northreach input" node scripts/build-northreach-simulation-input.mjs --check
+          run_step "check retained evidence" node scripts/reconcile-seed-simulation-evidence.mjs --check
+          run_step "test seed preflight" npm run test:seed-content-preflight
+          run_step "design seed preflight" npm run preflight:seed-content
+          run_step "diff check" git diff --check
+
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit retained evidence and diagnostics
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/seed-content-preflight-lib.mjs docs/seed-content/simulation docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt
+          if git diff --cached --quiet; then
+            echo "Simulation evidence is already reconciled."
+          else
+            git commit -m "fix(seed): reconcile deterministic simulation evidence [skip ci]"
+            git push origin HEAD:agent/seed-content-foundation-v1
+          fi
+
+      - name: Enforce reconciliation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.reconciliation.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Simulation evidence reconciliation failed with status $STATUS. See the committed diagnostic log."
+            false
+          fi
