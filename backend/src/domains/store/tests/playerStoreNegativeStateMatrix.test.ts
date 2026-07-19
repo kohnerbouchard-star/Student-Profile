@@ -170,7 +170,7 @@ class CountingRepository implements PlayerStorePublicRepository {
     return Promise.reject(new Error("Not used."));
   }
 
-  purchase(_input: any) {
+  purchase(_input: any): Promise<PlayerStorePublicReceiptDto> {
     this.purchaseCalls += 1;
     return Promise.reject(new Error("Store purchase must not run."));
   }
