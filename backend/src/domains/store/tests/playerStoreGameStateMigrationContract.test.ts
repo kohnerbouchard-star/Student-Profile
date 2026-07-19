@@ -8,6 +8,8 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 
+// Completed replay detection must remain ahead of the game-state lock so callers can
+// recover a committed receipt after pause or archival without creating a new write.
 Deno.test("public Store settlement gates new writes while preserving completed replay", async () => {
   const source = await Deno.readTextFile(MIGRATION);
 
