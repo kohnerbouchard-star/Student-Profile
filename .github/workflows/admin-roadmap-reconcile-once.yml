@@ -1,0 +1,56 @@
+name: Admin Roadmap Reconcile Once
+
+on:
+  push:
+    branches:
+      - agent/admin-modal-inventory-correction-v1
+    paths:
+      - .github/workflows/admin-roadmap-reconcile-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out corrective branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/admin-modal-inventory-correction-v1
+          fetch-depth: 0
+
+      - name: Reconcile completed Admin roadmap entries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/roadmaps/econovaria-beta-completion-roadmap-v1.md")
+          source = path.read_text()
+          replacements = {
+              "- [ ] `BETA-ADMIN-001` Complete keyboard-only navigation coverage.":
+                  "- [x] `BETA-ADMIN-001` Complete keyboard-only navigation coverage. `VERIFIED_COMPLETE` through PR #178 merged as `8ae4fc3dc9233b2e826c409680cd362c61509033` with mounted three-viewport, workflow, focus-order, and pointer-free evidence.",
+              "- [ ] `BETA-ADMIN-002` Complete focus trap, Escape, and focus restoration for every major modal and drawer.":
+                  "- [x] `BETA-ADMIN-002` Complete focus trap, Escape, and focus restoration for every major modal and drawer. `VERIFIED_COMPLETE` through foundation PR #197 merged as `ff9c6207ae2f7284fe753f0a719b0aa0c18017ff` plus corrective exhaustive current-main inventory PR #209.",
+              "- [ ] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event.":
+                  "- [x] `BETA-ADMIN-005` Replace broad session mount observation with an explicit mounted event. `VERIFIED_COMPLETE` through PR #193 merged as `8e9ff38270248d3ce0a46afd4179b371379e5da3`.",
+          }
+          for old, new in replacements.items():
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one roadmap entry for {old!r}; found {count}.")
+              source = source.replace(old, new)
+          path.write_text(source)
+          PY
+          git diff --check
+
+      - name: Commit roadmap reconciliation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          git commit -m "docs: reconcile completed Admin roadmap items"
+          git push origin HEAD:agent/admin-modal-inventory-correction-v1
