@@ -1,30 +1,10 @@
-export const SEOUL_STOCK_MARKET_TIME_ZONE = "Asia/Seoul";
-
 export interface StockMarketWindowSettingsSource {
   readonly timezone?: unknown;
 }
 
-export interface ResolvedStockMarketWindowSettings {
-  readonly timezone: string;
-  readonly source: "game_setting" | "seoul_fallback";
-}
-
-export function resolveStockMarketWindowSettings(
-  value: unknown,
-): ResolvedStockMarketWindowSettings {
-  const candidate = readTimeZoneCandidate(value);
-
-  if (candidate && isValidIanaTimeZone(candidate)) {
-    return {
-      timezone: candidate,
-      source: "game_setting",
-    };
-  }
-
-  return {
-    timezone: SEOUL_STOCK_MARKET_TIME_ZONE,
-    source: "seoul_fallback",
-  };
+export function readRequiredStockMarketTimeZone(value: unknown): string {
+  validateStockMarketWindowSettings(value);
+  return (value as Record<string, unknown>).timezone as string;
 }
 
 export function validateStockMarketWindowSettings(value: unknown): void {
@@ -33,13 +13,19 @@ export function validateStockMarketWindowSettings(value: unknown): void {
   }
 
   if (!("timezone" in value)) {
-    return;
+    throw new Error("stockMarketWindow.timezone is required.");
   }
 
-  const candidate = readTimeZoneCandidate(value);
-  if (!candidate || !isValidIanaTimeZone(candidate)) {
+  if (typeof value.timezone !== "string" || !value.timezone.trim()) {
+    throw new Error("stockMarketWindow.timezone is required.");
+  }
+
+  const timezone = value.timezone.trim();
+  if (!isValidIanaTimeZone(timezone)) {
     throw new Error("stockMarketWindow.timezone must be a valid IANA timezone.");
   }
+
+  value.timezone = timezone;
 }
 
 export function isValidIanaTimeZone(value: unknown): value is string {
@@ -55,15 +41,6 @@ export function isValidIanaTimeZone(value: unknown): value is string {
   } catch {
     return false;
   }
-}
-
-function readTimeZoneCandidate(value: unknown): string | null {
-  if (!isRecord(value) || typeof value.timezone !== "string") {
-    return null;
-  }
-
-  const timezone = value.timezone.trim();
-  return timezone || null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
