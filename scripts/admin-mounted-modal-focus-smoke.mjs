@@ -102,6 +102,28 @@ async function exerciseShareGameAccessModal(browser) {
     await context.close();
   }
 }
+
+async function exerciseExportHistoryModal(browser) {
+  const { context, page, errors } = await createPage(browser, "Export History modal");
+  try {
+    await loadAdmin(page);
+    await navigate(page, "Logs");
+    const opener = page.locator('[data-admin-terminal-action="open-export-history"]:visible').first();
+    await keyboardActivate(page, opener);
+
+    const backdrop = page.locator('[data-modal-id="admin-export-job-status"]:visible').last();
+    const dialog = backdrop.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    const focusableCount = await assertFocusTrap(page, dialog, "Export History modal");
+    await escapeAndRestore(page, backdrop, opener, "Export History modal");
+    const pointerEvents = await page.evaluate(() => window.__adminAccessibilityPointerEvents || []);
+    assert(pointerEvents.length === 0, \`Export History recorded pointer input: \${JSON.stringify(pointerEvents)}\`);
+    assert(errors.length === 0, errors[0] || "Export History emitted an unexpected browser error.");
+    return { focusableCount, escape: "dismissed", restored: true, pointerEvents: 0 };
+  } finally {
+    await context.close();
+  }
+}
 `;
 
   const runtimeTail = `
@@ -111,10 +133,12 @@ const report = {
   mountedEvidenceModalIds: ${JSON.stringify(mountedEvidenceModalIds)},
   playerProfile: null,
   shareGameAccess: null,
+  exportHistory: null,
 };
 try {
   report.playerProfile = await exercisePlayerProfileModal(browser);
   report.shareGameAccess = await exerciseShareGameAccessModal(browser);
+  report.exportHistory = await exerciseExportHistoryModal(browser);
   writeFileSync(
     \`\${ARTIFACT_DIR}/secondary-modal-accessibility.json\`,
     JSON.stringify(report, null, 2),
