@@ -38,10 +38,59 @@ if (!process.exitCode) {
   console.log(`Mounted Admin literal bundle modal IDs: ${JSON.stringify(literalBundleModalIds)}`);
   console.log(`Mounted Admin verified modal IDs: ${JSON.stringify(mountedVerifiedModalIds)}`);
 
-  const controllerWait = `async function assertFocusTrap(page, container, label) {\n  await container.evaluate(async (root, currentLabel) => {\n    for (let attempt = 0; attempt < 30; attempt += 1) {\n      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();\n      if (controller?.dialog === root) return;\n      await new Promise((resolve) => requestAnimationFrame(resolve));\n    }\n    throw new Error(\`${'${currentLabel}'} did not become the active modal controller.\`);\n  }, label);\n  const activeInside`;
+  const stabilizedFocusTrap = String.raw`async function assertFocusTrap(page, container, label) {
+  await container.evaluate(async (root, currentLabel) => {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+      if (controller?.dialog === root) return;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    throw new Error(currentLabel + " did not become the active modal controller.");
+  }, label);
+
+  const activeInside = await container.evaluate((root) => root.contains(document.activeElement));
+  assert(activeInside, label + " did not move initial focus inside the surface.");
+  const boundary = await markBoundary(page, container, label);
+
+  async function traceBoundary(edge) {
+    await container.evaluate((root, expectedEdge) => {
+      const target = root.querySelector('[data-admin-a11y-boundary="' + expectedEdge + '"]');
+      const datasetKey = expectedEdge === "first"
+        ? "adminForwardBoundaryReached"
+        : "adminReverseBoundaryReached";
+      root.dataset[datasetKey] = "false";
+      const onFocus = (event) => {
+        if (event.target !== target) return;
+        root.dataset[datasetKey] = "true";
+        root.removeEventListener("focusin", onFocus, true);
+      };
+      root.addEventListener("focusin", onFocus, true);
+    }, edge);
+  }
+
+  await boundary.first.focus();
+  await traceBoundary("last");
+  await page.keyboard.press("Shift+Tab");
+  const reverseWrapped = await container.evaluate((root) => {
+    const target = root.querySelector('[data-admin-a11y-boundary="last"]');
+    return document.activeElement === target || root.dataset.adminReverseBoundaryReached === "true";
+  });
+  assert(reverseWrapped, label + " did not wrap Shift+Tab from first to last.");
+
+  await boundary.last.focus();
+  await traceBoundary("first");
+  await page.keyboard.press("Tab");
+  const forwardWrapped = await container.evaluate((root) => {
+    const target = root.querySelector('[data-admin-a11y-boundary="first"]');
+    return document.activeElement === target || root.dataset.adminForwardBoundaryReached === "true";
+  });
+  assert(forwardWrapped, label + " did not wrap Tab from last to first.");
+  return boundary.count;
+}`;
+
   const stabilizedSource = source.replace(
-    "async function assertFocusTrap(page, container, label) {\n  const activeInside",
-    controllerWait,
+    /async function assertFocusTrap\(page, container, label\) \{[\s\S]*?return boundary\.count;\n\}/,
+    stabilizedFocusTrap,
   );
   if (stabilizedSource === source) {
     throw new Error("Admin modal focus-trap fixture contract changed.");
@@ -174,7 +223,7 @@ const report = {
   conditionalRendererModalIds: ${JSON.stringify(conditionalRendererModalIds)},
   conditionalRendererEvidence: {
     adminExportJobStatus: "Rendered only for a concrete export-job lifecycle; the active Logs surface is admin-export-history.",
-    adminSignoutFailed: "Failure-only recovery renderer; normal sign-out is not a mounted modal surface.",
+    adminSignoutFailed: "Failure-only recovery renderer; normal sign-out is not a mounted modal workflow.",
     playerLogEventDetail: "Player-specific conditional renderer; ordinary Logs detail actions remain inline and activate no modal controller.",
   },
   playerProfile: null,
