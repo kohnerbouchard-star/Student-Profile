@@ -212,7 +212,7 @@ Deno.test("economic SQL mutation matrix enforces replay-before-write and zero-le
   assertEquals(count(stocks, "from public.record_player_ledger_entry("), 2);
   assertBefore(stocks, "if found then", "from public.record_player_ledger_entry(");
   assertBefore(stocks, "'insufficient_cash'", "from public.record_player_ledger_entry(");
-  assertBefore(stocks, "'insufficient_shares'", stocks.lastIndexOf("from public.record_player_ledger_entry("));
+  assertBefore(stocks, "'insufficient_shares'", stocks.toLowerCase().lastIndexOf("from public.record_player_ledger_entry("));
   assertContains(stocks, "perform pg_advisory_xact_lock(");
   assertContains(stocks, "'stocks',\n        'stock_buy'");
   assertContains(stocks, "'stocks',\n        'stock_sell'");
@@ -347,19 +347,24 @@ function uuid(value: number): string {
 }
 
 function count(value: string, pattern: string): number {
-  return value.split(pattern).length - 1;
+  return value.toLowerCase().split(pattern.toLowerCase()).length - 1;
 }
 
 function assertBefore(value: string, first: string, second: string | number): void {
-  const firstIndex = value.indexOf(first);
-  const secondIndex = typeof second === "number" ? second : value.indexOf(second);
+  const normalized = value.toLowerCase();
+  const firstIndex = normalized.indexOf(first.toLowerCase());
+  const secondIndex = typeof second === "number"
+    ? second
+    : normalized.indexOf(second.toLowerCase());
   if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) {
     throw new Error(`Expected ${first} before ${String(second)}.`);
   }
 }
 
 function assertContains(value: string, expected: string): void {
-  if (!value.includes(expected)) throw new Error(`Expected source to contain ${expected}.`);
+  if (!value.toLowerCase().includes(expected.toLowerCase())) {
+    throw new Error(`Expected source to contain ${expected}.`);
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
