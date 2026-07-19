@@ -9,16 +9,16 @@ async function source(relativePath) {
 }
 
 const html = await source("index.html");
-const auth = await source("frontend/src/features/auth/auth.js");
+const login = await source("frontend/src/core/login.js");
 const api = await source("frontend/src/core/api.js");
 const signup = await source("backend/src/domains/auth/api/staffSignupHttpHandler.ts");
 
 assertIncludes(html, 'id="gameTimeZone"');
 assertIncludes(html, 'value="Asia/Seoul"');
 assertIncludes(html, "Controls market hours for every exchange in this game.");
-assertIncludes(auth, 'document.getElementById("gameTimeZone")');
-assertIncludes(auth, 'Intl.supportedValuesOf("timeZone")');
-assertNotIncludes(auth, "resolvedOptions().timeZone");
+assertIncludes(login, 'text("gameTimeZone")');
+assertIncludes(login, 'Intl.supportedValuesOf("timeZone")');
+assertNotIncludes(login, "resolvedOptions().timeZone");
 assertIncludes(api, "stockMarketWindow: {");
 assertIncludes(api, "timezone: String(input?.timeZone");
 assertIncludes(signup, "invalid_stock_market_timezone");
