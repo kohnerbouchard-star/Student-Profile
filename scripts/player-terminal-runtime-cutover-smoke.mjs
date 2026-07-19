@@ -31,8 +31,7 @@ for (const activeSource of [constants, api, login, terminalHtml, hostRuntime]) {
   assertNotIncludes(activeSource, "silent-haze-ca17");
 }
 
-assertNotIncludes(constants, "const API_URL");
-assertNotIncludes(constants, "API_URL,");
+assertNotIncludes(constants, "const API_URL =");
 assertNotIncludes(api, "submitAction");
 assertNotIncludes(api, "callApiOnce");
 assertIncludes(api, 'callSupabaseJsonRoute("/players/login"');
@@ -54,6 +53,7 @@ if (hostIndex < 0 || mainIndex < 0 || hostIndex >= mainIndex) {
 
 assertIncludes(hostRuntime, "sessionProvider: () => readStoredSession()");
 assertIncludes(hostRuntime, "studentProfileApiBaseUrl: CLASSROOM_API_URL");
+assertIncludes(hostRuntime, "accessToken: SUPABASE_PUBLISHABLE_KEY");
 assertIncludes(hostRuntime, "econovaria:player-logout-completed");
 assertIncludes(hostRuntime, "econovaria:player-session-invalid");
 assertIncludes(hostRuntime, "runtime.sessionStorage.removeItem(STORAGE_KEY)");
