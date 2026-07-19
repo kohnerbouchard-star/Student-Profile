@@ -70,7 +70,16 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if not public.is_stock_market_open_at(now()) then
+  -- Preserve the existing RPC's idempotency guarantee. A retry of an order that
+  -- already reached a terminal state returns the stored result even if the
+  -- exchange has since closed. A new order remains fail-closed.
+  if not exists (
+    select 1
+    from public.stock_orders existing_order
+    where existing_order.game_session_id = p_game_session_id
+      and existing_order.player_session_id = p_player_session_id
+      and existing_order.idempotency_key = btrim(coalesce(p_idempotency_key, ''))
+  ) and not public.is_stock_market_open_at(now()) then
     raise exception 'STOCK_TRADING_MARKET_CLOSED';
   end if;
 
@@ -95,7 +104,7 @@ comment on function public.execute_stock_market_order_calendar_gated(
   numeric,
   text
 ) is
-  'Service-role stock-order boundary that rejects immediate fills while the authoritative market calendar is closed.';
+  'Service-role stock-order boundary that rejects new immediate fills while closed and preserves stored idempotent order replay.';
 
 revoke all on function public.execute_stock_market_order_calendar_gated(
   uuid,
