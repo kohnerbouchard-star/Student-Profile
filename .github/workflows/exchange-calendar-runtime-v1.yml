@@ -1,0 +1,110 @@
+name: Exchange Calendar Runtime
+
+on:
+  push:
+    branches:
+      - agent/exchange-calendar-runtime-v1
+    paths:
+      - backend/**
+      - scripts/apply-exchange-calendar-runtime-v1.mjs
+      - .github/workflows/exchange-calendar-runtime-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: exchange-calendar-runtime-v1-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate exchange calendar runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out runtime branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/exchange-calendar-runtime-v1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply integration and retain diagnostics
+        id: validation
+        shell: bash
+        run: |
+          set +e
+          LOG="docs/audits/exchange-calendar-runtime-v1-run-log.txt"
+          mkdir -p "$(dirname "$LOG")"
+          : > "$LOG"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "apply exchange calendar integration" node scripts/apply-exchange-calendar-runtime-v1.mjs
+          run_step "focused exchange calendar tests" npm --prefix backend run test:stock-market-calendar
+          run_step "backend typecheck" npm --prefix backend run typecheck:all
+          run_step "migration source audit" npm run audit:migrations
+          run_step "integration drift check" node scripts/apply-exchange-calendar-runtime-v1.mjs --check
+          run_step "diff whitespace check" git diff --check
+
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit integration and diagnostics
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            backend/package.json \
+            backend/src/domains/stocks/README.md \
+            backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts \
+            backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts \
+            backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts \
+            backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts \
+            docs/audits/exchange-calendar-runtime-v1-run-log.txt
+          if git diff --cached --quiet; then
+            echo "Exchange calendar integration is already current."
+          else
+            git commit -m "feat(stocks): integrate exchange calendar runtime [skip ci]"
+            git push origin HEAD:agent/exchange-calendar-runtime-v1
+          fi
+
+      - name: Enforce validation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.validation.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Exchange calendar validation failed. See the committed diagnostic log."
+            false
+          fi
