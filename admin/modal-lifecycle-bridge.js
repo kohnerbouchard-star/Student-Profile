@@ -12,6 +12,7 @@
   ].join(",");
   const ACKNOWLEDGEMENT_SELECTOR = "[data-admin-modal-requires-acknowledgement='true']";
   const bindings = new Set();
+  const delegatedBundleCloseControls = new WeakSet();
   let lastOpener = null;
   let queued = false;
 
@@ -67,13 +68,23 @@
     return backdrop instanceof HTMLElement && visible(backdrop) ? backdrop : null;
   }
 
-  function bindingFor(backdrop) {
-    return [...bindings].find((binding) => binding.backdrop === backdrop) || null;
+  function bindingForDialog(dialog) {
+    return [...bindings].find((binding) => binding.dialog === dialog) || null;
+  }
+
+  function bindingForTarget(target) {
+    if (!(target instanceof Node)) return null;
+    let selected = null;
+    for (const binding of bindings) {
+      if (!binding.dialog.contains(target)) continue;
+      if (!selected || selected.dialog.contains(binding.dialog)) selected = binding;
+    }
+    return selected;
   }
 
   function pruneBindings() {
     for (const binding of [...bindings]) {
-      if (binding.backdrop.isConnected && binding.dialog.isConnected) continue;
+      if (binding.backdrop.isConnected && binding.dialog.isConnected && visible(binding.dialog)) continue;
       bindings.delete(binding);
       binding.controller?.destroy?.({ remove: false, restoreFocus: true });
     }
@@ -88,12 +99,12 @@
   function bindDialog(dialog) {
     if (!(dialog instanceof HTMLElement) || !visible(dialog)) return null;
     const backdrop = liveBackdrop(dialog);
-    if (!backdrop || bindingFor(backdrop)) return null;
+    if (!backdrop || bindingForDialog(dialog)) return null;
     if (backdrop.matches("[data-admin-player-created-confirmation]")) return null;
 
     const accessibility = window.EconovariaAdminModalAccessibility;
     if (!accessibility || typeof accessibility.activate !== "function") return null;
-    if (accessibility.getActiveController?.()?.backdrop === backdrop) return null;
+    if (accessibility.getActiveController?.()?.dialog === dialog) return null;
 
     const acknowledgementRequired = Boolean(backdrop.closest(ACKNOWLEDGEMENT_SELECTOR) || backdrop.matches(ACKNOWLEDGEMENT_SELECTOR));
     const opener = lastOpener instanceof HTMLElement ? lastOpener : null;
@@ -117,14 +128,17 @@
       dismissOnBackdrop: !acknowledgementRequired,
       onClose(reason) {
         bindings.delete(binding);
-        if (backdrop.isConnected && reason !== "close-button") {
+        const backdropSharedByParent = [...bindings].some((candidate) => candidate.backdrop === backdrop);
+        if (backdrop.isConnected && reason !== "close-button" && reason !== "destroyed") {
           const closeControl = existingCloseControl(dialog);
           if (closeControl) {
             binding.closingThroughBundle = true;
+            delegatedBundleCloseControls.add(closeControl);
             closeControl.click();
+            delegatedBundleCloseControls.delete(closeControl);
             binding.closingThroughBundle = false;
           }
-          if (backdrop.isConnected) backdrop.remove();
+          if (!backdropSharedByParent && backdrop.isConnected) backdrop.remove();
         }
         restoreOpenerAfterBundleClose(binding.opener);
       },
@@ -138,6 +152,7 @@
       detail: {
         acknowledgementRequired,
         openerAction: opener?.getAttribute("data-admin-terminal-action") || "",
+        sharedBackdrop: [...bindings].some((candidate) => candidate !== binding && candidate.backdrop === backdrop),
       },
     }));
     return binding;
@@ -148,6 +163,10 @@
     pruneBindings();
     const dialogs = [...document.querySelectorAll(DIALOG_SELECTOR)].filter((dialog) => {
       return dialog instanceof HTMLElement && visible(dialog) && liveBackdrop(dialog);
+    }).sort((left, right) => {
+      if (left.contains(right)) return -1;
+      if (right.contains(left)) return 1;
+      return 0;
     });
     dialogs.forEach(bindDialog);
   }
@@ -177,9 +196,9 @@
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
-    const backdrop = target.closest(BACKDROP_SELECTOR);
-    const binding = backdrop instanceof HTMLElement ? bindingFor(backdrop) : null;
     const closeControl = target.closest(CLOSE_SELECTOR);
+    if (closeControl && delegatedBundleCloseControls.has(closeControl)) return;
+    const binding = bindingForTarget(target);
     if (binding && closeControl && !binding.closingThroughBundle) {
       binding.controller?.close?.("close-button");
       return;
