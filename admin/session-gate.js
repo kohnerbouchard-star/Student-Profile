@@ -2,13 +2,16 @@
   "use strict";
 
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const ADMIN_MOUNTED_EVENT = "econovaria:admin-route-mounted";
   const sessionManager = window.EconovariaAdminAuthSession;
   const MINIMUM_GATE_VISIBLE_MS = 120;
+  const MOUNT_TIMEOUT_MS = 10000;
   const initializedAt = performance.now();
   let released = false;
   let redirecting = false;
   let mountTimeout = null;
   let releaseTimeout = null;
+  let listeningForMount = false;
 
   function mainLoginUrl(reason) {
     const url = new URL("../", window.location.href);
@@ -27,10 +30,29 @@
     window.location.replace(mainLoginUrl(reason));
   }
 
-  function release() {
-    if (released) return;
+  function adminMount() {
+    return document.getElementById("adminPreview");
+  }
+
+  function mountIsReady(mount = adminMount()) {
+    return Boolean(mount && !mount.hidden && mount.childElementCount > 0);
+  }
+
+  function stopWatchingForMount() {
+    if (listeningForMount) {
+      document.removeEventListener(ADMIN_MOUNTED_EVENT, handleAdminMounted);
+      listeningForMount = false;
+    }
+    if (mountTimeout) {
+      window.clearTimeout(mountTimeout);
+      mountTimeout = null;
+    }
+  }
+
+  function completeRelease() {
+    if (released) return false;
     released = true;
-    if (mountTimeout) window.clearTimeout(mountTimeout);
+    stopWatchingForMount();
     const remainingVisibleMs = Math.max(
       0,
       MINIMUM_GATE_VISIBLE_MS - (performance.now() - initializedAt),
@@ -39,11 +61,33 @@
       document.getElementById("adminSessionGate")?.remove();
       releaseTimeout = null;
     }, remainingVisibleMs);
+    return true;
+  }
+
+  function handleAdminMounted(event) {
+    const mount = adminMount();
+    if (!mount || event.target !== mount || !mountIsReady(mount)) return;
+    completeRelease();
+  }
+
+  function signalMounted(detail = {}) {
+    const mount = adminMount();
+    if (!mountIsReady(mount)) return false;
+    mount.dispatchEvent(new CustomEvent(ADMIN_MOUNTED_EVENT, {
+      bubbles: true,
+      detail: {
+        route: "Overview",
+        initial: true,
+        mountId: "adminPreview",
+        ...((detail && typeof detail === "object") ? detail : {}),
+      },
+    }));
+    return true;
   }
 
   function showError(message) {
     if (released) return;
-    if (mountTimeout) window.clearTimeout(mountTimeout);
+    stopWatchingForMount();
     if (releaseTimeout) window.clearTimeout(releaseTimeout);
 
     const gate = document.getElementById("adminSessionGate");
@@ -77,38 +121,32 @@
   }
 
   window.EconovariaAdminSessionGate = {
-    release,
-    showError
+    release: signalMounted,
+    showError,
+    mountedEvent: ADMIN_MOUNTED_EVENT,
   };
 
+  function beginMountWatch() {
+    if (released || listeningForMount) return;
+    if (mountIsReady()) {
+      completeRelease();
+      return;
+    }
+
+    listeningForMount = true;
+    document.addEventListener(ADMIN_MOUNTED_EVENT, handleAdminMounted);
+    mountTimeout = window.setTimeout(() => {
+      stopWatchingForMount();
+      showError("The administrator console took too long to start. Reload this page or return to sign in.");
+    }, MOUNT_TIMEOUT_MS);
+  }
+
   function watchForAdminMount() {
-    document.addEventListener("DOMContentLoaded", () => {
-      const mount = document.getElementById("adminPreview");
-
-      if (mount && !mount.hidden && mount.childElementCount > 0) {
-        release();
-        return;
-      }
-
-      const observer = new MutationObserver(() => {
-        if (mount && !mount.hidden && mount.childElementCount > 0) {
-          observer.disconnect();
-          release();
-        }
-      });
-
-      observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["hidden"]
-      });
-
-      mountTimeout = window.setTimeout(() => {
-        observer.disconnect();
-        showError("The administrator console took too long to start. Reload this page or return to sign in.");
-      }, 10000);
-    }, { once: true });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", beginMountWatch, { once: true });
+    } else {
+      beginMountWatch();
+    }
   }
 
   async function verifyTransferredSession() {
