@@ -24,18 +24,20 @@ function renderTransaction(transaction, fallbackCurrencyCode) {
   </article>`;
 }
 
-function renderBalanceCard(balance, index) {
+function renderBalanceCard(balance, index, bank) {
   const accountType = String(balance.accountType || "cash").trim() || "cash";
   const currencyCode = String(balance.currencyCode || "ECO").trim().toUpperCase() || "ECO";
   const accountLabel = accountType.replace(/[_-]+/g, " ").toUpperCase();
-  const tone = accountType.toLowerCase() === "savings" ? "is-savings" : index === 0 ? "is-checking" : "is-credit";
-  return `<article class="player-terminal-bank-card ${tone}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(accountType.toLowerCase() === "savings" ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3><p>Authoritative ${escapeHtml(currencyCode)} balance</p></article>`;
+  const isSavings = accountType.toLowerCase() === "savings";
+  const detail = isSavings && bank.savings?.configured !== false
+    ? `${escapeHtml(optionalPercent(bank.savings?.interestRate, "Yield unavailable"))} annual yield · ${escapeHtml(optionalCurrency(bank.savings?.interestEarned, currencyCode, "Interest unavailable"))} earned`
+    : `Authoritative ${escapeHtml(currencyCode)} balance`;
+  return `<article class="player-terminal-bank-card ${isSavings ? "is-savings" : "is-checking"}" data-player-banking-balance="${escapeHtml(`${accountType}:${currencyCode}`)}"><div>${icon(isSavings ? "banking" : "wallet")}<span><small>${escapeHtml(accountLabel)} ACCOUNT</small><strong>${escapeHtml(currencyCode)}</strong></span></div><h3>${escapeHtml(optionalCurrency(balance.balance, currencyCode, "Unavailable"))}</h3><p>${detail}</p></article>`;
 }
 
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
-  const savingsCurrencyCode = bank.savings?.currencyCode || currencyCode;
   const savingsConfigured = bank.savings?.configured !== false && hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true && hasNumericValue(bank.creditScore);
   const transfersConfigured = bank.transfersConfigured === true;
@@ -59,7 +61,7 @@ export function renderBankingPage(data) {
     </header>
 
     <div class="player-terminal-bank-accounts" aria-label="Current balances">
-      ${balances.map(renderBalanceCard).join("")}
+      ${balances.map((balance, index) => renderBalanceCard(balance, index, bank)).join("")}
       ${hasSavingsBalance ? "" : `<article class="player-terminal-bank-card is-savings"><div>${icon("banking")}<span><small>SAVINGS ACCOUNT</small><strong>NOT CONFIGURED</strong></span></div><h3>Not configured</h3><p>The current backend has not provisioned a savings account for this player.</p></article>`}
       <article class="player-terminal-bank-card is-credit"><div>${icon("chart")}<span><small>FINANCIAL PROFILE</small><strong>PLAYER CREDIT</strong></span></div><h3>${creditConfigured ? escapeHtml(bank.creditScore) : "Not configured"}</h3><p>${transferLimitAvailable ? `${escapeHtml(formatCurrency(transferLimit, currencyCode))} transfer limit` : "Credit and transfer limits are not yet available."}</p></article>
     </div>
