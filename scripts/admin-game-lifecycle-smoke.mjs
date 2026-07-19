@@ -221,6 +221,11 @@ async function confirmModal(page, name, phrase = "") {
   await confirm.focus();
   await page.keyboard.press("Enter");
   await modal.waitFor({ state: "detached", timeout: 8000 });
+  await page.waitForTimeout(1200);
+  await page.waitForFunction(() => {
+    const root = document.querySelector("[data-admin-game-lifecycle]");
+    return root && root.getAttribute("aria-busy") !== "true";
+  }, { timeout: 8000 });
 }
 
 async function assertLayout(page, root, name) {
