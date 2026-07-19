@@ -49,7 +49,7 @@ export interface PlayerStorePublicHttpHandlerDependencies {
     request: Request,
     client: EdgeSupabaseClient,
     body: Record<string, unknown>,
-  ) => Promise<PlayerRequestScope>;
+  ) => Promise<Pick<PlayerRequestScope, "gameId" | "playerUuid">>;
   readonly createRepository?: (
     client: EdgeSupabaseClient,
   ) => PlayerStorePublicRepository;

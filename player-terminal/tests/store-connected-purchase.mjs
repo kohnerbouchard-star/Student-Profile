@@ -25,7 +25,7 @@ const manifest = {
       marketplace: false,
       inventory: true,
       crafting: false,
-      banking: true,
+      banking: false,
       loans: false,
       messages: false,
       progression: false,
@@ -220,13 +220,12 @@ const purchase = await api.execute("storePurchase", {
 assert.equal(purchase.result.receipt.receiptKey, receiptKey);
 assert.deepEqual(purchase.invalidatedResources, ["dashboard", "store", "inventory", "banking"]);
 
-const refreshed = await api.refreshResources(["store", "inventory", "banking"]);
+const refreshed = await api.refreshResources(["store", "inventory"]);
 assert.equal(Object.keys(refreshed.errors).length, 0);
 assert.equal(refreshed.data.store.items[0].stock, 3);
 assert.equal(refreshed.data.inventory.items[0].storeItemId, "field_permit");
 assert.equal(refreshed.data.inventory.items[0].quantity, 2);
-assert.equal(refreshed.data.banking.checking.balance, 400);
-assert.equal(refreshed.data.banking.transactions[0].category, "store");
+assert.equal("banking" in refreshed.data, false, "Banking remains manifest-disabled and must not receive speculative traffic.");
 
 const quoteRequest = calls.find((request) => request.endpointKey === "storeQuote");
 assert.equal(quoteRequest.path, "/players/me/store/quotes");
