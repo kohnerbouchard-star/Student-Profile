@@ -151,6 +151,8 @@ This creates a race in which one module creates UI that another module immediate
 - Preserve one-time credential display behavior.
 - Add a source test preventing the legacy dialog from returning.
 
+**Resolution (2026-07-19):** `VERIFIED_COMPLETE` through PR #227 merged as `322db9d25fbfc581be59ae0fbe80ca20ce89b42d`. `player-access-code-bridge.js` is event-only and contains no dialog renderer or inline presentation. The remaining selector, removal helper, and observer/timer suppression calls were removed from `player-create-ux.js`, while the accepted one-time Player-created confirmation remains authoritative. The Player create smoke now fails closed if the legacy selector, marker, or suppression helper returns. Repository Quality #931 and Admin Shell Smoke #840 with all 87 stages passed on exact reviewed head `bcd14d0cf507c8545dee07ac263ef8cb17e83f53`.
+
 ### ADM-P1-01 — Interaction state depends on a global `window.fetch` wrapper
 
 **Category:** request architecture  
