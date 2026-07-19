@@ -22,6 +22,8 @@ That one timezone governs the trading session of every Econovaria exchange. Exch
 
 The migration assigns `Asia/Seoul` once to existing games that have no timezone. This is a data migration, not a runtime fallback. Deployment must abort if any existing nonempty timezone is not recognized.
 
+The existing-row validation preflight uses a named PostgreSQL dollar-quoted block so JSON key and error-message string literals cannot interfere with the PL/pgSQL delimiter.
+
 ## Runtime
 
 - The Backend database decision is authoritative.
