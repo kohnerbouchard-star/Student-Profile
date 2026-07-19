@@ -3,7 +3,7 @@ name: Required Game Market Timezone
 on:
   push:
     branches:
-      - agent/exchange-calendar-config-v1
+      - main
   pull_request:
     paths:
       - backend/**
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: required-game-market-timezone-${{ github.event.pull_request.number || github.ref }}
@@ -32,11 +32,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out branch
+      - name: Check out evaluated ref
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: agent/exchange-calendar-config-v1
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -80,6 +79,7 @@ jobs:
           run_step "fix Create Game smoke" node scripts/fix-shared-game-timezone-smoke-v1.mjs
           run_step "enforce one timezone source" node scripts/enforce-single-game-timezone-source-v1.mjs
           run_step "fix migration preflight syntax" node scripts/fix-timezone-migration-preflight-v1.mjs
+          run_step "generated integration drift" git diff --exit-code
           run_step "calendar tests" npm --prefix backend run test:stock-market-calendar
           run_step "staff signup timezone tests" env SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno test --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
           run_step "Create Game timezone smoke" node scripts/shared-game-timezone-ui-smoke.mjs
@@ -111,20 +111,6 @@ jobs:
             /tmp/required-game-market-timezone.patch
           if-no-files-found: error
           retention-days: 14
-
-      - name: Commit generated integration
-        if: github.event_name != 'pull_request' && steps.validation.outputs.status == '0'
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No generated changes to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat(stocks): require one shared game timezone"
-          git push origin HEAD:agent/exchange-calendar-config-v1
 
       - name: Enforce validation result
         shell: bash
