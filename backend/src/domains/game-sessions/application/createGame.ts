@@ -1,4 +1,8 @@
 import type { GameSessionRecord, UUID } from "../../../auth/types";
+import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "../../stocks/calendars/stockMarketWindowConfig";
 import type { AuditRepository } from "../../../supabase/auditRepository";
 import type { GameCreationRepository } from "../infrastructure/gameRepository";
 import type {
@@ -100,7 +104,9 @@ export function normalizeCreateGameInput(
     difficultyPreset: normalizeOptionalText(input.difficultyPreset, "standard"),
     attendanceWindow: normalizeJsonObject(input.attendanceWindow),
     businessMarketWindow: normalizeJsonObject(input.businessMarketWindow),
-    stockMarketWindow: normalizeJsonObject(input.stockMarketWindow),
+    stockMarketWindow: normalizeRequiredStockMarketWindow(
+      input.stockMarketWindow,
+    ),
     newsSchedule: normalizeJsonObject(input.newsSchedule),
   };
 }
@@ -174,6 +180,19 @@ function normalizeOptionalText(
   }
 
   return normalizedValue;
+}
+
+function normalizeRequiredStockMarketWindow(
+  value: JsonObject | null | undefined,
+): JsonObject {
+  try {
+    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;
+  } catch (error) {
+    if (error instanceof StockMarketWindowConfigError) {
+      throw new CreateGameValidationError(error.message);
+    }
+    throw error;
+  }
 }
 
 function normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {

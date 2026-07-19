@@ -62,7 +62,7 @@ function createSmokeTestInput(): LicensingActivationHandlerInput {
       difficultyPreset: "standard",
       attendanceWindow: {},
       businessMarketWindow: {},
-      stockMarketWindow: {},
+      stockMarketWindow: { timezone: "Asia/Seoul" },
       newsSchedule: {},
     },
   };

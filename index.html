@@ -234,6 +234,24 @@
               </label>
 
               <label>
+                <span>Game Timezone</span>
+                <select id="gameTimeZone" required aria-describedby="gameTimeZoneHelp">
+                  <option value="" selected disabled>Select timezone</option>
+                  <option value="Asia/Seoul">Seoul — Asia/Seoul</option>
+                  <option value="Asia/Tokyo">Tokyo — Asia/Tokyo</option>
+                  <option value="America/New_York">New York — America/New_York</option>
+                  <option value="America/Chicago">Chicago — America/Chicago</option>
+                  <option value="America/Denver">Denver — America/Denver</option>
+                  <option value="America/Los_Angeles">Los Angeles — America/Los_Angeles</option>
+                  <option value="Europe/London">London — Europe/London</option>
+                  <option value="Europe/Paris">Paris — Europe/Paris</option>
+                  <option value="Australia/Sydney">Sydney — Australia/Sydney</option>
+                  <option value="UTC">UTC</option>
+                </select>
+                <small id="gameTimeZoneHelp">Controls market hours for every exchange in this game.</small>
+              </label>
+
+              <label>
                 <span>Difficulty</span>
                 <select id="difficultyLevel" required>
                   <option value="" selected disabled>Select difficulty</option>

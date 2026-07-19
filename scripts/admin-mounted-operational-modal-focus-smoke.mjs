@@ -121,6 +121,16 @@ async function boundary(modal, focusLast = false) {
   }, focusLast);
 }
 
+async function waitForBoundaryFocus(page, edge) {
+  await page.waitForFunction(expectedEdge => {
+    const dialog = document.querySelector(".admin-terminal-modal:not([hidden])");
+    if (!(dialog instanceof HTMLElement)) return false;
+    const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+    const expected = expectedEdge === "first" ? controls[0] : controls.at(-1);
+    return Boolean(expected) && document.activeElement === expected;
+  }, edge, { timeout: 2000 });
+}
+
 async function exercise(browser, [action, section, key]) {
   const { context, page, errors } = await runtime(browser);
   try {
@@ -138,9 +148,11 @@ async function exercise(browser, [action, section, key]) {
     const bounds = await boundary(modal, true);
     assert(bounds.count > 0, `${action} modal contains no focusable controls.`);
     await page.keyboard.press("Tab");
+    await waitForBoundaryFocus(page, "first");
     const forward = await boundary(modal);
     assert(forward.activeIsFirst, `${action} forward wrap failed: ${JSON.stringify(forward)}.`);
     await page.keyboard.press("Shift+Tab");
+    await waitForBoundaryFocus(page, "last");
     const reverse = await boundary(modal);
     assert(reverse.activeIsLast, `${action} reverse wrap failed: ${JSON.stringify(reverse)}.`);
     await page.keyboard.press("Escape");

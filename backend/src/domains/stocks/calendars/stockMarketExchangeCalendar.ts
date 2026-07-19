@@ -1,3 +1,7 @@
+import {
+  isValidStockMarketTimeZone,
+} from "./stockMarketWindowConfig.ts";
+
 export const STOCK_EXCHANGE_CODES = [
   "FGX",
   "SBX",
@@ -43,7 +47,6 @@ export interface StockExchangeCalendarDefinition {
   readonly exchangeCode: StockExchangeCode;
   readonly countryCode: StockMarketCountryCode;
   readonly calendarVersion: string;
-  readonly timeZone: string;
   readonly regularTradingDays: readonly number[];
   readonly opensAt: string;
   readonly closesAt: string;
@@ -65,7 +68,6 @@ export interface StockMarketSessionState {
 }
 
 const DEFAULT_CALENDAR_VERSION = "2026.1";
-const DEFAULT_TIME_ZONE = "Asia/Seoul";
 const DEFAULT_OPEN = "08:00";
 const DEFAULT_CLOSE = "17:00";
 const DEFAULT_TRADING_DAYS = Object.freeze([1, 2, 3, 4, 5]);
@@ -82,7 +84,6 @@ export const STOCK_EXCHANGE_CALENDARS: Readonly<
         exchangeCode,
         countryCode: countryCode as StockMarketCountryCode,
         calendarVersion: DEFAULT_CALENDAR_VERSION,
-        timeZone: DEFAULT_TIME_ZONE,
         regularTradingDays: DEFAULT_TRADING_DAYS,
         opensAt: DEFAULT_OPEN,
         closesAt: DEFAULT_CLOSE,
@@ -136,11 +137,13 @@ export function stockMarketMinuteKey(
 
 export function evaluateStockMarketSession(
   exchangeCode: StockExchangeCode,
-  at: Date = new Date(),
+  at: Date,
+  gameTimeZone: string,
 ): StockMarketSessionState {
   assertValidDate(at);
+  assertValidGameTimeZone(gameTimeZone);
   const calendar = getStockExchangeCalendar(exchangeCode);
-  const core = evaluateCore(calendar, at);
+  const core = evaluateCore(calendar, at, gameTimeZone);
 
   return {
     exchangeCode,
@@ -151,28 +154,39 @@ export function evaluateStockMarketSession(
     evaluatedAt: at.toISOString(),
     localDate: core.local.date,
     localTime: core.local.time,
-    nextTransitionAt: findNextTransitionAt(calendar, at, core.status),
+    nextTransitionAt: findNextTransitionAt(
+      calendar,
+      at,
+      core.status,
+      gameTimeZone,
+    ),
   };
 }
 
 export function isStockMarketOpenAt(
   at: Date,
-  exchangeCode: StockExchangeCode = DEFAULT_STOCK_EXCHANGE_CODE,
+  exchangeCode: StockExchangeCode,
+  gameTimeZone: string,
 ): boolean {
   assertValidDate(at);
-  return evaluateCore(getStockExchangeCalendar(exchangeCode), at).status ===
-    "open";
+  assertValidGameTimeZone(gameTimeZone);
+  return evaluateCore(
+    getStockExchangeCalendar(exchangeCode),
+    at,
+    gameTimeZone,
+  ).status === "open";
 }
 
 function evaluateCore(
   calendar: StockExchangeCalendarDefinition,
   at: Date,
+  gameTimeZone: string,
 ): {
   readonly status: StockMarketSessionStatus;
   readonly reason: StockMarketClosureReason;
   readonly local: LocalDateTimeParts;
 } {
-  const local = localParts(at, calendar.timeZone);
+  const local = localParts(at, gameTimeZone);
 
   if (!calendar.regularTradingDays.includes(local.isoWeekday)) {
     return { status: "closed", reason: "weekend", local };
@@ -205,6 +219,7 @@ function findNextTransitionAt(
   calendar: StockExchangeCalendarDefinition,
   at: Date,
   currentStatus: StockMarketSessionStatus,
+  gameTimeZone: string,
 ): string | null {
   const minuteMs = 60_000;
   const firstMinute = Math.floor(at.getTime() / minuteMs) * minuteMs + minuteMs;
@@ -212,7 +227,9 @@ function findNextTransitionAt(
 
   for (let offset = 0; offset <= maximumMinutes; offset += 1) {
     const candidate = new Date(firstMinute + offset * minuteMs);
-    if (evaluateCore(calendar, candidate).status !== currentStatus) {
+    if (
+      evaluateCore(calendar, candidate, gameTimeZone).status !== currentStatus
+    ) {
       return candidate.toISOString();
     }
   }
@@ -271,6 +288,12 @@ function parseClockMinute(value: string): number {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
   if (!match) throw new Error(`Invalid market clock value ${value}.`);
   return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function assertValidGameTimeZone(value: string): void {
+  if (!isValidStockMarketTimeZone(value)) {
+    throw new Error("A valid game-level IANA timezone is required.");
+  }
 }
 
 function assertValidDate(value: Date): void {

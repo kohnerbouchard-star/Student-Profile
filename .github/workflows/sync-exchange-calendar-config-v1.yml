@@ -1,0 +1,108 @@
+name: Sync Exchange Calendar Config
+
+on:
+  push:
+    branches:
+      - agent/exchange-calendar-config-v1
+    paths:
+      - .github/workflows/sync-exchange-calendar-config-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-exchange-calendar-config-v1
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out authority branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/exchange-calendar-config-v1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Merge current main and reconcile generated overlap
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --prune
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "Branch already contains current main."
+            exit 0
+          fi
+
+          set +e
+          git merge --no-ff --no-commit origin/main
+          MERGE_STATUS=$?
+          set -e
+
+          if [ "$MERGE_STATUS" -ne 0 ]; then
+            CONFLICTS="$(git diff --name-only --diff-filter=U)"
+            UNEXPECTED="$(printf '%s\n' "$CONFLICTS" | grep -v '^backend/package.json$' || true)"
+            if [ -n "$UNEXPECTED" ]; then
+              echo "Unexpected merge conflicts:"
+              printf '%s\n' "$UNEXPECTED"
+              false
+            fi
+            git checkout --theirs backend/package.json
+            git add backend/package.json
+          fi
+
+          node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          node scripts/apply-shared-game-timezone-ui-v1.mjs
+          node scripts/fix-shared-game-timezone-smoke-v1.mjs
+          node scripts/enforce-single-game-timezone-source-v1.mjs
+          node scripts/fix-timezone-migration-preflight-v1.mjs
+          git add -A
+
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved merge conflicts remain."
+            git diff --name-only --diff-filter=U
+            false
+          fi
+
+          git commit -m "merge: sync shared market timezone with main"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Validate synchronized branch
+        shell: bash
+        run: |
+          npm --prefix backend run test:stock-market-calendar
+          env SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno test --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
+          node scripts/shared-game-timezone-ui-smoke.mjs
+          npm --prefix backend run typecheck:all
+          npm run audit:migrations
+          git diff --check
+
+      - name: Push synchronized branch
+        shell: bash
+        run: |
+          if git merge-base --is-ancestor origin/main HEAD && [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/agent/exchange-calendar-config-v1)" ]; then
+            git push origin HEAD:agent/exchange-calendar-config-v1
+          else
+            echo "No synchronization commit to push."
+          fi

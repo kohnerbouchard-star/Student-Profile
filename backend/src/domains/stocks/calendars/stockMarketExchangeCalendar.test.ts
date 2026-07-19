@@ -10,6 +10,8 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
+const GAME_TIME_ZONE = "Asia/Seoul";
+
 Deno.test("all ten countries map to a stable exchange", () => {
   assertEquals(STOCK_EXCHANGE_CODES.length, 10);
   assertEquals(getStockExchangeCodeForCountry("northreach"), "FGX");
@@ -28,6 +30,7 @@ Deno.test("market opens at 08:00 Asia Seoul on a weekday", () => {
   const state = evaluateStockMarketSession(
     "FGX",
     new Date("2026-07-19T23:00:00.000Z"),
+    GAME_TIME_ZONE,
   );
   assertEquals(state.status, "open");
   assertEquals(state.reason, "regular_session");
@@ -39,6 +42,7 @@ Deno.test("market is closed before open and reports the next transition", () => 
   const state = evaluateStockMarketSession(
     "FGX",
     new Date("2026-07-19T22:59:00.000Z"),
+    GAME_TIME_ZONE,
   );
   assertEquals(state.status, "closed");
   assertEquals(state.reason, "before_open");
@@ -49,6 +53,7 @@ Deno.test("market closes at 17:00 Asia Seoul", () => {
   const state = evaluateStockMarketSession(
     "FGX",
     new Date("2026-07-20T08:00:00.000Z"),
+    GAME_TIME_ZONE,
   );
   assertEquals(state.status, "closed");
   assertEquals(state.reason, "after_close");
@@ -56,10 +61,27 @@ Deno.test("market closes at 17:00 Asia Seoul", () => {
 
 Deno.test("weekends do not generate open market minutes", () => {
   const saturday = new Date("2026-07-18T03:00:00.000Z");
-  assertEquals(isStockMarketOpenAt(saturday, "AUX"), false);
-  const state = evaluateStockMarketSession("AUX", saturday);
+  assertEquals(
+    isStockMarketOpenAt(saturday, "AUX", GAME_TIME_ZONE),
+    false,
+  );
+  const state = evaluateStockMarketSession(
+    "AUX",
+    saturday,
+    GAME_TIME_ZONE,
+  );
   assertEquals(state.reason, "weekend");
   assertEquals(state.nextTransitionAt, "2026-07-19T23:00:00.000Z");
+});
+
+Deno.test("one supplied game timezone governs every exchange", () => {
+  const at = new Date("2026-07-20T13:00:00.000Z");
+  for (const exchangeCode of STOCK_EXCHANGE_CODES) {
+    assertEquals(
+      isStockMarketOpenAt(at, exchangeCode, "America/New_York"),
+      true,
+    );
+  }
 });
 
 Deno.test("minute keys are stable and exchange scoped", () => {

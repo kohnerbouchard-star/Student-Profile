@@ -265,7 +265,10 @@ function callLicensingActivationApi(bearerToken, input) {
     body: {
       purchaseCode: String(input?.licenseCode || "").trim(),
       gameName: String(input?.sessionName || "").trim(),
-      difficultyPreset: String(input?.difficulty || "").trim()
+      difficultyPreset: String(input?.difficulty || "").trim(),
+      stockMarketWindow: {
+        timezone: String(input?.timeZone || "").trim()
+      }
     },
     fallbackCode: "licensing_activation_failed",
     fallbackMessage: "The game could not be created."
@@ -284,7 +287,10 @@ function callStaffSignupApi(input) {
       displayName: String(input?.displayName || "").trim(),
       purchaseCode: String(input?.purchaseCode || "").trim(),
       gameName: String(input?.gameName || "").trim(),
-      difficultyPreset: String(input?.difficultyPreset || "").trim()
+      difficultyPreset: String(input?.difficultyPreset || "").trim(),
+      stockMarketWindow: {
+        timezone: String(input?.timeZone || "").trim()
+      }
     },
     fallbackCode: "staff_signup_failed",
     fallbackMessage: "Staff account signup failed."
