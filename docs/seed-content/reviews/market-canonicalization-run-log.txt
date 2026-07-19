@@ -12,7 +12,7 @@ Generated editorial screen: 0 blockers and 11 warning groups.
 exit=0
 
 ## generate identity evidence
-Recorded 96 active identities with 0 blockers.
+Recorded 240 active identities with 0 blockers.
 exit=0
 
 ## check canonicalization
@@ -44,7 +44,7 @@ exit=0
 > econovaria@0.0.0 audit:seed-content-identities
 > node scripts/seed-market-identity-reconciliation-summary.mjs --check
 
-Verified 96 active identities with 0 blockers.
+Verified 240 active identities with 0 blockers.
 exit=0
 
 ## test seed preflight
@@ -54,101 +54,69 @@ exit=0
 
 TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-not ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 87.83921
+  duration_ms: 92.474044
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:16:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-    
-    true !== false
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: false
-  actual: true
-  operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:24:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 118.799745
+  duration_ms: 133.393239
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 48.359411
+  duration_ms: 54.141045
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
-not ok 4 - staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 48.500586
+  duration_ms: 57.685481
   type: 'test'
-  location: '/home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:45:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly equal:
-    
-    true !== false
-    
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected: false
-  actual: true
-  operator: 'strictEqual'
-  stack: |-
-    TestContext.<anonymous> (file:///home/runner/work/Student-Profile/Student-Profile/scripts/seed-content-preflight.test.mjs:50:10)
-    async Test.run (node:internal/test_runner/test:1054:7)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.465804
+  duration_ms: 0.333305
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.220838
+  duration_ms: 0.156242
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.417452
+  duration_ms: 0.470321
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.228771
+  duration_ms: 0.308217
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.526174
+  duration_ms: 0.599442
   type: 'test'
   ...
 1..9
 # tests 9
 # suites 0
-# pass 7
-# fail 2
+# pass 9
+# fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 379.387478
-exit=1
+# duration_ms 408.094692
+exit=0
 
 ## design seed preflight
 
@@ -158,9 +126,8 @@ exit=1
 Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.1.0-design
 Environment: test
 Mode: design
-JSON files checked: 64
-Errors: 0; blockers: 21; warnings: 0
-[BLOCKER] ACTIVE_MARKET_COUNTRIES_INCOMPLETE docs/seed-content/markets/active-subsets/active-market-rollout-status-v1.json: 4 country candidates are committed; 10 are required.
+JSON files checked: 70
+Errors: 0; blockers: 20; warnings: 0
 [BLOCKER] ARRIVAL_PACKAGES_INCOMPLETE docs/seed-content/players/arrival-packages-v1.json: 10 arrival packages lack one or more required mechanical values or introductory references.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-packages, skills-and-credentials, contract-families, progression-model, simulation.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is blocked; dependencies: starting-value-calibration, housing-model, relationship-persistence, authoritative-instantiation-route.
@@ -185,14 +152,6 @@ Result: DESIGN_VALID_WITH_BLOCKERS
 exit=0
 
 ## diff check
-docs/seed-content/reviews/market-canonicalization-run-log.txt:65: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:67: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:99: trailing whitespace.
-+    
-docs/seed-content/reviews/market-canonicalization-run-log.txt:101: trailing whitespace.
-+    
-exit=2
+exit=0
 
-finalStatus=1
+finalStatus=0
