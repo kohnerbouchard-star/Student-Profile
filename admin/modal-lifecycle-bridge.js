@@ -243,4 +243,6 @@
     reconcile: scheduleSettledReconcile,
     getBindingCount: () => bindings.size,
   });
+
+  void import("./player-drawer-accessibility.js");
 })();
