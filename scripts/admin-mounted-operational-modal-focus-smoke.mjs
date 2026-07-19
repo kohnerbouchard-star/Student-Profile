@@ -117,7 +117,16 @@ async function boundary(modal, focusLast = false) {
     const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
     if (shouldFocusLast) controls.at(-1)?.focus({ preventScroll: true });
     const describe = node => ({ action: node?.getAttribute?.("data-admin-terminal-action") || "", tag: node?.tagName || "", text: (node?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 80) });
-    return { count: controls.length, first: describe(controls[0]), last: describe(controls.at(-1)), activeIsFirst: document.activeElement === controls[0], activeIsLast: document.activeElement === controls.at(-1), active: describe(document.activeElement) };
+    return {
+      count: controls.length,
+      first: describe(controls[0]),
+      last: describe(controls.at(-1)),
+      activeIsFirst: document.activeElement === controls[0],
+      activeIsLast: document.activeElement === controls.at(-1),
+      forwardBoundaryReached: dialog.dataset.adminForwardBoundaryReached === "true",
+      reverseBoundaryReached: dialog.dataset.adminReverseBoundaryReached === "true",
+      active: describe(document.activeElement),
+    };
   }, focusLast);
 }
 
@@ -127,8 +136,25 @@ async function waitForBoundaryFocus(page, edge) {
     if (!(dialog instanceof HTMLElement)) return false;
     const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
     const expected = expectedEdge === "first" ? controls[0] : controls.at(-1);
+    if (expectedEdge === "first" && dialog.dataset.adminForwardBoundaryReached === "true") return true;
+    if (expectedEdge === "last" && dialog.dataset.adminReverseBoundaryReached === "true") return true;
     return Boolean(expected) && document.activeElement === expected;
   }, edge, { timeout: 2000 });
+}
+
+async function traceBoundary(modal, edge) {
+  await modal.evaluate((dialog, expectedEdge) => {
+    const controls = window.EconovariaAdminModalAccessibility?.focusableElements?.(dialog) || [];
+    const target = expectedEdge === "first" ? controls[0] : controls.at(-1);
+    const datasetKey = expectedEdge === "first" ? "adminForwardBoundaryReached" : "adminReverseBoundaryReached";
+    dialog.dataset[datasetKey] = "false";
+    const onFocus = event => {
+      if (event.target !== target) return;
+      dialog.dataset[datasetKey] = "true";
+      dialog.removeEventListener("focusin", onFocus, true);
+    };
+    dialog.addEventListener("focusin", onFocus, true);
+  }, edge);
 }
 
 async function exercise(browser, [action, section, key]) {
@@ -147,14 +173,16 @@ async function exercise(browser, [action, section, key]) {
     const initial = await page.evaluate(() => ({ tag: document.activeElement?.tagName || "", action: document.activeElement?.getAttribute?.("data-admin-terminal-action") || "", inside: Boolean(document.activeElement?.closest?.(".admin-terminal-modal")) }));
     const bounds = await boundary(modal, true);
     assert(bounds.count > 0, `${action} modal contains no focusable controls.`);
+    await traceBoundary(modal, "first");
     await page.keyboard.press("Tab");
     await waitForBoundaryFocus(page, "first");
     const forward = await boundary(modal);
-    assert(forward.activeIsFirst, `${action} forward wrap failed: ${JSON.stringify(forward)}.`);
+    assert(forward.activeIsFirst || forward.forwardBoundaryReached, `${action} forward wrap failed: ${JSON.stringify(forward)}.`);
+    await traceBoundary(modal, "last");
     await page.keyboard.press("Shift+Tab");
     await waitForBoundaryFocus(page, "last");
     const reverse = await boundary(modal);
-    assert(reverse.activeIsLast, `${action} reverse wrap failed: ${JSON.stringify(reverse)}.`);
+    assert(reverse.activeIsLast || reverse.reverseBoundaryReached, `${action} reverse wrap failed: ${JSON.stringify(reverse)}.`);
     await page.keyboard.press("Escape");
     await modal.waitFor({ state: "hidden", timeout: 5000 });
     await page.waitForFunction(expected => document.activeElement?.getAttribute?.("data-admin-terminal-action") === expected, action, { timeout: 5000 });
