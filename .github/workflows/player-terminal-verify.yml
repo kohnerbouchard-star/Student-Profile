@@ -53,6 +53,7 @@ jobs:
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
               $0 == ".github/workflows/environment-neutral-browser.yml" { next }
               $0 == ".github/workflows/admin-shell-smoke.yml" { next }
+              $0 == ".github/workflows/admin-game-lifecycle-controls-v1.yml" { next }
               $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
               $0 == "admin/index.html" { next }
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
