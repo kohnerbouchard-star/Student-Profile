@@ -1,0 +1,244 @@
+name: Seed Executable Beta Pack
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - .github/workflows/seed-executable-beta-pack.yml
+      - package.json
+      - package-lock.json
+      - backend/package.json
+      - backend/package-lock.json
+      - scripts/seed-beta-*.mjs
+      - scripts/build-seed-beta-pack.mjs
+      - scripts/seed-content-*.mjs
+      - scripts/generate-*.mjs
+      - scripts/apply-seed-*.mjs
+      - scripts/reconcile-seed-*.mjs
+      - docs/seed-content/**
+      - player-terminal/src/data/map-regions.js
+      - player-terminal/assets/images/econovaria-world-map.png
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/seed-executable-beta-pack.yml
+      - package.json
+      - package-lock.json
+      - backend/package.json
+      - backend/package-lock.json
+      - scripts/seed-beta-*.mjs
+      - scripts/build-seed-beta-pack.mjs
+      - scripts/seed-content-*.mjs
+      - scripts/generate-*.mjs
+      - scripts/apply-seed-*.mjs
+      - scripts/reconcile-seed-*.mjs
+      - docs/seed-content/**
+      - player-terminal/src/data/map-regions.js
+      - player-terminal/assets/images/econovaria-world-map.png
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-executable-beta-pack-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    name: Synchronize seed authority with main
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.sync.outputs.current }}
+    steps:
+      - name: Check out existing seed authority branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Merge current main without scope rewriting
+        id: sync
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+            echo "Seed authority already contains current main."
+          else
+            git merge --no-edit --no-ff origin/main
+            git push origin HEAD:agent/seed-content-foundation-v1
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "Current main merged. A new current-head run will perform verification."
+          fi
+
+  verify-pull-request:
+    name: Verify executable pack on pull request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix backend ci
+      - run: npm run build:seed-beta-pack
+      - run: npm run validate:seed-beta-pack
+      - run: npm run test:seed-beta-pack
+      - run: npm run seed:beta:validate
+      - run: npm run seed:beta:dry-run
+      - run: npm run audit:seed-content
+      - run: npm test
+      - run: npm --prefix backend run typecheck:all
+      - run: npm --prefix backend run smoke
+      - run: npm run audit:migrations
+      - run: npm run preflight:seed-content:staging
+      - run: git diff --check
+      - name: Ensure deterministic builders leave no uncommitted drift
+        run: git diff --exit-code
+
+  verify-current-head:
+    name: Verify executable pack on synchronized head
+    needs: synchronize
+    if: github.event_name != 'pull_request' && needs.synchronize.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out synchronized branch head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+
+      - name: Set up repository Node version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Install Backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Rebuild deterministic bounded pack
+        run: npm run build:seed-beta-pack
+
+      - name: Validate bounded pack and integrity manifest
+        run: npm run validate:seed-beta-pack
+
+      - name: Run importer, rollback, activation, and exploit tests
+        run: npm run test:seed-beta-pack
+
+      - name: Validate environment-restricted importer
+        run: npm run seed:beta:validate
+
+      - name: Run staging dry-run without credentials
+        run: npm run seed:beta:dry-run
+
+      - name: Run every existing seed validator and simulation reconciliation
+        run: npm run audit:seed-content
+
+      - name: Run repository checks
+        run: npm test
+
+      - name: Run Backend typecheck
+        run: npm --prefix backend run typecheck:all
+
+      - name: Run Backend smoke
+        run: npm --prefix backend run smoke
+
+      - name: Run migration static audit
+        run: npm run audit:migrations
+
+      - name: Run structural isolated-staging preflight
+        run: npm run preflight:seed-content:staging
+
+      - name: Check whitespace and patch validity
+        run: git diff --check
+
+      - name: Ensure deterministic builders leave no uncommitted drift
+        run: git diff --exit-code
+
+      - name: Summarize production boundary
+        run: |
+          node -e "const p=require('./docs/seed-content/executable/beta-pack-v1/pack-v1.json'); if(p.productionAuthorized!==false||p.activationAuthorized!==false||p.boundedCounts.marketInstruments!==240||!p.excluded.fullMarketUniverse3200) process.exitCode=1; else console.log(JSON.stringify({packId:p.packId,version:p.version,marketInstruments:p.boundedCounts.marketInstruments,productionAuthorized:p.productionAuthorized,activationAuthorized:p.activationAuthorized,fullUniverseExcluded:p.excluded.fullMarketUniverse3200},null,2));"
+
+  connected-isolated-staging:
+    name: Connected isolated-staging gate
+    needs: verify-current-head
+    if: needs.verify-current-head.result == 'success' && vars.SEED_ISOLATED_STAGING_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/seed-content-foundation-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - name: Refuse production or missing isolated identity
+        env:
+          SUPABASE_URL: ${{ secrets.SEED_STAGING_SUPABASE_URL }}
+          EXPECTED_PROJECT_REF: ${{ vars.SEED_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.PRODUCTION_SUPABASE_PROJECT_REF }}
+        run: |
+          node - <<'NODE'
+          const url = process.env.SUPABASE_URL || '';
+          const expected = process.env.EXPECTED_PROJECT_REF || '';
+          const production = process.env.PRODUCTION_PROJECT_REF || 'cgiukdjwicykrmtkhudh';
+          const match = url.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/i);
+          if (!match || !expected || match[1] !== expected || expected === production || expected === 'cgiukdjwicykrmtkhudh') {
+            throw new Error('Connected staging identity is missing, mismatched, or production.');
+          }
+          console.log(JSON.stringify({ isolatedProjectRef: expected, productionRefRejected: true }));
+          NODE
+      - name: Validate pack before any connected write
+        run: npm run validate:seed-beta-pack
+      - name: Require explicit game session and activation authorization
+        env:
+          GAME_SESSION_ID: ${{ vars.SEED_STAGING_GAME_SESSION_ID }}
+          ACTIVATION_AUTHORIZATION_JSON: ${{ secrets.SEED_STAGING_ACTIVATION_AUTHORIZATION_JSON }}
+        run: |
+          test -n "$GAME_SESSION_ID"
+          test -n "$ACTIVATION_AUTHORIZATION_JSON"
+          printf '%s' "$ACTIVATION_AUTHORIZATION_JSON" > "$RUNNER_TEMP/seed-activation-authorization.json"
+      - name: Import and activate only the bounded pack
+        env:
+          SUPABASE_URL: ${{ secrets.SEED_STAGING_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SEED_STAGING_SERVICE_ROLE_KEY }}
+          SEED_TARGET_ENVIRONMENT: staging
+          SEED_PRODUCTION_PROJECT_REF: ${{ vars.PRODUCTION_SUPABASE_PROJECT_REF }}
+          EXPECTED_PROJECT_REF: ${{ vars.SEED_STAGING_PROJECT_REF }}
+          GAME_SESSION_ID: ${{ vars.SEED_STAGING_GAME_SESSION_ID }}
+        run: |
+          node scripts/seed-beta-importer.mjs \
+            --mode import \
+            --environment staging \
+            --expected-project-ref "$EXPECTED_PROJECT_REF" \
+            --game-session-id "$GAME_SESSION_ID" \
+            --activate \
+            --authorization "$RUNNER_TEMP/seed-activation-authorization.json" \
+            --audit-root "$RUNNER_TEMP/seed-audit"
+      - name: Retain non-sensitive import and rollback evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-connected-staging-${{ github.sha }}
+          path: ${{ runner.temp }}/seed-audit/*.json
+          if-no-files-found: error
+          retention-days: 90
