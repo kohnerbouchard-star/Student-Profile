@@ -119,31 +119,3 @@ jobs:
           git diff --cached --check
           git commit -m "docs(roadmap): mark incident readiness verified"
           git push origin HEAD:docs/incident-readiness-final-v2
-
-  finalize-player-market:
-    if: github.event.pull_request.head.ref == 'agent/player-market-reconciliation-v1'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out player market branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/player-market-reconciliation-v1
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Synchronize current main and finalize market roadmap
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f scripts/finalize-player-market-roadmap.mjs
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git merge --no-edit origin/main
-          node scripts/finalize-player-market-roadmap.mjs
-          git add -A
-          git diff --cached --check
-          git diff --cached --quiet && { echo "No market roadmap reconciliation changes were produced."; exit 1; }
-          git commit -m "docs(roadmap): mark player market reconciliation verified"
-          git push origin HEAD:agent/player-market-reconciliation-v1
