@@ -119,6 +119,13 @@ async function fixture() {
       sourceCommit: "a".repeat(40),
       deterministicArchive: "gnu-tar+gzip-n",
     },
+    environmentNeutrality: {
+      status: "pass",
+      verifier: "release-environment-neutrality-v1",
+      scannedRoots: ["index.html", "frontend", "admin"],
+      auditedProductionProjectRefSha256: null,
+      auditedWorkerOriginSha256: null,
+    },
     promotionPolicy: {
       rebuildAllowed: false,
       requiredSequence: ["staging", "production"],
@@ -195,6 +202,22 @@ test("release manifest validates exact artifact bytes and repository facts", asy
       expectedCommit: "a".repeat(40),
     }),
     /digest mismatch|size mismatch/,
+  );
+});
+
+test("release manifest rejects missing environment-neutrality evidence", async (t) => {
+  const data = await fixture();
+  t.after(() => rm(data.repoRoot, { recursive: true, force: true }));
+  const invalid = structuredClone(data.manifest);
+  delete invalid.environmentNeutrality;
+  await assert.rejects(
+    validateReleaseManifest({
+      manifest: invalid,
+      artifactRoot: data.artifactRoot,
+      repoRoot: data.repoRoot,
+      expectedCommit: "a".repeat(40),
+    }),
+    /environmentNeutrality/,
   );
 });
 
