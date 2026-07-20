@@ -1,4 +1,4 @@
-name: Apply Player Story Delivery v1
+name: Sync Main and Snapshot Player Story Delivery
 
 on:
   pull_request:
@@ -11,10 +11,10 @@ permissions:
   contents: write
 
 jobs:
-  apply:
+  sync-and-snapshot:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out pull request branch
         uses: actions/checkout@v7
@@ -22,35 +22,34 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Reconstruct and apply exact implementation
+      - name: Synchronize current main
         shell: bash
         run: |
           set -euo pipefail
-
-          cat \
-            .tmp/story-patch-gz/chunk-00 \
-            .tmp/story-patch-gz/chunk-01 \
-            .tmp/story-patch-gz/chunk-02-0 \
-            .tmp/story-patch-gz/chunk-02-1 \
-            > /tmp/player-story-delivery-v1.patch.gz.b64
-          base64 --decode .tmp/story-patch-gz/chunk-02-2-double \
-            >> /tmp/player-story-delivery-v1.patch.gz.b64
-          base64 --decode /tmp/player-story-delivery-v1.patch.gz.b64 \
-            > /tmp/player-story-delivery-v1.patch.gz
-          gzip --decompress --stdout /tmp/player-story-delivery-v1.patch.gz \
-            > /tmp/player-story-delivery-v1.patch
-
-          echo "f9f1ae19c00f54d33bfa202d00b08ff20f4821c82794216845d6dfe330baf35e  /tmp/player-story-delivery-v1.patch" \
-            | sha256sum --check --strict
-          git apply --check /tmp/player-story-delivery-v1.patch
-          git apply /tmp/player-story-delivery-v1.patch
-
-          rm -rf .tmp/story-patch .tmp/story-patch-gz
-          rm -f .github/workflows/apply-player-story-delivery-v1.yml
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --check
-          git commit -m "feat(player): add authoritative story delivery"
-          git push
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "Branch already contains current main."
+          else
+            git merge --no-edit origin/main
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
+      - name: Package synchronized source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=backend/node_modules \
+            -czf "$RUNNER_TEMP/player-story-delivery-synced-source.tar.gz" .
+
+      - name: Upload synchronized source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: player-story-delivery-synced-source
+          path: ${{ runner.temp }}/player-story-delivery-synced-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
