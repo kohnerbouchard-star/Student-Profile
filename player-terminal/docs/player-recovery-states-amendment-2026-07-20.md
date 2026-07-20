@@ -5,21 +5,17 @@
 **Roadmap phase:** Phase 3 — Close beta gameplay gaps  
 **Primary roadmap item:** Player-facing recovery states  
 **Related roadmap item:** `BETA-PLAYER-014`  
-**Status:** `IMPLEMENTED_NOT_MERGED`  
-**Authority:** PR #247, branch `agent/player-recovery-states-v1`  
-**Verified head:** `edc630a38b8df37ae92caf19797930d3f147e40f`  
-**Started:** 2026-07-20
+**Status:** `VERIFIED_COMPLETE`  
+**Implementation authority:** PR #247, branch `agent/player-recovery-states-v1`  
+**Implementation merge:** `ad889a2bdf9d5587fff3275d70751c79992171c7`  
+**Final verified head:** `4cf670dcb3653f1c803291b2a410b1c2d2fc512b`  
+**Completed:** 2026-07-20
 
-## Ownership declaration
+## Roadmap reconciliation
 
-This branch owns the bounded Player-facing recovery-state tranche. It does not own:
+The bounded repository-integrated Phase 3 **Player-facing recovery states** subsection is `VERIFIED_COMPLETE`. This record supersedes the unchecked Phase 3 recovery-state entry in the current canonical roadmap until that aggregate file is refreshed again.
 
-- seed content, calibration, active-market selection, or PR #163 content;
-- story cutscene or purpose-built story delivery owned by PR #244;
-- market orders and Portfolio work owned by PR #245;
-- Program-control consolidation completed by PR #251;
-- isolated-staging creation, proxy configuration, or deployment evidence;
-- new gameplay capabilities or visual redesign.
+`BETA-PLAYER-014` remains `IN_PROGRESS` only for connected isolated-staging probes covering offline, timeout, ambiguous writes, rate limiting, and session expiry. This completion record does not claim isolated-staging, production-promotion, or deployment evidence.
 
 ## Completed repository-integrated scope
 
@@ -31,21 +27,47 @@ This branch owns the bounded Player-facing recovery-state tranche. It does not o
 6. Session-invalid behavior remains delegated to the merged secure host/login handoff.
 7. Rate-limit recovery respects `retryAfterMs`, disables premature retry, and restores the same-action retry after the wait expires.
 8. The accepted Player visual system, keyboard behavior, responsive layout, public identifiers, and UUID privacy are preserved.
-9. Recovery installation is isolated from `player-terminal/src/main.js` to avoid collision with parallel Player feature branches.
+9. Recovery installation remains isolated from `player-terminal/src/main.js`, preserving parallel Player feature ownership.
 10. Deterministic Node and desktop/mobile Chromium verification is wired into Player Terminal Verify.
 
-## Verification evidence
+## Authoritative implementation evidence
 
-Final verified implementation head `edc630a38b8df37ae92caf19797930d3f147e40f` passed:
+Merged files include:
 
-- Repository Quality #1115;
-- Player Runtime Cutover Verify #26, including authenticated host handoff;
-- Player Terminal Verify #352;
-- the full standalone Node verification chain, including `tests/player-recovery-states.mjs`;
-- desktop and mobile Chromium, including offline gating, ambiguous same-action retry, rate-limit timing, confirmed-success refresh failure, responsive layout, and existing Player regression coverage.
+- `player-terminal/src/recovery/player-recovery-contract.js`;
+- `player-terminal/src/recovery/player-recovery-controller.js`;
+- `player-terminal/src/recovery/player-recovery-bootstrap.js`;
+- `player-terminal/css/player-terminal-recovery.css`;
+- `player-terminal/tests/player-recovery-states.mjs`;
+- `player-terminal/tests/browser/player-recovery-states.spec.mjs`;
+- `player-terminal/index.html`;
+- `player-terminal/package.json`.
 
-An earlier Chromium attempt correctly exposed a mutable disabled-state locator and a stale rate-limit countdown label. Both defects were corrected before the final green head.
+The final synchronized implementation head `4cf670dcb3653f1c803291b2a410b1c2d2fc512b` passed all ten triggered workflows before merge:
 
-## Evidence boundary
+- Player Terminal Verify #371;
+- Player Runtime Cutover Verify #30;
+- Repository Quality #1148;
+- Backend Typecheck #1286;
+- Database Replay #382;
+- Supply Chain Security #32;
+- Admin Game Lifecycle Controls #63;
+- Staging Readiness Preflight #113;
+- Exchange Calendar Runtime #239;
+- Required Game Market Timezone #271.
 
-This completes the repository-integrated Phase 3 Player recovery-state tranche after merge. Connected isolated-staging probes for offline, timeout, ambiguous writes, rate limiting, and session expiry remain tracked under `BETA-PLAYER-010`, `BETA-PLAYER-014`, and Phase 5 release evidence; this amendment does not claim those external gates are complete.
+Player Terminal verification includes the complete standalone Node chain plus desktop and mobile Chromium coverage for offline gating, same-action idempotent retry, rate-limit timing, confirmed-success refresh failure, responsive layout, and existing Player regressions.
+
+## Collision and release boundary
+
+This completed subsection does not own or alter:
+
+- seed content, calibration, active-market selection, or PR #163;
+- story cutscene and purpose-built delivery owned by PR #244;
+- market orders and Portfolio owned by PR #245;
+- Messaging owned by PR #248;
+- Marketplace owned by PR #249;
+- isolated-staging creation, proxy configuration, deployment, or production promotion;
+- new gameplay capabilities or product redesign.
+
+The duplicate recovery implementation path created as PR #253 was closed without merge. PR #247 and merge `ad889a2bdf9d5587fff3275d70751c79992171c7` are the sole authoritative implementation record.
