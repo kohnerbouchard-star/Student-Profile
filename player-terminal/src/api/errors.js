@@ -16,6 +16,7 @@ const STATUS_MESSAGES = Object.freeze({
   404: "The requested player resource is no longer available.",
   409: "This action conflicts with a newer update. Refresh this section and try again.",
   422: "The request contains information the game cannot accept.",
+  423: "This game is paused. Economic actions are temporarily unavailable.",
   429: "Too many requests were sent. Wait a moment and try again.",
   500: "The game service could not complete the request. Try again shortly.",
   502: "The game service is temporarily unavailable. Try again shortly.",
@@ -27,6 +28,8 @@ const CODE_MESSAGES = Object.freeze({
   ACTION_COOLDOWN: "That action was just submitted. Wait a moment before trying again.",
   GAME_ARCHIVED: "This game is no longer active. Existing records remain read-only.",
   GAME_ENDED: "This game has ended. Existing records remain read-only.",
+  GAME_LIFECYCLE_TERMINAL: "This game has ended. Existing records remain read-only.",
+  GAME_LIFECYCLE_UNKNOWN: "The game state is being reconciled. Economic actions are temporarily unavailable.",
   GAME_MUTATIONS_PAUSED: "This game is paused. Economic actions are temporarily unavailable.",
   GAME_NOT_ACTIVE: "This game is no longer active. Existing records remain read-only.",
   GAME_PAUSED: "This game is paused. Economic actions are temporarily unavailable.",
@@ -50,7 +53,8 @@ const CODE_MESSAGES = Object.freeze({
 });
 
 export function playerSafeErrorMessage({ status = 0, code = "" } = {}) {
-  return CODE_MESSAGES[code] || STATUS_MESSAGES[status] || "The request could not be completed. Try again.";
+  const safeCode = String(code || "").trim().toUpperCase();
+  return CODE_MESSAGES[safeCode] || STATUS_MESSAGES[status] || "The request could not be completed. Try again.";
 }
 
 export class ApiRequestError extends Error {
