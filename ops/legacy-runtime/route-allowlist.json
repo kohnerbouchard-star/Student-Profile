@@ -25,5 +25,9 @@
     "stock-market-read",
     "stock-market-trading",
     "stock-market-player-read"
-  ]
+  ],
+  "authProbePlans": {
+    "admin-api": {"path": "/health", "method": "GET"},
+    "classroom-api": {"path": "/health", "method": "GET"}
+  }
 }
