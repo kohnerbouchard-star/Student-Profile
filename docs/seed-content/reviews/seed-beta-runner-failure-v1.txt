@@ -9,7 +9,7 @@ From https://github.com/kohnerbouchard-star/Student-Profile
 Auto-merging package.json
 CONFLICT (content): Merge conflict in package.json
 Automatic merge failed; fix conflicts and then commit the result.
-[agent/seed-content-foundation-v1 72afdeb] chore(seed): synchronize PR 163 with current main and install beta pack [skip ci]
+[agent/seed-content-foundation-v1 2c7dc02] chore(seed): synchronize PR 163 with current main and install beta pack [skip ci]
 To https://github.com/kohnerbouchard-star/Student-Profile
  ! [remote rejected] HEAD -> agent/seed-content-foundation-v1 (refusing to allow a GitHub App to create or update workflow `.github/workflows/seed-beta-pack-execution.yml` without `workflows` permission)
 error: failed to push some refs to 'https://github.com/kohnerbouchard-star/Student-Profile'
