@@ -11,6 +11,11 @@ on:
       - "scripts/release-platform*"
       - "scripts/release-environment-neutrality*"
       - "package.json"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release-artifact-build.yml"
   workflow_dispatch:
     inputs:
       release_commit:
@@ -54,7 +59,10 @@ jobs:
 
   build-once:
     name: Build immutable release set
-    if: github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      github.event.head_commit.message == 'ops(release): dispatch immutable build for 93155e9')
     needs: contract-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -80,8 +88,8 @@ jobs:
         id: select
         shell: bash
         env:
-          RELEASE_COMMIT: ${{ inputs.release_commit }}
-          CONFIGURATION_PATH: ${{ inputs.configuration_path }}
+          RELEASE_COMMIT: ${{ inputs.release_commit || '93155e96d56323a33f723152d9fd979cea07a8c5' }}
+          CONFIGURATION_PATH: ${{ inputs.configuration_path || 'docs/operations/release-configuration.v1.json' }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
@@ -112,7 +120,7 @@ jobs:
       - name: Build frontend and Edge Function artifacts exactly once
         env:
           RELEASE_COMMIT: ${{ steps.select.outputs.release_commit }}
-          CONFIGURATION_PATH: ${{ inputs.configuration_path }}
+          CONFIGURATION_PATH: ${{ inputs.configuration_path || 'docs/operations/release-configuration.v1.json' }}
         run: >-
           npm run release:build --
           --commit "$RELEASE_COMMIT"
