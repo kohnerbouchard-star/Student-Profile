@@ -2,7 +2,7 @@ name: Incident Roadmap Finalize
 
 on:
   pull_request_target:
-    types: [ready_for_review]
+    types: [ready_for_review, reopened]
 
 permissions:
   contents: write
@@ -15,8 +15,7 @@ jobs:
   finalize:
     if: >-
       github.event.pull_request.number == 260 &&
-      github.event.pull_request.head.ref == 'docs/incident-readiness-verification-v1' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.ref == 'docs/incident-readiness-verification-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
