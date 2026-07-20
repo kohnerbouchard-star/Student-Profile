@@ -5,7 +5,7 @@
 **Authoritative path:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-19  
-**Current audited main baseline:** `249fc53a23ad23058d376e4e394524af0bdee265`
+**Current audited main baseline:** `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`
 
 ---
 
@@ -101,6 +101,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Player safe session-expiry exit | `VERIFIED_COMPLETE` | PR #165 merged as `4e20a5993da925463887bc23cc707be5679ccd20`; suspended-session correction PR #167 merged as `14adbc525995cc931998244c442a23b542f43c7a` |
 | Admin safe session-expiry exit | `VERIFIED_COMPLETE` | PR #166 merged as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5` |
 | Admin explicit request lifecycle | `VERIFIED_COMPLETE` | PR #168 merged as `1d487afc766146b5e3e19f718252b3eff9a1168e` |
+| Admin game lifecycle and emergency mutation controls | `VERIFIED_COMPLETE` | PR #229 merged as `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb` |
 | Admin shape-accurate skeletons | `VERIFIED_COMPLETE` | PR #162 merged |
 | Player Terminal skeleton hardening | `VERIFIED_COMPLETE` | merged on `main` |
 | Player Terminal capability tranche | `VERIFIED_COMPLETE` for frontend behavior only | PR #156 merged |
@@ -130,6 +131,12 @@ The first beta must prove this loop end to end with authoritative persistence.
 - PR #217 merged the Player Terminal host-runtime cutover and removed the Cloudflare browser transport as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`.
 - PR #222 physically removed the now-unmounted legacy Player source and installed a repository ratchet preventing its return as `3b74340830da8db4fdabe2926915c3a32471b7c8`; final head `9073afaf58b16da3831fb3e7d67da6922acbf4c5` passed Repository Quality #909, Player Runtime Cutover Verify #12, Admin Shell Smoke #836, Exchange Calendar Runtime #156, and Required Game Market Timezone #168.
 - PR #213 merged the authenticated Player Banking read boundary as `aee11e06c44dc9b6cd3ee2a386be215cef3c5536`; PR #221 completed connected pagination and full cross-currency balance display as `26eecaa1ed04e3aa0909c75be269491a975fad70`; PR #230 merged the economic mutation-to-ledger invariant matrix and idempotent staff-adjustment RPC as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`. Final PR #230 head `1050d8bf8b667d627c032cf72b891f6a31b1c380` passed Backend Typecheck #1214 with complete smoke, Database Replay #306, Admin Shell Smoke #854, Admin API Check #696, Admin Bundle Contract Audit #556, Repository Quality #945, Exchange Calendar Runtime #171, and Required Game Market Timezone #188.
+
+### 2026-07-20 game-lifecycle reconciliation
+
+- PR #229 merged authoritative Admin game lifecycle controls as `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`.
+- Final head `9f7cbab6f718215ec748ee4e78c0dde12a56da0d` passed all ten final-head workflows, including the dedicated lifecycle suite, the complete 89-stage Admin Shell, Backend Typecheck, Database Replay, Repository Quality, Admin API Check, Admin Bundle Contract Audit, Staging Readiness Preflight, Exchange Calendar Runtime, and Required Game Market Timezone.
+- `BETA-ADMIN-009` and `BETA-ADMIN-010` are repository-verified complete. Connected isolated-staging lifecycle verification remains under `BETA-ADMIN-007` and the release gates; it does not reopen the merged implementation items.
 
 ### Current release condition
 
@@ -244,8 +251,8 @@ The application is not yet approved for beta or production runtime cutover becau
 - [x] `BETA-ADMIN-006` Add explicit loading, loaded, refreshing, stale, empty, and failed data-state contracts. `VERIFIED_COMPLETE` through PR #231 merged as `249fc53a23ad23058d376e4e394524af0bdee265`; synchronized head `c0f482914ec34352b924d8220cabb1c87a79a23b` passed Repository Quality #949 and Admin Shell Smoke #858 with all 89 stages, including mounted six-state lifecycle, content-preserving refresh/stale behavior, accessibility, and zero-pointer evidence.
 - [ ] `BETA-ADMIN-007` Add staging-backed Admin smoke after isolated staging exists.
 - [x] `BETA-ADMIN-008` Add the inventory-redemption review queue after Backend handoff. `VERIFIED_COMPLETE` through PR #177 merged as `00ffc841cb7072cb98610e23d20eb4d0cfd60cf8`; Repository Quality #885, Staging Readiness Preflight #58, Database Replay #296, and Admin Shell Smoke #827 with all 87 stages passed.
-- [ ] `BETA-ADMIN-009` Add emergency game mutation pause/resume controls.
-- [ ] `BETA-ADMIN-010` Verify start, pause, resume, end, archive, session revoke, and join-code reset lifecycle.
+- [x] `BETA-ADMIN-009` Add emergency game mutation pause/resume controls. `VERIFIED_COMPLETE` through PR #229 merged as `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`; owner-scoped lifecycle reads and row-locked, idempotent transitions gate ordinary game mutations across draft, active, paused, ended, archived, and unknown states.
+- [x] `BETA-ADMIN-010` Verify start, pause, resume, end, archive, session revoke, and join-code reset lifecycle. `VERIFIED_COMPLETE` through PR #229 merged as `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`; final head `9f7cbab6f718215ec748ee4e78c0dde12a56da0d` passed Admin Game Lifecycle Controls #15, Admin Shell Smoke #875 with all 89 stages, Backend Typecheck #1229, Database Replay #321, Repository Quality #979, Admin API Check #711, Admin Bundle Contract Audit #571, Staging Readiness Preflight #74, Exchange Calendar Runtime #185, and Required Game Market Timezone #206.
 
 ---
 
@@ -713,8 +720,8 @@ Required gates:
 - [ ] Inventory redemption.
 - [ ] Notification inbox and cutscenes.
 - [ ] Minimal onboarding.
-- [ ] Game lifecycle start, pause, resume, end, archive, and session revoke.
-- [ ] Emergency economic mutation pause.
+- [x] Game lifecycle start, pause, resume, end, archive, and session revoke. Merged through PR #229.
+- [x] Emergency economic mutation pause. Merged through PR #229; isolated-staging connected verification remains part of the release gate.
 - [ ] Player-facing recovery states.
 - [ ] One complete tutorial Contract chain.
 - [ ] One complete Store purchase/redemption chain.
