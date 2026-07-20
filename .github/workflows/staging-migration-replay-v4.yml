@@ -1,6 +1,6 @@
 name: Staging Migration Replay V4
 
-# Controller-triggered retry after verified isolated-staging recovery pass 3.
+# Authoritative controller-owned staging replay.
 on:
   push:
     branches:
@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: econovaria-staging-migration-replay-v4
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   replay:
