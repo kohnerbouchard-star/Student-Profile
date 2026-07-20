@@ -30,17 +30,29 @@ jobs:
           ref: agent/roadmap-full-reconciliation-v1
           fetch-depth: 0
 
-      - name: Reconcile current-state roadmap sections
-        shell: bash
-        run: |
-          python3 .roadmap-reconcile/part1.py
-          python3 .roadmap-reconcile/part2a.py
-          python3 .roadmap-reconcile/part2b.py
-          python3 .roadmap-reconcile/part3a.py
-          python3 .roadmap-reconcile/part3b.py
-          python3 .roadmap-reconcile/part4a.py
-          python3 .roadmap-reconcile/part4b.py
-          git diff --check
+      - name: Reconcile baseline, authority, Identity, and capabilities
+        run: python3 .roadmap-reconcile/part1.py
+
+      - name: Reconcile Contracts, Store, and Inventory
+        run: python3 .roadmap-reconcile/part2a.py
+
+      - name: Reconcile Market, notifications, and Player runtime
+        run: python3 .roadmap-reconcile/part2b.py
+
+      - name: Reconcile Phase 0 and ownership registry
+        run: python3 .roadmap-reconcile/part3a.py
+
+      - name: Reconcile Backend, Player connection, and gameplay phases
+        run: python3 .roadmap-reconcile/part3b.py
+
+      - name: Reconcile seed-content evidence boundary
+        run: python3 .roadmap-reconcile/part4a.py
+
+      - name: Reconcile operations and validate status matrix
+        run: python3 .roadmap-reconcile/part4b.py
+
+      - name: Validate patch formatting
+        run: git diff --check
 
       - name: Remove one-use reconciliation files and commit roadmap
         shell: bash
