@@ -43,7 +43,7 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
-              $0 ~ /^(\.github\/workflows\/(player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
+              $0 ~ /^(\.github\/workflows\/(database-replay|player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
               $0 == "backend/package.json" { next }
               $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
