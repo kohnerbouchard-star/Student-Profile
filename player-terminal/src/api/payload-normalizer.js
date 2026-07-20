@@ -35,6 +35,13 @@ function normalizeString(key, value, endpointKey) {
 
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
+  if (endpointKey === "storyDeliveryState") {
+    const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
+    if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) {
+      throw invalidPayload(endpointKey, "action");
+    }
+    return { action };
+  }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {
     const payload = {};

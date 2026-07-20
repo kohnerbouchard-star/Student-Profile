@@ -21,6 +21,7 @@ const READ_ENDPOINTS = new Set([
   "progression",
   "notifications",
   "notificationsPage",
+  "storyDeliveries",
 ]);
 const REQUIRED_ARRAY_FIELDS = Object.freeze({
   dashboard: Object.freeze(["worldEvents", "marketPulse"]),
@@ -44,6 +45,7 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
     "licenses",
   ]),
   notificationsPage: Object.freeze(["items"]),
+  storyDeliveries: Object.freeze(["items"]),
 });
 const REQUIRED_OBJECT_FIELDS = Object.freeze({
   business: Object.freeze(["company", "operations"]),
