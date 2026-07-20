@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { COUNTRY_IDS, canonicalJson, pointInPolygon, stableNumber } from './seed-beta-pack-lib.mjs';
 import { validateSeedBetaPack } from './seed-beta-pack-validator.mjs';
 import { runImporter } from './seed-beta-importer.mjs';
+import { runSeedBetaStagingPreflight } from './seed-beta-staging-preflight.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
@@ -37,6 +38,14 @@ test('generated bounded pack passes the executable validator', async () => {
   assert.equal(report.summary.contractChains, COUNTRY_IDS.length);
 });
 
+test('executable staging preflight is structurally ready but remains connected-environment gated', async () => {
+  const report = await runSeedBetaStagingPreflight({ packRoot: PACK_ROOT });
+  assert.equal(report.structuralReady, true);
+  assert.equal(report.connectedImportReady, false);
+  assert.equal(report.productionAuthorized, false);
+  assert.equal(report.fullMarketUniverse3200Excluded, true);
+});
+
 test('importer dry run is credential-free and bounded', async () => {
   const result = await runImporter({ mode: 'dry-run', environment: 'staging', 'pack-root': PACK_ROOT, 'expected-project-ref': 'isolatedstagingref', 'game-session-id': '11111111-1111-4111-8111-111111111111' });
   assert.equal(result.result, 'DRY_RUN_COMPLETE');
@@ -49,4 +58,31 @@ test('importer rejects production before any network write', async () => {
     () => runImporter({ mode: 'dry-run', environment: 'production', 'pack-root': PACK_ROOT }),
     /Production is prohibited/,
   );
+});
+
+test('importer rejects the known live Supabase project before any network write', async () => {
+  const previous = {
+    target: process.env.SEED_TARGET_ENVIRONMENT,
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SEED_TARGET_ENVIRONMENT = 'staging';
+  process.env.SUPABASE_URL = 'https://cgiukdjwicykrmtkhudh.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-not-a-real-key';
+  try {
+    await assert.rejects(
+      () => runImporter({
+        mode: 'import',
+        environment: 'staging',
+        'pack-root': PACK_ROOT,
+        'expected-project-ref': 'cgiukdjwicykrmtkhudh',
+        'game-session-id': '11111111-1111-4111-8111-111111111111',
+      }),
+      /Refusing known production\/live project/,
+    );
+  } finally {
+    if (previous.target === undefined) delete process.env.SEED_TARGET_ENVIRONMENT; else process.env.SEED_TARGET_ENVIRONMENT = previous.target;
+    if (previous.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = previous.url;
+    if (previous.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = previous.key;
+  }
 });
