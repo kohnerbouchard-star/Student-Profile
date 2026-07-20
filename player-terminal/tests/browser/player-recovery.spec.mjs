@@ -12,8 +12,9 @@ function recoveryRegion(page) {
 
 test("offline recovery locks writes and online recovery restores them", async ({ page }) => {
   await openTerminal(page, "store");
-  const purchase = page.locator("[data-player-purchase]:not([disabled])").first();
+  const purchase = page.locator("[data-player-purchase]").first();
   await expect(purchase).toBeVisible();
+  await expect(purchase).toBeEnabled();
 
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await expect(recoveryRegion(page)).toBeVisible();
@@ -51,8 +52,10 @@ test("paused-game recovery survives route rerender and remains keyboard operable
   await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "restored");
 });
 
-test("committed-write ambiguity tells the player not to submit twice", async ({ page }) => {
+test("committed-write ambiguity prevents duplicate submission until refresh", async ({ page }) => {
   await openTerminal(page, "store");
+  const purchase = page.locator("[data-player-purchase]").first();
+  await expect(purchase).toBeEnabled();
 
   await page.evaluate(() => window.dispatchEvent(new CustomEvent("econovaria:player-recovery-signal", {
     detail: { code: "COMMITTED_REFRESH_PENDING" },
@@ -61,5 +64,9 @@ test("committed-write ambiguity tells the player not to submit twice", async ({ 
   await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "committed-refresh-pending");
   await expect(recoveryRegion(page)).toContainText("The action was saved");
   await expect(recoveryRegion(page)).toContainText("Do not submit the action again");
-  await expect(page.locator("[data-player-purchase]:not([disabled])").first()).toBeVisible();
+  await expect(purchase).toBeDisabled();
+
+  await recoveryRegion(page).getByRole("button", { name: "Refresh terminal" }).click();
+  await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "restored");
+  await expect(purchase).toBeEnabled();
 });
