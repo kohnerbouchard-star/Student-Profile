@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://econovaria.invalid/schemas/promotion-record.schema.json",
+  "title": "Econovaria promotion record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "promotionId",
+    "targetEnvironment",
+    "releaseId",
+    "sourceCommit",
+    "sourceRunId",
+    "sourceArtifactId",
+    "releaseManifestSha256",
+    "artifactSetSha256",
+    "environmentManifestEvidence",
+    "approval",
+    "deployment",
+    "rollback"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "promotionId": { "type": "string", "minLength": 12 },
+    "targetEnvironment": { "enum": ["staging", "production"] },
+    "releaseId": { "type": "string", "minLength": 16 },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sourceRunId": { "type": ["string", "integer"], "pattern": "^[0-9]+$" },
+    "sourceArtifactId": { "type": ["string", "integer"], "pattern": "^[0-9]+$" },
+    "releaseManifestSha256": { "$ref": "#/$defs/sha256" },
+    "artifactSetSha256": { "$ref": "#/$defs/sha256" },
+    "environmentManifestEvidence": { "$ref": "#/$defs/evidence" },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["githubEnvironment", "approver", "approvedAt"],
+      "properties": {
+        "githubEnvironment": { "enum": ["staging", "production"] },
+        "approver": { "type": "string", "minLength": 2 },
+        "approvedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "requestedAt", "mode"],
+      "properties": {
+        "operator": { "type": "string", "minLength": 2 },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "mode": { "const": "deploy" }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releaseId", "artifactSetSha256", "manifestEvidence"],
+      "properties": {
+        "releaseId": { "type": "string", "minLength": 16 },
+        "artifactSetSha256": { "$ref": "#/$defs/sha256" },
+        "manifestEvidence": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "stagingEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releaseId", "artifactSetSha256", "playerSmoke", "adminSmoke", "evidence"],
+      "properties": {
+        "releaseId": { "type": "string", "minLength": 16 },
+        "artifactSetSha256": { "$ref": "#/$defs/sha256" },
+        "playerSmoke": { "const": "pass" },
+        "adminSmoke": { "const": "pass" },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "capturedAt"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^docs/operations/evidence/[a-zA-Z0-9._/-]+$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "capturedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
