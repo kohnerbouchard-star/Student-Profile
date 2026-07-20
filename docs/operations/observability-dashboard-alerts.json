@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "dashboard": {
+    "title": "Econovaria Beta Operations",
+    "panels": [
+      {"id": "availability", "signal": "success_rate"},
+      {"id": "login-success", "signal": "login_success_rate"},
+      {"id": "auth-denials", "signal": "auth_denied_count"},
+      {"id": "cross-scope", "signal": "cross_scope_denied_count"},
+      {"id": "rate-limits", "signal": "http_429_count"},
+      {"id": "latency-p95", "signal": "request_duration_p95_ms"},
+      {"id": "database-time", "signal": "database_duration_p95_ms"},
+      {"id": "query-count", "signal": "database_query_count_p95"},
+      {"id": "edge-errors", "signal": "edge_failure_count"},
+      {"id": "migration-errors", "signal": "migration_failure_count"},
+      {"id": "stock-runner", "signal": "stock_runner_failure_count"},
+      {"id": "backup-age", "signal": "backup_age_hours"},
+      {"id": "idempotency", "signal": "duplicate_write_protection_failure_count"}
+    ]
+  },
+  "alerts": [
+    {"id": "availability", "severity": "critical", "threshold": "success_rate < 0.99 for 5m", "recovery": "success_rate >= 0.995 for 10m"},
+    {"id": "login-success", "severity": "warning", "threshold": "login_success_rate < 0.95 for 10m", "recovery": "login_success_rate >= 0.98 for 10m"},
+    {"id": "auth-denials", "severity": "warning", "threshold": "auth_denied_count > baseline", "recovery": "auth_denied_count returns to baseline"},
+    {"id": "cross-scope", "severity": "critical", "threshold": "cross_scope_denied_count > 0", "recovery": "no events for 15m"},
+    {"id": "rate-limits", "severity": "warning", "threshold": "http_429_count exceeds classroom baseline", "recovery": "count returns to baseline"},
+    {"id": "latency-p95", "severity": "warning", "threshold": "request_duration_p95_ms > 1500 for 10m", "recovery": "p95 <= 1000 for 10m"},
+    {"id": "database-time", "severity": "warning", "threshold": "database_duration_p95_ms > 750 for 10m", "recovery": "p95 <= 500 for 10m"},
+    {"id": "edge-errors", "severity": "critical", "threshold": "edge_failure_count > 0 for 5m", "recovery": "no events for 10m"},
+    {"id": "migration-errors", "severity": "critical", "threshold": "migration_failure_count > 0", "recovery": "latest replay succeeds"},
+    {"id": "stock-runner", "severity": "critical", "threshold": "stock_runner_failure_count > 0", "recovery": "three consecutive successful runs"},
+    {"id": "backup-age", "severity": "warning", "threshold": "backup_age_hours > 30", "recovery": "backup_age_hours <= 24"},
+    {"id": "idempotency", "severity": "critical", "threshold": "duplicate_write_protection_failure_count > 0", "recovery": "probe and retry evidence pass"}
+  ]
+}
