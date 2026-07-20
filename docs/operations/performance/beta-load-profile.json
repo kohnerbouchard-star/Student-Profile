@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "environment": "isolated-staging",
+  "mode": "plan-only",
+  "expectedPlayers": 30,
+  "maximumPlayers": 40,
+  "maximumRequestsPerSecond": 25,
+  "maximumDurationMinutes": 20,
+  "phases": [
+    {"id": "bootstrap", "players": 10, "durationSeconds": 120, "requestsPerSecond": 4},
+    {"id": "expected-classroom", "players": 30, "durationSeconds": 600, "requestsPerSecond": 15},
+    {"id": "maximum-classroom", "players": 40, "durationSeconds": 300, "requestsPerSecond": 25},
+    {"id": "recovery", "players": 10, "durationSeconds": 120, "requestsPerSecond": 4}
+  ],
+  "requiredMetrics": [
+    "request_count",
+    "failure_rate",
+    "duration_p50_ms",
+    "duration_p95_ms",
+    "database_duration_p95_ms",
+    "database_query_count_p95",
+    "cold_start_count"
+  ],
+  "connectedExecutionAuthorized": false
+}
