@@ -78,7 +78,7 @@ assert.throws(
     endpoints: manifest.endpoints.filter((endpoint) => endpoint.key !== "dashboard")
   }),
   (error) => error.code === "CAPABILITY_CONTRACT_MISMATCH" &&
-    error.body?.endpointKey === "dashboard"
+    /routes\.dashboard.*missing its endpoint descriptor/i.test(error.message)
 );
 
 assert.throws(
