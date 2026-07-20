@@ -12,55 +12,55 @@ TAP version 13
 # Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
 ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
   ---
-  duration_ms: 106.906666
+  duration_ms: 131.816637
   type: 'test'
   ...
 # Subtest: preflight report is deterministic for unchanged inputs
 ok 2 - preflight report is deterministic for unchanged inputs
   ---
-  duration_ms: 106.868455
+  duration_ms: 160.837357
   type: 'test'
   ...
 # Subtest: production environment fails closed for the unauthorized design pack
 ok 3 - production environment fails closed for the unauthorized design pack
   ---
-  duration_ms: 53.829723
+  duration_ms: 77.437541
   type: 'test'
   ...
 # Subtest: staging mode remains blocked until executable content is complete
 ok 4 - staging mode remains blocked until executable content is complete
   ---
-  duration_ms: 47.767955
+  duration_ms: 66.927212
   type: 'test'
   ...
 # Subtest: reusable definitions reject runtime ownership fields and UUID values
 ok 5 - reusable definitions reject runtime ownership fields and UUID values
   ---
-  duration_ms: 0.295556
+  duration_ms: 0.382587
   type: 'test'
   ...
 # Subtest: definition arrays reject duplicate stable keys
 ok 6 - definition arrays reject duplicate stable keys
   ---
-  duration_ms: 0.112318
+  duration_ms: 0.151815
   type: 'test'
   ...
 # Subtest: declared paths cannot escape the content root
 ok 7 - declared paths cannot escape the content root
   ---
-  duration_ms: 0.47221
+  duration_ms: 0.514463
   type: 'test'
   ...
 # Subtest: operator must provide an explicit valid environment
 ok 8 - operator must provide an explicit valid environment
   ---
-  duration_ms: 0.201361
+  duration_ms: 0.267321
   type: 'test'
   ...
 # Subtest: simulation manifests normalize both supported checksum schemas
 ok 9 - simulation manifests normalize both supported checksum schemas
   ---
-  duration_ms: 0.481346
+  duration_ms: 0.571561
   type: 'test'
   ...
 1..9
@@ -71,7 +71,7 @@ ok 9 - simulation manifests normalize both supported checksum schemas
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 386.886234
+# duration_ms 507.053488
 exit=0
 
 ## design seed preflight
@@ -82,7 +82,7 @@ exit=0
 Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.2.0-design
 Environment: test
 Mode: design
-JSON files checked: 82
+JSON files checked: 94
 Errors: 0; blockers: 16; warnings: 0
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-package-viability-simulation, skills-and-credentials, class-scoring-model, progression-persistence.
 [BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is definition-only; dependencies: starting-value-calibration, housing-cost-simulation, relationship-persistence, authoritative-instantiation-route.
