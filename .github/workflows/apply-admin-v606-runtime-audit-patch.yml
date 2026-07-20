@@ -1,0 +1,44 @@
+name: Apply Admin v606 Runtime Audit Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply-admin-v606-runtime-audit-patch.yml"
+      - "scripts/patch-admin-v606-runtime-bootstrap.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-admin-v606-runtime-audit-patch
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    if: github.head_ref == 'agent/environment-neutral-frontend-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/environment-neutral-frontend-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+      - name: Apply bounded audit correction
+        run: python3 scripts/patch-admin-v606-runtime-bootstrap.py
+      - name: Validate corrected Admin audit
+        run: node scripts/admin-v606-full-drift-audit.mjs
+      - name: Commit corrected audit only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm scripts/patch-admin-v606-runtime-bootstrap.py
+          git config user.name "econovaria-release-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/admin-v606-full-drift-audit.mjs scripts/patch-admin-v606-runtime-bootstrap.py
+          git commit -m "test(admin): accept validated runtime bootstrap in v606 audit"
+          git push origin HEAD:agent/environment-neutral-frontend-v1
