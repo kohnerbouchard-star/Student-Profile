@@ -1,6 +1,6 @@
 name: Staging Migration Replay V4
 
-# Authoritative controller-owned staging replay.
+# Authoritative controller-owned staging replay pass 4.
 on:
   push:
     branches:
