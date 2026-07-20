@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "roadmapItem": "OPS-SUPPLY-001",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "mergeSha": "476cfba30666b1303d32d6c2e46560483b641edf",
+  "finalImplementationHead": "48414aaccf223c94c358033c883215dced666f24",
+  "trustedMainWorkflow": "Supply Chain Security",
+  "trustedMainRunId": 29715658656,
+  "trustedMainRunNumber": 10,
+  "trustedMainRunUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29715658656",
+  "trustedMainConclusion": "success",
+  "artifactId": 8450479870,
+  "artifactName": "supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf",
+  "artifactArchiveUrl": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/artifacts/8450479870/zip",
+  "artifactUploadConclusion": "success",
+  "provenanceAttestationConclusion": "success",
+  "verifiedAt": "2026-07-20T04:00:06Z"
+}

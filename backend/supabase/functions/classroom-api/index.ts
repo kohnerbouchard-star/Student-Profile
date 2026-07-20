@@ -341,9 +341,15 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me/game/dashboard")) {
-    return handlePlayerGameDashboardRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "dashboard",
+      () =>
+        handlePlayerGameDashboardRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerContractAcceptanceRoute =
