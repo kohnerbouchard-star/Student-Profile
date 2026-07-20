@@ -35,7 +35,9 @@ export interface RateLimitDecision {
 }
 
 export interface RateLimitRepository {
-  consume(buckets: readonly RateLimitBucketInput[]): Promise<RateLimitDecision>;
+  consume(
+    buckets: readonly RateLimitBucketInput[],
+  ): Promise<RateLimitDecision>;
 }
 
 export class RateLimitError extends Error {
