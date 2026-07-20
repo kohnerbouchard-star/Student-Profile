@@ -79,6 +79,13 @@ const windowObject = {
     "econovaria.admin.auth.v1": JSON.stringify({ accessToken: ACCESS_TOKEN }),
     "econovaria.admin.selected-game.v1": GAME_ID,
   }),
+  EconovariaRuntimeConfig: Object.freeze({
+    environment: "staging",
+    supabaseUrl: "https://runtime-fixture.supabase.co",
+    supabasePublishableKey: "runtime-fixture-publishable-key",
+    classroomApiUrl: "https://runtime-fixture.supabase.co/functions/v1/classroom-api",
+    adminApiUrl: "https://runtime-fixture.supabase.co/functions/v1/admin-api",
+  }),
   Econovaria: { features: { adminOverviewTerminal: { currentModel: {} } } },
 };
 windowObject.window = windowObject;
@@ -154,4 +161,4 @@ const noRetry = await windowObject.fetch(
 assert(noRetry.status === 200, "Successful primary write did not pass through.");
 assert(calls.length === 1, "Successful primary write was duplicated.");
 
-console.log("Admin normalized RFID identity fallback smoke passed.");
+console.log("Admin normalized RFID identity fallback smoke passed under validated runtime configuration.");

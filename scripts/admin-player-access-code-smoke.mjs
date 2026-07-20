@@ -98,6 +98,13 @@ const windowObject = {
   fetch: nativeFetch,
   location: { href: "http://127.0.0.1:4173/admin/" },
   sessionStorage,
+  EconovariaRuntimeConfig: Object.freeze({
+    environment: "staging",
+    supabaseUrl: "https://runtime-fixture.supabase.co",
+    supabasePublishableKey: "runtime-fixture-publishable-key",
+    classroomApiUrl: "https://runtime-fixture.supabase.co/functions/v1/classroom-api",
+    adminApiUrl: "https://runtime-fixture.supabase.co/functions/v1/admin-api",
+  }),
   dispatchEvent(event) {
     issuedCredentials.push(event?.detail || null);
   },
@@ -162,4 +169,4 @@ assert(Boolean(calls[1].headers.apikey), "Canonical create omitted the publishab
 assert(!("x-csrf-token" in calls[1].headers), "Canonical create forwarded x-csrf-token.");
 assert(!("x-econovaria-csrf" in calls[1].headers), "Canonical create forwarded x-econovaria-csrf.");
 
-console.log("Admin configured Player ID and Access Code issuance smoke passed.");
+console.log("Admin configured Player ID and Access Code issuance smoke passed under validated runtime configuration.");

@@ -11,7 +11,11 @@ function assert(condition, message) {
 }
 
 const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
-const expectedScripts = [
+const runtimeBootstrapScripts = [
+  "../runtime-config.env.js",
+  "../frontend/src/core/runtime-config.js",
+];
+const expectedAdminScripts = [
   "./auth-session-manager.js",
   "./session-gate.js",
   "./admin-auth.js",
@@ -33,19 +37,26 @@ const expectedScripts = [
   "./dist/admin-overview-boot.js",
   "./shape-accurate-skeletons.js",
 ];
+const expectedScripts = [...runtimeBootstrapScripts, ...expectedAdminScripts];
 
 assert(
   JSON.stringify(scripts) === JSON.stringify(expectedScripts),
   `Admin script order drifted. Expected ${expectedScripts.join(", ")}; received ${scripts.join(", ")}.`,
 );
+assert(
+  html.includes('meta name="econovaria-admin-api-base" content=""'),
+  "Admin API metadata must be empty until validated runtime configuration initializes it.",
+);
 
 for (const reference of scripts) {
-  const path = resolve(adminRoot, reference.replace(/^\.\//, ""));
+  if (reference === "../runtime-config.env.js") continue;
+  const path = resolve(adminRoot, reference);
   assert(existsSync(path), `Missing admin script ${reference}.`);
   const result = spawnSync(process.execPath, ["--check", path], { encoding: "utf8" });
   assert(result.status === 0, `JavaScript syntax check failed for ${reference}:\n${result.stderr || result.stdout}`);
 }
 
+const runtimeConfig = readFileSync(resolve(root, "frontend/src/core/runtime-config.js"), "utf8");
 const sessionManager = readFileSync(resolve(adminRoot, "auth-session-manager.js"), "utf8");
 const auth = readFileSync(resolve(adminRoot, "admin-auth.js"), "utf8");
 const boot = readFileSync(resolve(adminRoot, "dist/admin-overview-boot.js"), "utf8");
@@ -70,6 +81,11 @@ const shapeSkeletonCss = readFileSync(resolve(adminRoot, "css/shape-accurate-ske
 const skeletonMatrix = readFileSync(resolve(adminRoot, "docs/admin-shape-accurate-skeleton-matrix-2026-07-18.md"), "utf8");
 const terminal = readFileSync(resolve(adminRoot, "dist/admin-overview-terminal.js"), "utf8");
 
+assert(runtimeConfig.includes("adminApiMeta.content = runtimeConfig.adminApiUrl"), "Validated runtime config does not populate Admin API metadata.");
+assert(sessionManager.includes("EconovariaRuntimeConfig"), "Admin session manager does not consume validated runtime configuration.");
+assert(auth.includes("EconovariaRuntimeConfig"), "Admin API bridge does not consume validated runtime configuration.");
+assert(fallback.includes("EconovariaRuntimeConfig"), "Classroom fallback does not consume validated runtime configuration.");
+assert(credentialBridge.includes("EconovariaRuntimeConfig"), "Credential bridge does not consume validated runtime configuration.");
 assert(sessionManager.includes("grant_type=refresh_token"), "Admin refresh-token grant is missing.");
 assert(sessionManager.includes("refreshPromise"), "Concurrent admin token refresh is not deduplicated.");
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Admin bootstrap completion is missing.");
@@ -225,4 +241,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
+console.log("Original v606 shell, runtime configuration bootstrap, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");

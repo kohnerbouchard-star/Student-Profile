@@ -1,8 +1,12 @@
 (function initEconovariaAdminAuthSessionManager() {
   "use strict";
 
-  const SUPABASE_URL = "https://cgiukdjwicykrmtkhudh.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
+  const runtimeConfig = window.EconovariaRuntimeConfig;
+  if (!runtimeConfig) {
+    throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
+  }
+  const SUPABASE_URL = runtimeConfig.supabaseUrl;
+  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const DEFAULT_EXPIRY_SKEW_MS = 30000;
