@@ -3,3 +3,224 @@
 From https://github.com/kohnerbouchard-star/Student-Profile
  * branch            main       -> FETCH_HEAD
 Already up to date.
+[agent/seed-content-foundation-v1 b80da42] fix(seed): correct bounded Attendance calibration [skip ci]
+ 27 files changed, 95 insertions(+), 3794 deletions(-)
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_npm_ci.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_smoke.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_typecheck.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/build_seed_beta_pack.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/check-status.tsv
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/connected_staging_import.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/deno-install.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/deno-version.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/existing_seed_validators.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/git_diff_check.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/importer_dry_run.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/importer_validate.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/migration_static_audit.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/npm_ci.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/release_staging_preflight.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/repository_test_suite.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/seed_design_staging_preflight.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_cli_help.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_db_lint_help.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_local_db_lint.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/test_seed_beta_pack.log
+ delete mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/validate_seed_beta_pack.log
+ delete mode 100644 scripts/seed-beta-final-verification-runner.sh
+To https://github.com/kohnerbouchard-star/Student-Profile
+   e7b3649..b80da42  HEAD -> agent/seed-content-foundation-v1
+npm_ci	required	0
+backend_npm_ci	required	0
+build_seed_beta_pack	required	0
+validate_seed_beta_pack	required	0
+test_seed_beta_pack	required	0
+importer_validate	required	0
+importer_dry_run	required	0
+existing_seed_validators	required	0
+repository_test_suite	required	0
+backend_typecheck	required	0
+backend_smoke	required	0
+migration_static_audit	required	0
+seed_beta_staging_preflight	required	0
+git_diff_check	required	0
+release_staging_preflight	external	1
+supabase_local_db_lint	external	1
+supabase_cli_help	evidence	0
+supabase_db_lint_help	evidence	0
+connected_staging_import	external	125
+docs/seed-content/reviews/executable-beta-pack-run-logs/backend_smoke.log:692: new blank line at EOF.
+docs/seed-content/reviews/executable-beta-pack-run-logs/deno-install.log:3: trailing whitespace.
++  inflating: /home/runner/work/_temp/deno/bin/deno  
+[agent/seed-content-foundation-v1 aa20262] test(seed): retain final executable beta pack evidence [skip ci]
+ 26 files changed, 3558 insertions(+), 51 deletions(-)
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_npm_ci.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_smoke.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/backend_typecheck.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/build_seed_beta_pack.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/check-status.tsv
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/connected_staging_import.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/deno-install.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/deno-version.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/existing_seed_validators.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/git_diff_check.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/importer_dry_run.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/importer_validate.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/migration_static_audit.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/npm_ci.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/release_staging_preflight.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/repository_test_suite.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/seed_beta_staging_preflight.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_cli_help.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_db_lint_help.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/supabase_local_db_lint.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/test_seed_beta_pack.log
+ create mode 100644 docs/seed-content/reviews/executable-beta-pack-run-logs/validate_seed_beta_pack.log
+To https://github.com/kohnerbouchard-star/Student-Profile
+   b80da42..aa20262  HEAD -> agent/seed-content-foundation-v1
+exit=0
+
+## build Northreach input
+Generated deterministic Northreach simulation input with 24 instruments.
+exit=0
+
+## run Northreach simulation
+exit=0
+
+## run Thaloris simulation
+exit=0
+
+## run Yrethia simulation
+exit=0
+
+## run Solvend simulation
+exit=0
+
+## reconcile retained evidence
+Reconciled retained evidence for 4 market simulations.
+exit=0
+
+generationStatus=0
+
+## record immutable artifact
+Recorded immutable artifact 8453070261 for 3 simulation evidence packages.
+exit=0
+
+## check retention policy
+Verified simulation evidence retention policy.
+exit=0
+
+## check Northreach input
+Verified deterministic Northreach simulation input.
+exit=0
+
+## check retained evidence
+Verified retained evidence for 4 market simulations.
+exit=0
+
+## test seed preflight
+
+> econovaria@0.0.0 test:seed-content-preflight
+> node --test scripts/seed-content-preflight.test.mjs
+
+TAP version 13
+# Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+  ---
+  duration_ms: 108.817362
+  type: 'test'
+  ...
+# Subtest: preflight report is deterministic for unchanged inputs
+ok 2 - preflight report is deterministic for unchanged inputs
+  ---
+  duration_ms: 140.059667
+  type: 'test'
+  ...
+# Subtest: production environment fails closed for the unauthorized design pack
+ok 3 - production environment fails closed for the unauthorized design pack
+  ---
+  duration_ms: 73.719609
+  type: 'test'
+  ...
+# Subtest: staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
+  ---
+  duration_ms: 73.013516
+  type: 'test'
+  ...
+# Subtest: reusable definitions reject runtime ownership fields and UUID values
+ok 5 - reusable definitions reject runtime ownership fields and UUID values
+  ---
+  duration_ms: 0.355502
+  type: 'test'
+  ...
+# Subtest: definition arrays reject duplicate stable keys
+ok 6 - definition arrays reject duplicate stable keys
+  ---
+  duration_ms: 0.146387
+  type: 'test'
+  ...
+# Subtest: declared paths cannot escape the content root
+ok 7 - declared paths cannot escape the content root
+  ---
+  duration_ms: 0.498804
+  type: 'test'
+  ...
+# Subtest: operator must provide an explicit valid environment
+ok 8 - operator must provide an explicit valid environment
+  ---
+  duration_ms: 0.241467
+  type: 'test'
+  ...
+# Subtest: simulation manifests normalize both supported checksum schemas
+ok 9 - simulation manifests normalize both supported checksum schemas
+  ---
+  duration_ms: 0.567824
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 469.265941
+exit=0
+
+## design seed preflight
+
+> econovaria@0.0.0 preflight:seed-content
+> node scripts/seed-content-preflight.mjs --environment test --mode design
+
+Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.2.0-design
+Environment: test
+Mode: design
+JSON files checked: 94
+Errors: 0; blockers: 16; warnings: 0
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-package-viability-simulation, skills-and-credentials, class-scoring-model, progression-persistence.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is definition-only; dependencies: starting-value-calibration, housing-cost-simulation, relationship-persistence, authoritative-instantiation-route.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: banking-products is definition-only; dependencies: banking-write-capability, rate-and-affordability-simulation.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: contracts is definition-only; dependencies: backend-contract-lifecycle, reward-calibration, targeting-capability-map.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: events-news-interactions is definition-only; dependencies: event-application-authority, narrative-persistence, effect-capability-map.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: exchanges is definition-only; dependencies: market-calendar-policy, backend-exchange-support.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: industries-and-commodities is definition-only; dependencies: subindustry-editorial-review, benchmark-methodology-review.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: issuers is definition-only; dependencies: financial-profile-enrichment-six-countries, issuer-runtime-schema.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: locations is blocked; dependencies: active-map-artwork, map-coordinate-verification, adjacency-verification, runtime-location-schema.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: market-instruments is definition-only; dependencies: instrument-capability-mapping, financial-calibration-six-countries, market-simulation-six-countries, bounded-active-market-approval.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: progression is definition-only; dependencies: progression-persistence, threshold-calibration.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: routes is blocked; dependencies: map-verification, route-runtime-model.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: staging-import is blocked; dependencies: backend-baseline, stable-id-storage, import-schema-mapping, rollback-rehearsal.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is definition-only; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration, recipe-approval.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is definition-only; dependencies: route-capability-map, notification-deduplication, tutorial-completion-persistence.
+[BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
+Result: DESIGN_VALID_WITH_BLOCKERS
+exit=0
+
+## diff check
+docs/seed-content/reviews/simulation-evidence-reconciliation-run-log.txt:54: trailing whitespace.
+++  inflating: /home/runner/work/_temp/deno/bin/deno  
+exit=2
+
+validationStatus=2

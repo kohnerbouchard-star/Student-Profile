@@ -16,7 +16,7 @@
     "northreach_active_instruments_v1.json": "4e7783ee9267bdb467cf561cdd78ccb622b80001b14276a157fc7ab6a7de42c8",
     "run_northreach_market_simulation_v1.py": "d6652769c8d3905adb53e4a1aab60ef9b5ff8e04f006614fb06654ca6acdabb8",
     "summary-v1.json": "d83574f71edd581eb140a094ca31309e8c2034ecccddd1443165b11c963a156b",
-    "raw-evidence-manifest-v1.json": "ad3751603858fc90d4f14f242994e27099fb9c3bcd8e67322b08fdf191666e2b"
+    "raw-evidence-manifest-v1.json": "6f013d3cd894b4b26b0250101ccfd21452f448931fe52f01e14291e9bf3da084"
   },
   "evidenceRetention": {
     "status": "immutable-workflow-artifact-retained",
@@ -26,12 +26,12 @@
     "requiredForApproval": true,
     "artifact": {
       "provider": "github-actions",
-      "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
-      "artifactId": "8452976836",
-      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8452976836",
-      "artifactDigest": "98b839c752a5dd6fb1dd062362394c04c72f7f5fa15fa77fe5f8a6f2526c5918",
-      "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
-      "workflowRunId": "29667017728",
+      "name": "econovaria-seed-simulation-raw-e7b3649068492d2e652a293625f398a8ee089fa8",
+      "artifactId": "8453070261",
+      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29722907129/artifacts/8453070261",
+      "artifactDigest": "a393c6674f7c60cfbfb6d065674caf458580a161c2f6035c660727a20f2ccd86",
+      "sourceCommit": "e7b3649068492d2e652a293625f398a8ee089fa8",
+      "workflowRunId": "29722907129",
       "retentionDays": 90,
       "retainedAt": "2026-07-19"
     }

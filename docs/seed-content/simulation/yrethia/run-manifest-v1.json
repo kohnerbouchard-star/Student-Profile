@@ -16,7 +16,7 @@
     "input-v1.json": "a382a1e86b6e616b50f2b532ac5e3e2c4f32ec7667023f00d8f9e2939875c2a6",
     "run_yrethia_market_simulation_v1.py": "5b160c217826d0a7218777711125e58d1e74ae8bc5dfa8d11d2046b06f3005df",
     "summary-v1.json": "5f6195563c0ba6963f6819f8aae486683b12833fade0e9debdee743c6b536da2",
-    "raw-evidence-manifest-v1.json": "0d0edb711396b6db83f34ec030b92ffb7a3a6d792a7fe7f9a10161436735f221"
+    "raw-evidence-manifest-v1.json": "5cabaf171be15c7f601fa8e18cc2f4d3b63fc6cb4bfae27f76ed3f187901a0a4"
   },
   "evidenceRetention": {
     "status": "immutable-workflow-artifact-retained",
@@ -26,12 +26,12 @@
     "requiredForApproval": true,
     "artifact": {
       "provider": "github-actions",
-      "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
-      "artifactId": "8452976836",
-      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8452976836",
-      "artifactDigest": "98b839c752a5dd6fb1dd062362394c04c72f7f5fa15fa77fe5f8a6f2526c5918",
-      "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
-      "workflowRunId": "29667017728",
+      "name": "econovaria-seed-simulation-raw-e7b3649068492d2e652a293625f398a8ee089fa8",
+      "artifactId": "8453070261",
+      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29722907129/artifacts/8453070261",
+      "artifactDigest": "a393c6674f7c60cfbfb6d065674caf458580a161c2f6035c660727a20f2ccd86",
+      "sourceCommit": "e7b3649068492d2e652a293625f398a8ee089fa8",
+      "workflowRunId": "29722907129",
       "retentionDays": 90,
       "retainedAt": "2026-07-19"
     }
