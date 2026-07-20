@@ -1,0 +1,78 @@
+name: Staging Migration Replay V4
+
+on:
+  push:
+    branches:
+      - agent/live-migration-reconciliation-v1
+    paths:
+      - ".github/workflows/staging-migration-replay-v4.yml"
+      - "scripts/operations/live-migration-reconciliation/apply-pending-via-psql.sh"
+      - "scripts/operations/live-migration-reconciliation/normalize-outer-transactions.py"
+      - "backend/supabase/config.next.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econovaria-staging-migration-replay-v4
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: Apply canonical migrations to isolated staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+    steps:
+      - name: Check out reconciliation branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Materialize current Supabase CLI config
+        run: cp backend/supabase/config.next.toml backend/supabase/config.toml
+
+      - name: Normalize remote replay copies
+        run: python3 scripts/operations/live-migration-reconciliation/normalize-outer-transactions.py
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Validate isolated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+
+      - name: Link isolated staging project
+        working-directory: backend
+        run: supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+
+      - name: Apply pending migrations through psql
+        shell: bash
+        run: bash scripts/operations/live-migration-reconciliation/apply-pending-via-psql.sh
+
+      - name: Record final migration ledger
+        working-directory: backend
+        run: supabase migration list --linked
