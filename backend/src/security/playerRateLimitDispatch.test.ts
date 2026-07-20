@@ -39,6 +39,8 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "news:GET": ["player.news.read", "read"],
     "notifications:GET": ["player.notifications.read", "read"],
     "notificationsRead:POST": ["player.notifications.write", "write"],
+    "storyDeliveries:GET": ["player.story.deliveries.read", "read"],
+    "storyDeliveryState:POST": ["player.story.deliveries.write", "write"],
   };
 
   const actual: Record<string, readonly string[]> = {};

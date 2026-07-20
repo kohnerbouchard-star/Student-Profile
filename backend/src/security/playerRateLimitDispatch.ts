@@ -124,6 +124,12 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   notificationsRead: byMethod({
     POST: operation("player.notifications.write", "write"),
   }),
+  storyDeliveries: byMethod({
+    GET: operation("player.story.deliveries.read", "read"),
+  }),
+  storyDeliveryState: byMethod({
+    POST: operation("player.story.deliveries.write", "write"),
+  }),
   portfolio: byMethod({
     GET: operation("player.portfolio.read", "read"),
   }),

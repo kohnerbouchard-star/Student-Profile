@@ -23,9 +23,7 @@ import {
   type PlayerGameDashboardCutsceneDeliveryStateDto,
   type PlayerGameDashboardRepository,
   type PlayerGameDashboardResponseBody,
-  type PlayerGameDashboardStoryNotificationReader,
   type PlayerGameDashboardStoryNotificationRepository,
-  type PlayerGameDashboardUnseenCutsceneDto,
 } from "../contracts/playerGameDashboardContracts.ts";
 import {
   PlayerGameDashboardError,
@@ -38,7 +36,6 @@ import {
 } from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
 import type {
   StoryNotificationDeliveryRecord,
-  StoryNotificationDeliveryWithNotification,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
 import {
   StoryNotificationRepositoryError,
@@ -129,13 +126,12 @@ export async function handlePlayerGameDashboardRequest(
       );
     }
 
-    const createStoryNotificationRepository =
-      dependencies.createStoryNotificationRepository;
-    const storyNotificationRepository = createStoryNotificationRepository
-      ? createStoryNotificationRepository(serviceClient)
-      : new SupabaseStoryNotificationRepository(serviceClient as any);
-
     if (actionRequest) {
+      const createStoryNotificationRepository =
+        dependencies.createStoryNotificationRepository;
+      const storyNotificationRepository = createStoryNotificationRepository
+        ? createStoryNotificationRepository(serviceClient)
+        : new SupabaseStoryNotificationRepository(serviceClient as any);
       const delivery = await markCutsceneDelivery({
         input: actionRequest,
         playerId: sessionResult.player.id,
@@ -159,16 +155,13 @@ export async function handlePlayerGameDashboardRequest(
       playerDisplayName: sessionResult.player.display_name,
       playerRosterLabel: sessionResult.player.roster_label,
     });
-    const unseenCutscenes = await readUnseenCutscenes({
-      repository: storyNotificationRepository,
-      gameSessionId,
-      playerId: sessionResult.player.id,
-    });
-
     return jsonResponse<PlayerGameDashboardResponseBody>(200, {
       ok: true,
       ...snapshot,
-      unseenCutscenes,
+      // Raw story payloads and internal delivery UUIDs are intentionally retired
+      // from this broad dashboard response. The dedicated story-delivery route
+      // publishes only public IDs and a bounded purpose-built content schema.
+      unseenCutscenes: [],
       realtime: {
         publicChannel: `game:${gameSessionId}:public`,
         lastSequence: null,
@@ -357,19 +350,6 @@ async function markCutsceneDelivery(input: {
   return input.repository.markNotificationDeliveryAcknowledged(markInput);
 }
 
-async function readUnseenCutscenes(input: {
-  readonly repository: PlayerGameDashboardStoryNotificationReader;
-  readonly gameSessionId: string;
-  readonly playerId: string;
-}): Promise<readonly PlayerGameDashboardUnseenCutsceneDto[]> {
-  const deliveries = await input.repository.listUnseenStoryCutsceneDeliveries({
-    gameSessionId: input.gameSessionId,
-    playerId: input.playerId,
-  });
-
-  return deliveries.map(toUnseenCutsceneDto);
-}
-
 function toDeliveryStateDto(
   delivery: StoryNotificationDeliveryRecord,
 ): PlayerGameDashboardCutsceneDeliveryStateDto {
@@ -380,24 +360,6 @@ function toDeliveryStateDto(
     seenAt: delivery.seenAt,
     dismissedAt: delivery.dismissedAt,
     acknowledgedAt: delivery.acknowledgedAt,
-  };
-}
-
-function toUnseenCutsceneDto(
-  delivery: StoryNotificationDeliveryWithNotification,
-): PlayerGameDashboardUnseenCutsceneDto {
-  return {
-    deliveryId: delivery.id,
-    notificationId: delivery.notificationId,
-    title: delivery.notification.title,
-    summary: delivery.notification.summary,
-    priority: delivery.notification.priority,
-    displayMode: delivery.notification.displayMode,
-    payload: delivery.notification.payload,
-    publishedAt: delivery.notification.publishedAt,
-    deliveredAt: delivery.deliveredAt,
-    requiresAcknowledgement:
-      delivery.notification.payload.requiresAcknowledgement === true,
   };
 }
 

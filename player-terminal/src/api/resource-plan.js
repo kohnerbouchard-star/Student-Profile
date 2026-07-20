@@ -43,7 +43,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   messageSend: Object.freeze(["dashboard", "messages"]),
   progressionUnlock: Object.freeze(["dashboard", "progression"]),
   progressionClaim: Object.freeze(["dashboard", "progression", "inventory", "banking"]),
-  notificationsRead: Object.freeze(["dashboard", "notifications"])
+  notificationsRead: Object.freeze(["dashboard", "notifications"]),
+  storyDeliveryState: Object.freeze(["storyDeliveries"])
 });
 
 export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set(Object.keys(WRITE_INVALIDATIONS)));

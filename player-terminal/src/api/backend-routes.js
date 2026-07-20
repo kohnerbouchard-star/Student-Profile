@@ -8,6 +8,23 @@ function requiredText(value, fieldName, endpointKey) {
   });
 }
 
+
+function publicStoryDeliveryId(value) {
+  const deliveryId = requiredText(value, "deliveryId", "storyDeliveryState").toLowerCase();
+  if (/^ndl_[0-9a-f]{32}$/.test(deliveryId)) return deliveryId;
+  throw new ApiRequestError("deliveryId is invalid for storyDeliveryState.", {
+    body: { code: "player_story_delivery_id_invalid", endpointKey: "storyDeliveryState" },
+  });
+}
+
+function storyDeliveryAction(value) {
+  const action = requiredText(value, "action", "storyDeliveryState").toLowerCase();
+  if (["seen", "dismissed", "acknowledged"].includes(action)) return action;
+  throw new ApiRequestError("action is invalid for storyDeliveryState.", {
+    body: { code: "player_story_delivery_action_invalid", endpointKey: "storyDeliveryState" },
+  });
+}
+
 function resolvedPathValue(path, pattern) {
   const match = String(path || "").match(pattern);
   if (!match?.[1]) return "";
@@ -313,6 +330,21 @@ const ROUTE_BUILDERS = Object.freeze({
     path: "/players/me/notifications/read",
     payload: {
       deliveryIds: notificationDeliveryIds(payload, "notificationsRead"),
+    },
+  }),
+
+  storyDeliveries: () => ({
+    method: "GET",
+    path: "/players/me/story-deliveries",
+  }),
+
+  storyDeliveryState: ({ params = {}, payload = {} }) => ({
+    method: "POST",
+    path: `/players/me/story-deliveries/${encodeURIComponent(
+      publicStoryDeliveryId(params.deliveryId || payload.deliveryId),
+    )}/state`,
+    payload: {
+      action: storyDeliveryAction(payload.action),
     },
   }),
 

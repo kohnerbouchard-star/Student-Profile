@@ -27,7 +27,9 @@ const ENDPOINT_COVERAGE = Object.freeze({
   portfolio: Object.freeze(["portfolio"]),
   store: Object.freeze(["store"]),
   storeQuote: Object.freeze(["storeQuote"]),
-  storePurchase: Object.freeze(["storePurchase"])
+  storePurchase: Object.freeze(["storePurchase"]),
+  storyDeliveries: Object.freeze(["storyDeliveries"]),
+  storyDeliveryState: Object.freeze(["storyDeliveryState"])
 });
 
 const ROUTE_REQUIREMENTS = Object.freeze({
@@ -50,7 +52,8 @@ const ACTION_REQUIREMENTS = Object.freeze({
   marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
   notificationsRead: "notificationsRead",
-  storePurchase: "storePurchase"
+  storePurchase: "storePurchase",
+  storyDeliveryState: "storyDeliveryState"
 });
 
 function mismatch(message, detail = {}) {
