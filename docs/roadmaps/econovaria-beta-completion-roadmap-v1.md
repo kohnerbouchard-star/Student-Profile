@@ -169,6 +169,13 @@ The first beta must prove this loop end to end with authoritative persistence.
 - PR #251 owns only Phase 0 program control. It adds fail-closed branch retirement for merged branches and explicitly `duplicate`-labeled closed branches, preserves the default and accepted Admin source refs, and adds a repository test ratchet.
 - Until PR #251 merges and PR #246 is closed/deleted, `P0-006` remains `IMPLEMENTED_NOT_MERGED`; no market, story, seed, Player, Admin, migration, runtime, or deployment capability is advanced by this program-control tranche.
 
+### 2026-07-20 software supply-chain security completion
+
+- PR #250 merged `OPS-SUPPLY-001` as `476cfba30666b1303d32d6c2e46560483b641edf` after a collision audit confirmed no active PR owned the subsection.
+- Final implementation head `48414aaccf223c94c358033c883215dced666f24` passed Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, Database Replay #358, Staging Readiness Preflight #107, Exchange Calendar Runtime #216, Required Game Market Timezone #245, and Admin Game Lifecycle Controls #43.
+- Trusted-main Supply Chain Security #10 (run `29715658656`) completed successfully, executed the provenance-attestation step, and retained immutable artifact `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf`. Evidence is recorded in `docs/operations/evidence/supply-chain-security-476cfba30666b1303d32d6c2e46560483b641edf.json`.
+- This completion does not satisfy immutable application promotion, isolated-environment approval, observability, backup/restore, or production release gates.
+
 ### Current release condition
 
 The application is not yet approved for beta or production runtime cutover because the following remain unresolved:
@@ -716,6 +723,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS` | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; does not own campaign definitions or runner scheduling. |
 | Player market orders and Portfolio | PR #245 / `agent/player-market-reconciliation-v1` | `IN_PROGRESS` | Sole surviving authority for `BETA-MKT-003` through `BETA-MKT-007`; PR #246 is a duplicate retirement target. |
 | Program-control consolidation | PR #251 / `chore/program-control-consolidation-v1` | `IMPLEMENTED_NOT_MERGED` | Owns only `P0-006`, ownership reconciliation, and branch-hygiene policy; no feature implementation. |
+| Software supply-chain security | PR #250 / merge `476cfba30666b1303d32d6c2e46560483b641edf` | `VERIFIED_COMPLETE` | Preserve secret scanning, dependency review, deterministic SBOM/checksum generation, trusted-run attestation, Dependabot cadence, and the patch/exception policy; artifact promotion and environment approval remain separately governed. |
 | Player runtime adapter and capability preflight | PR #141 / merge `566d99fab5668cf42d6275ec8d12c580239a3137` | `VERIFIED_COMPLETE` | Preserve explicit `classroom-api` routing and fail-closed manifest validation. |
 | Player runtime cutover and legacy source retirement | PRs #217 and #222 | repository code `VERIFIED_COMPLETE`; operations `IN_PROGRESS` | Do not restore the legacy frontend or Cloudflare browser transport; retire live Worker only through approved operational change control. |
 | Inventory redemption lifecycle | PRs #158, #177, and #224 | `VERIFIED_COMPLETE` at repository-integrated boundary | Extend the existing public-key, row-locked, idempotent lifecycle; PR #143 remains reference only. |
@@ -846,7 +854,7 @@ Required gates:
 - [ ] `OPS-STAGE-007` Add protected approval for staging and production. `IN_PROGRESS` at the tooling layer: the merged staging preflight targets a named GitHub `staging` environment, but actual isolated environment identities, required approvers, and production protection evidence remain absent.
 - [ ] `OPS-ARTIFACT-001` Build immutable artifacts from merge commits. `IN_PROGRESS` at the validation-contract layer through PR #169; no reviewed immutable frontend and Edge artifact set has been built and promoted.
 - [ ] `OPS-ARTIFACT-002` Generate release manifest with hashes, migration head, config version, and feature flags. `IN_PROGRESS`: a fail-closed manifest schema and validator merged through PR #169, but no complete evidence-backed release manifest exists.
-- [ ] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence. `IN_PROGRESS`: exact Node/npm/tool pins, lockfiles, high-severity dependency audit thresholds, and package-signature checks run in Repository Quality; secret scanning, dependency-review enforcement, SBOM, provenance, automated update policy, and approved patch cadence remain open.
+- [x] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence. `VERIFIED_COMPLETE` through PR #250 merged as `476cfba30666b1303d32d6c2e46560483b641edf`. Deterministic committed-source secret scanning, high-severity pull-request dependency review, root and Backend CycloneDX SBOMs, SHA-256 manifests, commit-specific immutable artifacts, trusted-main provenance attestation, grouped weekly Dependabot updates, patch/exception objectives, and Repository Quality enforcement are authoritative. Final head `48414aaccf223c94c358033c883215dced666f24` passed Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, and Database Replay #358; trusted-main Supply Chain Security #10 passed attestation and retained artifact `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf`.
 - [ ] `OPS-ACCESS-001` Add leaked-password protection and staff access policy.
 - [ ] `OPS-RATE-001` Add rate limiting. `IN_PROGRESS`: shared HMAC-keyed storage, atomic consumption, reviewed Player post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. Runtime proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, cleanup, telemetry, and staging probes remain open.
 - [ ] `OPS-OBS-001` Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes.
