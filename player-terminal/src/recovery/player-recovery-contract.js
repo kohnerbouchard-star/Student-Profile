@@ -132,7 +132,7 @@ export function buildPlayerRecoveryPresentation(error = {}, {
         : "The service requested a short pause before the same action is retried.",
       tone: "amber",
       action: "retry_same",
-      actionLabel: waitSeconds > 0 ? `Retry in ${waitSeconds}s` : "Retry the same action",
+      actionLabel: "Retry the same action",
       retryAfterMs: normalized.retryAfterMs,
       preserveData: true
     },
