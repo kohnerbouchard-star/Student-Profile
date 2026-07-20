@@ -1,4 +1,7 @@
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import * as base from "./release-platform-lib.mjs";
+import { verifyEnvironmentNeutralFrontend } from "./release-environment-neutrality.mjs";
 
 export const {
   COMMIT_PATTERN,
@@ -6,17 +9,16 @@ export const {
   ReleasePlatformValidationError,
   SECRET_NAME_PATTERN,
   SHA256_PATTERN,
-  buildImmutableRelease,
   canonicalJson,
   loadJson,
   repositoryReleaseFacts,
   sha256,
   sha256File,
   validateReleaseConfiguration,
-  validateReleaseManifest,
 } = base;
 
 const PLACEHOLDER_PATTERN = /^(?:change-me|example|placeholder|todo(?:[_-].*)?|tbd(?:[_-].*)?|unknown(?:[_-].*)?|development|staging|production|0+)$/i;
+const NEUTRALITY_VERIFIER = "release-environment-neutrality-v1";
 
 function assertNoPlaceholder(value, label, errors) {
   if (typeof value !== "string" || PLACEHOLDER_PATTERN.test(value)) {
@@ -68,6 +70,46 @@ export function validateDistinctEnvironmentManifests(manifests) {
   return validated;
 }
 
+export async function buildImmutableRelease(options) {
+  const neutrality = await verifyEnvironmentNeutralFrontend({ repoRoot: options.repoRoot });
+  const manifest = await base.buildImmutableRelease(options);
+  const enrichedManifest = {
+    ...manifest,
+    environmentNeutrality: {
+      status: "pass",
+      verifier: NEUTRALITY_VERIFIER,
+      scannedRoots: neutrality.scannedRoots,
+      auditedProductionProjectRefSha256: neutrality.auditedProductionProjectRef
+        ? base.sha256(neutrality.auditedProductionProjectRef)
+        : null,
+      auditedWorkerOriginSha256: neutrality.auditedWorkerOrigin
+        ? base.sha256(neutrality.auditedWorkerOrigin)
+        : null,
+    },
+  };
+  await writeFile(
+    path.join(options.outputRoot, "release-manifest.json"),
+    base.canonicalJson(enrichedManifest),
+  );
+  return enrichedManifest;
+}
+
+export async function validateReleaseManifest(options) {
+  const errors = [];
+  const neutrality = options.manifest?.environmentNeutrality;
+  if (neutrality?.status !== "pass") {
+    errors.push("release environmentNeutrality.status must be pass");
+  }
+  if (neutrality?.verifier !== NEUTRALITY_VERIFIER) {
+    errors.push(`release environmentNeutrality.verifier must be ${NEUTRALITY_VERIFIER}`);
+  }
+  if (!Array.isArray(neutrality?.scannedRoots) || neutrality.scannedRoots.length === 0) {
+    errors.push("release environmentNeutrality.scannedRoots is required");
+  }
+  if (errors.length) throw new base.ReleasePlatformValidationError(errors);
+  return base.validateReleaseManifest(options);
+}
+
 export async function validatePromotionRecord(options) {
   const { record, releaseManifest, expectedEnvironment } = options;
   const errors = [];
@@ -94,5 +136,11 @@ export async function validatePromotionRecord(options) {
     }
   }
   if (errors.length) throw new base.ReleasePlatformValidationError(errors);
+  await validateReleaseManifest({
+    manifest: releaseManifest,
+    artifactRoot: options.artifactRoot,
+    repoRoot: options.repoRoot,
+    expectedCommit: record?.sourceCommit,
+  });
   return base.validatePromotionRecord(options);
 }
