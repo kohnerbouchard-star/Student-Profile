@@ -36,7 +36,6 @@ export interface ReviewedPlayerRateLimitOperation {
 
 export type ReviewedPlayerRateLimitEndpointKey =
   | PlayerCapabilityEndpointKey
-  | "bootstrap"
   | "inventoryRedemption";
 
 export interface PlayerRateLimitDispatchDependencies {
@@ -90,6 +89,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   country: byMethod({
     GET: operation("player.country.read", "read"),
+  }),
+  dashboard: byMethod({
+    GET: operation("player.dashboard.read", "read"),
   }),
   inventory: byMethod({
     GET: operation("player.inventory.read", "read"),
