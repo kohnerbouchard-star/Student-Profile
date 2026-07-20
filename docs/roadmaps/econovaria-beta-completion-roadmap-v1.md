@@ -5,7 +5,7 @@
 **Authoritative path:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
-**Current audited main baseline:** `4e3c123c98c37a2b5d26a93e67bfb31c3b722925`
+**Current audited main baseline:** `b700147f03be26e1663437135878c6736f55b805`
 
 ---
 
@@ -140,6 +140,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 
 ### 2026-07-20 full repository reconciliation
 
+- PR #239 merged the full roadmap reconciliation as `b700147f03be26e1663437135878c6736f55b805`; this merge is the current audited `main` baseline.
 - Re-audited `main` at `4e3c123c98c37a2b5d26a93e67bfb31c3b722925` and all open PR ownership. PR #163 remains the sole open seed-content authority and remains draft; no replacement Backend, Player, lifecycle, or staging-preflight feature branch is active.
 - PR #158 merged the authoritative Player Backend as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`. PR #141 was cleaned and merged as the authoritative Player runtime adapter at `566d99fab5668cf42d6275ec8d12c580239a3137`; it is no longer donor-only. PR #143 remains donor/reference only.
 - Later merged tranches completed connected logout (#182), Contract reads/acceptance/submission/lifecycle (#190, #201, #205), Store lifecycle and race guards (#207, #210, #211), notification inbox behavior (#216), Inventory Admin review and connected redemption (#177, #224), runtime cutover and legacy source removal (#217, #222), Banking reads (#213, #221), and game lifecycle controls (#229).
@@ -1021,6 +1022,12 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-20 — Post-merge roadmap baseline seal
+
+- PR #239 merged the full application-state reconciliation as `b700147f03be26e1663437135878c6736f55b805`.
+- Updated the current audited `main` baseline to the reconciliation merge itself so the authoritative ledger is not immediately stale after merge.
+- Roadmap-only correction; no application source, migration, route, RPC, seed content, credential, environment, or runtime changed.
 
 ### 2026-07-20 — Full merged-repository and roadmap reconciliation
 
