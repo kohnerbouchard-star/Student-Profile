@@ -23,12 +23,12 @@
   ],
   "artifact": {
     "provider": "github-actions",
-    "name": "econovaria-seed-simulation-raw-e7b3649068492d2e652a293625f398a8ee089fa8",
-    "artifactId": "8453070261",
-    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29722907129/artifacts/8453070261",
-    "artifactDigest": "a393c6674f7c60cfbfb6d065674caf458580a161c2f6035c660727a20f2ccd86",
-    "sourceCommit": "e7b3649068492d2e652a293625f398a8ee089fa8",
-    "workflowRunId": "29722907129",
+    "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "artifactId": "8453081699",
+    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8453081699",
+    "artifactDigest": "5403ece8549431574c494b0da700f2aef1015904f77059d60582798b4eb75655",
+    "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
+    "workflowRunId": "29667017728",
     "retentionDays": 90,
     "retainedAt": "2026-07-19"
   }

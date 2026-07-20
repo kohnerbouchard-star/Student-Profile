@@ -16,7 +16,7 @@
     "input-v1.json": "e8b82d3fb1c8c8748b84aa2cbc1017606cfccb8c0e3060320b0b947037e179c1",
     "run_thaloris_market_simulation_v1.py": "40169e758fd7db1ceeccf50a04f4bd5d16e490ec7299939b371e4a93e6800149",
     "summary-v1.json": "3e5bfdb42021f4fe22820917b9e6cc85f9f14b5dab07a202476577d49af5a24d",
-    "raw-evidence-manifest-v1.json": "26b7d7493a98baaf8464878eeafe258325858511b641d78b9174ccaa8e97d369"
+    "raw-evidence-manifest-v1.json": "77c449597a4628329c1c0d148baf5dbd1323823a38e4e6dc2034eefb0aac22f6"
   },
   "evidenceRetention": {
     "status": "immutable-workflow-artifact-retained",
@@ -26,12 +26,12 @@
     "requiredForApproval": true,
     "artifact": {
       "provider": "github-actions",
-      "name": "econovaria-seed-simulation-raw-e7b3649068492d2e652a293625f398a8ee089fa8",
-      "artifactId": "8453070261",
-      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29722907129/artifacts/8453070261",
-      "artifactDigest": "a393c6674f7c60cfbfb6d065674caf458580a161c2f6035c660727a20f2ccd86",
-      "sourceCommit": "e7b3649068492d2e652a293625f398a8ee089fa8",
-      "workflowRunId": "29722907129",
+      "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
+      "artifactId": "8453081699",
+      "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8453081699",
+      "artifactDigest": "5403ece8549431574c494b0da700f2aef1015904f77059d60582798b4eb75655",
+      "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
+      "workflowRunId": "29667017728",
       "retentionDays": 90,
       "retainedAt": "2026-07-19"
     }
