@@ -42,8 +42,14 @@ jobs:
       - name: Enforce dependency vulnerability threshold
         run: npm audit --audit-level=high
 
-      - name: Verify supply-chain controls
-        run: npm run security:verify
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
+
+      - name: Test supply-chain controls
+        run: npm run test:supply-chain
+
+      - name: Generate supply-chain SBOM bundle
+        run: npm run security:sbom
 
       - name: Run repository audit and source checks
         id: repository-tests
