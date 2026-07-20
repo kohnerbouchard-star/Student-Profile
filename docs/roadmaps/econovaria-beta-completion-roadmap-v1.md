@@ -6,7 +6,7 @@
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
 **Audited application-state baseline:** `b700147f03be26e1663437135878c6736f55b805`
-**Repository state audited through:** `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`
+**Repository state audited through:** `222fd3e5b6491b32f79d7c56c0d84455411f6f77`
 
 ---
 
@@ -98,6 +98,9 @@ The first beta must prove this loop end to end with authoritative persistence.
 |---|---|---|
 | Backend player reconciliation | `VERIFIED_COMPLETE` | PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac` |
 | Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`, head `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; 407 seed commits beyond the common base and 98 commits behind the audited repository state |
+| Player story-notification delivery | `IN_PROGRESS` | PR #244, branch `agent/player-story-delivery-v1`; owns `BETA-NOTIF-005` and `BETA-NOTIF-006` without owning campaign content |
+| Player market orders and Portfolio | `IN_PROGRESS` | PR #245, branch `agent/player-market-reconciliation-v1`; surviving authority for `BETA-MKT-003` through `BETA-MKT-007` after duplicate PR #246 retirement |
+| Program-control consolidation | `IMPLEMENTED_NOT_MERGED` | PR #251, branch `chore/program-control-consolidation-v1`; reconciles overlapping ownership and hardens owner-safe branch retirement |
 | Player runtime cutover and legacy source removal | `VERIFIED_COMPLETE` for repository code; operations remain `IN_PROGRESS` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; PR #222 merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`; connected isolated staging and live Worker retirement remain release gates |
 | Player safe session-expiry exit | `VERIFIED_COMPLETE` | PR #165 merged as `4e20a5993da925463887bc23cc707be5679ccd20`; suspended-session correction PR #167 merged as `14adbc525995cc931998244c442a23b542f43c7a` |
 | Admin safe session-expiry exit | `VERIFIED_COMPLETE` | PR #166 merged as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5` |
@@ -159,6 +162,13 @@ The first beta must prove this loop end to end with authoritative persistence.
 - Physical-economy calibration is active rather than merely planned: 16,000 deterministic country/difficulty/scenario/seed runs completed, with 25 of 28 quantitative gates passing. Easy and Moderate border-disruption supply recovery and Hard baseline craft success remain failed gates; substitution coverage and salvage/arbitrage checks also remain open.
 - Operations and architecture are partially implemented: pinned toolchains, dependency audits, package-signature checks, repeated migration replay/lint, fail-closed staging validation, repository runtime cutover, and Admin architecture ratchets exist. They do not provide isolated environments, immutable release artifacts, SBOM/provenance, observability, backup/restore, incident readiness, or live legacy retirement evidence.
 
+### 2026-07-20 parallel-work ownership reconciliation
+
+- Re-audited open pull requests after parallel roadmap sessions created overlapping claims. PR #163 remains the sole seed-content authority and PR #244 uniquely owns Player story-notification delivery.
+- PRs #245 and #246 both claimed `BETA-MKT-003` through `BETA-MKT-007`. PR #245 contains the substantive public-safe market contract implementation and is the surviving authority. PR #246 contains only a temporary source-snapshot workflow and claim marker; its artifact was consumed for this audit and the PR is approved for explicit duplicate retirement.
+- PR #251 owns only Phase 0 program control. It adds fail-closed branch retirement for merged branches and explicitly `duplicate`-labeled closed branches, preserves the default and accepted Admin source refs, and adds a repository test ratchet.
+- Until PR #251 merges and PR #246 is closed/deleted, `P0-006` remains `IMPLEMENTED_NOT_MERGED`; no market, story, seed, Player, Admin, migration, runtime, or deployment capability is advanced by this program-control tranche.
+
 ### Current release condition
 
 The application is not yet approved for beta or production runtime cutover because the following remain unresolved:
@@ -187,7 +197,7 @@ This table counts stable roadmap IDs only. A checked item is merged and evidence
 
 ### Current phase situation
 
-- **Phase 0 — Program control:** substantially complete; superseded branch-ref cleanup remains open.
+- **Phase 0 — Program control:** `IMPLEMENTED_NOT_MERGED` on PR #251; duplicate market ownership is reconciled and safe duplicate-branch retirement is pending merge and execution against PR #246.
 - **Phase 1 — Authoritative Player Backend:** complete and merged.
 - **Phase 2 — Player connection:** mostly complete; Dashboard, Portfolio, Profile, market orders, and isolated-staging bootstrap remain open.
 - **Phase 3 — Beta gameplay gaps:** Contracts, Store/Inventory, notifications, and game lifecycle are repository-integrated; onboarding, cutscenes, Player recovery, market trade/portfolio, and a runtime story chain remain open.
@@ -686,12 +696,12 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 for repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; PR #163 remains the only open PR.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 for `main` `222fd3e5b6491b32f79d7c56c0d84455411f6f77`; PR #163 owns seed content, PR #244 owns story delivery, PR #245 owns market reconciliation, and duplicate PR #246 is approved for retirement by PR #251.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
 - [x] `P0-005` Reconcile donor work intentionally. PR #143 remains donor/reference only; PR #141 was cleaned, bounded, verified, and merged as the authoritative Player runtime adapter.
-- [ ] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. Temporary roadmap branches were removed after merge; a reliable owner-safe inventory and cleanup of older superseded refs remains open because the branch-search connector returned no authoritative listing.
+- [ ] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. `IMPLEMENTED_NOT_MERGED` on PR #251: open-PR ownership was reconciled, substantive market work was preserved on PR #245, PR #246 was classified as the duplicate after its source artifact was consumed, and Branch Hygiene now fail-closes deletion to merged or explicitly `duplicate`-labeled same-repository PRs. Completion requires PR #251 merge plus PR #246 closure and branch-deletion evidence.
 - [x] `P0-007` Add and maintain a capability ownership registry.
 - [x] `P0-008` Add a reverse-chronological change ledger to this document after every merged tranche.
 - [x] `P0-009` Require every future implementation prompt to reference this exact authoritative path.
@@ -703,6 +713,9 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 |---|---|---|---|
 | Authenticated Player Backend | PR #158 / merge `d403cf7baefeb3c1015c282cdbd748d2050e87ac` | `VERIFIED_COMPLETE` | No replacement Backend reconciliation branch; later work must use a narrowly owned roadmap item. |
 | Seed-content definition, calibration, and executable-content preparation | PR #163 / `agent/seed-content-foundation-v1` | `IN_PROGRESS` | Sole active seed authority; do not create another seed-content branch or merge/activate before its gates close. |
+| Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS` | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; does not own campaign definitions or runner scheduling. |
+| Player market orders and Portfolio | PR #245 / `agent/player-market-reconciliation-v1` | `IN_PROGRESS` | Sole surviving authority for `BETA-MKT-003` through `BETA-MKT-007`; PR #246 is a duplicate retirement target. |
+| Program-control consolidation | PR #251 / `chore/program-control-consolidation-v1` | `IMPLEMENTED_NOT_MERGED` | Owns only `P0-006`, ownership reconciliation, and branch-hygiene policy; no feature implementation. |
 | Player runtime adapter and capability preflight | PR #141 / merge `566d99fab5668cf42d6275ec8d12c580239a3137` | `VERIFIED_COMPLETE` | Preserve explicit `classroom-api` routing and fail-closed manifest validation. |
 | Player runtime cutover and legacy source retirement | PRs #217 and #222 | repository code `VERIFIED_COMPLETE`; operations `IN_PROGRESS` | Do not restore the legacy frontend or Cloudflare browser transport; retire live Worker only through approved operational change control. |
 | Inventory redemption lifecycle | PRs #158, #177, and #224 | `VERIFIED_COMPLETE` at repository-integrated boundary | Extend the existing public-key, row-locked, idempotent lifecycle; PR #143 remains reference only. |
@@ -1070,6 +1083,14 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-20 — Parallel-work ownership reconciliation on PR #251
+
+- Re-audited current open PRs and identified duplicate ownership between PRs #245 and #246 for `BETA-MKT-003` through `BETA-MKT-007`.
+- Preserved PR #245 as the substantive market authority; classified PR #246 as duplicate after consuming its temporary source-snapshot artifact and confirming it contains no unique application implementation.
+- Added fail-closed Branch Hygiene support for merged or explicitly `duplicate`-labeled same-repository PRs, retained the default and accepted Admin source branches, and added `scripts/branch-hygiene-policy.test.mjs`.
+- Updated `docs/operations/branch-cleanup-2026-07-17.md`, the capability ownership registry, and current program snapshot. `P0-006` remains `IMPLEMENTED_NOT_MERGED` until PR #251 merges and PR #246 is closed with branch-deletion evidence.
+- No application source, migration, route, RPC, seed definition, credential, environment, or deployment changed.
 
 ### 2026-07-20 — Comprehensive repository and roadmap re-audit
 
