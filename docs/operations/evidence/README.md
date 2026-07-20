@@ -2,8 +2,13 @@
 
 This directory contains reviewed, non-sensitive evidence records for isolated
 staging, immutable artifact promotion, rollback, restore, and connected smoke.
-A template, plan, workflow definition, or validator output produced without a
-real target is not staging evidence.
+A template, plan, workflow definition, approval request, or validator output
+produced without a real target is not staging evidence.
+
+`isolated-staging-creation-request-2026-07-20.md` is the exact resource,
+approval, secret-name, execution, and evidence request for the first isolated
+staging release. It remains a request—not deployment evidence—until the named
+resources are approved, created, and exercised.
 
 ## Admissible records
 
