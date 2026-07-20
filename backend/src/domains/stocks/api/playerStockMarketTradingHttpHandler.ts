@@ -20,7 +20,6 @@ import {
   type StockMarketOrderSide,
   StockMarketTradingError,
   type StockMarketTradingRepository,
-  type StockMarketTradingSuccessBody,
 } from "../contracts/stockMarketTradingContracts.ts";
 import {
   SupabaseStockMarketTradingRepository,
@@ -47,21 +46,11 @@ interface PlayerStockMarketTradingHttpDependencies {
 }
 
 interface PlayerStockMarketTradingBody {
-  readonly gameSessionId: string | null;
-  readonly stockAssetId: string | null;
-  readonly ticker: string | null;
-  readonly expectedPrice: number | null;
+  readonly ticker: string;
+  readonly expectedPrice: number;
   readonly side: StockMarketOrderSide;
   readonly quantity: number;
   readonly idempotencyKey: string;
-}
-
-interface ResolvedPlayerSession {
-  readonly session: {
-    readonly id: string;
-    readonly game_session_id: string;
-    readonly player_id: string;
-  };
 }
 
 interface ResolvedStockAsset {
@@ -119,70 +108,38 @@ export async function handlePlayerStockMarketTradingRequest(
       return jsonError(sessionResult.status, sessionResult.error);
     }
 
-    const publicTickerRequest = body.ticker !== null;
-    const gameSessionId = body.gameSessionId ??
-      sessionResult.session.game_session_id;
-
-    if (body.gameSessionId) {
-      assertRequestedSessionMatchesResolvedSession(
-        body.gameSessionId,
-        sessionResult,
+    const asset = await (dependencies.resolveStockAssetByTicker ??
+      resolveStockAssetByTicker)(
+        serviceClient,
+        sessionResult.session.game_session_id,
+        body.ticker,
       );
-    }
-
-    let stockAssetId = body.stockAssetId;
-    let resolvedTicker = body.ticker;
-
-    if (publicTickerRequest) {
-      const asset = await (dependencies.resolveStockAssetByTicker ??
-        resolveStockAssetByTicker)(
-          serviceClient,
-          gameSessionId,
-          body.ticker as string,
-        );
-      assertExpectedPriceMatches(body.expectedPrice, asset.currentPrice);
-      stockAssetId = asset.stockAssetId;
-      resolvedTicker = asset.ticker;
-    }
-
-    if (!stockAssetId) {
-      throw invalidRequest("stockAssetId or ticker is required.");
-    }
+    assertExpectedPriceMatches(body.expectedPrice, asset.currentPrice);
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
       : new SupabaseStockMarketTradingRepository(serviceClient as any);
     const result = await repository.executeOrder({
-      gameSessionId,
+      gameSessionId: sessionResult.session.game_session_id,
       playerSessionId: sessionResult.session.id,
-      stockAssetId,
+      stockAssetId: asset.stockAssetId,
       side: body.side,
       quantity: body.quantity,
       idempotencyKey: body.idempotencyKey,
     });
 
-    if (publicTickerRequest) {
-      return jsonResponse<PlayerSafeStockMarketTradingExecuteSuccessBody>(200, {
-        ok: true,
-        action: "execute_order",
-        order: {
-          ticker: resolvedTicker ?? result.order.ticker,
-          side: result.order.side,
-          quantity: result.order.quantity,
-          executionPrice: result.order.executionPrice,
-          grossValue: result.order.grossValue,
-          status: result.order.status,
-          rejectionReason: result.order.rejectionReason,
-        },
-        cash: result.cash,
-        holding: result.holding,
-      });
-    }
-
-    return jsonResponse<StockMarketTradingSuccessBody>(200, {
+    return jsonResponse<PlayerSafeStockMarketTradingExecuteSuccessBody>(200, {
       ok: true,
       action: "execute_order",
-      order: result.order,
+      order: {
+        ticker: asset.ticker,
+        side: result.order.side,
+        quantity: result.order.quantity,
+        executionPrice: result.order.executionPrice,
+        grossValue: result.order.grossValue,
+        status: result.order.status,
+        rejectionReason: result.order.rejectionReason,
+      },
       cash: result.cash,
       holding: result.holding,
     });
@@ -226,35 +183,14 @@ async function readPlayerStockMarketTradingBody(
     throw invalidRequest("Request body must be a JSON object.");
   }
 
-  rejectBodySuppliedPlayerSessionFields(value);
+  rejectPrivateScopeFields(value);
   rejectArrayShapedFields(value);
 
-  const ticker = readOptionalTicker(value.ticker);
-  const stockAssetId = readOptionalString(value.stockAssetId);
-
-  if (ticker && stockAssetId) {
-    throw invalidRequest("Send ticker, not stockAssetId, for the public player order boundary.");
-  }
-
-  if (!ticker && !stockAssetId) {
-    throw invalidRequest("ticker or stockAssetId is required.");
-  }
-
-  const gameSessionId = readOptionalString(value.gameSessionId);
-
-  if (!ticker && !gameSessionId) {
-    throw invalidRequest("gameSessionId is required for the legacy stockAssetId boundary.");
-  }
-
   return {
-    gameSessionId,
-    stockAssetId,
-    ticker,
-    expectedPrice: ticker
-      ? readPositiveNumber(value.expectedPrice, "expectedPrice")
-      : null,
+    ticker: readTicker(value.ticker),
+    expectedPrice: readPositiveNumber(value.expectedPrice, "expectedPrice"),
     side: readOrderSide(value.side),
-    quantity: readPositiveNumber(value.quantity, "quantity"),
+    quantity: readPositiveInteger(value.quantity, "quantity"),
     idempotencyKey: readRequiredString(
       value.idempotencyKey,
       "idempotencyKey",
@@ -262,29 +198,27 @@ async function readPlayerStockMarketTradingBody(
   };
 }
 
-function rejectBodySuppliedPlayerSessionFields(
-  value: Record<string, unknown>,
-): void {
-  if (
-    "playerSessionId" in value ||
-    "playerSessionIds" in value ||
-    "playerId" in value ||
-    "playerIds" in value
-  ) {
+function rejectPrivateScopeFields(value: Record<string, unknown>): void {
+  const forbidden = [
+    "gameSessionId",
+    "gameSessionIds",
+    "playerSessionId",
+    "playerSessionIds",
+    "playerId",
+    "playerIds",
+    "stockAssetId",
+    "stockAssetIds",
+  ];
+
+  if (forbidden.some((field) => field in value)) {
     throw invalidRequest(
-      "Player identity must not be sent; player stock trading derives it from x-player-session-token.",
+      "Player stock trading derives game, player, and stock ownership scope server-side from the session token and public ticker.",
     );
   }
 }
 
 function rejectArrayShapedFields(value: Record<string, unknown>): void {
   if (
-    Array.isArray(value.gameSessionId) ||
-    Array.isArray(value.gameSessionIds) ||
-    Array.isArray(value.gameSessions) ||
-    Array.isArray(value.sessions) ||
-    Array.isArray(value.stockAssetId) ||
-    Array.isArray(value.stockAssetIds) ||
     Array.isArray(value.ticker) ||
     Array.isArray(value.tickers) ||
     Array.isArray(value.expectedPrice) ||
@@ -292,33 +226,16 @@ function rejectArrayShapedFields(value: Record<string, unknown>): void {
     Array.isArray(value.idempotencyKeys)
   ) {
     throw invalidRequest(
-      "Player stock trading accepts exactly one asset, expectedPrice, and idempotencyKey per request.",
-    );
-  }
-}
-
-function assertRequestedSessionMatchesResolvedSession(
-  gameSessionId: string,
-  sessionResult: ResolvedPlayerSession,
-): void {
-  if (sessionResult.session.game_session_id !== gameSessionId) {
-    throw new EdgeActivationError(
-      "invalid_player_session_scope",
-      "Requested game session does not match the authenticated player session.",
-      401,
-      false,
+      "Player stock trading accepts exactly one ticker, expectedPrice, and idempotencyKey per request.",
     );
   }
 }
 
 function assertExpectedPriceMatches(
-  expectedPrice: number | null,
+  expectedPrice: number,
   currentPrice: number,
 ): void {
-  if (
-    expectedPrice === null ||
-    Math.abs(expectedPrice - currentPrice) > 0.0001
-  ) {
+  if (Math.abs(expectedPrice - currentPrice) > 0.0001) {
     throw new StockMarketTradingError(
       "stale_stock_price",
       "The reviewed stock price is stale. Refresh the market before confirming the order.",
@@ -387,24 +304,13 @@ async function resolveStockAssetByTicker(
 }
 
 function readRequiredString(value: unknown, fieldName: string): string {
-  const text = readOptionalString(value);
-
-  if (!text) {
-    throw invalidRequest(`${fieldName} is required.`);
-  }
-
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) throw invalidRequest(`${fieldName} is required.`);
   return text;
 }
 
-function readOptionalString(value: unknown): string | null {
-  const text = typeof value === "string" ? value.trim() : "";
-  return text || null;
-}
-
-function readOptionalTicker(value: unknown): string | null {
-  const text = readOptionalString(value);
-  if (!text) return null;
-  const ticker = normalizeTicker(text);
+function readTicker(value: unknown): string {
+  const ticker = normalizeTicker(readRequiredString(value, "ticker"));
   if (!/^[A-Z0-9][A-Z0-9.-]{0,15}$/.test(ticker)) {
     throw invalidRequest("ticker must be a valid public market ticker.");
   }
@@ -417,11 +323,7 @@ function normalizeTicker(value: string): string {
 
 function readOrderSide(value: unknown): StockMarketOrderSide {
   const side = typeof value === "string" ? value.trim().toLowerCase() : "";
-
-  if (side === "buy" || side === "sell") {
-    return side;
-  }
-
+  if (side === "buy" || side === "sell") return side;
   throw invalidRequest("side must be buy or sell.");
 }
 
@@ -429,8 +331,15 @@ function readPositiveNumber(value: unknown, fieldName: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw invalidRequest(`${fieldName} must be a positive number.`);
   }
-
   return value;
+}
+
+function readPositiveInteger(value: unknown, fieldName: string): number {
+  const number = readPositiveNumber(value, fieldName);
+  if (!Number.isInteger(number)) {
+    throw invalidRequest(`${fieldName} must be a positive integer.`);
+  }
+  return number;
 }
 
 function invalidRequest(message: string): StockMarketTradingError {
