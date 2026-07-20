@@ -14,6 +14,10 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import {
+  guardGameScopedMutation,
+  handleGameLifecycleOperation,
+} from "./gameLifecycleOperations.ts";
 
 function routePath(url: URL): string {
   const marker = "/admin-api";
@@ -204,6 +208,32 @@ Deno.serve(async (request: Request) => {
         code: "game_not_found",
         message: "That game is not available to this administrator.",
       });
+    }
+
+    const lifecycleOperation = await handleGameLifecycleOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (lifecycleOperation.handled) {
+      return json(
+        request,
+        lifecycleOperation.status || 500,
+        lifecycleOperation.body,
+      );
+    }
+
+    const mutationGuard = guardGameScopedMutation({
+      method: request.method,
+      operationalStatus: game.status,
+      suffix,
+    });
+    if (mutationGuard.handled) {
+      return json(request, mutationGuard.status || 409, mutationGuard.body);
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(
