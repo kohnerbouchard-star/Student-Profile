@@ -2,7 +2,7 @@ name: Incident Roadmap Finalize
 
 on:
   pull_request_target:
-    types: [ready_for_review, reopened]
+    types: [ready_for_review, reopened, synchronize]
 
 permissions:
   contents: write
@@ -30,6 +30,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f .github/incident-roadmap-finalize.trigger ]; then
+            echo "No incident-roadmap sentinel is present; no action required."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
@@ -111,6 +116,7 @@ jobs:
           PY
 
           git rm .github/workflows/incident-roadmap-finalize.yml
+          git rm .github/incident-roadmap-finalize.trigger
           git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
           git diff --cached --check
           git commit -m "docs(roadmap): mark incident readiness verified"
