@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "environment": "isolated-staging",
+  "releaseCommit": "REQUIRED_FULL_COMMIT_SHA",
+  "frontendIdentity": "REQUIRED_STAGING_FRONTEND_IDENTITY",
+  "supabaseProjectRef": "REQUIRED_STAGING_PROJECT_REF",
+  "executedAt": null,
+  "admin": {
+    "result": "pending",
+    "evidenceReferences": []
+  },
+  "playerDesktop": {
+    "result": "pending",
+    "evidenceReferences": []
+  },
+  "playerMobile": {
+    "result": "pending",
+    "evidenceReferences": []
+  },
+  "productionModified": false,
+  "containsSecretValues": false
+}
