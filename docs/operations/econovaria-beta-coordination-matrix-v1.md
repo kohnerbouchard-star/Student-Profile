@@ -2,6 +2,7 @@
 
 **Controller:** Chat 1 — beta program controller and merge gatekeeper  
 **Controller authority:** PR #281 merged as `7bbd08e19641146282b58023a0a911c90f6a148b`  
+**Containment reconciliation:** PR #288 (`docs/beta-program-controller-remediation-v1`)  
 **Repository:** `kohnerbouchard-star/Student-Profile`  
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Complete branch inventory:** `docs/operations/econovaria-remote-branch-inventory-v1.md`  
@@ -21,13 +22,13 @@ The branch inventory is a dated divergence snapshot. For concurrently moving wor
 6. Repository tooling is not staging evidence. An undeployed migration is not runtime evidence. A source snapshot is not implementation evidence.
 7. PRs #248, #249, and #261 are product-owner-paused expansion work. They remain open and preserved but are excluded from the beta merge queue until explicit reactivation.
 8. No chat may silently expand beyond the owned files and roadmap items below.
-9. No workstream may add a write-enabled `pull_request_target` or direct-`main` helper to advance a paused PR or bypass the controller merge queue.
+9. No workstream may add a write-enabled `pull_request_target`, `push`-triggered finalizer, or direct-`main` helper to advance a paused PR or bypass the controller merge queue.
 
 ## Ten-workstream matrix
 
 | Roadmap item / capability | Chat | Branch / PR | Owned scope | Prohibited scope | Latest controller finding | Merge readiness | Next exact action |
 |---|---:|---|---|---|---|---|---|
-| `P0-001`, `P0-002`, `P0-007`, `P0-008`; roadmap, coordination, queue, final reconciliation | 1 | PR #281 merged as `7bbd08e19641146282b58023a0a911c90f6a148b`; remediation branch `docs/beta-program-controller-remediation-v1` | Authoritative roadmap; coordination matrix; remote-branch inventory; bounded controller evidence and emergency collision containment | Application source, runtime routes, migrations, credentials, environments, deployment | Controller documents merged after Repository Quality, Supply Chain Security, and Staging Readiness Preflight passed. A post-merge paused-expansion bypass was contained and is being recorded here. | Controller authority `VERIFIED_COMPLETE`; remediation documentation must pass final-head CI | Merge this documentation-only reconciliation after green CI; continue enforcing the live queue |
+| `P0-001`, `P0-002`, `P0-007`, `P0-008`; roadmap, coordination, queue, final reconciliation | 1 | PR #281 merged as `7bbd08e19641146282b58023a0a911c90f6a148b`; remediation PR #288 | Authoritative roadmap; coordination matrix; remote-branch inventory; bounded controller evidence and emergency collision containment | Application source, runtime routes, migrations, credentials, environments, deployment | Controller documents merged after Repository Quality, Supply Chain Security, and Staging Readiness Preflight passed. A post-merge paused-expansion bypass was contained and is recorded in PR #288. | Controller authority `VERIFIED_COMPLETE`; remediation documentation must pass final-head CI | Merge this documentation-only reconciliation after green CI; continue enforcing the live queue |
 | Release platform for `OPS-STAGE-006`, `OPS-STAGE-007`, `OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`, `BETA-PLAYER-010`, `BETA-ADMIN-007` evidence | 2 | `agent/isolated-staging-release-v1`; PR #280 | Release manifests, immutable artifacts, promotion/rollback guards, environment templates, runbooks, focused workflows/tests | Roadmap, application behavior, seed/story files, migrations, production deployment | An earlier head passed all checks, but the branch advanced during review and was returned to draft; its current final-head diff and CI are authoritative | Not ready; prior green evidence cannot authorize a moved head | Stabilize the branch, audit the permanent final diff, pass all required final-head workflows, then merge tooling only; staging identities/deployment/smoke/rollback/restore remain open |
 | Migration-history reconciliation and isolated-staging migration application | 3 | `agent/live-migration-reconciliation-v1`; PR #282 | Read-only migration inventory, schema comparison, redacted metadata export, replay/lint and staging-only evidence | Roadmap, rewritten migrations, manual production SQL, production schema changes, unrelated features | Read-only findings record 53 live identities, 66 repository identities, 13 repository-only identities, no live-only identity, and no live mutation | Tooling/evidence may be reviewable only after the final head stabilizes; roadmap completion is not ready | Re-audit final diff/CI, run clean replay, compare live and isolated schemas, reconcile function artifacts, and execute the isolated `BETA-BANK-004` retry probe |
 | Live legacy-runtime and Cloudflare Worker retirement | 4 | `agent/legacy-runtime-retirement-v1`; PR #283 | Route/runtime inventory, traffic/auth probes, credential-rotation/shutdown/rollback controls | Roadmap, restored legacy source, unrelated runtime work, unapproved production shutdown | Preparatory inventory and tooling identify unresolved runtime and provider evidence gaps; no live change occurred | Preparatory tooling may merge only after stable green final-head review; live retirement remains incomplete | Complete final CI and controller review; obtain approved traffic, Cloudflare, auth, credential rotation, disablement, observation, and rollback evidence |
@@ -43,6 +44,7 @@ The branch inventory is a dated divergence snapshot. For concurrently moving wor
 | PR | Capability | Queue | Current gate decision |
 |---:|---|---|---|
 | #281 | Controller documents | Merged coordination/evidence | `VERIFIED_COMPLETE` as `7bbd08e19641146282b58023a0a911c90f6a148b` |
+| #288 | Controller containment record | Independent coordination/evidence | Documentation-only; merge after permanent final-head green CI |
 | #280 | Immutable release tooling | Independent beta tooling | Draft after head movement; re-audit current final diff and workflows |
 | #282 | Migration reconciliation tooling/evidence | Release foundation | Final-head review required; connected migration evidence remains open |
 | #283 | Legacy-retirement preparation | Release foundation | Preparatory merge only after stable green CI; live retirement remains approval/evidence blocked |
