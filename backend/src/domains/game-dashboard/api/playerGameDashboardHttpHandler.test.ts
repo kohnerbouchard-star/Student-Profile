@@ -5,14 +5,11 @@ import type {
   PlayerGameDashboardReadInput,
   PlayerGameDashboardRepository,
   PlayerGameDashboardSnapshot,
-  PlayerGameDashboardStoryNotificationReader,
   PlayerGameDashboardStoryNotificationRepository,
 } from "../contracts/playerGameDashboardContracts.ts";
 import type {
-  ListUnseenStoryCutsceneDeliveriesInput,
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-  StoryNotificationDeliveryWithNotification,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
 
 declare const Deno: {
@@ -338,60 +335,16 @@ Deno.test("player dashboard includes same-player stock history across sessions a
   assertEquals("price" in body.public.storeListings[0], false);
 });
 
-Deno.test("player dashboard includes unseen cutscene deliveries for the authenticated player only", async () => {
+Deno.test("player dashboard retires raw cutscene payload delivery", async () => {
   const seededTables = tables();
-  seededTables.notifications = [
-    storyNotificationRow(),
-    storyNotificationRow({
-      id: STORY_NOTIFICATION_LOW_ID,
-      source_id: "story-event-low",
-      title: "Minor update",
-      summary: "A lower priority cutscene.",
-      priority: "low",
-      payload: {
-        videoAssetKey: "story-low",
-      },
-      published_at: "2026-06-24T00:11:00.000Z",
-    }),
-    storyNotificationRow({
-      id: STORY_NOTIFICATION_SEEN_ID,
-      source_id: "story-event-seen",
-      title: "Already seen",
-    }),
-    storyNotificationRow({
-      id: STORY_NOTIFICATION_DISMISSED_ID,
-      source_id: "story-event-dismissed",
-      title: "Dismissed",
-    }),
-    storyNotificationRow({
-      id: STORY_NOTIFICATION_OTHER_PLAYER_ID,
-      source_id: "story-event-other-player",
-      title: "Other player",
-      priority: "critical",
-    }),
-  ];
-  seededTables.notification_deliveries = [
-    storyDeliveryRow(),
-    storyDeliveryRow({
-      id: STORY_DELIVERY_LOW_ID,
-      notification_id: STORY_NOTIFICATION_LOW_ID,
-    }),
-    storyDeliveryRow({
-      id: STORY_DELIVERY_SEEN_ID,
-      notification_id: STORY_NOTIFICATION_SEEN_ID,
-      seen_at: "2026-06-24T00:15:00.000Z",
-    }),
-    storyDeliveryRow({
-      id: STORY_DELIVERY_DISMISSED_ID,
-      notification_id: STORY_NOTIFICATION_DISMISSED_ID,
-      dismissed_at: "2026-06-24T00:16:00.000Z",
-    }),
-    storyDeliveryRow({
-      id: STORY_DELIVERY_OTHER_PLAYER_ID,
-      notification_id: STORY_NOTIFICATION_OTHER_PLAYER_ID,
-      player_id: OTHER_PLAYER_ID,
-    }),
-  ];
+  seededTables.notifications = [storyNotificationRow({
+    payload: {
+      videoAssetKey: "northreach-border-closure-v1",
+      requiresAcknowledgement: true,
+      arbitrarySecret: { mustNotReachBrowser: true },
+    },
+  })];
+  seededTables.notification_deliveries = [storyDeliveryRow()];
   const client = new FakeClient(seededTables);
 
   const response = await handlePlayerGameDashboardRequest(
@@ -401,48 +354,13 @@ Deno.test("player dashboard includes unseen cutscene deliveries for the authenti
   const body = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(body.unseenCutscenes, [
-    {
-      deliveryId: STORY_DELIVERY_ID,
-      notificationId: STORY_NOTIFICATION_ID,
-      title: "Northreach closes northern migration corridors",
-      summary: "Border restrictions escalate after security concerns.",
-      priority: "major",
-      displayMode: "modal_on_next_login",
-      payload: {
-        videoAssetKey: "northreach-border-closure-v1",
-        posterAssetKey: "northreach-border-closure-poster",
-        requiresAcknowledgement: true,
-      },
-      publishedAt: "2026-06-24T00:12:00.000Z",
-      deliveredAt: "2026-06-24T00:12:30.000Z",
-      requiresAcknowledgement: true,
-    },
-    {
-      deliveryId: STORY_DELIVERY_LOW_ID,
-      notificationId: STORY_NOTIFICATION_LOW_ID,
-      title: "Minor update",
-      summary: "A lower priority cutscene.",
-      priority: "low",
-      displayMode: "modal_on_next_login",
-      payload: {
-        videoAssetKey: "story-low",
-      },
-      publishedAt: "2026-06-24T00:11:00.000Z",
-      deliveredAt: "2026-06-24T00:12:30.000Z",
-      requiresAcknowledgement: false,
-    },
-  ]);
-  assertEquals(client.forbiddenCalls, []);
-  assertEquals(
-    seededTables.notification_deliveries.find((row) =>
-      row.id === STORY_DELIVERY_ID
-    )?.seen_at,
-    null,
-  );
+  assertEquals(body.unseenCutscenes, []);
+  assertEquals(JSON.stringify(body).includes("arbitrarySecret"), false);
+  assertEquals(JSON.stringify(body).includes(STORY_DELIVERY_ID), false);
+  assertEquals(JSON.stringify(body).includes(STORY_NOTIFICATION_ID), false);
 });
 
-Deno.test("player dashboard reads cutscenes through derived session identity", async () => {
+Deno.test("player dashboard does not invoke the retired cutscene reader", async () => {
   const storyNotificationRepository = new CapturingStoryNotificationReader();
 
   const response = await handlePlayerGameDashboardRequest(
@@ -455,16 +373,8 @@ Deno.test("player dashboard reads cutscenes through derived session identity", a
   const body = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(storyNotificationRepository.inputs, [{
-    gameSessionId: GAME_SESSION_ID,
-    playerId: PLAYER_ID,
-  }]);
-  assertEquals(
-    body.unseenCutscenes.map((cutscene: { deliveryId: string }) =>
-      cutscene.deliveryId
-    ),
-    [STORY_DELIVERY_ID],
-  );
+  assertEquals(body.unseenCutscenes, []);
+  assertEquals(storyNotificationRepository.readCalls, 0);
 });
 
 Deno.test("player dashboard marks own cutscene delivery seen", async () => {
@@ -1343,40 +1253,7 @@ class CapturingRepository implements PlayerGameDashboardRepository {
 
 class CapturingStoryNotificationReader
   implements PlayerGameDashboardStoryNotificationRepository {
-  readonly inputs: ListUnseenStoryCutsceneDeliveriesInput[] = [];
-
-  listUnseenStoryCutsceneDeliveries(
-    input: ListUnseenStoryCutsceneDeliveriesInput,
-  ): Promise<readonly StoryNotificationDeliveryWithNotification[]> {
-    this.inputs.push(input);
-
-    return Promise.resolve([{
-      id: STORY_DELIVERY_ID,
-      notificationId: STORY_NOTIFICATION_ID,
-      gameSessionId: input.gameSessionId,
-      playerId: input.playerId,
-      deliveredAt: "2026-06-24T00:12:30.000Z",
-      seenAt: null,
-      dismissedAt: null,
-      acknowledgedAt: null,
-      notification: {
-        id: STORY_NOTIFICATION_ID,
-        gameSessionId: input.gameSessionId,
-        sourceType: "storyline_event",
-        sourceId: "story-event-1",
-        notificationType: "story_cutscene",
-        title: "Northreach closes northern migration corridors",
-        summary: "Border restrictions escalate after security concerns.",
-        priority: "major",
-        displayMode: "modal_on_next_login",
-        payload: {
-          videoAssetKey: "northreach-border-closure-v1",
-          requiresAcknowledgement: true,
-        },
-        publishedAt: "2026-06-24T00:12:00.000Z",
-      },
-    }]);
-  }
+  readonly readCalls = 0;
 
   markNotificationDeliverySeen(
     input: MarkNotificationDeliveryInput,

@@ -15,6 +15,7 @@ import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/pla
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerInventoryRedemptionRoutePath } from "../../inventory/api/playerInventoryRedemptionRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
+import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/playerStoryDeliveryRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
@@ -54,6 +55,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.actions.inventoryUse, true);
   assertEquals(manifest.capabilities.actions.marketOrder, true);
   assertEquals(manifest.capabilities.actions.storePurchase, true);
+  assertEquals(manifest.capabilities.actions.storyDeliveryState, true);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
@@ -70,6 +72,8 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(endpointKeys.includes("store"), true);
   assertEquals(endpointKeys.includes("storeQuote"), true);
   assertEquals(endpointKeys.includes("storePurchase"), true);
+  assertEquals(endpointKeys.includes("storyDeliveries"), true);
+  assertEquals(endpointKeys.includes("storyDeliveryState"), true);
 });
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
@@ -93,7 +97,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":countryCode", "NR")
         .replace(":ticker", "AURA")
         .replace(":itemId", "meal-pass")
-        .replace(":requestId", `red_${"a".repeat(32)}`),
+        .replace(":requestId", `red_${"a".repeat(32)}`)
+        .replace(":deliveryId", `ndl_${"a".repeat(32)}`),
     }))
   );
 
@@ -132,6 +137,9 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       : operation.key === "notifications" ||
           operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
+      : operation.key === "storyDeliveries" ||
+          operation.key === "storyDeliveryState"
+      ? readPlayerStoryDeliveryRoutePath(operation.path)
       : operation.key === "logout"
       ? readPlayerSessionLogoutRoutePath(operation.path)
       : null;

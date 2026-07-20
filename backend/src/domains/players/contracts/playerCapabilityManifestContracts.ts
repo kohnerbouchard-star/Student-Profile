@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.2" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.3" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -47,6 +47,7 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "progressionUnlock",
   "savingsTransfer",
   "storePurchase",
+  "storyDeliveryState",
 ] as const;
 
 export type PlayerRouteCapabilityKey =
@@ -77,7 +78,9 @@ export type PlayerCapabilityEndpointKey =
   | "portfolio"
   | "store"
   | "storeQuote"
-  | "storePurchase";
+  | "storePurchase"
+  | "storyDeliveries"
+  | "storyDeliveryState";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -273,6 +276,21 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       pathTemplate: "/players/me/notifications/read",
     }],
     actionCapabilities: ["notificationsRead"],
+  },
+  {
+    key: "storyDeliveries",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/story-deliveries",
+    }],
+  },
+  {
+    key: "storyDeliveryState",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/story-deliveries/:deliveryId/state",
+    }],
+    actionCapabilities: ["storyDeliveryState"],
   },
   {
     key: "logout",

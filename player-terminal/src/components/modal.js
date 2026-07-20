@@ -81,10 +81,50 @@ function renderStorePurchaseModal(modal) {
   </div>`;
 }
 
+
+function storyAssetUrl(config, key) {
+  const value = config?.storyMediaAssets?.[key];
+  if (typeof value !== "string") return "";
+  const clean = value.trim();
+  return /^(?:\.\.?\/|\/)[A-Za-z0-9_./-]+$/.test(clean) ? clean : "";
+}
+
+function renderStoryCutsceneModal(modal, config) {
+  const delivery = modal.delivery || {};
+  const content = delivery.content || {};
+  const videoUrl = storyAssetUrl(config, content.videoAssetKey);
+  const posterUrl = storyAssetUrl(config, content.posterAssetKey);
+  const chapter = [
+    Number.isSafeInteger(content.act) ? `ACT ${content.act}` : String(delivery.category || "story").toUpperCase(),
+    Number.isSafeInteger(content.sequence) ? `SEQUENCE ${content.sequence}` : "",
+  ].filter(Boolean).join(" · ");
+  const media = videoUrl
+    ? `<video class="player-story-cutscene-media" controls preload="metadata" playsinline aria-label="Story briefing video" ${posterUrl ? `poster="${escapeHtml(posterUrl)}"` : ""}><source src="${escapeHtml(videoUrl)}" /></video>`
+    : `<div class="player-story-cutscene-fallback" role="img" aria-label="Story briefing transmission"><span>${icon("news")}</span><small>${escapeHtml(chapter)}</small><strong>${escapeHtml(delivery.title || "Story briefing")}</strong></div>`;
+  const close = delivery.requiresAcknowledgement
+    ? ""
+    : `<button class="player-terminal-icon-button" type="button" data-player-story-action="dismissed" aria-label="Dismiss story briefing" ${modal.processing ? "disabled" : ""}>${icon("close")}</button>`;
+  const action = delivery.requiresAcknowledgement ? "acknowledged" : "dismissed";
+  const actionLabel = delivery.requiresAcknowledgement ? "Acknowledge and continue" : "Continue";
+  return `<div class="player-terminal-modal-backdrop player-story-cutscene-backdrop" data-player-modal-backdrop>
+    <section class="player-terminal-modal player-story-cutscene-modal" role="dialog" aria-modal="true" aria-labelledby="storyCutsceneTitle" aria-describedby="storyCutsceneSummary">
+      <header class="player-terminal-modal-head"><div><small>${escapeHtml(chapter)}</small><h3 id="storyCutsceneTitle">${escapeHtml(delivery.title || "Story briefing")}</h3></div>${close}</header>
+      <div class="player-terminal-modal-body">
+        ${media}
+        <p id="storyCutsceneSummary" class="player-story-cutscene-summary">${escapeHtml(delivery.summary || "A new story development is available.")}</p>
+        ${delivery.requiresAcknowledgement ? `<p class="player-story-cutscene-requirement">This briefing requires acknowledgement before you continue.</p>` : ""}
+        ${modal.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(modal.error)}</p>` : ""}
+      </div>
+      <footer class="player-terminal-modal-footer"><button class="player-terminal-primary-button" type="button" data-player-story-action="${action}" ${modal.processing ? "disabled" : ""}>${modal.processing ? "Saving…" : actionLabel}</button></footer>
+    </section>
+  </div>`;
+}
+
 export function renderModal(modal, config = {}) {
   if (!modal) return "";
 
   if (modal.type === "storePurchase") return renderStorePurchaseModal(modal);
+  if (modal.type === "storyCutscene") return renderStoryCutsceneModal(modal, config);
 
   if (modal.type === "connection") {
     const diagnostics = modal.developerDiagnostics === true && config.environment === "development";
