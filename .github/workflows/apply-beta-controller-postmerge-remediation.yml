@@ -1,0 +1,40 @@
+name: Apply Beta Controller Post-Merge Remediation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beta-controller-postmerge-remediation
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/beta-program-controller-remediation-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: docs/beta-program-controller-remediation-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply roadmap remediation and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin docs/beta-program-controller-remediation-v1
+          python scripts/apply-beta-controller-postmerge-remediation.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-beta-controller-postmerge-remediation.yml
+          git rm scripts/apply-beta-controller-postmerge-remediation.py
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          git diff --cached --check
+          git commit -m "docs(program): record paused-expansion containment"
+          git push origin HEAD:docs/beta-program-controller-remediation-v1
