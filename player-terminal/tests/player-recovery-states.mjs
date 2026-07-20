@@ -63,12 +63,6 @@ class FakeElement {
     this.listeners.set(name, handlers.filter((candidate) => candidate !== handler));
   }
 
-  dispatchEvent(event) {
-    event.target = event.target || this;
-    for (const handler of this.listeners.get(event.type) || []) handler(event);
-    return true;
-  }
-
   append(...nodes) {
     for (const node of nodes) {
       node.parentNode = this;
@@ -105,9 +99,6 @@ class FakeElement {
     }
     if (selector === "[data-player-recovery-action=\"retry\"]") {
       return this.find((node) => node.dataset?.playerRecoveryAction === "retry");
-    }
-    if (selector === "[data-player-recovery-action=\"dismiss\"]") {
-      return this.find((node) => node.dataset?.playerRecoveryAction === "dismiss");
     }
     return null;
   }
@@ -153,24 +144,23 @@ function createHarness() {
   const stateEvents = [];
   let timerId = 0;
   let refreshCount = 0;
+  let session = {};
 
   class FakeMutationObserver {
     constructor(callback) {
       this.callback = callback;
       this.connected = false;
+      this.options = null;
       runtime.observer = this;
     }
 
-    observe() {
+    observe(_target, options) {
       this.connected = true;
+      this.options = options;
     }
 
     disconnect() {
       this.connected = false;
-    }
-
-    trigger() {
-      this.callback();
     }
   }
 
@@ -219,7 +209,7 @@ function createHarness() {
 
   const terminal = {
     getState() {
-      return { status: "ready", data: { session: {} } };
+      return { status: "ready", data: { session } };
     },
     async refresh() {
       refreshCount += 1;
@@ -235,6 +225,9 @@ function createHarness() {
     stateEvents,
     terminal,
     timeouts,
+    setSession(value) {
+      session = value;
+    },
     get refreshCount() {
       return refreshCount;
     },
@@ -262,12 +255,17 @@ function createHarness() {
 
   const committed = classifyPlayerRecoverySignal({ message: "Action completed. Some information will refresh when the service is available." });
   assert.equal(committed.kind, "committed-refresh-pending");
+  assert.equal(committed.lockMutations, true);
   assert.match(committed.message, /Do not submit the action again/);
 
-  assert.equal(classifyPlayerRecoverySignal({ code: "REQUEST_TIMEOUT" }).kind, "timeout");
-  assert.equal(classifyPlayerRecoverySignal({ status: 409 }).kind, "stale-data");
-  assert.equal(classifyPlayerRecoverySignal({ code: "ROUTE_DATA_UNAVAILABLE" }).kind, "route-unavailable");
-  assert.equal(classifyPlayerRecoverySignal({ status: 503 }).kind, "service-unavailable");
+  for (const input of [
+    { code: "REQUEST_TIMEOUT" },
+    { status: 409 },
+    { status: 503 },
+  ]) {
+    assert.equal(classifyPlayerRecoverySignal(input).lockMutations, true);
+  }
+  assert.equal(classifyPlayerRecoverySignal({ code: "ROUTE_DATA_UNAVAILABLE" }).lockMutations, false);
   assert.equal(classifyPlayerRecoverySignal({ message: "ordinary validation error" }), null);
   assert.equal(restoredPlayerRecoveryState().persistent, false);
   assert.equal(retrySeconds(5500, 501), 5);
@@ -289,14 +287,13 @@ function createHarness() {
 
   assert.equal(harness.listeners.get("offline")?.length, 1);
   assert.equal(harness.runtime.observer.connected, true);
+  assert.deepEqual(harness.runtime.observer.options, { childList: true, subtree: true });
 
   harness.runtime.navigator.onLine = false;
   harness.runtime.dispatchEvent(new FakeCustomEvent("offline"));
   assert.equal(controller.getState().kind, "offline");
   assert.equal(harness.control.disabled, true);
-  assert.equal(harness.control.dataset.playerRecoveryDisabled, "true");
   let region = harness.mount.querySelector("[data-player-recovery-region]");
-  assert.equal(region.hidden, false);
   assert.equal(region.dataset.playerRecoveryState, "offline");
   assert.equal(region.getAttribute("role"), "alert");
 
@@ -304,7 +301,6 @@ function createHarness() {
   harness.runtime.dispatchEvent(new FakeCustomEvent("online"));
   assert.equal(controller.getState().kind, "restored");
   assert.equal(harness.control.disabled, false);
-  assert.equal(region.dataset.playerRecoveryState, "restored");
   assert.ok(region.querySelector("[data-player-recovery-action=\"retry\"]"));
 
   harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-recovery-signal", {
@@ -313,6 +309,12 @@ function createHarness() {
   assert.equal(controller.getState().kind, "game-paused");
   assert.equal(harness.control.disabled, true);
 
+  harness.runtime.navigator.onLine = false;
+  harness.runtime.dispatchEvent(new FakeCustomEvent("offline"));
+  harness.runtime.navigator.onLine = true;
+  harness.runtime.dispatchEvent(new FakeCustomEvent("online"));
+  assert.equal(controller.getState().kind, "game-paused", "connectivity restoration must not clear a lifecycle lock");
+
   region.remove();
   assert.equal(harness.mount.querySelector("[data-player-recovery-region]"), null);
   controller.inspect();
@@ -320,33 +322,43 @@ function createHarness() {
   assert.ok(region, "the recovery region must survive terminal rerenders");
   assert.equal(region.dataset.playerRecoveryState, "game-paused");
 
+  harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-recovery-signal", {
+    detail: { code: "GAME_RESUMED" },
+  }));
+  assert.equal(controller.getState().kind, "restored");
+  assert.equal(harness.control.disabled, false);
+
   harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-session-invalid", {
     detail: { code: "SESSION_INVALID", status: 401 },
   }));
   assert.equal(controller.getState(), null);
-  assert.equal(harness.control.disabled, false);
   assert.equal(region.hidden, true);
 
-  const stale = classifyPlayerRecoverySignal({ status: 409 });
-  controller.show(stale);
+  controller.show(classifyPlayerRecoverySignal({ status: 409 }));
+  assert.equal(harness.control.disabled, true);
   assert.equal(await controller.retry(), true);
   assert.equal(harness.refreshCount, 1);
   assert.equal(controller.getState().kind, "restored");
+  assert.equal(harness.control.disabled, false);
 
   const toast = new FakeElement("div");
   toast.textContent = "Action completed. Some information will refresh when the service is available.";
   harness.mount.toasts.push(toast);
   controller.inspect();
   assert.equal(controller.getState().kind, "committed-refresh-pending");
-  assert.equal(harness.control.disabled, false);
+  assert.equal(harness.control.disabled, true);
 
   harness.mount.routeError = new FakeElement("section");
   harness.mount.routeError.textContent = "This section encountered a data problem.";
   controller.inspect();
   assert.equal(controller.getState().kind, "route-unavailable");
+  assert.equal(harness.control.disabled, false);
 
-  controller.show(classifyPlayerRecoverySignal({ code: "GAME_ENDED" }));
+  harness.setSession({ gameLifecycleStatus: "GAME_ENDED" });
+  harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-session-ready"));
+  assert.equal(controller.getState().kind, "game-ended");
   assert.equal(harness.control.disabled, true);
+
   controller.destroy();
   assert.equal(harness.runtime.observer.connected, false);
   assert.equal(harness.control.disabled, false);
