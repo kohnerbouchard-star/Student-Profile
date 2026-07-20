@@ -503,6 +503,12 @@ Deno.serve(async (request) => {
     );
   }
 
+  if (url.pathname.endsWith("/players/attendance/clock-in")) {
+    return handlePlayerAttendanceClockInRequest(request, {
+      createServiceClient,
+    });
+  }
+
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
 
   if (gameJoinCodeRoute) {
