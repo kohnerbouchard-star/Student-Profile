@@ -1,13 +1,16 @@
 (function installPlayerTerminalHostRuntime(runtime) {
   "use strict";
 
+  const runtimeConfig = runtime.EconovariaRuntimeConfig;
+  if (!runtimeConfig) {
+    throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
+  }
   const STORAGE_KEY = "econovaria.player.auth.v1";
-  const CLASSROOM_API_URL = "https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/classroom-api";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
+  const CLASSROOM_API_URL = runtimeConfig.classroomApiUrl;
+  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const SESSION_INVALID_EVENT = "econovaria:player-session-invalid";
   const SESSION_REQUIRED_EVENT = "econovaria:player-session-required";
   const LOGOUT_COMPLETED_EVENT = "econovaria:player-logout-completed";
-  const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
   function readStoredSession() {
     try {
@@ -60,14 +63,13 @@
     runtime.location.replace(loginUrl(reason));
   }
 
-  const hostname = String(runtime.location.hostname || "").toLowerCase();
-  const development = !hostname || LOCAL_HOSTS.has(hostname);
+  const development = runtimeConfig.environment === "development";
   const session = readStoredSession();
 
   runtime.ECONOVARIA_PLAYER_SESSION = session;
   runtime.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
     ...(runtime.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
-    environment: development ? "development" : "production",
+    environment: runtimeConfig.environment,
     allowPreviewMode: development,
     usePreviewData: development && !session,
     simulatePreviewWrites: false,

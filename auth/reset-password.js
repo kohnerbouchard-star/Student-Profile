@@ -1,8 +1,12 @@
 (() => {
   "use strict";
 
-  const SUPABASE_URL = "https://cgiukdjwicykrmtkhudh.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zkbXiJ1_zlmQIBMky6oi5w_4A24T1iV";
+  const runtimeConfig = window.EconovariaRuntimeConfig;
+  if (!runtimeConfig) {
+    throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
+  }
+  const SUPABASE_URL = runtimeConfig.supabaseUrl;
+  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const form = document.getElementById("resetPasswordForm");
   const message = document.getElementById("resetMessage");
   const intro = document.getElementById("resetIntro");
