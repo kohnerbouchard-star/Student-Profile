@@ -1,9 +1,0 @@
-
-> econovaria@0.0.0 seed:beta:validate
-> node scripts/seed-beta-importer.mjs --mode validate --environment test
-
-{
-  "error": "Pack validation failed with 3 errors.",
-  "status": null,
-  "details": null
-}

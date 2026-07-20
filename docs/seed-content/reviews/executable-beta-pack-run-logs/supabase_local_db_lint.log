@@ -1,7 +1,0 @@
-
-> econovaria@0.0.0 db:lint
-> supabase db lint --workdir backend --local --level warning
-
-Connecting to local database...
-[31mfailed to connect to postgres: effect/sql/SqlError: PgClient: Failed to connect[39m
-Try rerunning the command with --debug to troubleshoot the error.

@@ -172,7 +172,7 @@ async function buildArrivalAndContracts() {
     const housingDeposit = weeklyHousing * 2;
     const startingBalance = weeklyBasicNeeds * 3 + housingDeposit + weeklyOrdinary;
     const attendancePresentReward = Math.max(1, roundTo(weeklyOrdinary * 0.025, 1, 0));
-    const attendanceLateReward = Math.max(0, roundTo(attendancePresentReward * 0.5, 1, 0));
+    const attendanceLateReward = Math.max(0, Math.floor(attendancePresentReward * 0.5));
     const rewards = {
       arrival: weeklyBasicNeeds,
       livelihood: weeklyBasicNeeds,

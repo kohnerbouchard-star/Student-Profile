@@ -47,7 +47,7 @@
     "audit:seed-content-universe": "node scripts/generate-seed-market-universe.mjs --check",
     "build:seed-content-northreach-input": "node scripts/build-northreach-simulation-input.mjs",
     "preflight:seed-content": "node scripts/seed-content-preflight.mjs --environment test --mode design",
-    "preflight:seed-content:staging": "node scripts/seed-content-preflight.mjs --environment staging --mode staging",
+    "preflight:seed-content:staging": "node scripts/seed-beta-staging-preflight.mjs",
     "test:seed-content-preflight": "node --test scripts/seed-content-preflight.test.mjs",
     "build:seed-beta-pack": "node scripts/build-seed-beta-pack.mjs",
     "validate:seed-beta-pack": "node scripts/seed-beta-pack-validator.mjs",
