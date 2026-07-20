@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "mode": "read-only",
+  "destructiveActionsAuthorized": false,
+  "supabase": {
+    "requestedData": []
+  },
+  "cloudflare": {
+    "requestedData": []
+  },
+  "retention": {
+    "rawEvidence": "restricted store outside Git",
+    "repositoryEvidence": "redacted summaries only"
+  }
+}
