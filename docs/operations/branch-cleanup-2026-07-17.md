@@ -76,3 +76,30 @@ Branch Hygiene now deletes either:
 Closed unmerged branches without that label remain untouched. The default branch and `frontend/admin-terminal-source-v1` remain protected exceptions. `scripts/branch-hygiene-policy.test.mjs` ratchets these fail-closed rules in Repository Quality.
 
 The resulting active ownership set is unique: seed content (#163), story delivery (#244), and market reconciliation (#245). Future parallel chats must read the roadmap and open pull requests before creating a branch.
+
+## 2026-07-20 final Phase 0 reconciliation
+
+PR #251 merged owner-safe branch retirement as `89bfadfb0d609ef92081fda575f0e1e998b2650d`. Its final implementation head passed Repository Quality #1084, Database Replay #345, Staging Readiness Preflight #99, and Admin Game Lifecycle Controls #33.
+
+Duplicate and donor disposition is complete:
+
+- PR #246 was labeled `duplicate`, closed after its source-snapshot artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100. PR #245 remains the sole market-order and Portfolio authority.
+- PR #253 duplicated the Player recovery tranche already owned by earlier PR #247. It was labeled `duplicate` and closed; `feat/player-recovery-states-v1` no longer exists. Its useful lifecycle, safe-copy, source-integration, and contract-test ideas were explicitly dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
+- PR #255 was an aborted premature roadmap seal. It was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists.
+- PR #260 duplicated the incident-readiness roadmap verification already owned by earlier PR #259. Its unique completed-amendment evidence was transplanted into PR #259, it was labeled `duplicate` and closed, and `docs/incident-readiness-verification-v1` no longer exists.
+- The merged PR #251 branch was deleted automatically.
+
+The final active capability authorities at the audit boundary are:
+
+- PR #163 — seed-content definition, calibration, and executable-content preparation;
+- PR #244 — Player story-notification delivery;
+- PR #245 — Player market orders and Portfolio;
+- PR #248 — Messaging and communication;
+- PR #249 — Player Marketplace lifecycle;
+- PR #261 — Progression, reputation, and achievements.
+
+Recently completed parallel tranches are merged rather than active authorities: Player recovery PR #247, supply-chain PRs #250/#258, incident-readiness PR #252, and Dashboard/Profile PRs #254/#257. Branch-only work without an open pull request is not authoritative and must not be treated as a capability claim.
+
+This reconciliation leaves no overlapping active pull request over the same capability. Future agents must search current open pull requests and the capability ownership registry before creating a branch, and must use the explicit `duplicate` label before a closed unmerged branch may be deleted automatically.
+
+The final maintainer-authored authority scan was recorded against `main` `ad889a2bdf9d5587fff3275d70751c79992171c7` before PR #259 review.
