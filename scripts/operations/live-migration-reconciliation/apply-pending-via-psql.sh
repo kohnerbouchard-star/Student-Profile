@@ -4,8 +4,8 @@ set -euo pipefail
 # Release-controller replay entrypoint. Safe to rerun against isolated staging.
 MIGRATIONS_DIR="${1:-backend/supabase/migrations}"
 POOLER_URL_FILE="${2:-backend/supabase/.temp/pooler-url}"
-EXPECTED_HEAD="20260719200000"
-EXPECTED_COUNT="70"
+EXPECTED_HEAD="20260720235900"
+EXPECTED_COUNT="71"
 
 command -v psql >/dev/null
 command -v python3 >/dev/null
