@@ -1,0 +1,73 @@
+name: Staging Migration Replay
+
+on:
+  push:
+    branches:
+      - agent/live-migration-reconciliation-v1
+    paths:
+      - ".github/workflows/staging-migration-replay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econovaria-staging-migration-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: Apply canonical migrations to isolated staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+    steps:
+      - name: Check out reconciliation branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Validate isolated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test -f backend/supabase/config.toml
+          test -d backend/supabase/migrations
+
+      - name: Link isolated staging project
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          else
+            supabase --yes link --project-ref "$SUPABASE_PROJECT_REF"
+          fi
+
+      - name: Preview unapplied migrations
+        working-directory: backend
+        run: supabase --yes db push --linked --include-all --dry-run
+
+      - name: Apply unapplied migrations
+        working-directory: backend
+        run: supabase --yes db push --linked --include-all
+
+      - name: Record final migration ledger
+        working-directory: backend
+        run: supabase migration list --linked
