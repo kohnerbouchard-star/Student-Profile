@@ -8,6 +8,7 @@ EXPECTED_HEAD="20260719200000"
 EXPECTED_COUNT="70"
 
 command -v psql >/dev/null
+command -v python3 >/dev/null
 test -d "$MIGRATIONS_DIR"
 test -s "$POOLER_URL_FILE"
 test -n "${SUPABASE_PROJECT_REF:-}"
@@ -29,15 +30,43 @@ fi
 export PGPASSWORD="$SUPABASE_DB_PASSWORD"
 export PGSSLMODE=require
 
-repair_migration() {
+record_migration() {
   local version="$1"
-  (
-    cd backend
-    supabase migration repair "$version" \
-      --status applied \
-      --linked \
-      --password "$SUPABASE_DB_PASSWORD"
-  )
+  local name="$2"
+  local file="$3"
+  local ledger_sql
+  ledger_sql="$(mktemp)"
+
+  python3 - "$version" "$name" "$file" "$ledger_sql" <<'PY'
+from pathlib import Path
+import sys
+
+version, name, migration_path, output_path = sys.argv[1:]
+text = Path(migration_path).read_text(encoding="utf-8")
+tag = "econovaria_migration_ledger"
+while f"${tag}$" in text:
+    tag += "_x"
+
+def sql_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+payload = f"${tag}${text}${tag}$"
+sql = f"""
+insert into supabase_migrations.schema_migrations(version, name, statements)
+values (
+  {sql_literal(version)},
+  {sql_literal(name)},
+  array[{payload}]
+)
+on conflict (version) do update
+set name = excluded.name,
+    statements = excluded.statements;
+"""
+Path(output_path).write_text(sql, encoding="utf-8")
+PY
+
+  psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 -f "$ledger_sql"
+  rm -f "$ledger_sql"
 }
 
 mapfile -t remote_versions < <(
@@ -82,7 +111,7 @@ while IFS= read -r file; do
 
     if [[ "$reward_state" == "t|t|t|f|f|t" ]]; then
       printf 'Recovering verified schema-applied migration ledger: %s\n' "$filename"
-      repair_migration "$version"
+      record_migration "$version" "$name" "$file"
       recovered=true
     elif [[ "$reward_state" != "f|f|f|f|f|f" ]]; then
       printf 'Refusing ambiguous partial state for %s: %s\n' "$filename" "$reward_state" >&2
@@ -93,7 +122,7 @@ while IFS= read -r file; do
   if [[ "$recovered" == false ]]; then
     printf 'Applying through psql: %s\n' "$filename"
     psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 --single-transaction -f "$file"
-    repair_migration "$version"
+    record_migration "$version" "$name" "$file"
   fi
 
   recorded_name="$(
