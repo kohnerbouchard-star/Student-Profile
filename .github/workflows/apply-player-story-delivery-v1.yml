@@ -42,6 +42,10 @@ jobs:
           git apply --check /tmp/player-story-delivery-final.patch
           git apply /tmp/player-story-delivery-final.patch
 
+          # GITHUB_TOKEN cannot publish workflow-file changes. The exact
+          # Player verification allowlist update is applied by the connector
+          # after this source commit lands.
+          git checkout HEAD -- .github/workflows/player-terminal-verify.yml
           rm -rf .tmp/story-patch .tmp/story-patch-gz
 
           git config user.name "github-actions[bot]"
