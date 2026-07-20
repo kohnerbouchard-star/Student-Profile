@@ -7,7 +7,7 @@ import {
   validateEnvironmentManifest,
   validatePromotionRecord,
   validateReleaseManifest,
-} from "./release-platform-lib.mjs";
+} from "./release-platform-index.mjs";
 
 function parseArguments(argv) {
   const [command, ...rest] = argv;
