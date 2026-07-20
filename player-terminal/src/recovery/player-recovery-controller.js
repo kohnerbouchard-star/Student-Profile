@@ -1,0 +1,338 @@
+import {
+  classifyPlayerRecoverySignal,
+  restoredPlayerRecoveryState,
+  retrySeconds,
+} from "./recovery-policy.js";
+
+const MUTATION_CONTROL_SELECTOR = [
+  "[data-player-form][data-endpoint] input",
+  "[data-player-form][data-endpoint] select",
+  "[data-player-form][data-endpoint] textarea",
+  "[data-player-form][data-endpoint] button",
+  "[data-player-marketplace-cancel]",
+  "[data-player-skill-unlock]",
+  "[data-player-reward-claim]",
+  "[data-player-market-watchlist]",
+  "[data-player-purchase]",
+  "[data-player-contract-accept]",
+  "[data-player-inventory-use]",
+  "[data-player-action=\"notifications-read\"]",
+].join(",");
+
+function safeDocument(mount, runtime) {
+  return mount?.ownerDocument || runtime?.document || null;
+}
+
+function createTextElement(documentLike, tagName, text, className = "") {
+  const element = documentLike.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = text;
+  return element;
+}
+
+function ensureRecoveryRegion(mount, runtime) {
+  let region = mount.querySelector?.("[data-player-recovery-region]");
+  if (region) return region;
+
+  const documentLike = safeDocument(mount, runtime);
+  if (!documentLike?.createElement) return null;
+
+  region = documentLike.createElement("section");
+  region.className = "player-terminal-route-error player-terminal-recovery-state";
+  region.dataset.playerRecoveryRegion = "true";
+  region.hidden = true;
+  region.setAttribute?.("aria-live", "polite");
+  region.setAttribute?.("aria-atomic", "true");
+  mount.append?.(region);
+  return region;
+}
+
+function recoverySignalFromToast(toast, runtime) {
+  const message = String(toast?.textContent || "").trim();
+  if (!message) return null;
+  return classifyPlayerRecoverySignal({
+    message,
+    online: runtime?.navigator?.onLine !== false,
+  });
+}
+
+function restoreControl(control) {
+  if (!control?.dataset || control.dataset.playerRecoveryDisabled !== "true") return;
+  if ("disabled" in control) control.disabled = false;
+  control.removeAttribute?.("aria-disabled");
+  const originalTitle = control.dataset.playerRecoveryOriginalTitle;
+  if (originalTitle) control.setAttribute?.("title", originalTitle);
+  else control.removeAttribute?.("title");
+  delete control.dataset.playerRecoveryDisabled;
+  delete control.dataset.playerRecoveryOriginalTitle;
+}
+
+function lockControl(control, reason) {
+  if (!control || control.disabled || control.getAttribute?.("aria-disabled") === "true") return;
+  if (!control.dataset) control.dataset = {};
+  control.dataset.playerRecoveryDisabled = "true";
+  control.dataset.playerRecoveryOriginalTitle = String(control.getAttribute?.("title") || "");
+  if ("disabled" in control) control.disabled = true;
+  control.setAttribute?.("aria-disabled", "true");
+  control.setAttribute?.("title", reason);
+}
+
+export function installPlayerRecoveryController({
+  terminal,
+  config = {},
+  mount,
+  runtime = globalThis,
+} = {}) {
+  if (!terminal || typeof terminal.refresh !== "function" || typeof terminal.getState !== "function") {
+    throw new TypeError("A Player Terminal instance with refresh and getState is required.");
+  }
+  if (!mount || typeof mount.addEventListener !== "function") {
+    throw new TypeError("A Player Terminal mount is required.");
+  }
+
+  const recoveryEvent = String(config.playerRecoveryEvent || "econovaria:player-recovery-signal");
+  const sessionInvalidEvent = String(config.sessionInvalidEvent || "econovaria:player-session-invalid");
+  const sessionReadyEvent = String(config.sessionReadyEvent || "econovaria:player-session-ready");
+  const processedToasts = new WeakSet();
+  const region = ensureRecoveryRegion(mount, runtime);
+
+  let currentState = null;
+  let countdownTimer = 0;
+  let autoDismissTimer = 0;
+  let retryStartedAt = 0;
+  let destroyed = false;
+
+  function clearTimer(name) {
+    const value = name === "countdown" ? countdownTimer : autoDismissTimer;
+    if (!value) return;
+    if (name === "countdown") runtime.clearInterval?.(value);
+    else runtime.clearTimeout?.(value);
+    if (name === "countdown") countdownTimer = 0;
+    else autoDismissTimer = 0;
+  }
+
+  function mutationControls() {
+    return [...(mount.querySelectorAll?.(MUTATION_CONTROL_SELECTOR) || [])];
+  }
+
+  function unlockMutations() {
+    mutationControls().forEach(restoreControl);
+  }
+
+  function lockMutations(reason) {
+    mutationControls().forEach((control) => lockControl(control, reason));
+  }
+
+  function updateMutationLock() {
+    if (currentState?.lockMutations) lockMutations(currentState.message);
+    else unlockMutations();
+  }
+
+  function dismiss() {
+    if (!currentState?.canDismiss) return false;
+    clearTimer("countdown");
+    clearTimer("dismiss");
+    currentState = null;
+    retryStartedAt = 0;
+    unlockMutations();
+    if (region) {
+      region.hidden = true;
+      region.dataset.playerRecoveryState = "";
+      region.replaceChildren?.();
+    }
+    return true;
+  }
+
+  async function retry() {
+    if (!currentState || currentState.canRetry === false) return false;
+    try {
+      await terminal.refresh();
+      show(restoredPlayerRecoveryState());
+      return true;
+    } catch (error) {
+      const next = classifyPlayerRecoverySignal({
+        status: error?.status,
+        code: error?.code,
+        message: error?.message,
+        retryAfterMs: error?.retryAfterMs,
+        online: runtime?.navigator?.onLine !== false,
+      });
+      if (next) show(next);
+      return false;
+    }
+  }
+
+  function render() {
+    if (!region || !currentState) return;
+    const documentLike = safeDocument(mount, runtime);
+    if (!documentLike?.createElement) return;
+
+    const eyebrow = createTextElement(documentLike, "small", currentState.eyebrow);
+    const title = createTextElement(documentLike, "h2", currentState.title);
+    const message = createTextElement(documentLike, "p", currentState.message);
+    const actions = documentLike.createElement("div");
+    actions.className = "player-terminal-recovery-actions";
+
+    const remaining = currentState.kind === "rate-limited"
+      ? retrySeconds(currentState.retryAfterMs, Date.now() - retryStartedAt)
+      : 0;
+
+    if (currentState.canRetry || currentState.kind === "rate-limited") {
+      const retryButton = createTextElement(
+        documentLike,
+        "button",
+        remaining > 0 ? `Retry in ${remaining}s` : "Refresh terminal",
+        "player-terminal-primary-button",
+      );
+      retryButton.type = "button";
+      retryButton.dataset.playerRecoveryAction = "retry";
+      retryButton.disabled = remaining > 0 || currentState.canRetry === false;
+      retryButton.addEventListener?.("click", () => { void retry(); });
+      actions.append?.(retryButton);
+    }
+
+    if (currentState.canDismiss) {
+      const dismissButton = createTextElement(
+        documentLike,
+        "button",
+        "Dismiss",
+        "player-terminal-secondary-button",
+      );
+      dismissButton.type = "button";
+      dismissButton.dataset.playerRecoveryAction = "dismiss";
+      dismissButton.addEventListener?.("click", dismiss);
+      actions.append?.(dismissButton);
+    }
+
+    region.replaceChildren?.(eyebrow, title, message, actions);
+    region.hidden = false;
+    region.dataset.playerRecoveryState = currentState.kind;
+    region.setAttribute?.("role", currentState.tone === "red" ? "alert" : "status");
+    region.setAttribute?.("aria-live", currentState.tone === "red" ? "assertive" : "polite");
+    updateMutationLock();
+  }
+
+  function startCountdown() {
+    clearTimer("countdown");
+    if (currentState?.kind !== "rate-limited") return;
+    retryStartedAt = Date.now();
+    countdownTimer = runtime.setInterval?.(() => {
+      if (!currentState || currentState.kind !== "rate-limited") {
+        clearTimer("countdown");
+        return;
+      }
+      const remaining = retrySeconds(currentState.retryAfterMs, Date.now() - retryStartedAt);
+      if (remaining <= 0) {
+        currentState = Object.freeze({ ...currentState, canRetry: true, lockMutations: false });
+        clearTimer("countdown");
+      }
+      render();
+    }, 1000) || 0;
+  }
+
+  function show(state) {
+    if (destroyed || !state) return null;
+    clearTimer("dismiss");
+    currentState = state;
+    retryStartedAt = state.kind === "rate-limited" ? Date.now() : 0;
+    render();
+    startCountdown();
+    if (!state.persistent) {
+      autoDismissTimer = runtime.setTimeout?.(() => dismiss(), 4000) || 0;
+    }
+    runtime.dispatchEvent?.(new runtime.CustomEvent("econovaria:player-recovery-state-changed", {
+      detail: { kind: state.kind, lockMutations: state.lockMutations },
+    }));
+    return state;
+  }
+
+  function inspectMount() {
+    if (destroyed) return;
+    if (currentState?.lockMutations) updateMutationLock();
+
+    for (const toast of mount.querySelectorAll?.(".player-terminal-toast") || []) {
+      if (processedToasts.has(toast)) continue;
+      processedToasts.add(toast);
+      const state = recoverySignalFromToast(toast, runtime);
+      if (state) show(state);
+    }
+
+    const routeError = mount.querySelector?.(".player-terminal-route-error:not([data-player-recovery-region])");
+    if (routeError) {
+      const state = classifyPlayerRecoverySignal({
+        code: "ROUTE_DATA_UNAVAILABLE",
+        message: routeError.textContent,
+        online: runtime?.navigator?.onLine !== false,
+      });
+      if (state) show(state);
+    }
+  }
+
+  function handleOffline() {
+    show(classifyPlayerRecoverySignal({ online: false }));
+  }
+
+  function handleOnline() {
+    unlockMutations();
+    show(restoredPlayerRecoveryState());
+  }
+
+  function handleRecoveryEvent(event) {
+    const detail = event?.detail || {};
+    const state = classifyPlayerRecoverySignal({
+      ...detail,
+      online: runtime?.navigator?.onLine !== false,
+    });
+    if (state) show(state);
+  }
+
+  function handleSessionInvalid() {
+    clearTimer("countdown");
+    clearTimer("dismiss");
+    unlockMutations();
+    if (region) region.hidden = true;
+  }
+
+  function handleSessionReady() {
+    inspectMount();
+  }
+
+  const Observer = runtime.MutationObserver;
+  const observer = typeof Observer === "function"
+    ? new Observer(inspectMount)
+    : null;
+  observer?.observe?.(mount, { childList: true, subtree: true, attributes: true });
+
+  runtime.addEventListener?.("offline", handleOffline);
+  runtime.addEventListener?.("online", handleOnline);
+  runtime.addEventListener?.(recoveryEvent, handleRecoveryEvent);
+  runtime.addEventListener?.(sessionInvalidEvent, handleSessionInvalid);
+  runtime.addEventListener?.(sessionReadyEvent, handleSessionReady);
+
+  if (runtime?.navigator?.onLine === false) handleOffline();
+  else inspectMount();
+
+  return Object.freeze({
+    dismiss,
+    inspect: inspectMount,
+    retry,
+    show,
+    getState() {
+      return currentState;
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      clearTimer("countdown");
+      clearTimer("dismiss");
+      observer?.disconnect?.();
+      runtime.removeEventListener?.("offline", handleOffline);
+      runtime.removeEventListener?.("online", handleOnline);
+      runtime.removeEventListener?.(recoveryEvent, handleRecoveryEvent);
+      runtime.removeEventListener?.(sessionInvalidEvent, handleSessionInvalid);
+      runtime.removeEventListener?.(sessionReadyEvent, handleSessionReady);
+      unlockMutations();
+      region?.remove?.();
+    },
+  });
+}
