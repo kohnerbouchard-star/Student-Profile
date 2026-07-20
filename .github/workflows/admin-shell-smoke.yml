@@ -20,6 +20,7 @@ on:
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"
       - "scripts/admin-mounted-modal-focus-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs"
       - "scripts/admin-keyboard-navigation-source-smoke.mjs"
       - "scripts/admin-keyboard-navigation-smoke.mjs"
       - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
@@ -70,6 +71,7 @@ on:
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"
       - "scripts/admin-mounted-modal-focus-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs"
       - "scripts/admin-keyboard-navigation-source-smoke.mjs"
       - "scripts/admin-keyboard-navigation-smoke.mjs"
       - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
@@ -180,7 +182,7 @@ jobs:
         run: node scripts/admin-modal-accessibility-smoke.mjs
 
       - name: Audit mounted Admin operational modal focus
-        run: node scripts/admin-mounted-modal-focus-smoke.mjs
+        run: node scripts/admin-mounted-modal-focus-reconciled-smoke.mjs
 
       - name: Exercise inventory redemption review queue
         run: |
