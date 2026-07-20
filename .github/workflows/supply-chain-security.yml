@@ -60,8 +60,20 @@ jobs:
       - name: Scan committed source for credentials
         run: npm run security:secrets
 
-      - name: Test scanner and SBOM reproducibility
-        run: npm run test:supply-chain
+      - name: Verify committed-source scan test
+        run: node --test --test-name-pattern="repository secret scan" scripts/supply-chain-security.test.mjs
+
+      - name: Verify generated GitHub-token rejection
+        run: node --test --test-name-pattern="generated GitHub token" scripts/supply-chain-security.test.mjs
+
+      - name: Verify private-key rejection
+        run: node --test --test-name-pattern="private key material" scripts/supply-chain-security.test.mjs
+
+      - name: Verify reviewed allow marker
+        run: node --test --test-name-pattern="reviewed allow marker" scripts/supply-chain-security.test.mjs
+
+      - name: Verify deterministic SBOM and checksums
+        run: node --test --test-name-pattern="SBOM generation" scripts/supply-chain-security.test.mjs
 
       - name: Generate release-support SBOM bundle
         run: npm run security:sbom
