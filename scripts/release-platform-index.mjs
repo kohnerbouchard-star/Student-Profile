@@ -12,7 +12,6 @@ export const {
   repositoryReleaseFacts,
   sha256,
   sha256File,
-  validatePromotionRecord,
   validateReleaseConfiguration,
   validateReleaseManifest,
 } = base;
@@ -67,4 +66,33 @@ export function validateDistinctEnvironmentManifests(manifests) {
   }
   if (errors.length) throw new base.ReleasePlatformValidationError(errors);
   return validated;
+}
+
+export async function validatePromotionRecord(options) {
+  const { record, releaseManifest, expectedEnvironment } = options;
+  const errors = [];
+  if (record && releaseManifest) {
+    if (record.configurationSha256 !== releaseManifest.configuration?.sha256) {
+      errors.push("promotion configurationSha256 mismatch");
+    }
+    if (record.configurationVersion !== releaseManifest.configuration?.version) {
+      errors.push("promotion configurationVersion mismatch");
+    }
+  }
+  if (expectedEnvironment === "production" && record?.stagingEvidence) {
+    if (record.stagingEvidence.releaseManifestSha256 !== record.releaseManifestSha256) {
+      errors.push("stagingEvidence releaseManifestSha256 mismatch");
+    }
+    if (record.stagingEvidence.configurationSha256 !== releaseManifest?.configuration?.sha256) {
+      errors.push("stagingEvidence configurationSha256 mismatch");
+    }
+    if (String(record.stagingEvidence.sourceRunId ?? "") !== String(record.sourceRunId ?? "")) {
+      errors.push("stagingEvidence sourceRunId mismatch");
+    }
+    if (String(record.stagingEvidence.sourceArtifactId ?? "") !== String(record.sourceArtifactId ?? "")) {
+      errors.push("stagingEvidence sourceArtifactId mismatch");
+    }
+  }
+  if (errors.length) throw new base.ReleasePlatformValidationError(errors);
+  return base.validatePromotionRecord(options);
 }
