@@ -154,16 +154,19 @@ function createRuntime() {
   assert.equal(PlayerApi.prototype.execute, original, "Recovery instrumentation must restore the original API method when destroyed.");
 }
 
-const [mainSource, indexSource, controllerSource, cssSource] = await Promise.all([
+const [mainSource, bootstrapSource, indexSource, controllerSource, cssSource] = await Promise.all([
   readFile(path.join(root, "src/main.js"), "utf8"),
+  readFile(path.join(root, "src/recovery/player-recovery-bootstrap.js"), "utf8"),
   readFile(path.join(root, "index.html"), "utf8"),
   readFile(path.join(root, "src/recovery/player-recovery-controller.js"), "utf8"),
   readFile(path.join(root, "css/player-terminal-recovery.css"), "utf8")
 ]);
 
-assert.match(mainSource, /installPlayerRecoveryInstrumentation/);
-assert.match(mainSource, /installPlayerRecoveryController/);
+assert.doesNotMatch(mainSource, /PlayerRecovery/, "Recovery must remain isolated from the shared Player main integration file.");
+assert.match(bootstrapSource, /installPlayerRecoveryInstrumentation/);
+assert.match(bootstrapSource, /installPlayerRecoveryController/);
 assert.match(indexSource, /player-terminal-recovery\.css/);
+assert.match(indexSource, /player-recovery-bootstrap\.js/);
 assert.match(controllerSource, /MutationObserver/);
 assert.match(controllerSource, /addEventListener\?\.\("offline"/);
 assert.match(controllerSource, /data-player-recovery-region/);
@@ -173,4 +176,4 @@ assert.match(cssSource, /player-terminal-recovery-notice/);
 assert.match(cssSource, /@media \(max-width: 640px\)/);
 assert.doesNotMatch(controllerSource, /playerSessionToken|accessCode|ownershipUuid/i, "Recovery UI code must not expose credentials or ownership UUIDs.");
 
-console.log("Player recovery states passed: bounded classification, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");
+console.log("Player recovery states passed: bounded classification, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, isolated runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");
