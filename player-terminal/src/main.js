@@ -10,10 +10,15 @@ import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
 import { installPlayerInvalidationController } from "./realtime/player-invalidation-controller.js";
+import {
+  installPlayerRecoveryController,
+  installPlayerRecoveryInstrumentation
+} from "./recovery/player-recovery-controller.js";
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
 
 const mount = document.getElementById("playerTerminal");
 const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());
+const recoveryInstrumentation = installPlayerRecoveryInstrumentation({ runtime: globalThis });
 const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);
 const formDrafts = installFormDraftPreserver(mount, {
@@ -22,6 +27,7 @@ const formDrafts = installFormDraftPreserver(mount, {
 });
 
 const terminal = createPlayerTerminal({ mount, config });
+const recovery = installPlayerRecoveryController({ mount, terminal, config, runtime: globalThis });
 const sessionSafeExit = installPlayerSessionSafeExit({
   terminal,
   config,
@@ -35,6 +41,7 @@ const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
+  recovery.destroy();
   logout.destroy();
   sessionSafeExit.destroy();
   invalidations.destroy();
@@ -46,6 +53,7 @@ terminal.destroy = () => {
   countryFocus.destroy();
   skipLink.destroy();
   destroyTerminal();
+  recoveryInstrumentation.destroy();
 };
 
 globalThis.Econovaria = globalThis.Econovaria || {};
