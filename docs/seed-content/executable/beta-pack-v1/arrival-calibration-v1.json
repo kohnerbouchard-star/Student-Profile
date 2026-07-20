@@ -1,0 +1,336 @@
+{
+  "activationAuthorized": false,
+  "calibrationDate": "2026-07-20",
+  "calibrations": [
+    {
+      "approvedStartingBalance": 495,
+      "assumptions": {
+        "emergencyReserve": 65,
+        "housingDeposit": 94,
+        "weeklyBasicNeeds": 112,
+        "weeklyHousing": 47,
+        "weeklyOrdinary": 65
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 112,
+        "community": 73,
+        "livelihood": 112,
+        "market": 62,
+        "resilience": 78
+      },
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "ecoReferenceIndex": 0.892857,
+      "recoveryRoute": "settlement-office referral, essential-services Contract, and protected basic-housing review",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.089,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 477,
+      "assumptions": {
+        "emergencyReserve": 63,
+        "housingDeposit": 90,
+        "weeklyBasicNeeds": 108,
+        "weeklyHousing": 45,
+        "weeklyOrdinary": 63
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 108,
+        "community": 70,
+        "livelihood": 108,
+        "market": 59,
+        "resilience": 76
+      },
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "ecoReferenceIndex": 0.925926,
+      "recoveryRoute": "supervised records correction and entry-level port-service Contract",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.093,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 407,
+      "assumptions": {
+        "emergencyReserve": 53,
+        "housingDeposit": 78,
+        "weeklyBasicNeeds": 92,
+        "weeklyHousing": 39,
+        "weeklyOrdinary": 53
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 5,
+        "present": 1
+      },
+      "contractRewards": {
+        "arrival": 92,
+        "community": 60,
+        "livelihood": 92,
+        "market": 51,
+        "resilience": 64
+      },
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "ecoReferenceIndex": 1.086957,
+      "recoveryRoute": "licensed repair cooperative, community guarantor, and regulated starter Contract",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.054,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 522,
+      "assumptions": {
+        "emergencyReserve": 68,
+        "housingDeposit": 100,
+        "weeklyBasicNeeds": 118,
+        "weeklyHousing": 50,
+        "weeklyOrdinary": 68
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 118,
+        "community": 77,
+        "livelihood": 118,
+        "market": 65,
+        "resilience": 83
+      },
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "ecoReferenceIndex": 0.847458,
+      "recoveryRoute": "accelerated training, supervised research Contract, and temporary professional placement",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.085,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 371,
+      "assumptions": {
+        "emergencyReserve": 49,
+        "housingDeposit": 70,
+        "weeklyBasicNeeds": 84,
+        "weeklyHousing": 35,
+        "weeklyOrdinary": 49
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 5,
+        "present": 1
+      },
+      "contractRewards": {
+        "arrival": 84,
+        "community": 55,
+        "livelihood": 84,
+        "market": 46,
+        "resilience": 59
+      },
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "ecoReferenceIndex": 1.190476,
+      "recoveryRoute": "food-security work, market-assistant Contract, and basic-needs stabilization",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.06,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 557,
+      "assumptions": {
+        "emergencyReserve": 73,
+        "housingDeposit": 106,
+        "weeklyBasicNeeds": 126,
+        "weeklyHousing": 53,
+        "weeklyOrdinary": 73
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 126,
+        "community": 82,
+        "livelihood": 126,
+        "market": 69,
+        "resilience": 88
+      },
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "ecoReferenceIndex": 0.8,
+      "recoveryRoute": "public-service placement, shared-housing support, and conservation Contract",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.079,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 469,
+      "assumptions": {
+        "emergencyReserve": 61,
+        "housingDeposit": 90,
+        "weeklyBasicNeeds": 106,
+        "weeklyHousing": 45,
+        "weeklyOrdinary": 61
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 106,
+        "community": 69,
+        "livelihood": 106,
+        "market": 58,
+        "resilience": 74
+      },
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "ecoReferenceIndex": 0.943396,
+      "recoveryRoute": "settlement-support work, language or records Contract, and public-housing review",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.094,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 513,
+      "assumptions": {
+        "emergencyReserve": 67,
+        "housingDeposit": 98,
+        "weeklyBasicNeeds": 116,
+        "weeklyHousing": 49,
+        "weeklyOrdinary": 67
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 116,
+        "community": 75,
+        "livelihood": 116,
+        "market": 64,
+        "resilience": 81
+      },
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "ecoReferenceIndex": 0.862069,
+      "recoveryRoute": "development-authority placement, debt counseling, and public-project Contract",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.086,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 420,
+      "assumptions": {
+        "emergencyReserve": 55,
+        "housingDeposit": 80,
+        "weeklyBasicNeeds": 95,
+        "weeklyHousing": 40,
+        "weeklyOrdinary": 55
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 5,
+        "present": 1
+      },
+      "contractRewards": {
+        "arrival": 95,
+        "community": 62,
+        "livelihood": 95,
+        "market": 52,
+        "resilience": 67
+      },
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "ecoReferenceIndex": 1.052632,
+      "recoveryRoute": "technical retraining, worker-congress support, and essential-maintenance Contract",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.053,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    },
+    {
+      "approvedStartingBalance": 530,
+      "assumptions": {
+        "emergencyReserve": 70,
+        "housingDeposit": 100,
+        "weeklyBasicNeeds": 120,
+        "weeklyHousing": 50,
+        "weeklyOrdinary": 70
+      },
+      "attendanceRewards": {
+        "late": 1,
+        "maximumNormalWeeklyAttendanceIncome": 10,
+        "present": 2
+      },
+      "contractRewards": {
+        "arrival": 120,
+        "community": 78,
+        "livelihood": 120,
+        "market": 66,
+        "resilience": 84
+      },
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "ecoReferenceIndex": 0.833333,
+      "recoveryRoute": "supervised digital-services Contract, identity appeal, and community-access program",
+      "viability": {
+        "approved": true,
+        "arrivalContractBasicNeedsCoverage": 1,
+        "normalAttendanceWeeklyNeedsCoverage": 0.083,
+        "weeksCoveredBeforeIncome": 3.58
+      }
+    }
+  ],
+  "countryCount": 10,
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-arrival-calibration-v1",
+  "status": "approved-for-isolated-staging",
+  "validation": {
+    "allCountriesViable": true,
+    "minimumWeeksCovered": 3.58
+  },
+  "version": "1.0.0-beta"
+}

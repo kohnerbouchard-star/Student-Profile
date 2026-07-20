@@ -1,0 +1,229 @@
+{
+  "schemaVersion": "econovaria-beta-seed-execution-evidence-v1",
+  "recordedAt": "2026-07-20T06:39:39.423Z",
+  "branch": "agent/seed-content-foundation-v1",
+  "pullRequest": 163,
+  "synchronizedMainSha": "b047e322b18225d8a4136acc76e92da15bdbff1e",
+  "reconciledBranchSha": "c52b9e10c22c8c4b2b6c3b5aa546ced5b6d56c59",
+  "requiredFailures": 6,
+  "connectedStaging": {
+    "status": "external-blocked",
+    "reason": "Chat 2 isolated staging project identity, game session, and credentials were not available to this workflow. No database was touched.",
+    "productionTouched": false,
+    "knownLiveProjectRefProhibited": "cgiukdjwicykrmtkhudh"
+  },
+  "checks": [
+    {
+      "name": "npm_ci",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "backend_npm_ci",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "build_seed_beta_pack",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "validate_seed_beta_pack",
+      "classification": "required",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "test_seed_beta_pack",
+      "classification": "required",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "importer_validate",
+      "classification": "required",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "importer_dry_run",
+      "classification": "required",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "existing_seed_validators",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "repository_test_suite",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "backend_typecheck",
+      "classification": "required",
+      "status": 127,
+      "passed": false
+    },
+    {
+      "name": "backend_smoke",
+      "classification": "required",
+      "status": 127,
+      "passed": false
+    },
+    {
+      "name": "migration_static_audit",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "git_diff_check",
+      "classification": "required",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "seed_design_staging_preflight",
+      "classification": "evidence",
+      "status": 2,
+      "passed": false
+    },
+    {
+      "name": "release_staging_preflight",
+      "classification": "evidence",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "supabase_cli_help",
+      "classification": "evidence",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "supabase_db_lint_help",
+      "classification": "evidence",
+      "status": 0,
+      "passed": true
+    },
+    {
+      "name": "supabase_local_db_lint",
+      "classification": "evidence",
+      "status": 1,
+      "passed": false
+    },
+    {
+      "name": "connected_staging_import",
+      "classification": "external",
+      "status": 125,
+      "passed": false
+    }
+  ],
+  "retainedWorkflowLogs": [
+    {
+      "name": "backend_npm_ci.log",
+      "bytes": 76,
+      "sha256": "0fd40c13c8fc92c1446b786d949cd2e5c994cd6e07d4321d18e27eb6290737d8"
+    },
+    {
+      "name": "backend_smoke.log",
+      "bytes": 1743,
+      "sha256": "ff70679a988672515131d2377d60aea1c2b20c978c3ebed59055c934ee6fa2e7"
+    },
+    {
+      "name": "backend_typecheck.log",
+      "bytes": 443,
+      "sha256": "5faa28af8747bc021ef75f580a00947487c61e948dbfbee38b510bf714f71c50"
+    },
+    {
+      "name": "build_seed_beta_pack.log",
+      "bytes": 337,
+      "sha256": "598747e4319cc0cb9b8781123a478397349a8475135cefff877ca86a127dc6ef"
+    },
+    {
+      "name": "connected_staging_import.log",
+      "bytes": 208,
+      "sha256": "cf929371c4b4a31fcad447aa88159bb0dadb9d1f13282cdcf5e0ffa0c08e6ced"
+    },
+    {
+      "name": "existing_seed_validators.log",
+      "bytes": 11141,
+      "sha256": "dd814904b131a105e2fcde343bb27d5aa9f61ce761ebd92b7c108575f9354e9f"
+    },
+    {
+      "name": "git_diff_check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "importer_dry_run.log",
+      "bytes": 206,
+      "sha256": "32f6bdd6b781f74f7a4924f83c7714febee6a60a38faa4818c1dbfa5c0a84462"
+    },
+    {
+      "name": "importer_validate.log",
+      "bytes": 205,
+      "sha256": "730cb1f68929969c6f8f4b22be48f4ed4ec4b6693d08e4b5b1e299120219887d"
+    },
+    {
+      "name": "migration_static_audit.log",
+      "bytes": 190,
+      "sha256": "c3d6e2218263a69b71c3711c26092ef8f95c87b4c86c0c29ff52b37f8efa5dd9"
+    },
+    {
+      "name": "npm_ci.log",
+      "bytes": 140,
+      "sha256": "e01308907e98b442d663c67a1c26b60a9024ecafd30f06af4d0d1b483058cb47"
+    },
+    {
+      "name": "release_staging_preflight.log",
+      "bytes": 112,
+      "sha256": "00f7d439b7cd6fb938cd0cda3179201a89c13a8b8315fc93a3acd24dea12b57c"
+    },
+    {
+      "name": "repository_test_suite.log",
+      "bytes": 274912,
+      "sha256": "4d1f514faa5902e35f52f9777f21eac2b4907c0ff0d48d421ca676ee47986d27"
+    },
+    {
+      "name": "seed_design_staging_preflight.log",
+      "bytes": 3802,
+      "sha256": "29656034cc85bc0eee743adec2b45578ac41086cfcdd0f963666d3e5ae1f6d5f"
+    },
+    {
+      "name": "supabase_cli_help.log",
+      "bytes": 3864,
+      "sha256": "796cc863a01c16ac0dfbe150b63886b0f44538c7dc6b6f56ae86a1ed2e097f09"
+    },
+    {
+      "name": "supabase_db_lint_help.log",
+      "bytes": 2474,
+      "sha256": "9abc25beae34cfd318eb03a6974251d99ed5ee5a0a012fce9756a6f3517a7a62"
+    },
+    {
+      "name": "supabase_local_db_lint.log",
+      "bytes": 278,
+      "sha256": "f8614cf905cae276b68896b1f9fd90f4a095a1c9b019d3a227cb792822f65398"
+    },
+    {
+      "name": "test_seed_beta_pack.log",
+      "bytes": 3204,
+      "sha256": "69e317c39a9969de37c6b320416874d575c0b18c088850d01c34e7fdf38d2a13"
+    },
+    {
+      "name": "validate_seed_beta_pack.log",
+      "bytes": 1124,
+      "sha256": "7d7fd089228a4215b7a77bd7b89aff709e7e20b2586bbfa759e18fb632b5cdf0"
+    }
+  ],
+  "conclusion": "repository-checks-failed"
+}

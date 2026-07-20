@@ -1,0 +1,2338 @@
+{
+  "activationAuthorized": false,
+  "mappings": {
+    "contractTemplates": [
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.northreach.stabilization.v1"
+        },
+        "stableId": "contract.arrival.northreach.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.northreach.livelihood.v1"
+        },
+        "stableId": "contract.core.northreach.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.northreach.market.v1"
+        },
+        "stableId": "contract.core.northreach.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.yrethia.stabilization.v1"
+        },
+        "stableId": "contract.arrival.yrethia.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.yrethia.livelihood.v1"
+        },
+        "stableId": "contract.core.yrethia.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.yrethia.market.v1"
+        },
+        "stableId": "contract.core.yrethia.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.thaloris.stabilization.v1"
+        },
+        "stableId": "contract.arrival.thaloris.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.thaloris.livelihood.v1"
+        },
+        "stableId": "contract.core.thaloris.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.thaloris.market.v1"
+        },
+        "stableId": "contract.core.thaloris.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.solvend.stabilization.v1"
+        },
+        "stableId": "contract.arrival.solvend.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.solvend.livelihood.v1"
+        },
+        "stableId": "contract.core.solvend.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.solvend.market.v1"
+        },
+        "stableId": "contract.core.solvend.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.eldoran.stabilization.v1"
+        },
+        "stableId": "contract.arrival.eldoran.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.eldoran.livelihood.v1"
+        },
+        "stableId": "contract.core.eldoran.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.eldoran.market.v1"
+        },
+        "stableId": "contract.core.eldoran.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.valerion.stabilization.v1"
+        },
+        "stableId": "contract.arrival.valerion.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.valerion.livelihood.v1"
+        },
+        "stableId": "contract.core.valerion.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.valerion.market.v1"
+        },
+        "stableId": "contract.core.valerion.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.lumenor.stabilization.v1"
+        },
+        "stableId": "contract.arrival.lumenor.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.lumenor.livelihood.v1"
+        },
+        "stableId": "contract.core.lumenor.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.lumenor.market.v1"
+        },
+        "stableId": "contract.core.lumenor.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.xalvoria.stabilization.v1"
+        },
+        "stableId": "contract.arrival.xalvoria.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.xalvoria.livelihood.v1"
+        },
+        "stableId": "contract.core.xalvoria.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.xalvoria.market.v1"
+        },
+        "stableId": "contract.core.xalvoria.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.dravenlok.stabilization.v1"
+        },
+        "stableId": "contract.arrival.dravenlok.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.dravenlok.livelihood.v1"
+        },
+        "stableId": "contract.core.dravenlok.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.dravenlok.market.v1"
+        },
+        "stableId": "contract.core.dravenlok.market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.arrival.syndalis.stabilization.v1"
+        },
+        "stableId": "contract.arrival.syndalis.stabilization.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.syndalis.livelihood.v1"
+        },
+        "stableId": "contract.core.syndalis.livelihood.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "templateKey": "contract.core.syndalis.market.v1"
+        },
+        "stableId": "contract.core.syndalis.market.v1"
+      }
+    ],
+    "locations": [
+      {
+        "runtimeNaturalKey": {
+          "country": "northreach",
+          "name": "Frostgate"
+        },
+        "stableId": "location.northreach.frostgate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "northreach",
+          "name": "Boreal Basin"
+        },
+        "stableId": "location.northreach.boreal-basin.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "northreach",
+          "name": "Whiteglass Fields"
+        },
+        "stableId": "location.northreach.whiteglass-fields.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "northreach",
+          "name": "Aurora Rail Junction"
+        },
+        "stableId": "location.northreach.aurora-rail-junction.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "northreach",
+          "name": "Kestrel Watch"
+        },
+        "stableId": "location.northreach.kestrel-watch.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "yrethia",
+          "name": "Sableport"
+        },
+        "stableId": "location.yrethia.sableport.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "yrethia",
+          "name": "Blue Crane District"
+        },
+        "stableId": "location.yrethia.blue-crane-district.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "yrethia",
+          "name": "Mariner's Ledger Quarter"
+        },
+        "stableId": "location.yrethia.ledger-quarter.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "yrethia",
+          "name": "Tidewall Shipyards"
+        },
+        "stableId": "location.yrethia.tidewall-shipyards.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "yrethia",
+          "name": "Eastgate Customs Zone"
+        },
+        "stableId": "location.yrethia.eastgate-customs-zone.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "thaloris",
+          "name": "Dusk Harbor"
+        },
+        "stableId": "location.thaloris.dusk-harbor.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "thaloris",
+          "name": "Bonded Quarter"
+        },
+        "stableId": "location.thaloris.bonded-quarter.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "thaloris",
+          "name": "Ember Yard"
+        },
+        "stableId": "location.thaloris.ember-yard.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "thaloris",
+          "name": "Saltwind Freeport"
+        },
+        "stableId": "location.thaloris.saltwind-freeport.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "thaloris",
+          "name": "Breakwater Salvage Coast"
+        },
+        "stableId": "location.thaloris.breakwater-salvage-coast.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "solvend",
+          "name": "Aurora Spire"
+        },
+        "stableId": "location.solvend.aurora-spire.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "solvend",
+          "name": "Helix Research Campus"
+        },
+        "stableId": "location.solvend.helix-campus.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "solvend",
+          "name": "Skybridge Aerospace Range"
+        },
+        "stableId": "location.solvend.skybridge-range.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "solvend",
+          "name": "Lattice Valley"
+        },
+        "stableId": "location.solvend.lattice-valley.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "solvend",
+          "name": "Meridian Precision Works"
+        },
+        "stableId": "location.solvend.meridian-precision-works.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "eldoran",
+          "name": "Crescent Bay"
+        },
+        "stableId": "location.eldoran.crescent-bay.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "eldoran",
+          "name": "Greenbelt Grain Plain"
+        },
+        "stableId": "location.eldoran.greenbelt-plain.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "eldoran",
+          "name": "Central Freight Junction"
+        },
+        "stableId": "location.eldoran.central-freight-junction.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "eldoran",
+          "name": "Rivergate Wholesale Market"
+        },
+        "stableId": "location.eldoran.rivergate-market.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "eldoran",
+          "name": "Sunfield Reserve"
+        },
+        "stableId": "location.eldoran.sunfield-reserve.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "valerion",
+          "name": "Glassfall"
+        },
+        "stableId": "location.valerion.glassfall.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "valerion",
+          "name": "Silver Cascade Complex"
+        },
+        "stableId": "location.valerion.silver-cascade-complex.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "valerion",
+          "name": "Clearwater Basin"
+        },
+        "stableId": "location.valerion.clearwater-basin.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "valerion",
+          "name": "Verdant Finance District"
+        },
+        "stableId": "location.valerion.verdant-finance-district.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "valerion",
+          "name": "Azure Coast"
+        },
+        "stableId": "location.valerion.azure-coast.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "lumenor",
+          "name": "Starfall"
+        },
+        "stableId": "location.lumenor.starfall.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "lumenor",
+          "name": "Meridian Forum District"
+        },
+        "stableId": "location.lumenor.meridian-forum-district.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "lumenor",
+          "name": "Civic Archive Quarter"
+        },
+        "stableId": "location.lumenor.civic-archive-quarter.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "lumenor",
+          "name": "Observatory Hill"
+        },
+        "stableId": "location.lumenor.observatory-hill.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "lumenor",
+          "name": "Concord University Belt"
+        },
+        "stableId": "location.lumenor.concord-university-belt.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "xalvoria",
+          "name": "Emberhall"
+        },
+        "stableId": "location.xalvoria.emberhall.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "xalvoria",
+          "name": "Sovereign Finance District"
+        },
+        "stableId": "location.xalvoria.sovereign-finance-district.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "xalvoria",
+          "name": "Highpass Tunnel Works"
+        },
+        "stableId": "location.xalvoria.highpass-tunnel-works.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "xalvoria",
+          "name": "Gilded Forge Quarter"
+        },
+        "stableId": "location.xalvoria.gilded-forge-quarter.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "xalvoria",
+          "name": "Ashen Ridge Energy Fields"
+        },
+        "stableId": "location.xalvoria.ashen-ridge-energy-fields.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "dravenlok",
+          "name": "Ironhold"
+        },
+        "stableId": "location.dravenlok.ironhold.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "dravenlok",
+          "name": "Redline Steel Belt"
+        },
+        "stableId": "location.dravenlok.redline-steel-belt.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "dravenlok",
+          "name": "Eastern Rail Works"
+        },
+        "stableId": "location.dravenlok.eastern-rail-works.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "dravenlok",
+          "name": "Foundry Basin"
+        },
+        "stableId": "location.dravenlok.foundry-basin.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "dravenlok",
+          "name": "Blackstone Industrial Port"
+        },
+        "stableId": "location.dravenlok.blackstone-industrial-port.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "syndalis",
+          "name": "Blacklight"
+        },
+        "stableId": "location.syndalis.blacklight.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "syndalis",
+          "name": "Cipher District"
+        },
+        "stableId": "location.syndalis.cipher-district.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "syndalis",
+          "name": "Deepwave Cable Landing"
+        },
+        "stableId": "location.syndalis.deepwave-cable-landing.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "syndalis",
+          "name": "Nightglass Data Campus"
+        },
+        "stableId": "location.syndalis.nightglass-data-campus.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "country": "syndalis",
+          "name": "Meridian Security Operations Center"
+        },
+        "stableId": "location.syndalis.meridian-security-center.v1"
+      }
+    ],
+    "stockTemplates": [
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRCAA"
+        },
+        "stableId": "instrument.northreach.commodity_reference.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAB"
+        },
+        "stableId": "instrument.northreach.common_equity.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAC"
+        },
+        "stableId": "instrument.northreach.common_equity.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAD"
+        },
+        "stableId": "instrument.northreach.common_equity.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAE"
+        },
+        "stableId": "instrument.northreach.common_equity.0005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAG"
+        },
+        "stableId": "instrument.northreach.common_equity.0007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAH"
+        },
+        "stableId": "instrument.northreach.common_equity.0008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAI"
+        },
+        "stableId": "instrument.northreach.common_equity.0009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAK"
+        },
+        "stableId": "instrument.northreach.common_equity.0011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAL"
+        },
+        "stableId": "instrument.northreach.common_equity.0012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAM"
+        },
+        "stableId": "instrument.northreach.common_equity.0013.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAN"
+        },
+        "stableId": "instrument.northreach.common_equity.0014.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NREAO"
+        },
+        "stableId": "instrument.northreach.common_equity.0015.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRBAA"
+        },
+        "stableId": "instrument.northreach.corporate_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRBAF"
+        },
+        "stableId": "instrument.northreach.corporate_bond.0006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRBAG"
+        },
+        "stableId": "instrument.northreach.corporate_bond.0007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRBAJ"
+        },
+        "stableId": "instrument.northreach.corporate_bond.0010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRFAA"
+        },
+        "stableId": "instrument.northreach.etf_fund.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRFAB"
+        },
+        "stableId": "instrument.northreach.etf_fund.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRXAA"
+        },
+        "stableId": "instrument.northreach.index.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRTAC"
+        },
+        "stableId": "instrument.northreach.listed_trust.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRPAE"
+        },
+        "stableId": "instrument.northreach.preferred_convertible.0005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRGAA"
+        },
+        "stableId": "instrument.northreach.sovereign_public_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "NRGAB"
+        },
+        "stableId": "instrument.northreach.sovereign_public_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRCAA"
+        },
+        "stableId": "instrument.yrethia.commodity_reference.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAA"
+        },
+        "stableId": "instrument.yrethia.common_equity.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAB"
+        },
+        "stableId": "instrument.yrethia.common_equity.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAC"
+        },
+        "stableId": "instrument.yrethia.common_equity.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAD"
+        },
+        "stableId": "instrument.yrethia.common_equity.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAE"
+        },
+        "stableId": "instrument.yrethia.common_equity.0005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAF"
+        },
+        "stableId": "instrument.yrethia.common_equity.0006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAG"
+        },
+        "stableId": "instrument.yrethia.common_equity.0007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAH"
+        },
+        "stableId": "instrument.yrethia.common_equity.0008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAI"
+        },
+        "stableId": "instrument.yrethia.common_equity.0009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAJ"
+        },
+        "stableId": "instrument.yrethia.common_equity.0010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAK"
+        },
+        "stableId": "instrument.yrethia.common_equity.0011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YREAL"
+        },
+        "stableId": "instrument.yrethia.common_equity.0012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRBAA"
+        },
+        "stableId": "instrument.yrethia.corporate_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRBAB"
+        },
+        "stableId": "instrument.yrethia.corporate_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRBAC"
+        },
+        "stableId": "instrument.yrethia.corporate_bond.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRBAD"
+        },
+        "stableId": "instrument.yrethia.corporate_bond.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRFAA"
+        },
+        "stableId": "instrument.yrethia.etf_fund.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRFAB"
+        },
+        "stableId": "instrument.yrethia.etf_fund.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRXAA"
+        },
+        "stableId": "instrument.yrethia.index.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRTAA"
+        },
+        "stableId": "instrument.yrethia.listed_trust.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRPAA"
+        },
+        "stableId": "instrument.yrethia.preferred_convertible.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRGAA"
+        },
+        "stableId": "instrument.yrethia.sovereign_public_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "YRGAB"
+        },
+        "stableId": "instrument.yrethia.sovereign_public_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THCAA"
+        },
+        "stableId": "instrument.thaloris.commodity_reference.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAA"
+        },
+        "stableId": "instrument.thaloris.common_equity.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAB"
+        },
+        "stableId": "instrument.thaloris.common_equity.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAC"
+        },
+        "stableId": "instrument.thaloris.common_equity.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAD"
+        },
+        "stableId": "instrument.thaloris.common_equity.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAE"
+        },
+        "stableId": "instrument.thaloris.common_equity.0005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAF"
+        },
+        "stableId": "instrument.thaloris.common_equity.0006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAG"
+        },
+        "stableId": "instrument.thaloris.common_equity.0007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAH"
+        },
+        "stableId": "instrument.thaloris.common_equity.0008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAI"
+        },
+        "stableId": "instrument.thaloris.common_equity.0009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAJ"
+        },
+        "stableId": "instrument.thaloris.common_equity.0010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAK"
+        },
+        "stableId": "instrument.thaloris.common_equity.0011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THEAL"
+        },
+        "stableId": "instrument.thaloris.common_equity.0012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THBAA"
+        },
+        "stableId": "instrument.thaloris.corporate_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THBAB"
+        },
+        "stableId": "instrument.thaloris.corporate_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THBAC"
+        },
+        "stableId": "instrument.thaloris.corporate_bond.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THBAD"
+        },
+        "stableId": "instrument.thaloris.corporate_bond.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THFAA"
+        },
+        "stableId": "instrument.thaloris.etf_fund.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THFAB"
+        },
+        "stableId": "instrument.thaloris.etf_fund.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THXAA"
+        },
+        "stableId": "instrument.thaloris.index.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THTAA"
+        },
+        "stableId": "instrument.thaloris.listed_trust.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THPAA"
+        },
+        "stableId": "instrument.thaloris.preferred_convertible.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THGAA"
+        },
+        "stableId": "instrument.thaloris.sovereign_public_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "THGAB"
+        },
+        "stableId": "instrument.thaloris.sovereign_public_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVCAA"
+        },
+        "stableId": "instrument.solvend.commodity_reference.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAA"
+        },
+        "stableId": "instrument.solvend.common_equity.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAB"
+        },
+        "stableId": "instrument.solvend.common_equity.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAC"
+        },
+        "stableId": "instrument.solvend.common_equity.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAD"
+        },
+        "stableId": "instrument.solvend.common_equity.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAE"
+        },
+        "stableId": "instrument.solvend.common_equity.0005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAF"
+        },
+        "stableId": "instrument.solvend.common_equity.0006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAG"
+        },
+        "stableId": "instrument.solvend.common_equity.0007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAH"
+        },
+        "stableId": "instrument.solvend.common_equity.0008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAI"
+        },
+        "stableId": "instrument.solvend.common_equity.0009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAJ"
+        },
+        "stableId": "instrument.solvend.common_equity.0010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAK"
+        },
+        "stableId": "instrument.solvend.common_equity.0011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVEAL"
+        },
+        "stableId": "instrument.solvend.common_equity.0012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVBAA"
+        },
+        "stableId": "instrument.solvend.corporate_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVBAB"
+        },
+        "stableId": "instrument.solvend.corporate_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVBAC"
+        },
+        "stableId": "instrument.solvend.corporate_bond.0003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVBAD"
+        },
+        "stableId": "instrument.solvend.corporate_bond.0004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVFAA"
+        },
+        "stableId": "instrument.solvend.etf_fund.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVFAB"
+        },
+        "stableId": "instrument.solvend.etf_fund.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVXAA"
+        },
+        "stableId": "instrument.solvend.index.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVTAA"
+        },
+        "stableId": "instrument.solvend.listed_trust.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVPAA"
+        },
+        "stableId": "instrument.solvend.preferred_convertible.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVGAA"
+        },
+        "stableId": "instrument.solvend.sovereign_public_bond.0001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SVGAB"
+        },
+        "stableId": "instrument.solvend.sovereign_public_bond.0002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELBAA"
+        },
+        "stableId": "instrument.eldoran.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELBAB"
+        },
+        "stableId": "instrument.eldoran.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELBAC"
+        },
+        "stableId": "instrument.eldoran.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELBAD"
+        },
+        "stableId": "instrument.eldoran.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELCAA"
+        },
+        "stableId": "instrument.eldoran.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAA"
+        },
+        "stableId": "instrument.eldoran.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAB"
+        },
+        "stableId": "instrument.eldoran.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAC"
+        },
+        "stableId": "instrument.eldoran.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAD"
+        },
+        "stableId": "instrument.eldoran.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAE"
+        },
+        "stableId": "instrument.eldoran.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAF"
+        },
+        "stableId": "instrument.eldoran.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAG"
+        },
+        "stableId": "instrument.eldoran.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAH"
+        },
+        "stableId": "instrument.eldoran.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAI"
+        },
+        "stableId": "instrument.eldoran.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAJ"
+        },
+        "stableId": "instrument.eldoran.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAK"
+        },
+        "stableId": "instrument.eldoran.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELEAL"
+        },
+        "stableId": "instrument.eldoran.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELFAA"
+        },
+        "stableId": "instrument.eldoran.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELFAB"
+        },
+        "stableId": "instrument.eldoran.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELGAA"
+        },
+        "stableId": "instrument.eldoran.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELGAB"
+        },
+        "stableId": "instrument.eldoran.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELPAA"
+        },
+        "stableId": "instrument.eldoran.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELTAA"
+        },
+        "stableId": "instrument.eldoran.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "ELXAA"
+        },
+        "stableId": "instrument.eldoran.index.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VABAA"
+        },
+        "stableId": "instrument.valerion.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VABAB"
+        },
+        "stableId": "instrument.valerion.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VABAC"
+        },
+        "stableId": "instrument.valerion.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VABAD"
+        },
+        "stableId": "instrument.valerion.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VACAA"
+        },
+        "stableId": "instrument.valerion.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAA"
+        },
+        "stableId": "instrument.valerion.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAB"
+        },
+        "stableId": "instrument.valerion.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAC"
+        },
+        "stableId": "instrument.valerion.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAD"
+        },
+        "stableId": "instrument.valerion.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAE"
+        },
+        "stableId": "instrument.valerion.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAF"
+        },
+        "stableId": "instrument.valerion.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAG"
+        },
+        "stableId": "instrument.valerion.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAH"
+        },
+        "stableId": "instrument.valerion.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAI"
+        },
+        "stableId": "instrument.valerion.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAJ"
+        },
+        "stableId": "instrument.valerion.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAK"
+        },
+        "stableId": "instrument.valerion.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAEAL"
+        },
+        "stableId": "instrument.valerion.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAFAA"
+        },
+        "stableId": "instrument.valerion.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAFAB"
+        },
+        "stableId": "instrument.valerion.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAGAA"
+        },
+        "stableId": "instrument.valerion.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAGAB"
+        },
+        "stableId": "instrument.valerion.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAPAA"
+        },
+        "stableId": "instrument.valerion.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VATAA"
+        },
+        "stableId": "instrument.valerion.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "VAXAA"
+        },
+        "stableId": "instrument.valerion.index.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUBAA"
+        },
+        "stableId": "instrument.lumenor.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUBAB"
+        },
+        "stableId": "instrument.lumenor.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUBAC"
+        },
+        "stableId": "instrument.lumenor.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUBAD"
+        },
+        "stableId": "instrument.lumenor.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUCAA"
+        },
+        "stableId": "instrument.lumenor.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAA"
+        },
+        "stableId": "instrument.lumenor.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAB"
+        },
+        "stableId": "instrument.lumenor.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAC"
+        },
+        "stableId": "instrument.lumenor.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAD"
+        },
+        "stableId": "instrument.lumenor.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAE"
+        },
+        "stableId": "instrument.lumenor.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAF"
+        },
+        "stableId": "instrument.lumenor.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAG"
+        },
+        "stableId": "instrument.lumenor.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAH"
+        },
+        "stableId": "instrument.lumenor.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAI"
+        },
+        "stableId": "instrument.lumenor.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAJ"
+        },
+        "stableId": "instrument.lumenor.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAK"
+        },
+        "stableId": "instrument.lumenor.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUEAL"
+        },
+        "stableId": "instrument.lumenor.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUFAA"
+        },
+        "stableId": "instrument.lumenor.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUFAB"
+        },
+        "stableId": "instrument.lumenor.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUGAA"
+        },
+        "stableId": "instrument.lumenor.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUGAB"
+        },
+        "stableId": "instrument.lumenor.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUPAA"
+        },
+        "stableId": "instrument.lumenor.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUTAA"
+        },
+        "stableId": "instrument.lumenor.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "LUXAA"
+        },
+        "stableId": "instrument.lumenor.index.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XABAA"
+        },
+        "stableId": "instrument.xalvoria.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XABAB"
+        },
+        "stableId": "instrument.xalvoria.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XABAC"
+        },
+        "stableId": "instrument.xalvoria.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XABAD"
+        },
+        "stableId": "instrument.xalvoria.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XACAA"
+        },
+        "stableId": "instrument.xalvoria.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAA"
+        },
+        "stableId": "instrument.xalvoria.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAB"
+        },
+        "stableId": "instrument.xalvoria.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAC"
+        },
+        "stableId": "instrument.xalvoria.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAD"
+        },
+        "stableId": "instrument.xalvoria.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAE"
+        },
+        "stableId": "instrument.xalvoria.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAF"
+        },
+        "stableId": "instrument.xalvoria.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAG"
+        },
+        "stableId": "instrument.xalvoria.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAH"
+        },
+        "stableId": "instrument.xalvoria.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAI"
+        },
+        "stableId": "instrument.xalvoria.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAJ"
+        },
+        "stableId": "instrument.xalvoria.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAK"
+        },
+        "stableId": "instrument.xalvoria.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAEAL"
+        },
+        "stableId": "instrument.xalvoria.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAFAA"
+        },
+        "stableId": "instrument.xalvoria.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAFAB"
+        },
+        "stableId": "instrument.xalvoria.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAGAA"
+        },
+        "stableId": "instrument.xalvoria.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAGAB"
+        },
+        "stableId": "instrument.xalvoria.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAPAA"
+        },
+        "stableId": "instrument.xalvoria.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XATAA"
+        },
+        "stableId": "instrument.xalvoria.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "XAXAA"
+        },
+        "stableId": "instrument.xalvoria.index.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRBAA"
+        },
+        "stableId": "instrument.dravenlok.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRBAB"
+        },
+        "stableId": "instrument.dravenlok.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRBAC"
+        },
+        "stableId": "instrument.dravenlok.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRBAD"
+        },
+        "stableId": "instrument.dravenlok.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRCAA"
+        },
+        "stableId": "instrument.dravenlok.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAA"
+        },
+        "stableId": "instrument.dravenlok.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAB"
+        },
+        "stableId": "instrument.dravenlok.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAC"
+        },
+        "stableId": "instrument.dravenlok.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAD"
+        },
+        "stableId": "instrument.dravenlok.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAE"
+        },
+        "stableId": "instrument.dravenlok.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAF"
+        },
+        "stableId": "instrument.dravenlok.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAG"
+        },
+        "stableId": "instrument.dravenlok.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAH"
+        },
+        "stableId": "instrument.dravenlok.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAI"
+        },
+        "stableId": "instrument.dravenlok.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAJ"
+        },
+        "stableId": "instrument.dravenlok.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAK"
+        },
+        "stableId": "instrument.dravenlok.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DREAL"
+        },
+        "stableId": "instrument.dravenlok.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRFAA"
+        },
+        "stableId": "instrument.dravenlok.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRFAB"
+        },
+        "stableId": "instrument.dravenlok.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRGAA"
+        },
+        "stableId": "instrument.dravenlok.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRGAB"
+        },
+        "stableId": "instrument.dravenlok.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRPAA"
+        },
+        "stableId": "instrument.dravenlok.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRTAA"
+        },
+        "stableId": "instrument.dravenlok.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "DRXAA"
+        },
+        "stableId": "instrument.dravenlok.index.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYBAA"
+        },
+        "stableId": "instrument.syndalis.corporate_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYBAB"
+        },
+        "stableId": "instrument.syndalis.corporate_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYBAC"
+        },
+        "stableId": "instrument.syndalis.corporate_bond.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYBAD"
+        },
+        "stableId": "instrument.syndalis.corporate_bond.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYCAA"
+        },
+        "stableId": "instrument.syndalis.commodity_reference.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAA"
+        },
+        "stableId": "instrument.syndalis.common_equity.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAB"
+        },
+        "stableId": "instrument.syndalis.common_equity.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAC"
+        },
+        "stableId": "instrument.syndalis.common_equity.003.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAD"
+        },
+        "stableId": "instrument.syndalis.common_equity.004.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAE"
+        },
+        "stableId": "instrument.syndalis.common_equity.005.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAF"
+        },
+        "stableId": "instrument.syndalis.common_equity.006.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAG"
+        },
+        "stableId": "instrument.syndalis.common_equity.007.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAH"
+        },
+        "stableId": "instrument.syndalis.common_equity.008.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAI"
+        },
+        "stableId": "instrument.syndalis.common_equity.009.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAJ"
+        },
+        "stableId": "instrument.syndalis.common_equity.010.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAK"
+        },
+        "stableId": "instrument.syndalis.common_equity.011.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYEAL"
+        },
+        "stableId": "instrument.syndalis.common_equity.012.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYFAA"
+        },
+        "stableId": "instrument.syndalis.etf_fund.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYFAB"
+        },
+        "stableId": "instrument.syndalis.etf_fund.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYGAA"
+        },
+        "stableId": "instrument.syndalis.sovereign_public_bond.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYGAB"
+        },
+        "stableId": "instrument.syndalis.sovereign_public_bond.002.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYPAA"
+        },
+        "stableId": "instrument.syndalis.preferred_convertible.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYTAA"
+        },
+        "stableId": "instrument.syndalis.listed_trust.001.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "ticker": "SYXAA"
+        },
+        "stableId": "instrument.syndalis.index.001.v1"
+      }
+    ],
+    "storeItems": [
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-nort-precision-optical-glass"
+        },
+        "sourceItemStableId": "item.precision-optical-glass.v1",
+        "stableId": "store.northreach.precision-optical-glass.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-nort-sensor-board"
+        },
+        "sourceItemStableId": "item.sensor-board.v1",
+        "stableId": "store.northreach.sensor-board.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-nort-rare-earth-concentrate"
+        },
+        "sourceItemStableId": "item.rare-earth-concentrate.v1",
+        "stableId": "store.northreach.rare-earth-concentrate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-nort-cryogenic-ceramic"
+        },
+        "sourceItemStableId": "item.cryogenic-ceramic.v1",
+        "stableId": "store.northreach.cryogenic-ceramic.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-nort-superconductive-filament"
+        },
+        "sourceItemStableId": "item.superconductive-filament.v1",
+        "stableId": "store.northreach.superconductive-filament.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-yret-compressed-algae-fiber"
+        },
+        "sourceItemStableId": "item.compressed-algae-fiber.v1",
+        "stableId": "store.yrethia.compressed-algae-fiber.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-yret-deepwater-lubricant"
+        },
+        "sourceItemStableId": "item.deepwater-lubricant.v1",
+        "stableId": "store.yrethia.deepwater-lubricant.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-yret-marine-seal-assembly"
+        },
+        "sourceItemStableId": "item.marine-seal-assembly.v1",
+        "stableId": "store.yrethia.marine-seal-assembly.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-yret-marine-grade-resin"
+        },
+        "sourceItemStableId": "item.marine-grade-resin.v1",
+        "stableId": "store.yrethia.marine-grade-resin.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-yret-corrosion-resistant-alloy"
+        },
+        "sourceItemStableId": "item.corrosion-resistant-alloy.v1",
+        "stableId": "store.yrethia.corrosion-resistant-alloy.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-thal-thermal-gel"
+        },
+        "sourceItemStableId": "item.thermal-gel.v1",
+        "stableId": "store.thaloris.thermal-gel.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-thal-high-density-carbon"
+        },
+        "sourceItemStableId": "item.high-density-carbon.v1",
+        "stableId": "store.thaloris.high-density-carbon.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-thal-thermal-regulator"
+        },
+        "sourceItemStableId": "item.thermal-regulator.v1",
+        "stableId": "store.thaloris.thermal-regulator.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-thal-catalytic-membrane"
+        },
+        "sourceItemStableId": "item.catalytic-membrane.v1",
+        "stableId": "store.thaloris.catalytic-membrane.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-thal-lithium-salt"
+        },
+        "sourceItemStableId": "item.lithium-salt.v1",
+        "stableId": "store.thaloris.lithium-salt.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-solv-orbital-grade-aluminum"
+        },
+        "sourceItemStableId": "item.orbital-grade-aluminum.v1",
+        "stableId": "store.solvend.orbital-grade-aluminum.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-solv-aerospace-composite"
+        },
+        "sourceItemStableId": "item.aerospace-composite.v1",
+        "stableId": "store.solvend.aerospace-composite.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-solv-radiation-shielding-polymer"
+        },
+        "sourceItemStableId": "item.radiation-shielding-polymer.v1",
+        "stableId": "store.solvend.radiation-shielding-polymer.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-solv-research-instrument-core"
+        },
+        "sourceItemStableId": "item.research-instrument-core.v1",
+        "stableId": "store.solvend.research-instrument-core.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-solv-research-crystal-substrate"
+        },
+        "sourceItemStableId": "item.research-crystal-substrate.v1",
+        "stableId": "store.solvend.research-crystal-substrate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-eldo-secure-ledger-substrate"
+        },
+        "sourceItemStableId": "item.secure-ledger-substrate.v1",
+        "stableId": "store.eldoran.secure-ledger-substrate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-eldo-identity-laminate"
+        },
+        "sourceItemStableId": "item.identity-laminate.v1",
+        "stableId": "store.eldoran.identity-laminate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-eldo-anti-tamper-mesh"
+        },
+        "sourceItemStableId": "item.anti-tamper-mesh.v1",
+        "stableId": "store.eldoran.anti-tamper-mesh.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-eldo-encrypted-data-chip"
+        },
+        "sourceItemStableId": "item.encrypted-data-chip.v1",
+        "stableId": "store.eldoran.encrypted-data-chip.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-eldo-conductive-gold-foil"
+        },
+        "sourceItemStableId": "item.conductive-gold-foil.v1",
+        "stableId": "store.eldoran.conductive-gold-foil.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-vale-hydrophobic-sealant"
+        },
+        "sourceItemStableId": "item.hydrophobic-sealant.v1",
+        "stableId": "store.valerion.hydrophobic-sealant.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-vale-ceramic-filter-media"
+        },
+        "sourceItemStableId": "item.ceramic-filter-media.v1",
+        "stableId": "store.valerion.ceramic-filter-media.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-vale-structural-glass-composite"
+        },
+        "sourceItemStableId": "item.structural-glass-composite.v1",
+        "stableId": "store.valerion.structural-glass-composite.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-vale-filtration-membrane"
+        },
+        "sourceItemStableId": "item.filtration-membrane.v1",
+        "stableId": "store.valerion.filtration-membrane.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-vale-pump-assembly"
+        },
+        "sourceItemStableId": "item.pump-assembly.v1",
+        "stableId": "store.valerion.pump-assembly.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-lume-archival-polymer-sheet"
+        },
+        "sourceItemStableId": "item.archival-polymer-sheet.v1",
+        "stableId": "store.lumenor.archival-polymer-sheet.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-lume-acoustic-fiber"
+        },
+        "sourceItemStableId": "item.acoustic-fiber.v1",
+        "stableId": "store.lumenor.acoustic-fiber.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-lume-adaptive-textile-mesh"
+        },
+        "sourceItemStableId": "item.adaptive-textile-mesh.v1",
+        "stableId": "store.lumenor.adaptive-textile-mesh.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-lume-educational-display-film"
+        },
+        "sourceItemStableId": "item.educational-display-film.v1",
+        "stableId": "store.lumenor.educational-display-film.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-lume-learning-interface-module"
+        },
+        "sourceItemStableId": "item.learning-interface-module.v1",
+        "stableId": "store.lumenor.learning-interface-module.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-xalv-universal-fastener-set"
+        },
+        "sourceItemStableId": "item.universal-fastener-set.v1",
+        "stableId": "store.xalvoria.universal-fastener-set.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-xalv-hydraulic-fluid"
+        },
+        "sourceItemStableId": "item.hydraulic-fluid.v1",
+        "stableId": "store.xalvoria.hydraulic-fluid.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-xalv-reinforced-concrete-additive"
+        },
+        "sourceItemStableId": "item.reinforced-concrete-additive.v1",
+        "stableId": "store.xalvoria.reinforced-concrete-additive.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-xalv-machine-steel-billet"
+        },
+        "sourceItemStableId": "item.machine-steel-billet.v1",
+        "stableId": "store.xalvoria.machine-steel-billet.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-xalv-industrial-bearing-stock"
+        },
+        "sourceItemStableId": "item.industrial-bearing-stock.v1",
+        "stableId": "store.xalvoria.industrial-bearing-stock.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-drav-iron-ore-concentrate"
+        },
+        "sourceItemStableId": "item.iron-ore-concentrate.v1",
+        "stableId": "store.dravenlok.iron-ore-concentrate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-drav-refined-alloy-ingot"
+        },
+        "sourceItemStableId": "item.refined-alloy-ingot.v1",
+        "stableId": "store.dravenlok.refined-alloy-ingot.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-drav-hardened-steel-plate"
+        },
+        "sourceItemStableId": "item.hardened-steel-plate.v1",
+        "stableId": "store.dravenlok.hardened-steel-plate.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-drav-industrial-coke-composite"
+        },
+        "sourceItemStableId": "item.industrial-coke-composite.v1",
+        "stableId": "store.dravenlok.industrial-coke-composite.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-drav-structural-reinforcement-kit"
+        },
+        "sourceItemStableId": "item.structural-reinforcement-kit.v1",
+        "stableId": "store.dravenlok.structural-reinforcement-kit.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-synd-broadcast-fiber"
+        },
+        "sourceItemStableId": "item.broadcast-fiber.v1",
+        "stableId": "store.syndalis.broadcast-fiber.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-synd-photonic-film"
+        },
+        "sourceItemStableId": "item.photonic-film.v1",
+        "stableId": "store.syndalis.photonic-film.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-synd-signal-grade-silicon"
+        },
+        "sourceItemStableId": "item.signal-grade-silicon.v1",
+        "stableId": "store.syndalis.signal-grade-silicon.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-synd-encryption-crystal-matrix"
+        },
+        "sourceItemStableId": "item.encryption-crystal-matrix.v1",
+        "stableId": "store.syndalis.encryption-crystal-matrix.v1"
+      },
+      {
+        "runtimeNaturalKey": {
+          "itemKey": "beta-synd-secure-communications-blueprint"
+        },
+        "sourceItemStableId": "item.secure-communications-blueprint.v1",
+        "stableId": "store.syndalis.secure-communications-blueprint.v1"
+      }
+    ]
+  },
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-stable-id-map-v1",
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}
