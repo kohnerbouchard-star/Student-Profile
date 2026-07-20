@@ -1,1 +1,1 @@
-apply authoritative player story delivery source sha256 54fea54ed010df5665010aa2d4ffdfbeea156953bf3e51aa34e9a7d7223dfd98
+apply authoritative player story delivery source sha256 54fea54ed010df5665010aa2d4ffdfbeea156953bf3e51aa34e9a7d7223dfd98 retry 2
