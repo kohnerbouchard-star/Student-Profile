@@ -97,6 +97,7 @@ export function classifyPlayerRecoverySignal({
       message: "The write completed successfully, but the latest display could not be refreshed. Do not submit the action again; refresh the terminal instead.",
       tone: "green",
       canDismiss: false,
+      lockMutations: true,
     });
   }
 
@@ -107,6 +108,7 @@ export function classifyPlayerRecoverySignal({
       message: "Refresh the terminal before repeating an economic action so a completed write is not submitted twice.",
       tone: "amber",
       canDismiss: false,
+      lockMutations: true,
     });
   }
 
@@ -117,6 +119,7 @@ export function classifyPlayerRecoverySignal({
       message: "The displayed information is older than the authoritative game state. Refresh this terminal before retrying.",
       tone: "amber",
       canDismiss: false,
+      lockMutations: true,
     });
   }
 
@@ -136,6 +139,7 @@ export function classifyPlayerRecoverySignal({
       message: "Existing content may remain visible. Refresh before repeating any economic action.",
       tone: "amber",
       canDismiss: false,
+      lockMutations: true,
     });
   }
 
