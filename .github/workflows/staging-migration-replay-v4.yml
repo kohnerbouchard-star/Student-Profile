@@ -1,5 +1,6 @@
 name: Staging Migration Replay V4
 
+# Controller-triggered retry after verified isolated-staging recovery.
 on:
   push:
     branches:
