@@ -1,10 +1,17 @@
 \set ON_ERROR_STOP on
+\set QUIET 1
 \pset tuples_only on
 \pset format unaligned
+\set QUIET 0
 
 -- Read-only schema export. Run as a role with catalog visibility.
 -- Example:
 --   psql "$DATABASE_URL" -X -f export-live-schema.sql > live-schema.json
+--
+-- The migration ledger projection intentionally reads optional fields through
+-- to_jsonb(row). Hosted Supabase and the disposable CLI stack can expose
+-- different schema_migrations column sets; absent optional keys resolve to null
+-- instead of making the canonical exporter fail.
 
 with
 user_schemas as (
@@ -131,14 +138,22 @@ triggers as (
 ),
 migration_history as (
   select
-    version,
-    name,
-    md5(coalesce(array_to_string(statements, E'\n-- statement boundary --\n'), '')) as live_statement_md5,
-    coalesce(array_length(statements, 1), 0) as statement_count,
-    created_by,
-    idempotency_key,
-    coalesce(array_length(rollback, 1), 0) as rollback_statement_count
-  from supabase_migrations.schema_migrations
+    migration_row.version,
+    migration_row.name,
+    md5(coalesce((to_jsonb(migration_row) -> 'statements')::text, '[]')) as live_statement_md5,
+    case
+      when jsonb_typeof(to_jsonb(migration_row) -> 'statements') = 'array'
+        then jsonb_array_length(to_jsonb(migration_row) -> 'statements')
+      else 0
+    end as statement_count,
+    to_jsonb(migration_row) ->> 'created_by' as created_by,
+    to_jsonb(migration_row) ->> 'idempotency_key' as idempotency_key,
+    case
+      when jsonb_typeof(to_jsonb(migration_row) -> 'rollback') = 'array'
+        then jsonb_array_length(to_jsonb(migration_row) -> 'rollback')
+      else 0
+    end as rollback_statement_count
+  from supabase_migrations.schema_migrations migration_row
 )
 select jsonb_pretty(
   jsonb_build_object(
