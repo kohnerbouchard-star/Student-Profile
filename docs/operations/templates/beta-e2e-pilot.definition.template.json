@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "planned",
+  "environment": "isolated-staging",
+  "releaseCommit": "REQUIRED_FULL_RELEASE_SHA",
+  "sourceRunId": "REQUIRED_BUILD_RUN_ID",
+  "sourceArtifactId": "REQUIRED_ARTIFACT_ID",
+  "artifactSetSha256": "REQUIRED_ARTIFACT_SET_SHA256",
+  "supabaseProjectRef": "REQUIRED_STAGING_PROJECT_REF",
+  "frontendIdentity": "REQUIRED_STAGING_FRONTEND_IDENTITY",
+  "migrationHead": "REQUIRED_MIGRATION_HEAD",
+  "expectedScenarioCount": 52,
+  "executionMode": "continuous-single-release",
+  "syntheticOnly": true,
+  "connectedExecutionAuthorized": false,
+  "productionModified": false,
+  "containsSecretValues": false
+}
