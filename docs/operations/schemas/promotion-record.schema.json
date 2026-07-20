@@ -14,6 +14,8 @@
     "sourceArtifactId",
     "releaseManifestSha256",
     "artifactSetSha256",
+    "configurationVersion",
+    "configurationSha256",
     "environmentManifestEvidence",
     "approval",
     "deployment",
@@ -25,10 +27,12 @@
     "targetEnvironment": { "enum": ["staging", "production"] },
     "releaseId": { "type": "string", "minLength": 16 },
     "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
-    "sourceRunId": { "type": ["string", "integer"], "pattern": "^[0-9]+$" },
-    "sourceArtifactId": { "type": ["string", "integer"], "pattern": "^[0-9]+$" },
+    "sourceRunId": { "$ref": "#/$defs/numericId" },
+    "sourceArtifactId": { "$ref": "#/$defs/numericId" },
     "releaseManifestSha256": { "$ref": "#/$defs/sha256" },
     "artifactSetSha256": { "$ref": "#/$defs/sha256" },
+    "configurationVersion": { "type": "string", "minLength": 6 },
+    "configurationSha256": { "$ref": "#/$defs/sha256" },
     "environmentManifestEvidence": { "$ref": "#/$defs/evidence" },
     "approval": {
       "type": "object",
@@ -63,10 +67,24 @@
     "stagingEvidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["releaseId", "artifactSetSha256", "playerSmoke", "adminSmoke", "evidence"],
+      "required": [
+        "releaseId",
+        "sourceRunId",
+        "sourceArtifactId",
+        "releaseManifestSha256",
+        "artifactSetSha256",
+        "configurationSha256",
+        "playerSmoke",
+        "adminSmoke",
+        "evidence"
+      ],
       "properties": {
         "releaseId": { "type": "string", "minLength": 16 },
+        "sourceRunId": { "$ref": "#/$defs/numericId" },
+        "sourceArtifactId": { "$ref": "#/$defs/numericId" },
+        "releaseManifestSha256": { "$ref": "#/$defs/sha256" },
         "artifactSetSha256": { "$ref": "#/$defs/sha256" },
+        "configurationSha256": { "$ref": "#/$defs/sha256" },
         "playerSmoke": { "const": "pass" },
         "adminSmoke": { "const": "pass" },
         "evidence": { "$ref": "#/$defs/evidence" }
@@ -75,6 +93,12 @@
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "numericId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9]+$" },
+        { "type": "integer", "minimum": 1 }
+      ]
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
