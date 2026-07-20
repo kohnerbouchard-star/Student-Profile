@@ -1,0 +1,94 @@
+.player-terminal-recovery-notice {
+  position: fixed;
+  z-index: 1400;
+  inset-block-start: max(12px, env(safe-area-inset-top));
+  inset-inline-start: 50%;
+  width: min(720px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(63, 217, 255, 0.5);
+  border-radius: 14px;
+  background: rgba(3, 13, 24, 0.97);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
+  color: var(--player-text, #f4fbff);
+  backdrop-filter: blur(16px);
+}
+
+.player-terminal-recovery-notice.is-amber {
+  border-color: rgba(255, 190, 68, 0.72);
+}
+
+.player-terminal-recovery-notice.is-red {
+  border-color: rgba(255, 92, 113, 0.78);
+}
+
+.player-terminal-recovery-notice.is-green {
+  border-color: rgba(83, 226, 161, 0.72);
+}
+
+.player-terminal-recovery-notice > div {
+  min-width: 0;
+}
+
+.player-terminal-recovery-notice small,
+.player-terminal-recovery-notice strong,
+.player-terminal-recovery-notice p {
+  display: block;
+  margin: 0;
+}
+
+.player-terminal-recovery-notice small {
+  margin-block-end: 4px;
+  color: var(--player-muted, #8ea7b8);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.player-terminal-recovery-notice strong {
+  color: inherit;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.player-terminal-recovery-notice p {
+  margin-block-start: 4px;
+  color: var(--player-muted, #a9bdca);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.player-terminal-recovery-notice button {
+  flex: 0 0 auto;
+  min-width: 154px;
+}
+
+.player-terminal-recovery-notice button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+@media (max-width: 640px) {
+  .player-terminal-recovery-notice {
+    inset-block-start: max(8px, env(safe-area-inset-top));
+    width: calc(100vw - 20px);
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .player-terminal-recovery-notice button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-terminal-recovery-notice {
+    backdrop-filter: none;
+  }
+}
