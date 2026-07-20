@@ -59,6 +59,7 @@ jobs:
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
               $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
               $0 == "frontend/src/core/runtime-config.js" { next }
+              $0 == "scripts/admin-attendance-action-smoke.mjs" { next }
               $0 == "scripts/admin-classroom-identity-fallback-smoke.mjs" { next }
               $0 == "scripts/admin-player-access-code-smoke.mjs" { next }
               $0 == "scripts/admin-session-manager-smoke.mjs" { next }
