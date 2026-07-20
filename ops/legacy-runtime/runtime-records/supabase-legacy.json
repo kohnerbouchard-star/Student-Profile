@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "name": "server",
+      "verifyJwt": false,
+      "retirementDisposition": "retain-pending-review",
+      "rollbackInstructions": "Use the retained reviewed runtime record.",
+      "owner": "Platform owner",
+      "evidenceStatus": "review-required"
+    },
+    {
+      "name": "make-server-0dbf686f",
+      "verifyJwt": true,
+      "retirementDisposition": "retain-pending-attribution",
+      "rollbackInstructions": "Use the retained reviewed runtime record.",
+      "owner": "Platform owner",
+      "evidenceStatus": "attribution-required"
+    },
+    {
+      "name": "admin-api-staging",
+      "retirementDisposition": "retain-tombstone-then-delete",
+      "rollbackInstructions": "Use the retained tombstone record during the recovery window.",
+      "owner": "Platform owner",
+      "evidenceStatus": "observation-required"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "capturedAt": "2026-07-20T07:18:30Z",
+  "source": "read-only provider inventory",
+  "snapshot": {
+    "liveFunctionCount": 10
+  },
+  "observationPolicy": {
+    "preDisableQuietWindowDays": 14,
+    "postDisableMonitoringDays": 7,
+    "preDeleteRecoveryWindowDays": 30
+  },
+  "runtimeRecordFiles": [
+    "ops/legacy-runtime/runtime-records/canonical-runtimes.json",
+    "ops/legacy-runtime/runtime-records/supabase-legacy.json",
+    "ops/legacy-runtime/runtime-records/cloudflare-worker.json",
+    "ops/legacy-runtime/runtime-records/removed-stock-functions.json"
+  ]
+}

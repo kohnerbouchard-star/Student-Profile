@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 2,
+  "purpose": "Bounded, read-only traffic evidence without unbounded scans or sensitive-field retention.",
+  "queryPolicy": {
+    "maximumWindowHours": 24,
+    "maximumRecords": 1000,
+    "sort": "timestamp ascending",
+    "requiredFields": [
+      "timestamp",
+      "function_id or function_name or deployment_id",
+      "method",
+      "status_code",
+      "request URL or path"
+    ],
+    "forbiddenOutputFields": [
+      "authorization",
+      "apikey",
+      "cookie",
+      "set-cookie",
+      "raw client IP",
+      "request body",
+      "query-string secrets"
+    ]
+  },
+  "observation": {
+    "requiredConsecutiveDailySlices": 14,
+    "postDisableMonitoringDays": 7,
+    "preDeleteRecoveryDays": 30,
+    "rawExportLocation": "restricted evidence store outside Git",
+    "reviewedSummaryLocation": "docs/operations/evidence/legacy-runtime"
+  },
+  "legacyTargets": [
+    "make-server-0dbf686f",
+    "server",
+    "admin-api-staging",
+    "silent-haze-ca17",
+    "stock-market-sim",
+    "stock-market-simulation",
+    "stock-market-game-api",
+    "stock-market-data"
+  ],
+  "classificationRules": [
+    "401/403/404/410 responses still count as traffic and require attribution.",
+    "Any 2xx/3xx legacy call blocks retirement until the consumer is identified and migrated.",
+    "Unknown consumer fingerprints must be stable hashes; raw IPs, tokens, cookies, and bodies are prohibited.",
+    "A missing runtime in a small sample is not zero-traffic evidence."
+  ]
+}
