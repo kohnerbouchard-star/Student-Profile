@@ -1,22 +1,23 @@
 name: Messaging PR Unblock
 
 on:
-  pull_request_target:
-    types: [ready_for_review]
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/messaging-pr-unblock.yml"
 
 permissions:
   contents: write
 
 concurrency:
-  group: messaging-pr-unblock-${{ github.event.pull_request.number }}
+  group: messaging-pr-unblock-248
   cancel-in-progress: false
 
 jobs:
   unblock:
     if: >-
-      github.event.pull_request.number == 248 &&
-      github.event.pull_request.head.ref == 'agent/messaging-communication-v1' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.head_commit.message == 'ci(messaging): trigger exact PR synchronization unblocker' &&
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
