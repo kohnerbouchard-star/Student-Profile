@@ -1,0 +1,46 @@
+name: Beta Security Contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/beta-security-contract.yml"
+      - "backend/src/security/**"
+      - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
+      - "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts"
+      - "backend/supabase/migrations/20260720150000_harden_request_rate_limit_operations_v2.sql"
+      - "backend/package.json"
+      - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
+      - "docs/operations/beta-security-rate-limit-staging-runbook.md"
+      - "docs/operations/staff-access-security-policy.md"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.6.7
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Run security contracts
+        working-directory: backend
+        run: npm run test:player-security
+      - name: Typecheck all backend surfaces
+        working-directory: backend
+        run: npm run typecheck:all
+      - name: Scan repository for committed credentials
+        run: npm run security:secrets
