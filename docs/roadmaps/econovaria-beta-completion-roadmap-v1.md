@@ -6,7 +6,7 @@
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
 **Audited application-state baseline:** `b700147f03be26e1663437135878c6736f55b805`
-**Repository state audited through:** `e167ea3976da3a5825cc1cc079c994c4f887eaf6`
+**Repository state audited through:** `f44b0735763da6700fc18513fa7026dbd95aff86`
 
 ---
 
@@ -97,12 +97,12 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Program | Current status | Authority |
 |---|---|---|
 | Backend player reconciliation | `VERIFIED_COMPLETE` | PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac` |
-| Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`; sole seed-content authority |
-| Player story-notification delivery | `IN_PROGRESS` | PR #244, branch `agent/player-story-delivery-v1`; owns `BETA-NOTIF-005` and `BETA-NOTIF-006` without owning campaign content |
+| Seed-content foundation | `IN_PROGRESS`; not merge-ready | PR #163, branch `agent/seed-content-foundation-v1`; sole seed-content authority; 407 commits ahead and 132 behind audited `main`, non-mergeable, with no current-head workflow evidence and no executable importer or staging activation |
+| Player story-notification delivery | `IN_PROGRESS`; not merge-ready | PR #244, branch `agent/player-story-delivery-v1`; owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; synchronized with audited `main`, but the permanent diff still contains only temporary patch carriers and all visible final-head workflows require action |
 | Player market orders and Portfolio | `VERIFIED_COMPLETE` at the repository-integrated boundary | PR #245; `BETA-MKT-003` through `BETA-MKT-007` complete with ticker-only orders, session-derived Portfolio scope, central rate limiting, and safe tick triggering |
-| Messaging and communication | `IN_PROGRESS` | PR #248, branch `agent/messaging-communication-v1`; owns `EXP-MSG-001` through `EXP-MSG-007` |
-| Player Marketplace lifecycle | `IN_PROGRESS` | PR #249, branch `agent/player-marketplace-lifecycle-v1`; owns `EXP-MP-001` through `EXP-MP-009` |
-| Progression, reputation, and achievements | `IN_PROGRESS` | PR #261, branch `agent/progression-reputation-achievements-v1`; owns `EXP-PROG-001` through `EXP-PROG-008` |
+| Messaging and communication | `IN_PROGRESS`; product-owner-paused and excluded from the beta merge queue | PR #248, branch `agent/messaging-communication-v1`; preserved as the sole authority for `EXP-MSG-001` through `EXP-MSG-007`; draft status enforced until explicit owner reactivation |
+| Player Marketplace lifecycle | `IN_PROGRESS`; product-owner-paused and excluded from the beta merge queue | PR #249, branch `agent/player-marketplace-lifecycle-v1`; preserved as sole authority for `EXP-MP-001` through `EXP-MP-009`; four required workflows currently fail |
+| Progression, reputation, and achievements | `IN_PROGRESS`; product-owner-paused and excluded from the beta merge queue | PR #261, branch `agent/progression-reputation-achievements-v1`; preserved as sole authority for `EXP-PROG-001` through `EXP-PROG-008`; current branch contains planning/source-snapshot files rather than runtime completion evidence |
 | Program-control consolidation | `VERIFIED_COMPLETE` | PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`; all known duplicate claims are closed and their refs deleted |
 | Player Dashboard and Profile runtime | `VERIFIED_COMPLETE` at the repository-integrated boundary | PR #254 merged as `1156cf11cb9c4ecd9626779d3cab15fc40940315`; evidence PR #257 merged as `9918fb33c71d59f2247da8c2af7574076beecf62`; aggregate `BETA-PLAYER-008` completed with Portfolio on PR #245 |
 | Player recovery states | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`; isolated-staging recovery evidence remains under `BETA-PLAYER-014` |
@@ -121,7 +121,14 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Banking reads and exactly-once ledger invariants | `IN_PROGRESS` | PR #213 merged as `aee11e06c44dc9b6cd3ee2a386be215cef3c5536`; correction PR #221 merged as `26eecaa1ed04e3aa0909c75be269491a975fad70`; invariant PR #230 merged as `b8d227d8d8d0cd178efc63935371ab53eee8b78b`; isolated-staging migration application remains open |
 | Player runtime adapter | `VERIFIED_COMPLETE` | Cleaned PR #141 merged as `566d99fab5668cf42d6275ec8d12c580239a3137`; capability preflight and explicit `classroom-api` routing are authoritative |
 | Inventory redemption lifecycle | `VERIFIED_COMPLETE` at repository-integrated boundary | Backend PR #158, Admin review PR #177, and connected lifecycle PR #224 merged; PR #143 remains donor/reference only |
-| Staging and release readiness | `IN_PROGRESS` | Fail-closed preflight tooling merged through PR #169 as `ca642b1dfd6a2965612869e05b4fa1bd5840c437`; isolated environment evidence, rollback, restore, approval, and promotion remain open |
+| Staging and release readiness | `IN_PROGRESS` | Fail-closed preflight tooling merged through PR #169 as `ca642b1dfd6a2965612869e05b4fa1bd5840c437`; Chat 2 owns draft release-platform PR #280. Its branch advanced during controller review after an earlier green head and was returned to draft, so the permanent final diff and all final-head workflows must be re-audited before merge. Distinct staging identities, deployment, connected smoke, approval, rollback, restore, and promotion evidence remain open |
+| Production-beta program control | `IMPLEMENTED_NOT_MERGED` | Chat 1, branch `docs/beta-program-controller-v1`; sole authority for this roadmap, `docs/operations/econovaria-beta-coordination-matrix-v1.md`, collision prevention, merge sequencing, and final completion reconciliation |
+| Live migration reconciliation | `IMPLEMENTED_NOT_MERGED`; evidence incomplete | Chat 3, PR #282, branch `agent/live-migration-reconciliation-v1`; seven-file read-only migration/schema/metadata reconciliation tooling with Repository Quality, Supply Chain Security, and Staging Readiness Preflight passing; clean replay, connected live comparison, isolated-staging application, and retry evidence remain open |
+| Live legacy-runtime retirement | `IMPLEMENTED_NOT_MERGED`; evidence incomplete | Chat 4, PR #283, branch `agent/legacy-runtime-retirement-v1`; repository route/transport audit controls exist, but current traffic, connected auth probes, credential rotation, owner-approved shutdown, and rollback evidence remain open |
+| Beta security and rate-limit closure | `IN_PROGRESS`; not merge-ready | Chat 5, PR #284, branch `agent/beta-security-rate-limit-v1`; rate-limit keying, attendance abuse controls, tests, staging probe, and forward migration `20260720150000_harden_request_rate_limit_operations_v2.sql` exist, but multiple required workflows were cancelled and proxy/HMAC/concurrency/NAT/privacy staging evidence remains open |
+| Beta observability and performance | `IMPLEMENTED_NOT_MERGED`; runtime activation open | Chat 6, PR #287, branch `agent/beta-observability-performance-v1`; structured-event contracts, request observation wrapper, dashboard/alert definitions, load profile/runner, connected query-plan evidence, and CI exist with all visible final-head workflows passing; isolated runtime events, protected dashboard activation, bounded load execution, post-load index review, and shared-dispatch integration remain open |
+| Backup and restore rehearsal | `IMPLEMENTED_NOT_MERGED`; rehearsal not executed | Chat 7, PR #285, branch `agent/beta-backup-restore-v1`; runbooks, retention/manifest contracts, evidence templates, and a contract workflow exist; referenced automation, distinct synthetic target, restore execution, integrity, connected smoke, RPO, and RTO evidence remain open |
+| Final Phase 6 E2E and pilot | `BLOCKED`; harness `IMPLEMENTED_NOT_MERGED` | Chat 10, PR #286, branch `agent/beta-e2e-pilot-v1`; fail-closed 52-scenario orchestration and evidence contracts exist, but no scenario is complete until release, migration, security, story, seed, observability, and restore dependencies are merged and deployed to isolated staging |
 
 ### Historical 2026-07-18 repository reconciliation (superseded)
 
@@ -175,7 +182,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 - Market collision: PR #245 remains the sole authority for `BETA-MKT-003` through `BETA-MKT-007`. Duplicate PR #246 was labeled, closed after its source artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100.
 - Recovery collision: earlier PR #247 was preserved over replacement PR #253. PR #253 was labeled `duplicate`, closed, and `feat/player-recovery-states-v1` no longer exists; its useful donor ideas were dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
 - Premature seal PR #255 was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists. Later incident-verification PR #260 overlapped this earlier roadmap seal; its unique amendment evidence was transplanted into PR #259, it was labeled `duplicate`, closed, and `docs/incident-readiness-verification-v1` no longer exists. The merged PR #251 branch was retired automatically.
-- Current active capability ownership is unique: seed content #163, story delivery #244, Messaging #248, Marketplace #249, and Progression #261. Market/Portfolio #245, Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
+- Current capability ownership remains unique: seed content #163, story delivery #244, release-platform #280, migration reconciliation #282, legacy retirement #283, security/rate limits #284, backup/restore #285, final E2E harness #286, and observability/performance #287 are the active beta authorities. Messaging #248, Marketplace #249, and Progression #261 remain preserved sole authorities but are product-owner-paused and excluded from the beta merge queue. Market/Portfolio #245, Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
 - Branch-only work without an open pull request is not authoritative. Future agents must search this roadmap and current open pull requests before creating a branch.
 
 ### 2026-07-20 software supply-chain security completion
@@ -277,8 +284,8 @@ This table counts stable roadmap IDs only. A checked item is merged and evidence
 - [x] `BETA-AUTH-002` Connect Player Terminal Logout to the reviewed host revocation lifecycle. `VERIFIED_COMPLETE` through PR #182 merged as `6085f5a4c72aec524ee9cb8a3026a43d9610eced`.
 - [x] `BETA-AUTH-003` Verify both Player and Admin session expiry return safely to login. `VERIFIED_COMPLETE` through merged PRs #165, #166, and #167 with Player Terminal Verify #109, Admin Shell Smoke #594, Repository Quality #342/#329, and Branch Hygiene #16/#15.
 - [x] `BETA-AUTH-004` Add final brute-force, replay, revoked-session, expired-session, and cross-game authorization matrix. `VERIFIED_COMPLETE` through PR #158 with the standard Player security and request-scope suites on the final merged head.
-- [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action. `IN_PROGRESS`: the atomic HMAC-keyed foundation, reviewed post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. Staging proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, telemetry, cleanup, and connected runtime probes remain open.
-- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. `IN_PROGRESS`: Backend DTO privacy, browser-payload, fixture, rendered-output, and artifact regression coverage merged through PRs #158, #141, and #222. Connected staging network/log/trace and screenshot evidence remains open.
+- [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action. `IN_PROGRESS`: the atomic HMAC-keyed foundation, reviewed post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. PR #284 adds hardened operation keying, attendance abuse integration, focused tests, staging probes, and forward migration `20260720150000_harden_request_rate_limit_operations_v2.sql`, but is unmerged with cancelled required workflows. Staging proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, telemetry, cleanup, and connected runtime probes remain open.
+- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. `IN_PROGRESS`: Backend DTO privacy, browser-payload, fixture, rendered-output, and artifact regression coverage merged through PRs #158, #141, and #222; PR #284 is the sole active closure authority. Connected staging network/log/trace, screenshot, and reviewed proxy evidence remain open.
 
 ### Authoritative capability manifest
 
@@ -719,7 +726,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `e167ea3976da3a5825cc1cc079c994c4f887eaf6`; unique active capability authorities are PRs #163, #244, #248, #249, and #261. Market/Portfolio PR #245 is merged as `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a`.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, workflow state, migrations, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `f44b0735763da6700fc18513fa7026dbd95aff86`; active beta authorities are PR #280 release tooling, PR #244 story delivery, and PR #163 seed content. PRs #248, #249, and #261 remain unique expansion authorities but are product-owner-paused and excluded from the beta merge queue.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
@@ -735,12 +742,12 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Capability | Authority | Status | Collision rule |
 |---|---|---|---|
 | Authenticated Player Backend | PR #158 / merge `d403cf7baefeb3c1015c282cdbd748d2050e87ac` | `VERIFIED_COMPLETE` | No replacement Backend reconciliation branch; later work must use a narrowly owned roadmap item. |
-| Seed-content definition, calibration, and executable-content preparation | PR #163 / `agent/seed-content-foundation-v1` | `IN_PROGRESS` | Sole active seed authority; do not create another seed-content branch or merge/activate before its gates close. |
-| Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS` | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; does not own campaign definitions or runner scheduling. |
+| Seed-content definition, calibration, and executable-content preparation | PR #163 / `agent/seed-content-foundation-v1` | `IN_PROGRESS`; not merge-ready | Sole active seed authority; continue the existing branch only. Synchronize with `main`, rerun required CI, and provide bounded importer, rollback, calibration/map, and isolated-staging evidence before merge. |
+| Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS`; not merge-ready | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; continue the existing branch only. The application workflow must materialize a permanent bounded source diff and pass after synchronization. |
 | Player market orders and Portfolio | PR #245 / merge `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a` | `VERIFIED_COMPLETE` at repository-integrated boundary | `BETA-MKT-003` through `BETA-MKT-007` are complete; preserve the ticker-only, session-derived, rate-limited public boundary and keep active-market selection under PR #163. |
-| Messaging and communication | PR #248 / `agent/messaging-communication-v1` | `IN_PROGRESS` | Sole authority for `EXP-MSG-001` through `EXP-MSG-007`. |
-| Player Marketplace lifecycle | PR #249 / `agent/player-marketplace-lifecycle-v1` | `IN_PROGRESS` | Sole authority for `EXP-MP-001` through `EXP-MP-009`. |
-| Progression, reputation, and achievements | PR #261 / `agent/progression-reputation-achievements-v1` | `IN_PROGRESS` | Sole authority for `EXP-PROG-001` through `EXP-PROG-008`; does not own PR #163 seed definitions. |
+| Messaging and communication | PR #248 / `agent/messaging-communication-v1` | `IN_PROGRESS`; product-owner-paused | Sole preserved authority for `EXP-MSG-001` through `EXP-MSG-007`; draft and excluded from the beta merge queue until explicit owner reactivation. |
+| Player Marketplace lifecycle | PR #249 / `agent/player-marketplace-lifecycle-v1` | `IN_PROGRESS`; product-owner-paused | Sole preserved authority for `EXP-MP-001` through `EXP-MP-009`; draft, failing required workflows, and excluded from the beta merge queue until explicit owner reactivation. |
+| Progression, reputation, and achievements | PR #261 / `agent/progression-reputation-achievements-v1` | `IN_PROGRESS`; product-owner-paused | Sole preserved authority for `EXP-PROG-001` through `EXP-PROG-008`; current source-snapshot/planning files are not runtime completion evidence; excluded from the beta merge queue until explicit owner reactivation. |
 | Player recovery states | PR #247 / merge `ad889a2bdf9d5587fff3275d70751c79992171c7` | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | Do not reopen duplicate PR #253; connected recovery evidence remains governed by `BETA-PLAYER-014`. |
 | Incident readiness | PR #252 / merge `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4` | `VERIFIED_COMPLETE` | Preserve severity, ownership, classroom fallback, correction, evidence, and postmortem controls. |
 | Program-control consolidation | PR #251 / merge `89bfadfb0d609ef92081fda575f0e1e998b2650d` | `VERIFIED_COMPLETE` | Phase 0 is sealed; preserve the unique-authority registry and fail-closed branch-retirement policy. |
@@ -748,12 +755,19 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Player runtime adapter and capability preflight | PR #141 / merge `566d99fab5668cf42d6275ec8d12c580239a3137` | `VERIFIED_COMPLETE` | Preserve explicit `classroom-api` routing and fail-closed manifest validation. |
 | Player runtime cutover and legacy source retirement | PRs #217 and #222 | repository code `VERIFIED_COMPLETE`; operations `IN_PROGRESS` | Do not restore the legacy frontend or Cloudflare browser transport; retire live Worker only through approved operational change control. |
 | Inventory redemption lifecycle | PRs #158, #177, and #224 | `VERIFIED_COMPLETE` at repository-integrated boundary | Extend the existing public-key, row-locked, idempotent lifecycle; PR #143 remains reference only. |
-| Staging readiness validation | PR #169 / merge `ca642b1dfd6a2965612869e05b4fa1bd5840c437` | tooling `VERIFIED_COMPLETE`; external evidence `IN_PROGRESS` | Do not claim staging readiness from validator tests alone; supply current environment, migration, artifact, rollback, restore, and approval evidence. |
+| Staging readiness validation | PR #169 / merge `ca642b1dfd6a2965612869e05b4fa1bd5840c437`; PR #280 / `agent/isolated-staging-release-v1` | preflight tooling `VERIFIED_COMPLETE`; release platform `IMPLEMENTED_NOT_MERGED`; external evidence `IN_PROGRESS` | Do not claim staging readiness from tooling alone; distinct environment, migration, connected smoke, immutable artifact, rollback, restore, and approval evidence remain required. |
+| Production-beta coordination and merge gates | Chat 1 / `docs/beta-program-controller-v1` | `IMPLEMENTED_NOT_MERGED` | Sole authority for the roadmap and coordination matrix. No workstream may edit this roadmap or self-certify completion. |
+| Live migration reconciliation | Chat 3 / `agent/live-migration-reconciliation-v1` | `PLANNED` | Branch reserved; no replacement branch, rewritten migration, manual production SQL, or roadmap edit. |
+| Live legacy-runtime retirement | Chat 4 / `agent/legacy-runtime-retirement-v1` | `PLANNED` | Branch reserved; evidence and rollback planning only until explicit live-change approval. |
+| Beta security and rate-limit closure | Chat 5 / `agent/beta-security-rate-limit-v1` | `PLANNED` | Branch reserved; no expansion features or production configuration changes. |
+| Beta observability and performance | Chat 6 / `agent/beta-observability-performance-v1` | `PLANNED` | Branch reserved; redacted evidence only and no student-data logging. |
+| Backup and restore rehearsal | Chat 7 / `agent/beta-backup-restore-v1` | `PLANNED` | Branch reserved; isolated synthetic staging only and no production restore. |
+| Final Phase 6 E2E and pilot | Chat 10 / `agent/beta-e2e-pilot-v1` | `BLOCKED` | Branch reserved; execution waits for all release and capability dependencies. |
 | Banking and economic-ledger invariants | PRs #213, #221, and #230 | reads `VERIFIED_COMPLETE`; staff-adjustment staging application `IN_PROGRESS` | Apply and verify the merged migration in isolated staging before runtime promotion. |
 | Admin game lifecycle controls | PR #229 / merge `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb` | `VERIFIED_COMPLETE` | Preserve canonical lifecycle states, mutation gating, idempotency, and session/join-code revocation semantics. |
 | Accepted Admin source preservation | `frontend/admin-terminal-source-v1` | retained exception | Preserve per `CONTRIBUTING.md`; do not treat as active feature authority. |
 
-**Exit gate:** Met. No overlapping active pull request owns the same capability, superseded duplicate refs and finalizer artifacts are retired, and this roadmap reflects the repository through `e167ea3976da3a5825cc1cc079c994c4f887eaf6`.
+**Exit gate:** Met at the ownership-policy boundary. No overlapping pull request owns the same capability; paused expansion authorities are outside the beta merge queue; the ten-chat matrix is maintained in `docs/operations/econovaria-beta-coordination-matrix-v1.md`; and this roadmap reflects audited `main` through `f44b0735763da6700fc18513fa7026dbd95aff86`.
 
 ---
 
@@ -878,15 +892,15 @@ Required gates:
 - [x] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence. `VERIFIED_COMPLETE` through PR #250 merged as `476cfba30666b1303d32d6c2e46560483b641edf`. Deterministic committed-source secret scanning, high-severity pull-request dependency review, root and Backend CycloneDX SBOMs, SHA-256 manifests, commit-specific immutable artifacts, trusted-main provenance attestation, grouped weekly Dependabot updates, patch/exception objectives, and Repository Quality enforcement are authoritative. Final head `48414aaccf223c94c358033c883215dced666f24` passed Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, and Database Replay #358; trusted-main Supply Chain Security #10 passed attestation and retained artifact `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf`.
 - [ ] `OPS-ACCESS-001` Add leaked-password protection and staff access policy.
 - [ ] `OPS-RATE-001` Add rate limiting. `IN_PROGRESS`: shared HMAC-keyed storage, atomic consumption, reviewed Player post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. Runtime proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, cleanup, telemetry, and staging probes remain open.
-- [ ] `OPS-OBS-001` Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes.
-- [ ] `OPS-OBS-002` Add dashboards and alerts.
+- [ ] `OPS-OBS-001` Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes. `IMPLEMENTED_NOT_MERGED` on PR #287 at the contract/wrapper layer with allow-listed fields, HMAC-pseudonymous scope identifiers, request-ID propagation, bounded failure classification, and secret/body/raw-identifier rejection; shared dispatcher integration and isolated-staging runtime evidence remain open.
+- [ ] `OPS-OBS-002` Add dashboards and alerts. `IMPLEMENTED_NOT_MERGED` on PR #287 with 13 defined panels and 12 alert policies; protected provider activation and connected alert evidence remain open.
 - [ ] `OPS-BACKUP-001` Add backup retention.
 - [ ] `OPS-BACKUP-002` Create encrypted off-platform backup.
 - [ ] `OPS-RESTORE-001` Rehearse full restore.
 - [ ] `OPS-RESTORE-002` Define and rehearse RPO/RTO.
 - [x] `OPS-INCIDENT-001` Define incident severity, ownership, communications, classroom fallback, and correction procedures. `VERIFIED_COMPLETE` through PR #252 merged as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`; Incident Readiness, Repository Quality, Staging Readiness Preflight, Supply Chain Security, Admin Game Lifecycle Controls, and Database Replay passed.
-- [ ] `OPS-PERF-001` Add load fixtures and query-plan review.
-- [ ] `OPS-PERF-002` Add missing foreign-key indexes based on evidence.
+- [ ] `OPS-PERF-001` Add load fixtures and query-plan review. `IMPLEMENTED_NOT_MERGED` on PR #287 with a deterministic 30-player expected / 40-player maximum profile, plan-only isolated runner, five connected high-value query plans, and fail-closed plan review; approved isolated-staging execution remains open.
+- [ ] `OPS-PERF-002` Add missing foreign-key indexes based on evidence. `IN_PROGRESS`: PR #287 records 19 advisor notices but correctly adds no index migration because current critical tables contain only 1-15 rows and the five reviewed plans already use appropriate indexes; post-load evidence and index reconsideration remain required.
 - [ ] `OPS-SMOKE-001` Complete staging-backed Admin and Player smoke.
 
 PR #169 merged the fail-closed staging-readiness validator, protected workflow, template, and operator runbook as `ca642b1dfd6a2965612869e05b4fa1bd5840c437`. Repository Quality also enforces pinned toolchains, dependency vulnerability thresholds, package-signature checks, repository audits, and backend dependency audits. The tooling supports `OPS-STAGE-001` through `OPS-STAGE-007`, `OPS-ARTIFACT-001`/`002`, `OPS-STAGE-004`, and `OPS-RESTORE-001`/`002`, but does not claim the still-missing external environment, migration-ledger, artifact, rollback, restore, approval, or promotion evidence.
@@ -898,6 +912,8 @@ PR #169 merged the fail-closed staging-readiness validator, protected workflow, 
 ## 22. Phase 6 — Beta end-to-end validation and pilot
 
 **Goal:** Prove the complete classroom simulation with bounded users.
+
+PR #286 on `agent/beta-e2e-pilot-v1` contains a fail-closed 52-scenario harness, synthetic fixture contracts, defect reporting, redaction, and evidence digests. Its own preflight record is correctly `BLOCKED_BY_ENVIRONMENT`; harness coverage is not staging or product acceptance evidence, and no scenario below is complete.
 
 Required scenarios:
 
@@ -957,7 +973,7 @@ Pilot controls:
 
 ## 24. Player Marketplace
 
-**Status:** `PLANNED`; current surfaces remain read-only.
+**Status:** `IN_PROGRESS` on PR #249, but product-owner-paused and excluded from the production-beta merge queue. Preserve the existing branch and PR; do not merge, close, delete, or expand scope until explicit owner reactivation. Current required-workflow failures remain blockers.
 
 - [ ] `EXP-MP-001` Define listing, reservation, purchase, cancellation, settlement, fee, expiration, moderation, and dispute states.
 - [ ] `EXP-MP-002` Implement atomic listing creation with inventory reservation.
@@ -988,7 +1004,7 @@ Pilot controls:
 
 ## 26. Messaging and communication
 
-**Status:** `PLANNED`.
+**Status:** `IN_PROGRESS` on PR #248, but product-owner-paused and excluded from the production-beta merge queue. Preserve the existing branch and draft PR; do not merge, close, delete, or expand scope until explicit owner reactivation.
 
 - [ ] `EXP-MSG-001` Define teacher announcements, system messages, player threads, and Contract messages.
 - [ ] `EXP-MSG-002` Define moderation, permissions, retention, and audit.
@@ -1002,7 +1018,7 @@ Pilot controls:
 
 ## 27. Progression, reputation, and achievements
 
-**Status:** `IMPLEMENTED_NOT_MERGED` for basic activation-disabled level and achievement definitions on PR #163; authoritative reads, claims, unlocks, reputation, Admin correction, and full balance remain `PLANNED`.
+**Status:** `IN_PROGRESS` across PR #163 definition artifacts and PR #261 planning/source-snapshot work, but PR #261 is product-owner-paused and excluded from the production-beta merge queue. Authoritative reads, claims, unlocks, reputation, Admin correction, and full balance are not complete. Preserve both existing ownership boundaries and do not merge, close, delete, or expand PR #261 until explicit owner reactivation.
 
 - [ ] `EXP-PROG-001` Define experience, levels, skills, rewards, achievements, and public/private fields. `IMPLEMENTED_NOT_MERGED` in part on PR #163: ten levels and twenty achievements are machine-readable, while numeric thresholds, skills, economic rewards, privacy classification, and runtime storage remain incomplete.
 - [ ] `EXP-PROG-002` Define economic specialization without a permanently dominant path.
@@ -1053,7 +1069,7 @@ Pilot controls:
 
 **Status:** `IN_PROGRESS`. Several containment and ratchet steps are merged, but the target architecture and production operating model are not complete.
 
-- [ ] Retire all unknown legacy backend traffic. `IN_PROGRESS`: repository Player transport/source retirement is complete, while live Worker and legacy-function traffic/disposition evidence remains open.
+- [ ] Retire all unknown legacy backend traffic. `IN_PROGRESS`: repository Player transport/source retirement is complete; PR #283 adds route/transport allowlisting and audit controls, while live Worker traffic, connected auth, credential rotation, approved shutdown, and rollback evidence remain open.
 - [ ] Establish one typed versioned client. `IN_PROGRESS`: the Player runtime adapter and versioned capability contract are authoritative; Admin and remaining domains do not yet share one strict typed client.
 - [ ] Eliminate global fetch wrappers. `IN_PROGRESS`: the first global interception layer was removed and the current Admin architecture ratchet permits a maximum of 7 `window.fetch` assignments; the target remains zero.
 - [ ] Reduce MutationObservers to genuine DOM-observation requirements. `IN_PROGRESS`: explicit mounted-event work reduced the current Admin ratchet maximum to 11 observers; every remaining site still requires justification or extraction.
@@ -1064,7 +1080,7 @@ Pilot controls:
 - [ ] Add third-party processor review.
 - [ ] Measure strict-type coverage, complexity, bundle size, flaky tests, replay time, dependency age, legacy traffic, and recovery results.
 - [ ] Run quarterly restore exercises.
-- [ ] Maintain an immutable release and change-control process. `IN_PROGRESS`: branch/PR gates, repeated database replay, a fail-closed staging manifest contract, and protected workflow tooling exist; immutable artifact promotion, approvals, rollback, restore, and production evidence remain open.
+- [ ] Maintain an immutable release and change-control process. `IN_PROGRESS`: branch/PR gates, repeated database replay, fail-closed staging validation, and PR #280 immutable artifact/promotion tooling exist; distinct environment identities, connected deployment, approvals, rollback, restore, and production evidence remain open.
 
 ---
 
@@ -1112,6 +1128,16 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-20 — Production-beta controller and ten-workstream reconciliation
+
+- Audited `main` at `f44b0735763da6700fc18513fa7026dbd95aff86`, `CONTRIBUTING.md`, the authoritative roadmap, every open PR, the complete remote-branch inventory, divergence, changed files, migrations, and current-head workflow evidence.
+- Established Chat 1 as sole roadmap and merge-gate authority on draft PR #281 and added `docs/operations/econovaria-beta-coordination-matrix-v1.md` plus `docs/operations/econovaria-remote-branch-inventory-v1.md`.
+- Reconciled all ten workstreams: Chat 2 owns PR #280; Chat 3 PR #282; Chat 4 PR #283; Chat 5 PR #284; Chat 6 PR #287; Chat 7 PR #285; Chat 8 PR #244; Chat 9 PR #163; and Chat 10 PR #286. Draft PR authorities exist on every active implementation branch, preventing silent ownership and replacement branches.
+- Returned PR #248 to draft and recorded product-owner pause gates on PRs #248, #249, and #261 without closing or deleting them. They remain sole expansion authorities but are excluded from the production-beta merge queue.
+- Rejected current completion and merge claims lacking evidence: PR #244 still contains patch carriers with final-head workflows requiring action; PR #163 remains stale, non-mergeable, non-executable, and without current-head CI; PR #284 has cancelled required workflows; PRs #283, #285, and #286 remain running or externally blocked; and PRs #248, #249, and #261 are paused.
+- PRs #280 and #282 contain bounded repository release/reconciliation tooling, but their merges would not prove isolated staging, migration application, rollback, restore, live retirement, or beta completion.
+- No application feature was implemented by Chat 1 and no production schema, credential, environment, deployment, Worker, or runtime was changed in this controller reconciliation.
 
 ### 2026-07-20 — Default-branch incident-finalizer retirement
 
