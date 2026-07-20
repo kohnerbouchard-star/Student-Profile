@@ -15,6 +15,13 @@ const TEXT_EXTENSIONS = new Set([
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const SUPABASE_ORIGIN_PATTERN = /https:\/\/[a-z0-9-]+\.supabase\.co/gi;
 const CLOUDFLARE_WORKER_PATTERN = /https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/gi;
+export const BROWSER_RUNTIME_ROOTS = [
+  "index.html",
+  "frontend",
+  "admin",
+  "player-terminal",
+  "auth",
+];
 
 export class EnvironmentNeutralityError extends Error {
   constructor(findings) {
@@ -50,7 +57,7 @@ function recordMatches({ source, relativePath, pattern, label, findings }) {
 export async function verifyEnvironmentNeutralFrontend({
   repoRoot,
   auditPath = "docs/operations/production-manifest-2026-07-17.json",
-  roots = ["index.html", "frontend", "admin"],
+  roots = BROWSER_RUNTIME_ROOTS,
 }) {
   const audit = JSON.parse(await readFile(path.join(repoRoot, auditPath), "utf8"));
   const knownProjectRef = audit?.supabase?.projectRef;
