@@ -1,0 +1,94 @@
+.player-terminal-recovery-state {
+  position: fixed;
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  z-index: 10000;
+  display: grid;
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - 32px);
+  gap: 10px;
+  overflow: auto;
+  padding: 18px;
+  color: #eefbff;
+  background: rgba(3, 12, 24, .98);
+  border: 1px solid rgba(255, 165, 0, .62);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, .48), inset 3px 0 rgba(255, 165, 0, .82);
+  backdrop-filter: blur(18px);
+}
+
+.player-terminal-recovery-state[hidden] {
+  display: none !important;
+}
+
+.player-terminal-recovery-state[data-player-recovery-state="offline"],
+.player-terminal-recovery-state[data-player-recovery-state="game-ended"] {
+  border-color: rgba(248, 113, 113, .72);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, .48), inset 3px 0 rgba(248, 113, 113, .9);
+}
+
+.player-terminal-recovery-state[data-player-recovery-state="restored"],
+.player-terminal-recovery-state[data-player-recovery-state="committed-refresh-pending"] {
+  border-color: rgba(74, 222, 128, .68);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, .48), inset 3px 0 rgba(74, 222, 128, .88);
+}
+
+.player-terminal-recovery-state small {
+  color: var(--terminal-amber, #ffa500);
+  font: 900 9px/1.2 var(--player-terminal-font-ui, system-ui, sans-serif);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.player-terminal-recovery-state h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.12;
+}
+
+.player-terminal-recovery-state p {
+  margin: 0;
+  color: #a8c5d2;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.player-terminal-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.player-terminal-recovery-state button {
+  min-height: 44px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.player-terminal-recovery-state button:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgba(0, 212, 255, .72) !important;
+}
+
+.player-terminal-recovery-state button:disabled {
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  .player-terminal-recovery-state {
+    right: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 112px - env(safe-area-inset-bottom));
+    padding: 15px;
+  }
+}
+
+@media (forced-colors: active) {
+  .player-terminal-recovery-state {
+    border: 2px solid CanvasText;
+    box-shadow: none;
+  }
+}
