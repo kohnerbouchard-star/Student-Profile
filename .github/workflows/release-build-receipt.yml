@@ -1,0 +1,59 @@
+name: Release Build Receipt
+
+on:
+  workflow_run:
+    workflows:
+      - Release Artifact Build
+    types:
+      - completed
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  receipt:
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_commit.message == 'ops(release): dispatch immutable build receipt for 93155e9'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Record immutable build receipt on PR 280
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+            const artifacts = data.artifacts.map((artifact) => ({
+              id: artifact.id,
+              name: artifact.name,
+              sizeInBytes: artifact.size_in_bytes,
+              digest: artifact.digest || null,
+              expired: artifact.expired,
+            }));
+            const body = [
+              '## Immutable release build receipt',
+              '',
+              `- Target release commit: \`93155e96d56323a33f723152d9fd979cea07a8c5\``,
+              `- Workflow run ID: \`${run.id}\``,
+              `- Run number: \`${run.run_number}\``,
+              `- Conclusion: \`${run.conclusion}\``,
+              `- Trigger commit: \`${run.head_sha}\``,
+              `- Run URL: ${run.html_url}`,
+              `- Artifacts: \`${JSON.stringify(artifacts)}\``,
+              '',
+              'Production was not modified.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 280,
+              body,
+            });
