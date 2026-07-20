@@ -77,6 +77,13 @@ function lockControl(control, reason) {
   control.setAttribute?.("title", reason);
 }
 
+function dispatchRecoveryState(runtime, state) {
+  if (typeof runtime?.CustomEvent !== "function") return;
+  runtime.dispatchEvent?.(new runtime.CustomEvent("econovaria:player-recovery-state-changed", {
+    detail: { kind: state.kind, lockMutations: state.lockMutations },
+  }));
+}
+
 export function installPlayerRecoveryController({
   terminal,
   config = {},
@@ -94,13 +101,17 @@ export function installPlayerRecoveryController({
   const sessionInvalidEvent = String(config.sessionInvalidEvent || "econovaria:player-session-invalid");
   const sessionReadyEvent = String(config.sessionReadyEvent || "econovaria:player-session-ready");
   const processedToasts = new WeakSet();
-  const region = ensureRecoveryRegion(mount, runtime);
 
   let currentState = null;
   let countdownTimer = 0;
   let autoDismissTimer = 0;
   let retryStartedAt = 0;
   let destroyed = false;
+  let lastRouteErrorText = "";
+
+  function region() {
+    return ensureRecoveryRegion(mount, runtime);
+  }
 
   function clearTimer(name) {
     const value = name === "countdown" ? countdownTimer : autoDismissTimer;
@@ -134,11 +145,13 @@ export function installPlayerRecoveryController({
     clearTimer("dismiss");
     currentState = null;
     retryStartedAt = 0;
+    lastRouteErrorText = "";
     unlockMutations();
-    if (region) {
-      region.hidden = true;
-      region.dataset.playerRecoveryState = "";
-      region.replaceChildren?.();
+    const activeRegion = mount.querySelector?.("[data-player-recovery-region]");
+    if (activeRegion) {
+      activeRegion.hidden = true;
+      activeRegion.dataset.playerRecoveryState = "";
+      activeRegion.replaceChildren?.();
     }
     return true;
   }
@@ -163,7 +176,9 @@ export function installPlayerRecoveryController({
   }
 
   function render() {
-    if (!region || !currentState) return;
+    if (!currentState) return;
+    const activeRegion = region();
+    if (!activeRegion) return;
     const documentLike = safeDocument(mount, runtime);
     if (!documentLike?.createElement) return;
 
@@ -204,11 +219,11 @@ export function installPlayerRecoveryController({
       actions.append?.(dismissButton);
     }
 
-    region.replaceChildren?.(eyebrow, title, message, actions);
-    region.hidden = false;
-    region.dataset.playerRecoveryState = currentState.kind;
-    region.setAttribute?.("role", currentState.tone === "red" ? "alert" : "status");
-    region.setAttribute?.("aria-live", currentState.tone === "red" ? "assertive" : "polite");
+    activeRegion.replaceChildren?.(eyebrow, title, message, actions);
+    activeRegion.hidden = false;
+    activeRegion.dataset.playerRecoveryState = currentState.kind;
+    activeRegion.setAttribute?.("role", currentState.tone === "red" ? "alert" : "status");
+    activeRegion.setAttribute?.("aria-live", currentState.tone === "red" ? "assertive" : "polite");
     updateMutationLock();
   }
 
@@ -240,15 +255,13 @@ export function installPlayerRecoveryController({
     if (!state.persistent) {
       autoDismissTimer = runtime.setTimeout?.(() => dismiss(), 4000) || 0;
     }
-    runtime.dispatchEvent?.(new runtime.CustomEvent("econovaria:player-recovery-state-changed", {
-      detail: { kind: state.kind, lockMutations: state.lockMutations },
-    }));
+    dispatchRecoveryState(runtime, state);
     return state;
   }
 
   function inspectMount() {
     if (destroyed) return;
-    if (currentState?.lockMutations) updateMutationLock();
+    if (currentState) render();
 
     for (const toast of mount.querySelectorAll?.(".player-terminal-toast") || []) {
       if (processedToasts.has(toast)) continue;
@@ -258,13 +271,17 @@ export function installPlayerRecoveryController({
     }
 
     const routeError = mount.querySelector?.(".player-terminal-route-error:not([data-player-recovery-region])");
-    if (routeError) {
+    const routeErrorText = String(routeError?.textContent || "").trim();
+    if (routeErrorText && routeErrorText !== lastRouteErrorText) {
+      lastRouteErrorText = routeErrorText;
       const state = classifyPlayerRecoverySignal({
         code: "ROUTE_DATA_UNAVAILABLE",
-        message: routeError.textContent,
+        message: routeErrorText,
         online: runtime?.navigator?.onLine !== false,
       });
       if (state) show(state);
+    } else if (!routeErrorText) {
+      lastRouteErrorText = "";
     }
   }
 
@@ -290,7 +307,9 @@ export function installPlayerRecoveryController({
     clearTimer("countdown");
     clearTimer("dismiss");
     unlockMutations();
-    if (region) region.hidden = true;
+    currentState = null;
+    const activeRegion = mount.querySelector?.("[data-player-recovery-region]");
+    if (activeRegion) activeRegion.hidden = true;
   }
 
   function handleSessionReady() {
@@ -332,7 +351,7 @@ export function installPlayerRecoveryController({
       runtime.removeEventListener?.(sessionInvalidEvent, handleSessionInvalid);
       runtime.removeEventListener?.(sessionReadyEvent, handleSessionReady);
       unlockMutations();
-      region?.remove?.();
+      mount.querySelector?.("[data-player-recovery-region]")?.remove?.();
     },
   });
 }
