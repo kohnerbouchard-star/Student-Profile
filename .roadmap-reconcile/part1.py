@@ -23,7 +23,7 @@ def item(item_id, line):
 def row(label, line):
     rx(rf'^\| {re.escape(label)} \|.*$', line, f'table row {label}')
 
-exact('**Last baseline audit:** 2026-07-19', '**Last baseline audit:** 2026-07-20')
+exact('**Last baseline audit:** 2026-07-19  ', '**Last baseline audit:** 2026-07-20')
 exact('**Current audited main baseline:** `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`', '**Current audited main baseline:** `4e3c123c98c37a2b5d26a93e67bfb31c3b722925`')
 row('Player runtime cutover and legacy source removal', '| Player runtime cutover and legacy source removal | `VERIFIED_COMPLETE` for repository code; operations remain `IN_PROGRESS` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; PR #222 merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`; connected isolated staging and live Worker retirement remain release gates |')
 row('Production integration donor', '| Player runtime adapter | `VERIFIED_COMPLETE` | Cleaned PR #141 merged as `566d99fab5668cf42d6275ec8d12c580239a3137`; capability preflight and explicit `classroom-api` routing are authoritative |')
