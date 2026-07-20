@@ -1,0 +1,42 @@
+name: Generate Beta Remote Branch Inventory
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beta-remote-branch-inventory
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/beta-program-controller-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controller branch with full refs
+        uses: actions/checkout@v7
+        with:
+          ref: docs/beta-program-controller-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate complete remote branch inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin --prune '+refs/heads/*:refs/remotes/origin/*'
+          python scripts/generate-beta-remote-branch-inventory.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/generate-beta-remote-branch-inventory.yml
+          git rm scripts/generate-beta-remote-branch-inventory.py
+          git add docs/operations/econovaria-remote-branch-inventory-v1.md
+          git diff --cached --check
+          git commit -m "docs(program): record complete remote branch inventory"
+          git push origin HEAD:docs/beta-program-controller-v1
