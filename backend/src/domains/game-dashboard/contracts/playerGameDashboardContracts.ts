@@ -17,14 +17,9 @@ import type {
 import type {
   StorePurchaseHistoryItemDto,
 } from "../../store/contracts/storePurchaseContracts.ts";
-import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type {
-  ListUnseenStoryCutsceneDeliveriesInput,
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-  StoryNotificationDeliveryWithNotification,
-  StoryNotificationDisplayMode,
-  StoryNotificationPriority,
 } from "../../storylines/contracts/storyNotificationContracts.ts";
 
 export const GAME_PUBLIC_REALTIME_EVENTS = [
@@ -163,19 +158,6 @@ export interface PlayerGameDashboardPublicStoreListingDto {
   readonly updatedAt: string;
 }
 
-export interface PlayerGameDashboardUnseenCutsceneDto {
-  readonly deliveryId: string;
-  readonly notificationId: string;
-  readonly title: string;
-  readonly summary: string;
-  readonly priority: StoryNotificationPriority | string;
-  readonly displayMode: StoryNotificationDisplayMode | string;
-  readonly payload: JsonObject;
-  readonly publishedAt: string;
-  readonly deliveredAt: string;
-  readonly requiresAcknowledgement: boolean;
-}
-
 export const PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS = [
   "mark_cutscene_seen",
   "mark_cutscene_dismissed",
@@ -241,7 +223,8 @@ export interface PlayerGameDashboardSnapshot {
     readonly contracts: readonly PlayerContractDto[];
     readonly storeListings: readonly PlayerGameDashboardPublicStoreListingDto[];
   };
-  readonly unseenCutscenes: readonly PlayerGameDashboardUnseenCutsceneDto[];
+  /** Legacy dashboard cutscene transport is retired; use /players/me/story-deliveries. */
+  readonly unseenCutscenes: readonly never[];
 }
 
 export interface PlayerGameDashboardResponseBody
@@ -260,14 +243,7 @@ export interface PlayerGameDashboardRepository {
   ): Promise<PlayerGameDashboardSnapshot>;
 }
 
-export interface PlayerGameDashboardStoryNotificationReader {
-  listUnseenStoryCutsceneDeliveries(
-    input: ListUnseenStoryCutsceneDeliveriesInput,
-  ): Promise<readonly StoryNotificationDeliveryWithNotification[]>;
-}
-
-export interface PlayerGameDashboardStoryNotificationRepository
-  extends PlayerGameDashboardStoryNotificationReader {
+export interface PlayerGameDashboardStoryNotificationRepository {
   markNotificationDeliverySeen(
     input: MarkNotificationDeliveryInput,
   ): Promise<StoryNotificationDeliveryRecord>;

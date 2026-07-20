@@ -114,6 +114,7 @@ export function createPlayerTerminal({ mount, config }) {
 
   function selectorForElement(element) {
     if (!(element instanceof HTMLElement)) return "";
+    if (element.id) return `#${CSS.escape(element.id)}`;
     if (element.closest("[data-player-notification-drawer]")) return '[data-player-local-action="toggle-notifications"]';
     if (element.closest(".player-terminal-mobile-sheet")) return '[data-player-local-action="toggle-mobile-menu"]';
     const attributes = [
@@ -546,8 +547,18 @@ export function createPlayerTerminal({ mount, config }) {
     const interactiveTarget = event.target.closest("button, a, summary, input, select, textarea");
 
     if (stateAtClick.modal && event.target.matches("[data-player-modal-backdrop]")) {
-      restoreFocus();
-      store.setState({ modal: null });
+      if (stateAtClick.modal.type === "storyCutscene") {
+        mount.dispatchEvent(new CustomEvent("econovaria:player-story-close-request", {
+          bubbles: true,
+          detail: {
+            deliveryId: stateAtClick.modal.delivery?.deliveryId || "",
+            requiresAcknowledgement: stateAtClick.modal.delivery?.requiresAcknowledgement === true
+          }
+        }));
+      } else {
+        restoreFocus();
+        store.setState({ modal: null });
+      }
       return;
     }
 
@@ -933,6 +944,16 @@ export function createPlayerTerminal({ mount, config }) {
 
   function closeTopOverlay() {
     const state = store.getState();
+    if (state.modal?.type === "storyCutscene") {
+      mount.dispatchEvent(new CustomEvent("econovaria:player-story-close-request", {
+        bubbles: true,
+        detail: {
+          deliveryId: state.modal.delivery?.deliveryId || "",
+          requiresAcknowledgement: state.modal.delivery?.requiresAcknowledgement === true
+        }
+      }));
+      return true;
+    }
     if (state.modal) {
       restoreFocus();
       store.setState({ modal: null });
@@ -1030,6 +1051,20 @@ export function createPlayerTerminal({ mount, config }) {
     refresh: loadData,
     connectSession,
     getState: store.getState,
+    subscribe: store.subscribe,
+    openModal(modal, opener = null) {
+      if (opener) rememberFocus(opener);
+      store.setState((state) => ({
+        ...state,
+        ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false },
+        modal
+      }));
+    },
+    closeModal() {
+      restoreFocus();
+      store.setState({ modal: null });
+    },
+    showToast,
     navigate(route) {
       const state = store.getState();
       if (state.status === "ready" && !isRouteEnabled(state.data?.capabilities, route)) return false;

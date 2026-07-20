@@ -63,6 +63,8 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   notifications: { method: "GET", path: "/notifications" },
   notificationsPage: { method: "GET", path: "/notifications" },
   notificationsRead: { method: "POST", path: "/notifications/read" },
+  storyDeliveries: { method: "GET", path: "/story-deliveries" },
+  storyDeliveryState: { method: "POST", path: "/story-deliveries/:deliveryId/state" },
 });
 
 export function resolveEndpoint(endpoint, params = {}) {
