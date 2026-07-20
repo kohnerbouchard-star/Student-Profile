@@ -3,8 +3,8 @@
 **Date:** 2026-07-20  
 **Authority:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Owned item:** `OPS-SUPPLY-001`  
-**Status:** `IN_PROGRESS`  
-**Branch:** `agent/supply-chain-security-v1`
+**Status:** `VERIFIED_COMPLETE`  
+**Authority:** PR #250 / merge `476cfba30666b1303d32d6c2e46560483b641edf`
 
 ## Ownership
 
@@ -37,3 +37,17 @@ The tranche must deliver all of the following before merge:
 ## Completion boundary
 
 Repository controls and workflow evidence can complete this item. GitHub organization settings, isolated staging, artifact promotion, runtime observability, backup/restore, and production approval remain governed by their separate roadmap items.
+
+
+## Completion evidence
+
+- Implementation PR: #250.
+- Immutable merge commit: `476cfba30666b1303d32d6c2e46560483b641edf`.
+- Final implementation head: `48414aaccf223c94c358033c883215dced666f24`.
+- Pull-request validation: Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, Database Replay #358, Staging Readiness Preflight #107, Exchange Calendar Runtime #216, Required Game Market Timezone #245, and Admin Game Lifecycle Controls #43 passed.
+- Trusted-main validation: Supply Chain Security #10, run `29715658656`, completed successfully at `2026-07-20T04:00:06Z`.
+- Provenance: `Attest SBOM bundle provenance` completed successfully.
+- Immutable artifact: `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf` (artifact `8450479870`).
+- Machine-readable evidence: `docs/operations/evidence/supply-chain-security-476cfba30666b1303d32d6c2e46560483b641edf.json`.
+
+The bounded repository supply-chain subsection is complete. Isolated staging, immutable application promotion, environment approvals, runtime observability, backup/restore, and production release remain separate roadmap gates.
