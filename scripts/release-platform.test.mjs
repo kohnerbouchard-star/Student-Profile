@@ -198,12 +198,13 @@ test("release manifest validates exact artifact bytes and repository facts", asy
   );
 });
 
-test("production promotion requires exact staging evidence and rollback target", async (t) => {
+test("production promotion requires the exact staged manifest, configuration, artifact ID, and rollback target", async (t) => {
   const data = await fixture();
   t.after(() => rm(data.repoRoot, { recursive: true, force: true }));
   const environmentManifestEvidence = await evidence(data.repoRoot, "production-environment.json", "production environment record");
   const rollbackManifestEvidence = await evidence(data.repoRoot, "rollback-release.json", "previous immutable release");
   const stagingEvidencePointer = await evidence(data.repoRoot, "staging-smoke.json", "player=pass admin=pass");
+  const releaseManifestSha256 = sha256(await readFile(data.releaseManifestPath));
   const record = {
     schemaVersion: 1,
     promotionId: "promotion-production-20260720-001",
@@ -212,8 +213,10 @@ test("production promotion requires exact staging evidence and rollback target",
     sourceCommit: data.manifest.source.commit,
     sourceRunId: "123",
     sourceArtifactId: "456",
-    releaseManifestSha256: sha256(await readFile(data.releaseManifestPath)),
+    releaseManifestSha256,
     artifactSetSha256: data.manifest.artifactSetSha256,
+    configurationVersion: data.manifest.configuration.version,
+    configurationSha256: data.manifest.configuration.sha256,
     environmentManifestEvidence,
     approval: {
       githubEnvironment: "production",
@@ -232,7 +235,11 @@ test("production promotion requires exact staging evidence and rollback target",
     },
     stagingEvidence: {
       releaseId: data.manifest.releaseId,
+      sourceRunId: "123",
+      sourceArtifactId: "456",
+      releaseManifestSha256,
       artifactSetSha256: data.manifest.artifactSetSha256,
+      configurationSha256: data.manifest.configuration.sha256,
       playerSmoke: "pass",
       adminSmoke: "pass",
       evidence: stagingEvidencePointer,
@@ -247,6 +254,7 @@ test("production promotion requires exact staging evidence and rollback target",
     expectedEnvironment: "production",
   });
   assert.equal(validated.targetEnvironment, "production");
+
   const incomplete = structuredClone(record);
   delete incomplete.stagingEvidence;
   await assert.rejects(
@@ -259,6 +267,20 @@ test("production promotion requires exact staging evidence and rollback target",
       expectedEnvironment: "production",
     }),
     /requires stagingEvidence/,
+  );
+
+  const substitutedArtifact = structuredClone(record);
+  substitutedArtifact.stagingEvidence.sourceArtifactId = "999";
+  await assert.rejects(
+    validatePromotionRecord({
+      record: substitutedArtifact,
+      releaseManifest: data.manifest,
+      releaseManifestPath: data.releaseManifestPath,
+      artifactRoot: data.artifactRoot,
+      repoRoot: data.repoRoot,
+      expectedEnvironment: "production",
+    }),
+    /sourceArtifactId mismatch/,
   );
 });
 
