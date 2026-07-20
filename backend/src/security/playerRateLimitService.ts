@@ -17,7 +17,9 @@ import {
 import { SupabaseRateLimitRepository } from "./supabaseRateLimitRepository.ts";
 
 declare const Deno: {
-  readonly env: { get(name: string): string | undefined };
+  readonly env: {
+    get(name: string): string | undefined;
+  };
 };
 
 export interface PlayerRateLimitRuntimeConfig {
@@ -56,7 +58,9 @@ export interface EnforceScopedRateLimitInput {
 
 export interface PlayerRateLimitServiceDependencies {
   readonly readConfig?: () => PlayerRateLimitRuntimeConfig;
-  readonly createRepository?: (client: EdgeSupabaseClient) => RateLimitRepository;
+  readonly createRepository?: (
+    client: EdgeSupabaseClient,
+  ) => RateLimitRepository;
 }
 
 export function enforcePlayerRateLimit(
@@ -101,7 +105,10 @@ export async function enforcePreAuthRateLimit(
   }, config.hmacSecret);
   const repository = dependencies.createRepository
     ? dependencies.createRepository(client)
-    : new SupabaseRateLimitRepository(client, "consume_pre_auth_request_rate_limits_v1");
+    : new SupabaseRateLimitRepository(
+      client,
+      "consume_pre_auth_request_rate_limits_v1",
+    );
   return repository.consume(buckets);
 }
 
@@ -109,10 +116,18 @@ export function readPlayerRateLimitConfig(
   getEnv: (name: string) => string | undefined = Deno.env.get,
 ): PlayerRateLimitRuntimeConfig {
   const hmacSecret = getEnv("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ?? "";
-  const header = (getEnv("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "").trim().toLowerCase();
+  const header = (getEnv("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "")
+    .trim().toLowerCase();
+
   validateRateLimitHmacSecret(hmacSecret);
-  if (!TRUSTED_IP_HEADERS.includes(header as TrustedIpHeader)) throw invalidConfig();
-  return { hmacSecret, trustedIpHeader: header as TrustedIpHeader };
+  if (!TRUSTED_IP_HEADERS.includes(header as TrustedIpHeader)) {
+    throw invalidConfig();
+  }
+
+  return {
+    hmacSecret,
+    trustedIpHeader: header as TrustedIpHeader,
+  };
 }
 
 export async function enforceScopedRateLimit(
@@ -136,5 +151,8 @@ export async function enforceScopedRateLimit(
 }
 
 function invalidConfig(): RateLimitError {
-  return new RateLimitError("invalid_rate_limit_config", "Request rate limiting is not configured.");
+  return new RateLimitError(
+    "invalid_rate_limit_config",
+    "Request rate limiting is not configured.",
+  );
 }
