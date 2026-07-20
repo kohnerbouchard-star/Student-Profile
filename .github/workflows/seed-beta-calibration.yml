@@ -98,6 +98,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Generated bounded pack is already current."
           else
-            git commit -m "feat(seed): materialize calibrated executable beta pack [skip ci]"
+            git commit -m "feat(seed): materialize calibrated executable beta pack"
             git push origin HEAD:agent/seed-content-foundation-v1
           fi
