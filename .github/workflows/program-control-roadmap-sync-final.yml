@@ -1,0 +1,45 @@
+name: Program Control Roadmap Final Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/program-control-roadmap-sync-final.trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: program-control-roadmap-final-sync
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: github.event.head_commit.message == 'chore(program): trigger final roadmap synchronization'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Synchronize Phase 0 metadata and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          test -f .github/program-control-roadmap-sync-final.trigger
+          test -f scripts/program-control-roadmap-sync-final.py
+          python scripts/program-control-roadmap-sync-final.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/program-control-roadmap-sync-final.yml
+          git rm .github/program-control-roadmap-sync-final.trigger
+          git rm scripts/program-control-roadmap-sync-final.py
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
+          git diff --cached --check
+          git commit -m "docs(program): synchronize final Phase 0 ownership"
+          git push origin HEAD:main
