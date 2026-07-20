@@ -1,0 +1,178 @@
+
+> econovaria@0.0.0 audit:seed-content
+> npm run audit:seed-content-active-candidates && npm run audit:seed-content-arrivals && npm run audit:seed-content-canonicalization && npm run audit:seed-content-exchanges && npm run audit:seed-content-core-gameplay && npm run audit:seed-content-core-coverage && npm run audit:seed-content-universe && npm run audit:seed-content-editorial && npm run audit:seed-content-identities && npm run audit:seed-content-simulation-policy && npm run audit:seed-content-simulations && npm run audit:seed-content-issuers && npm run audit:seed-content-financial && npm run test:seed-content-preflight && npm run preflight:seed-content
+
+
+> econovaria@0.0.0 audit:seed-content-active-candidates
+> node scripts/generate-remaining-active-market-candidates.mjs --check
+
+Verified six remaining candidates: dravenlok:24/18, eldoran:24/18, lumenor:24/18, syndalis:24/18, valerion:24/18, xalvoria:24/18.
+
+> econovaria@0.0.0 audit:seed-content-arrivals
+> node scripts/generate-arrival-foundation-content.mjs --check
+
+Verified ten arrival packages, messages, tutorials, and stabilization Contracts.
+
+> econovaria@0.0.0 audit:seed-content-canonicalization
+> node scripts/apply-seed-market-canonicalization.mjs --check
+
+Verified seed-market canonicalization across the generator and active candidate records.
+
+> econovaria@0.0.0 audit:seed-content-exchanges
+> node scripts/seed-exchange-calendar-audit.mjs
+
+Verified ten exchange calendars with the Asia/Seoul weekday 08:00-17:00 baseline; holiday activation remains pending.
+
+> econovaria@0.0.0 audit:seed-content-core-gameplay
+> node scripts/generate-core-gameplay-content.mjs --check
+
+Verified core gameplay registries: {"contracts":40,"products":10,"levels":10,"achievements":20,"events":25,"chains":10,"crisisArcs":5,"interactions":50,"newsTemplates":30,"notificationTemplates":30}.
+
+> econovaria@0.0.0 audit:seed-content-core-coverage
+> node scripts/seed-core-content-coverage-audit.mjs --check
+
+Verified core-content coverage: 11/11 targets met; gap 0.
+
+> econovaria@0.0.0 audit:seed-content-universe
+> node scripts/generate-seed-market-universe.mjs --check
+
+Verified 3,200 instruments across 10 country files; 1675 stable issuers or administrators.
+
+> econovaria@0.0.0 audit:seed-content-editorial
+> node scripts/seed-content-universe-editorial-audit.mjs --check
+
+Verified editorial screen: 0 blockers and 11 warning groups.
+
+> econovaria@0.0.0 audit:seed-content-identities
+> node scripts/seed-market-identity-reconciliation-summary.mjs --check
+
+Verified 240 active identities with 0 blockers.
+
+> econovaria@0.0.0 audit:seed-content-simulation-policy
+> node scripts/apply-seed-simulation-retention-policy.mjs --check
+
+Verified simulation evidence retention policy.
+
+> econovaria@0.0.0 audit:seed-content-simulations
+> node scripts/build-northreach-simulation-input.mjs --check && node scripts/reconcile-seed-simulation-evidence.mjs --check
+
+Verified deterministic Northreach simulation input.
+Verified retained evidence for 4 market simulations.
+
+> econovaria@0.0.0 audit:seed-content-issuers
+> node scripts/seed-content-issuer-audit.mjs
+
+┌─────────┬──────────────┬─────────────┬─────────────────────┬─────────┬─────────────────┬────────┐
+│ (index) │ country      │ instruments │ uniqueInstrumentIds │ issuers │ uniqueIssuerIds │ issues │
+├─────────┼──────────────┼─────────────┼─────────────────────┼─────────┼─────────────────┼────────┤
+│ 0       │ 'dravenlok'  │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 1       │ 'eldoran'    │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 2       │ 'lumenor'    │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 3       │ 'northreach' │ '24/24'     │ 24                  │ '21/21' │ 21              │ 0      │
+│ 4       │ 'solvend'    │ '24/24'     │ 24                  │ '17/17' │ 17              │ 0      │
+│ 5       │ 'syndalis'   │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 6       │ 'thaloris'   │ '24/24'     │ 24                  │ '17/17' │ 17              │ 0      │
+│ 7       │ 'valerion'   │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 8       │ 'xalvoria'   │ '24/24'     │ 24                  │ '18/18' │ 18              │ 0      │
+│ 9       │ 'yrethia'    │ '24/24'     │ 24                  │ '17/17' │ 17              │ 0      │
+└─────────┴──────────────┴─────────────┴─────────────────────┴─────────┴─────────────────┴────────┘
+Issuer audit passed for 10 active-market candidates.
+
+> econovaria@0.0.0 audit:seed-content-financial
+> node scripts/seed-content-solvend-financial-audit.mjs
+
+Solvend financial audit passed: 17 issuers, 24 instruments, complete enrichment coverage, normalized weights, and valid arithmetic.
+
+> econovaria@0.0.0 test:seed-content-preflight
+> node --test scripts/seed-content-preflight.test.mjs
+
+TAP version 13
+# Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
+ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
+  ---
+  duration_ms: 111.1091
+  type: 'test'
+  ...
+# Subtest: preflight report is deterministic for unchanged inputs
+ok 2 - preflight report is deterministic for unchanged inputs
+  ---
+  duration_ms: 144.370136
+  type: 'test'
+  ...
+# Subtest: production environment fails closed for the unauthorized design pack
+ok 3 - production environment fails closed for the unauthorized design pack
+  ---
+  duration_ms: 68.295681
+  type: 'test'
+  ...
+# Subtest: staging mode remains blocked until executable content is complete
+ok 4 - staging mode remains blocked until executable content is complete
+  ---
+  duration_ms: 67.209676
+  type: 'test'
+  ...
+# Subtest: reusable definitions reject runtime ownership fields and UUID values
+ok 5 - reusable definitions reject runtime ownership fields and UUID values
+  ---
+  duration_ms: 0.374782
+  type: 'test'
+  ...
+# Subtest: definition arrays reject duplicate stable keys
+ok 6 - definition arrays reject duplicate stable keys
+  ---
+  duration_ms: 0.180338
+  type: 'test'
+  ...
+# Subtest: declared paths cannot escape the content root
+ok 7 - declared paths cannot escape the content root
+  ---
+  duration_ms: 0.481031
+  type: 'test'
+  ...
+# Subtest: operator must provide an explicit valid environment
+ok 8 - operator must provide an explicit valid environment
+  ---
+  duration_ms: 0.254687
+  type: 'test'
+  ...
+# Subtest: simulation manifests normalize both supported checksum schemas
+ok 9 - simulation manifests normalize both supported checksum schemas
+  ---
+  duration_ms: 0.561301
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 466.772012
+
+> econovaria@0.0.0 preflight:seed-content
+> node scripts/seed-content-preflight.mjs --environment test --mode design
+
+Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.2.0-design
+Environment: test
+Mode: design
+JSON files checked: 93
+Errors: 0; blockers: 16; warnings: 0
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-package-viability-simulation, skills-and-credentials, class-scoring-model, progression-persistence.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is definition-only; dependencies: starting-value-calibration, housing-cost-simulation, relationship-persistence, authoritative-instantiation-route.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: banking-products is definition-only; dependencies: banking-write-capability, rate-and-affordability-simulation.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: contracts is definition-only; dependencies: backend-contract-lifecycle, reward-calibration, targeting-capability-map.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: events-news-interactions is definition-only; dependencies: event-application-authority, narrative-persistence, effect-capability-map.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: exchanges is definition-only; dependencies: market-calendar-policy, backend-exchange-support.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: industries-and-commodities is definition-only; dependencies: subindustry-editorial-review, benchmark-methodology-review.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: issuers is definition-only; dependencies: financial-profile-enrichment-six-countries, issuer-runtime-schema.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: locations is blocked; dependencies: active-map-artwork, map-coordinate-verification, adjacency-verification, runtime-location-schema.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: market-instruments is definition-only; dependencies: instrument-capability-mapping, financial-calibration-six-countries, market-simulation-six-countries, bounded-active-market-approval.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: progression is definition-only; dependencies: progression-persistence, threshold-calibration.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: routes is blocked; dependencies: map-verification, route-runtime-model.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: staging-import is blocked; dependencies: backend-baseline, stable-id-storage, import-schema-mapping, rollback-rehearsal.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is definition-only; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration, recipe-approval.
+[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is definition-only; dependencies: route-capability-map, notification-deduplication, tutorial-completion-persistence.
+[BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
+Result: DESIGN_VALID_WITH_BLOCKERS

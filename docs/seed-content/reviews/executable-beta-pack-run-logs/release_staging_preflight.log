@@ -1,0 +1,5 @@
+
+> econovaria@0.0.0 preflight:staging
+> node scripts/deployment-readiness-preflight.mjs
+
+--manifest is required

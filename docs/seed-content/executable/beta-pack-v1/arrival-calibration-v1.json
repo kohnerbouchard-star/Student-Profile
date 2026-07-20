@@ -76,7 +76,7 @@
         "weeklyOrdinary": 53
       },
       "attendanceRewards": {
-        "late": 1,
+        "late": 0,
         "maximumNormalWeeklyAttendanceIncome": 5,
         "present": 1
       },
@@ -140,7 +140,7 @@
         "weeklyOrdinary": 49
       },
       "attendanceRewards": {
-        "late": 1,
+        "late": 0,
         "maximumNormalWeeklyAttendanceIncome": 5,
         "present": 1
       },
@@ -268,7 +268,7 @@
         "weeklyOrdinary": 55
       },
       "attendanceRewards": {
-        "late": 1,
+        "late": 0,
         "maximumNormalWeeklyAttendanceIncome": 5,
         "present": 1
       },

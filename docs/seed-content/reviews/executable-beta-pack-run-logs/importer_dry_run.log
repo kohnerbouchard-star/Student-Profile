@@ -1,0 +1,48 @@
+
+> econovaria@0.0.0 seed:beta:dry-run
+> node scripts/seed-beta-importer.mjs --mode dry-run --environment staging
+
+{
+  "result": "DRY_RUN_COMPLETE",
+  "validation": {
+    "schemaVersion": "econovaria-beta-pack-validation-report-v1",
+    "packId": "econovaria.beta-seed-pack.v1",
+    "version": "1.0.0-beta",
+    "valid": true,
+    "stagingStructurallyReady": true,
+    "summary": {
+      "errors": 0,
+      "warnings": 0,
+      "marketInstruments": 240,
+      "storeItems": 50,
+      "contractChains": 10,
+      "locations": 50,
+      "physicalItems": 144,
+      "campaignEvents": 10
+    },
+    "issues": []
+  },
+  "plan": {
+    "packId": "econovaria.beta-seed-pack.v1",
+    "version": "1.0.0-beta",
+    "environment": "staging",
+    "mode": "dry-run",
+    "activate": false,
+    "targetProjectRef": null,
+    "targetGameSessionSupplied": false,
+    "operations": {
+      "stockTemplates": 240,
+      "contractTemplates": 30,
+      "storeItems": 50,
+      "gameSessionContracts": 30
+    },
+    "safety": {
+      "productionProhibited": true,
+      "fullMarketUniverseExcluded": true,
+      "stableIdCollisionChecks": true,
+      "idempotentNaturalKeyReplay": true,
+      "rollbackBundleRequiredBeforeWrite": true,
+      "activationAuthorizationRequired": false
+    }
+  }
+}

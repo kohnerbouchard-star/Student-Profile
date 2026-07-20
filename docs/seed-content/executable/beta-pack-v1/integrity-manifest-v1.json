@@ -15,7 +15,7 @@
     {
       "bytes": 9636,
       "path": "arrival-calibration-v1.json",
-      "sha256": "734f1094ad6f920e8007b0646f3e908b698bf328bc4f6dcaac0f43cad394e95b"
+      "sha256": "a5b4e7e93289d78bd6f354742303a19cb2e1ebd995074b523a67612b71a85164"
     },
     {
       "bytes": 1451,
@@ -59,7 +59,7 @@
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "a94c409f191a1bbadd1d725a2dc2c0b080c0fd2c666d07b1db5eca802d322304",
+  "manifestContentSha256": "bbc474fc1284b9d91a68e8f09c740d7f43fda6fafb6b6df9aaed140680e9f5ac",
   "packId": "econovaria.beta-seed-pack.v1",
   "packSha256": "d73fd6d0f3e97571196cda671418b95af0b564fadf1fcf9c6451c6cdcd674a17",
   "productionAuthorized": false,
