@@ -1,0 +1,39 @@
+name: Legacy Runtime Retirement Audit
+
+on:
+  pull_request:
+    paths:
+      - "ops/legacy-runtime/**"
+      - "docs/operations/legacy-runtime-retirement-v1.md"
+      - "scripts/legacy-runtime/**"
+      - "scripts/player-terminal-runtime-cutover-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/legacy-runtime-retirement-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ops/legacy-runtime/**"
+      - "docs/operations/legacy-runtime-retirement-v1.md"
+      - "scripts/legacy-runtime/**"
+      - "scripts/player-terminal-runtime-cutover-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/legacy-runtime-retirement-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:legacy-runtime
+      - run: npm run test:legacy-runtime
+      - run: npm run test:player-runtime-cutover
