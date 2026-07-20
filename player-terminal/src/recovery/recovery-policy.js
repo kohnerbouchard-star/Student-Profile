@@ -89,6 +89,7 @@ export function classifyPlayerRecoverySignal({
       title: "Economic actions are temporarily paused",
       message: "You can continue reviewing information. Retry after the administrator resumes the game.",
       tone: "amber",
+      canDismiss: false,
       lockMutations: true,
     });
   }
@@ -102,6 +103,7 @@ export function classifyPlayerRecoverySignal({
       tone: "amber",
       retryAfterMs: delay,
       canRetry: false,
+      canDismiss: false,
       lockMutations: true,
     });
   }
