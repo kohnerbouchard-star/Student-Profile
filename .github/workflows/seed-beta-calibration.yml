@@ -80,3 +80,10 @@ jobs:
         run: npm run validate:seed-beta-pack
       - name: Test calibrated pack
         run: npm run test:seed-beta-pack
+      - name: Upload generated bounded pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-generated-pack-${{ github.sha }}
+          path: docs/seed-content/executable/beta-pack-v1
+          if-no-files-found: error
+          retention-days: 14
