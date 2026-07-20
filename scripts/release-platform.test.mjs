@@ -12,7 +12,7 @@ import {
   validatePromotionRecord,
   validateReleaseConfiguration,
   validateReleaseManifest,
-} from "./release-platform-lib.mjs";
+} from "./release-platform-index.mjs";
 
 async function write(root, relativePath, value) {
   const absolute = path.join(root, relativePath);
@@ -159,7 +159,7 @@ test("environment manifests reject secret values and placeholders", () => {
   const manifest = environmentManifest("staging", "stageproject01", "stage-static-01");
   manifest.supabase.serviceRoleKey = "not-allowed";
   assert.throws(() => validateEnvironmentManifest(manifest), /secret names only/);
-  const placeholder = environmentManifest("staging", "staging", "stage-static-01");
+  const placeholder = environmentManifest("staging", "TODO_STAGING_SUPABASE_PROJECT_REF", "TODO_STAGING_FRONTEND_TARGET");
   assert.throws(() => validateEnvironmentManifest(placeholder), /placeholder/);
 });
 
