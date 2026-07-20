@@ -199,6 +199,7 @@ export function installPlayerRecoveryController({
         show(lifecycle);
       } else {
         lifecycleState = null;
+        currentState = null;
         show(restoredPlayerRecoveryState());
       }
       return true;
@@ -288,8 +289,15 @@ export function installPlayerRecoveryController({
   function show(state) {
     if (destroyed || !state) return null;
     clearTimer("dismiss");
-    if (LIFECYCLE_STATE_KINDS.has(state.kind)) lifecycleState = state;
-    else if (lifecycleState && state.kind !== "offline") state = lifecycleState;
+    if (LIFECYCLE_STATE_KINDS.has(state.kind)) {
+      lifecycleState = state;
+    } else if (currentState?.kind === "offline" && state.kind !== "restored") {
+      state = currentState;
+    } else if (lifecycleState && state.kind !== "offline") {
+      state = lifecycleState;
+    } else if (currentState?.lockMutations && !state.lockMutations && state.kind !== "restored") {
+      state = currentState;
+    }
     currentState = state;
     retryStartedAt = state.kind === "rate-limited" ? Date.now() : 0;
     render();
@@ -334,16 +342,29 @@ export function installPlayerRecoveryController({
   }
 
   function handleOnline() {
-    if (lifecycleState) show(lifecycleState);
-    else show(restoredPlayerRecoveryState());
+    if (lifecycleState) {
+      show(lifecycleState);
+      return;
+    }
+    if (currentState?.kind !== "offline" && currentState?.lockMutations) {
+      render();
+      return;
+    }
+    show(restoredPlayerRecoveryState());
   }
 
   function handleRecoveryEvent(event) {
     const detail = event?.detail || {};
     const code = String(detail.code || "").trim().toUpperCase();
     if (ACTIVE_LIFECYCLE_CODES.has(code)) {
+      const clearingLifecycle = Boolean(lifecycleState) || LIFECYCLE_STATE_KINDS.has(currentState?.kind);
       lifecycleState = null;
-      show(restoredPlayerRecoveryState());
+      if (clearingLifecycle) {
+        currentState = null;
+        show(restoredPlayerRecoveryState());
+      } else if (currentState) {
+        render();
+      }
       return;
     }
     const state = classifyPlayerRecoverySignal({
@@ -371,6 +392,7 @@ export function installPlayerRecoveryController({
     }
     if (lifecycleState) {
       lifecycleState = null;
+      currentState = null;
       show(restoredPlayerRecoveryState());
       return;
     }
