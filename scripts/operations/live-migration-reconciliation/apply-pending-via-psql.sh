@@ -28,6 +28,17 @@ fi
 export PGPASSWORD="$SUPABASE_DB_PASSWORD"
 export PGSSLMODE=require
 
+repair_migration() {
+  local version="$1"
+  (
+    cd backend
+    supabase migration repair "$version" \
+      --status applied \
+      --linked \
+      --password "$SUPABASE_DB_PASSWORD"
+  )
+}
+
 mapfile -t remote_versions < <(
   psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -c "select version from supabase_migrations.schema_migrations order by version"
@@ -54,13 +65,35 @@ while IFS= read -r file; do
     continue
   fi
 
-  printf 'Applying through psql: %s\n' "$filename"
-  psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 --single-transaction -f "$file"
+  recovered=false
+  if [[ "$version" == "20260713194500" ]]; then
+    reward_state="$(
+      psql "$POOLER_URL" -X -qAt -F '|' -v ON_ERROR_STOP=1 -c "
+        select
+          to_regclass('public.contract_reward_issuances') is not null,
+          to_regprocedure('public.issue_contract_rewards_atomic_v1(uuid,uuid,uuid,uuid,text)') is not null,
+          has_function_privilege('service_role','public.issue_contract_rewards_atomic_v1(uuid,uuid,uuid,uuid,text)','EXECUTE'),
+          has_function_privilege('anon','public.issue_contract_rewards_atomic_v1(uuid,uuid,uuid,uuid,text)','EXECUTE'),
+          has_function_privilege('authenticated','public.issue_contract_rewards_atomic_v1(uuid,uuid,uuid,uuid,text)','EXECUTE'),
+          coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.contract_reward_issuances')), false)
+      "
+    )"
 
-  supabase migration repair "$version" \
-    --status applied \
-    --linked \
-    --password "$SUPABASE_DB_PASSWORD"
+    if [[ "$reward_state" == "t|t|t|f|f|t" ]]; then
+      printf 'Recovering verified schema-applied migration ledger: %s\n' "$filename"
+      repair_migration "$version"
+      recovered=true
+    elif [[ "$reward_state" != "f|f|f|f|f|f" ]]; then
+      printf 'Refusing ambiguous partial state for %s: %s\n' "$filename" "$reward_state" >&2
+      false
+    fi
+  fi
+
+  if [[ "$recovered" == false ]]; then
+    printf 'Applying through psql: %s\n' "$filename"
+    psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 --single-transaction -f "$file"
+    repair_migration "$version"
+  fi
 
   recorded_name="$(
     psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
