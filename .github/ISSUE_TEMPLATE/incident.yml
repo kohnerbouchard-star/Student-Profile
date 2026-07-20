@@ -1,0 +1,158 @@
+name: Incident coordination
+about: Create a sanitized coordination record for an Econovaria operational incident
+labels:
+  - incident
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Sanitized coordination record only
+        Do not include credentials, Access Codes, game/session codes, authorization headers, session tokens, token hashes, service secrets, internal UUIDs, player or student names, private logs, exploit payloads, or unrestricted evidence links.
+
+        Store sensitive evidence in the approved access-controlled incident record. This issue must contain only the minimum redacted detail needed to coordinate work.
+
+  - type: input
+    id: incident_id
+    attributes:
+      label: Incident ID
+      description: Use the private incident record identifier, for example INC-20260720-001.
+      placeholder: INC-YYYYMMDD-NNN
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Current severity
+      options:
+        - P0 — Critical
+        - P1 — High
+        - P2 — Moderate
+        - P3 — Low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Current status
+      options:
+        - Investigating
+        - Contained
+        - Recovering
+        - Monitoring
+        - Resolved
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: environments
+    attributes:
+      label: Affected environments
+      options:
+        - label: Development
+        - label: Isolated staging
+        - label: Production
+        - label: Classroom operations
+    validations:
+      required: true
+
+  - type: input
+    id: detected_at
+    attributes:
+      label: Detected at
+      description: Absolute timestamp with time zone. Use UTC when possible.
+      placeholder: 2026-07-20 03:30 UTC
+    validations:
+      required: true
+
+  - type: input
+    id: incident_commander
+    attributes:
+      label: Incident Commander
+      description: Name or accountable role. Do not list student information.
+      placeholder: Role or approved team member
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_scope
+    attributes:
+      label: Redacted affected scope
+      description: Identify capabilities and approximate games or classrooms using nonsecret labels.
+      placeholder: Affected capability, bounded game/class count, and time range
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_impact
+    attributes:
+      label: Confirmed impact
+      description: Separate confirmed facts from hypotheses and unknowns. Do not identify individual players.
+      placeholder: |
+        Confirmed:
+        - ...
+        Hypotheses:
+        - ...
+        Unknowns:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: containment
+    attributes:
+      label: Current containment
+      description: State what is paused, disabled, read-only, revoked, isolated, or rolled back.
+      placeholder: Containment controls and the time they were applied
+    validations:
+      required: true
+
+  - type: dropdown
+    id: retry_guidance
+    attributes:
+      label: Retry guidance
+      options:
+        - Do not retry until authoritative verification
+        - Only named read operations are safe
+        - Named actions may be retried
+        - Normal operation restored
+    validations:
+      required: true
+
+  - type: textarea
+    id: classroom_guidance
+    attributes:
+      label: Classroom guidance
+      description: State read-only, pause, or offline-fallback instructions without student details.
+      placeholder: Safe activity, offline record custody, and prohibited actions
+    validations:
+      required: true
+
+  - type: input
+    id: next_update
+    attributes:
+      label: Next update
+      description: Absolute timestamp with time zone.
+      placeholder: 2026-07-20 04:00 UTC
+    validations:
+      required: true
+
+  - type: input
+    id: private_record_reference
+    attributes:
+      label: Access-controlled record reference
+      description: Use a nonsecret reference or approved restricted link. Do not paste private evidence here.
+      placeholder: Private incident record reference
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: redaction_confirmation
+    attributes:
+      label: Redaction confirmation
+      options:
+        - label: I confirmed this issue contains no credentials, Access Codes, game/session codes, tokens, token hashes, service secrets, internal UUIDs, player names, private logs, or exploit payloads.
+          required: true
+        - label: Sensitive evidence is stored only in the approved access-controlled incident record.
+          required: true
