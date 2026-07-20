@@ -1,0 +1,171 @@
+name: Release Artifact Build
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-artifact-build.yml"
+      - ".github/workflows/release-promote.yml"
+      - "docs/operations/environments/**"
+      - "docs/operations/schemas/**"
+      - "docs/operations/release-configuration.v1.json"
+      - "scripts/release-platform*"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      release_commit:
+        description: Full commit SHA already reachable from main
+        required: true
+        type: string
+      configuration_path:
+        description: Versioned repository release configuration
+        required: true
+        default: docs/operations/release-configuration.v1.json
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-artifact-build-${{ inputs.release_commit || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  contract-tests:
+    name: Release platform contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Install repository tooling
+        run: npm ci
+      - name: Run release platform tests
+        run: npm run test:release-platform
+      - name: Scan release tooling for credentials
+        run: npm run security:secrets
+
+  build-once:
+    name: Build immutable release set
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      release_commit: ${{ steps.select.outputs.release_commit }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_url: ${{ steps.upload.outputs.artifact-url }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      release_id: ${{ steps.metadata.outputs.release_id }}
+      artifact_set_sha256: ${{ steps.metadata.outputs.artifact_set_sha256 }}
+    steps:
+      - name: Check out current main for ancestry verification
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Select immutable main commit
+        id: select
+        shell: bash
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          CONFIGURATION_PATH: ${{ inputs.configuration_path }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$CONFIGURATION_PATH" =~ ^docs/operations/[a-zA-Z0-9._/-]+\.json$ ]]
+          [[ "$CONFIGURATION_PATH" != *".."* ]]
+          git cat-file -e "${RELEASE_COMMIT}^{commit}"
+          git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main
+          git checkout --detach "$RELEASE_COMMIT"
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -f "$CONFIGURATION_PATH"
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Build frontend and Edge Function artifacts exactly once
+        env:
+          RELEASE_COMMIT: ${{ steps.select.outputs.release_commit }}
+          CONFIGURATION_PATH: ${{ inputs.configuration_path }}
+        run: >-
+          npm run release:build --
+          --commit "$RELEASE_COMMIT"
+          --config "$CONFIGURATION_PATH"
+          --output dist/release
+
+      - name: Validate generated manifest and artifact bytes
+        env:
+          RELEASE_COMMIT: ${{ steps.select.outputs.release_commit }}
+        run: >-
+          npm run release:validate --
+          --manifest dist/release/release-manifest.json
+          --artifact-root dist/release
+          --expected-commit "$RELEASE_COMMIT"
+
+      - name: Export immutable release metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          console.log(`release_id=${manifest.releaseId}`);
+          console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
+          NODE
+
+      - name: Upload immutable release set
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-release-${{ steps.select.outputs.release_commit }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          overwrite: false
+
+      - name: Attest release artifact provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/release/artifacts/*
+            dist/release/checksums.sha256
+            dist/release/release-configuration.json
+            dist/release/release-manifest.json
+          show-summary: true
+
+      - name: Record build outputs
+        shell: bash
+        run: |
+          {
+            echo "## Immutable release built"
+            echo "- Commit: \`${{ steps.select.outputs.release_commit }}\`"
+            echo "- Release: \`${{ steps.metadata.outputs.release_id }}\`"
+            echo "- Artifact-set SHA-256: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
+            echo "- GitHub artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
+            echo "- GitHub artifact digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
+            echo "- Rebuild during promotion: prohibited"
+          } >> "$GITHUB_STEP_SUMMARY"
