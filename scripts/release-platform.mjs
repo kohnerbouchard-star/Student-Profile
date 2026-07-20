@@ -46,6 +46,7 @@ async function main() {
       commit: manifest.source.commit,
       artifactSetSha256: manifest.artifactSetSha256,
       artifactCount: manifest.artifacts.length,
+      environmentNeutrality: manifest.environmentNeutrality.status,
     }, null, 2));
     return;
   }
@@ -64,6 +65,7 @@ async function main() {
       releaseId: validated.releaseId,
       commit: validated.source.commit,
       artifactSetSha256: validated.artifactSetSha256,
+      environmentNeutrality: validated.environmentNeutrality.status,
     }, null, 2));
     return;
   }
@@ -110,13 +112,19 @@ async function main() {
       artifactRoot: path.resolve(repoRoot, required(options, "artifactRoot")),
       repoRoot,
       expectedEnvironment: required(options, "expectedEnvironment"),
+      expectedSourceRunId: options.expectedSourceRunId,
+      expectedSourceArtifactId: options.expectedSourceArtifactId,
+      expectedEnvironmentManifestPath: options.expectedEnvironmentManifestPath,
     });
     console.log(JSON.stringify({
       status: "valid",
       promotionId: validated.promotionId,
       targetEnvironment: validated.targetEnvironment,
       releaseId: validated.releaseId,
+      sourceRunId: validated.sourceRunId,
+      sourceArtifactId: validated.sourceArtifactId,
       artifactSetSha256: validated.artifactSetSha256,
+      configurationSha256: validated.configurationSha256,
     }, null, 2));
     return;
   }
