@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "status": "planned",
+  "environment": "isolated-staging",
+  "fixtureId": "REQUIRED_SYNTHETIC_FIXTURE_ID",
+  "gamePublicKey": "REQUIRED_SYNTHETIC_GAME_KEY",
+  "adminIdentityReference": "REQUIRED_SECRET_NAME_REFERENCE",
+  "playerIdentityReferences": [
+    "REQUIRED_PLAYER_REFERENCE_1",
+    "REQUIRED_PLAYER_REFERENCE_2"
+  ],
+  "expectedPlayerCount": 30,
+  "maximumPlayerCount": 40,
+  "seedPackIdentity": "REQUIRED_APPROVED_SEED_PACK_IDENTITY",
+  "containsProductionData": false,
+  "containsSecretValues": false
+}
