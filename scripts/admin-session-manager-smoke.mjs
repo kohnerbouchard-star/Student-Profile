@@ -20,6 +20,11 @@ function createRuntime(fetch) {
   const window = {
     fetch,
     sessionStorage,
+    EconovariaRuntimeConfig: Object.freeze({
+      environment: "staging",
+      supabaseUrl: "https://runtime-fixture.supabase.co",
+      supabasePublishableKey: "runtime-fixture-publishable-key"
+    }),
     dispatchEvent() {}
   };
   window.window = window;
