@@ -1,0 +1,32 @@
+name: Environment Neutral Browser
+
+on:
+  pull_request:
+    paths:
+      - "frontend/src/core/runtime-config.js"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - ".github/workflows/environment-neutral-browser.yml"
+  push:
+    branches:
+      - agent/environment-neutral-frontend-v1
+    paths:
+      - "frontend/src/core/runtime-config.js"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - ".github/workflows/environment-neutral-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-config-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+      - run: node --test scripts/runtime-config-contract.test.mjs
