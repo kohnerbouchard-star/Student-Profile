@@ -13,7 +13,7 @@ def exact(old, new):
 
 def rx(pattern, replacement, label):
     global text
-    text, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE | re.DOTALL)
+    text, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE)
     if count != 1:
         raise SystemExit(f'Expected one match for {label}; found {count}.')
 
@@ -25,7 +25,6 @@ def row(label, line):
 
 exact('**Last baseline audit:** 2026-07-19', '**Last baseline audit:** 2026-07-20')
 exact('**Current audited main baseline:** `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb`', '**Current audited main baseline:** `4e3c123c98c37a2b5d26a93e67bfb31c3b722925`')
-
 row('Player runtime cutover and legacy source removal', '| Player runtime cutover and legacy source removal | `VERIFIED_COMPLETE` for repository code; operations remain `IN_PROGRESS` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; PR #222 merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`; connected isolated staging and live Worker retirement remain release gates |')
 row('Production integration donor', '| Player runtime adapter | `VERIFIED_COMPLETE` | Cleaned PR #141 merged as `566d99fab5668cf42d6275ec8d12c580239a3137`; capability preflight and explicit `classroom-api` routing are authoritative |')
 row('Inventory-redemption donor', '| Inventory redemption lifecycle | `VERIFIED_COMPLETE` at repository-integrated boundary | Backend PR #158, Admin review PR #177, and connected lifecycle PR #224 merged; PR #143 remains donor/reference only |')
@@ -44,14 +43,12 @@ reconciliation = '''### 2026-07-20 full repository reconciliation
 
 '''
 exact('### Current release condition\n', reconciliation + '### Current release condition\n')
-
 exact('**Overall status:** `VERIFIED_COMPLETE`, with logout/runtime integration still active under Backend reconciliation.', '**Overall status:** `VERIFIED_COMPLETE` for merged identity, session, authorization, and logout boundaries; shared rate-limit runtime tuning and connected leak-evidence capture remain `IN_PROGRESS`.')
 item('BETA-AUTH-001', '- [x] `BETA-AUTH-001` Merge authoritative player logout route. `VERIFIED_COMPLETE` through PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; `POST /players/me/session/logout` is session-derived, private/no-store, game-scoped, and revokes the current Player session.')
 item('BETA-AUTH-002', '- [x] `BETA-AUTH-002` Connect Player Terminal Logout to the reviewed host revocation lifecycle. `VERIFIED_COMPLETE` through PR #182 merged as `6085f5a4c72aec524ee9cb8a3026a43d9610eced`.')
 item('BETA-AUTH-004', '- [x] `BETA-AUTH-004` Add final brute-force, replay, revoked-session, expired-session, and cross-game authorization matrix. `VERIFIED_COMPLETE` through PR #158 with the standard Player security and request-scope suites on the final merged head.')
 item('BETA-AUTH-005', '- [ ] `BETA-AUTH-005` Add shared rate limiting by IP, identity, game, and action. `IN_PROGRESS`: the atomic HMAC-keyed foundation, reviewed post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. Staging proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, telemetry, cleanup, and connected runtime probes remain open.')
 item('BETA-AUTH-006', '- [ ] `BETA-AUTH-006` Verify no credentials, token hashes, session tokens, or internal UUIDs appear in browser output, logs, fixtures, artifacts, or errors. `IN_PROGRESS`: Backend DTO privacy, browser-payload, fixture, rendered-output, and artifact regression coverage merged through PRs #158, #141, and #222. Connected staging network/log/trace and screenshot evidence remains open.')
-
 caps = {
 'BETA-CAP-001': '- [x] `BETA-CAP-001` Publish authenticated `GET /players/me/capabilities`. `VERIFIED_COMPLETE` through PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`.',
 'BETA-CAP-002': '- [x] `BETA-CAP-002` Version the manifest schema and capability mapping independently. `VERIFIED_COMPLETE`; current schema is `1` and current manifest is `2026-07-19.4`.',
@@ -60,7 +57,5 @@ caps = {
 'BETA-CAP-005': '- [x] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `VERIFIED_COMPLETE` through the merged Player capability and security suites.',
 'BETA-CAP-006': '- [x] `BETA-CAP-006` Reconcile the manifest after every later Backend tranche and before runtime adapter execution. `VERIFIED_COMPLETE`; current manifest `2026-07-19.4` includes only the merged reviewed endpoint set.',
 }
-for key, value in caps.items():
-    item(key, value)
-
+for key, value in caps.items(): item(key, value)
 path.write_text(text, encoding='utf-8')
