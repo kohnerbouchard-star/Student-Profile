@@ -57,6 +57,8 @@ jobs:
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
               $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
               $0 == "frontend/src/core/runtime-config.js" { next }
+              $0 == "scripts/admin-classroom-identity-fallback-smoke.mjs" { next }
+              $0 == "scripts/admin-player-access-code-smoke.mjs" { next }
               $0 == "scripts/admin-session-manager-smoke.mjs" { next }
               $0 == "scripts/admin-shell-identity-smoke.mjs" { next }
               $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
@@ -131,6 +133,22 @@ jobs:
         if: success()
         working-directory: player-terminal
         run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser-only runtime fixture
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p player-terminal/frontend/src/core
+          cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+          cat > player-terminal/runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
 
       - name: Run Chromium browser verification
         if: success()
