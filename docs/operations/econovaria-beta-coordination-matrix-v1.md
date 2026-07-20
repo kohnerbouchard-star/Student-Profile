@@ -1,6 +1,7 @@
 # Econovaria Production-Beta Coordination Matrix
 
 **Controller:** Chat 1 — beta program controller and merge gatekeeper  
+**Controller PR:** #281 (`docs/beta-program-controller-v1`, draft)  
 **Repository:** `kohnerbouchard-star/Student-Profile`  
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
 **Audited main:** `f44b0735763da6700fc18513fa7026dbd95aff86`  
@@ -13,7 +14,7 @@
 2. No workstream may edit the authoritative roadmap. Workstream completion claims must be reported to Chat 1 with merged-code, passing-workflow, and required staging/runtime evidence.
 3. One capability has one branch and one PR authority. Existing branches must be continued; replacement branches are prohibited.
 4. No production deployment, production credential change, manual production SQL, or manual production schema mutation is authorized.
-5. A PR with a failing, missing, cancelled, or still-running required workflow is not merge-ready.
+5. A PR with a failing, missing, cancelled, `action_required`, or still-running required workflow is not merge-ready.
 6. Repository tooling is not staging evidence. An undeployed migration is not runtime evidence. A source snapshot is not implementation evidence.
 7. PRs #248, #249, and #261 are product-owner-paused expansion work. They remain open and preserved, but are excluded from the beta merge queue until explicit reactivation.
 8. No chat may silently expand beyond the owned files and roadmap items below.
@@ -22,8 +23,8 @@
 
 | Roadmap item / capability | Assigned chat | Branch and PR | Files owned | Files prohibited | Dependencies | Current CI state | Merge readiness | Blockers | Next exact action |
 |---|---|---|---|---|---|---|---|---|---|
-| `P0-001`, `P0-002`, `P0-007`, `P0-008`; roadmap authority, merge queue, final reconciliation | Chat 1 | `docs/beta-program-controller-v1`; controller PR pending | `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`; `docs/operations/econovaria-beta-coordination-matrix-v1.md`; bounded program-control helpers only | Application source, runtime routes, migrations, seed definitions, credentials, environment mutation, deployment | All workstreams report evidence here | Controller branch created from current main; checks pending after PR creation | Not ready until roadmap reconciliation diff is permanent and all required checks pass | Roadmap is stale against current main; active branch/PR state changed after its last audit | Publish this matrix and exact roadmap corrections; keep PR draft until checks pass |
-| `OPS-STAGE-006`, `OPS-STAGE-007`, `OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`; release infrastructure for `BETA-PLAYER-010` and `BETA-ADMIN-007` | Chat 2 | `agent/isolated-staging-release-v1`; PR #280 | `docs/operations/isolated-staging-release-platform.md`; release-platform validators, manifest builders, promotion/rollback guards, environment templates, runbooks, focused tests/workflows | Authoritative roadmap, application behavior, seed/story files, database migrations, production deployment | Current main; migration inventory; security; backup/restore; distinct staging identities | Staging Readiness Preflight and Supply Chain Security pass; Repository Quality was running at audit | Not ready while any required check is running; tooling merge does not complete staging items | No separate synthetic-data Supabase project or frontend staging target; no connected smoke, approval, rollback, or restore evidence | Finish bounded tooling and tests on PR #280; obtain green final-head CI; do not claim staging completion |
+| `P0-001`, `P0-002`, `P0-007`, `P0-008`; roadmap authority, merge queue, final reconciliation | Chat 1 | `docs/beta-program-controller-v1`; PR #281 | `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`; `docs/operations/econovaria-beta-coordination-matrix-v1.md`; bounded program-control helpers only | Application source, runtime routes, migrations, seed definitions, credentials, environment mutation, deployment | All workstreams report evidence here | Permanent two-document diff exists; final-head Repository Quality, Supply Chain Security, and Staging Readiness Preflight require action/authorization | Not merge-ready until all required final-head workflows complete successfully | Required workflows are not green | Trigger and complete final-head workflows; keep PR draft and unmerged until green |
+| `OPS-STAGE-006`, `OPS-STAGE-007`, `OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`; release infrastructure for `BETA-PLAYER-010` and `BETA-ADMIN-007` | Chat 2 | `agent/isolated-staging-release-v1`; PR #280 | `docs/operations/isolated-staging-release-platform.md`; release-platform validators, manifest builders, promotion/rollback guards, environment templates, runbooks, focused tests/workflows | Authoritative roadmap, application behavior, seed/story files, database migrations, production deployment | Current main; migration inventory; security; backup/restore; distinct staging identities | Staging Readiness Preflight and Supply Chain Security pass; Repository Quality was cancelled on the audited head | Not merge-ready; a cancelled required workflow is a hard blocker and tooling merge would not complete staging items | No green Repository Quality; no separate synthetic-data Supabase project or frontend staging target; no connected smoke, approval, rollback, or restore evidence | Rerun or retrigger Repository Quality on the existing PR head; finish bounded tooling/tests; do not claim staging completion |
 | Migration-history reconciliation and isolated-staging migration application, including `20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql` | Chat 3 | `agent/live-migration-reconciliation-v1`; no PR yet | Migration inventory/evidence, replay/lint tooling, staging application plan and evidence, migration-head reconciliation | Authoritative roadmap, unrelated feature code, destructive/rewritten migration history, manual production SQL, production schema changes | Chat 2 staging identity and release manifest; current merged migration head | Branch reserved at current main; no commits and no CI | Not started / not merge-ready | No implementation or evidence branch content; no isolated staging target | Audit every migration on main and open beta PRs; publish exact migration head/count/digest and staging-only reconciliation plan on this branch |
 | Live legacy-runtime and Cloudflare Worker retirement evidence | Chat 4 | `agent/legacy-runtime-retirement-v1`; no PR yet | Operational traffic inventory, credential-rotation plan, shutdown/rollback runbook, non-production validation, retirement evidence | Authoritative roadmap, restoring removed legacy Player source, unrelated runtime features, production shutdown without approval | Chat 2 release controls; Chat 5 security; current traffic evidence; explicit owner approval for live changes | Branch reserved at current main; no commits and no CI | Not started / not merge-ready | No current production traffic evidence, credential-rotation evidence, or approved shutdown window | Inventory live legacy endpoints and traffic without changing production; define fail-closed retirement and rollback evidence requirements |
 | Shared security, session abuse controls, rate-limit tuning, `BETA-AUTH-005`, `BETA-AUTH-006`, `OPS-RATE-001` | Chat 5 | `agent/beta-security-rate-limit-v1`; no PR yet | Focused security/rate-limit tests, configuration contracts, privacy/leak evidence, staging validation | Authoritative roadmap, expansion features, seed/story content, production configuration changes | Chat 2 staging; current auth/session/runtime contracts | Branch equals current main; zero workstream commits; no PR/CI | Not started / not merge-ready | No scoped implementation or staging evidence | Audit remaining security/rate-limit roadmap rows and create one bounded PR on the existing branch only after identifying exact gaps |
@@ -37,7 +38,8 @@
 
 | PR | Capability | Queue | Divergence from audited main | Required workflow state | Gate decision |
 |---|---|---|---|---|---|
-| #280 | Isolated staging / immutable release tooling | Beta tooling | Created from current main; two commits at audit | Two checks passed; Repository Quality running | Hold until all final-head checks pass; merge would authorize tooling only, not staging completion |
+| #281 | Beta program control and roadmap reconciliation | Independent coordination/evidence | Based on audited main; permanent diff is two documents | Final-head Repository Quality, Supply Chain Security, and Staging Readiness Preflight are `action_required` | Hold in draft; do not merge until all required checks pass |
+| #280 | Isolated staging / immutable release tooling | Beta tooling | Created from current main; two commits at audit | Staging preflight and supply-chain pass; Repository Quality cancelled | Reject merge until Repository Quality is retriggered and passes; merge would authorize tooling only, not staging completion |
 | #256 | Dependabot `actions/upload-artifact` v4 → v7 | Independent tooling | 1 ahead / 29 behind | Admin Game Lifecycle Controls and Admin Shell Smoke fail | Reject merge; rebase/recreate and require full green workflows |
 | #244 | Story delivery | Beta capability | 11 ahead / 32 behind | Application workflow fails; other visible checks pass | Reject merge; actual implementation is not yet materialized in the permanent diff |
 | #163 | Seed content / bounded executable release | Beta capability | 407 ahead / 132 behind | No current-head workflow runs or statuses found | Reject merge; synchronize and supply executable/staging evidence |
@@ -50,18 +52,18 @@
 - Current beta release work must treat merged migration history on `main` as immutable.
 - PR #248 owns only its paused Messaging migration `20260720123000_add_messaging_communication_v1.sql`.
 - PR #249 owns only its paused Marketplace migrations `20260720042500_add_marketplace_reference_scopes_v1.sql`, `20260720043000_add_player_marketplace_lifecycle_v1.sql`, and `20260720044500_fix_marketplace_order_settlement_state_v1.sql`.
-- PRs #244, #163, #261, #256, and #280 currently add no database migration.
+- PRs #244, #163, #261, #256, #280, and #281 currently add no database migration.
 - Chat 3 owns migration-history reconciliation and isolated-staging application evidence. It may add only forward corrective migrations; it may not rewrite merged migrations or apply manual production SQL.
 - Chat 9 may add a bounded seed importer migration only on PR #163 and only after Chat 3 confirms migration ordering and Chat 2 provides isolated-staging release controls.
 
 ## Merge sequence
 
-1. Independent tooling and evidence PRs that do not modify runtime behavior, beginning with PR #280 after complete green CI; PR #256 only after rebase and complete green CI.
+1. Independent tooling and evidence PRs that do not modify runtime behavior, including controller PR #281 after complete green CI and PR #280 after complete green CI; PR #256 only after rebase and complete green CI.
 2. Security, migration, observability, backup/restore, and release foundations from Chats 3–7 in dependency order.
 3. PR #244 story delivery after permanent source materialization, synchronization, and complete green CI.
 4. PR #163 bounded executable seed release after synchronization, calibration/map/import/rollback gates, and isolated-staging evidence.
 5. Chat 10 final Phase 6 E2E and pilot evidence.
-6. Chat 1 authoritative roadmap completion reconciliation.
+6. Chat 1 final authoritative roadmap completion reconciliation.
 
 ## Completion-claim decision rule
 
