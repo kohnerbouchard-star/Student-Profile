@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -55,6 +55,7 @@ export type PlayerActionCapabilityKey =
   typeof PLAYER_ACTION_CAPABILITY_KEYS[number];
 
 export type PlayerCapabilityEndpointKey =
+  | "bootstrap"
   | "capabilities"
   | "banking"
   | "contractAccept"
@@ -62,6 +63,7 @@ export type PlayerCapabilityEndpointKey =
   | "contracts"
   | "countries"
   | "country"
+  | "dashboard"
   | "inventory"
   | "inventoryRedemptions"
   | "logout"
@@ -115,6 +117,11 @@ export type PlayerCapabilityManifestRoute =
 
 const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   {
+    key: "bootstrap",
+    operations: [{ method: "GET", pathTemplate: "/players/me" }],
+    routeCapabilities: ["profile"],
+  },
+  {
     key: "capabilities",
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
   },
@@ -157,6 +164,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       method: "GET",
       pathTemplate: "/players/me/world/countries/:countryCode",
     }],
+  },
+  {
+    key: "dashboard",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/game/dashboard",
+    }],
+    routeCapabilities: ["dashboard"],
   },
   {
     key: "news",
