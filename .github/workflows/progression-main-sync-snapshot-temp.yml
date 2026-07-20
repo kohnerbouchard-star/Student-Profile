@@ -1,0 +1,32 @@
+name: Progression Main Sync Snapshot Temp
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/progression-main-sync-snapshot-temp.yml
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Package current main source
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=backend/node_modules \
+            --exclude=player-terminal/node_modules \
+            -czf "$RUNNER_TEMP/student-profile-main-source.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: progression-main-sync-source
+          path: ${{ runner.temp }}/student-profile-main-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
