@@ -70,6 +70,8 @@ Final implementation head `afdbd18882db30b3b08d7815a4cacb527dc7b766` passed:
 
 PR #252 had no comments and no unresolved review threads before squash merge as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`.
 
+The verification record was preserved from duplicate PR #260 in the earlier Phase 0 seal PR #259 before #260 was closed and its branch retired.
+
 ## Completion boundary
 
 `VERIFIED_COMPLETE` applies to the repository-operational incident-readiness subsection. It does not claim external observability, backup/restore, isolated-environment, live credential-rotation, performance, or staging smoke evidence owned by other Phase 5 roadmap items.
