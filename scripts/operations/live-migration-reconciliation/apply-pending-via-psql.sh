@@ -147,8 +147,7 @@ while IFS= read -r file; do
 
   recorded_name="$(
     psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
-      -v migration_version="$version" \
-      -c "select coalesce(name, '') from supabase_migrations.schema_migrations where version = :'migration_version'"
+      -c "select coalesce(name, '') from supabase_migrations.schema_migrations where version = '$version'"
   )"
 
   if [[ "$recorded_name" != "$name" ]]; then
