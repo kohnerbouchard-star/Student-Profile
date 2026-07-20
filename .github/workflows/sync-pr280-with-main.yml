@@ -30,33 +30,47 @@ jobs:
           persist-credentials: false
 
       - name: Construct merge handoff bundle
+        id: construct
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "econovaria-release-controller"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch --quiet --no-tags origin main
-          branch_head="$(git rev-parse HEAD)"
-          main_head="$(git rev-parse origin/main)"
-          git merge --no-ff --no-commit -X theirs origin/main
-          git rm .github/workflows/sync-pr280-with-main.yml
-          git diff --check --cached
-          git commit -m "Merge current main into isolated staging release platform"
-          merge_head="$(git rev-parse HEAD)"
-          merge_tree="$(git rev-parse HEAD^{tree})"
-          main_tree="$(git rev-parse origin/main^{tree})"
-          printf 'branch_head=%s\nmain_head=%s\nmerge_head=%s\nmerge_tree=%s\nmain_tree=%s\n' \
-            "$branch_head" "$main_head" "$merge_head" "$merge_tree" "$main_tree" \
-            > "$RUNNER_TEMP/pr280-sync-metadata.txt"
-          git bundle create "$RUNNER_TEMP/pr280-sync.bundle" HEAD origin/main
-          cat "$RUNNER_TEMP/pr280-sync-metadata.txt"
+          set +e
+          {
+            set -x
+            git config user.name "econovaria-release-controller"
+            git config user.email "actions@users.noreply.github.com"
+            git fetch --quiet --no-tags origin main
+            branch_head="$(git rev-parse HEAD)"
+            main_head="$(git rev-parse origin/main)"
+            git merge --no-ff --no-commit -X theirs origin/main
+            git rm .github/workflows/sync-pr280-with-main.yml
+            git diff --check --cached
+            git commit -m "Merge current main into isolated staging release platform"
+            merge_head="$(git rev-parse HEAD)"
+            merge_tree="$(git rev-parse HEAD^{tree})"
+            main_tree="$(git rev-parse origin/main^{tree})"
+            printf 'branch_head=%s\nmain_head=%s\nmerge_head=%s\nmerge_tree=%s\nmain_tree=%s\n' \
+              "$branch_head" "$main_head" "$merge_head" "$merge_tree" "$main_tree" \
+              > "$RUNNER_TEMP/pr280-sync-metadata.txt"
+            git bundle create "$RUNNER_TEMP/pr280-sync.bundle" HEAD refs/remotes/origin/main
+            cat "$RUNNER_TEMP/pr280-sync-metadata.txt"
+          } > "$RUNNER_TEMP/pr280-sync-command.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/pr280-sync-command.log"
+          exit "$status"
 
-      - name: Upload merge handoff
+      - name: Upload merge handoff and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pr280-sync-handoff
           path: |
             ${{ runner.temp }}/pr280-sync.bundle
             ${{ runner.temp }}/pr280-sync-metadata.txt
+            ${{ runner.temp }}/pr280-sync-command.log
           if-no-files-found: error
           retention-days: 7
+
+      - name: Fail after diagnostic upload
+        if: steps.construct.outcome == 'failure'
+        run: false
