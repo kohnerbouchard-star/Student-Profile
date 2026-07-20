@@ -33,7 +33,7 @@
     "test:incident-readiness": "node --test scripts/incident-readiness-contract.test.mjs",
     "test:market-trigger": "node --test scripts/trigger-stock-market-tick.test.mjs",
     "test:player-runtime-cutover": "node scripts/player-terminal-runtime-cutover-smoke.mjs",
-    "test:release-platform": "node --test scripts/release-platform.test.mjs scripts/release-environment-neutrality.test.mjs",
+    "test:release-platform": "node --test scripts/release-platform.test.mjs scripts/release-environment-neutrality.test.mjs scripts/release-build-determinism.test.mjs",
     "test:supply-chain": "node --test scripts/supply-chain-security.test.mjs",
     "db:lint": "supabase db lint --workdir backend --local --level warning",
     "db:reset": "supabase db reset --workdir backend --local",
