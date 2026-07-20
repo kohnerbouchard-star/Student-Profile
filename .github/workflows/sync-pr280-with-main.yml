@@ -28,47 +28,24 @@ jobs:
           ref: agent/isolated-staging-release-v1
           fetch-depth: 0
 
-      - name: Merge current main into the existing branch
-        id: merge
-        continue-on-error: true
+      - name: Publish merge commit handoff or clean prior handoff
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "econovaria-release-controller"
           git config user.email "actions@users.noreply.github.com"
           git fetch --quiet --no-tags origin main
-          set +e
-          git merge --no-ff --no-commit -X theirs origin/main > "$RUNNER_TEMP/merge-output.txt" 2>&1
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            {
-              echo "merge_exit_status=$status"
-              echo "--- merge output ---"
-              cat "$RUNNER_TEMP/merge-output.txt"
-              echo "--- unmerged paths ---"
-              git diff --name-only --diff-filter=U
-              echo "--- status ---"
-              git status --short
-            } > "$RUNNER_TEMP/pr280-sync-diagnostic.txt"
-            git merge --abort || true
-            cat "$RUNNER_TEMP/pr280-sync-diagnostic.txt"
-            exit "$status"
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            git push origin :refs/tags/pr280-sync-handoff || true
+            echo "Branch already contains current main; handoff tag removed."
+            exit 0
           fi
-          cat "$RUNNER_TEMP/merge-output.txt"
+
+          git merge --no-ff --no-commit -X theirs origin/main
           git diff --check --cached
           git commit -m "Merge current main into isolated staging release platform"
-          git push origin HEAD:agent/isolated-staging-release-v1
-
-      - name: Upload merge diagnostics
-        if: steps.merge.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr280-sync-diagnostic
-          path: ${{ runner.temp }}/pr280-sync-diagnostic.txt
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Fail after diagnostic upload
-        if: steps.merge.outcome == 'failure'
-        run: false
+          merge_sha="$(git rev-parse HEAD)"
+          git tag -f pr280-sync-handoff "$merge_sha"
+          git push --force origin refs/tags/pr280-sync-handoff
+          printf 'Published merge handoff %s\n' "$merge_sha"
