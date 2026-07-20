@@ -24,9 +24,9 @@
   "artifact": {
     "provider": "github-actions",
     "name": "econovaria-seed-simulation-raw-507cf0f54e27c75e8bd82d24dba798765cfc7107",
-    "artifactId": "8436033290",
-    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8436033290",
-    "artifactDigest": "04b0fd8e3f6be54e08d24e95da77253077461a71f27f6c22268f9ffac5482f2f",
+    "artifactId": "8452836279",
+    "artifactUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/29667017728/artifacts/8452836279",
+    "artifactDigest": "0dfd2a3b734a6fb510fbb9af4c1d813497585208ca9e85f6a5b88cefe2ba0758",
     "sourceCommit": "507cf0f54e27c75e8bd82d24dba798765cfc7107",
     "workflowRunId": "29667017728",
     "retentionDays": 90,
