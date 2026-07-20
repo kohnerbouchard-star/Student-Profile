@@ -1,0 +1,44 @@
+name: Apply Admin Attendance Success-State Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply-admin-attendance-success-state-patch.yml"
+      - "scripts/patch-admin-attendance-action-success-state.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-admin-attendance-success-state-patch
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    if: github.head_ref == 'agent/environment-neutral-frontend-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/environment-neutral-frontend-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+      - name: Apply bounded attendance correction
+        run: python3 scripts/patch-admin-attendance-action-success-state.py
+      - name: Validate corrected attendance smoke syntax
+        run: node --check scripts/admin-attendance-action-smoke.mjs
+      - name: Commit corrected smoke only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm scripts/patch-admin-attendance-action-success-state.py
+          git config user.name "econovaria-release-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/admin-attendance-action-smoke.mjs scripts/patch-admin-attendance-action-success-state.py
+          git commit -m "test(admin): accept completed attendance scanner state"
+          git push origin HEAD:agent/environment-neutral-frontend-v1
