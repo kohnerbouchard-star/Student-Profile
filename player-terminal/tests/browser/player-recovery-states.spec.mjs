@@ -8,8 +8,9 @@ async function openTerminal(page, route = "store") {
 
 test("offline recovery preserves visible data and pauses economic actions", async ({ page, context }) => {
   await openTerminal(page, "store");
-  const purchase = page.locator("[data-player-purchase]:not([disabled])").first();
+  const purchase = page.locator("[data-player-purchase]").first();
   await expect(purchase).toBeVisible();
+  await expect(purchase).toBeEnabled();
 
   await context.setOffline(true);
   const notice = page.locator("[data-player-recovery-region]");
