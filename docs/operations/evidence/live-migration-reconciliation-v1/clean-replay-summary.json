@@ -1,0 +1,15 @@
+{
+  "format": "econovaria-clean-replay-evidence-v1",
+  "generated_at": "2026-07-20T07:55:12Z",
+  "source_commit": "18213c774eb8f6dd0c74dc23863b79e6c0fd13b5",
+  "migration_count": 70,
+  "migration_head": "20260719200000_add_game_lifecycle_controls_v1",
+  "canonical_schema_sha256": "eca6e8a03c79b3a473129a17234d9ec0741d576aca6d4f96ecfc49e5eb3e09a5",
+  "repository_migration_manifest_sha256": "1ebfe266c8c7849b8952b6906946dbdf2b20c749d8f85dba002b8d19657884f5",
+  "replay_count": 2,
+  "deterministic": true,
+  "database_lint_level": "warning",
+  "database_lint_passed": true,
+  "live_database_modified": false,
+  "isolated_staging_modified": false
+}
