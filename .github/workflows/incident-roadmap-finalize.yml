@@ -83,12 +83,12 @@ jobs:
           release_marker = "### Current release condition\n"
           completion_section = """### 2026-07-20 incident-readiness completion
 
-- PR #252 merged `OPS-INCIDENT-001` as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4` after a current ownership audit confirmed no active pull request owned the subsection.
-- Final implementation head `afdbd18882db30b3b08d7815a4cacb527dc7b766` passed Incident Readiness #6, Repository Quality #1140, Staging Readiness Preflight #110, Supply Chain Security #24, Admin Game Lifecycle Controls #59, and Database Replay #378 with two clean migration replays and database lint.
-- The merged P0–P3 policy, incident-command runbook, classroom continuity and exactly-once economic-correction procedure, privacy-safe communication templates, sanitized issue intake, deterministic validator, regression tests, and CI enforcement are authoritative at the repository-operational boundary.
-- This completion does not satisfy isolated-environment, observability, backup/restore, performance, or staging-smoke evidence owned by separate Phase 5 items.
+          - PR #252 merged `OPS-INCIDENT-001` as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4` after a current ownership audit confirmed no active pull request owned the subsection.
+          - Final implementation head `afdbd18882db30b3b08d7815a4cacb527dc7b766` passed Incident Readiness #6, Repository Quality #1140, Staging Readiness Preflight #110, Supply Chain Security #24, Admin Game Lifecycle Controls #59, and Database Replay #378 with two clean migration replays and database lint.
+          - The merged P0–P3 policy, incident-command runbook, classroom continuity and exactly-once economic-correction procedure, privacy-safe communication templates, sanitized issue intake, deterministic validator, regression tests, and CI enforcement are authoritative at the repository-operational boundary.
+          - This completion does not satisfy isolated-environment, observability, backup/restore, performance, or staging-smoke evidence owned by separate Phase 5 items.
 
-"""
+          """
           if "### 2026-07-20 incident-readiness completion" not in text:
               count = text.count(release_marker)
               if count != 1:
@@ -98,12 +98,12 @@ jobs:
           ledger_marker = "Append entries in reverse chronological order.\n\n"
           ledger_entry = """### 2026-07-20 — Incident-readiness completion on PR #252
 
-- Completed `OPS-INCIDENT-001` with objective P0–P3 severity and stop conditions, explicit incident command, the full response lifecycle, classroom continuity, privacy-safe communications, and auditable idempotent economic correction.
-- Added sanitized incident intake, a deterministic fail-closed contract validator, positive and negative regression coverage, dedicated CI, and root audit/test integration while preserving merged branch-hygiene and supply-chain checks.
-- Final head `afdbd18882db30b3b08d7815a4cacb527dc7b766` passed all six required workflows; PR #252 had no comments or unresolved review threads.
-- PR #252 merged as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`. External environment, observability, backup/restore, performance, and staging-smoke gates remain separately open.
+          - Completed `OPS-INCIDENT-001` with objective P0–P3 severity and stop conditions, explicit incident command, the full response lifecycle, classroom continuity, privacy-safe communications, and auditable idempotent economic correction.
+          - Added sanitized incident intake, a deterministic fail-closed contract validator, positive and negative regression coverage, dedicated CI, and root audit/test integration while preserving merged branch-hygiene and supply-chain checks.
+          - Final head `afdbd18882db30b3b08d7815a4cacb527dc7b766` passed all six required workflows; PR #252 had no comments or unresolved review threads.
+          - PR #252 merged as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`. External environment, observability, backup/restore, performance, and staging-smoke gates remain separately open.
 
-"""
+          """
           if "### 2026-07-20 — Incident-readiness completion on PR #252" not in text:
               count = text.count(ledger_marker)
               if count != 1:
@@ -119,3 +119,31 @@ jobs:
           git diff --cached --check
           git commit -m "docs(roadmap): mark incident readiness verified"
           git push origin HEAD:docs/incident-readiness-final-v2
+
+  finalize-player-market:
+    if: github.event.pull_request.head.ref == 'agent/player-market-reconciliation-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out player market branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/player-market-reconciliation-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Synchronize current main and finalize market roadmap
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/finalize-player-market-roadmap.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit origin/main
+          node scripts/finalize-player-market-roadmap.mjs
+          git add -A
+          git diff --cached --check
+          git diff --cached --quiet && { echo "No market roadmap reconciliation changes were produced."; exit 1; }
+          git commit -m "docs(roadmap): mark player market reconciliation verified"
+          git push origin HEAD:agent/player-market-reconciliation-v1
