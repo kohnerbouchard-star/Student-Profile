@@ -9,6 +9,7 @@
     "hardening": "node tests/v75-hardening.mjs",
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
+    "dashboard-profile": "node tests/dashboard-profile-capabilities.mjs",
     "runtime-integration": "node tests/student-profile-runtime-integration.mjs",
     "connected-reads": "node tests/connected-read-surface-gating.mjs",
     "logout": "node tests/player-logout-revocation.mjs",
@@ -30,12 +31,12 @@
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run dashboard-profile && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, full connected Inventory redemption lifecycle and committed-success behavior, truthful Banking and Inventory, realtime freshness, safe session timeout exits, persistent player recovery states, and Chromium browser verification."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated Dashboard and Profile reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, full connected Inventory redemption lifecycle and committed-success behavior, truthful Banking and Inventory, realtime freshness, safe session timeout exits, persistent player recovery states, and Chromium browser verification."
 }

@@ -56,3 +56,23 @@ It retains the default branch and the admin source-preservation branch.
 - Review the remaining admin source branch during the transport/de-bundling
   program and either merge useful source, tag a documented archive, or delete
   it.
+
+## 2026-07-20 parallel-work ownership reconciliation
+
+A current pull-request audit found four pre-consolidation open authorities:
+
+- PR #163 / `agent/seed-content-foundation-v1` — sole seed-content authority;
+- PR #244 / `agent/player-story-delivery-v1` — Player story-notification delivery;
+- PR #245 / `agent/player-market-reconciliation-v1` — substantive market-order and Portfolio implementation;
+- PR #246 / `agent/player-market-portfolio-v1` — duplicate market ownership claim containing only a temporary source-snapshot workflow and claim marker.
+
+PR #245 is retained as the market authority because it contains the substantive public-safe market contract changes. PR #246's successful source-snapshot artifact was consumed to conduct the reconciliation; it contains no unique application implementation requiring transplant and is approved for explicit duplicate retirement.
+
+Branch Hygiene now deletes either:
+
+1. a merged same-repository pull-request branch; or
+2. a closed, unmerged same-repository pull-request branch carrying the explicit `duplicate` label.
+
+Closed unmerged branches without that label remain untouched. The default branch and `frontend/admin-terminal-source-v1` remain protected exceptions. `scripts/branch-hygiene-policy.test.mjs` ratchets these fail-closed rules in Repository Quality.
+
+The resulting active ownership set is unique: seed content (#163), story delivery (#244), and market reconciliation (#245). Future parallel chats must read the roadmap and open pull requests before creating a branch.

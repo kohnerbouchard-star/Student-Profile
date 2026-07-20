@@ -39,10 +39,10 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.routes.market, true);
   assertEquals(manifest.capabilities.routes.contracts, true);
   assertEquals(manifest.capabilities.routes.inventory, true);
-  assertEquals(manifest.capabilities.routes.dashboard, false);
+  assertEquals(manifest.capabilities.routes.dashboard, true);
   assertEquals(manifest.capabilities.routes.store, true);
   assertEquals(manifest.capabilities.routes.banking, true);
-  assertEquals(manifest.capabilities.routes.profile, false);
+  assertEquals(manifest.capabilities.routes.profile, true);
 
   assertEquals(manifest.capabilities.actions.marketWatchlist, true);
   assertEquals(manifest.capabilities.actions.notificationsRead, true);
@@ -55,11 +55,13 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
+  assertEquals(endpointKeys.includes("bootstrap"), true);
   assertEquals(endpointKeys.includes("capabilities"), true);
   assertEquals(endpointKeys.includes("banking"), true);
   assertEquals(endpointKeys.includes("contractAccept"), true);
   assertEquals(endpointKeys.includes("contractSubmit"), true);
   assertEquals(endpointKeys.includes("contracts"), true);
+  assertEquals(endpointKeys.includes("dashboard"), true);
   assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
   assertEquals(endpointKeys.includes("marketOrder" as never), false);
   assertEquals(endpointKeys.includes("store"), true);
@@ -77,7 +79,7 @@ Deno.test("player capability manifest contains no UUID-shaped identifiers", () =
   }
 });
 
-Deno.test("every advertised endpoint path is recognized by an authoritative route parser", () => {
+Deno.test("every advertised endpoint path is recognized by the authoritative dispatch boundary", () => {
   const operations = buildPlayerCapabilityManifest().endpoints.flatMap((
     endpoint,
   ) =>
@@ -93,7 +95,13 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
   );
 
   for (const operation of operations) {
-    const parsed = operation.key === "capabilities"
+    const parsed = operation.key === "bootstrap"
+      ? operation.path === "/players/me" ? { kind: "bootstrap" } : null
+      : operation.key === "dashboard"
+      ? operation.path === "/players/me/game/dashboard"
+        ? { kind: "dashboard" }
+        : null
+      : operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
       : operation.key === "banking"
       ? readPlayerBankingPublicRoutePath(operation.path)
