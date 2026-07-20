@@ -20,6 +20,7 @@ test("offline recovery locks writes and online recovery restores them", async ({
   await expect(recoveryRegion(page)).toBeVisible();
   await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "offline");
   await expect(recoveryRegion(page)).toHaveAttribute("role", "alert");
+  await expect(recoveryRegion(page).getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(purchase).toBeDisabled();
   await expect(purchase).toHaveAttribute("data-player-recovery-disabled", "true");
 
@@ -37,6 +38,7 @@ test("paused-game recovery survives route rerender and remains keyboard operable
   })));
   await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "game-paused");
   await expect(recoveryRegion(page)).toContainText("Economic actions are temporarily paused");
+  await expect(recoveryRegion(page).getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(page.locator("[data-player-purchase]").first()).toBeDisabled();
 
   await page.evaluate(() => { window.location.hash = "contracts"; });
@@ -64,6 +66,7 @@ test("committed-write ambiguity prevents duplicate submission until refresh", as
   await expect(recoveryRegion(page)).toHaveAttribute("data-player-recovery-state", "committed-refresh-pending");
   await expect(recoveryRegion(page)).toContainText("The action was saved");
   await expect(recoveryRegion(page)).toContainText("Do not submit the action again");
+  await expect(recoveryRegion(page).getByRole("button", { name: "Dismiss" })).toHaveCount(0);
   await expect(purchase).toBeDisabled();
 
   await recoveryRegion(page).getByRole("button", { name: "Refresh terminal" }).click();
