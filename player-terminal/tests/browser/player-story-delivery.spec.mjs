@@ -27,7 +27,7 @@ async function installConnectedStory(page, item, options = {}) {
   await expect(page.locator("#player-main-content")).toBeVisible();
   await page.locator("#player-main-content").focus();
   await page.evaluate(async ({ item, failAction }) => {
-    const { installStoryDeliveryFlow } = await import("/player-terminal/src/features/notifications/story-delivery-flow.js");
+    const { installStoryDeliveryFlow } = await import("/src/features/notifications/story-delivery-flow.js");
     const terminal = window.Econovaria.playerTerminal;
     const mount = document.getElementById("playerTerminal");
     window.__storyWrites = [];
