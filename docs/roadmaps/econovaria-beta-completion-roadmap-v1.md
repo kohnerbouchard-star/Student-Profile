@@ -6,7 +6,7 @@
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
 **Audited application-state baseline:** `b700147f03be26e1663437135878c6736f55b805`
-**Current repository audit head:** `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`
+**Repository state audited through:** `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`
 
 ---
 
@@ -97,7 +97,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Program | Current status | Authority |
 |---|---|---|
 | Backend player reconciliation | `VERIFIED_COMPLETE` | PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac` |
-| Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`, head `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; 407 seed commits beyond the common base and 98 current-main commits behind |
+| Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`, head `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; 407 seed commits beyond the common base and 98 commits behind the audited repository state |
 | Player runtime cutover and legacy source removal | `VERIFIED_COMPLETE` for repository code; operations remain `IN_PROGRESS` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; PR #222 merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`; connected isolated staging and live Worker retirement remain release gates |
 | Player safe session-expiry exit | `VERIFIED_COMPLETE` | PR #165 merged as `4e20a5993da925463887bc23cc707be5679ccd20`; suspended-session correction PR #167 merged as `14adbc525995cc931998244c442a23b542f43c7a` |
 | Admin safe session-expiry exit | `VERIFIED_COMPLETE` | PR #166 merged as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5` |
@@ -151,8 +151,8 @@ The first beta must prove this loop end to end with authoritative persistence.
 
 ### 2026-07-20 comprehensive repository and roadmap re-audit
 
-- Re-audited current `main` at `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`. Every commit after application-state baseline `b700147f03be26e1663437135878c6736f55b805` is roadmap-only, so no later application capability is being inferred.
-- PR #163 remains the only open PR and the sole seed-content authority. Its current head is `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; the branch has 407 seed commits beyond merge base `d403cf7baefeb3c1015c282cdbd748d2050e87ac` and is 98 current-main commits behind. It must be synchronized and revalidated before merge.
+- Re-audited repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`. PR #242 merged the resulting roadmap-only reconciliation as `35c26ba1bdda6aef46f562c3adebb69a28db95b0`; that documentation merge does not advance application, runtime, staging, or operational evidence. Every commit after application-state baseline `b700147f03be26e1663437135878c6736f55b805` is roadmap-only, so no later application capability is being inferred.
+- PR #163 remains the only open PR and the sole seed-content authority. Its current head is `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; the branch has 407 seed commits beyond merge base `d403cf7baefeb3c1015c282cdbd748d2050e87ac` and is 98 commits behind the audited repository state. It must be synchronized and revalidated before merge.
 - The merged Player capability manifest remains schema `1`, version `2026-07-19.4`. Dashboard, Portfolio, Profile, market orders, Crafting, Loans, Business, Marketplace writes, Messages, and Progression remain unadvertised or unavailable.
 - PR #163 contains substantial definition-layer progress that was understated in the expansion ledger: 144 item definitions, 60 recipe definitions, Store scarcity/difficulty policies, 10 banking products, 10 levels, 20 achievements, 50 locations, 13 proposed route families, 50 Contracts, 25 events, 10 event chains, 5 crisis arcs, 50 interactions, 30 news templates, 10 tutorials, and 30 notification templates.
 - Definition coverage is not runtime completion. All PR #163 content remains production-unauthorized and activation-disabled; map coordinates and adjacency are unverified; an importer, persistence, rollback, runtime capability mapping, staging load, and human approval remain absent.
@@ -686,7 +686,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 at current `main` `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; PR #163 remains the only open PR.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 for repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; PR #163 remains the only open PR.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
@@ -787,7 +787,7 @@ Required gates:
 
 ### Current PR #163 evidence boundary
 
-- PR #163 remains draft and is a validated design-definition/calibration branch, not a deployable seed release. Current audited head: `ad73fbe23dffd8556e58f363b6dd833daa93cd74`. It is 98 current-main commits behind and must be synchronized before merge review.
+- PR #163 remains draft and is a validated design-definition/calibration branch, not a deployable seed release. Current audited head: `ad73fbe23dffd8556e58f363b6dd833daa93cd74`. It is 98 commits behind the audited repository state and must be synchronized before merge review.
 - The definition layer contains ten 320-record country JSONLs: exactly 3,200 unique stable IDs, symbols, and display names, with 1,675 stable issuer or administrator IDs. Every record remains activation-disabled and runtime-unverified.
 - The bounded-selection layer contains 240 candidate instruments across all ten countries. Four country candidates are curated/enriched; six are selection-complete and enrichment-pending. No candidate is activation-authorized.
 - The physical-economy layer contains 144 item definitions and a 60-recipe graph with difficulty, substitution, scarcity, maintenance, salvage, and demand policies. Numeric prices, effect coefficients, recipe activation, production import, and runtime capability remain approval-blocked.
@@ -1073,8 +1073,8 @@ Append entries in reverse chronological order.
 
 ### 2026-07-20 — Comprehensive repository and roadmap re-audit
 
-- Audited current `main` `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; application implementation remains represented by baseline `b700147f03be26e1663437135878c6736f55b805` because all later mainline changes are roadmap-only.
-- Confirmed PR #163 is the only open PR and sole seed authority at `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; it is 407 seed commits beyond merge base `d403cf7baefeb3c1015c282cdbd748d2050e87ac` and 98 current-main commits behind.
+- Audited repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; application implementation remains represented by baseline `b700147f03be26e1663437135878c6736f55b805` because all later mainline changes are roadmap-only.
+- Confirmed PR #163 is the only open PR and sole seed authority at `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; it is 407 seed commits beyond merge base `d403cf7baefeb3c1015c282cdbd748d2050e87ac` and 98 commits behind the audited repository state.
 - Reclassified understated unmerged definition work for Contracts, Store scarcity, items, Crafting, financial-market registries, banking products, progression, campaign content, locations, and routes while preserving all runtime, approval, staging, and production blockers.
 - Recorded the 144-item/60-recipe physical-economy graph and its 16,000-run calibration result: 25/28 quantitative gates pass; three quantitative failures plus substitution, salvage/recraft, arbitrage, and concurrency gaps prevent activation.
 - Reclassified operations and architecture controls as partial where evidence exists: dependency auditing, package signatures, pinned tooling, replay/lint, staging validation, Player legacy-source retirement, capability versioning, and Admin fetch/observer ratchets.
