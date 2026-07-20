@@ -106,19 +106,10 @@ const ROUTE_BUILDERS = Object.freeze({
     }),
   }),
 
-  portfolio: ({ session }) => ({
+  portfolio: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/stocks/portfolio", {
-      gameSessionId: requiredText(
-        session?.gameSessionId,
-        "gameSessionId",
-        "portfolio",
-      ),
-      playerSessionId: requiredText(
-        session?.playerSessionId,
-        "playerSessionId",
-        "portfolio",
-      ),
+      limit: payload.limit,
     }),
   }),
 
@@ -146,23 +137,30 @@ const ROUTE_BUILDERS = Object.freeze({
     ),
   }),
 
-  marketOrder: ({ payload = {}, session }) => {
+  marketOrder: ({ payload = {} }) => {
     if (String(payload.orderType || "market").toLowerCase() !== "market") {
       throw new ApiRequestError(
         "Limit orders are not supported by the current player stock-order route.",
         { body: { code: "player_limit_orders_not_supported" } },
       );
     }
+    const expectedPrice = Number(payload.expectedPrice ?? payload.price);
+    if (!Number.isFinite(expectedPrice) || expectedPrice <= 0) {
+      throw new ApiRequestError(
+        "expectedPrice is required for marketOrder.",
+        { body: { code: "player_market_expected_price_invalid" } },
+      );
+    }
     return {
       method: "POST",
       path: "/players/me/stocks/orders",
       payload: {
-        gameSessionId: gameSessionId(payload, session, "marketOrder"),
-        stockAssetId: requiredText(
-          payload.stockAssetId || payload.assetId,
-          "stockAssetId",
+        ticker: requiredText(
+          payload.ticker || payload.symbol || payload.assetId,
+          "ticker",
           "marketOrder",
-        ),
+        ).toUpperCase(),
+        expectedPrice,
         side: requiredText(payload.side, "side", "marketOrder").toLowerCase(),
         quantity: Number(payload.quantity),
         idempotencyKey: idempotencyKey(payload, "marketOrder"),
