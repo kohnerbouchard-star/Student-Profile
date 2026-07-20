@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Release-controller replay entrypoint. Safe to rerun against isolated staging.
 MIGRATIONS_DIR="${1:-backend/supabase/migrations}"
 POOLER_URL_FILE="${2:-backend/supabase/.temp/pooler-url}"
 EXPECTED_HEAD="20260719200000"
