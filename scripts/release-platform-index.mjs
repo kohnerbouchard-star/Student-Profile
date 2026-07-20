@@ -19,6 +19,7 @@ export const {
 
 const PLACEHOLDER_PATTERN = /^(?:change-me|example|placeholder|todo(?:[_-].*)?|tbd(?:[_-].*)?|unknown(?:[_-].*)?|development|staging|production|0+)$/i;
 const NEUTRALITY_VERIFIER = "release-environment-neutrality-v1";
+const RELEASE_WORKFLOW = "Release Artifact Build";
 
 function assertNoPlaceholder(value, label, errors) {
   if (typeof value !== "string" || PLACEHOLDER_PATTERN.test(value)) {
@@ -106,12 +107,29 @@ export async function validateReleaseManifest(options) {
   if (!Array.isArray(neutrality?.scannedRoots) || neutrality.scannedRoots.length === 0) {
     errors.push("release environmentNeutrality.scannedRoots is required");
   }
+  const provenance = options.manifest?.provenance;
+  if (provenance?.builder !== "github-actions") {
+    errors.push("release provenance.builder must be github-actions");
+  }
+  if (provenance?.workflow !== RELEASE_WORKFLOW) {
+    errors.push(`release provenance.workflow must be ${RELEASE_WORKFLOW}`);
+  }
+  if (provenance?.repository !== "kohnerbouchard-star/Student-Profile") {
+    errors.push("release provenance.repository is invalid");
+  }
   if (errors.length) throw new base.ReleasePlatformValidationError(errors);
   return base.validateReleaseManifest(options);
 }
 
 export async function validatePromotionRecord(options) {
-  const { record, releaseManifest, expectedEnvironment } = options;
+  const {
+    record,
+    releaseManifest,
+    expectedEnvironment,
+    expectedSourceRunId,
+    expectedSourceArtifactId,
+    expectedEnvironmentManifestPath,
+  } = options;
   const errors = [];
   if (record && releaseManifest) {
     if (record.configurationSha256 !== releaseManifest.configuration?.sha256) {
@@ -120,6 +138,22 @@ export async function validatePromotionRecord(options) {
     if (record.configurationVersion !== releaseManifest.configuration?.version) {
       errors.push("promotion configurationVersion mismatch");
     }
+  }
+  if (expectedSourceRunId !== undefined) {
+    if (String(record?.sourceRunId ?? "") !== String(expectedSourceRunId)) {
+      errors.push("promotion sourceRunId does not match workflow input");
+    }
+    if (String(releaseManifest?.provenance?.workflowRunId ?? "") !== String(expectedSourceRunId)) {
+      errors.push("release provenance workflowRunId does not match workflow input");
+    }
+  }
+  if (expectedSourceArtifactId !== undefined
+      && String(record?.sourceArtifactId ?? "") !== String(expectedSourceArtifactId)) {
+    errors.push("promotion sourceArtifactId does not match workflow input");
+  }
+  if (expectedEnvironmentManifestPath !== undefined
+      && record?.environmentManifestEvidence?.path !== expectedEnvironmentManifestPath) {
+    errors.push("promotion environment manifest path does not match workflow input");
   }
   if (expectedEnvironment === "production" && record?.stagingEvidence) {
     if (record.stagingEvidence.releaseManifestSha256 !== record.releaseManifestSha256) {
