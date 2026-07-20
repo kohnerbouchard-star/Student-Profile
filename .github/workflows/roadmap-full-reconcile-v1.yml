@@ -1,0 +1,44 @@
+name: Roadmap Full Reconciliation
+
+on:
+  push:
+    branches:
+      - agent/roadmap-full-reconciliation-v1
+    paths:
+      - .github/workflows/roadmap-full-reconcile-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out reconciliation branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/roadmap-full-reconciliation-v1
+          fetch-depth: 0
+
+      - name: Reconcile current-state roadmap sections
+        shell: bash
+        run: |
+          python3 .roadmap-reconcile/part1.py
+          python3 .roadmap-reconcile/part2a.py
+          python3 .roadmap-reconcile/part2b.py
+          python3 .roadmap-reconcile/part3a.py
+          python3 .roadmap-reconcile/part3b.py
+          python3 .roadmap-reconcile/part4a.py
+          python3 .roadmap-reconcile/part4b.py
+          git diff --check
+
+      - name: Remove one-use reconciliation files and commit roadmap
+        shell: bash
+        run: |
+          rm -rf .roadmap-reconcile
+          rm .github/workflows/roadmap-full-reconcile-v1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md .roadmap-reconcile .github/workflows/roadmap-full-reconcile-v1.yml
+          git commit -m "docs(roadmap): reconcile merged application state"
+          git push origin HEAD:agent/roadmap-full-reconciliation-v1
