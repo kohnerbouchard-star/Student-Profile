@@ -1,14 +1,14 @@
 {
   "schemaVersion": "econovaria-beta-seed-execution-evidence-v1",
-  "recordedAt": "2026-07-20T06:39:39.423Z",
+  "recordedAt": "2026-07-20T06:48:00.718Z",
   "branch": "agent/seed-content-foundation-v1",
   "pullRequest": 163,
-  "synchronizedMainSha": "b047e322b18225d8a4136acc76e92da15bdbff1e",
-  "reconciledBranchSha": "c52b9e10c22c8c4b2b6c3b5aa546ced5b6d56c59",
-  "requiredFailures": 6,
+  "synchronizedMainSha": "5153c9c2352fc4902fab0c84fb9ecfbd06b31cf5",
+  "reconciledBranchSha": "36eba433574323a0d9a8748cc21d269fe3905c65",
+  "requiredFailures": 4,
   "connectedStaging": {
     "status": "external-blocked",
-    "reason": "Chat 2 isolated staging project identity, game session, and credentials were not available to this workflow. No database was touched.",
+    "reason": "Chat 2 isolated staging identity and credentials unavailable; no database touched.",
     "productionTouched": false,
     "knownLiveProjectRefProhibited": "cgiukdjwicykrmtkhudh"
   },
@@ -70,14 +70,14 @@
     {
       "name": "backend_typecheck",
       "classification": "required",
-      "status": 127,
-      "passed": false
+      "status": 0,
+      "passed": true
     },
     {
       "name": "backend_smoke",
       "classification": "required",
-      "status": 127,
-      "passed": false
+      "status": 0,
+      "passed": true
     },
     {
       "name": "migration_static_audit",
@@ -132,17 +132,17 @@
     {
       "name": "backend_npm_ci.log",
       "bytes": 76,
-      "sha256": "0fd40c13c8fc92c1446b786d949cd2e5c994cd6e07d4321d18e27eb6290737d8"
+      "sha256": "a8fde421de3ab0b1f35a1bbd8249f41de5fa829b817556eeb59f49926966d132"
     },
     {
       "name": "backend_smoke.log",
-      "bytes": 1743,
-      "sha256": "ff70679a988672515131d2377d60aea1c2b20c978c3ebed59055c934ee6fa2e7"
+      "bytes": 73360,
+      "sha256": "fc6a409211e456cc6fcbdb69adf4a03df1c6369cc7c9a391cafccc7b8843cf94"
     },
     {
       "name": "backend_typecheck.log",
-      "bytes": 443,
-      "sha256": "5faa28af8747bc021ef75f580a00947487c61e948dbfbee38b510bf714f71c50"
+      "bytes": 5338,
+      "sha256": "a373f3acbaa4b7eaffcdbc07810f52a94b55c86a539d9f8d58a2ca10c2f1c370"
     },
     {
       "name": "build_seed_beta_pack.log",
@@ -151,13 +151,23 @@
     },
     {
       "name": "connected_staging_import.log",
-      "bytes": 208,
-      "sha256": "cf929371c4b4a31fcad447aa88159bb0dadb9d1f13282cdcf5e0ffa0c08e6ced"
+      "bytes": 171,
+      "sha256": "9a355a2d75d6b446b39970d54d3c87450dfea092c36feb04cbee5aef8d0d9145"
+    },
+    {
+      "name": "deno-install.log",
+      "bytes": 774,
+      "sha256": "60a1d62e576836475d1d98fe29254928b31d4283076302e043e773c36c303dad"
+    },
+    {
+      "name": "deno-version.log",
+      "bytes": 92,
+      "sha256": "0a94e1e5b8986e651bf9e0a099d97fc9c06e85f8b018596131ab1979ab89a245"
     },
     {
       "name": "existing_seed_validators.log",
-      "bytes": 11141,
-      "sha256": "dd814904b131a105e2fcde343bb27d5aa9f61ce761ebd92b7c108575f9354e9f"
+      "bytes": 11142,
+      "sha256": "a36622b2f592170c5c1be2ce7d07d3a9375de67bcca068e3fa05db702331000e"
     },
     {
       "name": "git_diff_check.log",
@@ -191,8 +201,8 @@
     },
     {
       "name": "repository_test_suite.log",
-      "bytes": 274912,
-      "sha256": "4d1f514faa5902e35f52f9777f21eac2b4907c0ff0d48d421ca676ee47986d27"
+      "bytes": 274911,
+      "sha256": "695d78c1acfcac44b24be3eeea0c250e997c72653136ce3c07c265506cf545fd"
     },
     {
       "name": "seed_design_staging_preflight.log",
@@ -216,8 +226,8 @@
     },
     {
       "name": "test_seed_beta_pack.log",
-      "bytes": 3204,
-      "sha256": "69e317c39a9969de37c6b320416874d575c0b18c088850d01c34e7fdf38d2a13"
+      "bytes": 3205,
+      "sha256": "176900da11c1c8d8eda5e3dd5d3549c94a44c03db23293c6cd01436d001e05b2"
     },
     {
       "name": "validate_seed_beta_pack.log",

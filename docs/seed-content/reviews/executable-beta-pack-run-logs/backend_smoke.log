@@ -1,0 +1,692 @@
+
+> econovaria-backend@0.0.0 smoke
+> npm run test:smoke
+
+
+> econovaria-backend@0.0.0 test:smoke
+> npm run test:stock-market-calendar && npm run test:player-market-assets && SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno run --config=supabase/functions/deno.json --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --deny-net --lock=supabase/functions/deno.lock --frozen src/smoke/classroomApiSmokeTest.ts && npm run test:player-request-scope && npm run test:player-security && npm run test:player-capabilities && npm run test:player-world && npm run test:player-inventory && npm run test:player-notifications && npm run test:player-logout && npm run test:player-contract-acceptance && npm run test:player-contract-lifecycle && npm run test:player-store-public && npm run test:player-banking-public && npm run test:economic-ledger-invariants && npm run test:game-lifecycle && npm run test:admin-api
+
+
+> econovaria-backend@0.0.0 test:stock-market-calendar
+> deno test --allow-read=supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql,supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/stocks/calendars/stockMarketWindowConfig.test.ts src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.test.ts src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/calendars/stockMarketWindowConfig.test.ts
+[0m[32mCheck[0m src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts
+[0m[32mCheck[0m src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts
+[0m[38;5;245mrunning 1 test from ./src/domains/stocks/infrastructure/supabaseStockMarketWindowRepository.test.ts[0m
+market status is evaluated with game scope and server time ... [0m[32mok[0m [0m[38;5;245m(599µs)[0m
+[0m[38;5;245mrunning 11 tests from ./src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts[0m
+stock trading repository calls execute order RPC with one game and player session ... [0m[32mok[0m [0m[38;5;245m(651µs)[0m
+stock trading repository maps filled buy response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(154µs)[0m
+stock trading repository maps filled sell response with actual cash balance ... [0m[32mok[0m [0m[38;5;245m(158µs)[0m
+stock trading repository maps insufficient cash to 409 ... [0m[32mok[0m [0m[38;5;245m(294µs)[0m
+stock trading repository maps insufficient shares to 409 ... [0m[32mok[0m [0m[38;5;245m(153µs)[0m
+stock trading repository maps missing game, player, and stock to 404 ... [0m[32mok[0m [0m[38;5;245m(304µs)[0m
+stock trading repository rejects execution while the market is closed ... [0m[32mok[0m [0m[38;5;245m(114µs)[0m
+stock trading repository maps missing schema to schema-not-applied ... [0m[32mok[0m [0m[38;5;245m(125µs)[0m
+stock trading repository forwards idempotency key ... [0m[32mok[0m [0m[38;5;245m(121µs)[0m
+stock trading repository does not call initialize portfolio RPC ... [0m[32mok[0m [0m[38;5;245m(121µs)[0m
+stock trading repository does not call runner, read, or seed RPCs ... [0m[32mok[0m [0m[38;5;245m(104µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/stocks/calendars/stockMarketWindowConfig.test.ts[0m
+one explicit game timezone is required ... [0m[32mok[0m [0m[38;5;245m(14ms)[0m
+valid IANA timezone is normalized and retained ... [0m[32mok[0m [0m[38;5;245m(530µs)[0m
+[0m[38;5;245mrunning 7 tests from ./src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts[0m
+all ten countries map to a stable exchange ... [0m[32mok[0m [0m[38;5;245m(450µs)[0m
+market opens at 08:00 Asia Seoul on a weekday ... [0m[32mok[0m [0m[38;5;245m(15ms)[0m
+market is closed before open and reports the next transition ... [0m[32mok[0m [0m[38;5;245m(445µs)[0m
+market closes at 17:00 Asia Seoul ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+weekends do not generate open market minutes ... [0m[32mok[0m [0m[38;5;245m(15ms)[0m
+one supplied game timezone governs every exchange ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+minute keys are stable and exchange scoped ... [0m[32mok[0m [0m[38;5;245m(115µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/stocks/tests/stockExchangeCalendarMigrationContract.test.ts[0m
+one required game timezone gates all exchanges ... [0m[32mok[0m [0m[38;5;245m(841µs)[0m
+[0m[38;5;245mrunning 15 tests from ./src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts[0m
+stock market runner rejects non-POST requests ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+stock market runner rejects missing configured secret ... [0m[32mok[0m [0m[38;5;245m(995µs)[0m
+stock market runner rejects missing or invalid request secret ... [0m[32mok[0m [0m[38;5;245m(575µs)[0m
+stock market runner rejects missing gameSessionId ... [0m[32mok[0m [0m[38;5;245m(588µs)[0m
+stock market runner rejects multiple game session request shapes ... [0m[32mok[0m [0m[38;5;245m(279µs)[0m
+stock market runner rejects ticks while the market is closed ... [0m[32mok[0m [0m[38;5;245m(583µs)[0m
+stock market runner returns success shape ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock market runner publishes one public stock tick after persistence ... [0m[32mok[0m [0m[38;5;245m(987µs)[0m
+stock market runner posts market news and broadcasts public event ... [0m[32mok[0m [0m[38;5;245m(949µs)[0m
+stock market runner keeps successful tick response when realtime publish fails ... [0m[32mok[0m [0m[38;5;245m(414µs)[0m
+stock market runner keeps successful tick response when realtime publisher throws ... [0m[32mok[0m [0m[38;5;245m(450µs)[0m
+stock market runner creates storyline hook from factory after successful tick ... [0m[32mok[0m [0m[38;5;245m(362µs)[0m
+stock market runner invokes storyline hook after successful tick ... [0m[32mok[0m [0m[38;5;245m(321µs)[0m
+stock market runner keeps successful tick response when storyline hook fails ... [0m[32mok[0m [0m[38;5;245m(383µs)[0m
+stock market runner derives the default seed from one game session ... [0m[32mok[0m [0m[38;5;245m(321µs)[0m
+
+[0m[32mok[0m | 37 passed | 0 failed [0m[38;5;245m(268ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-market-assets
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/stocks/api/playerStockAssetListRoutePaths.test.ts src/domains/stocks/api/playerStockAssetListRequestParser.test.ts src/domains/stocks/api/playerStockAssetListHttpHandler.test.ts src/domains/stocks/api/playerStockAssetDetailRequestParser.test.ts src/domains/stocks/api/playerStockAssetDetailHttpHandler.test.ts src/domains/stocks/api/playerStockWatchlistRoutePaths.test.ts src/domains/stocks/api/playerStockWatchlistRequestParser.test.ts src/domains/stocks/api/playerStockWatchlistHttpHandler.test.ts src/domains/stocks/api/playerStockMarketPublicRoutePaths.test.ts src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts src/domains/stocks/api/playerStockMarketTradingHttpHandler.test.ts src/domains/stocks/api/playerStockMarketPublicBoundary.test.ts src/domains/stocks/services/playerStockAssetListService.test.ts src/domains/stocks/services/playerStockAssetDetailService.test.ts src/domains/stocks/services/playerStockWatchlistService.test.ts src/domains/stocks/infrastructure/supabasePlayerStockAssetListRepository.test.ts src/domains/stocks/infrastructure/supabasePlayerStockAssetDetailRepository.test.ts src/domains/stocks/infrastructure/supabasePlayerStockWatchlistRepository.test.ts
+
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabasePlayerStockAssetListRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabasePlayerStockAssetDetailRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/infrastructure/supabasePlayerStockWatchlistRepository.test.ts
+[0m[32mCheck[0m src/domains/stocks/services/playerStockAssetListService.test.ts
+[0m[32mCheck[0m src/domains/stocks/services/playerStockAssetDetailService.test.ts
+[0m[32mCheck[0m src/domains/stocks/services/playerStockWatchlistService.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockAssetListRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockAssetListRequestParser.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockAssetListHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockAssetDetailRequestParser.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockAssetDetailHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockWatchlistRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockWatchlistRequestParser.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockWatchlistHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockMarketPublicRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockMarketTradingHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/stocks/api/playerStockMarketPublicBoundary.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/infrastructure/supabasePlayerStockAssetListRepository.test.ts[0m
+player stock asset repository scopes and bounds one asset query plus one tick query ... [0m[32mok[0m [0m[38;5;245m(9ms)[0m
+player stock asset repository preserves lookahead range ... [0m[32mok[0m [0m[38;5;245m(154µs)[0m
+player stock asset repository maps schema errors ... [0m[32mok[0m [0m[38;5;245m(347µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/stocks/infrastructure/supabasePlayerStockAssetDetailRepository.test.ts[0m
+stock asset detail scopes the asset and bounded history queries ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+stock asset detail does not query history when the asset is unavailable ... [0m[32mok[0m [0m[38;5;245m(152µs)[0m
+stock asset detail rejects duplicate active ticker rows ... [0m[32mok[0m [0m[38;5;245m(305µs)[0m
+stock asset detail maps missing schema errors ... [0m[32mok[0m [0m[38;5;245m(206µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/infrastructure/supabasePlayerStockWatchlistRepository.test.ts[0m
+player stock watchlist repository scopes list reads and latest ticks ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock watchlist repository makes PUT and DELETE idempotent ... [0m[32mok[0m [0m[38;5;245m(592µs)[0m
+player stock watchlist repository rejects inactive additions and maps schema errors ... [0m[32mok[0m [0m[38;5;245m(590µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/stocks/services/playerStockAssetListService.test.ts[0m
+player stock asset service returns deterministic public-safe pagination ... [0m[32mok[0m [0m[38;5;245m(998µs)[0m
+player stock asset service distinguishes a valid empty market ... [0m[32mok[0m [0m[38;5;245m(128µs)[0m
+player stock asset service rejects cross-game rows and public id collisions ... [0m[32mok[0m [0m[38;5;245m(412µs)[0m
+player stock asset service maps persistence failures to retryable unavailability ... [0m[32mok[0m [0m[38;5;245m(371µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/stocks/services/playerStockAssetDetailService.test.ts[0m
+player stock asset detail maps deterministic ascending history ... [0m[32mok[0m [0m[38;5;245m(889µs)[0m
+player stock asset detail returns a safe not-found error ... [0m[32mok[0m [0m[38;5;245m(296µs)[0m
+player stock asset detail fails closed on cross-scope records ... [0m[32mok[0m [0m[38;5;245m(359µs)[0m
+player stock asset detail maps persistence failures to retryable service errors ... [0m[32mok[0m [0m[38;5;245m(384µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/services/playerStockWatchlistService.test.ts[0m
+player stock watchlist service preserves entry order and hides UUIDs ... [0m[32mok[0m [0m[38;5;245m(855µs)[0m
+player stock watchlist service returns idempotent mutation state ... [0m[32mok[0m [0m[38;5;245m(201µs)[0m
+player stock watchlist service maps missing assets and persistence outages ... [0m[32mok[0m [0m[38;5;245m(686µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/stocks/api/playerStockAssetListRoutePaths.test.ts[0m
+player stock asset routes accept collection and public ticker detail paths ... [0m[32mok[0m [0m[38;5;245m(616µs)[0m
+player stock asset routes reject internal UUIDs and malformed detail paths ... [0m[32mok[0m [0m[38;5;245m(146µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/stocks/api/playerStockAssetListRequestParser.test.ts[0m
+player stock asset list parser applies bounded defaults ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+player stock asset list parser rejects invalid bounds and duplicates ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock asset list parser rejects client-selected game scope ... [0m[32mok[0m [0m[38;5;245m(450µs)[0m
+player stock asset list parser rejects malformed paths ... [0m[32mok[0m [0m[38;5;245m(185µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/api/playerStockAssetListHttpHandler.test.ts[0m
+player stock asset list derives scope and returns browser-safe DTOs ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+player stock asset list rejects missing sessions and client game selection ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock asset reads reject runner secrets, malformed paths, and writes ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/api/playerStockAssetDetailRequestParser.test.ts[0m
+player stock asset detail parser applies a bounded history default ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+player stock asset detail parser rejects malformed bounds and unsupported query ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock asset detail parser rejects client-selected game scope ... [0m[32mok[0m [0m[38;5;245m(573µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/stocks/api/playerStockAssetDetailHttpHandler.test.ts[0m
+player stock asset detail derives authenticated scope and redacts UUIDs ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+player stock asset detail returns not found without leaking scope ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock asset detail rejects malformed paths and client game selection ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock asset detail rejects missing sessions, runner secrets, and writes ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/stocks/api/playerStockWatchlistRoutePaths.test.ts[0m
+player stock watchlist route accepts collection and public tickers ... [0m[32mok[0m [0m[38;5;245m(633µs)[0m
+player stock watchlist route rejects UUIDs, encoded separators, and extra segments ... [0m[32mok[0m [0m[38;5;245m(146µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/api/playerStockWatchlistRequestParser.test.ts[0m
+player stock watchlist parser applies bounded list defaults ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+player stock watchlist parser rejects duplicate, unknown, and client scope fields ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock watchlist mutation parser rejects query fields and bodies ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/stocks/api/playerStockWatchlistHttpHandler.test.ts[0m
+player stock watchlist handler reads browser-safe assets ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+player stock watchlist handler provides idempotent PUT and DELETE responses ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock watchlist handler rejects missing sessions, bodies, secrets, and invalid methods ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/stocks/api/playerStockMarketPublicRoutePaths.test.ts[0m
+player public stock routes recognize exact portfolio and order paths ... [0m[32mok[0m [0m[38;5;245m(489µs)[0m
+player public stock routes fail closed for nested and unrelated paths ... [0m[32mok[0m [0m[38;5;245m(89µs)[0m
+[0m[38;5;245mrunning 13 tests from ./src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts[0m
+player stock read rejects missing player session ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+player stock read rejects invalid player session ... [0m[32mok[0m [0m[38;5;245m(847µs)[0m
+player stock read rejects revoked, expired, and inactive sessions ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock read rejects mismatched game session ... [0m[32mok[0m [0m[38;5;245m(656µs)[0m
+player stock read rejects missing game or player session query ... [0m[32mok[0m [0m[38;5;245m(864µs)[0m
+player stock read rejects array-shaped or multiple session ids ... [0m[32mok[0m [0m[38;5;245m(751µs)[0m
+player stock read rejects invalid limits ... [0m[32mok[0m [0m[38;5;245m(605µs)[0m
+player stock read does not require or accept the runner secret ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock read returns portfolio DTO through the player-safe route ... [0m[32mok[0m [0m[38;5;245m(435µs)[0m
+player stock read returns holdings DTO through the player-safe route ... [0m[32mok[0m [0m[38;5;245m(346µs)[0m
+player stock read returns orders newest-first through the player-safe route ... [0m[32mok[0m [0m[38;5;245m(483µs)[0m
+player stock read returns trades newest-first through the player-safe route ... [0m[32mok[0m [0m[38;5;245m(453µs)[0m
+player stock read stays read-only ... [0m[32mok[0m [0m[38;5;245m(280µs)[0m
+[0m[38;5;245mrunning 7 tests from ./src/domains/stocks/api/playerStockMarketTradingHttpHandler.test.ts[0m
+player stock trading rejects unsupported methods and missing player session token ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+player stock trading rejects invalid sessions and runner secrets ... [0m[32mok[0m [0m[38;5;245m(966µs)[0m
+player stock trading rejects private scope injection ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player stock trading validates ticker, reviewed price, side, quantity, and idempotency ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+player stock trading resolves the public ticker inside authenticated game scope ... [0m[32mok[0m [0m[38;5;245m(620µs)[0m
+player stock trading rejects stale reviewed prices before repository execution ... [0m[32mok[0m [0m[38;5;245m(432µs)[0m
+player stock trading preserves repository rejection states ... [0m[32mok[0m [0m[38;5;245m(910µs)[0m
+[0m[38;5;245mrunning 6 tests from ./src/domains/stocks/api/playerStockMarketPublicBoundary.test.ts[0m
+public player market order resolves ticker server-side and emits no ownership UUID ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+public player market order rejects a stale reviewed price before settlement ... [0m[32mok[0m [0m[38;5;245m(891µs)[0m
+public player market order rejects internal stock UUID injection ... [0m[32mok[0m [0m[38;5;245m(430µs)[0m
+public player market order maps insufficient cash and shares ... [0m[32mok[0m [0m[38;5;245m(808µs)[0m
+public portfolio derives all ownership scope from the player token ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+public portfolio rejects partial legacy ownership query injection ... [0m[32mok[0m [0m[38;5;245m(570µs)[0m
+
+[0m[32mok[0m | 73 passed | 0 failed [0m[38;5;245m(790ms)[0m
+
+ok - shared helper rejects missing authorization
+ok - shared helper rejects invalid auth user
+ok - shared helper returns configured lookup failure
+ok - shared helper returns staff_not_found
+ok - shared helper returns staff auth user and service client
+ok - staff bootstrap missing auth returns missing_staff_auth_user
+ok - staff bootstrap lookup failure preserves staff_bootstrap_failed
+ok - licensing missing auth happens before body parsing
+ok - licensing invalid JSON happens before staff lookup
+ok - licensing lookup failure preserves activation failure body
+
+> econovaria-backend@0.0.0 test:player-request-scope
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/api/playerRequestScope.test.ts src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts src/security/playerBrowserPayloadPrivacy.test.ts
+
+[0m[32mCheck[0m src/domains/players/api/playerRequestScope.test.ts
+[0m[32mCheck[0m src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts
+[0m[32mCheck[0m src/security/playerBrowserPayloadPrivacy.test.ts
+[0m[38;5;245mrunning 10 tests from ./src/domains/players/api/playerRequestScope.test.ts[0m
+player request scope derives immutable identity only from the active session ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+player request scope rejects a missing player session ... [0m[32mok[0m [0m[38;5;245m(812µs)[0m
+player request scope rejects expired and revoked sessions ... [0m[32mok[0m [0m[38;5;245m(645µs)[0m
+player request scope rejects inactive or structurally mismatched session resolution ... [0m[32mok[0m [0m[38;5;245m(430µs)[0m
+player request scope rejects wrong-game access and conflicting game hints ... [0m[32mok[0m [0m[38;5;245m(836µs)[0m
+player request scope rejects query and header ownership selection ... [0m[32mok[0m [0m[38;5;245m(858µs)[0m
+player request scope rejects body ownership and recipient UUID injection ... [0m[32mok[0m [0m[38;5;245m(728µs)[0m
+player-facing recipient identifiers remain available for scoped lookup ... [0m[32mok[0m [0m[38;5;245m(181µs)[0m
+player request scope preserves resolver authorization failures ... [0m[32mok[0m [0m[38;5;245m(235µs)[0m
+request-scope compatibility helpers enforce the same boundary ... [0m[32mok[0m [0m[38;5;245m(458µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts[0m
+player login returns a one-time token without internal UUIDs ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+player login fails closed when a legacy player lacks a public identifier ... [0m[32mok[0m [0m[38;5;245m(507µs)[0m
+player bootstrap derives scope from token and returns no token or UUID ... [0m[32mok[0m [0m[38;5;245m(797µs)[0m
+player bootstrap rejects UUID-shaped public identifier without internal fallback ... [0m[32mok[0m [0m[38;5;245m(340µs)[0m
+[0m[38;5;245mrunning 7 tests from ./src/security/playerBrowserPayloadPrivacy.test.ts[0m
+browser payload privacy: reviewed capability manifest contains no credential material or UUID values ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+browser payload privacy: reviewed logout response contains no credential material or internal UUIDs ... [0m[32mok[0m [0m[38;5;245m(76µs)[0m
+browser payload privacy: generic public errors contain no request credentials or internal UUIDs ... [0m[32mok[0m [0m[38;5;245m(87µs)[0m
+browser payload privacy: login exposes only the one-time session token and public player identifier ... [0m[32mok[0m [0m[38;5;245m(85µs)[0m
+browser payload privacy: bootstrap exposes no raw token or internal UUID ... [0m[32mok[0m [0m[38;5;245m(114µs)[0m
+browser payload privacy: legacy UUID-bearing bootstrap shapes are detected as blockers ... [0m[32mok[0m [0m[38;5;245m(122µs)[0m
+browser payload privacy: credential, token-hash, and plaintext-token fields are detected ... [0m[32mok[0m [0m[38;5;245m(79µs)[0m
+
+[0m[32mok[0m | 21 passed | 0 failed [0m[38;5;245m(116ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-security
+> deno test --allow-read=supabase/functions/classroom-api/index.ts,supabase/migrations/20260718173000_add_shared_request_rate_limits_v1.sql,supabase/migrations/20260718190000_add_pre_auth_rate_limit_rpc_v1.sql --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/security/playerAuthorizationSecurityMatrix.test.ts src/security/rateLimitHttp.test.ts src/security/rateLimitKeying.test.ts src/security/rateLimitMigration.test.ts src/security/playerRateLimitService.test.ts src/security/supabaseRateLimitRepository.test.ts src/security/playerRateLimitDispatch.test.ts src/security/classroomApiRateLimitDispatch.test.ts src/security/preAuthRateLimitMigration.test.ts
+
+[0m[32mCheck[0m src/security/playerAuthorizationSecurityMatrix.test.ts
+[0m[32mCheck[0m src/security/rateLimitHttp.test.ts
+[0m[32mCheck[0m src/security/rateLimitKeying.test.ts
+[0m[32mCheck[0m src/security/rateLimitMigration.test.ts
+[0m[32mCheck[0m src/security/playerRateLimitService.test.ts
+[0m[32mCheck[0m src/security/supabaseRateLimitRepository.test.ts
+[0m[32mCheck[0m src/security/playerRateLimitDispatch.test.ts
+[0m[32mCheck[0m src/security/classroomApiRateLimitDispatch.test.ts
+[0m[32mCheck[0m src/security/preAuthRateLimitMigration.test.ts
+[0m[38;5;245mrunning 6 tests from ./src/security/playerAuthorizationSecurityMatrix.test.ts[0m
+authorization matrix: repeated invalid-token attempts fail closed with uniform public errors ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+authorization matrix: revoked, expired, inactive, and malformed-expiry sessions fail closed ... [0m[32mok[0m [0m[38;5;245m(780µs)[0m
+authorization matrix: replay of a token after revocation is rejected ... [0m[32mok[0m [0m[38;5;245m(564µs)[0m
+authorization matrix: cross-game request hints and cross-game resolved rows are rejected ... [0m[32mok[0m [0m[38;5;245m(562µs)[0m
+authorization matrix: wrong-player resolution and ownership injection are rejected ... [0m[32mok[0m [0m[38;5;245m(467µs)[0m
+authorization matrix: active owner succeeds without accepting browser-selected ownership ... [0m[32mok[0m [0m[38;5;245m(207µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/security/rateLimitHttp.test.ts[0m
+rate-limit 429 response is retryable, private, bounded, and scope-private ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+rate-limit outage response fails closed without exposing dimensions or keys ... [0m[32mok[0m [0m[38;5;245m(506µs)[0m
+[0m[38;5;245mrunning 5 tests from ./src/security/rateLimitKeying.test.ts[0m
+rate-limit keying produces four bounded privacy-safe dimension keys ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+rate-limit keys isolate games and actions without changing identity or IP buckets ... [0m[32mok[0m [0m[38;5;245m(11ms)[0m
+pre-auth login keying uses only IP and action-per-IP buckets ... [0m[32mok[0m [0m[38;5;245m(854µs)[0m
+trusted client IP parsing normalizes IPv4 and IPv6 and rejects untrusted shapes ... [0m[32mok[0m [0m[38;5;245m(8ms)[0m
+rate-limit keying rejects weak secrets, client-shaped actions, and invalid ownership ... [0m[32mok[0m [0m[38;5;245m(470µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/security/rateLimitMigration.test.ts[0m
+rate-limit migration is transactional, privacy-safe, atomic, and service-role only ... [0m[32mok[0m [0m[38;5;245m(931µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/security/playerRateLimitService.test.ts[0m
+player rate-limit service consumes all server-derived dimensions once ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+pre-auth login limiter consumes only IP and action buckets once ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player rate-limit service counts replays and concurrent attempts without client idempotency bypass ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+player rate-limit configuration fails closed without a strong HMAC secret and reviewed proxy header ... [0m[32mok[0m [0m[38;5;245m(866µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/security/supabaseRateLimitRepository.test.ts[0m
+rate-limit repository calls the atomic RPC once and maps its decision ... [0m[32mok[0m [0m[38;5;245m(617µs)[0m
+pre-auth rate-limit repository uses only the dedicated two-bucket RPC ... [0m[32mok[0m [0m[38;5;245m(178µs)[0m
+rate-limit repository fails closed on RPC errors and malformed results ... [0m[32mok[0m [0m[38;5;245m(304µs)[0m
+[0m[38;5;245mrunning 9 tests from ./src/security/playerRateLimitDispatch.test.ts[0m
+reviewed Player route mapping is server-owned and exhaustive ... [0m[32mok[0m [0m[38;5;245m(583µs)[0m
+post-auth dispatch resolves scope, consumes once, and invokes route once ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+post-auth denial and outage fail closed before route work ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+post-auth dispatch preserves session errors without consuming a bucket ... [0m[32mok[0m [0m[38;5;245m(562µs)[0m
+unsupported route methods bypass consumption and retain handler semantics ... [0m[32mok[0m [0m[38;5;245m(202µs)[0m
+login dispatch consumes only pre-auth IP/action context before parsing credentials ... [0m[32mok[0m [0m[38;5;245m(356µs)[0m
+login denial and limiter outage fail closed without invoking credential handler ... [0m[32mok[0m [0m[38;5;245m(807µs)[0m
+unsupported login method is not consumed and remains method-not-allowed ... [0m[32mok[0m [0m[38;5;245m(223µs)[0m
+missing limiter runtime configuration blocks both authenticated and login dispatch ... [0m[32mok[0m [0m[38;5;245m(894µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/security/classroomApiRateLimitDispatch.test.ts[0m
+Classroom API dispatch applies one central guard to each integrated reviewed route ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 1 test from ./src/security/preAuthRateLimitMigration.test.ts[0m
+pre-auth migration is atomic, two-dimensional, and service-role only ... [0m[32mok[0m [0m[38;5;245m(906µs)[0m
+
+[0m[32mok[0m | 32 passed | 0 failed [0m[38;5;245m(380ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-capabilities
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/contracts/playerCapabilityManifestContracts.test.ts src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts src/domains/players/api/playerCapabilityManifestHttpHandler.test.ts
+
+[0m[32mCheck[0m src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
+[0m[32mCheck[0m src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/players/api/playerCapabilityManifestHttpHandler.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/players/contracts/playerCapabilityManifestContracts.test.ts[0m
+player capability manifest is generated from the reviewed endpoint allowlist ... [0m[32mok[0m [0m[38;5;245m(825µs)[0m
+player capability manifest contains no UUID-shaped identifiers ... [0m[32mok[0m [0m[38;5;245m(275µs)[0m
+every advertised endpoint path is recognized by the authoritative dispatch boundary ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts[0m
+player capability manifest route accepts only exact direct and Edge paths ... [0m[32mok[0m [0m[38;5;245m(503µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/players/api/playerCapabilityManifestHttpHandler.test.ts[0m
+player capability manifest authenticates and returns a UUID-private no-store contract ... [0m[32mok[0m [0m[38;5;245m(23ms)[0m
+player capability manifest rejects unsupported methods, malformed paths, and browser scope injection ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+player capability manifest rejects missing, expired, revoked, and wrong-game sessions ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player capability manifest fails closed when runtime configuration is unavailable ... [0m[32mok[0m [0m[38;5;245m(327µs)[0m
+
+[0m[32mok[0m | 8 passed | 0 failed [0m[38;5;245m(92ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-world
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/countries/api/playerWorldRoutePaths.test.ts src/domains/countries/api/playerWorldRequestParser.test.ts src/domains/countries/api/playerWorldReadHttpHandler.test.ts src/domains/countries/services/playerWorldReadService.test.ts src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.test.ts
+
+[0m[32mCheck[0m src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.test.ts
+[0m[32mCheck[0m src/domains/countries/services/playerWorldReadService.test.ts
+[0m[32mCheck[0m src/domains/countries/api/playerWorldRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/countries/api/playerWorldRequestParser.test.ts
+[0m[32mCheck[0m src/domains/countries/api/playerWorldReadHttpHandler.test.ts
+[0m[38;5;245mrunning 4 tests from ./src/domains/countries/infrastructure/supabasePlayerWorldReadRepository.test.ts[0m
+Supabase world repository scopes countries to authenticated game snapshots ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+country detail requires an active public country and a game snapshot ... [0m[32mok[0m [0m[38;5;245m(328µs)[0m
+world news query is game-scoped, public, active, ordered, and cursor-bounded ... [0m[32mok[0m [0m[38;5;245m(899µs)[0m
+cross-game rows fail closed and unsafe media is removed ... [0m[32mok[0m [0m[38;5;245m(526µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/countries/services/playerWorldReadService.test.ts[0m
+world service returns deterministic country DTOs without UUIDs ... [0m[32mok[0m [0m[38;5;245m(9ms)[0m
+country detail rejects missing, hidden, unavailable, and cross-game records ... [0m[32mok[0m [0m[38;5;245m(534µs)[0m
+world news is deterministic, paginated, empty-safe, and game-scoped ... [0m[32mok[0m [0m[38;5;245m(633µs)[0m
+repository failure is distinct from an empty world feed ... [0m[32mok[0m [0m[38;5;245m(446µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/countries/api/playerWorldRoutePaths.test.ts[0m
+player world routes parse direct and classroom-api paths ... [0m[32mok[0m [0m[38;5;245m(545µs)[0m
+player world routes reject spoofed and overlong paths ... [0m[32mok[0m [0m[38;5;245m(74µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/countries/api/playerWorldRequestParser.test.ts[0m
+country requests accept public codes and reject UUID identifiers ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+news requests use bounded deterministic cursor pagination ... [0m[32mok[0m [0m[38;5;245m(924µs)[0m
+world requests reject browser-selected game scope and unknown query fields ... [0m[32mok[0m [0m[38;5;245m(957µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/countries/api/playerWorldReadHttpHandler.test.ts[0m
+countries, country detail, and news use the authenticated scope ... [0m[32mok[0m [0m[38;5;245m(23ms)[0m
+world handlers distinguish empty feeds from unavailable services ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+world handlers reject missing, expired, revoked, and wrong-game sessions ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+world handlers reject UUID ownership injection ... [0m[32mok[0m [0m[38;5;245m(911µs)[0m
+
+[0m[32mok[0m | 17 passed | 0 failed [0m[38;5;245m(190ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-inventory
+> deno test --allow-read=supabase/migrations/20260718113000_add_inventory_redemption_player_workflow_v1.sql --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/inventory/api/playerInventoryRoutePaths.test.ts src/domains/inventory/api/playerInventoryRequestParser.test.ts src/domains/inventory/api/playerInventoryReadHttpHandler.test.ts src/domains/inventory/services/playerInventoryReadService.test.ts src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.test.ts src/domains/inventory/api/playerInventoryRedemptionRoutePaths.test.ts src/domains/inventory/api/playerInventoryRedemptionRequestParser.test.ts src/domains/inventory/api/playerInventoryRedemptionHttpHandler.test.ts src/domains/inventory/domain/playerInventoryRedemptionStateMachine.test.ts src/domains/inventory/infrastructure/supabasePlayerInventoryRedemptionRepository.test.ts src/domains/inventory/tests/playerInventoryRedemptionMigrationContract.test.ts src/domains/inventory/tests/adminInventoryRedemptionMigrationContract.test.ts src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts
+
+[0m[32mCheck[0m src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.test.ts
+[0m[32mCheck[0m src/domains/inventory/infrastructure/supabasePlayerInventoryRedemptionRepository.test.ts
+[0m[32mCheck[0m src/domains/inventory/services/playerInventoryReadService.test.ts
+[0m[32mCheck[0m src/domains/inventory/domain/playerInventoryRedemptionStateMachine.test.ts
+[0m[32mCheck[0m src/domains/inventory/tests/playerInventoryRedemptionMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/inventory/tests/adminInventoryRedemptionMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryRequestParser.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryReadHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryRedemptionRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryRedemptionRequestParser.test.ts
+[0m[32mCheck[0m src/domains/inventory/api/playerInventoryRedemptionHttpHandler.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/inventory/infrastructure/supabasePlayerInventoryReadRepository.test.ts[0m
+inventory repository joins scoped holdings to Store metadata ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+inventory repository returns a valid empty result without querying item metadata ... [0m[32mok[0m [0m[38;5;245m(117µs)[0m
+inventory repository fails closed for missing metadata and persistence errors ... [0m[32mok[0m [0m[38;5;245m(498µs)[0m
+[0m[38;5;245mrunning 5 tests from ./src/domains/inventory/infrastructure/supabasePlayerInventoryRedemptionRepository.test.ts[0m
+Redemption repository invokes server-scoped atomic request RPC and exposes public IDs only ... [0m[32mok[0m [0m[38;5;245m(844µs)[0m
+Redemption repository preserves exact idempotent replay ... [0m[32mok[0m [0m[38;5;245m(189µs)[0m
+Redemption repository invokes player-scoped history RPC without internal IDs ... [0m[32mok[0m [0m[38;5;245m(240µs)[0m
+Redemption repository maps availability, quantity, idempotency, and missing schema errors ... [0m[32mok[0m [0m[38;5;245m(426µs)[0m
+Redemption repository fails closed on malformed, mismatched, or excessive RPC data ... [0m[32mok[0m [0m[38;5;245m(455µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/inventory/services/playerInventoryReadService.test.ts[0m
+inventory service returns deterministic UUID-private inventory summaries ... [0m[32mok[0m [0m[38;5;245m(11ms)[0m
+inventory service distinguishes empty inventory from persistence unavailability ... [0m[32mok[0m [0m[38;5;245m(491µs)[0m
+inventory service rejects cross-scope, duplicate public IDs, and invalid reservations ... [0m[32mok[0m [0m[38;5;245m(328µs)[0m
+inventory service fails closed above the 200-holding maximum ... [0m[32mok[0m [0m[38;5;245m(463µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/inventory/domain/playerInventoryRedemptionStateMachine.test.ts[0m
+Redemption state machine permits only reviewed forward transitions ... [0m[32mok[0m [0m[38;5;245m(421µs)[0m
+Redemption state machine defines reservation effects and rejects repeated consumption ... [0m[32mok[0m [0m[38;5;245m(140µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/inventory/tests/playerInventoryRedemptionMigrationContract.test.ts[0m
+Redemption migration is forward, transaction-wrapped, and game isolated ... [0m[32mok[0m [0m[38;5;245m(920µs)[0m
+Redemption request serializes before retry resolution and reserves once ... [0m[32mok[0m [0m[38;5;245m(352µs)[0m
+Redemption persistence is append-only and browser returns are UUID-private ... [0m[32mok[0m [0m[38;5;245m(263µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/inventory/tests/adminInventoryRedemptionMigrationContract.test.ts[0m
+Admin redemption migration is forward-only, scoped, and transaction wrapped ... [0m[32mok[0m [0m[38;5;245m(444µs)[0m
+Admin redemption review serializes staff idempotency and request reservation writes ... [0m[32mok[0m [0m[38;5;245m(189µs)[0m
+Admin redemption terminal transitions append audit and typed Inventory evidence once ... [0m[32mok[0m [0m[38;5;245m(156µs)[0m
+Admin redemption RPC return contracts omit internal UUID identifiers ... [0m[32mok[0m [0m[38;5;245m(116µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts[0m
+connected Store-owned Inventory redemption lifecycle is idempotent, scoped, and UUID-private ... [0m[32mok[0m [0m[38;5;245m(28ms)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/inventory/api/playerInventoryRoutePaths.test.ts[0m
+player inventory route accepts exact direct and classroom-api paths ... [0m[32mok[0m [0m[38;5;245m(440µs)[0m
+player inventory route rejects spoofed prefixes, item paths, and unrelated paths ... [0m[32mok[0m [0m[38;5;245m(78µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/inventory/api/playerInventoryRequestParser.test.ts[0m
+player inventory request parser accepts an unparameterized read ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+player inventory request parser rejects malformed routes, query parameters, and game headers ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/inventory/api/playerInventoryReadHttpHandler.test.ts[0m
+inventory handler derives scope from the player session and returns UUID-private DTOs ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+inventory handler rejects missing, game-selected, injected, and unsupported requests ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+inventory handler maps persistence failures to a retryable unavailable response ... [0m[32mok[0m [0m[38;5;245m(659µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/inventory/api/playerInventoryRedemptionRoutePaths.test.ts[0m
+Inventory redemption routes recognize direct and Edge public-ID paths ... [0m[32mok[0m [0m[38;5;245m(631µs)[0m
+Inventory redemption routes reject UUID-like and malformed browser identifiers ... [0m[32mok[0m [0m[38;5;245m(198µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/inventory/api/playerInventoryRedemptionRequestParser.test.ts[0m
+Redemption command parser normalizes the bounded public command ... [0m[32mok[0m [0m[38;5;245m(20ms)[0m
+Redemption command parser rejects ownership, unknown keys, invalid quantity, and unsafe idempotency ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+Redemption read parser accepts bounded collection filters and exact item reads ... [0m[32mok[0m [0m[38;5;245m(706µs)[0m
+Redemption read parser rejects unknown, repeated, unbounded, and item query parameters ... [0m[32mok[0m [0m[38;5;245m(943µs)[0m
+[0m[38;5;245mrunning 6 tests from ./src/domains/inventory/api/playerInventoryRedemptionHttpHandler.test.ts[0m
+Player redemption request derives scope and returns UUID-private creation evidence ... [0m[32mok[0m [0m[38;5;245m(26ms)[0m
+Player redemption exact retry returns 200 replay without changing scope ... [0m[32mok[0m [0m[38;5;245m(852µs)[0m
+Player redemption collection and status reads stay scoped and public ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+Player redemption rejects method, malformed route, browser scope, and identity before persistence ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+Player redemption rejects missing and inactive player sessions ... [0m[32mok[0m [0m[38;5;245m(692µs)[0m
+Player redemption preserves reviewed domain error contracts and missing-item reads ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+
+[0m[32mok[0m | 41 passed | 0 failed [0m[38;5;245m(530ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-notifications
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/notifications/api/playerNotificationRoutePaths.test.ts src/domains/notifications/api/playerNotificationRequestParser.test.ts src/domains/notifications/api/playerNotificationHttpHandler.test.ts src/domains/notifications/services/playerNotificationService.test.ts src/domains/notifications/infrastructure/supabasePlayerNotificationRepository.test.ts
+
+[0m[32mCheck[0m src/domains/notifications/infrastructure/supabasePlayerNotificationRepository.test.ts
+[0m[32mCheck[0m src/domains/notifications/services/playerNotificationService.test.ts
+[0m[32mCheck[0m src/domains/notifications/api/playerNotificationRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/notifications/api/playerNotificationRequestParser.test.ts
+[0m[32mCheck[0m src/domains/notifications/api/playerNotificationHttpHandler.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/notifications/infrastructure/supabasePlayerNotificationRepository.test.ts[0m
+notification repository joins scoped deliveries to public notification metadata ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+notification repository resolves and updates public delivery IDs ... [0m[32mok[0m [0m[38;5;245m(554µs)[0m
+notification repository maps missing schema failures ... [0m[32mok[0m [0m[38;5;245m(361µs)[0m
+[0m[38;5;245mrunning 5 tests from ./src/domains/notifications/services/playerNotificationService.test.ts[0m
+notification service returns bounded UUID-private pages ... [0m[32mok[0m [0m[38;5;245m(986µs)[0m
+notification service distinguishes empty and unavailable reads ... [0m[32mok[0m [0m[38;5;245m(444µs)[0m
+notification service reports the exact unread total independently from page size ... [0m[32mok[0m [0m[38;5;245m(124µs)[0m
+notification read acknowledgement is idempotent and ordered ... [0m[32mok[0m [0m[38;5;245m(587µs)[0m
+notification service fails closed for missing and cross-scope deliveries ... [0m[32mok[0m [0m[38;5;245m(345µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/notifications/api/playerNotificationRoutePaths.test.ts[0m
+player notification routes accept exact list and read paths ... [0m[32mok[0m [0m[38;5;245m(460µs)[0m
+player notification routes fail closed for item and spoofed paths ... [0m[32mok[0m [0m[38;5;245m(97µs)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/notifications/api/playerNotificationRequestParser.test.ts[0m
+notification list parser applies bounded defaults and cursor round trips ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+notification list parser rejects unsupported fields and browser game scope ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+notification read parser accepts unique public delivery IDs only ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/notifications/api/playerNotificationHttpHandler.test.ts[0m
+notification handler lists UUID-private player notifications ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+notification handler marks public deliveries read idempotently ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+notification handler rejects missing sessions, identity injection, and browser game scope ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+
+[0m[32mok[0m | 16 passed | 0 failed [0m[38;5;245m(182ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-logout
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/api/playerSessionLogoutRoutePaths.test.ts src/domains/players/api/playerSessionLogoutHttpHandler.test.ts src/domains/players/infrastructure/supabasePlayerSessionLogoutRepository.test.ts
+
+[0m[32mCheck[0m src/domains/players/infrastructure/supabasePlayerSessionLogoutRepository.test.ts
+[0m[32mCheck[0m src/domains/players/api/playerSessionLogoutRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/players/api/playerSessionLogoutHttpHandler.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/players/infrastructure/supabasePlayerSessionLogoutRepository.test.ts[0m
+logout repository reads and conditionally revokes a token-owned session ... [0m[32mok[0m [0m[38;5;245m(867µs)[0m
+logout repository returns null when no row matches ... [0m[32mok[0m [0m[38;5;245m(96µs)[0m
+logout repository fails closed on persistence errors ... [0m[32mok[0m [0m[38;5;245m(237µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/players/api/playerSessionLogoutRoutePaths.test.ts[0m
+player logout route accepts exact direct and classroom-api paths ... [0m[32mok[0m [0m[38;5;245m(466µs)[0m
+player logout route rejects malformed and unrelated paths ... [0m[32mok[0m [0m[38;5;245m(89µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/players/api/playerSessionLogoutHttpHandler.test.ts[0m
+player logout revokes the token-owned active session without UUID leakage ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+player logout is idempotent for an already revoked token ... [0m[32mok[0m [0m[38;5;245m(459µs)[0m
+player logout rejects missing token, browser scope, fields, and unsupported methods ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+player logout maps concurrent conflicts and persistence failures ... [0m[32mok[0m [0m[38;5;245m(729µs)[0m
+
+[0m[32mok[0m | 9 passed | 0 failed [0m[38;5;245m(90ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-contract-acceptance
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/contracts/contracts/playerContractPublicListContracts.test.ts src/domains/contracts/api/playerContractPublicListHttpHandler.test.ts src/domains/contracts/api/playerContractPublicSubmitHttpHandler.test.ts src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts src/domains/contracts/api/playerContractAcceptanceHttpHandler.test.ts src/domains/contracts/infrastructure/supabasePlayerContractAcceptanceRepository.test.ts
+
+[0m[32mCheck[0m src/domains/contracts/infrastructure/supabasePlayerContractAcceptanceRepository.test.ts
+[0m[32mCheck[0m src/domains/contracts/contracts/playerContractPublicListContracts.test.ts
+[0m[32mCheck[0m src/domains/contracts/api/playerContractPublicListHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/contracts/api/playerContractPublicSubmitHttpHandler.test.ts
+[0m[32mCheck[0m src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts
+[0m[32mCheck[0m src/domains/contracts/api/playerContractAcceptanceHttpHandler.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/contracts/infrastructure/supabasePlayerContractAcceptanceRepository.test.ts[0m
+acceptance repository calls the scoped public-key rpc ... [0m[32mok[0m [0m[38;5;245m(662µs)[0m
+acceptance repository preserves idempotent and unavailable outcomes ... [0m[32mok[0m [0m[38;5;245m(174µs)[0m
+acceptance repository fails closed on schema and result errors ... [0m[32mok[0m [0m[38;5;245m(389µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/contracts/contracts/playerContractPublicListContracts.test.ts[0m
+public Player Contract DTOs expose stable public keys and remove UUID-bearing fields ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+[0m[38;5;245mrunning 3 tests from ./src/domains/contracts/api/playerContractPublicListHttpHandler.test.ts[0m
+Player Contract public list route parser accepts only direct and Edge list paths ... [0m[32mok[0m [0m[38;5;245m(457µs)[0m
+Player Contract public list derives scope from the authenticated session and returns no UUIDs ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+Player Contract public list rejects browser-owned scope and invalid sessions ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/contracts/api/playerContractPublicSubmitHttpHandler.test.ts[0m
+public Player Contract submission parser accepts only exact direct and Edge public-key routes ... [0m[32mok[0m [0m[38;5;245m(581µs)[0m
+public Player Contract submission derives scope, requires acceptance, and returns no UUIDs ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+public Player Contract submission rejects browser scope and malformed evidence ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+public Player Contract submission enforces accepted, available, and unlocked progress ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts[0m
+contract acceptance route accepts direct and classroom-api paths ... [0m[32mok[0m [0m[38;5;245m(574µs)[0m
+contract acceptance route rejects malformed and spoofed prefixes ... [0m[32mok[0m [0m[38;5;245m(84µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/contracts/api/playerContractAcceptanceHttpHandler.test.ts[0m
+contract acceptance handler returns a UUID-private accepted response ... [0m[32mok[0m [0m[38;5;245m(22ms)[0m
+contract acceptance handler treats retries as idempotent success ... [0m[32mok[0m [0m[38;5;245m(675µs)[0m
+contract acceptance handler rejects unavailable and locked progress ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+contract acceptance handler rejects missing sessions and ownership injection ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+
+[0m[32mok[0m | 17 passed | 0 failed [0m[38;5;245m(245ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-contract-lifecycle
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts
+
+[0m[32mCheck[0m src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts
+[0m[38;5;245mrunning 1 test from ./src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts[0m
+full Contract lifecycle reaches rewarded completion with one ledger write ... [0m[32mok[0m [0m[38;5;245m(32ms)[0m
+
+[0m[32mok[0m | 1 passed | 0 failed [0m[38;5;245m(34ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-store-public
+> deno test --allow-read=supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql,supabase/migrations/20260624084500_add_store_country_currency_purchase_fields_v1.sql,supabase/migrations/20260719170000_gate_public_store_purchase_by_game_state_v1.sql,src/domains/players/api/playerSessionHttpHelpers.ts --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/store/api/playerStorePublicHttpHandler.test.ts src/domains/store/tests/playerStorePublicMigrationContract.test.ts src/domains/store/tests/playerStoreGameStateMigrationContract.test.ts src/domains/store/tests/playerStorePublicRateLimitContract.test.ts src/domains/store/tests/playerStoreFullLifecycleIntegration.test.ts src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts src/domains/store/tests/playerStoreNegativeStateIntegration.test.ts
+
+[0m[32mCheck[0m src/domains/store/tests/playerStorePublicMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/store/tests/playerStoreGameStateMigrationContract.test.ts
+[0m[32mCheck[0m src/domains/store/tests/playerStorePublicRateLimitContract.test.ts
+[0m[32mCheck[0m src/domains/store/tests/playerStoreFullLifecycleIntegration.test.ts
+[0m[32mCheck[0m src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts
+[0m[32mCheck[0m src/domains/store/tests/playerStoreNegativeStateIntegration.test.ts
+[0m[32mCheck[0m src/domains/store/api/playerStorePublicHttpHandler.test.ts
+[0m[38;5;245mrunning 1 test from ./src/domains/store/tests/playerStorePublicMigrationContract.test.ts[0m
+Player Store migration adds public transaction keys and atomic wrapper ... [0m[32mok[0m [0m[38;5;245m(863µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/store/tests/playerStoreGameStateMigrationContract.test.ts[0m
+public Store settlement gates new writes while preserving completed replay ... [0m[32mok[0m [0m[38;5;245m(901µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/store/tests/playerStorePublicRateLimitContract.test.ts[0m
+public Player Store operations use reviewed rate-limit profiles ... [0m[32mok[0m [0m[38;5;245m(418µs)[0m
+[0m[38;5;245mrunning 1 test from ./src/domains/store/tests/playerStoreFullLifecycleIntegration.test.ts[0m
+public Player Store lifecycle settles once and refreshes catalog, receipt, ledger, and inventory state ... [0m[32mok[0m [0m[38;5;245m(25ms)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts[0m
+Store settlement source enforces quote expiry, stock, balance, and idempotency guards ... [0m[32mok[0m [0m[38;5;245m(874µs)[0m
+Player session resolution rejects paused and ended games before Store repository work ... [0m[32mok[0m [0m[38;5;245m(23ms)[0m
+Player Store maps authoritative purchase failures to stable public errors ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+Duplicate Store request replays one receipt without duplicate economic writes ... [0m[32mok[0m [0m[38;5;245m(884µs)[0m
+[0m[38;5;245mrunning 2 tests from ./src/domains/store/tests/playerStoreNegativeStateIntegration.test.ts[0m
+Player Store exposes bounded negative-state errors without mutation scope ... [0m[32mok[0m [0m[38;5;245m(24ms)[0m
+Player Store preserves an authoritative completed replay response ... [0m[32mok[0m [0m[38;5;245m(470µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/store/api/playerStorePublicHttpHandler.test.ts[0m
+Player Store route parser accepts only reviewed collection paths ... [0m[32mok[0m [0m[38;5;245m(473µs)[0m
+Player Store list and quote responses expose public keys only ... [0m[32mok[0m [0m[38;5;245m(21ms)[0m
+Player Store purchase uses session scope and returns public receipt ... [0m[32mok[0m [0m[38;5;245m(617µs)[0m
+Player Store rejects browser-owned scope and unexpected request fields ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+
+[0m[32mok[0m | 14 passed | 0 failed [0m[38;5;245m(300ms)[0m
+
+
+> econovaria-backend@0.0.0 test:player-banking-public
+> deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/economy/api/playerBankingPublicHttpHandler.test.ts src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts
+
+[0m[32mCheck[0m src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts
+[0m[32mCheck[0m src/domains/economy/api/playerBankingPublicHttpHandler.test.ts
+[0m[38;5;245mrunning 1 test from ./src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts[0m
+public Banking repository uses two bounded scoped queries without selecting IDs ... [0m[32mok[0m [0m[38;5;245m(806µs)[0m
+[0m[38;5;245mrunning 5 tests from ./src/domains/economy/api/playerBankingPublicHttpHandler.test.ts[0m
+Player Banking parser accepts only the reviewed collection route ... [0m[32mok[0m [0m[38;5;245m(461µs)[0m
+Player Banking returns cross-currency public data and a safe next cursor ... [0m[32mok[0m [0m[38;5;245m(26ms)[0m
+Player Banking cursor advances response-local public keys ... [0m[32mok[0m [0m[38;5;245m(618µs)[0m
+Player Banking empty state is a normal bounded response ... [0m[32mok[0m [0m[38;5;245m(464µs)[0m
+Player Banking rejects malformed pagination and browser-owned scope ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+
+[0m[32mok[0m | 6 passed | 0 failed [0m[38;5;245m(66ms)[0m
+
+
+> econovaria-backend@0.0.0 test:economic-ledger-invariants
+> deno test --allow-read=supabase/migrations/20260713085704_repair_player_attendance_clock_in_v1.sql,supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql,supabase/migrations/20260624070500_fix_store_purchase_rpc_ambiguous_columns.sql,supabase/migrations/20260624131500_fix_stock_market_order_country_cash_rpc_v1.sql,supabase/migrations/20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql,supabase/functions/admin-api/attendancePlayerOperations.ts,../admin/classroom-write-fallback.js,src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/economy/tests/economicMutationLedgerInvariant.test.ts
+
+[0m[32mCheck[0m src/domains/economy/tests/economicMutationLedgerInvariant.test.ts
+[0m[38;5;245mrunning 3 tests from ./src/domains/economy/tests/economicMutationLedgerInvariant.test.ts[0m
+staff Attendance and Player adjustments create one ledger result, replay safely, and preserve exact balances ... [0m[32mok[0m [0m[38;5;245m(11ms)[0m
+Contract cash rewards issue one ledger write while invalid and already-issued paths issue none ... [0m[32mok[0m [0m[38;5;245m(10ms)[0m
+economic SQL mutation matrix enforces replay-before-write and zero-ledger rejection paths ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+
+[0m[32mok[0m | 3 passed | 0 failed [0m[38;5;245m(25ms)[0m
+
+
+> econovaria-backend@0.0.0 test:game-lifecycle
+> deno test --allow-read=supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/games/tests/gameLifecycleMigrationContract.test.ts supabase/functions/admin-api/gameLifecycleOperations.test.ts supabase/functions/admin-api/accountOperations.test.ts
+
+[0m[32mCheck[0m supabase/functions/admin-api/gameLifecycleOperations.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/accountOperations.test.ts
+[0m[32mCheck[0m src/domains/games/tests/gameLifecycleMigrationContract.test.ts
+[0m[38;5;245mrunning 7 tests from ./supabase/functions/admin-api/gameLifecycleOperations.test.ts[0m
+Admin lifecycle read returns a bounded public state model ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+Admin lifecycle start activates a draft game ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+Admin lifecycle pause sends only server-owned scope and optimistic version ... [0m[32mok[0m [0m[38;5;245m(348µs)[0m
+Admin lifecycle exposes explicit Player session revocation ... [0m[32mok[0m [0m[38;5;245m(312µs)[0m
+Admin lifecycle rejects browser scope injection and unsafe idempotency ... [0m[32mok[0m [0m[38;5;245m(792µs)[0m
+Lifecycle guard blocks paused and terminal game writes but preserves controls ... [0m[32mok[0m [0m[38;5;245m(169µs)[0m
+Lifecycle persistence errors map to stable retry and conflict states ... [0m[32mok[0m [0m[38;5;245m(538µs)[0m
+[0m[38;5;245mrunning 3 tests from ./supabase/functions/admin-api/accountOperations.test.ts[0m
+legacy Admin archive route uses canonical lifecycle RPC ... [0m[32mok[0m [0m[38;5;245m(888µs)[0m
+legacy Admin archive route still requires explicit confirmation ... [0m[32mok[0m [0m[38;5;245m(156µs)[0m
+legacy Admin archive route requires end before archive ... [0m[32mok[0m [0m[38;5;245m(303µs)[0m
+[0m[38;5;245mrunning 4 tests from ./src/domains/games/tests/gameLifecycleMigrationContract.test.ts[0m
+game lifecycle migration defines canonical states and compatibility projection ... [0m[32mok[0m [0m[38;5;245m(763µs)[0m
+game lifecycle transition is owner-scoped, idempotent, and row-locked ... [0m[32mok[0m [0m[38;5;245m(182µs)[0m
+terminal lifecycle actions revoke sessions and join access atomically ... [0m[32mok[0m [0m[38;5;245m(190µs)[0m
+game lifecycle database surface is service-role only ... [0m[32mok[0m [0m[38;5;245m(164µs)[0m
+
+[0m[32mok[0m | 14 passed | 0 failed [0m[38;5;245m(87ms)[0m
+
+
+> econovaria-backend@0.0.0 test:admin-api
+> deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/*.test.ts
+
+[0m[32mDownload[0m https://esm.sh/@supabase/auth-js@2.108.2/denonext/auth-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/functions-js@2.108.2/denonext/functions-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/postgrest-js@2.108.2/denonext/postgrest-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/realtime-js@2.108.2/denonext/realtime-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/storage-js@2.108.2/denonext/storage-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/supabase-js@2.108.2/denonext/supabase-js.mjs
+[0m[32mDownload[0m https://esm.sh/tslib@2.8.1/denonext/tslib.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5?target=denonext
+[0m[32mDownload[0m https://esm.sh/iceberg-js@0.8.1?target=denonext
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts
+[0m[32mDownload[0m https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/longpoll.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/presence.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/push.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/serializer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/socket.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/timer.d.ts
+[0m[32mDownload[0m https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/constants.d.ts
+[0m[32mCheck[0m supabase/functions/admin-api/accountOperations.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/common.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/controlSurfaceOperations.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/cors.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/gameLifecycleOperations.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/inventoryRedemptionOperations.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/inventoryRedemptionRouterContract.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/mutationAdapters.test.ts
+[0m[32mCheck[0m supabase/functions/admin-api/runtimeMutations.test.ts
+[0m[38;5;245mrunning 3 tests from ./supabase/functions/admin-api/accountOperations.test.ts[0m
+legacy Admin archive route uses canonical lifecycle RPC ... [0m[32mok[0m [0m[38;5;245m(903µs)[0m
+legacy Admin archive route still requires explicit confirmation ... [0m[32mok[0m [0m[38;5;245m(156µs)[0m
+legacy Admin archive route requires end before archive ... [0m[32mok[0m [0m[38;5;245m(333µs)[0m
+[0m[38;5;245mrunning 2 tests from ./supabase/functions/admin-api/common.test.ts[0m
+legacy accepted contract decision reviews then issues atomic rewards ... [0m[32mok[0m [0m[38;5;245m(13ms)[0m
+legacy rejected contract decision never issues rewards ... [0m[32mok[0m [0m[38;5;245m(618µs)[0m
+[0m[38;5;245mrunning 7 tests from ./supabase/functions/admin-api/controlSurfaceOperations.test.ts[0m
+rejects invalid manual attendance corrections before database access ... [0m[32mok[0m [0m[38;5;245m(14ms)[0m
+rejects zero-value player ledger adjustments before database access ... [0m[32mok[0m [0m[38;5;245m(341µs)[0m
+leaves unknown attendance and player routes for the router fallback ... [0m[32mok[0m [0m[38;5;245m(257µs)[0m
+returns explicit disabled responses for unsupported visible controls ... [0m[32mok[0m [0m[38;5;245m(534µs)[0m
+returns useful documentation and diagnostics payloads ... [0m[32mok[0m [0m[38;5;245m(209µs)[0m
+requires a display name before updating the administrator profile ... [0m[32mok[0m [0m[38;5;245m(374µs)[0m
+requires explicit confirmation before archiving a game ... [0m[32mok[0m [0m[38;5;245m(150µs)[0m
+[0m[38;5;245mrunning 2 tests from ./supabase/functions/admin-api/cors.test.ts[0m
+allows production and loopback development origins ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+does not reflect arbitrary external origins ... [0m[32mok[0m [0m[38;5;245m(163µs)[0m
+[0m[38;5;245mrunning 7 tests from ./supabase/functions/admin-api/gameLifecycleOperations.test.ts[0m
+Admin lifecycle read returns a bounded public state model ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+Admin lifecycle start activates a draft game ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+Admin lifecycle pause sends only server-owned scope and optimistic version ... [0m[32mok[0m [0m[38;5;245m(332µs)[0m
+Admin lifecycle exposes explicit Player session revocation ... [0m[32mok[0m [0m[38;5;245m(310µs)[0m
+Admin lifecycle rejects browser scope injection and unsafe idempotency ... [0m[32mok[0m [0m[38;5;245m(773µs)[0m
+Lifecycle guard blocks paused and terminal game writes but preserves controls ... [0m[32mok[0m [0m[38;5;245m(164µs)[0m
+Lifecycle persistence errors map to stable retry and conflict states ... [0m[32mok[0m [0m[38;5;245m(547µs)[0m
+[0m[38;5;245mrunning 9 tests from ./supabase/functions/admin-api/inventoryRedemptionOperations.test.ts[0m
+admin redemption queue defaults to pending and returns UUID-private public models ... [0m[32mok[0m [0m[38;5;245m(19ms)[0m
+admin redemption queue supports bounded historical pagination and lookahead ... [0m[32mok[0m [0m[38;5;245m(507µs)[0m
+admin redemption review sends public request IDs and server-authenticated scope to one atomic RPC ... [0m[32mok[0m [0m[38;5;245m(2ms)[0m
+admin redemption review preserves exact replay outcome ... [0m[32mok[0m [0m[38;5;245m(359µs)[0m
+admin redemption queue and review reject malformed methods, paths, filters, and commands before RPC ... [0m[32mok[0m [0m[38;5;245m(1ms)[0m
+admin redemption review rejects mismatched header and body idempotency keys ... [0m[32mok[0m [0m[38;5;245m(202µs)[0m
+admin redemption maps scope, missing request, state, idempotency, and schema errors ... [0m[32mok[0m [0m[38;5;245m(694µs)[0m
+admin redemption fails closed and redacts UUID-shaped content from persistence ... [0m[32mok[0m [0m[38;5;245m(511µs)[0m
+admin redemption leaves unrelated Admin routes untouched ... [0m[32mok[0m [0m[38;5;245m(112µs)[0m
+[0m[38;5;245mrunning 1 test from ./supabase/functions/admin-api/inventoryRedemptionRouterContract.test.ts[0m
+Admin router dispatches authenticated owned-game redemption operations before generic routes ... [0m[32mok[0m [0m[38;5;245m(447µs)[0m
+[0m[38;5;245mrunning 7 tests from ./supabase/functions/admin-api/mutationAdapters.test.ts[0m
+normalizes v606 store create and update payloads ... [0m[32mok[0m [0m[38;5;245m(18ms)[0m
+translates store delete into a reversible archive ... [0m[32mok[0m [0m[38;5;245m(640µs)[0m
+normalizes the v606 contract composer payload ... [0m[32mok[0m [0m[38;5;245m(931µs)[0m
+normalizes contract review decisions ... [0m[32mok[0m [0m[38;5;245m(238µs)[0m
+separates standard settings from custom difficulty policy values ... [0m[32mok[0m [0m[38;5;245m(427µs)[0m
+applies a named difficulty preset from the authoritative profile ... [0m[32mok[0m [0m[38;5;245m(392µs)[0m
+initializes a missing custom difficulty policy from the saved preset ... [0m[32mok[0m [0m[38;5;245m(392µs)[0m
+[0m[38;5;245mrunning 6 tests from ./supabase/functions/admin-api/runtimeMutations.test.ts[0m
+normalizes nested player create payloads with identity credentials ... [0m[32mok[0m [0m[38;5;245m(592µs)[0m
+normalizes plural attendance scan route and legacy code fields ... [0m[32mok[0m [0m[38;5;245m(145µs)[0m
+rejects create player without a display name ... [0m[32mok[0m [0m[38;5;245m(95µs)[0m
+rejects create player without an RFID Player ID ... [0m[32mok[0m [0m[38;5;245m(100µs)[0m
+rejects create player without an Access Code ... [0m[32mok[0m [0m[38;5;245m(105µs)[0m
+ignores unrelated mutations ... [0m[32mok[0m [0m[38;5;245m(76µs)[0m
+
+[0m[32mok[0m | 44 passed | 0 failed [0m[38;5;245m(418ms)[0m
+
