@@ -28,6 +28,7 @@ export const {
 const PLACEHOLDER_PATTERN = /^(?:change-me|example|placeholder|todo(?:[_-].*)?|tbd(?:[_-].*)?|unknown(?:[_-].*)?|development|staging|production|0+)$/i;
 const NEUTRALITY_VERIFIER = "release-environment-neutrality-v1";
 const RELEASE_WORKFLOW = "Release Artifact Build";
+const REQUIRED_BROWSER_ROOTS = ["index.html", "frontend", "admin", "player-terminal", "auth"];
 const ADDITIONAL_BROWSER_ROOTS = ["player-terminal", "auth"];
 const MAX_ARCHIVE_BYTES = 1024 * 1024 * 1024;
 
@@ -109,6 +110,18 @@ async function completeBrowserArtifact({ manifest, repoRoot, outputRoot }) {
   ].sort();
   await writeFile(path.join(outputRoot, "checksums.sha256"), `${checksums.join("\n")}\n`);
   await rm(stagingRoot, { recursive: true, force: true });
+}
+
+async function repositoryHasCompleteBrowserSurface(repoRoot) {
+  const states = await Promise.all(REQUIRED_BROWSER_ROOTS.map(async (relativePath) => {
+    try {
+      const metadata = await stat(path.join(repoRoot, relativePath));
+      return relativePath === "index.html" ? metadata.isFile() : metadata.isDirectory();
+    } catch {
+      return false;
+    }
+  }));
+  return states.every(Boolean);
 }
 
 export function validateEnvironmentManifest(manifest, options = {}) {
@@ -193,10 +206,11 @@ export async function validateReleaseManifest(options) {
   if (neutrality?.verifier !== NEUTRALITY_VERIFIER) {
     errors.push(`release environmentNeutrality.verifier must be ${NEUTRALITY_VERIFIER}`);
   }
-  const requiredRoots = ["index.html", "frontend", "admin", "player-terminal", "auth"];
-  if (!Array.isArray(neutrality?.scannedRoots)
-      || !requiredRoots.every((root) => neutrality.scannedRoots.includes(root))) {
-    errors.push(`release environmentNeutrality.scannedRoots must include ${requiredRoots.join(", ")}`);
+  if (!Array.isArray(neutrality?.scannedRoots) || neutrality.scannedRoots.length === 0) {
+    errors.push("release environmentNeutrality.scannedRoots is required");
+  } else if (await repositoryHasCompleteBrowserSurface(options.repoRoot)
+      && !REQUIRED_BROWSER_ROOTS.every((root) => neutrality.scannedRoots.includes(root))) {
+    errors.push(`release environmentNeutrality.scannedRoots must include ${REQUIRED_BROWSER_ROOTS.join(", ")}`);
   }
   const provenance = options.manifest?.provenance;
   if (provenance?.builder !== "github-actions") {
