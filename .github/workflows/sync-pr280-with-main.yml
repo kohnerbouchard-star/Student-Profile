@@ -1,0 +1,39 @@
+name: Sync PR 280 With Main
+
+on:
+  push:
+    branches:
+      - agent/isolated-staging-release-v1
+    paths:
+      - ".github/workflows/sync-pr280-with-main.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-pr280-with-main
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out existing release branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/isolated-staging-release-v1
+          fetch-depth: 0
+
+      - name: Merge current main and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "econovaria-release-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch --no-tags origin main
+          git merge --no-ff --no-commit origin/main
+          git rm .github/workflows/sync-pr280-with-main.yml
+          git diff --check --cached
+          git commit -m "Merge current main into isolated staging release platform"
+          git push origin HEAD:agent/isolated-staging-release-v1
