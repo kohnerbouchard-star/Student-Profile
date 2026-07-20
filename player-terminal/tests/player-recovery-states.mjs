@@ -57,7 +57,7 @@ const limited = buildPlayerRecoveryPresentation(
 );
 assert.equal(limited.kind, "rate_limited");
 assert.equal(limited.retryAfterMs, 2500);
-assert.equal(limited.actionLabel, "Retry in 3s");
+assert.equal(limited.actionLabel, "Retry the same action");
 
 const committed = buildPlayerRecoveryPresentation({}, {
   committed: true,
