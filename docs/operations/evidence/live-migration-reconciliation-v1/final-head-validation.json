@@ -1,0 +1,35 @@
+{
+  "format": "econovaria-live-migration-final-head-v1",
+  "generated_at": "2026-07-20T07:55:12Z",
+  "branch": "agent/live-migration-reconciliation-v1",
+  "head_before_evidence_commit": "18213c774eb8f6dd0c74dc23863b79e6c0fd13b5",
+  "synchronized_main": "906050e6b963332e2a8ae8af4df395b0d0107db0",
+  "commits_behind_main": 0,
+  "commits_ahead_of_main": 17,
+  "repository_checks": {
+    "root_tests": "success",
+    "backend_typecheck_all": "failure",
+    "backend_smoke": "failure",
+    "migration_audit": "success",
+    "reconciliation_tools": "success"
+  },
+  "migration_reconciliation": {
+    "repository_migration_count": 70,
+    "status_counts": {
+      "live-only": 10,
+      "matched": 43,
+      "repository-only": 27
+    },
+    "blocking": true,
+    "process_exit": 2
+  },
+  "clean_replay": {
+    "replay_count": 2,
+    "deterministic_schema": true,
+    "migration_count": 70,
+    "lint": "passed"
+  },
+  "connected_isolated_staging": "blocked_not_provided",
+  "live_production_modified": false,
+  "authoritative_roadmap_modified_by_branch": false
+}
