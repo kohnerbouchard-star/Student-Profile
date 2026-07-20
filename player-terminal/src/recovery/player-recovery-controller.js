@@ -19,6 +19,9 @@ const MUTATION_CONTROL_SELECTOR = [
   "[data-player-action=\"notifications-read\"]",
 ].join(",");
 
+const LIFECYCLE_STATE_KINDS = new Set(["game-paused", "game-ended"]);
+const ACTIVE_LIFECYCLE_CODES = new Set(["GAME_ACTIVE", "GAME_RESUMED", "MUTATIONS_RESUMED"]);
+
 function safeDocument(mount, runtime) {
   return mount?.ownerDocument || runtime?.document || null;
 }
@@ -84,6 +87,22 @@ function dispatchRecoveryState(runtime, state) {
   }));
 }
 
+function lifecycleRecoveryFromTerminal(terminal) {
+  const session = terminal?.getState?.()?.data?.session || {};
+  const code = String(
+    session.gameLifecycleStatus ||
+    session.lifecycleStatus ||
+    session.gameStatus ||
+    session.gameState ||
+    "",
+  ).trim().toUpperCase();
+  if (session.mutationsPaused === true && !code) {
+    return classifyPlayerRecoverySignal({ code: "GAME_MUTATIONS_PAUSED" });
+  }
+  if (!code || ACTIVE_LIFECYCLE_CODES.has(code)) return null;
+  return classifyPlayerRecoverySignal({ code });
+}
+
 export function installPlayerRecoveryController({
   terminal,
   config = {},
@@ -103,6 +122,7 @@ export function installPlayerRecoveryController({
   const processedToasts = new WeakSet();
 
   let currentState = null;
+  let lifecycleState = null;
   let countdownTimer = 0;
   let autoDismissTimer = 0;
   let retryStartedAt = 0;
@@ -160,7 +180,14 @@ export function installPlayerRecoveryController({
     if (!currentState || currentState.canRetry === false) return false;
     try {
       await terminal.refresh();
-      show(restoredPlayerRecoveryState());
+      const lifecycle = lifecycleRecoveryFromTerminal(terminal);
+      if (lifecycle) {
+        lifecycleState = lifecycle;
+        show(lifecycle);
+      } else {
+        lifecycleState = null;
+        show(restoredPlayerRecoveryState());
+      }
       return true;
     } catch (error) {
       const next = classifyPlayerRecoverySignal({
@@ -249,6 +276,7 @@ export function installPlayerRecoveryController({
     if (destroyed || !state) return null;
     clearTimer("dismiss");
     currentState = state;
+    if (LIFECYCLE_STATE_KINDS.has(state.kind)) lifecycleState = state;
     retryStartedAt = state.kind === "rate-limited" ? Date.now() : 0;
     render();
     startCountdown();
@@ -261,7 +289,9 @@ export function installPlayerRecoveryController({
 
   function inspectMount() {
     if (destroyed) return;
-    if (currentState) render();
+    const activeRegion = mount.querySelector?.("[data-player-recovery-region]");
+    if (currentState && !activeRegion) render();
+    else if (currentState?.lockMutations) updateMutationLock();
 
     for (const toast of mount.querySelectorAll?.(".player-terminal-toast") || []) {
       if (processedToasts.has(toast)) continue;
@@ -290,12 +320,18 @@ export function installPlayerRecoveryController({
   }
 
   function handleOnline() {
-    unlockMutations();
-    show(restoredPlayerRecoveryState());
+    if (lifecycleState) show(lifecycleState);
+    else show(restoredPlayerRecoveryState());
   }
 
   function handleRecoveryEvent(event) {
     const detail = event?.detail || {};
+    const code = String(detail.code || "").trim().toUpperCase();
+    if (ACTIVE_LIFECYCLE_CODES.has(code)) {
+      lifecycleState = null;
+      show(restoredPlayerRecoveryState());
+      return;
+    }
     const state = classifyPlayerRecoverySignal({
       ...detail,
       online: runtime?.navigator?.onLine !== false,
@@ -308,19 +344,22 @@ export function installPlayerRecoveryController({
     clearTimer("dismiss");
     unlockMutations();
     currentState = null;
+    lifecycleState = null;
     const activeRegion = mount.querySelector?.("[data-player-recovery-region]");
     if (activeRegion) activeRegion.hidden = true;
   }
 
   function handleSessionReady() {
-    inspectMount();
+    const lifecycle = lifecycleRecoveryFromTerminal(terminal);
+    if (lifecycle) show(lifecycle);
+    else inspectMount();
   }
 
   const Observer = runtime.MutationObserver;
   const observer = typeof Observer === "function"
     ? new Observer(inspectMount)
     : null;
-  observer?.observe?.(mount, { childList: true, subtree: true, attributes: true });
+  observer?.observe?.(mount, { childList: true, subtree: true });
 
   runtime.addEventListener?.("offline", handleOffline);
   runtime.addEventListener?.("online", handleOnline);
@@ -329,7 +368,11 @@ export function installPlayerRecoveryController({
   runtime.addEventListener?.(sessionReadyEvent, handleSessionReady);
 
   if (runtime?.navigator?.onLine === false) handleOffline();
-  else inspectMount();
+  else {
+    const lifecycle = lifecycleRecoveryFromTerminal(terminal);
+    if (lifecycle) show(lifecycle);
+    else inspectMount();
+  }
 
   return Object.freeze({
     dismiss,
