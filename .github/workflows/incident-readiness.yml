@@ -1,0 +1,57 @@
+name: Incident Readiness
+
+on:
+  pull_request:
+    paths:
+      - "docs/operations/incident-readiness-policy.json"
+      - "docs/operations/incident-response-runbook.md"
+      - "docs/operations/classroom-continuity-and-economic-correction.md"
+      - "docs/operations/incident-communications-templates.md"
+      - "docs/roadmaps/econovaria-incident-readiness-amendment-2026-07-20.md"
+      - ".github/ISSUE_TEMPLATE/incident.yml"
+      - ".github/workflows/incident-readiness.yml"
+      - "scripts/incident-readiness-contract.mjs"
+      - "scripts/incident-readiness-contract.test.mjs"
+      - "package.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/operations/incident-readiness-policy.json"
+      - "docs/operations/incident-response-runbook.md"
+      - "docs/operations/classroom-continuity-and-economic-correction.md"
+      - "docs/operations/incident-communications-templates.md"
+      - "docs/roadmaps/econovaria-incident-readiness-amendment-2026-07-20.md"
+      - ".github/ISSUE_TEMPLATE/incident.yml"
+      - ".github/workflows/incident-readiness.yml"
+      - "scripts/incident-readiness-contract.mjs"
+      - "scripts/incident-readiness-contract.test.mjs"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  incident-readiness:
+    name: Incident readiness contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run incident-readiness tests
+        run: node --test scripts/incident-readiness-contract.test.mjs
+
+      - name: Validate incident-readiness contract
+        run: node scripts/incident-readiness-contract.mjs

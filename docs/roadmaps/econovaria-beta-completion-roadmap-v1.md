@@ -6,7 +6,7 @@
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
 **Audited application-state baseline:** `b700147f03be26e1663437135878c6736f55b805`
-**Repository state audited through:** `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`
+**Repository state audited through:** `e167ea3976da3a5825cc1cc079c994c4f887eaf6`
 
 ---
 
@@ -97,7 +97,17 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Program | Current status | Authority |
 |---|---|---|
 | Backend player reconciliation | `VERIFIED_COMPLETE` | PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac` |
-| Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`, head `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; 407 seed commits beyond the common base and 98 commits behind the audited repository state |
+| Seed-content foundation | `IN_PROGRESS`; branch synchronization required | PR #163, branch `agent/seed-content-foundation-v1`; sole seed-content authority |
+| Player story-notification delivery | `IN_PROGRESS` | PR #244, branch `agent/player-story-delivery-v1`; owns `BETA-NOTIF-005` and `BETA-NOTIF-006` without owning campaign content |
+| Player market orders and Portfolio | `VERIFIED_COMPLETE` at the repository-integrated boundary | PR #245; `BETA-MKT-003` through `BETA-MKT-007` complete with ticker-only orders, session-derived Portfolio scope, central rate limiting, and safe tick triggering |
+| Messaging and communication | `IN_PROGRESS` | PR #248, branch `agent/messaging-communication-v1`; owns `EXP-MSG-001` through `EXP-MSG-007` |
+| Player Marketplace lifecycle | `IN_PROGRESS` | PR #249, branch `agent/player-marketplace-lifecycle-v1`; owns `EXP-MP-001` through `EXP-MP-009` |
+| Progression, reputation, and achievements | `IN_PROGRESS` | PR #261, branch `agent/progression-reputation-achievements-v1`; owns `EXP-PROG-001` through `EXP-PROG-008` |
+| Program-control consolidation | `VERIFIED_COMPLETE` | PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`; all known duplicate claims are closed and their refs deleted |
+| Player Dashboard and Profile runtime | `VERIFIED_COMPLETE` at the repository-integrated boundary | PR #254 merged as `1156cf11cb9c4ecd9626779d3cab15fc40940315`; evidence PR #257 merged as `9918fb33c71d59f2247da8c2af7574076beecf62`; aggregate `BETA-PLAYER-008` completed with Portfolio on PR #245 |
+| Player recovery states | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`; isolated-staging recovery evidence remains under `BETA-PLAYER-014` |
+| Software supply-chain security | `VERIFIED_COMPLETE` | PR #250 merged as `476cfba30666b1303d32d6c2e46560483b641edf`; evidence seal PR #258 merged as `0d9afbf7fb8688841858e4f75460ab91f02820d9` |
+| Incident readiness | `VERIFIED_COMPLETE` | PR #252 merged as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`; deterministic validator and incident process suite are authoritative |
 | Player runtime cutover and legacy source removal | `VERIFIED_COMPLETE` for repository code; operations remain `IN_PROGRESS` | PR #217 merged as `8a50a0880b8a24bd244e740dc5c81cb8a7452b0e`; PR #222 merged as `3b74340830da8db4fdabe2926915c3a32471b7c8`; connected isolated staging and live Worker retirement remain release gates |
 | Player safe session-expiry exit | `VERIFIED_COMPLETE` | PR #165 merged as `4e20a5993da925463887bc23cc707be5679ccd20`; suspended-session correction PR #167 merged as `14adbc525995cc931998244c442a23b542f43c7a` |
 | Admin safe session-expiry exit | `VERIFIED_COMPLETE` | PR #166 merged as `c2b3f315901698359a4bfb3dc0eb3e63c719d8a5` |
@@ -153,11 +163,35 @@ The first beta must prove this loop end to end with authoritative persistence.
 
 - Re-audited repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`. PR #242 merged the resulting roadmap-only reconciliation as `35c26ba1bdda6aef46f562c3adebb69a28db95b0`; that documentation merge does not advance application, runtime, staging, or operational evidence. Every commit after application-state baseline `b700147f03be26e1663437135878c6736f55b805` is roadmap-only, so no later application capability is being inferred.
 - PR #163 remains the only open PR and the sole seed-content authority. Its current head is `ad73fbe23dffd8556e58f363b6dd833daa93cd74`; the branch has 407 seed commits beyond merge base `d403cf7baefeb3c1015c282cdbd748d2050e87ac` and is 98 commits behind the audited repository state. It must be synchronized and revalidated before merge.
-- The merged Player capability manifest remains schema `1`, version `2026-07-19.4`. Dashboard, Portfolio, Profile, market orders, Crafting, Loans, Business, Marketplace writes, Messages, and Progression remain unadvertised or unavailable.
+- The merged Player capability manifest is schema `1`, version `2026-07-20.2`. Dashboard and Profile are authoritative through PR #254; Portfolio and ticker-only market orders are authoritative through PR #245; Crafting, Loans, Business, Marketplace writes, Messages, and Progression remain unadvertised or unavailable.
 - PR #163 contains substantial definition-layer progress that was understated in the expansion ledger: 144 item definitions, 60 recipe definitions, Store scarcity/difficulty policies, 10 banking products, 10 levels, 20 achievements, 50 locations, 13 proposed route families, 50 Contracts, 25 events, 10 event chains, 5 crisis arcs, 50 interactions, 30 news templates, 10 tutorials, and 30 notification templates.
 - Definition coverage is not runtime completion. All PR #163 content remains production-unauthorized and activation-disabled; map coordinates and adjacency are unverified; an importer, persistence, rollback, runtime capability mapping, staging load, and human approval remain absent.
 - Physical-economy calibration is active rather than merely planned: 16,000 deterministic country/difficulty/scenario/seed runs completed, with 25 of 28 quantitative gates passing. Easy and Moderate border-disruption supply recovery and Hard baseline craft success remain failed gates; substitution coverage and salvage/arbitrage checks also remain open.
-- Operations and architecture are partially implemented: pinned toolchains, dependency audits, package-signature checks, repeated migration replay/lint, fail-closed staging validation, repository runtime cutover, and Admin architecture ratchets exist. They do not provide isolated environments, immutable release artifacts, SBOM/provenance, observability, backup/restore, incident readiness, or live legacy retirement evidence.
+- Operations and architecture are partially implemented: supply-chain security and incident readiness are now `VERIFIED_COMPLETE`; pinned toolchains, repeated migration replay/lint, fail-closed staging validation, repository runtime cutover, and Admin architecture ratchets also exist. Isolated environments, immutable application promotion, observability, backup/restore rehearsal, and live legacy retirement evidence remain open.
+
+### 2026-07-20 final parallel-work ownership reconciliation
+
+- PR #251 merged owner-safe branch retirement as `89bfadfb0d609ef92081fda575f0e1e998b2650d`; its final head passed Repository Quality #1084, Database Replay #345, Staging Readiness Preflight #99, and Admin Game Lifecycle Controls #33.
+- Market collision: PR #245 remains the sole authority for `BETA-MKT-003` through `BETA-MKT-007`. Duplicate PR #246 was labeled, closed after its source artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100.
+- Recovery collision: earlier PR #247 was preserved over replacement PR #253. PR #253 was labeled `duplicate`, closed, and `feat/player-recovery-states-v1` no longer exists; its useful donor ideas were dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
+- Premature seal PR #255 was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists. Later incident-verification PR #260 overlapped this earlier roadmap seal; its unique amendment evidence was transplanted into PR #259, it was labeled `duplicate`, closed, and `docs/incident-readiness-verification-v1` no longer exists. The merged PR #251 branch was retired automatically.
+- Current active capability ownership is unique: seed content #163, story delivery #244, Messaging #248, Marketplace #249, and Progression #261. Market/Portfolio #245, Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
+- Branch-only work without an open pull request is not authoritative. Future agents must search this roadmap and current open pull requests before creating a branch.
+
+### 2026-07-20 software supply-chain security completion
+
+- PR #250 merged `OPS-SUPPLY-001` as `476cfba30666b1303d32d6c2e46560483b641edf` after a collision audit confirmed no active PR owned the subsection.
+- Final implementation head `48414aaccf223c94c358033c883215dced666f24` passed Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, Database Replay #358, Staging Readiness Preflight #107, Exchange Calendar Runtime #216, Required Game Market Timezone #245, and Admin Game Lifecycle Controls #43.
+- Trusted-main Supply Chain Security #10 (run `29715658656`) completed successfully, executed the provenance-attestation step, and retained immutable artifact `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf`. Evidence is recorded in `docs/operations/evidence/supply-chain-security-476cfba30666b1303d32d6c2e46560483b641edf.json`.
+- This completion does not satisfy immutable application promotion, isolated-environment approval, observability, backup/restore, or production release gates.
+
+### 2026-07-20 Player market reconciliation
+
+- PR #245 completed the bounded Stock Market active-reconciliation tranche `BETA-MKT-003` through `BETA-MKT-007` without taking ownership from PR #163.
+- The public market-order boundary is ticker-only, session-derived, centrally rate-limited, stale-price protected, idempotent, and UUID-private; Portfolio reads are session-derived and browser-safe.
+- Capability manifest `2026-07-20.2` publishes Dashboard/Profile, Portfolio, and market orders only after exact Backend-to-adapter coverage validation.
+- The repository-controlled stock-tick trigger is secret-protected, timeout-bounded, game-scoped, deterministic when requested, and covered for closed-market and duplicate-tick rejection.
+- Active-instrument selection and calibration remain open under `BETA-MKT-008` and PR #163; isolated-staging scheduler activation remains an environment/release task.
 
 ### Current release condition
 
@@ -178,30 +212,29 @@ This table counts stable roadmap IDs only. A checked item is merged and evidence
 
 | Scope | Verified/checked | Open | Total |
 |---|---:|---:|---:|
-| Program control | 9 | 1 | 10 |
-| Beta capability items | 57 | 39 | 96 |
+| Program control | 10 | 0 | 10 |
+| Beta capability items | 64 | 32 | 96 |
 | Seed-specific items | 0 | 1 | 1 |
-| Operations/release items | 0 | 22 | 22 |
+| Operations/release items | 2 | 20 | 22 |
 | Expansion items | 0 | 109 | 109 |
-| **Total identified items** | **66** | **172** | **238** |
+| **Total identified items** | **76** | **162** | **238** |
 
 ### Current phase situation
 
-- **Phase 0 — Program control:** substantially complete; superseded branch-ref cleanup remains open.
+- **Phase 0 — Program control:** `VERIFIED_COMPLETE`; all ten items are merged and evidence-backed, overlapping market and recovery claims are retired, and active capability ownership is unique.
 - **Phase 1 — Authoritative Player Backend:** complete and merged.
-- **Phase 2 — Player connection:** mostly complete; Dashboard, Portfolio, Profile, market orders, and isolated-staging bootstrap remain open.
-- **Phase 3 — Beta gameplay gaps:** Contracts, Store/Inventory, notifications, and game lifecycle are repository-integrated; onboarding, cutscenes, Player recovery, market trade/portfolio, and a runtime story chain remain open.
+- **Phase 2 — Player connection:** repository-integrated beta reads and writes are complete through PRs #254 and #245; isolated-staging connected bootstrap, retry, and network evidence remain open.
+- **Phase 3 — Beta gameplay gaps:** Contracts, Store/Inventory, notifications, market trade/Portfolio, game lifecycle, and the repository Player recovery tranche are integrated; onboarding, cutscenes, connected recovery evidence, and a runtime story chain remain open.
 - **Phase 4 — Seed content/calibration:** definition coverage is broad and measurable, but PR #163 is stale against `main`, six market simulations remain, physical-economy calibration has failed gates, and no importer/rollback/staging activation exists.
-- **Phase 5 — Security/release/operations:** validation tooling and several repository controls exist; isolated environments, live migration reconciliation, immutable artifacts, observability, legacy retirement, backup/restore, incident readiness, and staging smoke remain open.
+- **Phase 5 — Security/release/operations:** supply-chain security and incident readiness are complete; isolated environments, live migration reconciliation, immutable application promotion, observability, legacy retirement, backup/restore rehearsal, and staging smoke remain open.
 - **Phase 6 — End-to-end pilot:** not yet executed as one authoritative staging-backed sequence.
 
 ### Current dependency-ordered priorities
 
 1. Reconcile migration history and establish an isolated staging environment with protected approval.
-2. Complete `BETA-MKT-003` through `BETA-MKT-007` so market orders and Portfolio can join the authoritative Player loop.
-3. Complete onboarding, cutscene/purpose-built story delivery, and Player recovery states.
-4. Synchronize PR #163 with current `main`, preserve its sole ownership, close its failed calibration/map/import/rollback gates, and load only a bounded staging subset.
-5. Run the complete Phase 6 sequence, including backup/restore, retry/idempotency, lifecycle pause/end, and cross-game denial.
+2. Complete onboarding and cutscene/purpose-built story delivery, then capture connected isolated-staging recovery evidence.
+3. Synchronize PR #163 with current `main`, preserve its sole ownership, close its failed calibration/map/import/rollback gates, and load only a bounded staging subset.
+4. Run the complete Phase 6 sequence, including backup/restore, retry/idempotency, lifecycle pause/end, and cross-game denial.
 
 ---
 
@@ -250,11 +283,11 @@ This table counts stable roadmap IDs only. A checked item is merged and evidence
 ### Authoritative capability manifest
 
 - [x] `BETA-CAP-001` Publish authenticated `GET /players/me/capabilities`. `VERIFIED_COMPLETE` through PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`.
-- [x] `BETA-CAP-002` Version the manifest schema and capability mapping independently. `VERIFIED_COMPLETE`; current schema is `1` and current manifest is `2026-07-19.4`.
-- [x] `BETA-CAP-003` Advertise only reviewed, implemented Backend operations and represent unsupported operations as unavailable. `VERIFIED_COMPLETE`; the reviewed endpoint registry drives route/action flags and market orders, Portfolio, Dashboard, and Profile remain false or absent.
+- [x] `BETA-CAP-002` Version the manifest schema and capability mapping independently. `VERIFIED_COMPLETE`; current schema is `1` and current manifest is `2026-07-20.2`.
+- [x] `BETA-CAP-003` Advertise only reviewed, implemented Backend operations and represent unsupported operations as unavailable. `VERIFIED_COMPLETE`; manifest `2026-07-20.2` advertises reviewed Dashboard, Profile/bootstrap, market reads, watchlist, Portfolio, and ticker-only market orders while unsupported capabilities remain false or absent.
 - [x] `BETA-CAP-004` Keep the manifest private/no-store, session-scoped, game-isolated, and free of internal UUIDs. `VERIFIED_COMPLETE` through merged request-scope and capability-contract coverage.
 - [x] `BETA-CAP-005` Add exact route, method, malformed-path, unsupported-method, expired, revoked, wrong-game, UUID-injection, and response-contract tests. `VERIFIED_COMPLETE` through the merged Player capability and security suites.
-- [x] `BETA-CAP-006` Reconcile the manifest after every later Backend tranche and before runtime adapter execution. `VERIFIED_COMPLETE`; current manifest `2026-07-19.4` includes only the merged reviewed endpoint set.
+- [x] `BETA-CAP-006` Reconcile the manifest after every later Backend tranche and before runtime adapter execution. `VERIFIED_COMPLETE`; current manifest `2026-07-20.2` includes only the merged reviewed endpoint set.
 
 ---
 
@@ -464,7 +497,7 @@ PR #163 provides an activation-disabled definition and specification layer. The 
 
 ## 12. Stock market and investments
 
-**Overall status:** `VERIFIED_COMPLETE` for the Backend market engine and authenticated market reads/watchlist; connected Player market orders, Portfolio, scheduled staging ticks, and broader financial instruments remain `IN_PROGRESS` or `PLANNED`.
+**Overall status:** `VERIFIED_COMPLETE` for the Backend market engine, authenticated market reads/watchlist, connected Player Portfolio and ticker-only market orders, and the repository-controlled safe tick trigger. Isolated-staging scheduler activation, active-instrument calibration, and broader financial instruments remain `IN_PROGRESS` or `PLANNED`.
 
 ### Complete
 
@@ -495,12 +528,12 @@ PR #163 provides an activation-disabled definition and specification layer. The 
 ### Active reconciliation
 
 - [x] `BETA-MKT-001` Merge bounded market collection and asset-detail routes. `VERIFIED_COMPLETE` through PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`.
-- [x] `BETA-MKT-002` Merge watchlist list/add/remove. `VERIFIED_COMPLETE` through PR #158; current manifest `2026-07-19.4` advertises the reviewed GET/PUT/DELETE watchlist operations.
-- [ ] `BETA-MKT-003` Resolve public ticker to internal runtime asset at the order boundary.
-- [ ] `BETA-MKT-004` Publish capability manifest for market reads, watchlist, and market orders. `IN_PROGRESS`: manifest `2026-07-19.4` truthfully advertises market reads, asset detail, and watchlist; `marketOrder` remains false until the public-ticker order boundary is reconciled under `BETA-MKT-003`.
-- [ ] `BETA-MKT-005` Connect Player Terminal to authoritative market and portfolio routes. `IN_PROGRESS`: market reads, asset detail, and watchlist are connected; Portfolio and market-order execution are not advertised by the current manifest.
-- [ ] `BETA-MKT-006` Schedule or safely trigger market ticks in staging and beta.
-- [ ] `BETA-MKT-007` Verify market closed, paused, stale price, insufficient funds, insufficient shares, duplicate order, and refresh-failure states.
+- [x] `BETA-MKT-002` Merge watchlist list/add/remove. `VERIFIED_COMPLETE` through PR #158; current manifest `2026-07-20.2` advertises the reviewed GET/PUT/DELETE watchlist operations.
+- [x] `BETA-MKT-003` Resolve public ticker to internal runtime asset at the order boundary. `VERIFIED_COMPLETE` through PR #245: `POST /players/me/stocks/orders` accepts a bounded public ticker and reviewed expected price, derives game/player/session scope from the authenticated session, resolves the active internal asset only inside the trusted Backend boundary, and rejects private-scope or stock-UUID injection.
+- [x] `BETA-MKT-004` Publish capability manifest for market reads, watchlist, and market orders. `VERIFIED_COMPLETE` through PR #245; manifest `2026-07-20.2` advertises market reads, asset detail, watchlist, Portfolio, and the reviewed ticker-only `marketOrder` operation, and Player preflight fails closed on coverage mismatch.
+- [x] `BETA-MKT-005` Connect Player Terminal to authoritative market and portfolio routes. `VERIFIED_COMPLETE` through PR #245: Portfolio scope is session-derived with no ownership UUID query parameters, market orders submit ticker/expected price/side/quantity/idempotency only, and the reviewed confirmation, receipt, refresh, and limit-order-unavailable states remain intact.
+- [x] `BETA-MKT-006` Schedule or safely trigger market ticks in staging and beta. `VERIFIED_COMPLETE` at the repository-controlled trigger boundary through PR #245: `scripts/trigger-stock-market-tick.mjs` is game-scoped, secret-protected, HTTPS-enforcing outside localhost, timeout-bounded, deterministic when explicit tick index/seed are supplied, and emits bounded machine-readable evidence. Connected scheduler activation remains a Phase 5 environment task.
+- [x] `BETA-MKT-007` Verify market closed, paused, stale price, insufficient funds, insufficient shares, duplicate order, and refresh-failure states. `VERIFIED_COMPLETE` through PR #245 with Backend public-boundary and repository/RPC coverage, central sensitive-write rate limiting, ticker/UUID privacy checks, replay-safe idempotency, Player committed-success refresh handling, and safe-trigger closed-market/duplicate-tick evidence.
 - [ ] `BETA-MKT-008` Select a calibrated active subset of approximately 20–30 instruments per country.
 
 ### Full financial-market expansion
@@ -629,7 +662,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 ## 15. Player Terminal
 
-**Overall status:** `VERIFIED_COMPLETE` for the hardened frontend, authoritative runtime adapter, capability preflight, and manifest-advertised routes; full beta read/write coverage and isolated-staging bootstrap remain `IN_PROGRESS`.
+**Overall status:** `VERIFIED_COMPLETE` for the hardened frontend, authoritative runtime adapter, capability preflight, and repository-integrated beta reads/writes; isolated-staging connected bootstrap remains `IN_PROGRESS`.
 
 ### Complete frontend surfaces
 
@@ -666,17 +699,17 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 - [x] `BETA-PLAYER-001` Install the Student-Profile adapter before `PlayerApi` construction. `VERIFIED_COMPLETE` through cleaned PR #141 merged as `566d99fab5668cf42d6275ec8d12c580239a3137`.
 - [x] `BETA-PLAYER-002` Select `/functions/v1/classroom-api` explicitly. `VERIFIED_COMPLETE` through PR #141.
 - [x] `BETA-PLAYER-003` Prohibit `/api/player` fallback in Student-Profile connected mode. `VERIFIED_COMPLETE` through PR #141 and the runtime-cutover ratchets merged in PRs #217 and #222.
-- [x] `BETA-PLAYER-004` Consume authoritative capability manifest and version. `VERIFIED_COMPLETE`; startup consumes schema `1`, manifest `2026-07-19.4`.
+- [x] `BETA-PLAYER-004` Consume authoritative capability manifest and version. `VERIFIED_COMPLETE`; startup consumes schema `1`, manifest `2026-07-20.2` after Dashboard/Profile PR #254 and market/Portfolio PR #245.
 - [x] `BETA-PLAYER-005` Validate advertised capability-to-adapter coverage at startup. `VERIFIED_COMPLETE` through PR #141 capability-contract validation.
 - [x] `BETA-PLAYER-006` Fail closed before execution when capability and route mappings disagree. `VERIFIED_COMPLETE` through PR #141.
 - [x] `BETA-PLAYER-007` Preserve approved product surfaces with truthful Integration Pending or Unavailable states. `VERIFIED_COMPLETE` through PR #180 merged as `6a30e48d23f5ecb8b4e69794823863a49ce7254a`.
-- [ ] `BETA-PLAYER-008` Connect Dashboard, World, News, Market, Portfolio, Store, Contracts, Inventory, Banking, Notifications, and Profile. `IN_PROGRESS`: manifest-advertised World, News, Market reads, Store, Contracts, Inventory, Banking, and Notifications are connected; Dashboard, Portfolio, and Profile are not advertised by manifest `2026-07-19.4`.
-- [ ] `BETA-PLAYER-009` Connect Store, Contract, Market, watchlist, notification, redemption, and logout writes. `IN_PROGRESS`: Store, Contract, watchlist, notification-read, redemption, and logout writes are connected; `marketOrder` remains unavailable.
+- [x] `BETA-PLAYER-008` Connect Dashboard, World, News, Market, Portfolio, Store, Contracts, Inventory, Banking, Notifications, and Profile. `VERIFIED_COMPLETE` at the repository-integrated boundary through Dashboard/Profile PR #254 and market/Portfolio PR #245; manifest `2026-07-20.2` and the reviewed adapter cover every listed beta read surface without preview fallback.
+- [x] `BETA-PLAYER-009` Connect Store, Contract, Market, watchlist, notification, redemption, and logout writes. `VERIFIED_COMPLETE` at the repository-integrated boundary through PR #245; the ticker-only market-order write joins the previously connected Store, Contract, watchlist, notification-read, redemption, and logout operations.
 - [ ] `BETA-PLAYER-010` Verify desktop and mobile connected bootstrap in isolated staging. Repository-connected desktop/mobile fixtures pass; environment-backed staging evidence remains open.
 - [x] `BETA-PLAYER-011` Verify session replacement abort and stale-result rejection. `VERIFIED_COMPLETE` through the Player Terminal verification chain retained by PR #141 and later runtime-cutover merges.
 - [x] `BETA-PLAYER-012` Verify no ownership UUID appears in URLs, payloads, models, fixtures, or rendered output. `VERIFIED_COMPLETE` for repository and Chromium evidence through PRs #158, #141, and #224; connected logs/traces remain separately tracked under `BETA-AUTH-006`.
-- [ ] `BETA-PLAYER-013` Verify committed-success behavior for every economic write. `IN_PROGRESS`: Store, Contract, and Inventory redemption committed-success paths are covered; market-order execution and isolated-staging ambiguity evidence remain open.
-- [ ] `BETA-PLAYER-014` Verify offline, timeout, ambiguous write, 429, and session-expiry recovery. `IN_PROGRESS`: frontend recovery contracts and safe expiry exit are merged; connected isolated-staging retry/rate-limit evidence remains open.
+- [ ] `BETA-PLAYER-013` Verify committed-success behavior for every economic write. `IN_PROGRESS`: Store, Contract, Inventory redemption, and market-order committed-success paths are covered at the repository-integrated boundary; isolated-staging ambiguous-write evidence remains open.
+- [ ] `BETA-PLAYER-014` Verify offline, timeout, ambiguous write, 429, and session-expiry recovery. `IN_PROGRESS`: PR #247 merged the repository recovery tranche as `ad889a2bdf9d5587fff3275d70751c79992171c7` after all ten final workflows passed; connected isolated-staging retry/rate-limit evidence remains open.
 
 ---
 
@@ -686,12 +719,12 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 for repository state through `3b6c6d3b120a17121fb1168c41bf039b2e66dd00`; PR #163 remains the only open PR.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `e167ea3976da3a5825cc1cc079c994c4f887eaf6`; unique active capability authorities are PRs #163, #244, #248, #249, and #261. Market/Portfolio PR #245 is merged as `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a`.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
 - [x] `P0-005` Reconcile donor work intentionally. PR #143 remains donor/reference only; PR #141 was cleaned, bounded, verified, and merged as the authoritative Player runtime adapter.
-- [ ] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. Temporary roadmap branches were removed after merge; a reliable owner-safe inventory and cleanup of older superseded refs remains open because the branch-search connector returned no authoritative listing.
+- [x] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. `VERIFIED_COMPLETE` through PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`, seal PR #259 merged as `e2483e25d767cbe5714735c627093d9968507908`, and default-branch cleanup through `e167ea3976da3a5825cc1cc079c994c4f887eaf6`: market duplicate #246, recovery duplicate #253, premature seal #255, and incident-verification duplicates #260, #270, and #273 are closed with their useful evidence consumed or dispositioned; the obsolete incident finalizer workflow, trigger, and script are deleted from `main`.
 - [x] `P0-007` Add and maintain a capability ownership registry.
 - [x] `P0-008` Add a reverse-chronological change ledger to this document after every merged tranche.
 - [x] `P0-009` Require every future implementation prompt to reference this exact authoritative path.
@@ -703,6 +736,15 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 |---|---|---|---|
 | Authenticated Player Backend | PR #158 / merge `d403cf7baefeb3c1015c282cdbd748d2050e87ac` | `VERIFIED_COMPLETE` | No replacement Backend reconciliation branch; later work must use a narrowly owned roadmap item. |
 | Seed-content definition, calibration, and executable-content preparation | PR #163 / `agent/seed-content-foundation-v1` | `IN_PROGRESS` | Sole active seed authority; do not create another seed-content branch or merge/activate before its gates close. |
+| Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS` | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; does not own campaign definitions or runner scheduling. |
+| Player market orders and Portfolio | PR #245 / merge `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a` | `VERIFIED_COMPLETE` at repository-integrated boundary | `BETA-MKT-003` through `BETA-MKT-007` are complete; preserve the ticker-only, session-derived, rate-limited public boundary and keep active-market selection under PR #163. |
+| Messaging and communication | PR #248 / `agent/messaging-communication-v1` | `IN_PROGRESS` | Sole authority for `EXP-MSG-001` through `EXP-MSG-007`. |
+| Player Marketplace lifecycle | PR #249 / `agent/player-marketplace-lifecycle-v1` | `IN_PROGRESS` | Sole authority for `EXP-MP-001` through `EXP-MP-009`. |
+| Progression, reputation, and achievements | PR #261 / `agent/progression-reputation-achievements-v1` | `IN_PROGRESS` | Sole authority for `EXP-PROG-001` through `EXP-PROG-008`; does not own PR #163 seed definitions. |
+| Player recovery states | PR #247 / merge `ad889a2bdf9d5587fff3275d70751c79992171c7` | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | Do not reopen duplicate PR #253; connected recovery evidence remains governed by `BETA-PLAYER-014`. |
+| Incident readiness | PR #252 / merge `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4` | `VERIFIED_COMPLETE` | Preserve severity, ownership, classroom fallback, correction, evidence, and postmortem controls. |
+| Program-control consolidation | PR #251 / merge `89bfadfb0d609ef92081fda575f0e1e998b2650d` | `VERIFIED_COMPLETE` | Phase 0 is sealed; preserve the unique-authority registry and fail-closed branch-retirement policy. |
+| Software supply-chain security | PR #250 / merge `476cfba30666b1303d32d6c2e46560483b641edf` | `VERIFIED_COMPLETE` | Preserve secret scanning, dependency review, deterministic SBOM/checksum generation, trusted-run attestation, Dependabot cadence, and the patch/exception policy; artifact promotion and environment approval remain separately governed. |
 | Player runtime adapter and capability preflight | PR #141 / merge `566d99fab5668cf42d6275ec8d12c580239a3137` | `VERIFIED_COMPLETE` | Preserve explicit `classroom-api` routing and fail-closed manifest validation. |
 | Player runtime cutover and legacy source retirement | PRs #217 and #222 | repository code `VERIFIED_COMPLETE`; operations `IN_PROGRESS` | Do not restore the legacy frontend or Cloudflare browser transport; retire live Worker only through approved operational change control. |
 | Inventory redemption lifecycle | PRs #158, #177, and #224 | `VERIFIED_COMPLETE` at repository-integrated boundary | Extend the existing public-key, row-locked, idempotent lifecycle; PR #143 remains reference only. |
@@ -711,7 +753,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Admin game lifecycle controls | PR #229 / merge `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb` | `VERIFIED_COMPLETE` | Preserve canonical lifecycle states, mutation gating, idempotency, and session/join-code revocation semantics. |
 | Accepted Admin source preservation | `frontend/admin-terminal-source-v1` | retained exception | Preserve per `CONTRIBUTING.md`; do not treat as active feature authority. |
 
-**Exit gate:** No overlapping active branch owns the same capability, and this roadmap reflects the current repository.
+**Exit gate:** Met. No overlapping active pull request owns the same capability, superseded duplicate refs and finalizer artifacts are retired, and this roadmap reflects the repository through `e167ea3976da3a5825cc1cc079c994c4f887eaf6`.
 
 ---
 
@@ -733,7 +775,7 @@ Required gates:
 - [x] Wrong-role, wrong-game, wrong-player, expired, revoked, replay, idempotency, and UUID-injection tests.
 - [x] No production deployment occurred before merge; isolated-staging promotion remains governed by Phase 5.
 
-**Exit gate:** Met. PR #158 is merged, donor work is no longer required for Backend authority, and the current implemented endpoint set is represented by capability manifest `2026-07-19.4`.
+**Exit gate:** Met. PR #158 is merged, donor work is no longer required for Backend authority, and the current implemented endpoint set is represented by capability manifest `2026-07-20.2`.
 
 ---
 
@@ -746,8 +788,8 @@ Required gates:
 - [x] Consume normalized host Player session.
 - [x] Validate capability manifest schema and version.
 - [x] Reconcile every advertised endpoint key with a reviewed frontend route.
-- [ ] Connect all beta reads. `IN_PROGRESS`: Dashboard, Portfolio, and Profile are not advertised by manifest `2026-07-19.4`.
-- [ ] Connect all beta writes. `IN_PROGRESS`: market-order execution is not advertised; reviewed Store, Contract, watchlist, notification, redemption, and logout writes are connected.
+- [x] Connect all beta reads. `VERIFIED_COMPLETE` at the repository-integrated boundary through manifest `2026-07-20.2`, including Dashboard, Profile/bootstrap, and Portfolio.
+- [x] Connect all beta writes. `VERIFIED_COMPLETE` at the repository-integrated boundary through PR #245; market orders are reviewed, ticker-only, capability-advertised, and connected alongside Store, Contract, watchlist, notification, redemption, and logout writes.
 - [x] Connect logout through the host revocation lifecycle.
 - [x] Add fail-closed integration mismatch states.
 - [x] Run repository-connected browser tests.
@@ -756,7 +798,7 @@ Required gates:
 - [x] Verify no speculative or `/api/player` fallback requests.
 - [ ] Run isolated-staging connected bootstrap, retry, and network-evidence capture.
 
-**Exit gate:** Open. A real authenticated Player must still complete the full base loop in isolated staging without preview data, including the currently unavailable market-order and remaining read surfaces.
+**Exit gate:** Open only at the environment boundary. Repository-integrated beta reads and writes are complete; a real authenticated Player must still complete the full base loop in isolated staging without preview data, with connected retry, rate-limit, and network evidence.
 
 ---
 
@@ -771,10 +813,10 @@ Required gates:
 - [ ] Minimal onboarding. `IN_PROGRESS`: PR #163 defines ten arrival packages, messages, tutorials, and stabilization Contracts; the arrival class system is explicitly not started and no runtime onboarding flow is merged.
 - [x] Game lifecycle start, pause, resume, end, archive, and session revoke. Merged through PR #229.
 - [x] Emergency economic mutation pause. Merged through PR #229; isolated-staging connected verification remains part of the release gate.
-- [ ] Player-facing recovery states.
+- [x] Player-facing recovery states at the repository boundary through PR #247; connected isolated-staging retry/rate-limit evidence remains open under `BETA-PLAYER-014`.
 - [ ] One complete tutorial Contract chain. `IMPLEMENTED_NOT_MERGED` at the definition layer on PR #163; runtime instantiation and staging playthrough remain open.
 - [x] One complete Store purchase and Inventory redemption chain at the repository-integrated boundary through PRs #207, #210, #211, and #224.
-- [ ] One complete Market trade/portfolio chain.
+- [x] One complete Market trade/portfolio chain. `VERIFIED_COMPLETE` at the repository-integrated boundary through PR #245 with ticker-only buy/sell execution, ledger/holding settlement, Portfolio refresh, replay safety, negative states, and committed-success refresh handling.
 - [ ] One complete story event and notification chain. `IN_PROGRESS` at the definition layer on PR #163; runtime event activation, notification/cutscene delivery, and replay evidence remain open.
 
 **Exit gate:** Every core loop has one end-to-end authoritative path and one failure/retry path.
@@ -833,7 +875,7 @@ Required gates:
 - [ ] `OPS-STAGE-007` Add protected approval for staging and production. `IN_PROGRESS` at the tooling layer: the merged staging preflight targets a named GitHub `staging` environment, but actual isolated environment identities, required approvers, and production protection evidence remain absent.
 - [ ] `OPS-ARTIFACT-001` Build immutable artifacts from merge commits. `IN_PROGRESS` at the validation-contract layer through PR #169; no reviewed immutable frontend and Edge artifact set has been built and promoted.
 - [ ] `OPS-ARTIFACT-002` Generate release manifest with hashes, migration head, config version, and feature flags. `IN_PROGRESS`: a fail-closed manifest schema and validator merged through PR #169, but no complete evidence-backed release manifest exists.
-- [ ] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence. `IN_PROGRESS`: exact Node/npm/tool pins, lockfiles, high-severity dependency audit thresholds, and package-signature checks run in Repository Quality; secret scanning, dependency-review enforcement, SBOM, provenance, automated update policy, and approved patch cadence remain open.
+- [x] `OPS-SUPPLY-001` Add secret scanning, dependency review, SBOM/provenance, and patch cadence. `VERIFIED_COMPLETE` through PR #250 merged as `476cfba30666b1303d32d6c2e46560483b641edf`. Deterministic committed-source secret scanning, high-severity pull-request dependency review, root and Backend CycloneDX SBOMs, SHA-256 manifests, commit-specific immutable artifacts, trusted-main provenance attestation, grouped weekly Dependabot updates, patch/exception objectives, and Repository Quality enforcement are authoritative. Final head `48414aaccf223c94c358033c883215dced666f24` passed Supply Chain Security #9, Repository Quality #1104, Backend Typecheck #1261, and Database Replay #358; trusted-main Supply Chain Security #10 passed attestation and retained artifact `supply-chain-sbom-476cfba30666b1303d32d6c2e46560483b641edf`.
 - [ ] `OPS-ACCESS-001` Add leaked-password protection and staff access policy.
 - [ ] `OPS-RATE-001` Add rate limiting. `IN_PROGRESS`: shared HMAC-keyed storage, atomic consumption, reviewed Player post-auth dispatch, and credential-blind login pre-auth enforcement merged through PR #158. Runtime proxy/HMAC configuration, SQL concurrency evidence, shared-NAT tuning, cleanup, telemetry, and staging probes remain open.
 - [ ] `OPS-OBS-001` Add structured logs, request IDs, release SHA, safe actor/game identifiers, latency, DB metrics, and outcome classes.
@@ -842,7 +884,7 @@ Required gates:
 - [ ] `OPS-BACKUP-002` Create encrypted off-platform backup.
 - [ ] `OPS-RESTORE-001` Rehearse full restore.
 - [ ] `OPS-RESTORE-002` Define and rehearse RPO/RTO.
-- [ ] `OPS-INCIDENT-001` Define incident severity, ownership, communications, classroom fallback, and correction procedures.
+- [x] `OPS-INCIDENT-001` Define incident severity, ownership, communications, classroom fallback, and correction procedures. `VERIFIED_COMPLETE` through PR #252 merged as `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4`; Incident Readiness, Repository Quality, Staging Readiness Preflight, Supply Chain Security, Admin Game Lifecycle Controls, and Database Replay passed.
 - [ ] `OPS-PERF-001` Add load fixtures and query-plan review.
 - [ ] `OPS-PERF-002` Add missing foreign-key indexes based on evidence.
 - [ ] `OPS-SMOKE-001` Complete staging-backed Admin and Player smoke.
@@ -1070,6 +1112,37 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-20 — Default-branch incident-finalizer retirement
+
+- Confirmed Phase 0 remained `VERIFIED_COMPLETE` after market/Portfolio PR #245 merged as `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a`.
+- Retired duplicate incident-verification PRs #260, #270, and #273 and the unmerged push-gated replacement #275 after PR #259 had already made the incident checkbox, scoreboards, Phase 5 status, amendment, verification record, and ledger authoritative.
+- Removed `.github/workflows/incident-roadmap-finalize.yml`, `.github/incident-roadmap-finalize.trigger`, and `scripts/finalize-incident-roadmap.py` from `main` through commits `14fe5833a7cae23bd41703565a64217082025301`, `67510771742340f22261cbe0dd7d9946ac33ee11`, and `7846ee95ec539de6005c327e13e918792cbe3eb0`; recorded the cleanup in `e167ea3976da3a5825cc1cc079c994c4f887eaf6`.
+- Current active capability authorities are #163 seed content, #244 story delivery, #248 Messaging, #249 Marketplace, and #261 Progression. No application source, migration, route, RPC, seed definition, credential, environment, runtime, or deployment behavior changed in this reconciliation.
+
+### 2026-07-20 — Player market reconciliation on PR #245
+
+- Completed `BETA-MKT-003` through `BETA-MKT-007` with a public ticker-only order contract, session-derived Portfolio scope, central rate limiting, stale-price protection, idempotent settlement, and a repository-controlled safe tick trigger.
+- Published capability manifest `2026-07-20.2` and completed aggregate Player read/write items `BETA-PLAYER-008` and `BETA-PLAYER-009` at the repository-integrated boundary.
+- Preserved PR #163 as the sole active-instrument and seed-content authority; `BETA-MKT-008` and isolated-staging scheduler activation remain separately open.
+
+### 2026-07-20 — Phase 0 program-control completion seal
+
+- PR #251 merged owner-safe program control as `89bfadfb0d609ef92081fda575f0e1e998b2650d` after Repository Quality #1084, Database Replay #345, Staging Readiness Preflight #99, and Admin Game Lifecycle Controls #33 passed.
+- Preserved PR #245 over duplicate market PR #246 and PR #247 over duplicate recovery PR #253; consumed or explicitly dispositioned useful donor material before retirement. Premature roadmap seal PR #255 was retired without merge. Incident-verification PR #260 was also retired after its unique amendment evidence was transplanted into PR #259.
+- Confirmed refs `agent/player-market-portfolio-v1`, `feat/player-recovery-states-v1`, and `docs/program-control-phase0-seal-v1` no longer exist. Branch Hygiene run #100 is immutable deletion evidence for PR #246; the later duplicate refs were absent from the final remote branch inventory.
+- Recorded unique active capability authorities: #163 seed content, #244 story delivery, #245 market/Portfolio, #248 Messaging, #249 Marketplace, and #261 Progression. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active owners.
+- Reconciled repository state through `ad889a2bdf9d5587fff3275d70751c79992171c7`, including Dashboard/Profile manifest `2026-07-20.1`, merged Player recovery, supply-chain security, and incident readiness without overstating Portfolio, connected staging, or release completion.
+- Marked `P0-006` and all of Phase 0 `VERIFIED_COMPLETE`; corrected the scoreboard to Program control 10/10, Operations 2/22, and 69 verified / 169 open / 238 total.
+- Documentation and policy reconciliation only; no application source, migration, route, RPC, seed definition, credential, environment, runtime, or deployment changed in this seal.
+
+### 2026-07-20 — Parallel-work ownership reconciliation on PR #251
+
+- Re-audited current open PRs and identified duplicate ownership between PRs #245 and #246 for `BETA-MKT-003` through `BETA-MKT-007`.
+- Preserved PR #245 as the substantive market authority; classified PR #246 as duplicate after consuming its temporary source-snapshot artifact and confirming it contains no unique application implementation.
+- Added fail-closed Branch Hygiene support for merged or explicitly `duplicate`-labeled same-repository PRs, retained the default and accepted Admin source branches, and added `scripts/branch-hygiene-policy.test.mjs`.
+- Updated `docs/operations/branch-cleanup-2026-07-17.md`, the capability ownership registry, and current program snapshot. `P0-006` remains `IMPLEMENTED_NOT_MERGED` until PR #251 merges and PR #246 is closed with branch-deletion evidence.
+- No application source, migration, route, RPC, seed definition, credential, environment, or deployment changed.
 
 ### 2026-07-20 — Comprehensive repository and roadmap re-audit
 

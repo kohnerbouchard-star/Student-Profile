@@ -54,6 +54,9 @@ jobs:
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/contracts\/playerContractPublicListContracts([.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/players\/contracts\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }
+              $0 == "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.test.ts" { next }
+              $0 ~ /^backend\/src\/domains\/stocks\/api\/playerStockMarket[A-Za-z0-9.-]*[.]ts$/ { next }
+              $0 == "backend/src/domains/stocks/contracts/stockMarketTradingContracts.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/api\/playerStorePublic[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/store\/contracts\/playerStorePublicContracts[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/store\/infrastructure\/supabasePlayerStorePublicRepository[.]ts$/ { next }
@@ -63,6 +66,10 @@ jobs:
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
+              $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
+              $0 == "docs/roadmaps/active/player-market-reconciliation-v1.md" { next }
+              $0 == "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md" { next }
+              $0 ~ /^scripts\/trigger-stock-market-tick([.]test)?[.]mjs$/ { next }
               { print }
             ' /tmp/player-terminal-changed-files.txt)"
           else

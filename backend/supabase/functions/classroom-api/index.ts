@@ -30,10 +30,10 @@ import {
   readStaffPlayerLedgerHistoryRoutePath,
 } from "../../../src/domains/economy/api/economyRoutePaths.ts";
 import {
-handlePlayerBankingPublicRequest,
+  handlePlayerBankingPublicRequest,
 } from "../../../src/domains/economy/api/playerBankingPublicHttpHandler.ts";
 import {
-readPlayerBankingPublicRoutePath,
+  readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
   handleStaffPlayerLedgerHistoryRequest,
@@ -341,9 +341,15 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me/game/dashboard")) {
-    return handlePlayerGameDashboardRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "dashboard",
+      () =>
+        handlePlayerGameDashboardRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerContractAcceptanceRoute =
@@ -404,47 +410,77 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me/stocks/portfolio")) {
-    return handlePlayerStockMarketReadRequest(request, "read_portfolio", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_portfolio", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/holdings")) {
-    return handlePlayerStockMarketReadRequest(request, "read_holdings", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_holdings", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/orders")) {
     if (request.method === "POST") {
-      return handlePlayerStockMarketTradingRequest(request, {
-        createServiceClient,
-      });
+      return dispatchRateLimitedReviewedPlayerRequest(
+        request,
+        "marketOrder",
+        () =>
+          handlePlayerStockMarketTradingRequest(request, {
+            createServiceClient,
+          }),
+        { createServiceClient },
+      );
     }
 
-    return handlePlayerStockMarketReadRequest(request, "read_orders", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_orders", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/trades")) {
-    return handlePlayerStockMarketReadRequest(request, "read_trades", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_trades", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);
 
   if (playerBankingRoute) {
-  return dispatchRateLimitedReviewedPlayerRequest(
-  request,
-  "banking",
-  () =>
-  handlePlayerBankingPublicRequest(request, {
-  createServiceClient,
-  }),
-  { createServiceClient },
-  );
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "banking",
+      () =>
+        handlePlayerBankingPublicRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me")) {
@@ -465,6 +501,12 @@ Deno.serve(async (request) => {
       () => handlePlayerLoginRequest(request, { createServiceClient }),
       { createServiceClient },
     );
+  }
+
+  if (url.pathname.endsWith("/players/attendance/clock-in")) {
+    return handlePlayerAttendanceClockInRequest(request, {
+      createServiceClient,
+    });
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);

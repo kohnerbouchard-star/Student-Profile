@@ -5,6 +5,7 @@ const SUPPORTED_SCHEMA_VERSION = 1;
 const SUPPORTED_SERVICE = "classroom-api";
 
 const ENDPOINT_COVERAGE = Object.freeze({
+  bootstrap: Object.freeze(["session"]),
   capabilities: Object.freeze(["capabilities"]),
   banking: Object.freeze(["banking"]),
   contractAccept: Object.freeze(["contractAccept"]),
@@ -12,27 +13,33 @@ const ENDPOINT_COVERAGE = Object.freeze({
   contracts: Object.freeze(["contracts"]),
   countries: Object.freeze(["countries"]),
   country: Object.freeze(["country"]),
+  dashboard: Object.freeze(["dashboard"]),
   inventory: Object.freeze(["inventory"]),
   inventoryRedemptions: Object.freeze(["inventoryUse"]),
   logout: Object.freeze(["logout"]),
   market: Object.freeze(["market"]),
   marketAsset: Object.freeze(["marketAsset"]),
+  marketOrder: Object.freeze(["marketOrder"]),
   marketWatchlist: Object.freeze(["marketWatchlist"]),
   news: Object.freeze(["news"]),
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
+  portfolio: Object.freeze(["portfolio"]),
   store: Object.freeze(["store"]),
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"])
 });
 
 const ROUTE_REQUIREMENTS = Object.freeze({
+  dashboard: "dashboard",
   news: "news",
   banking: "banking",
   market: "market",
+  portfolio: "portfolio",
   contracts: "contracts",
   inventory: "inventory",
-  store: "store"
+  store: "store",
+  profile: "bootstrap"
 });
 
 const ACTION_REQUIREMENTS = Object.freeze({
@@ -40,6 +47,7 @@ const ACTION_REQUIREMENTS = Object.freeze({
   contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
   logout: "logout",
+  marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
   notificationsRead: "notificationsRead",
   storePurchase: "storePurchase"
@@ -111,7 +119,8 @@ export function validateStudentProfileCapabilityManifest(raw) {
     for (const operation of item.operations) {
       const method = typeof operation?.method === "string" ? operation.method.trim().toUpperCase() : "";
       const pathTemplate = typeof operation?.pathTemplate === "string" ? operation.pathTemplate.trim() : "";
-      if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !pathTemplate.startsWith("/players/me/")) {
+      const isPlayerPath = pathTemplate === "/players/me" || pathTemplate.startsWith("/players/me/");
+      if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !isPlayerPath) {
         throw mismatch(`Backend endpoint ${key} contains an invalid operation.`, { key, method, pathTemplate });
       }
     }

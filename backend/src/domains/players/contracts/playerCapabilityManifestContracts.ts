@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-19.4" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -55,6 +55,7 @@ export type PlayerActionCapabilityKey =
   typeof PLAYER_ACTION_CAPABILITY_KEYS[number];
 
 export type PlayerCapabilityEndpointKey =
+  | "bootstrap"
   | "capabilities"
   | "banking"
   | "contractAccept"
@@ -62,15 +63,18 @@ export type PlayerCapabilityEndpointKey =
   | "contracts"
   | "countries"
   | "country"
+  | "dashboard"
   | "inventory"
   | "inventoryRedemptions"
   | "logout"
   | "market"
   | "marketAsset"
+  | "marketOrder"
   | "marketWatchlist"
   | "news"
   | "notifications"
   | "notificationsRead"
+  | "portfolio"
   | "store"
   | "storeQuote"
   | "storePurchase";
@@ -112,6 +116,11 @@ export type PlayerCapabilityManifestRoute =
   | { readonly kind: "malformed" };
 
 const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
+  {
+    key: "bootstrap",
+    operations: [{ method: "GET", pathTemplate: "/players/me" }],
+    routeCapabilities: ["profile"],
+  },
   {
     key: "capabilities",
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
@@ -157,6 +166,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     }],
   },
   {
+    key: "dashboard",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/game/dashboard",
+    }],
+    routeCapabilities: ["dashboard"],
+  },
+  {
     key: "news",
     operations: [{ method: "GET", pathTemplate: "/players/me/world/news" }],
     routeCapabilities: ["news"],
@@ -175,6 +192,15 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     routeCapabilities: ["market"],
   },
   {
+    key: "marketOrder",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/stocks/orders",
+    }],
+    routeCapabilities: ["market"],
+    actionCapabilities: ["marketOrder"],
+  },
+  {
     key: "marketWatchlist",
     operations: [
       { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
@@ -186,6 +212,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketWatchlist"],
+  },
+  {
+    key: "portfolio",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/stocks/portfolio",
+    }],
+    routeCapabilities: ["portfolio"],
   },
   {
     key: "store",

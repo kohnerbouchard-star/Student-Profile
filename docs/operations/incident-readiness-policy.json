@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "policyId": "ECON-INCIDENT-READINESS-V1",
+  "effectiveDate": "2026-07-20",
+  "scope": [
+    "development",
+    "isolated-staging",
+    "production",
+    "classroom-operations"
+  ],
+  "severities": {
+    "P0": {
+      "name": "Critical",
+      "declareWhenAny": [
+        "confirmed or credible cross-game data exposure",
+        "credential, session-token, token-hash, or service-secret exposure",
+        "authorization bypass or unauthorized economic mutation",
+        "unbounded or actively repeating economic writes",
+        "irrecoverable data loss or inability to contain a destructive write path",
+        "active compromise of production control or deployment authority"
+      ],
+      "initialAcknowledgementMinutes": 5,
+      "internalUpdateMinutes": 15,
+      "stakeholderUpdateMinutes": 30,
+      "automaticStopConditions": [
+        "pause affected economic mutations immediately",
+        "revoke affected sessions or credentials",
+        "disable the affected route, feature, worker, or deployment when required for containment",
+        "move classrooms to documented read-only fallback"
+      ]
+    },
+    "P1": {
+      "name": "High",
+      "declareWhenAny": [
+        "bounded economic corruption within one or more games",
+        "widespread inability to sign in or use a required classroom workflow",
+        "runaway market, story, reward, or notification execution with contained scope",
+        "failure of Admin pause or correction controls",
+        "material integrity risk with no confirmed cross-game or credential exposure"
+      ],
+      "initialAcknowledgementMinutes": 15,
+      "internalUpdateMinutes": 30,
+      "stakeholderUpdateMinutes": 60,
+      "automaticStopConditions": [
+        "pause the affected capability or games",
+        "prevent retries that could duplicate writes",
+        "switch affected classrooms to documented fallback"
+      ]
+    },
+    "P2": {
+      "name": "Moderate",
+      "declareWhenAny": [
+        "major workflow degradation with a safe workaround",
+        "bounded incorrect calculation or stale read with no ongoing harmful writes",
+        "partial service outage that does not require classroom-wide stop"
+      ],
+      "initialAcknowledgementMinutes": 60,
+      "internalUpdateMinutes": 240,
+      "stakeholderUpdateMinutes": 1440,
+      "automaticStopConditions": []
+    },
+    "P3": {
+      "name": "Low",
+      "declareWhenAny": [
+        "localized presentation, reporting, or noncritical workflow defect",
+        "minor operational issue with no security, privacy, integrity, or classroom continuity impact"
+      ],
+      "initialAcknowledgementMinutes": 1440,
+      "internalUpdateMinutes": 1440,
+      "stakeholderUpdateMinutes": 0,
+      "automaticStopConditions": []
+    }
+  },
+  "roles": {
+    "incidentCommander": {
+      "accountableFor": [
+        "severity and declaration",
+        "containment authority",
+        "role assignment",
+        "decision log",
+        "recovery authorization",
+        "closure"
+      ]
+    },
+    "technicalLead": {
+      "accountableFor": [
+        "technical investigation",
+        "safe mitigation",
+        "verification plan",
+        "implementation evidence"
+      ]
+    },
+    "dataIntegrityLead": {
+      "accountableFor": [
+        "affected-record determination",
+        "economic reconciliation",
+        "correction manifest",
+        "post-correction verification"
+      ]
+    },
+    "operationsLead": {
+      "accountableFor": [
+        "environment and deployment control",
+        "credential and session containment",
+        "rollback or disable execution",
+        "operational evidence"
+      ]
+    },
+    "classroomLead": {
+      "accountableFor": [
+        "teacher instructions",
+        "fallback activation",
+        "offline record custody",
+        "safe return to service"
+      ]
+    },
+    "communicationsLead": {
+      "accountableFor": [
+        "internal updates",
+        "classroom notices",
+        "stakeholder updates",
+        "privacy review"
+      ]
+    },
+    "scribe": {
+      "accountableFor": [
+        "UTC timeline",
+        "decision and action log",
+        "evidence index",
+        "handoff record"
+      ]
+    }
+  },
+  "mandatoryControls": {
+    "p0P1TwoPersonApproval": [
+      "economic correction execution",
+      "production credential rotation completion",
+      "return to normal economic writes"
+    ],
+    "forbiddenActions": [
+      "direct production database correction as a normal path",
+      "deleting or rewriting append-only ledger history",
+      "reusing a failed write with a new idempotency key before outcome verification",
+      "placing credentials, session tokens, internal UUIDs, player names, or exploit details in public issues",
+      "declaring recovery before authoritative read and invariant verification"
+    ],
+    "requiredCorrectionProperties": [
+      "game-scoped",
+      "server-authoritative",
+      "idempotent",
+      "append-only or compensating",
+      "audited",
+      "reconcilable",
+      "approved"
+    ]
+  },
+  "closureRequirements": [
+    "containment remains effective",
+    "root cause or bounded causal hypothesis is recorded",
+    "authoritative state and economic invariants pass",
+    "affected classrooms receive return-to-service instructions",
+    "temporary access and mitigations are removed or time-bounded",
+    "corrective actions have owners and due dates",
+    "post-incident review is scheduled for P0 and P1"
+  ]
+}

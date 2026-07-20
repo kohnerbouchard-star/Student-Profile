@@ -18,6 +18,7 @@ import {
   type StockMarketPlayerReadAction,
   StockMarketPlayerReadError,
   type StockMarketPlayerReadRepository,
+  type StockMarketPlayerReadResult,
   type StockMarketPlayerReadSuccessBody,
 } from "../contracts/stockMarketPlayerReadContracts.ts";
 import {
@@ -89,14 +90,21 @@ export async function handlePlayerStockMarketReadRequest(
     }
 
     const url = new URL(request.url);
-    const gameSessionId = readSingleRequiredQueryText(
-      url.searchParams,
-      "gameSessionId",
-    );
-    const playerSessionId = readSingleRequiredQueryText(
-      url.searchParams,
-      "playerSessionId",
-    );
+    const requestedGameSessionIds = url.searchParams.getAll("gameSessionId");
+    const requestedPlayerSessionIds = url.searchParams.getAll("playerSessionId");
+    const legacyScopedRequest = requestedGameSessionIds.length > 0 ||
+      requestedPlayerSessionIds.length > 0;
+
+    if (
+      legacyScopedRequest &&
+      (requestedGameSessionIds.length !== 1 ||
+        requestedPlayerSessionIds.length !== 1)
+    ) {
+      throw invalidRequest(
+        "Legacy stock reads require exactly one gameSessionId and playerSessionId together.",
+      );
+    }
+
     const limit = readOptionalLimit(url.searchParams);
     const serviceClient = dependencies.createServiceClient(envResult.value);
     const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
@@ -109,11 +117,20 @@ export async function handlePlayerStockMarketReadRequest(
       return jsonError(sessionResult.status, sessionResult.error);
     }
 
-    assertRequestedSessionMatchesResolvedSession(
-      gameSessionId,
-      playerSessionId,
-      sessionResult,
-    );
+    const gameSessionId = legacyScopedRequest
+      ? readSingleRequiredQueryText(url.searchParams, "gameSessionId")
+      : sessionResult.session.game_session_id;
+    const playerSessionId = legacyScopedRequest
+      ? readSingleRequiredQueryText(url.searchParams, "playerSessionId")
+      : sessionResult.session.id;
+
+    if (legacyScopedRequest) {
+      assertRequestedSessionMatchesResolvedSession(
+        gameSessionId,
+        playerSessionId,
+        sessionResult,
+      );
+    }
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
@@ -124,6 +141,10 @@ export async function handlePlayerStockMarketReadRequest(
       playerSessionId,
       limit,
     });
+
+    if (!legacyScopedRequest) {
+      return jsonResponse(200, toPlayerSafeStockRead(result));
+    }
 
     return jsonResponse<StockMarketPlayerReadSuccessBody>(200, {
       ok: true,
@@ -154,6 +175,61 @@ export async function handlePlayerStockMarketReadRequest(
   }
 }
 
+function toPlayerSafeStockRead(result: StockMarketPlayerReadResult) {
+  if (result.action === "read_portfolio" || result.action === "read_holdings") {
+    return {
+      ok: true as const,
+      action: result.action,
+      cash: result.cash,
+      summary: result.summary,
+      holdings: result.holdings.map((holding) => ({
+        ticker: holding.ticker,
+        companyName: holding.companyName,
+        sector: holding.sector,
+        countryCode: holding.countryCode,
+        quantity: holding.quantity,
+        averageCost: holding.averageCost,
+        currentPrice: holding.currentPrice,
+        marketValue: holding.marketValue,
+        costBasis: holding.costBasis,
+        unrealizedPnl: holding.unrealizedPnl,
+        unrealizedPnlPct: holding.unrealizedPnlPct,
+        realizedPnl: holding.realizedPnl,
+      })),
+    };
+  }
+
+  if (result.action === "read_orders") {
+    return {
+      ok: true as const,
+      action: result.action,
+      orders: result.orders.map((order) => ({
+        ticker: order.ticker,
+        side: order.side,
+        quantity: order.quantity,
+        executionPrice: order.executionPrice,
+        grossValue: order.grossValue,
+        status: order.status,
+        rejectionReason: order.rejectionReason,
+        idempotencyKey: order.idempotencyKey,
+        createdAt: order.createdAt,
+      })),
+    };
+  }
+
+  return {
+    ok: true as const,
+    action: result.action,
+    trades: result.trades.map((trade) => ({
+      ticker: trade.ticker,
+      side: trade.side,
+      quantity: trade.quantity,
+      executionPrice: trade.executionPrice,
+      grossValue: trade.grossValue,
+      createdAt: trade.createdAt,
+    })),
+  };
+}
 
 function assertRequestedSessionMatchesResolvedSession(
   gameSessionId: string,
