@@ -365,8 +365,16 @@ export function installPlayerRecoveryController({
 
   function handleSessionReady() {
     const lifecycle = lifecycleRecoveryFromTerminal(terminal);
-    if (lifecycle) show(lifecycle);
-    else inspectMount();
+    if (lifecycle) {
+      show(lifecycle);
+      return;
+    }
+    if (lifecycleState) {
+      lifecycleState = null;
+      show(restoredPlayerRecoveryState());
+      return;
+    }
+    inspectMount();
   }
 
   const Observer = runtime.MutationObserver;
