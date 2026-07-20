@@ -279,7 +279,7 @@ async function buildSubstitutionCalibration(physical) {
       const canonicalCost = canonicalPrice * Math.ceil(canonical.quantityRatio * penalty);
       for (const member of group.members) {
         const rawCost = priceByKey.get(member.itemKey) * Math.ceil(member.quantityRatio * penalty);
-        const quotedCost = roundTo(clamp(rawCost, canonicalCost * 0.92, canonicalCost * 1.12), 0.25, 2);
+        const quotedCost = Number(clamp(rawCost, canonicalCost * 0.92, canonicalCost * 1.12).toFixed(2));
         checks.push({
           groupKey: group.groupKey,
           difficulty,
