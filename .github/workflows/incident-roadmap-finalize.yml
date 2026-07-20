@@ -2,7 +2,7 @@ name: Incident Roadmap Finalize
 
 on:
   pull_request:
-    types: [synchronize]
+    types: [opened, synchronize]
 
 permissions:
   contents: write
@@ -13,16 +13,14 @@ concurrency:
 
 jobs:
   finalize:
-    if: >-
-      github.event.pull_request.number == 270 &&
-      github.event.pull_request.head.ref == 'docs/incident-readiness-verification-clean-v1'
+    if: github.event.pull_request.head.ref == 'docs/incident-readiness-final-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Check out exact verification branch
         uses: actions/checkout@v4
         with:
-          ref: docs/incident-readiness-verification-clean-v1
+          ref: docs/incident-readiness-final-v2
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -120,4 +118,4 @@ jobs:
           git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md
           git diff --cached --check
           git commit -m "docs(roadmap): mark incident readiness verified"
-          git push origin HEAD:docs/incident-readiness-verification-clean-v1
+          git push origin HEAD:docs/incident-readiness-final-v2
