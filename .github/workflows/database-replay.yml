@@ -5,6 +5,7 @@ on:
     paths:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
+      - "backend/src/domains/notifications/infrastructure/**"
       - "scripts/validate-supabase-migrations.mjs"
       - "package.json"
       - "package-lock.json"
@@ -15,6 +16,7 @@ on:
     paths:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
+      - "backend/src/domains/notifications/infrastructure/**"
       - "scripts/validate-supabase-migrations.mjs"
       - "package.json"
       - "package-lock.json"
