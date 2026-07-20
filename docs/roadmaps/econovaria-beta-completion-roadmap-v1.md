@@ -6,7 +6,7 @@
 **Program state:** Active; beta scope is not locked until the product owner explicitly locks it  
 **Last baseline audit:** 2026-07-20
 **Audited application-state baseline:** `b700147f03be26e1663437135878c6736f55b805`
-**Repository state audited through:** `ad889a2bdf9d5587fff3275d70751c79992171c7`
+**Repository state audited through:** `e167ea3976da3a5825cc1cc079c994c4f887eaf6`
 
 ---
 
@@ -175,7 +175,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 - Market collision: PR #245 remains the sole authority for `BETA-MKT-003` through `BETA-MKT-007`. Duplicate PR #246 was labeled, closed after its source artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100.
 - Recovery collision: earlier PR #247 was preserved over replacement PR #253. PR #253 was labeled `duplicate`, closed, and `feat/player-recovery-states-v1` no longer exists; its useful donor ideas were dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
 - Premature seal PR #255 was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists. Later incident-verification PR #260 overlapped this earlier roadmap seal; its unique amendment evidence was transplanted into PR #259, it was labeled `duplicate`, closed, and `docs/incident-readiness-verification-v1` no longer exists. The merged PR #251 branch was retired automatically.
-- Current active capability ownership is unique: seed content #163, story delivery #244, market/Portfolio #245, Messaging #248, Marketplace #249, and Progression #261. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
+- Current active capability ownership is unique: seed content #163, story delivery #244, Messaging #248, Marketplace #249, and Progression #261. Market/Portfolio #245, Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
 - Branch-only work without an open pull request is not authoritative. Future agents must search this roadmap and current open pull requests before creating a branch.
 
 ### 2026-07-20 software supply-chain security completion
@@ -719,12 +719,12 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `ad889a2bdf9d5587fff3275d70751c79992171c7`; unique active capability authorities are PRs #163, #244, #245, #248, #249, and #261.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `e167ea3976da3a5825cc1cc079c994c4f887eaf6`; unique active capability authorities are PRs #163, #244, #248, #249, and #261. Market/Portfolio PR #245 is merged as `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a`.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
 - [x] `P0-005` Reconcile donor work intentionally. PR #143 remains donor/reference only; PR #141 was cleaned, bounded, verified, and merged as the authoritative Player runtime adapter.
-- [x] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. `VERIFIED_COMPLETE` through PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`: PR #245 was preserved over duplicate #246; PR #247 was preserved over duplicate #253 with donor ideas dispositioned before merge; premature seal #255 was retired; all duplicate PRs are closed; refs `agent/player-market-portfolio-v1`, `feat/player-recovery-states-v1`, and `docs/program-control-phase0-seal-v1` no longer resolve.
+- [x] `P0-006` Close or archive superseded branch refs after their useful work is accounted for and after confirming no other active chat owns them. `VERIFIED_COMPLETE` through PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`, seal PR #259 merged as `e2483e25d767cbe5714735c627093d9968507908`, and default-branch cleanup through `e167ea3976da3a5825cc1cc079c994c4f887eaf6`: market duplicate #246, recovery duplicate #253, premature seal #255, and incident-verification duplicates #260, #270, and #273 are closed with their useful evidence consumed or dispositioned; the obsolete incident finalizer workflow, trigger, and script are deleted from `main`.
 - [x] `P0-007` Add and maintain a capability ownership registry.
 - [x] `P0-008` Add a reverse-chronological change ledger to this document after every merged tranche.
 - [x] `P0-009` Require every future implementation prompt to reference this exact authoritative path.
@@ -737,7 +737,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Authenticated Player Backend | PR #158 / merge `d403cf7baefeb3c1015c282cdbd748d2050e87ac` | `VERIFIED_COMPLETE` | No replacement Backend reconciliation branch; later work must use a narrowly owned roadmap item. |
 | Seed-content definition, calibration, and executable-content preparation | PR #163 / `agent/seed-content-foundation-v1` | `IN_PROGRESS` | Sole active seed authority; do not create another seed-content branch or merge/activate before its gates close. |
 | Player story-notification delivery | PR #244 / `agent/player-story-delivery-v1` | `IN_PROGRESS` | Owns `BETA-NOTIF-005` and `BETA-NOTIF-006`; does not own campaign definitions or runner scheduling. |
-| Player market orders and Portfolio | PR #245 / `agent/player-market-reconciliation-v1` | `VERIFIED_COMPLETE` at repository-integrated boundary | `BETA-MKT-003` through `BETA-MKT-007` are complete; preserve the ticker-only, session-derived, rate-limited public boundary and keep active-market selection under PR #163. |
+| Player market orders and Portfolio | PR #245 / merge `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a` | `VERIFIED_COMPLETE` at repository-integrated boundary | `BETA-MKT-003` through `BETA-MKT-007` are complete; preserve the ticker-only, session-derived, rate-limited public boundary and keep active-market selection under PR #163. |
 | Messaging and communication | PR #248 / `agent/messaging-communication-v1` | `IN_PROGRESS` | Sole authority for `EXP-MSG-001` through `EXP-MSG-007`. |
 | Player Marketplace lifecycle | PR #249 / `agent/player-marketplace-lifecycle-v1` | `IN_PROGRESS` | Sole authority for `EXP-MP-001` through `EXP-MP-009`. |
 | Progression, reputation, and achievements | PR #261 / `agent/progression-reputation-achievements-v1` | `IN_PROGRESS` | Sole authority for `EXP-PROG-001` through `EXP-PROG-008`; does not own PR #163 seed definitions. |
@@ -753,7 +753,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Admin game lifecycle controls | PR #229 / merge `ece5876b0dfc79458afb5b5aaa9266b9884ecbcb` | `VERIFIED_COMPLETE` | Preserve canonical lifecycle states, mutation gating, idempotency, and session/join-code revocation semantics. |
 | Accepted Admin source preservation | `frontend/admin-terminal-source-v1` | retained exception | Preserve per `CONTRIBUTING.md`; do not treat as active feature authority. |
 
-**Exit gate:** Met. No overlapping active pull request owns the same capability, superseded duplicate refs are retired, and this roadmap reflects the repository through `ad889a2bdf9d5587fff3275d70751c79992171c7`.
+**Exit gate:** Met. No overlapping active pull request owns the same capability, superseded duplicate refs and finalizer artifacts are retired, and this roadmap reflects the repository through `e167ea3976da3a5825cc1cc079c994c4f887eaf6`.
 
 ---
 
@@ -1112,6 +1112,13 @@ No item may be checked complete merely because code was written.
 ## 33. Change ledger
 
 Append entries in reverse chronological order.
+
+### 2026-07-20 — Default-branch incident-finalizer retirement
+
+- Confirmed Phase 0 remained `VERIFIED_COMPLETE` after market/Portfolio PR #245 merged as `64d6a5badc52a1fad4394b0eaa53ac1f97e8855a`.
+- Retired duplicate incident-verification PRs #260, #270, and #273 and the unmerged push-gated replacement #275 after PR #259 had already made the incident checkbox, scoreboards, Phase 5 status, amendment, verification record, and ledger authoritative.
+- Removed `.github/workflows/incident-roadmap-finalize.yml`, `.github/incident-roadmap-finalize.trigger`, and `scripts/finalize-incident-roadmap.py` from `main` through commits `14fe5833a7cae23bd41703565a64217082025301`, `67510771742340f22261cbe0dd7d9946ac33ee11`, and `7846ee95ec539de6005c327e13e918792cbe3eb0`; recorded the cleanup in `e167ea3976da3a5825cc1cc079c994c4f887eaf6`.
+- Current active capability authorities are #163 seed content, #244 story delivery, #248 Messaging, #249 Marketplace, and #261 Progression. No application source, migration, route, RPC, seed definition, credential, environment, runtime, or deployment behavior changed in this reconciliation.
 
 ### 2026-07-20 — Player market reconciliation on PR #245
 
