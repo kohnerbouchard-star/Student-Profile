@@ -8,6 +8,8 @@
   "sourceArtifactId": "TODO",
   "releaseManifestSha256": "TODO",
   "artifactSetSha256": "TODO",
+  "configurationVersion": "TODO",
+  "configurationSha256": "TODO",
   "environmentManifestEvidence": {
     "path": "TODO",
     "sha256": "TODO",
