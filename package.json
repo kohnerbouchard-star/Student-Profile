@@ -16,6 +16,9 @@
     "audit:incident-readiness": "node scripts/incident-readiness-contract.mjs",
     "audit:migrations": "node scripts/validate-supabase-migrations.mjs",
     "preflight:staging": "node scripts/deployment-readiness-preflight.mjs",
+    "security:secrets": "node scripts/supply-chain-secret-scan.mjs",
+    "security:sbom": "node scripts/generate-supply-chain-sbom.mjs",
+    "security:verify": "npm run security:secrets && npm run test:supply-chain && npm run security:sbom",
     "test:admin-mounted-event": "node scripts/admin-explicit-mounted-event-smoke.mjs",
     "test:admin-redemptions": "node scripts/admin-inventory-redemption-queue-contract.mjs",
     "test:admin-game-lifecycle": "node scripts/admin-game-lifecycle-contract.mjs",
@@ -23,6 +26,7 @@
     "test:deployment-readiness": "node --test scripts/deployment-readiness-preflight.test.mjs",
     "test:incident-readiness": "node --test scripts/incident-readiness-contract.test.mjs",
     "test:player-runtime-cutover": "node scripts/player-terminal-runtime-cutover-smoke.mjs",
+    "test:supply-chain": "node --test scripts/supply-chain-security.test.mjs",
     "db:lint": "supabase db lint --workdir backend --local --level warning",
     "db:reset": "supabase db reset --workdir backend --local",
     "test": "npm run audit && npm run test:deployment-readiness && npm run test:branch-hygiene && npm run test:incident-readiness && npm run test:admin-mounted-event && npm run test:admin-redemptions && npm run test:admin-game-lifecycle && npm run test:player-runtime-cutover && node scripts/admin-session-manager-smoke.mjs && node scripts/admin-shell-smoke.mjs && node scripts/admin-v606-full-drift-audit.mjs"
