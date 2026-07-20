@@ -1,10 +1,8 @@
 name: Program Control Roadmap Final Sync
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/program-control-roadmap-sync-final.trigger"
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -15,7 +13,9 @@ concurrency:
 
 jobs:
   synchronize:
-    if: github.event.head_commit.message == 'chore(program): trigger final roadmap synchronization'
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'chore/program-control-final-sync-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
