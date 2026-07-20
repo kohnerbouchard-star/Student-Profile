@@ -25,6 +25,8 @@ async function releaseRepository() {
   await write(root, "index.html", "<!doctype html><title>Player</title>\n");
   await write(root, "frontend/app.js", "export const api = '/functions/v1/classroom-api';\n");
   await write(root, "admin/app.js", "export const api = '/functions/v1/admin-api';\n");
+  await write(root, "player-terminal/host-runtime.js", "export const api = '/functions/v1/classroom-api';\n");
+  await write(root, "auth/reset-password.js", "export const api = '/auth/v1/recover';\n");
   await write(root, "assets/icon.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>\n");
   await write(root, "backend/supabase/migrations/20260101000000_init.sql", "select 1;\n");
   await write(root, "backend/supabase/functions/admin-api/index.ts", "export default true;\n");
@@ -47,7 +49,13 @@ async function releaseRepository() {
   return { root, commit: git(root, ["rev-parse", "HEAD"]) };
 }
 
-test("release builder produces identical frontend and Edge archive hashes", async (t) => {
+function archiveEntries(archivePath) {
+  const result = spawnSync("tar", ["-tzf", archivePath], { encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`unable to inspect frontend archive: ${result.stderr}`);
+  return result.stdout.split("\n").filter(Boolean);
+}
+
+test("release builder produces identical complete browser and Edge archive hashes", async (t) => {
   const tarHelp = spawnSync("tar", ["--help"], { encoding: "utf8" });
   if (tarHelp.status !== 0 || !tarHelp.stdout.includes("--sort")) {
     t.skip("GNU tar is required for deterministic release archives");
@@ -71,15 +79,17 @@ test("release builder produces identical frontend and Edge archive hashes", asyn
     else process.env.GITHUB_RUN_ATTEMPT = previousAttempt;
   });
 
+  const firstRoot = path.join(fixture.root, "dist/release-one");
+  const secondRoot = path.join(fixture.root, "dist/release-two");
   const first = await buildImmutableRelease({
     repoRoot: fixture.root,
-    outputRoot: path.join(fixture.root, "dist/release-one"),
+    outputRoot: firstRoot,
     commit: fixture.commit,
     configurationPath: "docs/operations/release-configuration.v1.json",
   });
   const second = await buildImmutableRelease({
     repoRoot: fixture.root,
-    outputRoot: path.join(fixture.root, "dist/release-two"),
+    outputRoot: secondRoot,
     commit: fixture.commit,
     configurationPath: "docs/operations/release-configuration.v1.json",
   });
@@ -89,6 +99,16 @@ test("release builder produces identical frontend and Edge archive hashes", asyn
     first.artifacts.map(({ file, sha256, sizeBytes }) => ({ file, sha256, sizeBytes })),
     second.artifacts.map(({ file, sha256, sizeBytes }) => ({ file, sha256, sizeBytes })),
   );
+  const entries = archiveEntries(path.join(firstRoot, "artifacts/frontend.tar.gz"));
+  assert(entries.some((entry) => entry.endsWith("player-terminal/host-runtime.js")));
+  assert(entries.some((entry) => entry.endsWith("auth/reset-password.js")));
   assert.equal(first.environmentNeutrality.status, "pass");
+  assert.deepEqual(first.environmentNeutrality.scannedRoots, [
+    "index.html",
+    "frontend",
+    "admin",
+    "player-terminal",
+    "auth",
+  ]);
   assert.equal(first.source.commit, fixture.commit);
 });
