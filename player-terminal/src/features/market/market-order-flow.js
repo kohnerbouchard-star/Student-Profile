@@ -63,7 +63,6 @@ export function renderMarketOrderDialog(transaction) {
         <div class="player-terminal-modal-body">
           <div class="player-terminal-connector-status">${renderStatusPill(rejected ? "REJECTED" : transaction.refreshWarning ? "FILLED · REFRESH PENDING" : "FILLED", rejected ? "red" : transaction.refreshWarning ? "amber" : "green")}<p>${escapeHtml(detail)}</p></div>
           <dl class="player-terminal-connector-meta">
-            <div><dt>ORDER ID</dt><dd><code>${escapeHtml(order.orderId || "Recorded")}</code></dd></div>
             <div><dt>SIDE</dt><dd>${escapeHtml(String(order.side || transaction.side).toUpperCase())}</dd></div>
             <div><dt>QUANTITY</dt><dd>${escapeHtml(order.quantity ?? transaction.quantity)}</dd></div>
             <div><dt>EXECUTION PRICE</dt><dd>${escapeHtml(formatCurrency(order.executionPrice, cash.currencyCode || code))}</dd></div>
@@ -201,7 +200,8 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     try {
       api.setSession(config);
       operation = await api.execute("marketOrder", {
-        assetId: transaction.asset.id,
+        ticker: transaction.asset.symbol,
+        expectedPrice: Number(transaction.asset.price),
         side: transaction.side,
         orderType: "market",
         quantity: transaction.quantity

@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -69,10 +69,12 @@ export type PlayerCapabilityEndpointKey =
   | "logout"
   | "market"
   | "marketAsset"
+  | "marketOrder"
   | "marketWatchlist"
   | "news"
   | "notifications"
   | "notificationsRead"
+  | "portfolio"
   | "store"
   | "storeQuote"
   | "storePurchase";
@@ -190,6 +192,15 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     routeCapabilities: ["market"],
   },
   {
+    key: "marketOrder",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/stocks/orders",
+    }],
+    routeCapabilities: ["market"],
+    actionCapabilities: ["marketOrder"],
+  },
+  {
     key: "marketWatchlist",
     operations: [
       { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
@@ -201,6 +212,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketWatchlist"],
+  },
+  {
+    key: "portfolio",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/stocks/portfolio",
+    }],
+    routeCapabilities: ["portfolio"],
   },
   {
     key: "store",

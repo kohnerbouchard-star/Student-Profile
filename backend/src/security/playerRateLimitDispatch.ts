@@ -70,10 +70,10 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     GET: operation("player.session.read", "read"),
   }),
   capabilities: byMethod({
-  GET: operation("player.capabilities.read", "read"),
+    GET: operation("player.capabilities.read", "read"),
   }),
   banking: byMethod({
-  GET: operation("player.banking.read", "read"),
+    GET: operation("player.banking.read", "read"),
   }),
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
@@ -107,6 +107,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   marketAsset: byMethod({
     GET: operation("player.asset.read", "read"),
   }),
+  marketOrder: byMethod({
+    POST: operation("player.market.order", "sensitive"),
+  }),
   marketWatchlist: byMethod({
     DELETE: operation("player.watchlist.write", "write"),
     GET: operation("player.watchlist.read", "read"),
@@ -120,6 +123,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   notificationsRead: byMethod({
     POST: operation("player.notifications.write", "write"),
+  }),
+  portfolio: byMethod({
+    GET: operation("player.portfolio.read", "read"),
   }),
   store: byMethod({
     GET: operation("player.store.read", "read"),

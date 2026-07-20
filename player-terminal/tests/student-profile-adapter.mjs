@@ -35,20 +35,23 @@ const rawDashboard = {
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
-  manifestVersion: "2026-07-19.4",
+  manifestVersion: "2026-07-20.1",
   service: "classroom-api",
   capabilities: {
     routes: {
       news: true,
       market: true,
+      portfolio: true,
       contracts: true,
       inventory: true,
-      store: true
+      store: true,
+      banking: true
     },
     actions: {
       contractAccept: true,
       inventoryUse: true,
       logout: true,
+      marketOrder: true,
       marketWatchlist: true,
       notificationsRead: true,
       storePurchase: true
@@ -107,12 +110,20 @@ const capabilityManifest = {
       operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets" }]
     },
     {
+      key: "marketOrder",
+      operations: [{ method: "POST", pathTemplate: "/players/me/stocks/orders" }]
+    },
+    {
       key: "marketWatchlist",
       operations: [
         { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
         { method: "PUT", pathTemplate: "/players/me/stocks/watchlist/:ticker" },
         { method: "DELETE", pathTemplate: "/players/me/stocks/watchlist/:ticker" }
       ]
+    },
+    {
+      key: "portfolio",
+      operations: [{ method: "GET", pathTemplate: "/players/me/stocks/portfolio" }]
     },
     {
       key: "news",
@@ -229,8 +240,18 @@ const responses = {
   },
   marketOrder: {
     ok: true,
-    orderId: "order-1",
-    status: "filled"
+    action: "execute_order",
+    order: {
+      ticker: "AURA",
+      side: "buy",
+      quantity: 2,
+      executionPrice: 100,
+      grossValue: 200,
+      status: "filled",
+      rejectionReason: null
+    },
+    cash: { accountType: "cash", currencyCode: "ECO", balance: 1050 },
+    holding: { quantity: 2, averageCost: 100 }
   }
 };
 
@@ -266,7 +287,7 @@ const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
 assert.equal(session.capabilitySchemaVersion, 1);
-assert.equal(session.capabilityManifestVersion, "2026-07-19.4");
+assert.equal(session.capabilityManifestVersion, "2026-07-20.1");
 assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");
@@ -318,7 +339,8 @@ assert.equal(calls.at(-1).payload.idempotencyKey, "idem-purchase-1");
 assert.equal(calls.at(-1).headers["idempotency-key"], "idem-purchase-1");
 
 await apiCall(context("marketOrder", "POST", "/market/orders", {
-  assetId: "asset-1",
+  ticker: "AURA",
+  expectedPrice: 100,
   side: "buy",
   orderType: "market",
   quantity: 2
@@ -326,18 +348,22 @@ await apiCall(context("marketOrder", "POST", "/market/orders", {
 assert.equal(calls.at(-1).method, "POST");
 assert.equal(calls.at(-1).path, "/players/me/stocks/orders");
 assert.deepEqual(calls.at(-1).payload, {
-  gameSessionId: "game-1",
-  stockAssetId: "asset-1",
+  ticker: "AURA",
+  expectedPrice: 100,
   side: "buy",
   quantity: 2,
   idempotencyKey: "idem-order-1"
 });
+assert.equal("gameSessionId" in calls.at(-1).payload, false);
+assert.equal("playerSessionId" in calls.at(-1).payload, false);
+assert.equal("stockAssetId" in calls.at(-1).payload, false);
 assert.equal("playerId" in calls.at(-1).payload, false, "Economic writes must not accept a client-selected owner UUID.");
 
 await assert.rejects(
   apiCall(context("marketOrder", "POST", "/market/orders", {
     playerId: "0c80fe6d-e1d9-4e90-90f4-1b174be727f1",
-    assetId: "asset-1",
+    ticker: "AURA",
+    expectedPrice: 100,
     side: "buy",
     orderType: "market",
     quantity: 1
@@ -354,4 +380,4 @@ await assert.rejects(
   "Player transfer remains visible but pending until the UUID-authoritative backend route exists."
 );
 
-console.log("Student-Profile adapter passed: canonical routes, capability preflight, UUID-private Contracts, UI read models, session headers, UUID ownership, and idempotent writes are valid.");
+console.log("Student-Profile adapter passed: canonical routes, capability preflight, UUID-private Contracts and market orders, UI read models, session headers, and idempotent writes are valid.");

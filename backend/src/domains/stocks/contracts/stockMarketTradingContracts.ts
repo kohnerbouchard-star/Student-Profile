@@ -29,6 +29,16 @@ export interface StockMarketOrderDto {
   readonly rejectionReason: string | null;
 }
 
+export interface PlayerSafeStockMarketOrderDto {
+  readonly ticker: string;
+  readonly side: StockMarketOrderSide;
+  readonly quantity: number;
+  readonly executionPrice: number;
+  readonly grossValue: number;
+  readonly status: StockMarketOrderStatus;
+  readonly rejectionReason: string | null;
+}
+
 export interface StockMarketCashDto {
   readonly accountType: "cash";
   readonly currencyCode: string;
@@ -44,6 +54,14 @@ export interface StockMarketTradingExecuteSuccessBody {
   readonly ok: true;
   readonly action: "execute_order";
   readonly order: StockMarketOrderDto;
+  readonly cash: StockMarketCashDto;
+  readonly holding: StockMarketHoldingDto;
+}
+
+export interface PlayerSafeStockMarketTradingExecuteSuccessBody {
+  readonly ok: true;
+  readonly action: "execute_order";
+  readonly order: PlayerSafeStockMarketOrderDto;
   readonly cash: StockMarketCashDto;
   readonly holding: StockMarketHoldingDto;
 }
@@ -106,6 +124,7 @@ export type StockMarketTradingErrorCode =
   | "player_session_not_found"
   | "stock_asset_not_found"
   | "stock_market_closed"
+  | "stale_stock_price"
   | "insufficient_cash"
   | "insufficient_shares"
   | "invalid_stock_market_trading_state"

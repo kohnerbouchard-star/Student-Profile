@@ -19,10 +19,12 @@ const ENDPOINT_COVERAGE = Object.freeze({
   logout: Object.freeze(["logout"]),
   market: Object.freeze(["market"]),
   marketAsset: Object.freeze(["marketAsset"]),
+  marketOrder: Object.freeze(["marketOrder"]),
   marketWatchlist: Object.freeze(["marketWatchlist"]),
   news: Object.freeze(["news"]),
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
+  portfolio: Object.freeze(["portfolio"]),
   store: Object.freeze(["store"]),
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"])
@@ -33,6 +35,7 @@ const ROUTE_REQUIREMENTS = Object.freeze({
   news: "news",
   banking: "banking",
   market: "market",
+  portfolio: "portfolio",
   contracts: "contracts",
   inventory: "inventory",
   store: "store",
@@ -44,6 +47,7 @@ const ACTION_REQUIREMENTS = Object.freeze({
   contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
   logout: "logout",
+  marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
   notificationsRead: "notificationsRead",
   storePurchase: "storePurchase"

@@ -27,7 +27,8 @@ Deno.test("player capability manifest authenticates and returns a UUID-private n
   assertEquals(body.schemaVersion, 1);
   assertEquals(body.service, "classroom-api");
   assertEquals(body.capabilities.routes.market, true);
-  assertEquals(body.capabilities.actions.marketOrder, false);
+  assertEquals(body.capabilities.routes.portfolio, true);
+  assertEquals(body.capabilities.actions.marketOrder, true);
   assertNoUuid(JSON.stringify(body));
 });
 
