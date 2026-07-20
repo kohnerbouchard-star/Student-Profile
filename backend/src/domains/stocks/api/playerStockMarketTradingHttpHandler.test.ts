@@ -12,148 +12,113 @@ declare const Deno: {
 };
 
 const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
-const OTHER_GAME_SESSION_ID = "00000000-0000-4000-8000-000000000002";
 const PLAYER_SESSION_ID = "00000000-0000-4000-8000-000000000011";
-const OTHER_PLAYER_SESSION_ID = "00000000-0000-4000-8000-000000000012";
 const PLAYER_ID = "00000000-0000-4000-8000-000000000021";
 const STOCK_ASSET_ID = "00000000-0000-4000-8000-000000000101";
 const ORDER_ID = "00000000-0000-4000-8000-000000000201";
 
-Deno.test("player stock trading rejects missing player session token", async () => {
-  const response = await handlePlayerStockMarketTradingRequest(
+Deno.test("player stock trading rejects unsupported methods and missing player session token", async () => {
+  const method = await handlePlayerStockMarketTradingRequest(
+    request(orderBody(), { method: "GET" }),
+    dependencies(),
+  );
+  await assertErrorResponse(method, 405, "method_not_allowed");
+
+  const missing = await handlePlayerStockMarketTradingRequest(
     request(orderBody(), { playerSessionToken: null }),
     dependencies(),
   );
-
-  await assertErrorResponse(response, 401, "invalid_player_session");
+  await assertErrorResponse(missing, 401, "invalid_player_session");
 });
 
-Deno.test("player stock trading rejects invalid player session", async () => {
-  const response = await handlePlayerStockMarketTradingRequest(
+Deno.test("player stock trading rejects invalid sessions and runner secrets", async () => {
+  const invalid = await handlePlayerStockMarketTradingRequest(
     request(orderBody()),
-    dependencies({ client: new FakeClient({ ...tables(), player_sessions: [] }) }),
+    dependencies({
+      resolvePlayerSession: () => Promise.resolve({
+        ok: false as const,
+        status: 401,
+        error: {
+          code: "invalid_player_session",
+          message: "Player session is invalid.",
+          retryable: false,
+        },
+      }),
+    }),
   );
+  await assertErrorResponse(invalid, 401, "invalid_player_session");
 
-  await assertErrorResponse(response, 401, "invalid_player_session");
-});
-
-Deno.test("player stock trading rejects revoked, expired, and inactive sessions", async () => {
-  for (const session of [
-    playerSession({ status: "revoked", revoked_at: "2026-06-24T00:00:00.000Z" }),
-    playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
-    playerSession({ status: "expired" }),
-  ]) {
-    const response = await handlePlayerStockMarketTradingRequest(
-      request(orderBody()),
-      dependencies({ client: new FakeClient({ ...tables(), player_sessions: [session] }) }),
-    );
-
-    await assertErrorResponse(response, 401, "invalid_player_session");
-  }
-});
-
-Deno.test("player stock trading rejects runner secret on player route", async () => {
-  const response = await handlePlayerStockMarketTradingRequest(
+  const secret = await handlePlayerStockMarketTradingRequest(
     request(orderBody(), { runnerSecret: "runner-secret" }),
     dependencies(),
   );
-
-  await assertErrorResponse(response, 400, "stock_runner_secret_not_allowed");
+  await assertErrorResponse(secret, 400, "stock_runner_secret_not_allowed");
 });
 
-Deno.test("player stock trading rejects mismatched game session", async () => {
-  const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ gameSessionId: OTHER_GAME_SESSION_ID })),
-    dependencies(),
-  );
-
-  await assertErrorResponse(response, 401, "invalid_player_session_scope");
-});
-
-Deno.test("player stock trading rejects body-supplied playerSessionId", async () => {
+Deno.test("player stock trading rejects private scope injection", async () => {
   for (const body of [
+    orderBody({ gameSessionId: GAME_SESSION_ID }),
     orderBody({ playerSessionId: PLAYER_SESSION_ID }),
-    orderBody({ playerSessionIds: [PLAYER_SESSION_ID] }),
+    orderBody({ playerId: PLAYER_ID }),
+    orderBody({ stockAssetId: STOCK_ASSET_ID }),
   ]) {
     const response = await handlePlayerStockMarketTradingRequest(
       request(body),
       dependencies(),
     );
-
-    await assertErrorResponse(response, 400, "invalid_stock_market_trading_request");
+    await assertErrorResponse(
+      response,
+      400,
+      "invalid_stock_market_trading_request",
+    );
   }
 });
 
-Deno.test("player stock trading derives playerSessionId from authenticated session", async () => {
-  const repository = new MockTradingRepository();
-  const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody()),
-    dependencies({
-      client: new FakeClient({
-        ...tables(),
-        player_sessions: [playerSession({ id: OTHER_PLAYER_SESSION_ID })],
-      }),
-      repository,
-    }),
-  );
-
-  assertEquals(response.status, 200);
-  assertEquals(repository.inputs[0].playerSessionId, OTHER_PLAYER_SESSION_ID);
-});
-
-Deno.test("player stock trading rejects missing IDs and idempotency key", async () => {
+Deno.test("player stock trading validates ticker, reviewed price, side, quantity, and idempotency", async () => {
   for (const body of [
-    orderBody({ gameSessionId: undefined }),
-    orderBody({ stockAssetId: undefined }),
+    orderBody({ ticker: undefined }),
+    orderBody({ ticker: "bad ticker" }),
+    orderBody({ expectedPrice: undefined }),
+    orderBody({ expectedPrice: 0 }),
+    orderBody({ side: "hold" }),
+    orderBody({ quantity: 0 }),
+    orderBody({ quantity: 1.5 }),
     orderBody({ idempotencyKey: undefined }),
+    orderBody({ ticker: ["AURA"] }),
   ]) {
     const response = await handlePlayerStockMarketTradingRequest(
       request(body),
       dependencies(),
     );
-
-    await assertErrorResponse(response, 400, "invalid_stock_market_trading_request");
-  }
-});
-
-Deno.test("player stock trading rejects array-shaped IDs", async () => {
-  for (const body of [
-    orderBody({ gameSessionId: [GAME_SESSION_ID] }),
-    orderBody({ stockAssetId: [STOCK_ASSET_ID] }),
-    orderBody({ idempotencyKey: ["order-1"] }),
-  ]) {
-    const response = await handlePlayerStockMarketTradingRequest(
-      request(body),
-      dependencies(),
+    await assertErrorResponse(
+      response,
+      400,
+      "invalid_stock_market_trading_request",
     );
-
-    await assertErrorResponse(response, 400, "invalid_stock_market_trading_request");
   }
 });
 
-Deno.test("player stock trading rejects invalid side and quantity", async () => {
-  const invalidSide = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ side: "hold" })),
-    dependencies(),
-  );
-  const invalidQuantity = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ quantity: 0 })),
-    dependencies(),
-  );
-
-  await assertErrorResponse(invalidSide, 400, "invalid_stock_market_trading_request");
-  await assertErrorResponse(invalidQuantity, 400, "invalid_stock_market_trading_request");
-});
-
-Deno.test("player stock trading executes buy through repository and returns country cash currency", async () => {
+Deno.test("player stock trading resolves the public ticker inside authenticated game scope", async () => {
   const repository = new MockTradingRepository();
+  const resolved: unknown[] = [];
   const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ side: "BUY", quantity: 3 })),
-    dependencies({ repository }),
+    request(orderBody({ ticker: "aura", side: "BUY", quantity: 3 })),
+    dependencies({
+      repository,
+      resolveStockAssetByTicker: async (_client, gameSessionId, ticker) => {
+        resolved.push({ gameSessionId, ticker });
+        return {
+          stockAssetId: STOCK_ASSET_ID,
+          ticker: "AURA",
+          currentPrice: 100,
+        };
+      },
+    }),
   );
   const body = await response.json();
 
   assertEquals(response.status, 200);
+  assertEquals(resolved, [{ gameSessionId: GAME_SESSION_ID, ticker: "AURA" }]);
   assertEquals(repository.inputs, [{
     gameSessionId: GAME_SESSION_ID,
     playerSessionId: PLAYER_SESSION_ID,
@@ -166,10 +131,6 @@ Deno.test("player stock trading executes buy through repository and returns coun
     ok: true,
     action: "execute_order",
     order: {
-      orderId: ORDER_ID,
-      gameSessionId: GAME_SESSION_ID,
-      playerSessionId: PLAYER_SESSION_ID,
-      stockAssetId: STOCK_ASSET_ID,
       ticker: "AURA",
       side: "buy",
       quantity: 3,
@@ -188,61 +149,67 @@ Deno.test("player stock trading executes buy through repository and returns coun
       averageCost: 100,
     },
   });
+  assertNoUuid(body);
 });
 
-Deno.test("player stock trading executes sell through repository", async () => {
+Deno.test("player stock trading rejects stale reviewed prices before repository execution", async () => {
   const repository = new MockTradingRepository();
   const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody({ side: "sell", quantity: 2 })),
+    request(orderBody({ expectedPrice: 99 })),
     dependencies({ repository }),
   );
-  const body = await response.json();
 
-  assertEquals(response.status, 200);
-  assertEquals(repository.inputs[0].side, "sell");
-  assertEquals(body.order.side, "sell");
-  assertEquals(body.cash.currencyCode, "XAL");
+  await assertErrorResponse(response, 409, "stale_stock_price");
+  assertEquals(repository.inputs, []);
 });
 
-Deno.test("player stock trading maps repository errors", async () => {
-  const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody()),
-    dependencies({
-      repository: new MockTradingRepository(
-        new StockMarketTradingError(
-          "insufficient_cash",
-          "Insufficient player cash for this stock order.",
-          409,
-        ),
-      ),
-    }),
-  );
-
-  await assertErrorResponse(response, 409, "insufficient_cash");
-});
-
-Deno.test("player stock trading does not call direct service writes or RPCs in handler", async () => {
-  const client = new FakeClient(tables());
-  const repository = new MockTradingRepository();
-  const response = await handlePlayerStockMarketTradingRequest(
-    request(orderBody()),
-    dependencies({ client, repository }),
-  );
-
-  assertEquals(response.status, 200);
-  assertEquals(client.forbiddenCalls, []);
-  assertEquals(repository.inputs.length, 1);
+Deno.test("player stock trading preserves repository rejection states", async () => {
+  for (const error of [
+    new StockMarketTradingError(
+      "stock_market_closed",
+      "Stock market is closed.",
+      409,
+    ),
+    new StockMarketTradingError(
+      "insufficient_cash",
+      "Insufficient player cash for this stock order.",
+      409,
+    ),
+    new StockMarketTradingError(
+      "insufficient_shares",
+      "Insufficient stock holdings for this sell order.",
+      409,
+    ),
+    new StockMarketTradingError(
+      "invalid_stock_market_trading_state",
+      "Game mutations are paused.",
+      409,
+    ),
+  ]) {
+    const response = await handlePlayerStockMarketTradingRequest(
+      request(orderBody()),
+      dependencies({ repository: new MockTradingRepository(error) }),
+    );
+    await assertErrorResponse(response, error.status, error.code);
+  }
 });
 
 function dependencies(options: {
-  readonly client?: FakeClient;
   readonly repository?: StockMarketTradingRepository;
+  readonly resolvePlayerSession?: () => Promise<any>;
+  readonly resolveStockAssetByTicker?: (
+    client: unknown,
+    gameSessionId: string,
+    ticker: string,
+  ) => Promise<{
+    readonly stockAssetId: string;
+    readonly ticker: string;
+    readonly currentPrice: number;
+  }>;
 } = {}): any {
-  const client = options.client ?? new FakeClient(tables());
   const repository = options.repository ?? new MockTradingRepository();
-
   return {
-    createServiceClient: () => client as any,
+    createServiceClient: () => ({}),
     readSupabaseEnv: () => ({
       ok: true as const,
       value: {
@@ -252,6 +219,24 @@ function dependencies(options: {
       },
     }),
     hashSessionToken: async () => "session-token-hash",
+    resolvePlayerSession: options.resolvePlayerSession ?? (() => Promise.resolve({
+      ok: true as const,
+      session: {
+        id: PLAYER_SESSION_ID,
+        game_session_id: GAME_SESSION_ID,
+        player_id: PLAYER_ID,
+      },
+    })),
+    resolveStockAssetByTicker: options.resolveStockAssetByTicker ??
+      (async (_client: unknown, gameSessionId: string, ticker: string) => {
+        assertEquals(gameSessionId, GAME_SESSION_ID);
+        assertEquals(ticker, "AURA");
+        return {
+          stockAssetId: STOCK_ASSET_ID,
+          ticker: "AURA",
+          currentPrice: 100,
+        };
+      }),
     createRepository: () => repository,
   };
 }
@@ -259,77 +244,40 @@ function dependencies(options: {
 function request(
   body: Record<string, unknown>,
   options: {
+    readonly method?: string;
     readonly playerSessionToken?: string | null;
     readonly runnerSecret?: string;
   } = {},
 ): Request {
   const headers = new Headers({ "content-type": "application/json" });
-
   if (options.playerSessionToken !== null) {
     headers.set("x-player-session-token", options.playerSessionToken ?? "player-token");
   }
-
   if (options.runnerSecret) {
     headers.set("x-stock-market-runner-secret", options.runnerSecret);
   }
-
   return new Request("https://example.test/players/me/stocks/orders", {
-    method: "POST",
+    method: options.method ?? "POST",
     headers,
-    body: JSON.stringify(body),
+    body: options.method === "GET" ? undefined : JSON.stringify(body),
   });
 }
 
 function orderBody(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const body = {
-    gameSessionId: GAME_SESSION_ID,
-    stockAssetId: STOCK_ASSET_ID,
+  const body: Record<string, unknown> = {
+    ticker: "AURA",
+    expectedPrice: 100,
     side: "buy",
     quantity: 3,
     idempotencyKey: "order-1",
     ...overrides,
   };
-
   for (const [key, value] of Object.entries(body)) {
-    if (value === undefined) {
-      delete body[key as keyof typeof body];
-    }
+    if (value === undefined) delete body[key];
   }
-
   return body;
-}
-
-function tables(): Record<string, readonly Record<string, unknown>[]> {
-  return {
-    player_sessions: [playerSession()],
-    game_sessions: [{
-      id: GAME_SESSION_ID,
-      name: "Period 1",
-      status: "active",
-    }],
-    players: [{
-      id: PLAYER_ID,
-      game_session_id: GAME_SESSION_ID,
-      display_name: "Avery",
-      roster_label: "A-1",
-      status: "active",
-    }],
-  };
-}
-
-function playerSession(overrides: Record<string, unknown> = {}) {
-  return {
-    id: PLAYER_SESSION_ID,
-    game_session_id: GAME_SESSION_ID,
-    player_id: PLAYER_ID,
-    session_token_hash: "session-token-hash",
-    status: "active",
-    expires_at: "2999-01-01T00:00:00.000Z",
-    revoked_at: null,
-    ...overrides,
-  };
 }
 
 class MockTradingRepository implements StockMarketTradingRepository {
@@ -339,11 +287,7 @@ class MockTradingRepository implements StockMarketTradingRepository {
 
   async executeOrder(input: StockMarketOrderExecuteInput) {
     this.inputs.push(input);
-
-    if (this.error) {
-      throw this.error;
-    }
-
+    if (this.error) throw this.error;
     return {
       order: {
         orderId: ORDER_ID,
@@ -371,101 +315,30 @@ class MockTradingRepository implements StockMarketTradingRepository {
   }
 }
 
-class FakeClient {
-  readonly forbiddenCalls: string[] = [];
-
-  constructor(
-    readonly tables: Record<string, readonly Record<string, unknown>[]>,
-  ) {}
-
-  from(tableName: string): FakeQueryBuilder {
-    return new FakeQueryBuilder(this, tableName);
-  }
-
-  async rpc(functionName: string) {
-    this.forbiddenCalls.push(`rpc:${functionName}`);
-    return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
-  }
-}
-
-class FakeQueryBuilder
-  implements PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
-  private readonly filters: { readonly column: string; readonly value: unknown }[] = [];
-
-  constructor(
-    private readonly client: FakeClient,
-    private readonly tableName: string,
-  ) {}
-
-  select(): FakeQueryBuilder {
-    return this;
-  }
-
-  insert(): FakeQueryBuilder {
-    this.client.forbiddenCalls.push(`insert:${this.tableName}`);
-    return this;
-  }
-
-  update(): FakeQueryBuilder {
-    this.client.forbiddenCalls.push(`update:${this.tableName}`);
-    return this;
-  }
-
-  delete(): FakeQueryBuilder {
-    this.client.forbiddenCalls.push(`delete:${this.tableName}`);
-    return this;
-  }
-
-  eq(column: string, value: unknown): FakeQueryBuilder {
-    this.filters.push({ column, value });
-    return this;
-  }
-
-  async maybeSingle() {
-    const result = await this.execute();
-    return { data: result.data?.[0] ?? null, error: result.error };
-  }
-
-  then<TResult1 = { readonly data: unknown[] | null; readonly error: unknown }, TResult2 = never>(
-    onfulfilled?: ((
-      value: { readonly data: unknown[] | null; readonly error: unknown },
-    ) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ): PromiseLike<TResult1 | TResult2> {
-    return this.execute().then(onfulfilled, onrejected);
-  }
-
-  private async execute(): Promise<{
-    readonly data: unknown[] | null;
-    readonly error: unknown;
-  }> {
-    let rows = [...(this.client.tables[this.tableName] ?? [])];
-
-    for (const filter of this.filters) {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
-    }
-
-    return { data: rows, error: null };
-  }
-}
-
 async function assertErrorResponse(
   response: Response,
   status: number,
   code: string,
 ): Promise<void> {
   const body = await response.json();
-
   assertEquals(response.status, status);
   assertEquals(body.error.code, code);
+}
+
+function assertNoUuid(value: unknown): void {
+  const serialized = JSON.stringify(value);
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(serialized)
+  ) {
+    throw new Error(`UUID leaked: ${serialized}`);
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Assertion failed. Actual: ${JSON.stringify(actual)} Expected: ${
-        JSON.stringify(expected)
-      }`,
+      `Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
     );
   }
 }

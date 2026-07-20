@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Classroom Economy Market Simulation</title>
+  <meta name="theme-color" content="#0f172a" />
+  <title>Econovaria</title>
   <link rel="stylesheet" href="frontend/src/styles/app.css" />
-
   <style id="app-preload-style">
     html.preload,
     html.preload body {
@@ -18,27 +18,19 @@
         #0f172a;
     }
 
-    html.preload .login-panel-frame,
-    html.preload #appShell {
-      opacity: 0;
-    }
-
-    html:not(.preload) .login-panel-frame,
-    html:not(.preload) #appShell {
+    html.preload .login-panel-frame { opacity: 0; }
+    html:not(.preload) .login-panel-frame {
       opacity: 1;
       transition: opacity 120ms ease;
     }
 
     @media (prefers-reduced-motion: reduce) {
-      html:not(.preload) .login-panel-frame,
-      html:not(.preload) #appShell {
-        transition: none;
-      }
+      html:not(.preload) .login-panel-frame { transition: none; }
     }
   </style>
 </head>
 <body>
-  <section id="loginScreen" class="login-screen login-root" data-mode="player" aria-label="Eco Novaria login">
+  <section id="loginScreen" class="login-screen login-root" data-mode="player" aria-label="Econovaria login">
     <img class="world-map" src="assets/Login_Screen_Background_image_balanced_vibrant.png" alt="" />
     <img class="building-neon-outline" src="assets/novaria-building-blue-purple-outline-balanced.png" alt="" aria-hidden="true" />
     <div class="vignette" aria-hidden="true"></div>
@@ -50,7 +42,7 @@
     </audio>
 
     <div id="audioControl" class="audio-control" aria-label="Background music controls">
-      <button id="musicToggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Turn background music on">
+      <button id="musicToggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle background music">
         <svg class="audio-icon audio-icon-off" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
           <path d="M17 9l4 6"></path>
@@ -72,10 +64,10 @@
       <div class="hud-group">
         <span class="status-dot"></span>
         <span>ECONOVARIA MARKET INTELLIGENCE SYSTEM</span>
-        <span class="version">v4.7.2</span>
+        <span class="version">PLAYER TERMINAL</span>
       </div>
       <div class="hud-group hud-exchanges">
-        <span id="hudDate">YR-3</span>
+        <span id="hudDate">LOADING</span>
         <span id="hudTime">00:00:00</span>
         <span class="exchange ok">NXE &#9679;</span>
         <span class="exchange ok">VSE &#9679;</span>
@@ -85,7 +77,7 @@
 
     <footer class="login-hud login-hud-bottom">
       <span>LAT 0.00&deg; / LON 0.00&deg; &middot; ZOOM 1.0x &middot; MERCATOR PROJECTION</span>
-      <span class="secure"><span class="status-dot green"></span> SECURE &middot; ENCRYPTED &middot; CLASSROOM MODE</span>
+      <span class="secure"><span class="status-dot green"></span> SECURE &middot; ENCRYPTED &middot; ECONOVARIA</span>
     </footer>
 
     <div class="login-panel-wrap" aria-live="polite">
@@ -126,23 +118,14 @@
                 <span>Game / Session Code</span>
                 <input id="gameCode" autocomplete="off" maxlength="12" placeholder="Game / Session Code" required />
               </label>
-
               <label>
                 <span>Player ID / RFID Card</span>
                 <input id="playerId" autocomplete="off" placeholder="Scan RFID card or enter Player ID" required />
               </label>
-
               <label>
                 <span>Access Code</span>
-                <input
-                  id="playerAccessCode"
-                  type="password"
-                  autocomplete="current-password"
-                  placeholder="Enter Access Code"
-                  required
-                />
+                <input id="playerAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required />
               </label>
-
               <div id="playerMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn cyan" type="submit">Enter Game</button>
             </form>
@@ -153,26 +136,12 @@
               <form id="adminForm" class="form-stack">
                 <label>
                   <span>Admin Email</span>
-                  <input
-                    id="adminEmail"
-                    type="email"
-                    autocomplete="username"
-                    placeholder="teacher@example.com"
-                    required
-                  />
+                  <input id="adminEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required />
                 </label>
-
                 <label>
                   <span>Access Code</span>
-                  <input
-                    id="adminAccessCode"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="Enter Access Code"
-                    required
-                  />
+                  <input id="adminAccessCode" type="password" autocomplete="current-password" placeholder="Enter Access Code" required />
                 </label>
-
                 <div id="adminMessage" class="login-message status-message hidden"></div>
                 <button class="submit-btn amber" type="submit">Admin Login</button>
                 <button id="forgotAdminAccessCode" class="auth-link-button" type="button">Forgot Access Code?</button>
@@ -184,7 +153,6 @@
                 <span>Select Active Game</span>
                 <button id="backToAdminLogin" type="button">Back</button>
               </div>
-
               <div id="selectedGameMessage" class="login-message status-message hidden"></div>
               <div id="adminGameList" class="game-list"></div>
             </div>
@@ -194,45 +162,37 @@
             <form id="createForm" class="form-stack form-stack-compact">
               <label>
                 <span>License / Purchase Code</span>
-                <input
-                  id="licenseCode"
-                  autocomplete="off"
-                  placeholder="Enter License Code"
-                  required
-                />
+                <input id="licenseCode" autocomplete="off" placeholder="Enter License Code" required />
               </label>
-
               <label>
                 <span>Teacher / Admin Email</span>
-                <input
-                  id="createEmail"
-                  type="email"
-                  autocomplete="username"
-                  placeholder="teacher@example.com"
-                  required
-                />
+                <input id="createEmail" type="email" autocomplete="username" placeholder="teacher@example.com" required />
               </label>
-
               <label>
                 <span>Display Name</span>
-                <input
-                  id="createDisplayName"
-                  autocomplete="name"
-                  placeholder="Teacher Name"
-                  required
-                />
+                <input id="createDisplayName" autocomplete="name" placeholder="Teacher Name" required />
               </label>
-
               <label>
                 <span>Game Name</span>
-                <input
-                  id="sessionName"
-                  autocomplete="off"
-                  placeholder="Period 3 Economy"
-                  required
-                />
+                <input id="sessionName" autocomplete="off" placeholder="Period 3 Economy" required />
               </label>
-
+              <label>
+                <span>Game Timezone</span>
+                <select id="gameTimeZone" required aria-describedby="gameTimeZoneHelp">
+                  <option value="" selected disabled>Select timezone</option>
+                  <option value="Asia/Seoul">Seoul — Asia/Seoul</option>
+                  <option value="Asia/Tokyo">Tokyo — Asia/Tokyo</option>
+                  <option value="America/New_York">New York — America/New_York</option>
+                  <option value="America/Chicago">Chicago — America/Chicago</option>
+                  <option value="America/Denver">Denver — America/Denver</option>
+                  <option value="America/Los_Angeles">Los Angeles — America/Los_Angeles</option>
+                  <option value="Europe/London">London — Europe/London</option>
+                  <option value="Europe/Paris">Paris — Europe/Paris</option>
+                  <option value="Australia/Sydney">Sydney — Australia/Sydney</option>
+                  <option value="UTC">UTC</option>
+                </select>
+                <small id="gameTimeZoneHelp">Controls market hours for every exchange in this game.</small>
+              </label>
               <label>
                 <span>Difficulty</span>
                 <select id="difficultyLevel" required>
@@ -243,41 +203,24 @@
                   <option value="insane">Insane</option>
                 </select>
               </label>
-
               <div class="two-col">
                 <label>
                   <span>Access Code</span>
-                  <input
-                    id="createAccessCode"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="8"
-                    placeholder="Minimum 8 characters"
-                    required
-                  />
+                  <input id="createAccessCode" type="password" autocomplete="new-password" minlength="8" placeholder="Minimum 8 characters" required />
                 </label>
-
                 <label>
                   <span>Confirm</span>
-                  <input
-                    id="confirmAccessCode"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="8"
-                    placeholder="Confirm Access Code"
-                    required
-                  />
+                  <input id="confirmAccessCode" type="password" autocomplete="new-password" minlength="8" placeholder="Confirm Access Code" required />
                 </label>
               </div>
-
               <div id="createMessage" class="login-message status-message hidden"></div>
               <button class="submit-btn purple" type="submit">Create Game</button>
             </form>
           </div>
 
           <footer class="panel-footer">
-            <span>ECONOVARIA &middot; BUILD 4.7.2</span>
-            <span><span class="status-dot green"></span> LIVE &middot; CLASSROOM MODE</span>
+            <span>ECONOVARIA &middot; PLAYER TERMINAL CUTOVER</span>
+            <span><span class="status-dot green"></span> SUPABASE CONNECTED</span>
           </footer>
           <div class="panel-accent panel-accent-bottom"></div>
         </section>
@@ -285,101 +228,13 @@
     </div>
   </section>
 
-  <div id="appShell" class="app-shell hidden">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">CE</div>
-        <div>
-          <div class="brand-title">Classroom Economy</div>
-          <div class="brand-subtitle">Market simulation</div>
-        </div>
-      </div>
-
-      <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" data-view="profile">Overview</button>
-        <button class="nav-item" data-view="store">Store</button>
-        <button class="nav-item" data-view="portfolio">Portfolio</button>
-        <button class="nav-item" data-view="trade">Trading</button>
-        <button class="nav-item" data-view="stockProfile">Market Data</button>
-        <button class="nav-item" data-view="rating">Forecasts</button>
-      </nav>
-
-      <div class="sidebar-card">
-        <div class="eyebrow">Today</div>
-        <strong id="connectionMode">Account active</strong>
-        <p id="connectionCopy">Balances and activity update after each confirmed action.</p>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="page-heading">
-          <div class="eyebrow">Market simulation</div>
-          <h1 id="pageTitle">Overview</h1>
-          <p id="pageSubtitle" class="page-subtitle">Review your balance, portfolio, items, and recent activity.</p>
-        </div>
-
-        <div class="identity-card">
-          <div class="identity-name" id="identityName">Student</div>
-          <div class="identity-meta" id="identityMeta">Signed in</div>
-          <div class="permission-row" id="permissionSummary"></div>
-          <div class="identity-actions">
-            <button class="ghost-btn" id="refreshButton" type="button">Refresh</button>
-            <button class="ghost-btn logout-btn" id="logoutButton" type="button">Log out</button>
-          </div>
-        </div>
-      </header>
-
-      <div id="globalStatus" class="global-status hidden"></div>
-
-      <section id="profile" class="view active"></section>
-      <section id="store" class="view"></section>
-      <section id="portfolio" class="view"></section>
-      <section id="trade" class="view"></section>
-      <section id="stockProfile" class="view"></section>
-      <section id="rating" class="view"></section>
-    </main>
-  </div>
-
   <script src="frontend/src/core/constants.js"></script>
-  <script src="frontend/src/core/state.js"></script>
-  <script src="frontend/src/utils/formatting.js"></script>
-  <script src="frontend/src/utils/currency-symbols.js"></script>
-  <script src="frontend/src/ui/dom.js"></script>
   <script src="frontend/src/core/api.js"></script>
-  <script src="frontend/src/core/snapshot.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="frontend/src/features/realtime/game-public-realtime.js"></script>
-  <script src="frontend/src/features/auth/auth.js"></script>
-  <script src="frontend/src/features/dashboard/dashboard.js"></script>
-  <script src="frontend/src/features/store/store.js"></script>
-  <script src="frontend/src/features/inventory/inventory.js"></script>
-  <script src="frontend/src/features/portfolio/portfolio.js"></script>
-  <script src="frontend/src/features/trading/trading.js"></script>
-  <script src="frontend/src/features/market/market.js"></script>
-  <script src="frontend/src/features/forecasts/forecasts.js"></script>
-  <script src="frontend/src/core/router.js"></script>
-  <script src="frontend/src/core/bootstrap.js"></script>
-  <script src="frontend/src/ui/student-ui.js"></script>
-  <script src="frontend/src/features/market/market-data-refresh.js?v=20260611-newsfix2"></script>
-  <script src="frontend/src/ui/mobile.js"></script>
-  <script src="frontend/src/ui/academic-market-copy.js"></script>
-  <script id="app-preload-release-script">
-    (function releaseAppPreload() {
-      var released = false;
-
-      function release() {
-        if (released) return;
-        released = true;
-        document.documentElement.classList.remove("preload");
-      }
-
-      window.addEventListener("load", function () {
-        window.setTimeout(release, 60);
-      }, { once: true });
-
-      window.setTimeout(release, 1800);
-    })();
+  <script src="frontend/src/core/login.js"></script>
+  <script>
+    window.setTimeout(function releasePreloadFallback() {
+      document.documentElement.classList.remove("preload");
+    }, 1800);
   </script>
 </body>
 </html>

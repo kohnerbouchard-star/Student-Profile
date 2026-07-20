@@ -35,6 +35,17 @@ Deno.test("staff signup validates before creating an Auth user", async () => {
   assertEquals(mock.calls.authCreates, 0);
 });
 
+Deno.test("staff signup requires an explicit game timezone before creating Auth", async () => {
+  const mock = createMock();
+  const response = await handleStaffSignupRequest(
+    signupRequest({ stockMarketWindow: undefined }),
+    mock.dependencies,
+  );
+
+  await assertError(response, 400, "invalid_stock_market_timezone");
+  assertEquals(mock.calls.authCreates, 0);
+});
+
 Deno.test("staff signup creates the linked account and first game", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
@@ -182,6 +193,7 @@ function signupRequest(overrides: Record<string, unknown> = {}): Request {
       purchaseCode: "LICENSE-CODE",
       gameName: "Fall 2026",
       difficultyPreset: "moderate",
+      stockMarketWindow: { timezone: "Asia/Seoul" },
       ...overrides,
     }),
   });

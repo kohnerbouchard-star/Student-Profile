@@ -30,8 +30,11 @@ import {
   readStaffPlayerLedgerHistoryRoutePath,
 } from "../../../src/domains/economy/api/economyRoutePaths.ts";
 import {
-  handlePlayerLedgerHistoryRequest,
-} from "../../../src/domains/economy/api/playerLedgerHistoryHttpHandler.ts";
+  handlePlayerBankingPublicRequest,
+} from "../../../src/domains/economy/api/playerBankingPublicHttpHandler.ts";
+import {
+  readPlayerBankingPublicRoutePath,
+} from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
@@ -104,19 +107,29 @@ import {
   readPlayerContractAcceptanceRoutePath,
 } from "../../../src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts";
 import {
+  handlePlayerContractPublicListRequest,
+} from "../../../src/domains/contracts/api/playerContractPublicListHttpHandler.ts";
+import {
+  readPlayerContractPublicListRoutePath,
+} from "../../../src/domains/contracts/api/playerContractPublicListRoutePaths.ts";
+import {
+  handlePlayerContractPublicSubmitRequest,
+} from "../../../src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts";
+import {
+  readPlayerContractPublicSubmitRoutePath,
+} from "../../../src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts";
+import {
   readPlayerContractRoutePath,
 } from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
 import {
   handlePlayerContractRequest,
 } from "../../../src/domains/contracts/api/playerContractHttpHandler.ts";
 import {
-  handlePlayerStoreCatalogRequest,
-} from "../../../src/domains/store/api/playerStoreCatalogHttpHandler.ts";
+  handlePlayerStorePublicRequest,
+} from "../../../src/domains/store/api/playerStorePublicHttpHandler.ts";
 import {
-  handlePlayerStorePurchaseHistoryRequest,
-  handlePlayerStorePurchaseRequest,
-  handlePlayerStoreQuoteRequest,
-} from "../../../src/domains/store/api/playerStorePurchaseHttpHandler.ts";
+  readPlayerStorePublicRoutePath,
+} from "../../../src/domains/store/api/playerStorePublicRoutePaths.ts";
 import {
   handlePlayerStockMarketReadRequest,
 } from "../../../src/domains/stocks/api/playerStockMarketReadHttpHandler.ts";
@@ -308,34 +321,35 @@ Deno.serve(async (request) => {
     );
   }
 
-  if (url.pathname.endsWith("/players/me/store/items")) {
-    return handlePlayerStoreCatalogRequest(request, {
-      createServiceClient,
-    });
-  }
+  const playerStoreRoute = readPlayerStorePublicRoutePath(url.pathname);
 
-  if (url.pathname.endsWith("/players/me/store/quote")) {
-    return handlePlayerStoreQuoteRequest(request, {
-      createServiceClient,
-    });
-  }
-
-  if (url.pathname.endsWith("/players/me/store/purchases")) {
-    if (request.method === "GET") {
-      return handlePlayerStorePurchaseHistoryRequest(request, {
-        createServiceClient,
-      });
-    }
-
-    return handlePlayerStorePurchaseRequest(request, {
-      createServiceClient,
-    });
+  if (playerStoreRoute) {
+    const endpointKey = playerStoreRoute.kind === "items"
+      ? "store"
+      : playerStoreRoute.kind === "quotes"
+      ? "storeQuote"
+      : "storePurchase";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerStorePublicRequest(request, playerStoreRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/game/dashboard")) {
-    return handlePlayerGameDashboardRequest(request, {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "dashboard",
+      () =>
+        handlePlayerGameDashboardRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   const playerContractAcceptanceRoute =
@@ -355,6 +369,38 @@ Deno.serve(async (request) => {
     );
   }
 
+  const playerContractPublicSubmitRoute =
+    readPlayerContractPublicSubmitRoutePath(url.pathname);
+
+  if (playerContractPublicSubmitRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "contractSubmit",
+      () =>
+        handlePlayerContractPublicSubmitRequest(
+          request,
+          playerContractPublicSubmitRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerContractPublicListRoute =
+    readPlayerContractPublicListRoutePath(url.pathname);
+
+  if (playerContractPublicListRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "contracts",
+      () =>
+        handlePlayerContractPublicListRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
   const playerContractRoute = readPlayerContractRoutePath(url.pathname);
 
   if (playerContractRoute) {
@@ -364,39 +410,77 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/players/me/stocks/portfolio")) {
-    return handlePlayerStockMarketReadRequest(request, "read_portfolio", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_portfolio", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/holdings")) {
-    return handlePlayerStockMarketReadRequest(request, "read_holdings", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_holdings", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/orders")) {
     if (request.method === "POST") {
-      return handlePlayerStockMarketTradingRequest(request, {
-        createServiceClient,
-      });
+      return dispatchRateLimitedReviewedPlayerRequest(
+        request,
+        "marketOrder",
+        () =>
+          handlePlayerStockMarketTradingRequest(request, {
+            createServiceClient,
+          }),
+        { createServiceClient },
+      );
     }
 
-    return handlePlayerStockMarketReadRequest(request, "read_orders", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_orders", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me/stocks/trades")) {
-    return handlePlayerStockMarketReadRequest(request, "read_trades", {
-      createServiceClient,
-    });
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_trades", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
-  if (url.pathname.endsWith("/players/me/ledger")) {
-    return handlePlayerLedgerHistoryRequest(request, {
-      createServiceClient,
-    });
+  const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);
+
+  if (playerBankingRoute) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "banking",
+      () =>
+        handlePlayerBankingPublicRequest(request, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
   }
 
   if (url.pathname.endsWith("/players/me")) {
@@ -417,6 +501,12 @@ Deno.serve(async (request) => {
       () => handlePlayerLoginRequest(request, { createServiceClient }),
       { createServiceClient },
     );
+  }
+
+  if (url.pathname.endsWith("/players/attendance/clock-in")) {
+    return handlePlayerAttendanceClockInRequest(request, {
+      createServiceClient,
+    });
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);

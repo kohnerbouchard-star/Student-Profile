@@ -10,6 +10,10 @@ import {
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "../../stocks/calendars/stockMarketWindowConfig.ts";
+import {
   isRecord,
   parseOptionalJsonObject,
   parseOptionalText,
@@ -191,6 +195,14 @@ export async function handleGameSettingsRequest(
       },
     });
   } catch (error) {
+    if (error instanceof StockMarketWindowConfigError) {
+      return jsonError(400, {
+        code: "invalid_stock_market_timezone",
+        message: error.message,
+        retryable: false,
+      });
+    }
+
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {
         code: error.code,
@@ -260,7 +272,9 @@ function buildGameSettingsUpdatePayload(
   }
 
   if (body.stockMarketWindow !== undefined && body.stockMarketWindow !== null) {
-    payload.stock_market_window = body.stockMarketWindow;
+    payload.stock_market_window = normalizeRequiredStockMarketWindowSetting(
+      body.stockMarketWindow,
+    );
   }
 
   if (body.newsSchedule !== undefined && body.newsSchedule !== null) {

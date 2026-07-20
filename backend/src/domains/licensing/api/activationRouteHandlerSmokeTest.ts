@@ -48,7 +48,7 @@ export async function runLicensingActivationApiBoundarySmokeTest(): Promise<Lice
         difficultyPreset: "standard",
         attendanceWindow: {},
         businessMarketWindow: {},
-        stockMarketWindow: {},
+        stockMarketWindow: { timezone: "Asia/Seoul" },
         newsSchedule: {},
       },
     },

@@ -8,18 +8,26 @@ permissions:
   contents: write
 
 jobs:
-  delete-merged-head:
+  delete-retired-head:
     if: >-
-      github.event.pull_request.merged == true &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref != github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
-      - name: Delete merged pull-request branch
-        uses: actions/github-script@v7
+      - name: Delete merged or explicitly duplicated pull-request branch
+        uses: actions/github-script@v9
         with:
           script: |
-            const branch = context.payload.pull_request.head.ref;
+            const pullRequest = context.payload.pull_request;
+            const branch = pullRequest.head.ref;
+            const labels = new Set((pullRequest.labels || []).map((label) => label.name));
+            const shouldDelete = pullRequest.merged === true || labels.has("duplicate");
+
+            if (!shouldDelete) {
+              core.notice(`Retaining closed unmerged branch ${branch}; it is not labeled duplicate.`);
+              return;
+            }
+
             const retained = new Set([
               context.payload.repository.default_branch,
               "frontend/admin-terminal-source-v1"
@@ -36,7 +44,8 @@ jobs:
                 repo: context.repo.repo,
                 ref: `heads/${branch}`
               });
-              core.notice(`Deleted merged branch ${branch}.`);
+              const reason = pullRequest.merged === true ? "merged" : "explicitly duplicated";
+              core.notice(`Deleted ${reason} branch ${branch}.`);
             } catch (error) {
               if (error.status === 422) {
                 core.notice(`Branch ${branch} is already absent or protected.`);

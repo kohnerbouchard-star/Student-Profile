@@ -1,4 +1,8 @@
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
+import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "../../stocks/calendars/stockMarketWindowConfig.ts";
 import type { LicensingActivationRequestBody } from "./activationContract.ts";
 
 export type LicensingActivationRequestParseErrorCode =
@@ -36,7 +40,9 @@ export function parseLicensingActivationRequestBody(
     difficultyPreset: parseOptionalText(value.difficultyPreset),
     attendanceWindow: parseOptionalJsonObject(value.attendanceWindow),
     businessMarketWindow: parseOptionalJsonObject(value.businessMarketWindow),
-    stockMarketWindow: parseOptionalJsonObject(value.stockMarketWindow),
+    stockMarketWindow: parseRequiredStockMarketWindow(
+      value.stockMarketWindow,
+    ),
     newsSchedule: parseOptionalJsonObject(value.newsSchedule),
   };
 }
@@ -74,6 +80,20 @@ function parseOptionalText(value: unknown): string | null {
   const normalizedValue = value.trim();
 
   return normalizedValue || null;
+}
+
+function parseRequiredStockMarketWindow(value: unknown): JsonObject {
+  try {
+    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;
+  } catch (error) {
+    if (error instanceof StockMarketWindowConfigError) {
+      throw new LicensingActivationRequestParseError(
+        "invalid_activation_settings",
+        error.message,
+      );
+    }
+    throw error;
+  }
 }
 
 function parseOptionalJsonObject(value: unknown): JsonObject | null {

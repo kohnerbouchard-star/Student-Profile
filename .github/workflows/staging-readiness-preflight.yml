@@ -1,0 +1,69 @@
+name: Staging Readiness Preflight
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/staging-readiness-preflight.yml"
+      - "docs/operations/**"
+      - "scripts/deployment-readiness-preflight*"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      manifest_path:
+        description: Repository-relative staging deployment manifest path
+        required: true
+        type: string
+      release_commit:
+        description: Full immutable main commit represented by the manifest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validator-tests:
+    name: Validator tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:deployment-readiness
+
+  staging-preflight:
+    name: Fail-closed staging evidence check
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Verify immutable main ancestry and evidence-only follow-up
+        env:
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        run: |
+          [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$MANIFEST_PATH" =~ ^docs/operations/evidence/[a-zA-Z0-9._/-]+\.json$ ]]
+          [[ "$MANIFEST_PATH" != *".."* ]]
+          git merge-base --is-ancestor "$RELEASE_COMMIT" HEAD
+          git diff --quiet "$RELEASE_COMMIT" HEAD -- . \
+            ':(exclude)docs/operations/evidence/**'
+      - name: Validate immutable release evidence
+        env:
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        run: >-
+          npm run preflight:staging --
+          --manifest "$MANIFEST_PATH"
+          --expected-commit "$RELEASE_COMMIT"

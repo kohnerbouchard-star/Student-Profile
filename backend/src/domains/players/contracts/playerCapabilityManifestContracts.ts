@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-18.3" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -55,19 +55,29 @@ export type PlayerActionCapabilityKey =
   typeof PLAYER_ACTION_CAPABILITY_KEYS[number];
 
 export type PlayerCapabilityEndpointKey =
+  | "bootstrap"
   | "capabilities"
+  | "banking"
   | "contractAccept"
+  | "contractSubmit"
+  | "contracts"
   | "countries"
   | "country"
+  | "dashboard"
   | "inventory"
   | "inventoryRedemptions"
   | "logout"
   | "market"
   | "marketAsset"
+  | "marketOrder"
   | "marketWatchlist"
   | "news"
   | "notifications"
-  | "notificationsRead";
+  | "notificationsRead"
+  | "portfolio"
+  | "store"
+  | "storeQuote"
+  | "storePurchase";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -107,8 +117,18 @@ export type PlayerCapabilityManifestRoute =
 
 const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   {
+    key: "bootstrap",
+    operations: [{ method: "GET", pathTemplate: "/players/me" }],
+    routeCapabilities: ["profile"],
+  },
+  {
     key: "capabilities",
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
+  },
+  {
+    key: "banking",
+    operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }],
+    routeCapabilities: ["banking"],
   },
   {
     key: "contractAccept",
@@ -117,6 +137,19 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       pathTemplate: "/players/me/contracts/:contractKey/accept",
     }],
     actionCapabilities: ["contractAccept"],
+  },
+  {
+    key: "contractSubmit",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/contracts/:contractKey/submit",
+    }],
+    actionCapabilities: ["contractSubmit"],
+  },
+  {
+    key: "contracts",
+    operations: [{ method: "GET", pathTemplate: "/players/me/contracts" }],
+    routeCapabilities: ["contracts"],
   },
   {
     key: "countries",
@@ -131,6 +164,14 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       method: "GET",
       pathTemplate: "/players/me/world/countries/:countryCode",
     }],
+  },
+  {
+    key: "dashboard",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/game/dashboard",
+    }],
+    routeCapabilities: ["dashboard"],
   },
   {
     key: "news",
@@ -151,6 +192,15 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     routeCapabilities: ["market"],
   },
   {
+    key: "marketOrder",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/stocks/orders",
+    }],
+    routeCapabilities: ["market"],
+    actionCapabilities: ["marketOrder"],
+  },
+  {
     key: "marketWatchlist",
     operations: [
       { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
@@ -162,6 +212,31 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketWatchlist"],
+  },
+  {
+    key: "portfolio",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/stocks/portfolio",
+    }],
+    routeCapabilities: ["portfolio"],
+  },
+  {
+    key: "store",
+    operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }],
+    routeCapabilities: ["store"],
+  },
+  {
+    key: "storeQuote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }],
+  },
+  {
+    key: "storePurchase",
+    operations: [
+      { method: "GET", pathTemplate: "/players/me/store/purchases" },
+      { method: "POST", pathTemplate: "/players/me/store/purchases" },
+    ],
+    actionCapabilities: ["storePurchase"],
   },
   {
     key: "inventory",

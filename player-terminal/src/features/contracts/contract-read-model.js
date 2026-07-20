@@ -1,3 +1,5 @@
+const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
 function list(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -13,6 +15,15 @@ function text(value, fallback = "") {
 function number(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function publicContractKey(contract) {
+  const value = text(contract.contractKey || contract.publicKey || contract.key);
+  return PUBLIC_CONTRACT_KEY.test(value) ? value : "";
+}
+
+function internalContractId(contract) {
+  return text(contract.contractId || contract.id);
 }
 
 function readableRequirement(value) {
@@ -123,16 +134,20 @@ function timeline(contract, progress, status) {
 
 export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
   const body = object(response);
-  const progressByContract = new Map(list(body.progress).map((entry) => [text(entry.contractId), object(entry)]));
-  const items = list(body.contracts).map((contractValue) => {
+  const progressByContract = new Map(list(body.progress).map((entryValue) => {
+    const entry = object(entryValue);
+    return [text(entry.contractKey || entry.contractId), entry];
+  }));
+  const items = list(body.contracts).flatMap((contractValue) => {
     const contract = object(contractValue);
-    const id = text(contract.contractId || contract.id);
-    const progress = progressByContract.get(id) || {};
+    const id = publicContractKey(contract);
+    if (!id) return [];
+    const progress = progressByContract.get(id) || progressByContract.get(internalContractId(contract)) || {};
     const status = statusFrom(contract, progress, now);
     const reward = rewardFields(contract.rewardPayload);
     const metadata = object(contract.metadata);
     const evidence = object(progress.evidencePayload);
-    return {
+    return [{
       id,
       status,
       backendStatus: text(progress.status || contract.status),
@@ -159,7 +174,7 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
         note: text(evidence.note || evidence.response || evidence.text)
       } : null,
       timeline: timeline(contract, progress, status)
-    };
+    }];
   });
 
   const preferredTabs = [

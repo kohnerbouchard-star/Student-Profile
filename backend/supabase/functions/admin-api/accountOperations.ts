@@ -258,26 +258,60 @@ export async function handleAccountOperation(
         },
       };
     }
-    const result = await service
-      .from("game_sessions")
-      .update({ status: "archived", updated_at: new Date().toISOString() })
-      .eq("id", gameId)
-      .eq("owner_staff_user_id", staff.id)
-      .select("id,name,status,created_at,updated_at")
-      .maybeSingle();
-    if (result.error) throw result.error;
-    await audit(service, {
-      gameSessionId: gameId,
-      staffUserId: staff.id,
-      action: "games.game_archived",
-      targetType: "game_session",
-      targetId: gameId,
-      metadata: { previousStatus: game.status },
+
+    const idempotencyKey = text(body.idempotencyKey) ||
+      `legacy.archive.${crypto.randomUUID()}`;
+    const expectedVersion = Number.isSafeInteger(Number(body.expectedVersion)) &&
+        Number(body.expectedVersion) > 0
+      ? Number(body.expectedVersion)
+      : null;
+    const result = await service.rpc("transition_game_lifecycle_atomic_v1", {
+      p_game_session_id: gameId,
+      p_staff_user_id: staff.id,
+      p_action: "archive",
+      p_idempotency_key: idempotencyKey,
+      p_expected_version: expectedVersion,
     });
+    if (result.error) {
+      const message = String(result.error.message || "").toUpperCase();
+      if (message.includes("GAME_LIFECYCLE_TRANSITION_INVALID")) {
+        return {
+          handled: true,
+          status: 409,
+          body: {
+            code: "game_must_be_ended_before_archive",
+            message: "End the game before archiving it.",
+          },
+        };
+      }
+      if (message.includes("GAME_LIFECYCLE_VERSION_CONFLICT")) {
+        return {
+          handled: true,
+          status: 409,
+          body: {
+            code: "game_lifecycle_version_conflict",
+            message: "The game lifecycle changed. Reload before archiving.",
+          },
+        };
+      }
+      throw result.error;
+    }
+    const transition = result.data?.[0] || null;
     return {
       handled: true,
       status: 200,
-      body: { data: { archived: true, game: result.data } },
+      body: {
+        data: {
+          archived: true,
+          outcome: transition?.transition_outcome || "applied",
+          game: {
+            ...game,
+            status: transition?.operational_status || "archived",
+            lifecycleState: transition?.lifecycle_state || "archived",
+            lifecycleVersion: transition?.lifecycle_version || expectedVersion,
+          },
+        },
+      },
     };
   }
 

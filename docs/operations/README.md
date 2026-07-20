@@ -11,6 +11,10 @@ change authority, recovery expectations, and the production-grade program.
   decision and safe cleanup boundary.
 - `github-repository-settings.md` defines the main-branch ruleset, required
   checks, security settings, and protected release environments.
+- `staging-readiness-preflight.md` defines the deterministic fail-closed gate
+  for isolated staging evidence and recovery readiness.
+- `staging-readiness-manifest.template.json` is an intentionally incomplete
+  names-only template; it is never deployment evidence by itself.
 - `production-grade-execution-plan.md` is the sequenced engineering program and
   launch gate.
 

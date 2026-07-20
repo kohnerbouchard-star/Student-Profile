@@ -6,13 +6,18 @@ import {
   PLAYER_ROUTE_CAPABILITY_KEYS,
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
+import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
 import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { readPlayerContractAcceptanceRoutePath } from "../../contracts/api/playerContractAcceptanceRoutePaths.ts";
+import { readPlayerContractPublicListRoutePath } from "../../contracts/api/playerContractPublicListRoutePaths.ts";
+import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/playerContractPublicSubmitRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerInventoryRedemptionRoutePath } from "../../inventory/api/playerInventoryRedemptionRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
+import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
+import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -31,31 +36,40 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     ...PLAYER_ACTION_CAPABILITY_KEYS,
   ]);
 
+  assertEquals(manifest.capabilities.routes.dashboard, true);
+  assertEquals(manifest.capabilities.routes.profile, true);
   assertEquals(manifest.capabilities.routes.news, true);
   assertEquals(manifest.capabilities.routes.market, true);
+  assertEquals(manifest.capabilities.routes.portfolio, true);
+  assertEquals(manifest.capabilities.routes.contracts, true);
   assertEquals(manifest.capabilities.routes.inventory, true);
-  assertEquals(manifest.capabilities.routes.dashboard, false);
-  assertEquals(manifest.capabilities.routes.contracts, false);
-  assertEquals(manifest.capabilities.routes.store, false);
-  assertEquals(manifest.capabilities.routes.banking, false);
-  assertEquals(manifest.capabilities.routes.profile, false);
+  assertEquals(manifest.capabilities.routes.store, true);
+  assertEquals(manifest.capabilities.routes.banking, true);
 
   assertEquals(manifest.capabilities.actions.marketWatchlist, true);
   assertEquals(manifest.capabilities.actions.notificationsRead, true);
   assertEquals(manifest.capabilities.actions.logout, true);
   assertEquals(manifest.capabilities.actions.contractAccept, true);
+  assertEquals(manifest.capabilities.actions.contractSubmit, true);
   assertEquals(manifest.capabilities.actions.inventoryUse, true);
-  assertEquals(manifest.capabilities.actions.marketOrder, false);
-  assertEquals(manifest.capabilities.actions.contractSubmit, false);
-  assertEquals(manifest.capabilities.actions.storePurchase, false);
+  assertEquals(manifest.capabilities.actions.marketOrder, true);
+  assertEquals(manifest.capabilities.actions.storePurchase, true);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
+  assertEquals(endpointKeys.includes("bootstrap"), true);
   assertEquals(endpointKeys.includes("capabilities"), true);
+  assertEquals(endpointKeys.includes("banking"), true);
   assertEquals(endpointKeys.includes("contractAccept"), true);
+  assertEquals(endpointKeys.includes("contractSubmit"), true);
+  assertEquals(endpointKeys.includes("contracts"), true);
+  assertEquals(endpointKeys.includes("dashboard"), true);
   assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
-  assertEquals(endpointKeys.includes("marketOrder" as never), false);
-  assertEquals(endpointKeys.includes("store" as never), false);
+  assertEquals(endpointKeys.includes("marketOrder"), true);
+  assertEquals(endpointKeys.includes("portfolio"), true);
+  assertEquals(endpointKeys.includes("store"), true);
+  assertEquals(endpointKeys.includes("storeQuote"), true);
+  assertEquals(endpointKeys.includes("storePurchase"), true);
 });
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
@@ -68,7 +82,7 @@ Deno.test("player capability manifest contains no UUID-shaped identifiers", () =
   }
 });
 
-Deno.test("every advertised endpoint path is recognized by an authoritative route parser", () => {
+Deno.test("every advertised endpoint path is recognized by the authoritative dispatch boundary", () => {
   const operations = buildPlayerCapabilityManifest().endpoints.flatMap((
     endpoint,
   ) =>
@@ -84,16 +98,33 @@ Deno.test("every advertised endpoint path is recognized by an authoritative rout
   );
 
   for (const operation of operations) {
-    const parsed = operation.key === "capabilities"
+    const parsed = operation.key === "bootstrap"
+      ? operation.path === "/players/me" ? { kind: "bootstrap" } : null
+      : operation.key === "dashboard"
+      ? operation.path === "/players/me/game/dashboard"
+        ? { kind: "dashboard" }
+        : null
+      : operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
+      : operation.key === "banking"
+      ? readPlayerBankingPublicRoutePath(operation.path)
       : operation.key === "contractAccept"
       ? readPlayerContractAcceptanceRoutePath(operation.path)
+      : operation.key === "contractSubmit"
+      ? readPlayerContractPublicSubmitRoutePath(operation.path)
+      : operation.key === "contracts"
+      ? readPlayerContractPublicListRoutePath(operation.path)
       : operation.key === "countries" || operation.key === "country" ||
           operation.key === "news"
       ? readPlayerWorldRoutePath(operation.path)
       : operation.key === "market" || operation.key === "marketAsset" ||
           operation.key === "marketWatchlist"
       ? readPlayerStockAssetListRoutePath(operation.path)
+      : operation.key === "marketOrder" || operation.key === "portfolio"
+      ? readPlayerStockMarketPublicRoutePath(operation.path)
+      : operation.key === "store" || operation.key === "storeQuote" ||
+          operation.key === "storePurchase"
+      ? readPlayerStorePublicRoutePath(operation.path)
       : operation.key === "inventory"
       ? readPlayerInventoryRoutePath(operation.path)
       : operation.key === "inventoryRedemptions"

@@ -1,3 +1,6 @@
+import {
+  readStockMarketOpenState,
+} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   PlayerGameDashboardCashBalanceDto,
   PlayerGameDashboardInventoryItemDto,
@@ -297,7 +300,10 @@ const MARKET_NEWS_SELECT = [
 
 export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
-  constructor(private readonly client: SupabasePlayerGameDashboardClient) {}
+  constructor(
+    private readonly client: SupabasePlayerGameDashboardClient,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async read(
     input: PlayerGameDashboardReadInput,
@@ -307,6 +313,7 @@ export class SupabasePlayerGameDashboardRepository
     );
     const [
       gameSession,
+      marketOpen,
       publicMarket,
       players,
       countryByPlayerId,
@@ -322,6 +329,7 @@ export class SupabasePlayerGameDashboardRepository
       contractProgress,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
+      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
@@ -379,7 +387,9 @@ export class SupabasePlayerGameDashboardRepository
         id: gameSession.id,
         name: gameSession.name,
         status: gameSession.status,
-        marketStatus: gameSession.status === "active" ? "open" : "closed",
+        marketStatus: gameSession.status === "active" && marketOpen
+          ? "open"
+          : "closed",
         currentTick: publicMarket.tickIndex,
         updatedAt: gameSession.updated_at ?? null,
       },

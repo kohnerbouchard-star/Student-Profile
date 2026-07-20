@@ -1,8 +1,16 @@
 import { PlayerApi } from "../../api/player-api.js";
-import { ApiConnectionPendingError } from "../../api/errors.js";
+import { ApiConnectionPendingError, playerSafeErrorMessage } from "../../api/errors.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { renderModal } from "../../components/modal.js";
 import { focusFirstInteractive, setButtonProcessing } from "../../core/dom.js";
+
+const RESET_QUOTE_CODES = new Set([
+  "STORE_INSUFFICIENT_STOCK",
+  "STORE_ITEM_NOT_AVAILABLE",
+  "STORE_QUOTE_ALREADY_USED",
+  "STORE_QUOTE_EXPIRED",
+  "STORE_QUOTE_NOT_FOUND"
+]);
 
 function storeModalElement(mount) {
   const dialog = mount.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
@@ -16,7 +24,51 @@ function focusableElements(root) {
 
 function safeMessage(error, fallback) {
   if (error instanceof ApiConnectionPendingError) return "Store purchasing is awaiting the authoritative backend connection.";
+  const code = String(error?.code || "").trim().toUpperCase();
+  const status = Number(error?.status || 0);
+  if (code || status) return playerSafeErrorMessage({ status, code });
   return String(error?.message || fallback || "The Store request could not be completed.");
+}
+
+export function storeQuoteFromOperation(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  const quote = result.quote;
+  return quote && typeof quote === "object" && !Array.isArray(quote) ? quote : result;
+}
+
+export function resolveStorePurchaseFailure(error, fallback = "The Store purchase could not be completed.") {
+  const code = String(error?.code || "").trim().toUpperCase();
+  const status = Number(error?.status || 0);
+  return Object.freeze({
+    code,
+    status,
+    message: safeMessage(error, fallback),
+    resetQuote: RESET_QUOTE_CODES.has(code),
+    retryable: code === "STORE_PURCHASE_IN_PROGRESS" || error?.retryable === true,
+    sessionInvalid: status === 401
+  });
+}
+
+export function dispatchStoreSessionInvalid(error, config = {}, runtime = globalThis) {
+  const failure = resolveStorePurchaseFailure(error);
+  if (!failure.sessionInvalid) return false;
+  const detail = Object.freeze({
+    reason: "invalid_player_session",
+    terminal: "player",
+    status: failure.status || 401,
+    code: failure.code || "SESSION_INVALID",
+    requestId: String(error?.requestId || "")
+  });
+  try {
+    if (typeof config.onSessionInvalid === "function") config.onSessionInvalid(detail);
+  } catch {
+    // Host callbacks cannot block the safe fallback event.
+  }
+  const eventName = String(config.sessionInvalidEvent || "econovaria:player-session-invalid");
+  if (typeof runtime.CustomEvent === "function" && typeof runtime.dispatchEvent === "function") {
+    runtime.dispatchEvent(new runtime.CustomEvent(eventName, { detail }));
+  }
+  return true;
 }
 
 export function installStorePurchaseFlow({ mount, terminal, config }) {
@@ -66,7 +118,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const state = terminal.getState();
     if (!isEndpointEnabled(state.data?.capabilities, "storeQuote")) return;
     const itemId = button.dataset.playerPurchase;
-    const item = state.data?.store?.items?.find((candidate) => String(candidate.id) === String(itemId));
+    const item = state.data?.store?.items?.find((candidate) => String(candidate.itemKey || candidate.id) === String(itemId));
     if (!item) return;
     opener = button;
     transaction = {
@@ -96,14 +148,14 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     try {
       api.setSession(config);
       const operation = await api.execute("storeQuote", {
-        storeItemId: transaction.item.id,
+        itemKey: transaction.item.itemKey || transaction.item.id,
         quantity
       });
       transaction = {
         ...transaction,
         stage: "review",
         quantity,
-        quote: operation.result,
+        quote: storeQuoteFromOperation(operation.result),
         receipt: null,
         error: "",
         refreshWarning: ""
@@ -111,7 +163,9 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       renderTransaction();
     } catch (error) {
       restoreButton();
-      transaction = { ...transaction, quantity, error: safeMessage(error, "The Store quote could not be created.") };
+      const failure = resolveStorePurchaseFailure(error, "The Store quote could not be created.");
+      if (failure.sessionInvalid && dispatchStoreSessionInvalid(error, config)) return;
+      transaction = { ...transaction, quantity, error: failure.message };
       renderTransaction();
     }
   }
@@ -121,9 +175,19 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     return Number.isFinite(expiresAt) && expiresAt <= Date.now();
   }
 
+  async function refreshedTransactionItem() {
+    const itemKey = String(transaction?.item?.itemKey || transaction?.item?.id || "");
+    try {
+      await terminal.refresh();
+      return terminal.getState()?.data?.store?.items?.find((item) => String(item.itemKey || item.id) === itemKey) || transaction.item;
+    } catch {
+      return transaction.item;
+    }
+  }
+
   async function confirmPurchase(button) {
     const quote = transaction?.quote;
-    if (!quote?.quoteId) {
+    if (!quote?.quoteKey) {
       transaction = { ...transaction, stage: "select", error: "Request a current Store quote before confirming the purchase." };
       renderTransaction();
       return;
@@ -139,12 +203,27 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     try {
       api.setSession(config);
       operation = await api.execute("storePurchase", {
-        quoteId: quote.quoteId,
+        quoteKey: quote.quoteKey,
         clientSubmittedAt: new Date().toISOString()
       });
     } catch (error) {
       restoreButton();
-      transaction = { ...transaction, error: safeMessage(error, "The Store purchase could not be completed.") };
+      const failure = resolveStorePurchaseFailure(error);
+      if (failure.sessionInvalid && dispatchStoreSessionInvalid(error, config)) return;
+      if (failure.resetQuote) {
+        const item = await refreshedTransactionItem();
+        transaction = {
+          ...transaction,
+          stage: "select",
+          item,
+          quote: null,
+          receipt: null,
+          error: failure.message,
+          refreshWarning: ""
+        };
+      } else {
+        transaction = { ...transaction, error: failure.message };
+      }
       renderTransaction();
       return;
     }
@@ -152,7 +231,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     transaction = {
       ...transaction,
       stage: "receipt",
-      receipt: operation.result,
+      receipt: operation.result?.receipt || operation.result,
       error: "",
       refreshWarning: ""
     };

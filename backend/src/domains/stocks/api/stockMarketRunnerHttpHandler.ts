@@ -24,6 +24,9 @@ import {
 } from "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
+import {
+  readStockMarketOpenState,
+} from "../infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   StockMarketChartPoint,
   StockMarketEngineInput,
@@ -92,6 +95,12 @@ interface StockMarketRunnerHttpDependencies {
     client: EdgeSupabaseClient,
   ) => StockMarketNewsRepository;
   readonly calculateNextTick?: CalculateStockMarketTick;
+  readonly now?: () => Date;
+  readonly readMarketOpenState?: (
+    client: EdgeSupabaseClient,
+    gameSessionId: string,
+    at: Date,
+  ) => Promise<boolean>;
   readonly createPublicRealtimePublisher?: (
     client: EdgeSupabaseClient,
   ) => StockMarketRunnerPublicRealtimePublisher;
@@ -204,6 +213,21 @@ export async function handleStockMarketRunnerRequest(
       });
     }
 
+    const marketOpen = await (dependencies.readMarketOpenState ??
+      readStockMarketOpenState)(
+        serviceClient,
+        body.gameSessionId,
+        (dependencies.now ?? (() => new Date()))(),
+      );
+
+    if (!marketOpen) {
+      throw new StockMarketRunnerError(
+        "stock_market_closed",
+        "Stock market is closed in the configured game timezone.",
+        409,
+      );
+    }
+
     const storylineRunnerAfterTick = dependencies.runStorylineEventsAfterTick ??
       (dependencies.createStorylineRunnerAfterTick
         ? dependencies.createStorylineRunnerAfterTick(serviceClient)
@@ -246,7 +270,7 @@ export async function handleStockMarketRunnerRequest(
       return jsonError(error.status, {
         code: error.code,
         message: error.message,
-        retryable: false,
+        retryable: error.code === "stock_market_closed",
       });
     }
 

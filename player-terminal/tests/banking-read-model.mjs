@@ -1,28 +1,42 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
+import {
+  mergeBankingPages,
+  resolveBankingReadFailure,
+} from "../src/features/banking/banking-read-flow.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { previewData } from "../src/data/preview-data.js";
 
 const data = structuredClone(previewData);
 data.session.currencyCode = "ECO";
 data.banking = {
-  checking: { accountId: "CASH", balance: 1250, available: 1250, pending: 0 },
+  checking: { accountId: "CASH", balance: 1250, available: 1250, pending: 0, currencyCode: "ECO" },
   savings: {
     configured: false,
     accountId: "NOT CONFIGURED",
     balance: null,
     available: null,
     interestRate: null,
-    interestEarned: null
+    interestEarned: null,
+    currencyCode: ""
   },
+  balances: [
+    { accountType: "cash", balance: 1250, currencyCode: "ECO" },
+    { accountType: "cash", balance: 40, currencyCode: "LUM" }
+  ],
+  generatedAt: "2026-07-19T04:00:00.000Z",
+  staleAt: "2026-07-19T04:02:00.000Z",
+  stale: true,
+  pagination: { cursor: null, nextCursor: "offset_2", hasMore: true, limit: 2 },
   creditConfigured: false,
   transfersConfigured: false,
   creditScore: null,
   transferLimit: null,
   transactions: [
     {
-      id: "ledger-eco",
+      id: "ledger_1",
       description: "Contract reward",
       date: "Jul 18, 12:00 PM",
       category: "contracts",
@@ -32,7 +46,7 @@ data.banking = {
       currencyCode: "ECO"
     },
     {
-      id: "ledger-lum",
+      id: "ledger_2",
       description: "Foreign currency adjustment",
       date: "Jul 18, 12:05 PM",
       category: "economy",
@@ -45,7 +59,11 @@ data.banking = {
 };
 
 const html = renderBankingPage(data);
-assert.ok(html.includes("ECO 1,250"), "The authoritative cash balance must render.");
+assert.ok(html.includes("ECO 1,250"), "The authoritative ECO balance must render.");
+assert.ok(html.includes("LUM 40"), "Every returned balance currency must render, not only the first cash row.");
+assert.ok(html.includes('data-player-banking-balance="cash:ECO"'));
+assert.ok(html.includes('data-player-banking-balance="cash:LUM"'));
+assert.ok(html.includes("STALE DATA"), "Expired freshness metadata must be visible.");
 assert.ok(html.includes("NOT CONFIGURED"));
 assert.ok(html.includes("CREDIT NOT CONFIGURED"));
 assert.ok(html.includes("BACKEND INTEGRATION PENDING"));
@@ -62,6 +80,7 @@ assert.match(html, /data-player-form="savings-transfer"[\s\S]*?<button[^>]*type=
 assert.ok(html.includes("+ECO 25"));
 assert.ok(html.includes("LUM -4"), "Each ledger entry must use its authoritative currency code.");
 assert.ok(html.includes("POSTED LEDGER ACTIVITY"));
+assert.ok(html.includes("data-player-banking-load-more"), "A real continuation control must render when the Backend returns a next cursor.");
 
 const ledgerRoute = resolvePlayerBackendRequest({
   endpointKey: "banking",
@@ -75,24 +94,92 @@ assert.equal(ledgerRoute.method, "GET");
 assert.equal(ledgerRoute.path, "/players/me/ledger?limit=50");
 assert.equal(ledgerRoute.payload, undefined);
 
+const nextPageRoute = resolvePlayerBackendRequest({
+  endpointKey: "banking",
+  method: "GET",
+  path: "/banking/summary",
+  payload: { limit: 25, cursor: "offset_50" },
+  params: {},
+  session: { playerSessionToken: "token-1" }
+});
+assert.equal(nextPageRoute.path, "/players/me/ledger?limit=25&cursor=offset_50");
+assert.equal(nextPageRoute.path.includes("gameSessionId"), false);
+assert.equal(nextPageRoute.path.includes("playerId"), false);
+
+const nextPage = {
+  ...data.banking,
+  balances: [
+    { accountType: "cash", balance: 1275, currencyCode: "ECO" },
+    { accountType: "cash", balance: 40, currencyCode: "LUM" }
+  ],
+  transactions: [
+    data.banking.transactions[1],
+    {
+      id: "ledger_3",
+      description: "Store purchase",
+      date: "Jul 18, 12:10 PM",
+      category: "store",
+      amount: -10,
+      status: "Posted",
+      accountType: "cash",
+      currencyCode: "ECO"
+    }
+  ],
+  pagination: { cursor: "offset_2", nextCursor: null, hasMore: false, limit: 2 },
+  stale: false
+};
+const merged = mergeBankingPages(data.banking, nextPage);
+assert.deepEqual(merged.transactions.map((entry) => entry.id), ["ledger_1", "ledger_2", "ledger_3"]);
+assert.equal(merged.balances[0].balance, 1275, "Later pages must refresh authoritative balances.");
+assert.equal(merged.pagination.hasMore, false);
+assert.equal(merged.pagination.nextCursor, null);
+
 const configuredData = structuredClone(data);
+configuredData.banking.stale = false;
 configuredData.banking.savings = {
   configured: true,
   accountId: "SAVINGS",
   balance: 200,
   available: 200,
   interestRate: 1.5,
-  interestEarned: 3
+  interestEarned: 3,
+  currencyCode: "LUM"
 };
+configuredData.banking.balances.push({ accountType: "savings", balance: 200, currencyCode: "LUM" });
 configuredData.banking.creditConfigured = true;
 configuredData.banking.transfersConfigured = true;
 configuredData.banking.creditScore = 720;
 configuredData.banking.transferLimit = 500;
 const configuredHtml = renderBankingPage(configuredData);
 assert.ok(configuredHtml.includes("CREDIT 720"));
-assert.ok(configuredHtml.includes("ECO 200"));
-assert.ok(configuredHtml.includes("1.50% annual yield"));
+assert.ok(configuredHtml.includes("LUM 200"), "Savings must render with the authoritative account currency.");
 assert.ok(configuredHtml.includes('max="500"'));
+assert.ok(!configuredHtml.includes("STALE DATA"));
 assert.ok(!configuredHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/));
 
-console.log("Banking read model passed: authoritative balances, per-entry currency, capability truthfulness, mutable Player ID lookup, and UUID ownership are valid.");
+const emptyData = structuredClone(data);
+emptyData.banking.transactions = [];
+emptyData.banking.pagination = { cursor: null, nextCursor: null, hasMore: false, limit: 50 };
+emptyData.banking.stale = false;
+const emptyHtml = renderBankingPage(emptyData);
+assert.ok(emptyHtml.includes("No transactions yet"));
+assert.ok(emptyHtml.includes("0 transactions"));
+assert.ok(emptyHtml.includes("All available activity loaded"));
+assert.ok(!emptyHtml.includes("data-player-banking-load-more"));
+
+assert.equal(resolveBankingReadFailure({ status: 429 }), "Banking activity is being requested too quickly. Try again shortly.");
+assert.match(resolveBankingReadFailure({ code: "OFFLINE" }), /Loaded transactions remain visible/);
+
+const controllerSource = fs.readFileSync(
+  new URL("../src/features/banking/banking-read-flow.js", import.meta.url),
+  "utf8"
+);
+assert.doesNotMatch(controllerSource, /\bfetch\s*\(/);
+assert.match(controllerSource, /api\.request\("banking"/);
+assert.match(controllerSource, /payload:\s*\{[\s\S]*cursor/);
+assert.match(controllerSource, /state\.data\.banking = banking/);
+
+const serialized = JSON.stringify({ data, ledgerRoute, nextPageRoute, merged });
+assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized), false);
+
+console.log("Banking read model passed: connected pagination, all balances, freshness, empty state, and UUID privacy are valid.");

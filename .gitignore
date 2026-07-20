@@ -16,3 +16,6 @@ admin-browser-smoke-artifacts/
 playwright-report/
 test-results/
 coverage/
+artifacts/supply-chain/
+
+.seed-audit/

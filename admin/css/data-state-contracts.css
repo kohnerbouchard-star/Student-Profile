@@ -1,0 +1,86 @@
+/* Explicit Admin data-state contracts. Accepted v606 geometry remains authoritative. */
+
+.admin-data-state-panel {
+  position: fixed;
+  top: 86px;
+  right: 22px;
+  z-index: 905;
+  display: grid;
+  gap: 5px;
+  width: min(390px, calc(100vw - 44px));
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1px solid rgba(116, 226, 255, 0.3);
+  background: rgba(3, 17, 31, 0.96);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34);
+  color: rgba(226, 249, 255, 0.9);
+  font-family: var(--admin-terminal-font-ui, ui-monospace, monospace);
+  pointer-events: none;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.admin-data-state-panel[hidden] {
+  display: none !important;
+}
+
+.admin-data-state-panel strong,
+.admin-data-state-panel span {
+  display: block;
+}
+
+.admin-data-state-panel strong {
+  color: #f4fcff;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.admin-data-state-panel span {
+  color: rgba(194, 224, 233, 0.84);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.admin-data-state-panel[data-state="stale"] {
+  border-color: rgba(255, 195, 78, 0.48);
+  background: rgba(37, 27, 7, 0.96);
+}
+
+.admin-data-state-panel[data-state="stale"] strong {
+  color: #ffd27a;
+}
+
+.admin-data-state-panel[data-state="empty"] {
+  border-color: rgba(116, 226, 255, 0.3);
+}
+
+.admin-data-state-panel[data-state="empty"] strong {
+  color: #9eefff;
+}
+
+.admin-data-state-panel[data-state="failed"] {
+  border-color: rgba(255, 112, 112, 0.52);
+  background: rgba(42, 10, 15, 0.97);
+}
+
+.admin-data-state-panel[data-state="failed"] strong {
+  color: #ffaaaa;
+}
+
+.admin-terminal-shell-main[data-admin-data-state="refreshing"] {
+  --admin-data-state-active: 1;
+}
+
+.admin-terminal-shell-main[data-admin-data-state="stale"] .admin-shape-refresh-indicator {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .admin-data-state-panel {
+    top: 72px;
+    right: 12px;
+    width: min(360px, calc(100vw - 24px));
+  }
+}

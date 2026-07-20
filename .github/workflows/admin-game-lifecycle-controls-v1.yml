@@ -1,0 +1,116 @@
+name: Admin Game Lifecycle Controls
+
+on:
+  pull_request:
+    paths:
+      - "admin/css/game-lifecycle-controls.css"
+      - "admin/game-lifecycle-controls.js"
+      - "admin/index.html"
+      - "backend/package.json"
+      - "backend/src/domains/games/tests/gameLifecycleMigrationContract.test.ts"
+      - "backend/supabase/functions/admin-api/accountOperations.ts"
+      - "backend/supabase/functions/admin-api/accountOperations.test.ts"
+      - "backend/supabase/functions/admin-api/gameLifecycleOperations.ts"
+      - "backend/supabase/functions/admin-api/gameLifecycleOperations.test.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql"
+      - "scripts/admin-game-lifecycle-contract.mjs"
+      - "scripts/admin-game-lifecycle-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/admin-game-lifecycle-controls-v1.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "admin/css/game-lifecycle-controls.css"
+      - "admin/game-lifecycle-controls.js"
+      - "admin/index.html"
+      - "backend/package.json"
+      - "backend/src/domains/games/tests/gameLifecycleMigrationContract.test.ts"
+      - "backend/supabase/functions/admin-api/accountOperations.ts"
+      - "backend/supabase/functions/admin-api/accountOperations.test.ts"
+      - "backend/supabase/functions/admin-api/gameLifecycleOperations.ts"
+      - "backend/supabase/functions/admin-api/gameLifecycleOperations.test.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql"
+      - "scripts/admin-game-lifecycle-contract.mjs"
+      - "scripts/admin-game-lifecycle-smoke.mjs"
+      - "package.json"
+      - ".github/workflows/admin-game-lifecycle-controls-v1.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-game-lifecycle-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Validate lifecycle source boundary
+        run: npm run test:admin-game-lifecycle
+
+      - name: Validate lifecycle database and Admin API contracts
+        run: npm --prefix backend run test:game-lifecycle
+
+      - name: Typecheck Admin edge integration
+        run: npm --prefix backend run typecheck:admin-edge
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start static preview
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-game-lifecycle-server.log 2>&1 &
+          echo $! > /tmp/admin-game-lifecycle-server.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/admin/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-game-lifecycle-server.log
+          false
+
+      - name: Exercise lifecycle controls at all accepted widths
+        env:
+          ADMIN_SMOKE_ARTIFACT_DIR: admin-browser-smoke-artifacts/game-lifecycle
+        run: node scripts/admin-game-lifecycle-smoke.mjs
+
+      - name: Upload lifecycle diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-game-lifecycle-${{ github.sha }}
+          path: |
+            admin-browser-smoke-artifacts/game-lifecycle/
+            /tmp/admin-game-lifecycle-server.log
+          if-no-files-found: warn
+          retention-days: 14

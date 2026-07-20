@@ -15,92 +15,221 @@
     '[tabindex]:not([tabindex="-1"])',
   ].join(",");
 
-  let activeController = null;
+  const controllerStack = [];
 
   function visible(element) {
     if (!(element instanceof HTMLElement) || element.hidden) return false;
     if (element.getAttribute("aria-hidden") === "true") return false;
+    if (element.closest("[hidden], [inert], [aria-hidden='true']")) return false;
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
   }
 
+  function enabled(element) {
+    if (!(element instanceof HTMLElement)) return false;
+    if (("disabled" in element && element.disabled === true) || element.getAttribute("aria-disabled") === "true") return false;
+    return true;
+  }
+
   function focusableElements(dialog) {
     if (!(dialog instanceof HTMLElement)) return [];
     return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) => {
-      return visible(element) && element.tabIndex >= 0;
+      return visible(element) && enabled(element) && element.tabIndex >= 0;
     });
   }
 
+  function semanticFocusReplacement(preferred) {
+    if (!(preferred instanceof HTMLElement)) return null;
+    const selectors = [];
+    const action = preferred.getAttribute("data-admin-terminal-action");
+    const section = preferred.getAttribute("data-admin-section");
+    const playerId = preferred.getAttribute("data-player-id");
+    if (action && playerId) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"][data-player-id="${CSS.escape(playerId)}"]`);
+    if (action) selectors.push(`[data-admin-terminal-action="${CSS.escape(action)}"]`);
+    if (section) selectors.push(`[data-admin-section="${CSS.escape(section)}"]`);
+    if (preferred.id) selectors.push(`#${CSS.escape(preferred.id)}`);
+    for (const selector of selectors) {
+      const candidate = [...document.querySelectorAll(selector)].find((element) => {
+        return element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element);
+      });
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
   function stableFocusTarget(preferred) {
-    if (preferred instanceof HTMLElement && preferred.isConnected && visible(preferred)) return preferred;
+    if (preferred instanceof HTMLElement && preferred.isConnected && visible(preferred) && enabled(preferred)) return preferred;
+    const replacement = semanticFocusReplacement(preferred);
+    if (replacement) return replacement;
     return [
-      document.querySelector('[data-admin-terminal-action="add-player"]'),
       document.querySelector('[data-admin-section][aria-current="page"]'),
+      document.querySelector('[data-admin-section][aria-selected="true"]'),
       document.querySelector('[data-admin-section].active, [data-admin-section].is-active'),
+      document.querySelector('[data-admin-section]'),
+      document.querySelector('[data-admin-terminal-action="add-player"]'),
+      document.querySelector(".admin-terminal-shell-main"),
       document.querySelector("#adminPreview"),
-    ].find((element) => element instanceof HTMLElement && element.isConnected && visible(element)) || null;
+    ].find((element) => element instanceof HTMLElement && element.isConnected && visible(element) && enabled(element)) || null;
+  }
+
+  function focusStableTarget(target) {
+    if (!(target instanceof HTMLElement) || !target.isConnected || !enabled(target)) return;
+    const isAdminRoot = target.id === "adminPreview" || target.classList.contains("admin-terminal-shell-main");
+    if (!isAdminRoot && !visible(target)) return;
+    if (target.tabIndex < 0 && !target.matches(FOCUSABLE_SELECTOR)) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+  }
+
+  function stackTop() {
+    return controllerStack[controllerStack.length - 1] || null;
+  }
+
+  function removeFromStack(controller) {
+    const index = controllerStack.lastIndexOf(controller);
+    if (index >= 0) controllerStack.splice(index, 1);
   }
 
   function activate(options = {}) {
     const backdrop = options.backdrop;
     const dialog = options.dialog;
-    if (!(backdrop instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+    if (!(backdrop instanceof HTMLElement) || !(dialog instanceof HTMLElement) || !backdrop.isConnected || !dialog.isConnected) {
       throw new TypeError("Admin modal accessibility requires a connected backdrop and dialog.");
     }
+    if (!backdrop.contains(dialog)) {
+      throw new TypeError("Admin modal accessibility requires the dialog to be contained by its backdrop.");
+    }
 
-    activeController?.destroy?.({ restoreFocus: false });
+    const parentController = stackTop();
+    parentController?.suspend?.();
 
     const opener = stableFocusTarget(options.opener || document.activeElement);
     const dismissOnEscape = options.dismissOnEscape !== false;
     const dismissOnBackdrop = options.dismissOnBackdrop !== false;
+    const trapFocus = options.trapFocus !== false;
+    const applyDialogSemantics = options.applyDialogSemantics !== false;
     let closed = false;
+    let listening = false;
+    let redirectingFocus = false;
+    let lastFocusedInside = null;
 
-    function restoreFocus() {
-      const target = stableFocusTarget(opener);
-      if (!target) return;
-      window.requestAnimationFrame(() => target.focus({ preventScroll: true }));
+    if (applyDialogSemantics && !dialog.hasAttribute("role")) dialog.setAttribute("role", "dialog");
+    if (applyDialogSemantics && trapFocus && !dialog.hasAttribute("aria-modal")) dialog.setAttribute("aria-modal", "true");
+
+    function rememberInsideFocus() {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && dialog.contains(active) && visible(active) && enabled(active)) {
+        lastFocusedInside = active;
+      }
     }
 
-    function cleanup() {
+    function focusInside(preferred = null, direction = "first") {
+      if (closed || !backdrop.isConnected || !dialog.isConnected) return;
+      const controls = focusableElements(dialog);
+      const target = preferred instanceof HTMLElement && dialog.contains(preferred) && visible(preferred) && enabled(preferred)
+        ? preferred
+        : direction === "last"
+          ? controls[controls.length - 1] || dialog
+          : controls[0] || dialog;
+      if (target === dialog && !dialog.hasAttribute("tabindex")) dialog.tabIndex = -1;
+      redirectingFocus = true;
+      target.focus({ preventScroll: true });
+      redirectingFocus = false;
+      rememberInsideFocus();
+    }
+
+    function restoreFocus() {
+      window.requestAnimationFrame(() => {
+        const target = stableFocusTarget(opener) || document.querySelector("#adminPreview");
+        focusStableTarget(target);
+        window.requestAnimationFrame(() => {
+          const replacement = semanticFocusReplacement(opener);
+          if (replacement instanceof HTMLElement && document.activeElement !== replacement) {
+            focusStableTarget(replacement);
+          }
+        });
+      });
+    }
+
+    function addListeners() {
+      if (listening || closed) return;
+      listening = true;
+      document.addEventListener("keydown", onKeyDown, true);
+      document.addEventListener("focusin", onFocusIn, true);
+      backdrop.addEventListener("click", onBackdropClick, true);
+    }
+
+    function removeListeners() {
+      if (!listening) return;
+      listening = false;
       document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("focusin", onFocusIn, true);
       backdrop.removeEventListener("click", onBackdropClick, true);
-      if (activeController === controller) activeController = null;
+    }
+
+    function resume() {
+      if (closed || !backdrop.isConnected || !dialog.isConnected) return;
+      addListeners();
+      if (!trapFocus) return;
+      window.requestAnimationFrame(() => {
+        if (!closed && stackTop() === controller && !dialog.contains(document.activeElement)) {
+          focusInside(lastFocusedInside);
+        }
+      });
+    }
+
+    function suspend() {
+      rememberInsideFocus();
+      removeListeners();
+    }
+
+    function finish(reason, closeOptions = {}, removeBackdrop = true) {
+      if (closed) return;
+      closed = true;
+      removeListeners();
+      removeFromStack(controller);
+
+      if (typeof options.onClose === "function") options.onClose(reason);
+      else if (removeBackdrop) backdrop.remove();
+
+      const parent = stackTop();
+      parent?.resume?.();
+      if (closeOptions.restoreFocus !== false) restoreFocus();
+
+      backdrop.dispatchEvent(new CustomEvent("econovaria:admin-modal-closed", {
+        bubbles: true,
+        detail: { reason, stackDepth: controllerStack.length },
+      }));
     }
 
     function close(reason = "closed", closeOptions = {}) {
-      if (closed) return;
-      closed = true;
-      cleanup();
-      if (typeof options.onClose === "function") options.onClose(reason);
-      else backdrop.remove();
-      if (closeOptions.restoreFocus !== false) restoreFocus();
+      finish(reason, closeOptions, true);
     }
 
     function destroy(destroyOptions = {}) {
       if (closed) return;
-      closed = true;
-      cleanup();
-      if (destroyOptions.remove !== false) backdrop.remove();
-      if (destroyOptions.restoreFocus !== false) restoreFocus();
+      const removeBackdrop = destroyOptions.remove !== false;
+      finish("destroyed", destroyOptions, removeBackdrop);
     }
 
-    function keepFocusInside() {
-      const controls = focusableElements(dialog);
-      const target = controls[0] || dialog;
-      if (target === dialog && !dialog.hasAttribute("tabindex")) dialog.tabIndex = -1;
-      target.focus({ preventScroll: true });
+    function onFocusIn(event) {
+      if (!trapFocus || closed || stackTop() !== controller || redirectingFocus) return;
+      if (event.target instanceof Node && dialog.contains(event.target)) {
+        rememberInsideFocus();
+        return;
+      }
+      focusInside(lastFocusedInside);
     }
 
     function onKeyDown(event) {
-      if (!backdrop.isConnected || closed) return;
+      if (!backdrop.isConnected || closed || stackTop() !== controller) return;
 
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (dismissOnEscape) close("escape");
         else {
-          keepFocusInside();
+          focusInside(lastFocusedInside);
           backdrop.dispatchEvent(new CustomEvent("econovaria:admin-modal-dismiss-blocked", {
             bubbles: true,
             detail: { reason: "escape" },
@@ -110,11 +239,11 @@
       }
 
       const isTab = event.key === "Tab";
-      if (!isTab) return;
+      if (!trapFocus || !isTab) return;
       const controls = focusableElements(dialog);
       if (!controls.length) {
         event.preventDefault();
-        keepFocusInside();
+        focusInside();
         return;
       }
 
@@ -123,41 +252,56 @@
       const current = document.activeElement;
       if (!dialog.contains(current)) {
         event.preventDefault();
-        (event.shiftKey ? last : first).focus({ preventScroll: true });
+        focusInside(null, event.shiftKey ? "last" : "first");
         return;
       }
       if (!event.shiftKey && current === last) {
         event.preventDefault();
-        first.focus({ preventScroll: true });
+        focusInside(first);
       } else if (event.shiftKey && current === first) {
         event.preventDefault();
-        last.focus({ preventScroll: true });
+        focusInside(last);
       }
     }
 
     function onBackdropClick(event) {
-      if (event.target !== backdrop) return;
+      if (event.target !== backdrop || closed || stackTop() !== controller) return;
       if (dismissOnBackdrop) {
         close("backdrop");
         return;
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      keepFocusInside();
+      focusInside(lastFocusedInside);
+      backdrop.dispatchEvent(new CustomEvent("econovaria:admin-modal-dismiss-blocked", {
+        bubbles: true,
+        detail: { reason: "backdrop" },
+      }));
     }
 
-    const controller = Object.freeze({ close, destroy, focusFirst: keepFocusInside });
-    activeController = controller;
-    document.addEventListener("keydown", onKeyDown, true);
-    backdrop.addEventListener("click", onBackdropClick, true);
+    const controller = Object.freeze({
+      close,
+      destroy,
+      focusFirst: () => focusInside(),
+      resume,
+      suspend,
+      get dialog() { return dialog; },
+      get backdrop() { return backdrop; },
+      get closed() { return closed; },
+    });
 
-    const initial = options.initialFocus instanceof HTMLElement && dialog.contains(options.initialFocus)
+    controllerStack.push(controller);
+    addListeners();
+
+    const initial = options.initialFocus instanceof HTMLElement && dialog.contains(options.initialFocus) && visible(options.initialFocus) && enabled(options.initialFocus)
       ? options.initialFocus
       : focusableElements(dialog)[0] || dialog;
-    if (initial === dialog && !dialog.hasAttribute("tabindex")) dialog.tabIndex = -1;
-    window.requestAnimationFrame(() => {
-      if (!closed && backdrop.isConnected) initial.focus({ preventScroll: true });
-    });
+    window.requestAnimationFrame(() => focusInside(initial));
+
+    backdrop.dispatchEvent(new CustomEvent("econovaria:admin-modal-activated", {
+      bubbles: true,
+      detail: { stackDepth: controllerStack.length, trapFocus },
+    }));
 
     return controller;
   }
@@ -165,5 +309,7 @@
   window.EconovariaAdminModalAccessibility = Object.freeze({
     activate,
     focusableElements,
+    getActiveController: stackTop,
+    getStackDepth: () => controllerStack.length,
   });
 })();

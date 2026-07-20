@@ -164,6 +164,9 @@ const errors = [];
 let phase = "initializing";
 
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
+page.on("console", (message) => {
+  if (message.type() === "error") errors.push(`console: ${message.text()}`);
+});
 page.on("requestfailed", (request) => {
   const url = request.url();
   const failure = request.failure()?.errorText || "";
@@ -179,6 +182,12 @@ await page.addInitScript(({ token, gameId, adminId }) => {
     user: { id: adminId, email: "admin@example.test" },
   }));
   sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+  window.__adminKeyboardPointerEvents = [];
+  for (const type of ["pointerdown", "mousedown", "touchstart"]) {
+    window.addEventListener(type, (event) => {
+      window.__adminKeyboardPointerEvents.push({ type: event.type, target: event.target?.tagName || "" });
+    }, true);
+  }
 }, { token: accessToken, gameId: GAME_ID, adminId: ADMIN_ID });
 
 await page.route("**/functions/v1/admin-api/**", async (route) => {
@@ -217,16 +226,24 @@ async function saveDiagnostics(name, extra = {}) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/${name}.png`, fullPage: true });
 }
 
+async function keyboardActivate(locator, key = "Enter") {
+  await locator.waitFor({ state: "visible", timeout: 8000 });
+  await locator.focus();
+  assert(await locator.evaluate((node) => document.activeElement === node), `Keyboard target did not receive focus: ${await locator.textContent()}`);
+  await page.keyboard.press(key);
+}
+
 try {
   phase = "opening admin shell";
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
 
   phase = "opening Players section";
-  await page.locator('[data-admin-section="Players"]').first().click();
-  const playerEntry = page.getByText(player.displayName, { exact: true }).first();
-  await playerEntry.waitFor({ state: "visible", timeout: 8000 });
-  await playerEntry.click();
+  await keyboardActivate(page.locator('[data-admin-section="Players"]').first(), "Enter");
+  const playerToggle = page.locator(
+    `[data-admin-terminal-action="select-player-panel"][data-player-id="${PLAYER_ID}"]`,
+  ).first();
+  await keyboardActivate(playerToggle, "Enter");
 
   phase = "verifying original drawer shell";
   const drawer = page.locator("[data-admin-terminal-player-drawer]").first();
@@ -238,20 +255,32 @@ try {
   assert(JSON.stringify(labels.map((value) => value.trim())) === JSON.stringify(TAB_LABELS), `Player drawer tabs drifted: ${JSON.stringify(labels)}.`);
   assert(!(await drawer.textContent()).includes(PLAYER_ID), "Player drawer exposed the backend UUID.");
 
-  for (const key of TAB_KEYS) {
+  const firstTab = drawer.locator('[data-player-drawer-tab="overview"]');
+  await firstTab.focus();
+  assert(await firstTab.evaluate((node) => document.activeElement === node), "Overview drawer tab did not receive focus.");
+
+  for (let index = 0; index < TAB_KEYS.length; index += 1) {
+    const key = TAB_KEYS[index];
     phase = `opening ${key} drawer tab`;
     const button = drawer.locator(`[data-player-drawer-tab="${key}"]`);
-    await button.click();
+    assert(await button.evaluate((node) => document.activeElement === node), `${key} tab was not focused.`);
+    assert(await button.getAttribute("aria-selected") === "true", `${key} tab was not selected.`);
     const panel = drawer.locator(`[data-player-drawer-panel="${key}"]`);
     await panel.waitFor({ state: "visible", timeout: 5000 });
-    assert(await button.getAttribute("aria-selected") === "true", `${key} tab was not selected.`);
     assert(await drawer.locator("[data-player-drawer-panel]:visible").count() === 1, `${key} tab left multiple panels visible.`);
+    if (index < TAB_KEYS.length - 1) await page.keyboard.press("ArrowRight");
   }
 
+  const keyboardEvidence = await page.evaluate(() => ({
+    modality: document.documentElement.getAttribute("data-admin-input-modality"),
+    pointerEvents: window.__adminKeyboardPointerEvents || [],
+  }));
+  assert(keyboardEvidence.modality === "keyboard", "Player drawer lost keyboard modality.");
+  assert(keyboardEvidence.pointerEvents.length === 0, `Player drawer emitted pointer input: ${JSON.stringify(keyboardEvidence.pointerEvents)}.`);
   assert(errors.length === 0, errors[0] || "Unexpected browser error.");
   phase = "passed";
-  await saveDiagnostics("admin-player-drawer-v606", { tabs: labels });
-  console.log("Authoritative player data renders inside the original v606 six-tab drawer.");
+  await saveDiagnostics("admin-player-drawer-v606", { tabs: labels, keyboardEvidence });
+  console.log("Authoritative player data renders and all six drawer tabs operate by keyboard.");
 } catch (error) {
   await saveDiagnostics("admin-player-drawer-v606-failure", {
     failure: error.stack || error.message || String(error),

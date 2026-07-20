@@ -17,10 +17,23 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-modal-accessibility-source-smoke.mjs"
+      - "scripts/admin-modal-accessibility-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-source-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-keyboard-workflows-smoke.mjs"
+      - "scripts/admin-keyboard-focus-order-smoke.mjs"
+      - "scripts/admin-inventory-redemption-queue-contract.mjs"
+      - "scripts/admin-inventory-redemption-queue-ui-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-loading-scope-contract.mjs"
+      - "scripts/admin-data-state-contracts-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -55,10 +68,23 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-browser-smoke.mjs"
+      - "scripts/admin-modal-accessibility-source-smoke.mjs"
+      - "scripts/admin-modal-accessibility-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-smoke.mjs"
+      - "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-source-smoke.mjs"
+      - "scripts/admin-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-mounted-keyboard-navigation-smoke.mjs"
+      - "scripts/admin-keyboard-workflows-smoke.mjs"
+      - "scripts/admin-keyboard-focus-order-smoke.mjs"
+      - "scripts/admin-inventory-redemption-queue-contract.mjs"
+      - "scripts/admin-inventory-redemption-queue-ui-smoke.mjs"
       - "scripts/admin-stabilization-smoke.mjs"
       - "scripts/admin-quality-smoke-fixture.mjs"
       - "scripts/admin-contract-validation-smoke.mjs"
       - "scripts/admin-loading-scanner-smoke.mjs"
+      - "scripts/admin-loading-scope-contract.mjs"
+      - "scripts/admin-data-state-contracts-smoke.mjs"
       - "scripts/admin-attendance-reward-settings-smoke.mjs"
       - "scripts/admin-settings-disclosure-smoke.mjs"
       - "scripts/admin-account-surfaces-smoke.mjs"
@@ -85,10 +111,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -105,6 +131,9 @@ jobs:
       - name: Validate admin shell source contracts
         run: node scripts/admin-shell-smoke.mjs
 
+      - name: Audit Admin loading scope and quick actions
+        run: node scripts/admin-loading-scope-contract.mjs
+
       - name: Validate accepted v606 drift boundaries
         run: node scripts/admin-v606-full-drift-audit.mjs
 
@@ -120,9 +149,18 @@ jobs:
       - name: Validate player access code issuance
         run: node scripts/admin-player-access-code-smoke.mjs
 
+      - name: Validate inventory redemption queue contracts
+        run: node scripts/admin-inventory-redemption-queue-contract.mjs
+
+      - name: Validate Admin modal accessibility contracts
+        run: node scripts/admin-modal-accessibility-source-smoke.mjs
+
       - name: Install browser smoke runtime
         run: |
           npx playwright install --with-deps chromium
+
+      - name: Exercise Admin keyboard navigation
+        run: node scripts/admin-keyboard-navigation-smoke.mjs
 
       - name: Start static preview
         run: |
@@ -136,6 +174,30 @@ jobs:
           done
           cat /tmp/admin-smoke-server.log
           false
+
+      - name: Exercise Admin data-state contracts
+        run: node scripts/admin-data-state-contracts-smoke.mjs
+
+      - name: Exercise nested Admin modal accessibility
+        run: node scripts/admin-modal-accessibility-smoke.mjs
+
+      - name: Audit mounted Admin operational modal focus
+        run: node scripts/admin-mounted-modal-focus-reconciled-smoke.mjs
+
+      - name: Exercise inventory redemption review queue
+        run: |
+          mkdir -p admin-browser-smoke-artifacts/redemptions
+          set -o pipefail
+          node scripts/admin-inventory-redemption-queue-ui-smoke.mjs 2>&1 | tee admin-browser-smoke-artifacts/redemptions/run.log
+
+      - name: Audit mounted keyboard-only Admin navigation
+        run: node scripts/admin-mounted-keyboard-navigation-smoke.mjs
+
+      - name: Exercise keyboard-only Admin create and scanner workflows
+        run: node scripts/admin-keyboard-workflows-smoke.mjs
+
+      - name: Prove page focus order and in-flight keyboard exclusion
+        run: node scripts/admin-keyboard-focus-order-smoke.mjs
 
       - name: Exercise player identity login
         run: node scripts/player-login-identity-smoke.mjs

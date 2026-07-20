@@ -1,0 +1,122 @@
+name: Required Game Market Timezone
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - backend/**
+      - frontend/**
+      - index.html
+      - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/fix-required-timezone-rpc-fixture-v1.mjs
+      - scripts/apply-shared-game-timezone-ui-v1.mjs
+      - scripts/fix-shared-game-timezone-smoke-v1.mjs
+      - scripts/enforce-single-game-timezone-source-v1.mjs
+      - scripts/fix-timezone-migration-preflight-v1.mjs
+      - scripts/shared-game-timezone-ui-smoke.mjs
+      - .github/workflows/configurable-stock-market-timezone-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: required-game-market-timezone-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out evaluated ref
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply and validate required timezone integration
+        id: validation
+        shell: bash
+        run: |
+          set +e
+          LOG="/tmp/required-game-market-timezone.log"
+          PATCH="/tmp/required-game-market-timezone.patch"
+          : > "$LOG"
+          STATUS=0
+
+          run_step() {
+            NAME="$1"
+            shift
+            printf '\n## %s\n' "$NAME" | tee -a "$LOG"
+            "$@" 2>&1 | tee -a "$LOG"
+            CODE=${PIPESTATUS[0]}
+            printf 'exit=%s\n' "$CODE" | tee -a "$LOG"
+            if [ "$CODE" -ne 0 ] && [ "$STATUS" -eq 0 ]; then STATUS="$CODE"; fi
+          }
+
+          run_step "apply calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "apply RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          run_step "apply Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
+          run_step "fix Create Game smoke" node scripts/fix-shared-game-timezone-smoke-v1.mjs
+          run_step "enforce one timezone source" node scripts/enforce-single-game-timezone-source-v1.mjs
+          run_step "fix migration preflight syntax" node scripts/fix-timezone-migration-preflight-v1.mjs
+          run_step "generated integration drift" git diff --exit-code
+          run_step "calendar tests" npm --prefix backend run test:stock-market-calendar
+          run_step "staff signup timezone tests" env SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=smoke-anon-key SUPABASE_SERVICE_ROLE_KEY=smoke-service-role-key deno test --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/auth/api/staffSignupHttpHandlerTest.ts
+          run_step "Create Game timezone smoke" node scripts/shared-game-timezone-ui-smoke.mjs
+          run_step "backend typecheck" npm --prefix backend run typecheck:all
+
+          git diff --binary > /tmp/timezone-before-replay.patch
+          run_step "replay calendar integration" node scripts/apply-configurable-stock-market-timezone-v1.mjs
+          run_step "replay RPC fixture" node scripts/fix-required-timezone-rpc-fixture-v1.mjs
+          run_step "replay Create Game integration" node scripts/apply-shared-game-timezone-ui-v1.mjs
+          run_step "replay Create Game smoke fix" node scripts/fix-shared-game-timezone-smoke-v1.mjs
+          run_step "replay one timezone source" node scripts/enforce-single-game-timezone-source-v1.mjs
+          run_step "replay migration preflight fix" node scripts/fix-timezone-migration-preflight-v1.mjs
+          git diff --binary > /tmp/timezone-after-replay.patch
+          run_step "combined integration idempotency" cmp /tmp/timezone-before-replay.patch /tmp/timezone-after-replay.patch
+          run_step "whitespace" git diff --check
+
+          git diff --binary > "$PATCH"
+          printf '\nfinalStatus=%s\n' "$STATUS" | tee -a "$LOG"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: required-game-market-timezone-diagnostics
+          path: |
+            /tmp/required-game-market-timezone.log
+            /tmp/required-game-market-timezone.patch
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce validation result
+        shell: bash
+        run: |
+          STATUS="${{ steps.validation.outputs.status }}"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "Required game market timezone validation failed."
+            false
+          fi

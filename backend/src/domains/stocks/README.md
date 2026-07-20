@@ -330,3 +330,27 @@ Future API handlers, persistence, scheduled tick orchestration, trading,
 analyst features, admin controls, and audit logs should call the
 pure engine rather than moving calculation logic into routes, Supabase
 functions, or frontend code.
+
+## V8 Exchange Calendar Runtime
+
+V8 introduces a Backend-authoritative market-session boundary for the one-year,
+real-time game. The initial runtime profile intentionally preserves the legacy
+classroom schedule: Asia/Seoul, Monday through Friday, 08:00 inclusive to 17:00
+exclusive. The calendar contract supports ten stable fictional exchange codes,
+versioned holiday dates, and early-close overrides; holiday records remain
+fail-closed until approved.
+
+The stock runner rejects closed-session ticks before loading or persisting market
+state. The trading repository calls the calendar-gated service-role RPC, which
+rejects immediate fills while the market is closed. The Player dashboard derives
+market status from the same server-side calendar service instead of equating an
+active game with an open market.
+
+Closed sessions keep the last authoritative price. Market news and non-exchange
+game systems may continue, but regular-session price ticks and immediate trade
+fills do not. The minute key helper provides an exchange-scoped UTC idempotency
+key for later missed-open-minute replay.
+
+## Required Game Timezone
+
+Every game must store one valid IANA timezone at `game_settings.stock_market_window.timezone`. The same timezone governs every Econovaria exchange. Browser and device timezones are prohibited. Existing games receive a one-time `Asia/Seoul` migration value; after migration there is no runtime fallback. Missing or invalid settings fail closed at the request, database, runner, dashboard, and order-execution boundaries.

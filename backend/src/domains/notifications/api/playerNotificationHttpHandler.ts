@@ -130,6 +130,9 @@ export async function handlePlayerNotificationRequest(
             ? encodePlayerNotificationCursor(result.nextCursor)
             : null,
         },
+        summary: {
+          unreadCount: result.unreadCount,
+        },
         items: result.items,
         emptyState: result.items.length === 0
           ? { reason: "notifications_empty" }
