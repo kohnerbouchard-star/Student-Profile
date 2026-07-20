@@ -53,7 +53,9 @@ function assertOrdered(source: string, fragments: readonly string[]): void {
   for (const fragment of fragments) {
     const index = source.indexOf(fragment);
     if (index < 0) throw new Error(`Missing source fragment: ${fragment}`);
-    if (index <= previous) throw new Error(`Source fragment is out of order: ${fragment}`);
+    if (index <= previous) {
+      throw new Error(`Source fragment is out of order: ${fragment}`);
+    }
     previous = index;
   }
 }
