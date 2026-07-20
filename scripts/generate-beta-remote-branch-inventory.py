@@ -73,9 +73,9 @@ rows.sort(key=lambda row: (0 if row[0] in OPEN_PR else 1 if row[0] in ASSIGNED e
 out = [
     "# Econovaria Remote Branch Divergence Inventory",
     "",
-    "**Generated from:** complete `refs/remotes/origin/*` after `git fetch origin --prune`  ",
-    f"**Audited main:** `{main}`  ",
-    "**Date:** 2026-07-20  ",
+    "**Generated from:** complete `refs/remotes/origin/*` after `git fetch origin --prune`",
+    f"**Audited main:** `{main}`",
+    "**Date:** 2026-07-20",
     "**Authority:** Chat 1 beta program controller",
     "",
     "This inventory is branch evidence, not capability completion evidence. An unmerged or branch-only ref is non-authoritative unless the beta coordination matrix assigns it and an active pull request establishes the bounded capability scope.",
