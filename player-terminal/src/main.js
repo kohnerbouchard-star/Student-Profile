@@ -10,6 +10,7 @@ import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
 import { installPlayerInvalidationController } from "./realtime/player-invalidation-controller.js";
+import { installPlayerRecoveryController } from "./recovery/player-recovery-controller.js";
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
 
 const mount = document.getElementById("playerTerminal");
@@ -27,6 +28,7 @@ const sessionSafeExit = installPlayerSessionSafeExit({
   config,
   mount,
 });
+const recovery = installPlayerRecoveryController({ terminal, config, mount });
 const logout = installPlayerLogoutController({ terminal, config, mount });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
@@ -35,6 +37,7 @@ const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
+  recovery.destroy();
   logout.destroy();
   sessionSafeExit.destroy();
   invalidations.destroy();
