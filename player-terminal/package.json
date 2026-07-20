@@ -26,7 +26,7 @@
     "notifications-inbox": "node tests/notification-inbox-flow.mjs",
     "realtime": "node tests/realtime-freshness.mjs",
     "session-timeout": "node tests/session-timeout-safe-exit.mjs",
-    "recovery": "node tests/player-recovery-states.mjs",
+    "recovery": "node tests/player-recovery-states.mjs && node tests/player-recovery-contracts.mjs",
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
