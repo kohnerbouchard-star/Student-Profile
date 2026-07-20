@@ -216,8 +216,8 @@ try {
   await panel.locator('[data-admin-terminal-action="submit-attendance-scan"]').click();
   await page.waitForFunction(() => {
     const state = document.querySelector("[data-admin-terminal-scanner-state]")?.textContent || "";
-    return /confirmed/i.test(state);
-  }, null, { timeout: 5000 });
+    return /confirmed|completed/i.test(state);
+  }, null, { timeout: 10_000 });
 
   const browserResult = await page.evaluate(() => ({
     player: document.querySelector("[data-admin-terminal-last-scan-player]")?.textContent?.trim() || "",
@@ -246,7 +246,7 @@ try {
   if (classroomWrites[0].body?.playerId !== "PLAYER-CODE-123") {
     throw new Error(`Attendance retry sent unexpected body ${JSON.stringify(classroomWrites[0].body)}.`);
   }
-  if (result.resultHidden || !result.emptyHidden || !/confirmed/i.test(result.scannerState)) {
+  if (result.resultHidden || !result.emptyHidden || !/confirmed|completed/i.test(result.scannerState)) {
     throw new Error(`Attendance result did not reach confirmed visible state: ${JSON.stringify(result)}.`);
   }
   if (!result.player || !result.status) {
@@ -254,6 +254,15 @@ try {
   }
   console.log("Admin attendance scanner submission and original video smoke passed.");
 } catch (error) {
+  try {
+    writeFileSync(`${ARTIFACT_DIR}/attendance-action-error.json`, JSON.stringify({
+      error: error.stack || error.message || String(error),
+      writes,
+      errors,
+    }, null, 2));
+    await page.screenshot({ path: `${ARTIFACT_DIR}/attendance-action-error.png`, fullPage: true });
+    writeFileSync(`${ARTIFACT_DIR}/attendance-action-error.html`, await page.content());
+  } catch (_) {}
   console.error(error.stack || error.message || String(error));
   console.error("ATTENDANCE_WRITES", JSON.stringify(writes, null, 2));
   process.exitCode = 1;

@@ -4,12 +4,20 @@ on:
   pull_request:
     paths:
       - "player-terminal/**"
+      - "frontend/src/core/runtime-config.js"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/environment-neutral-browser-integration.test.mjs"
       - ".github/workflows/player-terminal-verify.yml"
   push:
     branches:
       - main
     paths:
       - "player-terminal/**"
+      - "frontend/src/core/runtime-config.js"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/environment-neutral-browser-integration.test.mjs"
       - ".github/workflows/player-terminal-verify.yml"
 
 permissions:
@@ -43,13 +51,29 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
+              $0 == ".github/workflows/environment-neutral-browser.yml" { next }
+              $0 == ".github/workflows/admin-shell-smoke.yml" { next }
+              $0 == ".github/workflows/admin-game-lifecycle-controls-v1.yml" { next }
+              $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
+              $0 == "admin/index.html" { next }
+              $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
+              $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
+              $0 == "frontend/src/core/runtime-config.js" { next }
+              $0 == "scripts/admin-attendance-action-smoke.mjs" { next }
+              $0 == "scripts/admin-classroom-identity-fallback-smoke.mjs" { next }
+              $0 == "scripts/admin-player-access-code-smoke.mjs" { next }
+              $0 == "scripts/admin-session-manager-smoke.mjs" { next }
+              $0 == "scripts/admin-shell-identity-smoke.mjs" { next }
+              $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
+              $0 == "scripts/environment-neutral-browser-integration.test.mjs" { next }
+              $0 == "scripts/runtime-config-contract.test.mjs" { next }
               $0 ~ /^(\.github\/workflows\/(database-replay|player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
               $0 == "backend/package.json" { next }
               $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/game-dashboard\/(api\/playerGameDashboardHttpHandler([.]test)?[.]ts|contracts\/playerGameDashboardContracts[.]ts)$/ { next }
               $0 ~ /^backend\/src\/domains\/economy\/api\/playerBankingPublic[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/economy\/contracts\/playerBankingPublicContracts[.]ts$/ { next }
+              $0 == "backend/src/domains/economy/contracts/playerBankingPublicContracts.ts" { next }
               $0 ~ /^backend\/src\/domains\/economy\/infrastructure\/supabasePlayerBankingPublicRepository([.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }
@@ -59,8 +83,8 @@ jobs:
               $0 ~ /^backend\/src\/domains\/stocks\/api\/playerStockMarket[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 == "backend/src/domains/stocks/contracts/stockMarketTradingContracts.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/api\/playerStorePublic[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/store\/contracts\/playerStorePublicContracts[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/store\/infrastructure\/supabasePlayerStorePublicRepository[.]ts$/ { next }
+              $0 == "backend/src/domains/store/contracts/playerStorePublicContracts.ts" { next }
+              $0 == "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
@@ -112,6 +136,22 @@ jobs:
         if: success()
         working-directory: player-terminal
         run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser-only runtime fixture
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p player-terminal/frontend/src/core
+          cp frontend/src/core/runtime-config.js player-terminal/frontend/src/core/runtime-config.js
+          cat > player-terminal/runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
 
       - name: Run Chromium browser verification
         if: success()

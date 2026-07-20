@@ -1,0 +1,53 @@
+name: Environment Neutral Browser
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "frontend/**"
+      - "auth/**"
+      - "admin/**"
+      - "player-terminal/**"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/environment-neutral-browser-integration.test.mjs"
+      - ".github/workflows/environment-neutral-browser.yml"
+  push:
+    branches:
+      - agent/environment-neutral-frontend-v1
+    paths:
+      - "index.html"
+      - "frontend/**"
+      - "auth/**"
+      - "admin/**"
+      - "player-terminal/**"
+      - "docs/operations/environments/runtime-config.env.template.js"
+      - "scripts/runtime-config-contract.test.mjs"
+      - "scripts/environment-neutral-browser-integration.test.mjs"
+      - ".github/workflows/environment-neutral-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-config-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+      - name: Validate runtime configuration contracts
+        run: node --test scripts/runtime-config-contract.test.mjs scripts/environment-neutral-browser-integration.test.mjs
+      - name: Validate browser consumer syntax
+        run: |
+          node --check frontend/src/core/runtime-config.js
+          node --check frontend/src/core/constants.js
+          node --check auth/reset-password.js
+          node --check admin/auth-session-manager.js
+          node --check player-terminal/host-runtime.js
+          node --check admin/player-access-code-bridge.js
+          node --check admin/admin-auth.js
+          node --check admin/classroom-write-fallback.js
