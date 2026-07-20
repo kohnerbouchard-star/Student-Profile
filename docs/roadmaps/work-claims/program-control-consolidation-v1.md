@@ -3,6 +3,7 @@
 **Status:** `IN_PROGRESS`  
 **Started:** 2026-07-20  
 **Branch:** `chore/program-control-consolidation-v1`  
+**Pull request:** #251  
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`
 
 ## Owned roadmap scope
@@ -13,11 +14,11 @@
 
 ## Current collision found
 
-PRs #245 and #246 both claim `BETA-MKT-003` through `BETA-MKT-007`. The substantive implementation branch will be preserved; the duplicate claim will be retired only after its useful source-snapshot role is accounted for.
+PRs #245 and #246 both claim `BETA-MKT-003` through `BETA-MKT-007`. PR #245 contains the substantive market contract implementation and remains the surviving authority. PR #246 contains only a temporary source-snapshot workflow and ownership marker; its useful audit artifact has been consumed and it is the duplicate to retire.
 
 ## Collision boundary
 
-This branch does not implement market, story, seed-content, Player, Admin, or staging capabilities. PR #163 remains the sole seed-content authority, PR #244 remains the story-delivery authority, and the surviving market PR retains exclusive market ownership.
+This branch does not implement market, story, seed-content, Player, Admin, or staging capabilities. PR #163 remains the sole seed-content authority, PR #244 remains the story-delivery authority, and PR #245 retains exclusive market ownership.
 
 ## Completion gate
 
