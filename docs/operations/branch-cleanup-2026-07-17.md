@@ -86,6 +86,7 @@ Duplicate and donor disposition is complete:
 - PR #246 was labeled `duplicate`, closed after its source-snapshot artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100. PR #245 remains the sole market-order and Portfolio authority.
 - PR #253 duplicated the Player recovery tranche already owned by earlier PR #247. It was labeled `duplicate` and closed; `feat/player-recovery-states-v1` no longer exists. Its useful lifecycle, safe-copy, source-integration, and contract-test ideas were explicitly dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
 - PR #255 was an aborted premature roadmap seal. It was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists.
+- PR #260 duplicated the incident-readiness roadmap verification already owned by earlier PR #259. Its unique completed-amendment evidence was transplanted into PR #259, it was labeled `duplicate` and closed, and `docs/incident-readiness-verification-v1` no longer exists.
 - The merged PR #251 branch was deleted automatically.
 
 The final active capability authorities at the audit boundary are:
@@ -94,7 +95,8 @@ The final active capability authorities at the audit boundary are:
 - PR #244 — Player story-notification delivery;
 - PR #245 — Player market orders and Portfolio;
 - PR #248 — Messaging and communication;
-- PR #249 — Player Marketplace lifecycle.
+- PR #249 — Player Marketplace lifecycle;
+- PR #261 — Progression, reputation, and achievements.
 
 Recently completed parallel tranches are merged rather than active authorities: Player recovery PR #247, supply-chain PRs #250/#258, incident-readiness PR #252, and Dashboard/Profile PRs #254/#257. Branch-only work without an open pull request is not authoritative and must not be treated as a capability claim.
 

@@ -102,6 +102,7 @@ The first beta must prove this loop end to end with authoritative persistence.
 | Player market orders and Portfolio | `IN_PROGRESS` | PR #245, branch `agent/player-market-reconciliation-v1`; sole authority for `BETA-MKT-003` through `BETA-MKT-007` |
 | Messaging and communication | `IN_PROGRESS` | PR #248, branch `agent/messaging-communication-v1`; owns `EXP-MSG-001` through `EXP-MSG-007` |
 | Player Marketplace lifecycle | `IN_PROGRESS` | PR #249, branch `agent/player-marketplace-lifecycle-v1`; owns `EXP-MP-001` through `EXP-MP-009` |
+| Progression, reputation, and achievements | `IN_PROGRESS` | PR #261, branch `agent/progression-reputation-achievements-v1`; owns `EXP-PROG-001` through `EXP-PROG-008` |
 | Program-control consolidation | `VERIFIED_COMPLETE` | PR #251 merged as `89bfadfb0d609ef92081fda575f0e1e998b2650d`; all known duplicate claims are closed and their refs deleted |
 | Player Dashboard and Profile runtime | `VERIFIED_COMPLETE` at the repository-integrated boundary | PR #254 merged as `1156cf11cb9c4ecd9626779d3cab15fc40940315`; evidence PR #257 merged as `9918fb33c71d59f2247da8c2af7574076beecf62`; aggregate `BETA-PLAYER-008` remains open for Portfolio |
 | Player recovery states | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`; isolated-staging recovery evidence remains under `BETA-PLAYER-014` |
@@ -173,8 +174,8 @@ The first beta must prove this loop end to end with authoritative persistence.
 - PR #251 merged owner-safe branch retirement as `89bfadfb0d609ef92081fda575f0e1e998b2650d`; its final head passed Repository Quality #1084, Database Replay #345, Staging Readiness Preflight #99, and Admin Game Lifecycle Controls #33.
 - Market collision: PR #245 remains the sole authority for `BETA-MKT-003` through `BETA-MKT-007`. Duplicate PR #246 was labeled, closed after its source artifact was consumed, and `agent/player-market-portfolio-v1` was deleted by Branch Hygiene run #100.
 - Recovery collision: earlier PR #247 was preserved over replacement PR #253. PR #253 was labeled `duplicate`, closed, and `feat/player-recovery-states-v1` no longer exists; its useful donor ideas were dispositioned on PR #247 before PR #247 merged as `ad889a2bdf9d5587fff3275d70751c79992171c7`.
-- Premature seal PR #255 was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists. The merged PR #251 branch was retired automatically.
-- Current active capability ownership is unique: seed content #163, story delivery #244, market/Portfolio #245, Messaging #248, and Marketplace #249. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
+- Premature seal PR #255 was labeled `duplicate`, closed without merge, and `docs/program-control-phase0-seal-v1` no longer exists. Later incident-verification PR #260 overlapped this earlier roadmap seal; its unique amendment evidence was transplanted into PR #259, it was labeled `duplicate`, closed, and `docs/incident-readiness-verification-v1` no longer exists. The merged PR #251 branch was retired automatically.
+- Current active capability ownership is unique: seed content #163, story delivery #244, market/Portfolio #245, Messaging #248, Marketplace #249, and Progression #261. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active authorities.
 - Branch-only work without an open pull request is not authoritative. Future agents must search this roadmap and current open pull requests before creating a branch.
 
 ### 2026-07-20 software supply-chain security completion
@@ -711,7 +712,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 
 **Goal:** Ensure one authority exists for every capability and every completion claim.
 
-- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `ad889a2bdf9d5587fff3275d70751c79992171c7`; unique active capability authorities are PRs #163, #244, #245, #248, and #249.
+- [x] `P0-001` Re-audit current `main`, active PR ownership, branch divergence, and deployed-runtime evidence boundaries. Refreshed on 2026-07-20 through `main` `ad889a2bdf9d5587fff3275d70751c79992171c7`; unique active capability authorities are PRs #163, #244, #245, #248, #249, and #261.
 - [x] `P0-002` Update this roadmap audit metadata, active authority table, current status precision, and identified-item scoreboard. Refreshed in the 2026-07-20 comprehensive re-audit.
 - [x] `P0-003` Keep PR #158 as the only Backend reconciliation authority through merge. Completed: PR #158 merged as `d403cf7baefeb3c1015c282cdbd748d2050e87ac`; no replacement Backend reconciliation PR is active.
 - [x] `P0-004` Keep PR #163 as the current seed-content foundation branch. Verified: it remains the sole open seed-content authority and remains draft.
@@ -732,6 +733,7 @@ PR #163 defines immigrant openings, economic opportunity and pressure events, Me
 | Player market orders and Portfolio | PR #245 / `agent/player-market-reconciliation-v1` | `IN_PROGRESS` | Sole authority for `BETA-MKT-003` through `BETA-MKT-007`; do not create another market reconciliation branch. |
 | Messaging and communication | PR #248 / `agent/messaging-communication-v1` | `IN_PROGRESS` | Sole authority for `EXP-MSG-001` through `EXP-MSG-007`. |
 | Player Marketplace lifecycle | PR #249 / `agent/player-marketplace-lifecycle-v1` | `IN_PROGRESS` | Sole authority for `EXP-MP-001` through `EXP-MP-009`. |
+| Progression, reputation, and achievements | PR #261 / `agent/progression-reputation-achievements-v1` | `IN_PROGRESS` | Sole authority for `EXP-PROG-001` through `EXP-PROG-008`; does not own PR #163 seed definitions. |
 | Player recovery states | PR #247 / merge `ad889a2bdf9d5587fff3275d70751c79992171c7` | repository tranche `VERIFIED_COMPLETE`; connected evidence `IN_PROGRESS` | Do not reopen duplicate PR #253; connected recovery evidence remains governed by `BETA-PLAYER-014`. |
 | Incident readiness | PR #252 / merge `08b524e3230b6bbda79d9c0e2aa08e8cc9063fb4` | `VERIFIED_COMPLETE` | Preserve severity, ownership, classroom fallback, correction, evidence, and postmortem controls. |
 | Program-control consolidation | PR #251 / merge `89bfadfb0d609ef92081fda575f0e1e998b2650d` | `VERIFIED_COMPLETE` | Phase 0 is sealed; preserve the unique-authority registry and fail-closed branch-retirement policy. |
@@ -1107,9 +1109,9 @@ Append entries in reverse chronological order.
 ### 2026-07-20 — Phase 0 program-control completion seal
 
 - PR #251 merged owner-safe program control as `89bfadfb0d609ef92081fda575f0e1e998b2650d` after Repository Quality #1084, Database Replay #345, Staging Readiness Preflight #99, and Admin Game Lifecycle Controls #33 passed.
-- Preserved PR #245 over duplicate market PR #246 and PR #247 over duplicate recovery PR #253; consumed or explicitly dispositioned useful donor material before retirement. Premature roadmap seal PR #255 was also retired without merge.
+- Preserved PR #245 over duplicate market PR #246 and PR #247 over duplicate recovery PR #253; consumed or explicitly dispositioned useful donor material before retirement. Premature roadmap seal PR #255 was retired without merge. Incident-verification PR #260 was also retired after its unique amendment evidence was transplanted into PR #259.
 - Confirmed refs `agent/player-market-portfolio-v1`, `feat/player-recovery-states-v1`, and `docs/program-control-phase0-seal-v1` no longer exist. Branch Hygiene run #100 is immutable deletion evidence for PR #246; the later duplicate refs were absent from the final remote branch inventory.
-- Recorded unique active capability authorities: #163 seed content, #244 story delivery, #245 market/Portfolio, #248 Messaging, and #249 Marketplace. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active owners.
+- Recorded unique active capability authorities: #163 seed content, #244 story delivery, #245 market/Portfolio, #248 Messaging, #249 Marketplace, and #261 Progression. Recovery #247, supply-chain #250/#258, incident readiness #252, and Dashboard/Profile #254/#257 are merged rather than active owners.
 - Reconciled repository state through `ad889a2bdf9d5587fff3275d70751c79992171c7`, including Dashboard/Profile manifest `2026-07-20.1`, merged Player recovery, supply-chain security, and incident readiness without overstating Portfolio, connected staging, or release completion.
 - Marked `P0-006` and all of Phase 0 `VERIFIED_COMPLETE`; corrected the scoreboard to Program control 10/10, Operations 2/22, and 69 verified / 169 open / 238 total.
 - Documentation and policy reconciliation only; no application source, migration, route, RPC, seed definition, credential, environment, runtime, or deployment changed in this seal.
