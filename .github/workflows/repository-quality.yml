@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # INCIDENT_ROADMAP_FINALIZER_PERMISSION
 
 concurrency:
   group: repository-quality-${{ github.ref }}
@@ -18,11 +18,13 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false # INCIDENT_ROADMAP_FINALIZER_CREDENTIAL_GUARD
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -82,17 +84,9 @@ jobs:
       - name: Audit backend dependencies
         run: npm --prefix backend audit --audit-level=high
 
-  # INCIDENT_ROADMAP_FINALIZER_BEGIN
-  incident-roadmap-finalize:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/docs/incident-readiness-final-v3'
-    needs: quality
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out exact verification branch
+      # INCIDENT_ROADMAP_FINALIZER_BEGIN
+      - name: Check out exact incident verification branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/incident-readiness-final-v3'
         uses: actions/checkout@v7
         with:
           ref: docs/incident-readiness-final-v3
@@ -100,6 +94,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Apply and self-remove incident roadmap finalizer
+        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/incident-readiness-final-v3'
         shell: bash
         run: |
           set -euo pipefail
@@ -178,17 +173,35 @@ jobs:
 
           quality = Path(".github/workflows/repository-quality.yml")
           workflow = quality.read_text(encoding="utf-8")
-          branch_line = "      - docs/incident-readiness-final-v3 # INCIDENT_ROADMAP_FINALIZER_BRANCH\n"
-          if workflow.count(branch_line) != 1:
-              raise SystemExit("Incident finalizer branch marker is missing or duplicated")
-          workflow = workflow.replace(branch_line, "", 1)
-          start = "  # INCIDENT_ROADMAP_FINALIZER_BEGIN\n"
-          end = "  # INCIDENT_ROADMAP_FINALIZER_END\n"
-          if workflow.count(start) != 1 or workflow.count(end) != 1:
-              raise SystemExit("Incident finalizer job markers are missing or duplicated")
-          before, remainder = workflow.split(start, 1)
-          _, after = remainder.split(end, 1)
-          quality.write_text(before.rstrip() + "\n" + after.lstrip("\n"), encoding="utf-8")
+          exact_replacements = [
+              (
+                  "      - docs/incident-readiness-final-v3 # INCIDENT_ROADMAP_FINALIZER_BRANCH\n",
+                  "",
+              ),
+              (
+                  "  contents: write # INCIDENT_ROADMAP_FINALIZER_PERMISSION\n",
+                  "  contents: read\n",
+              ),
+              (
+                  "    timeout-minutes: 35\n",
+                  "    timeout-minutes: 25\n",
+              ),
+              (
+                  "        with:\n          persist-credentials: false # INCIDENT_ROADMAP_FINALIZER_CREDENTIAL_GUARD\n\n      - name: Set up Node\n",
+                  "\n      - name: Set up Node\n",
+              ),
+          ]
+          for old, new in exact_replacements:
+              count = workflow.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one workflow occurrence, found {count}: {old}")
+              workflow = workflow.replace(old, new, 1)
+
+          start = "      # INCIDENT_ROADMAP_FINALIZER_BEGIN\n"
+          if workflow.count(start) != 1:
+              raise SystemExit("Incident finalizer step marker is missing or duplicated")
+          workflow = workflow.split(start, 1)[0].rstrip() + "\n"
+          quality.write_text(workflow, encoding="utf-8")
           PY
 
           git rm .github/workflows/incident-roadmap-finalize.yml
@@ -197,4 +210,4 @@ jobs:
           git diff --cached --check
           git commit -m "docs(roadmap): mark incident readiness verified"
           git push origin HEAD:docs/incident-readiness-final-v3
-  # INCIDENT_ROADMAP_FINALIZER_END
+      # INCIDENT_ROADMAP_FINALIZER_END
