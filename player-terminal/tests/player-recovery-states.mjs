@@ -240,11 +240,12 @@ function createHarness() {
   assert.equal(offline.lockMutations, true);
   assert.equal(offline.canDismiss, false);
 
-  const paused = classifyPlayerRecoverySignal({ code: "GAME_MUTATIONS_PAUSED" });
+  const paused = classifyPlayerRecoverySignal({ code: "game_mutations_paused" });
   assert.equal(paused.kind, "game-paused");
   assert.equal(paused.lockMutations, true);
+  assert.equal(paused.canDismiss, false);
 
-  const ended = classifyPlayerRecoverySignal({ message: "This game has ended." });
+  const ended = classifyPlayerRecoverySignal({ code: "game_lifecycle_terminal" });
   assert.equal(ended.kind, "game-ended");
   assert.equal(ended.canRetry, false);
 
@@ -252,6 +253,7 @@ function createHarness() {
   assert.equal(rateLimited.kind, "rate-limited");
   assert.equal(rateLimited.retryAfterMs, 9000);
   assert.equal(rateLimited.lockMutations, true);
+  assert.equal(rateLimited.canDismiss, false);
 
   const committed = classifyPlayerRecoverySignal({ message: "Action completed. Some information will refresh when the service is available." });
   assert.equal(committed.kind, "committed-refresh-pending");
@@ -296,6 +298,7 @@ function createHarness() {
   let region = harness.mount.querySelector("[data-player-recovery-region]");
   assert.equal(region.dataset.playerRecoveryState, "offline");
   assert.equal(region.getAttribute("role"), "alert");
+  assert.equal(controller.dismiss(), false);
 
   harness.runtime.navigator.onLine = true;
   harness.runtime.dispatchEvent(new FakeCustomEvent("online"));
@@ -308,6 +311,7 @@ function createHarness() {
   }));
   assert.equal(controller.getState().kind, "game-paused");
   assert.equal(harness.control.disabled, true);
+  assert.equal(controller.dismiss(), false);
 
   harness.runtime.navigator.onLine = false;
   harness.runtime.dispatchEvent(new FakeCustomEvent("offline"));
@@ -348,16 +352,41 @@ function createHarness() {
   assert.equal(controller.getState().kind, "committed-refresh-pending");
   assert.equal(harness.control.disabled, true);
 
+  harness.runtime.dispatchEvent(new FakeCustomEvent("online"));
+  assert.equal(controller.getState().kind, "committed-refresh-pending", "generic reconnect cannot clear write ambiguity");
+  harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-recovery-signal", {
+    detail: { code: "GAME_ACTIVE" },
+  }));
+  assert.equal(controller.getState().kind, "committed-refresh-pending", "an active lifecycle event cannot clear write ambiguity");
+
   harness.mount.routeError = new FakeElement("section");
   harness.mount.routeError.textContent = "This section encountered a data problem.";
+  controller.inspect();
+  assert.equal(controller.getState().kind, "committed-refresh-pending", "a route error cannot replace an authoritative refresh lock");
+  assert.equal(harness.control.disabled, true);
+
+  assert.equal(await controller.retry(), true);
+  assert.equal(harness.refreshCount, 2);
+  assert.equal(controller.getState().kind, "restored");
+  assert.equal(harness.control.disabled, false);
+
+  harness.mount.routeError = null;
+  controller.inspect();
+  harness.mount.routeError = new FakeElement("section");
+  harness.mount.routeError.textContent = "This section could not be loaded.";
   controller.inspect();
   assert.equal(controller.getState().kind, "route-unavailable");
   assert.equal(harness.control.disabled, false);
 
-  harness.setSession({ gameLifecycleStatus: "GAME_ENDED" });
+  harness.setSession({ lifecycle: { state: "ended" } });
   harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-session-ready"));
   assert.equal(controller.getState().kind, "game-ended");
   assert.equal(harness.control.disabled, true);
+
+  harness.setSession({ lifecycle: { state: "active" } });
+  harness.runtime.dispatchEvent(new FakeCustomEvent("econovaria:player-session-ready"));
+  assert.equal(controller.getState().kind, "restored");
+  assert.equal(harness.control.disabled, false);
 
   controller.destroy();
   assert.equal(harness.runtime.observer.connected, false);
