@@ -103,3 +103,11 @@ Recently completed parallel tranches are merged rather than active authorities: 
 This reconciliation leaves no overlapping active pull request over the same capability. Future agents must search current open pull requests and the capability ownership registry before creating a branch, and must use the explicit `duplicate` label before a closed unmerged branch may be deleted automatically.
 
 The final maintainer-authored authority scan was recorded against `main` `ad889a2bdf9d5587fff3275d70751c79992171c7` before PR #259 review.
+
+## 2026-07-20 post-seal stale-helper cleanup
+
+After PR #259 merged as `e2483e25d767cbe5714735c627093d9968507908`, the final audit found `.github/workflows/incident-roadmap-finalize.yml` on `main`. PRs #265–#268, #271, and #272 installed, retargeted, and repeatedly revised that one-shot write-capable helper after incident-readiness evidence was already authoritative. It regenerated or targeted duplicate PRs #260, #270, and #273. A separate push-gated replacement on PR #275 was retired before merge.
+
+PRs #260, #270, and #273 were labeled `duplicate`, closed, and their branches `docs/incident-readiness-verification-v1`, `docs/incident-readiness-verification-clean-v1`, and `docs/incident-readiness-final-v2` were deleted. PR #276 then merged the completed market-finalizer removal but deliberately retained the stale incident job. PR #269 removes that remaining unreachable helper from current `main`. Deleting it loses no implementation or verification evidence and prevents further regeneration of retired duplicate branches.
+
+The final PR #269 review scope is limited to the workflow deletion and this operations record.
