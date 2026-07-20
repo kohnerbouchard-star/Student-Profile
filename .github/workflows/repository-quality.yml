@@ -17,7 +17,7 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -41,6 +41,9 @@ jobs:
 
       - name: Enforce dependency vulnerability threshold
         run: npm audit --audit-level=high
+
+      - name: Verify supply-chain controls
+        run: npm run security:verify
 
       - name: Run repository audit and source checks
         id: repository-tests
