@@ -11,7 +11,7 @@ const runtimePath = join(
 );
 
 const source = readFileSync(sourcePath, "utf8");
-const reconciledFocusTrap = String.raw`const stabilizedFocusTrap = String.raw\`async function assertFocusTrap(page, container, label) {
+const reconciledFocusTrap = `const stabilizedFocusTrap = String.raw\`async function assertFocusTrap(page, container, label) {
   await container.evaluate(async (root, currentLabel) => {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
