@@ -55,7 +55,14 @@ export function classifyPlayerRecoverySignal({
     });
   }
 
-  if (["GAME_ENDED", "GAME_ARCHIVED", "GAME_NOT_ACTIVE"].includes(safeCode) || lowerMessage.includes("game has ended") || lowerMessage.includes("game is no longer active")) {
+  if ([
+    "GAME_ENDED",
+    "GAME_ARCHIVED",
+    "GAME_NOT_ACTIVE",
+    "GAME_LIFECYCLE_TERMINAL",
+    "ENDED",
+    "ARCHIVED",
+  ].includes(safeCode) || lowerMessage.includes("game has ended") || lowerMessage.includes("ended or been archived") || lowerMessage.includes("game is no longer active")) {
     return recoveryState("game-ended", {
       eyebrow: "GAME ENDED",
       title: "This game is read-only",
@@ -67,7 +74,16 @@ export function classifyPlayerRecoverySignal({
     });
   }
 
-  if (["GAME_PAUSED", "GAME_MUTATIONS_PAUSED", "GAME_STATE_LOCKED"].includes(safeCode) || lowerMessage.includes("game is paused") || lowerMessage.includes("economic actions are paused")) {
+  if ([
+    "GAME_PAUSED",
+    "GAME_MUTATIONS_PAUSED",
+    "GAME_STATE_LOCKED",
+    "GAME_LIFECYCLE_UNKNOWN",
+    "PAUSED",
+    "DISABLED",
+    "DRAFT",
+    "MUTATIONS_PAUSED",
+  ].includes(safeCode) || lowerMessage.includes("game is paused") || lowerMessage.includes("game mutations are paused") || lowerMessage.includes("economic actions are paused") || lowerMessage.includes("mutations are blocked")) {
     return recoveryState("game-paused", {
       eyebrow: "GAME PAUSED",
       title: "Economic actions are temporarily paused",
