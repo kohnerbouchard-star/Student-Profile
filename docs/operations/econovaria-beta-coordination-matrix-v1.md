@@ -3,89 +3,69 @@
 **Controller:** Chat 1 — beta program controller and merge gatekeeper  
 **Controller authority:** PR #281 merged as `7bbd08e19641146282b58023a0a911c90f6a148b`  
 **Containment reconciliation:** PR #288 merged as `b047e322b18225d8a4136acc76e92da15bdbff1e`  
+**Story merge reconciliation:** PR #289 (`docs/beta-controller-story-merge-v1`)  
+**Current authoritative main:** `35462edd60edbb86b0222f38cdb42bb41aac0efe`  
 **Repository:** `kohnerbouchard-star/Student-Profile`  
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`  
-**Complete branch inventory:** `docs/operations/econovaria-remote-branch-inventory-v1.md`  
-**Controller evidence reconciled through:** `b047e322b18225d8a4136acc76e92da15bdbff1e`  
 **Audit date:** 2026-07-20  
 **Production deployment authorized:** No
 
-The branch inventory is a dated divergence snapshot. For concurrently moving workstreams, the current GitHub PR head, diff, and workflow state are the source of truth. PRs #282 through #287 were opened after the generated inventory and supersede its earlier “no PR” disposition for those assigned branches.
+Current GitHub PR heads, permanent diffs, divergence from `35462edd60edbb86b0222f38cdb42bb41aac0efe`, and final-head workflow results are the merge-queue source of truth. A workflow result from a head that predates current `main` is historical evidence only and does not satisfy the final-head merge gate.
 
 ## Control rules
 
-1. Chat 1 exclusively owns the authoritative roadmap, this coordination matrix, collision prevention, merge sequencing, and final completion reconciliation.
-2. No workstream may edit the authoritative roadmap. Completion claims require merged code, passing final-head workflows, and required staging/runtime evidence.
-3. One capability has one existing branch and one PR authority. Replacement branches are prohibited.
+1. Chat 1 exclusively owns the authoritative roadmap, this matrix, collision prevention, merge sequencing, and final completion reconciliation.
+2. No workstream may edit the authoritative roadmap or self-certify completion.
+3. One capability has one existing branch and one PR authority. Replacement branches and overlapping donor merges are prohibited.
 4. No production deployment, production credential change, manual production SQL, or manual production schema mutation is authorized.
-5. A failing, missing, cancelled, `action_required`, queued, or running required workflow blocks merge.
-6. Repository tooling is not staging evidence. An undeployed migration is not runtime evidence. A source snapshot is not implementation evidence.
-7. PRs #248, #249, and #261 are product-owner-paused expansion work. They remain open and preserved but are excluded from the beta merge queue until explicit reactivation.
-8. No chat may silently expand beyond the owned files and roadmap items below.
-9. No workstream may add a write-enabled `pull_request_target`, `push`-triggered finalizer, or direct-`main` helper to advance a paused PR or bypass the controller merge queue.
+5. Every active PR must contain current `main` and pass all required workflows on its permanent final head before merge.
+6. Repository tooling is not connected staging, runtime, restore, observability, load, or pilot evidence.
+7. PRs #248, #249, and #261 are product-owner-paused expansion work. They remain open and draft but are excluded from the beta merge queue until explicit reactivation.
+8. No write-enabled finalizer, `pull_request_target`, push-triggered synchronizer, or direct-`main` helper may bypass the controller queue.
 
-## Ten-workstream matrix
+## Current ten-workstream queue
 
-| Roadmap item / capability | Chat | Branch / PR | Owned scope | Prohibited scope | Latest controller finding | Merge readiness | Next exact action |
-|---|---:|---|---|---|---|---|---|
-| `P0-001`, `P0-002`, `P0-007`, `P0-008`; roadmap, coordination, queue, final reconciliation | 1 | PR #281 merged as `7bbd08e19641146282b58023a0a911c90f6a148b`; PR #288 merged as `b047e322b18225d8a4136acc76e92da15bdbff1e` | Authoritative roadmap; coordination matrix; remote-branch inventory; bounded controller evidence and emergency collision containment | Application source, runtime routes, migrations, credentials, environments, deployment | Controller authority and the paused-expansion containment record are merged after all required final-head workflows passed. | `VERIFIED_COMPLETE` at the program-control boundary | Continue auditing current PR heads and enforce the dependency-ordered queue; perform final roadmap reconciliation after Phase 6 evidence |
-| Release platform for `OPS-STAGE-006`, `OPS-STAGE-007`, `OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`, `BETA-PLAYER-010`, `BETA-ADMIN-007` evidence | 2 | `agent/isolated-staging-release-v1`; PR #280 | Release manifests, immutable artifacts, promotion/rollback guards, environment templates, runbooks, focused workflows/tests | Roadmap, application behavior, seed/story files, migrations, production deployment | An earlier head passed all checks, but the branch advanced during review and was returned to draft; its current final-head diff and CI are authoritative | Not ready; prior green evidence cannot authorize a moved head | Stabilize the branch, audit the permanent final diff, pass all required final-head workflows, then merge tooling only; staging identities/deployment/smoke/rollback/restore remain open |
-| Migration-history reconciliation and isolated-staging migration application | 3 | `agent/live-migration-reconciliation-v1`; PR #282 | Read-only migration inventory, schema comparison, redacted metadata export, replay/lint and staging-only evidence | Roadmap, rewritten migrations, manual production SQL, production schema changes, unrelated features | Read-only findings record 53 live identities, 66 repository identities, 13 repository-only identities, no live-only identity, and no live mutation | Tooling/evidence may be reviewable only after the final head stabilizes; roadmap completion is not ready | Re-audit final diff/CI, run clean replay, compare live and isolated schemas, reconcile function artifacts, and execute the isolated `BETA-BANK-004` retry probe |
-| Live legacy-runtime and Cloudflare Worker retirement | 4 | `agent/legacy-runtime-retirement-v1`; PR #283 | Route/runtime inventory, traffic/auth probes, credential-rotation/shutdown/rollback controls | Roadmap, restored legacy source, unrelated runtime work, unapproved production shutdown | Preparatory inventory and tooling identify unresolved runtime and provider evidence gaps; no live change occurred | Preparatory tooling may merge only after stable green final-head review; live retirement remains incomplete | Complete final CI and controller review; obtain approved traffic, Cloudflare, auth, credential rotation, disablement, observation, and rollback evidence |
-| `BETA-AUTH-005`, `BETA-AUTH-006`, `OPS-RATE-001`, `OPS-ACCESS-001` | 5 | `agent/beta-security-rate-limit-v1`; PR #284 | Rate-limit keying/policy, proxy controls, attendance abuse integration, access policy, tests, forward migration and staging probes | Roadmap, expansion features, seed/story work, production config/schema mutation | Substantial bounded security tranche exists, but an audited head had multiple cancelled required workflows | Rejected until one stable final head passes the complete affected workflow matrix | Stabilize branch, rerun Backend/Database Replay/security/Player/Admin/repository gates, review migration ordering with Chat 3, then collect proxy/HMAC/concurrency/NAT/privacy/access staging evidence |
-| `OPS-OBS-001`, `OPS-OBS-002`, `OPS-PERF-001`, `OPS-PERF-002`; observability and performance | 6 | `agent/beta-observability-performance-v1`; PR #287 | Structured-event/request-observation contracts, dashboard/alert definitions, load profile/runner, query-plan review and evidence | Roadmap, shared dispatcher/session/rate-limit integration, migrations, live runtime configuration, student-data logging | Repository/evidence tranche has green visible CI and intentionally defers runtime integration and load activation | Repository tranche is a tooling/evidence candidate, not operational completion | Controller-review stable final diff; merge only at the repository boundary; later integrate shared dispatch after Chat 5 and prove protected dashboards, runtime events, bounded load, and post-load index decisions in isolated staging |
-| Backup, restore, rollback rehearsal, RPO/RTO | 7 | `agent/beta-backup-restore-v1`; PR #285 | Backup/restore runbooks, retention/manifest contracts, synthetic isolated rehearsal and evidence | Roadmap, production restore, manual production schema changes, application features | Runbooks, templates, and contract workflow exist; no approved distinct target or executed restore evidence exists | Not ready | Stabilize final diff and CI, review/complete referenced automation, execute against a distinct synthetic target, and record integrity, connected Admin/Player smoke, RPO, and RTO evidence |
-| `BETA-NOTIF-005`, `BETA-NOTIF-006`; Player story cutscene/purpose-built delivery | 8 | `agent/player-story-delivery-v1`; PR #244 | Bounded story-delivery Backend/Player implementation and tests | Roadmap, PR #163 campaign definitions, generic raw payload rendering, runner scheduling, redesign | Permanent implementation and clean final-head evidence must be re-audited from current GitHub state | Not merge-ready without permanent source and complete final-head CI | Materialize actual source, remove carriers/finalizers, make a human-authored final commit, and pass all required checks |
-| Phase 4 bounded executable seed release and `BETA-SEED-001` | 9 | `agent/seed-content-foundation-v1`; PR #163 | `docs/seed-content/**`, generators, validators, simulations, bounded importer/rollback/staging evidence | Roadmap, PR #244 runtime delivery, production activation/deployment, unrelated features | Stale, non-mergeable, non-executable, and no current-head staging evidence was found at controller audit | Rejected | Synchronize the existing branch, close calibration/map gates, add idempotent importer/rollback, and prove a bounded isolated-staging load |
-| Phase 6 complete E2E sequence and pilot | 10 | `agent/beta-e2e-pilot-v1`; PR #286 | 52-scenario orchestration, synthetic fixtures, defect/evidence contracts, pilot controls/results | Roadmap, feature implementation, production deployment, manual production data/schema changes | Harness/preflight work exists and correctly records `BLOCKED_BY_ENVIRONMENT`; no scenario is complete | Dependency-blocked even if harness CI passes | Stabilize final diff/CI; execute only after release, migration, security, story, seed, observability, and restore dependencies are merged and deployed to isolated staging |
+| Chat | Roadmap ownership | PR and branch | Commits behind current main | CI state | Environment dependency | Merge readiness | Exact next action |
+|---:|---|---|---:|---|---|---|---|
+| 1 | `P0-001`, `P0-002`, `P0-007`, `P0-008`; authoritative roadmap, collision control, queue, final go/no-go | PR #289, `docs/beta-controller-story-merge-v1` | 0 | Permanent two-document diff exists; final-head Repository Quality, Supply Chain Security, and Staging Readiness Preflight are required | None for documentation authority | Draft until final-head CI is green | Pass all required workflows on this human-authored head, merge documentation only, then continue live PR-state monitoring |
+| 2 | `OPS-STAGE-006`, `OPS-STAGE-007`, `OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`; infrastructure for `BETA-PLAYER-010` and `BETA-ADMIN-007` | PR #280, `agent/isolated-staging-release-v1`, head `a6e26347947cd61c200ad2492e327587daf902eb` | 7 | Repository, release, supply-chain, preflight, incident, and Admin checks passed on the stale head; Database Replay was running at audit | Distinct synthetic Supabase project, separate frontend staging target, environment-neutral runtime configuration, protected reviewers/secrets, deployment adapters, connected smoke, rollback and promotion evidence | Not merge-ready; branch is stale and connected staging does not exist | Merge current `main` into the existing branch without replacement, resolve only owned-file conflicts, make a permanent final commit, rerun every required workflow, and retain draft status until controller review |
+| 3 | `OPS-STAGE-001`, `OPS-STAGE-002`, `OPS-STAGE-003`; isolated evidence for `BETA-BANK-004` | PR #282, `agent/live-migration-reconciliation-v1`, head `e93267b93af62a7b143b7d5078fd2bff80d6136f` | 7 | Repository Quality, Supply Chain Security, and Staging Readiness Preflight passed on the stale head | Chat 2 isolated database; clean replay; canonical live/isolated schema comparison; Auth and Edge Function metadata; isolated retry/rollback evidence | Not merge-ready; stale and externally blocked | Synchronize the existing branch with current `main`, rerun complete final-head CI, then execute only read-only live comparison and isolated-staging replay/retry evidence |
+| 4 | `OPS-STAGE-004`, `OPS-STAGE-005`; legacy runtime and credential retirement | PR #283, `agent/legacy-runtime-retirement-v1`, head `58d3a261254e1c9f3cb804ab94e498c21d8b1259` | 7 | Repository, Database Replay, supply-chain, preflight, incident, Admin, and legacy audit passed on the stale head | Approved read-only production and Cloudflare evidence; consumer attribution; credential rotation authority; observation windows; disable/delete approval and rollback owner | Not merge-ready; stale and live retirement remains approval-blocked | Keep outside the merge queue, synchronize the existing branch with current `main`, rerun final-head CI, then collect approval-gated evidence without changing production |
+| 5 | `BETA-AUTH-005`, `BETA-AUTH-006`, `OPS-RATE-001`, `OPS-ACCESS-001` | PR #284, `agent/beta-security-rate-limit-v1`, head `a3fc83190fd7eea6af34831dc23a610df421526c` | 1 | No workflow runs exist on the actual current PR head; prior PR text references a different head and is not authoritative | Isolated migration deployment; SQL concurrency; proxy overwrite/strip; shared-NAT/brute-force; scanner burst/outage; privacy leak scan; staff Auth/MFA/recovery/revocation evidence | Rejected from merge queue until synchronized and fully green | Synchronize with current `main`, review collision with merged story rate-limit/capability files, publish one permanent final head, and rerun the complete affected Backend, database, Player, Admin, privacy, and repository matrix |
+| 6 | `OPS-OBS-001`, `OPS-OBS-002`, `OPS-PERF-001`, `OPS-PERF-002` | PR #287, `agent/beta-observability-performance-v1`, head `d94185a7ee964c85ea2cd7634eb4741cfba0537a` | 7 | Observability, Backend, Database Replay, Repository Quality, supply-chain, preflight, incident, timezone, exchange, and Admin checks passed on the stale head | Shared-dispatch integration after Chat 5; isolated runtime events; protected dashboards/alerts; bounded 30/40-player load; post-load query-plan/index review | Not merge-ready; stale and operational evidence absent | Synchronize the existing branch with current `main`, rerun final-head CI, preserve the no-index-without-load decision, and wait for Chat 5 plus isolated staging before runtime/load execution |
+| 7 | `OPS-BACKUP-001`, `OPS-BACKUP-002`, `OPS-RESTORE-001`, `OPS-RESTORE-002` | PR #285, `agent/beta-backup-restore-v1`, head `7039911d996e9ccc9de2096231c7c6c569ea4d9e` | 7 | Backup/Restore Contract, Database Replay, Repository Quality, supply-chain, preflight, incident, and Admin checks passed on the stale head | Managed backup/PITR evidence; approved distinct restore target; immutable off-platform storage; real encrypted backup; two-phase restore; connected Admin/Player smoke; measured RPO/RTO | Not merge-ready; stale and no restore rehearsal exists | Synchronize the existing branch with current `main`, rerun final-head CI, then execute the guarded rehearsal only against the approved isolated target |
+| 8 | `BETA-NOTIF-005`, `BETA-NOTIF-006` | PR #244 merged from `agent/player-story-delivery-v1` as `35462edd60edbb86b0222f38cdb42bb41aac0efe` | 0 | All ten final-head workflows passed on `86f7243a89dc9e02cdd1dd939ccafaa552b06b9d`, including Backend, Database Replay, Player Terminal desktop/mobile, Repository Quality, supply-chain, preflight, runtime cutover, timezone/exchange, and Admin lifecycle | None for the bounded code-integrated story-delivery lifecycle; campaign scheduling, seed activation, and staging playthrough remain separate items | `VERIFIED_COMPLETE` for `BETA-NOTIF-005` and `BETA-NOTIF-006` | Preserve merged implementation; do not reopen or create replacement story-delivery branches; consume it as a dependency for seed and Phase 6 work |
+| 9 | Phase 4 bounded executable seed release and `BETA-SEED-001`; campaign and active-content definitions | PR #163, `agent/seed-content-foundation-v1`, head `74bcac12127244f232c563b4b018703b53cab4ff` | 1 | No workflow runs exist on the actual current head | Complete calibration/editorial/map evidence; Backend stable-ID/import authority; idempotent importer/deactivation/rollback; isolated bounded load; Admin/Player cross-surface verification; activation approval | Not merge-ready; large definition branch remains non-activated and current-head CI is absent | Synchronize the existing branch with current `main`, rerun all seed and repository gates, finish the executable bounded pack and staging importer, and activate only after operations evidence is complete |
+| 10 | Phase 6 E2E and pilot validation | PR #286, `agent/beta-e2e-pilot-v1`, head `34aafcb79ed7406db73f5500d91ebdacca31e603` | 7 | Beta E2E harness, Database Replay, Repository Quality, supply-chain, preflight, incident, and Admin checks passed on the stale head | Approved immutable isolated release; migrations; security/privacy; restore comparison; observability/load; bounded seed activation; no unresolved P0/P1 defects | Dependency-blocked and stale | Synchronize with current `main`, rerun final-head harness CI, update the dependency manifest to recognize merged story delivery, and execute no scenario until all preceding gates are authoritative |
 
-## Open pull-request gate status
+## Paused expansion queue
 
-| PR | Capability | Queue | Current gate decision |
+| PR | Capability | State | Controller gate |
 |---:|---|---|---|
-| #281 | Controller documents | Merged coordination/evidence | `VERIFIED_COMPLETE` as `7bbd08e19641146282b58023a0a911c90f6a148b` |
-| #288 | Controller containment record | Merged coordination/evidence | `VERIFIED_COMPLETE` as `b047e322b18225d8a4136acc76e92da15bdbff1e` |
-| #280 | Immutable release tooling | Independent beta tooling | Draft after head movement; re-audit current final diff and workflows |
-| #282 | Migration reconciliation tooling/evidence | Release foundation | Final-head review required; connected migration evidence remains open |
-| #283 | Legacy-retirement preparation | Release foundation | Preparatory merge only after stable green CI; live retirement remains approval/evidence blocked |
-| #284 | Security/rate limits/access | Security foundation | Draft and rejected until stable complete green CI plus migration/staging review |
-| #287 | Observability/performance tooling/evidence | Operations foundation | Repository boundary may be reviewable; runtime/load/dashboard evidence remains open |
-| #285 | Backup/restore controls | Recovery foundation | Hold until stable green CI and reviewed automation; rehearsal evidence remains open |
-| #286 | Final E2E harness | Final evidence | Keep draft and dependency-blocked |
-| #256 | Dependabot artifact action | Independent tooling | Reject; stale and required Admin workflows failed at audit |
-| #244 | Story delivery | Beta capability | Reject until permanent source and complete final-head evidence exist |
-| #163 | Seed release | Beta capability | Reject; stale, non-mergeable, non-executable, and lacks staging evidence |
-| #248 | Messaging | Paused expansion | Draft restored after unauthorized ready transition; preserved and excluded from beta queue |
-| #249 | Marketplace | Paused expansion | Preserved and excluded; required workflows failed at audit |
-| #261 | Progression | Paused expansion | Preserved and excluded; planning/source snapshot is not runtime evidence |
+| #248 | Messaging | Open draft | Preserve existing branch; no synchronization, finalizer, merge, or roadmap edit until explicit product-owner reactivation |
+| #249 | Marketplace | Open draft | Preserve existing branch; remain outside the beta queue regardless of mergeability or CI |
+| #261 | Progression | Open draft | Preserve existing branch; source/planning work is not runtime completion and remains outside the beta queue |
 
 ## Migration ownership and collision boundaries
 
 - Merged migration history on `main` is immutable.
-- Chat 3 / PR #282 owns migration-history reconciliation and isolated-staging application evidence; only forward corrections are permitted.
-- Chat 5 / PR #284 owns its forward rate-limit/telemetry migration set, subject to Chat 3 ordering/replay review.
-- Paused PR #248 owns `20260720123000_add_messaging_communication_v1.sql` but may not advance while paused.
-- Paused PR #249 owns `20260720042500_add_marketplace_reference_scopes_v1.sql`, `20260720043000_add_player_marketplace_lifecycle_v1.sql`, and `20260720044500_fix_marketplace_order_settlement_state_v1.sql` but may not advance while paused.
-- Chat 9 may add a bounded seed importer migration only on PR #163 after Chat 3 confirms ordering and Chat 2 supplies isolated release controls.
+- Chat 3 / PR #282 owns migration-history reconciliation and isolated-staging application evidence; only forward corrective migrations are permitted.
+- Chat 5 / PR #284 owns its rate-limit hardening migration set, subject to Chat 3 ordering and replay review after synchronization.
+- Chat 9 may add the bounded seed importer only on PR #163 after Chat 3 confirms ordering and Chat 2 supplies isolated release controls.
+- Paused PRs #248 and #249 retain their migration ownership but may not advance while paused.
 - No chat may apply manual production SQL.
 
-## Merge sequence
+## Priority-ordered merge and evidence queue
 
-1. Stable independent tooling/evidence boundaries from PRs #280 and #282; PR #256 only after refresh and full green CI.
-2. Security and release foundations: PRs #284, #283, #287, and #285 in dependency-safe order and only at their reviewed repository boundaries.
-3. PR #244 after permanent implementation materialization and green CI.
-4. PR #163 after synchronization, executable import/rollback, calibration/map closure, and isolated-staging evidence.
-5. PR #286 execution against the approved immutable isolated-staging release.
-6. Chat 1 final authoritative roadmap completion reconciliation.
-
-## Controller incident record — paused Messaging bypass
-
-- PR #248 was explicitly product-owner-paused and returned to draft by Chat 1.
-- Commit `c88d7e80c866038731dba7044e97ba33ab83aecb` nevertheless added a write-enabled workflow to `main` that listened for PR #248 becoming ready, modified the paused branch, and attempted a direct push back to `main`.
-- Commit `efb734f6a975158b826c6d22e5b260fd892c861d` changed that workflow to a `push` trigger on `main`, immediately activating the same paused-expansion synchronization path.
-- Chat 1 restored PR #248 to draft and removed the workflow from `main` in emergency containment commit `92563c58304517e911816627a9cac0c74db92aef`.
-- The workflow, its finalizers, and any branch changes it produced are not completion or merge evidence. PR #248 remains excluded until explicit product-owner reactivation.
+1. Merge and reconcile PR #244 — **completed** as `35462edd60edbb86b0222f38cdb42bb41aac0efe`.
+2. Synchronize PRs #280, #282, #283, #284, #285, #286, #287, and PR #163 with current `main`; require permanent final heads and complete CI.
+3. Establish the distinct isolated staging environment and immutable release boundary.
+4. Run migration reconciliation, `BETA-BANK-004`, rate-limit, privacy, access, and legacy-runtime evidence.
+5. Run encrypted backup, restore, connected smoke, observability, alerts, bounded load, and post-load query-plan evidence.
+6. Complete, import, verify, and explicitly authorize the bounded executable seed pack.
+7. Execute the continuous 52-checkpoint Phase 6 run and controlled pilot evidence.
+8. Chat 1 issues the final authoritative roadmap reconciliation and production-beta go/no-go decision.
 
 ## Completion-claim decision rule
 
-Chat 1 accepts completion only when the capability is merged into `main`, all required final-head workflows pass, migrations replay/lint where applicable, required browser/security/idempotency evidence exists, and required staging/runtime/release evidence is immutable and reviewable. Otherwise the highest permitted status is `IMPLEMENTED_NOT_MERGED`, `IN_PROGRESS`, or `BLOCKED`.
+A capability is complete only when its permanent implementation is merged into `main`, all required final-head workflows pass, migration replay/lint and browser/security/idempotency evidence exist where applicable, and any required connected staging/runtime/restore/load evidence is immutable and reviewable. Otherwise its highest valid status remains `IMPLEMENTED_NOT_MERGED`, `IN_PROGRESS`, or `BLOCKED`.
