@@ -57,8 +57,14 @@ jobs:
       - name: Install pinned repository tooling
         run: npm ci
 
-      - name: Verify secret scan, SBOM tests, and SBOM generation
-        run: npm run security:verify
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
+
+      - name: Test scanner and SBOM reproducibility
+        run: npm run test:supply-chain
+
+      - name: Generate release-support SBOM bundle
+        run: npm run security:sbom
 
       - name: Upload immutable SBOM bundle
         uses: actions/upload-artifact@v4
