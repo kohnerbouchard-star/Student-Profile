@@ -6,6 +6,11 @@ on:
       - agent/isolated-staging-release-v1
     paths:
       - ".github/workflows/sync-pr280-with-main.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-pr280-with-main.yml"
 
 permissions:
   contents: write
@@ -16,6 +21,10 @@ concurrency:
 
 jobs:
   sync:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'agent/isolated-staging-release-v1')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
