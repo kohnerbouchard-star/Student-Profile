@@ -1,4 +1,12 @@
-import { writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import {
+  cp,
+  mkdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import * as base from "./release-platform-lib.mjs";
 import { verifyEnvironmentNeutralFrontend } from "./release-environment-neutrality.mjs";
@@ -20,11 +28,87 @@ export const {
 const PLACEHOLDER_PATTERN = /^(?:change-me|example|placeholder|todo(?:[_-].*)?|tbd(?:[_-].*)?|unknown(?:[_-].*)?|development|staging|production|0+)$/i;
 const NEUTRALITY_VERIFIER = "release-environment-neutrality-v1";
 const RELEASE_WORKFLOW = "Release Artifact Build";
+const ADDITIONAL_BROWSER_ROOTS = ["player-terminal", "auth"];
+const MAX_ARCHIVE_BYTES = 1024 * 1024 * 1024;
 
 function assertNoPlaceholder(value, label, errors) {
   if (typeof value !== "string" || PLACEHOLDER_PATTERN.test(value)) {
     errors.push(`${label} is a placeholder`);
   }
+}
+
+function deterministicTarGzip(sourceRoot, archivePath) {
+  const tar = spawnSync("tar", [
+    "--sort=name",
+    "--mtime=@0",
+    "--owner=0",
+    "--group=0",
+    "--numeric-owner",
+    "--format=ustar",
+    "-cf",
+    "-",
+    "-C",
+    sourceRoot,
+    ".",
+  ], { encoding: null, maxBuffer: MAX_ARCHIVE_BYTES });
+  if (tar.status !== 0) {
+    throw new Error(`tar failed while completing frontend artifact: ${tar.stderr?.toString() ?? "unknown error"}`);
+  }
+  const gzip = spawnSync("gzip", ["-n", "-9"], {
+    input: tar.stdout,
+    encoding: null,
+    maxBuffer: MAX_ARCHIVE_BYTES,
+  });
+  if (gzip.status !== 0) {
+    throw new Error(`gzip failed while completing frontend artifact: ${gzip.stderr?.toString() ?? "unknown error"}`);
+  }
+  return writeFile(archivePath, gzip.stdout);
+}
+
+async function completeBrowserArtifact({ manifest, repoRoot, outputRoot }) {
+  const frontend = manifest.artifacts.find((artifact) => artifact.kind === "frontend");
+  if (!frontend) throw new Error("release manifest is missing the frontend artifact");
+
+  const archivePath = path.join(outputRoot, frontend.file);
+  const stagingRoot = path.join(outputRoot, ".frontend-complete");
+  await rm(stagingRoot, { recursive: true, force: true });
+  await mkdir(stagingRoot, { recursive: true });
+
+  const extract = spawnSync("tar", ["-xzf", archivePath, "-C", stagingRoot], {
+    encoding: "utf8",
+    maxBuffer: MAX_ARCHIVE_BYTES,
+  });
+  if (extract.status !== 0) {
+    throw new Error(`unable to expand base frontend artifact: ${extract.stderr || "unknown error"}`);
+  }
+
+  for (const relativePath of ADDITIONAL_BROWSER_ROOTS) {
+    const source = path.join(repoRoot, relativePath);
+    const target = path.join(stagingRoot, relativePath);
+    if (!(await stat(source)).isDirectory()) {
+      throw new Error(`required browser runtime root is not a directory: ${relativePath}`);
+    }
+    await cp(source, target, { recursive: true, force: false, errorOnExist: true });
+  }
+
+  await deterministicTarGzip(stagingRoot, archivePath);
+  const metadata = await stat(archivePath);
+  frontend.sha256 = await base.sha256File(archivePath);
+  frontend.sizeBytes = metadata.size;
+  manifest.artifactSetSha256 = base.sha256(base.canonicalJson(
+    manifest.artifacts.map(({ file, sha256: digest, sizeBytes }) => ({
+      file,
+      sha256: digest,
+      sizeBytes,
+    })),
+  ));
+
+  const checksums = [
+    ...manifest.artifacts.map((artifact) => `${artifact.sha256}  ${artifact.file}`),
+    `${manifest.configuration.sha256}  ${manifest.configuration.file}`,
+  ].sort();
+  await writeFile(path.join(outputRoot, "checksums.sha256"), `${checksums.join("\n")}\n`);
+  await rm(stagingRoot, { recursive: true, force: true });
 }
 
 export function validateEnvironmentManifest(manifest, options = {}) {
@@ -74,6 +158,11 @@ export function validateDistinctEnvironmentManifests(manifests) {
 export async function buildImmutableRelease(options) {
   const neutrality = await verifyEnvironmentNeutralFrontend({ repoRoot: options.repoRoot });
   const manifest = await base.buildImmutableRelease(options);
+  await completeBrowserArtifact({
+    manifest,
+    repoRoot: options.repoRoot,
+    outputRoot: options.outputRoot,
+  });
   const enrichedManifest = {
     ...manifest,
     environmentNeutrality: {
@@ -104,8 +193,10 @@ export async function validateReleaseManifest(options) {
   if (neutrality?.verifier !== NEUTRALITY_VERIFIER) {
     errors.push(`release environmentNeutrality.verifier must be ${NEUTRALITY_VERIFIER}`);
   }
-  if (!Array.isArray(neutrality?.scannedRoots) || neutrality.scannedRoots.length === 0) {
-    errors.push("release environmentNeutrality.scannedRoots is required");
+  const requiredRoots = ["index.html", "frontend", "admin", "player-terminal", "auth"];
+  if (!Array.isArray(neutrality?.scannedRoots)
+      || !requiredRoots.every((root) => neutrality.scannedRoots.includes(root))) {
+    errors.push(`release environmentNeutrality.scannedRoots must include ${requiredRoots.join(", ")}`);
   }
   const provenance = options.manifest?.provenance;
   if (provenance?.builder !== "github-actions") {
