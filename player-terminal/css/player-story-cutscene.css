@@ -1,0 +1,100 @@
+.player-story-cutscene-backdrop {
+  background: color-mix(in srgb, #01060d 86%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.player-story-cutscene-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(860px, calc(100vh - 32px));
+  border-color: color-mix(in srgb, var(--player-terminal-cyan, #49d7ff) 48%, transparent);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, .72), 0 0 48px rgba(73, 215, 255, .12);
+}
+
+.player-story-cutscene-modal > .player-terminal-modal-body {
+  display: grid;
+  gap: 18px;
+}
+
+.player-story-cutscene-media,
+.player-story-cutscene-fallback {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(112, 220, 255, .26);
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 20%, rgba(44, 169, 219, .18), transparent 42%), linear-gradient(145deg, #071a27, #020810 68%);
+}
+
+.player-story-cutscene-media {
+  object-fit: contain;
+}
+
+.player-story-cutscene-fallback {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px;
+  text-align: center;
+}
+
+.player-story-cutscene-fallback span {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(112, 220, 255, .32);
+  border-radius: 50%;
+  background: rgba(18, 84, 111, .2);
+}
+
+.player-story-cutscene-fallback small,
+.player-story-cutscene-requirement {
+  color: var(--player-terminal-cyan, #72dcff);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.player-story-cutscene-fallback strong {
+  max-width: 560px;
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  line-height: 1.15;
+}
+
+.player-story-cutscene-summary {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.player-story-cutscene-requirement {
+  margin: 0;
+  font-size: .75rem;
+}
+
+@media (max-width: 620px) {
+  .player-story-cutscene-modal {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+  .player-story-cutscene-fallback { padding: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-story-cutscene-media { scroll-behavior: auto; }
+}
+
+@media (forced-colors: active) {
+  .player-story-cutscene-media,
+  .player-story-cutscene-fallback { border: 2px solid CanvasText; }
+}
+
+.player-story-cutscene-modal:focus {
+  outline: 2px solid var(--player-terminal-cyan, #72dcff);
+  outline-offset: 3px;
+}
+
+.player-story-cutscene-modal button:focus-visible,
+.player-story-cutscene-media:focus-visible {
+  outline: 3px solid var(--player-terminal-cyan, #72dcff);
+  outline-offset: 3px;
+}

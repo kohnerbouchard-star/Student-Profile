@@ -5,6 +5,7 @@ import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js"
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
+import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
@@ -32,12 +33,14 @@ const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
+const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
   logout.destroy();
   sessionSafeExit.destroy();
   invalidations.destroy();
+  storyDeliveries.destroy();
   notifications.destroy();
   bankingReads.destroy();
   marketOrders.destroy();

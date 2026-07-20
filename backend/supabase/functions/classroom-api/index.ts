@@ -170,6 +170,12 @@ import {
   readPlayerNotificationRoutePath,
 } from "../../../src/domains/notifications/api/playerNotificationRoutePaths.ts";
 import {
+  handlePlayerStoryDeliveryRequest,
+} from "../../../src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts";
+import {
+  readPlayerStoryDeliveryRoutePath,
+} from "../../../src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -261,6 +267,25 @@ Deno.serve(async (request) => {
         handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
           createServiceClient,
         }),
+      { createServiceClient },
+    );
+  }
+
+  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
+
+  if (playerStoryDeliveryRoute) {
+    const endpointKey = playerStoryDeliveryRoute.kind === "state"
+      ? "storyDeliveryState"
+      : "storyDeliveries";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerStoryDeliveryRequest(
+          request,
+          playerStoryDeliveryRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
