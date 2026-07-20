@@ -221,7 +221,7 @@ test("release manifest rejects missing environment-neutrality evidence", async (
   );
 });
 
-test("production promotion requires the exact staged manifest, configuration, artifact ID, and rollback target", async (t) => {
+test("production promotion requires exact staged and dispatch identities plus rollback", async (t) => {
   const data = await fixture();
   t.after(() => rm(data.repoRoot, { recursive: true, force: true }));
   const environmentManifestEvidence = await evidence(data.repoRoot, "production-environment.json", "production environment record");
@@ -268,42 +268,49 @@ test("production promotion requires the exact staged manifest, configuration, ar
       evidence: stagingEvidencePointer,
     },
   };
-  const validated = await validatePromotionRecord({
-    record,
+  const validationOptions = {
     releaseManifest: data.manifest,
     releaseManifestPath: data.releaseManifestPath,
     artifactRoot: data.artifactRoot,
     repoRoot: data.repoRoot,
     expectedEnvironment: "production",
-  });
+    expectedSourceRunId: "123",
+    expectedSourceArtifactId: "456",
+    expectedEnvironmentManifestPath: environmentManifestEvidence.path,
+  };
+  const validated = await validatePromotionRecord({ record, ...validationOptions });
   assert.equal(validated.targetEnvironment, "production");
 
   const incomplete = structuredClone(record);
   delete incomplete.stagingEvidence;
   await assert.rejects(
-    validatePromotionRecord({
-      record: incomplete,
-      releaseManifest: data.manifest,
-      releaseManifestPath: data.releaseManifestPath,
-      artifactRoot: data.artifactRoot,
-      repoRoot: data.repoRoot,
-      expectedEnvironment: "production",
-    }),
+    validatePromotionRecord({ record: incomplete, ...validationOptions }),
     /requires stagingEvidence/,
   );
 
-  const substitutedArtifact = structuredClone(record);
-  substitutedArtifact.stagingEvidence.sourceArtifactId = "999";
+  const substitutedStagingArtifact = structuredClone(record);
+  substitutedStagingArtifact.stagingEvidence.sourceArtifactId = "999";
+  await assert.rejects(
+    validatePromotionRecord({ record: substitutedStagingArtifact, ...validationOptions }),
+    /sourceArtifactId mismatch/,
+  );
+
   await assert.rejects(
     validatePromotionRecord({
-      record: substitutedArtifact,
-      releaseManifest: data.manifest,
-      releaseManifestPath: data.releaseManifestPath,
-      artifactRoot: data.artifactRoot,
-      repoRoot: data.repoRoot,
-      expectedEnvironment: "production",
+      record,
+      ...validationOptions,
+      expectedSourceArtifactId: "999",
     }),
-    /sourceArtifactId mismatch/,
+    /does not match workflow input/,
+  );
+
+  await assert.rejects(
+    validatePromotionRecord({
+      record,
+      ...validationOptions,
+      expectedEnvironmentManifestPath: "docs/operations/evidence/other-environment.json",
+    }),
+    /environment manifest path does not match workflow input/,
   );
 });
 
@@ -313,5 +320,6 @@ test("promotion workflow downloads an artifact by ID and never rebuilds", async 
   assert.match(workflow, /environment:\s*\$\{\{ inputs\.target_environment \}\}/);
   assert.doesNotMatch(workflow, /release:build/);
   assert.doesNotMatch(workflow, /npm\s+run\s+build/);
+  assert.match(workflow, /expected-source-artifact-id/);
   assert.match(workflow, /validate-promotion/);
 });
