@@ -1,0 +1,82 @@
+name: Seed Beta Calibration
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - .github/workflows/seed-beta-calibration.yml
+      - package.json
+      - scripts/build-seed-beta-pack.mjs
+      - scripts/build-seed-beta-calibration.mjs
+      - scripts/seed-beta-pack-lib.mjs
+      - scripts/seed-beta-pack-validator.mjs
+      - scripts/seed-beta-pack.test.mjs
+      - docs/seed-content/**
+      - player-terminal/src/data/map-regions.js
+      - player-terminal/assets/images/econovaria-world-map.png
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/seed-beta-calibration.yml
+      - package.json
+      - scripts/build-seed-beta-pack.mjs
+      - scripts/build-seed-beta-calibration.mjs
+      - scripts/seed-beta-pack-lib.mjs
+      - scripts/seed-beta-pack-validator.mjs
+      - scripts/seed-beta-pack.test.mjs
+      - docs/seed-content/**
+      - player-terminal/src/data/map-regions.js
+      - player-terminal/assets/images/econovaria-world-map.png
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-beta-calibration-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - name: Build and capture diagnostics
+        id: build
+        shell: bash
+        run: |
+          set +e
+          npm run build:seed-beta-pack > "$RUNNER_TEMP/seed-beta-calibration.log" 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          tail -n 120 "$RUNNER_TEMP/seed-beta-calibration.log"
+          exit 0
+      - name: Upload calibration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-calibration-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/seed-beta-calibration.log
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce calibration build
+        shell: bash
+        run: |
+          if [ "${{ steps.build.outputs.status }}" != "0" ]; then
+            echo "Seed beta calibration failed. Inspect the retained diagnostic artifact."
+            false
+          fi
+      - name: Validate calibrated pack
+        run: npm run validate:seed-beta-pack
+      - name: Test calibrated pack
+        run: npm run test:seed-beta-pack
