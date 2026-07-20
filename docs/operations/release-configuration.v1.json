@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "configurationVersion": "2026-07-20.1",
+  "featureFlags": {
+    "betaReleaseApproved": false,
+    "messagingExpansionEnabled": false,
+    "marketplaceExpansionEnabled": false,
+    "progressionExpansionEnabled": false,
+    "seedActivationAuthorized": false,
+    "storyNotificationDeliveryEnabled": false
+  }
+}
