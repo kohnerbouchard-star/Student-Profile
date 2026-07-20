@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "name": "previously-observed-stock-functions",
+      "members": [
+        "stock-market-sim",
+        "stock-market-simulation",
+        "stock-market-game-api",
+        "stock-market-data"
+      ],
+      "retirementDisposition": "preserve-deletion-evidence",
+      "rollbackInstructions": "Do not restore without reviewed source, ownership, and approval.",
+      "owner": "Market service owner",
+      "evidenceStatus": "historical-evidence-required"
+    }
+  ]
+}
