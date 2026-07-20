@@ -1,0 +1,33 @@
+name: Program Control Phase 0 Ledger Seal
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/program-control-phase0-ledger-seal.yml
+      - scripts/program-control-phase0-ledger-seal.py
+
+permissions:
+  contents: write
+
+jobs:
+  seal-ledger:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/program-control-phase0-final-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - run: python scripts/program-control-phase0-ledger-seal.py
+      - run: rm scripts/program-control-phase0-ledger-seal.py .github/workflows/program-control-phase0-ledger-seal.yml
+      - name: Commit generated ledger seal
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md scripts/program-control-phase0-ledger-seal.py .github/workflows/program-control-phase0-ledger-seal.yml
+          git commit -m "docs(roadmap): add Phase 0 completion ledger"
+          git push origin HEAD:${{ github.head_ref }}
