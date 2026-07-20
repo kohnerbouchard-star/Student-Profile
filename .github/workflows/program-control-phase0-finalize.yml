@@ -1,0 +1,37 @@
+name: Program Control Phase 0 Finalize
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/program-control-phase0-finalize.yml
+      - scripts/program-control-phase0-finalize.py
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-roadmap:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/program-control-phase0-final-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - run: python scripts/program-control-phase0-finalize.py
+      - run: rm scripts/program-control-phase0-finalize.py .github/workflows/program-control-phase0-finalize.yml
+      - name: Commit generated roadmap update
+        run: |
+          if git diff --quiet; then
+            echo "No Phase 0 reconciliation changes were generated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmaps/econovaria-beta-completion-roadmap-v1.md scripts/program-control-phase0-finalize.py .github/workflows/program-control-phase0-finalize.yml
+          git commit -m "docs(roadmap): seal Phase 0 program control"
+          git push origin HEAD:${{ github.head_ref }}
