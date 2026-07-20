@@ -5,26 +5,9 @@ on:
     paths:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
-      - "backend/src/domains/notifications/infrastructure/**"
-      - "scripts/validate-supabase-migrations.mjs"
       - "scripts/operations/live-migration-reconciliation/**"
       - "docs/operations/evidence/live-migration-reconciliation-v1/**"
-      - "package.json"
-      - "package-lock.json"
       - ".github/workflows/database-replay.yml"
-      - ".github/workflows/live-migration-reconciliation-finalize.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/supabase/config.toml"
-      - "backend/supabase/migrations/**"
-      - "backend/src/domains/notifications/infrastructure/**"
-      - "scripts/validate-supabase-migrations.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/database-replay.yml"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -34,91 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  replay:
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22.23.1"
-          cache: npm
-
-      - name: Pin npm
-        run: npm install --global npm@10.9.8
-
-      - name: Install pinned tooling
-        run: npm ci
-
-      - name: Validate migration source
-        run: npm run audit:migrations
-
-      - name: Start disposable Supabase stack
-        shell: bash
-        run: |
-          LOG="/tmp/database-replay-startup.log"
-          : > "$LOG"
-          STATUS=1
-
-          for ATTEMPT in 1 2 3; do
-            printf '\n## Supabase startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
-            set +e
-            npx supabase start --workdir backend \
-              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
-              2>&1 | tee -a "$LOG"
-            STATUS=${PIPESTATUS[0]}
-            set -e
-
-            if [ "$STATUS" -eq 0 ]; then
-              exit 0
-            fi
-
-            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
-            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
-            sleep $((ATTEMPT * 10))
-          done
-
-          exit "$STATUS"
-
-      - name: Replay migrations from zero twice
-        run: |
-          npx supabase db reset --workdir backend --local
-          npx supabase db reset --workdir backend --local
-
-      - name: Lint rebuilt database
-        run: npx supabase db lint --workdir backend --local --level warning
-
-      - name: Capture local service diagnostics
-        if: failure()
-        shell: bash
-        run: |
-          npx supabase status --workdir backend 2>&1 | tee -a /tmp/database-replay-status.log || true
-          docker ps -a 2>&1 | tee -a /tmp/database-replay-docker.log || true
-          docker system df 2>&1 | tee -a /tmp/database-replay-docker.log || true
-
-      - name: Upload replay diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: database-replay-diagnostics
-          path: |
-            /tmp/database-replay-startup.log
-            /tmp/database-replay-status.log
-            /tmp/database-replay-docker.log
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop disposable stack
-        if: always()
-        run: npx supabase stop --workdir backend --no-backup || true
-
   finalize-reconciliation:
     if: >-
-      github.event_name == 'pull_request' &&
       github.event.pull_request.number == 282 &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/live-migration-reconciliation-v1'
@@ -160,31 +60,47 @@ jobs:
       - name: Run root repository tests
         id: root_tests
         continue-on-error: true
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/root-tests.log
 
       - name: Run Backend typecheck
         id: backend_typecheck
         continue-on-error: true
-        run: npm --prefix backend run typecheck:all
+        shell: bash
+        run: |
+          set -o pipefail
+          npm --prefix backend run typecheck:all 2>&1 | tee /tmp/backend-typecheck.log
 
       - name: Run Backend smoke
         id: backend_smoke
         continue-on-error: true
-        run: npm --prefix backend run smoke
+        shell: bash
+        run: |
+          set -o pipefail
+          npm --prefix backend run smoke 2>&1 | tee /tmp/backend-smoke.log
 
       - name: Validate migration source
         id: migration_audit
         continue-on-error: true
-        run: npm run audit:migrations
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run audit:migrations 2>&1 | tee /tmp/migration-audit.log
 
       - name: Validate reconciliation tooling
         id: reconciliation_tools
         continue-on-error: true
+        shell: bash
         run: |
-          node --check scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs
-          node --check scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs
-          node scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs --self-test
-          bash -n scripts/operations/live-migration-reconciliation/export-management-metadata.sh
+          set -o pipefail
+          {
+            node --check scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs
+            node --check scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs
+            node scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs --self-test
+            bash -n scripts/operations/live-migration-reconciliation/export-management-metadata.sh
+          } 2>&1 | tee /tmp/reconciliation-tools.log
 
       - name: Calculate all repository migration SHA-256 values
         id: migration_hashes
@@ -201,6 +117,7 @@ jobs:
             statement_count: .live_statement_count
           }]}' "$EVIDENCE_DIR/migration-ledger.json" > /tmp/live-migrations.json
 
+          RECONCILE_EXIT=0
           node scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs \
             --repo-dir backend/supabase/migrations \
             --live-snapshot /tmp/live-migrations.json \
@@ -226,7 +143,7 @@ jobs:
           HASH_COUNT="$(jq '[.migrations[].repository_sha256 | select(test("^[0-9a-f]{64}$"))] | length' "$EVIDENCE_DIR/repository-migration-sha256.json")"
           test "$REPOSITORY_COUNT" -eq "$HASH_COUNT"
           test "$REPOSITORY_COUNT" -gt 0
-          printf 'reconcile_exit=%s\n' "${RECONCILE_EXIT:-0}" >> "$GITHUB_OUTPUT"
+          printf 'reconcile_exit=%s\n' "$RECONCILE_EXIT" >> "$GITHUB_OUTPUT"
           printf 'repository_count=%s\n' "$REPOSITORY_COUNT" >> "$GITHUB_OUTPUT"
 
       - name: Start disposable Supabase stack
@@ -258,7 +175,6 @@ jobs:
           exit "$STATUS"
 
       - name: Replay from zero twice and capture canonical schemas
-        id: clean_replay
         shell: bash
         run: |
           set -euo pipefail
@@ -310,7 +226,7 @@ jobs:
              }' "$EVIDENCE_DIR/clean-replay-schema.json" \
             > "$EVIDENCE_DIR/clean-replay-summary.json"
 
-      - name: Record evidence and restore temporary workflow changes
+      - name: Record and publish evidence
         env:
           ROOT_TESTS: ${{ steps.root_tests.outcome }}
           BACKEND_TYPECHECK: ${{ steps.backend_typecheck.outcome }}
@@ -378,13 +294,9 @@ jobs:
             }' > "$EVIDENCE_DIR/final-head-validation.json"
 
           test "$BEHIND" -eq 0
-          git checkout origin/main -- .github/workflows/database-replay.yml
-          rm -f .github/workflows/live-migration-reconciliation-finalize.yml
           git diff --check
-          git add "$EVIDENCE_DIR" .github/workflows/database-replay.yml
-          git add -u .github/workflows/live-migration-reconciliation-finalize.yml
+          git add "$EVIDENCE_DIR"
           git commit -m "test(db): record clean replay and migration hashes"
-          git pull --rebase origin agent/live-migration-reconciliation-v1
           git push origin HEAD:agent/live-migration-reconciliation-v1
 
       - name: Enforce final-head check results
@@ -405,7 +317,7 @@ jobs:
           test "$RECONCILIATION_TOOLS" = "success"
           test "${RECONCILE_EXIT:-0}" -eq 0
 
-      - name: Upload final reconciliation evidence
+      - name: Upload final reconciliation evidence and check logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -413,6 +325,11 @@ jobs:
           path: |
             /tmp/live-migration-reconciliation-startup.log
             /tmp/clean-replay-schema-first.json
+            /tmp/root-tests.log
+            /tmp/backend-typecheck.log
+            /tmp/backend-smoke.log
+            /tmp/migration-audit.log
+            /tmp/reconciliation-tools.log
             docs/operations/evidence/live-migration-reconciliation-v1/
           if-no-files-found: warn
           retention-days: 30
