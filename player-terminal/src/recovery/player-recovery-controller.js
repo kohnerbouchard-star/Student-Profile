@@ -20,7 +20,14 @@ const MUTATION_CONTROL_SELECTOR = [
 ].join(",");
 
 const LIFECYCLE_STATE_KINDS = new Set(["game-paused", "game-ended"]);
-const ACTIVE_LIFECYCLE_CODES = new Set(["GAME_ACTIVE", "GAME_RESUMED", "MUTATIONS_RESUMED"]);
+const ACTIVE_LIFECYCLE_CODES = new Set([
+  "GAME_ACTIVE",
+  "GAME_RESUMED",
+  "MUTATIONS_RESUMED",
+  "ACTIVE",
+  "RUNNING",
+  "ENABLED",
+]);
 
 function safeDocument(mount, runtime) {
   return mount?.ownerDocument || runtime?.document || null;
@@ -89,16 +96,22 @@ function dispatchRecoveryState(runtime, state) {
 
 function lifecycleRecoveryFromTerminal(terminal) {
   const session = terminal?.getState?.()?.data?.session || {};
+  const lifecycle = session.lifecycle && typeof session.lifecycle === "object"
+    ? session.lifecycle
+    : {};
+  if (session.mutationsPaused === true || lifecycle.mutationsPaused === true) {
+    return classifyPlayerRecoverySignal({ code: "GAME_MUTATIONS_PAUSED" });
+  }
   const code = String(
     session.gameLifecycleStatus ||
     session.lifecycleStatus ||
     session.gameStatus ||
     session.gameState ||
+    lifecycle.state ||
+    lifecycle.operationalStatus ||
+    session.operationalStatus ||
     "",
   ).trim().toUpperCase();
-  if (session.mutationsPaused === true && !code) {
-    return classifyPlayerRecoverySignal({ code: "GAME_MUTATIONS_PAUSED" });
-  }
   if (!code || ACTIVE_LIFECYCLE_CODES.has(code)) return null;
   return classifyPlayerRecoverySignal({ code });
 }
@@ -275,8 +288,9 @@ export function installPlayerRecoveryController({
   function show(state) {
     if (destroyed || !state) return null;
     clearTimer("dismiss");
-    currentState = state;
     if (LIFECYCLE_STATE_KINDS.has(state.kind)) lifecycleState = state;
+    else if (lifecycleState && state.kind !== "offline") state = lifecycleState;
+    currentState = state;
     retryStartedAt = state.kind === "rate-limited" ? Date.now() : 0;
     render();
     startCountdown();
