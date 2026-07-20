@@ -9,11 +9,12 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
-    "audit": "npm run audit:migrations && npm run audit:architecture && npm run audit:assets && npm run audit:admin-contracts && npm run audit:incident-readiness",
+    "audit": "npm run audit:migrations && npm run audit:architecture && npm run audit:assets && npm run audit:admin-contracts && npm run audit:incident-readiness && npm run audit:legacy-runtime",
     "audit:admin-contracts": "node scripts/admin-bundle-contract-audit.mjs",
     "audit:architecture": "node scripts/admin-architecture-ratchet.mjs",
     "audit:assets": "node scripts/asset-reference-audit.mjs",
     "audit:incident-readiness": "node scripts/incident-readiness-contract.mjs",
+    "audit:legacy-runtime": "node scripts/legacy-runtime/audit-live-runtime-inventory.mjs && node scripts/legacy-runtime/legacy-browser-transport-ratchet.mjs",
     "audit:migrations": "node scripts/validate-supabase-migrations.mjs",
     "preflight:staging": "node scripts/deployment-readiness-preflight.mjs",
     "release:build": "node scripts/release-platform.mjs build",
@@ -31,13 +32,14 @@
     "test:branch-hygiene": "node --test scripts/branch-hygiene-policy.test.mjs",
     "test:deployment-readiness": "node --test scripts/deployment-readiness-preflight.test.mjs",
     "test:incident-readiness": "node --test scripts/incident-readiness-contract.test.mjs",
+    "test:legacy-runtime": "node --test scripts/legacy-runtime/runtime-retirement.test.mjs",
     "test:market-trigger": "node --test scripts/trigger-stock-market-tick.test.mjs",
     "test:player-runtime-cutover": "node scripts/player-terminal-runtime-cutover-smoke.mjs",
     "test:release-platform": "node --test scripts/release-platform.test.mjs scripts/release-environment-neutrality.test.mjs scripts/release-build-determinism.test.mjs",
     "test:supply-chain": "node --test scripts/supply-chain-security.test.mjs",
     "db:lint": "supabase db lint --workdir backend --local --level warning",
     "db:reset": "supabase db reset --workdir backend --local",
-    "test": "npm run audit && npm run test:deployment-readiness && npm run test:release-platform && npm run test:branch-hygiene && npm run test:incident-readiness && npm run test:market-trigger && npm run test:admin-mounted-event && npm run test:admin-redemptions && npm run test:admin-game-lifecycle && npm run test:player-runtime-cutover && node scripts/admin-session-manager-smoke.mjs && node scripts/admin-shell-smoke.mjs && node scripts/admin-v606-full-drift-audit.mjs"
+    "test": "npm run audit && npm run test:deployment-readiness && npm run test:release-platform && npm run test:branch-hygiene && npm run test:incident-readiness && npm run test:legacy-runtime && npm run test:market-trigger && npm run test:admin-mounted-event && npm run test:admin-redemptions && npm run test:admin-game-lifecycle && npm run test:player-runtime-cutover && node scripts/admin-session-manager-smoke.mjs && node scripts/admin-shell-smoke.mjs && node scripts/admin-v606-full-drift-audit.mjs"
   },
   "devDependencies": {
     "playwright": "1.61.1",
