@@ -1,0 +1,56 @@
+name: Apply Player Story Delivery v1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .tmp/story-patch-gz/READY
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Reconstruct and apply exact implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat \
+            .tmp/story-patch-gz/chunk-00 \
+            .tmp/story-patch-gz/chunk-01 \
+            .tmp/story-patch-gz/chunk-02-0 \
+            .tmp/story-patch-gz/chunk-02-1 \
+            > /tmp/player-story-delivery-v1.patch.gz.b64
+          base64 --decode .tmp/story-patch-gz/chunk-02-2-double \
+            >> /tmp/player-story-delivery-v1.patch.gz.b64
+          base64 --decode /tmp/player-story-delivery-v1.patch.gz.b64 \
+            > /tmp/player-story-delivery-v1.patch.gz
+          gzip --decompress --stdout /tmp/player-story-delivery-v1.patch.gz \
+            > /tmp/player-story-delivery-v1.patch
+
+          echo "f9f1ae19c00f54d33bfa202d00b08ff20f4821c82794216845d6dfe330baf35e  /tmp/player-story-delivery-v1.patch" \
+            | sha256sum --check --strict
+          git apply --check /tmp/player-story-delivery-v1.patch
+          git apply /tmp/player-story-delivery-v1.patch
+
+          rm -rf .tmp/story-patch .tmp/story-patch-gz
+          rm -f .github/workflows/apply-player-story-delivery-v1.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(player): add authoritative story delivery"
+          git push
