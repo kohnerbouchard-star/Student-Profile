@@ -27,6 +27,20 @@ rollback-evidence requirements.
    separate environment-scoped secrets. Production requires a named reviewer and
    no self-approval where supported.
 
+## Application configuration blocker
+
+The accepted static Admin source currently contains an absolute URL for the
+audited live Supabase project. An artifact containing that binding cannot be used
+as an isolated staging artifact and then promoted unchanged to production.
+
+PR #280 adds `release:validate-neutrality`. The manual immutable-artifact workflow
+fails before packaging whenever Player/Admin static source contains an absolute
+Supabase origin, an absolute Cloudflare Worker origin, the audited live project
+ref, or the audited live Worker origin. The application owner must externalize
+runtime endpoint configuration or otherwise make the checked-in frontend
+artifact environment-neutral. This release tranche does not modify application
+source.
+
 ## Expected Supabase cost
 
 Official Supabase pricing checked on 2026-07-20 states that the Free plan permits
@@ -62,7 +76,9 @@ The product owner must confirm all of the following before resource creation:
 
 Repository schemas, validators, deterministic artifact generation, checksums,
 provenance, exact-artifact promotion, rollback controls, environment templates,
-runbooks, and workflow-contract tests are implemented on PR #280. Real
-`OPS-STAGE-006`, `OPS-STAGE-007`, `BETA-PLAYER-010`, and `BETA-ADMIN-007`
-evidence remains unavailable until the distinct resources and approvals above
-exist.
+runbooks, workflow-contract tests, and environment-neutrality enforcement are
+implemented on PR #280. Real `OPS-STAGE-006`, `OPS-STAGE-007`,
+`OPS-ARTIFACT-001`, `OPS-ARTIFACT-002`, `BETA-PLAYER-010`, and
+`BETA-ADMIN-007` evidence remains unavailable until the application binding,
+distinct resources, approvals, connected deployments, and recovery evidence are
+resolved.
