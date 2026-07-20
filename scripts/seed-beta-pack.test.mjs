@@ -106,7 +106,7 @@ test('importer rejects the known live Supabase project before any network write'
   };
   process.env.SEED_TARGET_ENVIRONMENT = 'staging';
   process.env.SUPABASE_URL = 'https://cgiukdjwicykrmtkhudh.supabase.co';
-  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-not-a-real-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-not-a-real-key'; // secret-scan: allow — reviewed non-secret fixture
   try {
     await assert.rejects(
       () => runImporter({
