@@ -8,7 +8,10 @@ on:
       - "docs/operations/environments/**"
       - "docs/operations/evidence/**"
       - "docs/operations/schemas/**"
+      - "docs/operations/*promotion-record.template.json"
+      - "docs/operations/staging-player-admin-smoke.template.json"
       - "scripts/release-platform*"
+      - "scripts/release-environment-neutrality*"
       - "package.json"
   workflow_dispatch:
     inputs:
@@ -145,16 +148,22 @@ jobs:
           --manifest "$ENVIRONMENT_MANIFEST_PATH"
           --expected-environment "$TARGET_ENVIRONMENT"
 
-      - name: Validate approval, staging evidence, and rollback target
+      - name: Validate dispatch identity, approval, staging evidence, and rollback target
         env:
           PROMOTION_RECORD_PATH: ${{ inputs.promotion_record_path }}
+          ENVIRONMENT_MANIFEST_PATH: ${{ inputs.environment_manifest_path }}
           TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_ARTIFACT_ID: ${{ inputs.source_artifact_id }}
         run: >-
           npm run release:validate-promotion --
           --record "$PROMOTION_RECORD_PATH"
           --release-manifest dist/release/release-manifest.json
           --artifact-root dist/release
           --expected-environment "$TARGET_ENVIRONMENT"
+          --expected-source-run-id "$SOURCE_RUN_ID"
+          --expected-source-artifact-id "$SOURCE_ARTIFACT_ID"
+          --expected-environment-manifest-path "$ENVIRONMENT_MANIFEST_PATH"
 
       - name: Verify checksums before handoff to deployment adapters
         working-directory: dist/release
@@ -174,15 +183,22 @@ jobs:
         shell: bash
         run: |
           node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const crypto = require('node:crypto');
           const fs = require('node:fs');
-          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          const manifestBytes = fs.readFileSync('dist/release/release-manifest.json');
+          const manifest = JSON.parse(manifestBytes.toString('utf8'));
+          const manifestSha = crypto.createHash('sha256').update(manifestBytes).digest('hex');
           console.log('## Exact artifact promotion authorized');
           console.log(`- Target: \`${process.env.TARGET_ENVIRONMENT}\``);
           console.log(`- Release: \`${manifest.releaseId}\``);
           console.log(`- Commit: \`${manifest.source.commit}\``);
-          console.log(`- Artifact-set SHA-256: \`${manifest.artifactSetSha256}\``);
           console.log(`- Source workflow run: \`${process.env.SOURCE_RUN_ID}\``);
           console.log(`- Source artifact ID: \`${process.env.SOURCE_ARTIFACT_ID}\``);
+          console.log(`- Release-manifest SHA-256: \`${manifestSha}\``);
+          console.log(`- Artifact-set SHA-256: \`${manifest.artifactSetSha256}\``);
+          console.log(`- Configuration version: \`${manifest.configuration.version}\``);
+          console.log(`- Configuration SHA-256: \`${manifest.configuration.sha256}\``);
+          console.log(`- Environment-neutrality: \`${manifest.environmentNeutrality.status}\``);
           console.log('- Rebuilt during promotion: `false`');
           console.log('- External deployment remains blocked unless the approved environment-specific deployment adapter and credentials exist.');
           NODE
