@@ -1,0 +1,116 @@
+{
+  "format": "econovaria-live-renumbered-identity-review-v1",
+  "captured_on": "2026-07-20",
+  "live_project_ref": "cgiukdjwicykrmtkhudh",
+  "review_scope": "Read-only comparison of the ten live-only version identities with same-name repository migrations on synchronized main.",
+  "summary": {
+    "reviewed_pair_count": 10,
+    "statement_sha256_identical_count": 2,
+    "same_name_content_divergent_count": 8,
+    "live_ledger_modified": false,
+    "corrective_migration_created": false
+  },
+  "pairs": [
+    {
+      "name": "create_admin_audit_log_flags_v1",
+      "live_version": "20260713144033",
+      "live_statement_sha256": "f70ac2d04867b045f1c8485bbc3888d790ee0f67c5fd92e5260d2dd05ea7c026",
+      "repository_version": "20260713193000",
+      "repository_file": "20260713193000_create_admin_audit_log_flags_v1.sql",
+      "repository_sha256": "7f4ef054e2fcad2bc3ad5e1731ebffa322973728e6b769946406b1d8afd9be87",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Do not rewrite the live ledger. Compare live and isolated table, constraint, index, RLS, grant, and function effects before proposing a forward-only correction."
+    },
+    {
+      "name": "issue_contract_rewards_atomic_v1",
+      "live_version": "20260713144209",
+      "live_statement_sha256": "a538d90b0b92a0162244c673d24457090a712242c80bd2a30b212148952edf71",
+      "repository_version": "20260713194500",
+      "repository_file": "20260713194500_issue_contract_rewards_atomic_v1.sql",
+      "repository_sha256": "aa78ad118a2ea87cba62dba42e8fa159a8462f0a63050a942e4841c1baaccf03",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Verify function signature, security-definer properties, grants, idempotency constraints, and reward issuance behavior in isolation before any forward-only correction."
+    },
+    {
+      "name": "harden_admin_data_api_tables_v1",
+      "live_version": "20260713223157",
+      "live_statement_sha256": "b09c4cd6bd25ee7573c498b676954330b04db666ac2adeaacf402c7a9a054cea",
+      "repository_version": "20260714224000",
+      "repository_file": "20260714224000_harden_admin_data_api_tables_v1.sql",
+      "repository_sha256": "b09c4cd6bd25ee7573c498b676954330b04db666ac2adeaacf402c7a9a054cea",
+      "classification": "renumbered_statement_sha256_identical",
+      "recommended_disposition": "Treat as the same migration content under different version identities. Preserve both historical records and verify isolated replay ordering; do not reapply to production solely to align the version number."
+    },
+    {
+      "name": "complete_admin_control_surfaces_v1",
+      "live_version": "20260713223526",
+      "live_statement_sha256": "1402a0aadc40b697ae187cdf44bca79a6125de4eb69824561a07ad7cdea379fd",
+      "repository_version": "20260713223000",
+      "repository_file": "20260713223000_complete_admin_control_surfaces_v1.sql",
+      "repository_sha256": "1402a0aadc40b697ae187cdf44bca79a6125de4eb69824561a07ad7cdea379fd",
+      "classification": "renumbered_statement_sha256_identical",
+      "recommended_disposition": "Treat as the same migration content under different version identities. Preserve both historical records and verify isolated replay ordering; do not reapply to production solely to align the version number."
+    },
+    {
+      "name": "harden_security_definer_rpc_privileges_v1",
+      "live_version": "20260713224905",
+      "live_statement_sha256": "d709d4c52381e4f236fe5267ff7e660399bf5835b47658806ac26a87591188f8",
+      "repository_version": "20260714233000",
+      "repository_file": "20260714233000_harden_security_definer_rpc_privileges_v1.sql",
+      "repository_sha256": "4ddef93929ee064bddeb4e1147516fe244014bfd7fc0255d20896a31874357e7",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare function ownership, SECURITY DEFINER state, search paths, PUBLIC/anon/authenticated revocations, and service-role grants before proposing a forward-only privilege correction."
+    },
+    {
+      "name": "index_admin_control_surface_foreign_keys_v1",
+      "live_version": "20260713225007",
+      "live_statement_sha256": "ce5be9b6b5a686a21fd2f8f1e1274e0dc846e3badfccbd8387cdf602888aa0e4",
+      "repository_version": "20260714234500",
+      "repository_file": "20260714234500_index_admin_control_surface_foreign_keys_v1.sql",
+      "repository_sha256": "e64607edeb7eb6e3e6ad23f21ea93e628c871a0eb4068117cd3b4c9c0030e522",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare exact index definitions, predicates, uniqueness, and covered foreign-key columns in live and isolated snapshots."
+    },
+    {
+      "name": "add_configurable_player_identity_v1",
+      "live_version": "20260714072030",
+      "live_statement_sha256": "eb64fee46861a7612fd6f5d3b761c4da064f707e584bf959ad36075ec7b1abd3",
+      "repository_version": "20260714235950",
+      "repository_file": "20260714235950_add_configurable_player_identity_v1.sql",
+      "repository_sha256": "d0f5d50c319ad64b739c743d1fac629e9241ded7625f8b009551cca444adf608",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare player columns, constraints, indexes, credential function definitions, grants, and data backfill behavior in isolation."
+    },
+    {
+      "name": "harden_configurable_player_identity_rpc_grants_v1",
+      "live_version": "20260714072127",
+      "live_statement_sha256": "d7da49678d4f007ad34b949760cb9aaa2c44a741da5fabf25546db2b7572a330",
+      "repository_version": "20260715001000",
+      "repository_file": "20260715001000_harden_configurable_player_identity_rpc_grants_v1.sql",
+      "repository_sha256": "246cc5e5c91b4024f24952c81924a1f5f1d9c60663c15d644a390dfe7824b690",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare exact EXECUTE privileges and PUBLIC/anon/authenticated revocations before a forward-only grant correction is considered."
+    },
+    {
+      "name": "fix_player_identity_rpc_column_ambiguity_v1",
+      "live_version": "20260714073723",
+      "live_statement_sha256": "b8709ba8cc7ad28b2804563110f19101b00971f9b87195401699ff2cb3a85132",
+      "repository_version": "20260715002000",
+      "repository_file": "20260715002000_fix_player_identity_rpc_column_ambiguity_v1.sql",
+      "repository_sha256": "e5222df535dafde723e82f3219066d5c7b0050d23024e450b395505c33ae07b9",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare the effective function definition and execute regression probes against live-exported and isolated definitions."
+    },
+    {
+      "name": "add_story_notification_tables_v1",
+      "live_version": "20260714113345",
+      "live_statement_sha256": "9c42de7f3967216213c1f7d7ca0060c71b870a4f2b81a68bd0daed1bddf2acbf",
+      "repository_version": "20260715003000",
+      "repository_file": "20260715003000_add_story_notification_tables_v1.sql",
+      "repository_sha256": "8a81b2a0250bb6463f45c6869c74f6b9d94f6a8a6dd6b3f201d2c9e0389ca9ba",
+      "classification": "renumbered_content_divergent_requires_isolated_schema_effect_review",
+      "recommended_disposition": "Preserve both identities. Compare notification tables, delivery constraints, indexes, RLS state, grants, and later hardening migration effects before proposing a forward-only correction."
+    }
+  ],
+  "global_disposition": "The ten live-only identities are reviewed and paired by exact migration name. Two pairs are byte-identical at the stored-statement/repository-file SHA-256 boundary. Eight pairs have content drift and remain blocking until isolated schema-effect comparison. No production ledger rewrite or speculative corrective migration is authorized."
+}

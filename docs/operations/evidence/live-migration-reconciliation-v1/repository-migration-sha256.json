@@ -1,0 +1,498 @@
+{
+  "format": "econovaria-repository-migration-sha256-v1",
+  "generated_at": "2026-07-20T07:53:28Z",
+  "source_commit": "18213c774eb8f6dd0c74dc23863b79e6c0fd13b5",
+  "migration_count": 70,
+  "migrations": [
+    {
+      "version": "20260615161835",
+      "name": "create_core_tables_v1",
+      "filename": "20260615161835_create_core_tables_v1.sql",
+      "repository_sha256": "b37e3a66ebc96d19e6884991954ab022b8d928ff0282b73e83364fd4e2dd3651",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260615220305",
+      "name": "add_rls_policies_v1",
+      "filename": "20260615220305_add_rls_policies_v1.sql",
+      "repository_sha256": "857a110c37a5b6889a90b07b71d74925715047ed1fc155e577fe51e967dbc953",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260616142000",
+      "name": "add_licensing_activation_rpc_v1",
+      "filename": "20260616142000_add_licensing_activation_rpc_v1.sql",
+      "repository_sha256": "19baf1d50fa963fde0cdf8a919581ed27980e50aff707147b0580647a653f981",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260617072000",
+      "name": "fix_licensing_activation_rpc_column_refs_v1",
+      "filename": "20260617072000_fix_licensing_activation_rpc_column_refs_v1.sql",
+      "repository_sha256": "89c98e84b693665ab431fdb497b8120d6973d13e415c3da0248f61e92fca8685",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260617113000",
+      "name": "add_ledger_transaction_rpc_v1",
+      "filename": "20260617113000_add_ledger_transaction_rpc_v1.sql",
+      "repository_sha256": "787038282c74bed09f1a3fb0885f811410a464d3bb47339e22b195ed184b91fe",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260617114500",
+      "name": "add_initial_balance_seed_rpc_v1",
+      "filename": "20260617114500_add_initial_balance_seed_rpc_v1.sql",
+      "repository_sha256": "e39272c05756308c357fcd2384ccf6cda4754b00d00bdb4f453900650e776471",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260617120000",
+      "name": "add_player_attendance_clock_in_v1",
+      "filename": "20260617120000_add_player_attendance_clock_in_v1.sql",
+      "repository_sha256": "d3d73dc266f69fe43f88ad5060da4c260db932a411af348d8308c60b9bdba90b",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260617133000",
+      "name": "create_store_items_v1",
+      "filename": "20260617133000_create_store_items_v1.sql",
+      "repository_sha256": "9c2e8e90548452c23f44031d9b520f8ff4cb1e4ff228da0300fba353e30a3900",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260621002500",
+      "name": "create_store_purchase_foundation_v1",
+      "filename": "20260621002500_create_store_purchase_foundation_v1.sql",
+      "repository_sha256": "880af1c498ca2d77b1c95e2c7ed03d55b4fc68b408a8ffc5c4dd959d5054d1dd",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260621004500",
+      "name": "create_country_profiles_v1",
+      "filename": "20260621004500_create_country_profiles_v1.sql",
+      "repository_sha256": "643ad17884c2a4c8cecd5be8da6c6f23f1f4fad6e46855b33e87e439778ced4a",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260621015000",
+      "name": "add_store_purchase_execution_rpc_v1",
+      "filename": "20260621015000_add_store_purchase_execution_rpc_v1.sql",
+      "repository_sha256": "b03b0a99768a359d6f812136ad454ffd07f34beed36c66d5adf4a887a4f5e178",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260621021000",
+      "name": "add_balanced_player_country_assignment_v1",
+      "filename": "20260621021000_add_balanced_player_country_assignment_v1.sql",
+      "repository_sha256": "abdaee896b349895230860cca4fe440db355ef1830047bfdf9aad09c03e3db5f",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260621023000",
+      "name": "patch_balanced_player_country_assignment_lock_v1",
+      "filename": "20260621023000_patch_balanced_player_country_assignment_lock_v1.sql",
+      "repository_sha256": "408e50b9483054465954b551d769f0cf690dc913e452f190e282b935c334b977",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623093000",
+      "name": "add_stock_market_schema_foundation_v1",
+      "filename": "20260623093000_add_stock_market_schema_foundation_v1.sql",
+      "repository_sha256": "e9b8105aea7569e44d554dc7ba95d45c533ae27b72ba5e180051cf2dc3f6845e",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623103000",
+      "name": "add_stock_market_runner_apply_rpc_v1",
+      "filename": "20260623103000_add_stock_market_runner_apply_rpc_v1.sql",
+      "repository_sha256": "78521f74bcafae446e6bd4499f26bfb45002509a267a70ca00c6ca5081e5adaa",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623113000",
+      "name": "seed_default_stock_templates_v1",
+      "filename": "20260623113000_seed_default_stock_templates_v1.sql",
+      "repository_sha256": "19fe24aa2f9e5c9f86078044217f1dc3b85ea94deeb30d6e2bfe5fc381852215",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623114000",
+      "name": "add_stock_market_seed_copy_rpc_v1",
+      "filename": "20260623114000_add_stock_market_seed_copy_rpc_v1.sql",
+      "repository_sha256": "eff0355b1734a62e917b4d21ba56d32e910a59f51c947d8ec3f613c48a266933",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623115000",
+      "name": "add_stock_market_latest_ticks_read_rpc_v1",
+      "filename": "20260623115000_add_stock_market_latest_ticks_read_rpc_v1.sql",
+      "repository_sha256": "334e693f77a06c8fa5659440cf71d827146dfaa67e14f48e5da52d1d9300238e",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623123000",
+      "name": "add_stock_market_trading_foundation_v1",
+      "filename": "20260623123000_add_stock_market_trading_foundation_v1.sql",
+      "repository_sha256": "b6be4ae8ed9b5762d7fc2fb83bfa44ec98551c73752b4b7e60cc6e25dce12a18",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623123500",
+      "name": "harden_stock_market_trading_active_session_v1",
+      "filename": "20260623123500_harden_stock_market_trading_active_session_v1.sql",
+      "repository_sha256": "06a9d67fd169c3007a21c3632f306086938d477ad51badb8d7a1b2be18db0b6e",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623124500",
+      "name": "fix_stock_market_seed_copy_ambiguous_columns_v1",
+      "filename": "20260623124500_fix_stock_market_seed_copy_ambiguous_columns_v1.sql",
+      "repository_sha256": "bfadccaefcff883a8c2dc45ea238959fed9ef2f05636e7e5d49dd6efa1212d04",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623125000",
+      "name": "fix_country_snapshot_initializer_conflict_v1",
+      "filename": "20260623125000_fix_country_snapshot_initializer_conflict_v1.sql",
+      "repository_sha256": "bff9a4c8d2658968550857525e67f245fb4d5064b65ca870785bd50f98c0d160",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260623125500",
+      "name": "fix_country_snapshot_default_baseline_v1",
+      "filename": "20260623125500_fix_country_snapshot_default_baseline_v1.sql",
+      "repository_sha256": "535bdd30b4e7a4efeda110d477790303474c3434eda423926bea29778710396c",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624051000",
+      "name": "repair_store_purchase_foundation_schema",
+      "filename": "20260624051000_repair_store_purchase_foundation_schema.sql",
+      "repository_sha256": "3ea996857b1e559ae03125163308867417b3399eb28e3a4774479506844cfad7",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624064500",
+      "name": "repair_store_purchase_execution_rpc",
+      "filename": "20260624064500_repair_store_purchase_execution_rpc.sql",
+      "repository_sha256": "4e5686bc396d32970f268816d7cb04a68a2b69ccce75de2aa2f95bf41463a7ed",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624065500",
+      "name": "fix_store_purchase_rpc_digest_schema",
+      "filename": "20260624065500_fix_store_purchase_rpc_digest_schema.sql",
+      "repository_sha256": "61d66119e319c3a7c72c7f84d9c4f51e346ab2aeb9b2fa097b1af98324fb1fe3",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624070500",
+      "name": "fix_store_purchase_rpc_ambiguous_columns",
+      "filename": "20260624070500_fix_store_purchase_rpc_ambiguous_columns.sql",
+      "repository_sha256": "b28cdeaed2e24f9cbc4346f93b5535282f10818b1d43342e3927e345d9bc1308",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624072000",
+      "name": "add_multi_currency_foundation_v1",
+      "filename": "20260624072000_add_multi_currency_foundation_v1.sql",
+      "repository_sha256": "123ad4b9cb1eeb79208249e3cb6dfa195d0774844a1f20aa0c14a481d7018d25",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624073500",
+      "name": "seed_initial_currency_exchange_rates_v1",
+      "filename": "20260624073500_seed_initial_currency_exchange_rates_v1.sql",
+      "repository_sha256": "4f64a0064ae1161a0eb90b2fd31ee634664fdd5155244b68d71ef6fecf8cbd15",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624075000",
+      "name": "align_country_profiles_with_country_currencies_v1",
+      "filename": "20260624075000_align_country_profiles_with_country_currencies_v1.sql",
+      "repository_sha256": "4a0126d59753aa737e2a721715ea85437c475179a83299d33ef627adb9488cc7",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624075500",
+      "name": "fix_official_country_currencies_v1",
+      "filename": "20260624075500_fix_official_country_currencies_v1.sql",
+      "repository_sha256": "28cda9ab58ef9bde933b9ebc22990c77aa9ae79bc6c4f255691fba99bf622f30",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624081500",
+      "name": "repair_country_profile_currency_codes_v1",
+      "filename": "20260624081500_repair_country_profile_currency_codes_v1.sql",
+      "repository_sha256": "7af8884a6a516a38806ffe97daf3ea537b1523ae51269d0d3336233dbcd19bbe",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624082000",
+      "name": "delete_invalid_country_currencies_v1",
+      "filename": "20260624082000_delete_invalid_country_currencies_v1.sql",
+      "repository_sha256": "0e81ada9729002f57fbd389d84e586ce1db150dcaea765cd7f2bb831bc6bb39d",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624083500",
+      "name": "cleanup_currency_metadata_v1",
+      "filename": "20260624083500_cleanup_currency_metadata_v1.sql",
+      "repository_sha256": "262439da2d0d7b146e752eff647eaa712ef61844b3e40d0f6fd23f442fe7b373",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624084500",
+      "name": "add_store_country_currency_purchase_fields_v1",
+      "filename": "20260624084500_add_store_country_currency_purchase_fields_v1.sql",
+      "repository_sha256": "79b0ac9a295082934f77680ac8a00024540d4928eb806bfb3fe2817127d05c90",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624123000",
+      "name": "remove_legacy_eco_store_defaults_v1",
+      "filename": "20260624123000_remove_legacy_eco_store_defaults_v1.sql",
+      "repository_sha256": "008b5d0b65a0eaa1f334e24dc4333c0695b95078eca6c052a3f52e2375be0623",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624130000",
+      "name": "stock_country_cash_currency_v1",
+      "filename": "20260624130000_stock_country_cash_currency_v1.sql",
+      "repository_sha256": "fa3d1e670300bc504218479a7456962f6cdd4a4e2d1bdfce1fa536aff3d0895d",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624131500",
+      "name": "fix_stock_market_order_country_cash_rpc_v1",
+      "filename": "20260624131500_fix_stock_market_order_country_cash_rpc_v1.sql",
+      "repository_sha256": "7bb98aa18409787cd3802dcd7d054f3b8e17315b2c4d6b9301607a1615180ef4",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260624132500",
+      "name": "drop_unused_stock_order_rpc_v1",
+      "filename": "20260624132500_drop_unused_stock_order_rpc_v1.sql",
+      "repository_sha256": "76a3fe8258681ba58550863f73dd66c9204bbf32991706885dd5afb48e978fed",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260625103000",
+      "name": "extend_stock_market_events_news_metadata_v1",
+      "filename": "20260625103000_extend_stock_market_events_news_metadata_v1.sql",
+      "repository_sha256": "192f06f99cccd64ec6c0db0740e45367421cd00a2dcbf9821940bfd6cd1db1a1",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260625120000",
+      "name": "add_storyline_schema_v1",
+      "filename": "20260625120000_add_storyline_schema_v1.sql",
+      "repository_sha256": "9f3c1128815ab477fdcbc4d50affd3bcd3c421d352b9c0864f9fa508f59bd557",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260625123000",
+      "name": "add_contracts_schema_v1",
+      "filename": "20260625123000_add_contracts_schema_v1.sql",
+      "repository_sha256": "5221984f1452e0f688a4fe3a97674a6c30cd69edae2cd1f844cbbf424616ff7a",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260625143000",
+      "name": "add_demo_storyline_seed_rpc_v1",
+      "filename": "20260625143000_add_demo_storyline_seed_rpc_v1.sql",
+      "repository_sha256": "665a9c4861d8c3f20b1e1223ec4ff5a8f597d1d8a9850eb7d48ce553c9a9d2cd",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260713085704",
+      "name": "repair_player_attendance_clock_in_v1",
+      "filename": "20260713085704_repair_player_attendance_clock_in_v1.sql",
+      "repository_sha256": "e43738f4ef8a80fe895988a56217aa1a3a133e35f7d0f659b4d6e037672d760e",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260713085743",
+      "name": "repair_contracts_schema_v1",
+      "filename": "20260713085743_repair_contracts_schema_v1.sql",
+      "repository_sha256": "da1c2990624b7dbe8c3da9dc648000596ab4fe13256ba69dc9a59777efd9a849",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260713193000",
+      "name": "create_admin_audit_log_flags_v1",
+      "filename": "20260713193000_create_admin_audit_log_flags_v1.sql",
+      "repository_sha256": "7f4ef054e2fcad2bc3ad5e1731ebffa322973728e6b769946406b1d8afd9be87",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260713194500",
+      "name": "issue_contract_rewards_atomic_v1",
+      "filename": "20260713194500_issue_contract_rewards_atomic_v1.sql",
+      "repository_sha256": "aa78ad118a2ea87cba62dba42e8fa159a8462f0a63050a942e4841c1baaccf03",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260713223000",
+      "name": "complete_admin_control_surfaces_v1",
+      "filename": "20260713223000_complete_admin_control_surfaces_v1.sql",
+      "repository_sha256": "1402a0aadc40b697ae187cdf44bca79a6125de4eb69824561a07ad7cdea379fd",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260714034518",
+      "name": "post_merge_admin_performance_cleanup_v1",
+      "filename": "20260714034518_post_merge_admin_performance_cleanup_v1.sql",
+      "repository_sha256": "0b99d80f4a465f252ecdeea1e910825411c438532e2b9a67ff3edeb426386b30",
+      "reconciliation_status": "matched"
+    },
+    {
+      "version": "20260714224000",
+      "name": "harden_admin_data_api_tables_v1",
+      "filename": "20260714224000_harden_admin_data_api_tables_v1.sql",
+      "repository_sha256": "b09c4cd6bd25ee7573c498b676954330b04db666ac2adeaacf402c7a9a054cea",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260714233000",
+      "name": "harden_security_definer_rpc_privileges_v1",
+      "filename": "20260714233000_harden_security_definer_rpc_privileges_v1.sql",
+      "repository_sha256": "4ddef93929ee064bddeb4e1147516fe244014bfd7fc0255d20896a31874357e7",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260714234500",
+      "name": "index_admin_control_surface_foreign_keys_v1",
+      "filename": "20260714234500_index_admin_control_surface_foreign_keys_v1.sql",
+      "repository_sha256": "e64607edeb7eb6e3e6ad23f21ea93e628c871a0eb4068117cd3b4c9c0030e522",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260714235950",
+      "name": "add_configurable_player_identity_v1",
+      "filename": "20260714235950_add_configurable_player_identity_v1.sql",
+      "repository_sha256": "d0f5d50c319ad64b739c743d1fac629e9241ded7625f8b009551cca444adf608",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260715001000",
+      "name": "harden_configurable_player_identity_rpc_grants_v1",
+      "filename": "20260715001000_harden_configurable_player_identity_rpc_grants_v1.sql",
+      "repository_sha256": "246cc5e5c91b4024f24952c81924a1f5f1d9c60663c15d644a390dfe7824b690",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260715002000",
+      "name": "fix_player_identity_rpc_column_ambiguity_v1",
+      "filename": "20260715002000_fix_player_identity_rpc_column_ambiguity_v1.sql",
+      "repository_sha256": "e5222df535dafde723e82f3219066d5c7b0050d23024e450b395505c33ae07b9",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260715003000",
+      "name": "add_story_notification_tables_v1",
+      "filename": "20260715003000_add_story_notification_tables_v1.sql",
+      "repository_sha256": "8a81b2a0250bb6463f45c6869c74f6b9d94f6a8a6dd6b3f201d2c9e0389ca9ba",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260717090000",
+      "name": "harden_story_notification_scope_v1",
+      "filename": "20260717090000_harden_story_notification_scope_v1.sql",
+      "repository_sha256": "fb80e8b02d5369d52fca1bdaa7278ffa41b01e742df033310b3c576b04325ef1",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718064000",
+      "name": "add_player_stock_watchlist_v1",
+      "filename": "20260718064000_add_player_stock_watchlist_v1.sql",
+      "repository_sha256": "1f71aa580927fb4a45b25f20a56648780f3d622469a8c12fd188ef1b48e68136",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718083500",
+      "name": "add_player_notification_public_ids_v1",
+      "filename": "20260718083500_add_player_notification_public_ids_v1.sql",
+      "repository_sha256": "9e33f0bb29d9f062eca79fef839709eff3059d3467d4ed171a5a60cd02927726",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718112000",
+      "name": "accept_player_contract_by_key_v2",
+      "filename": "20260718112000_accept_player_contract_by_key_v2.sql",
+      "repository_sha256": "17ba5aebc7a35da5905ccfe03c59af5b3fc212dcf659a4746db32ca3479084e9",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718113000",
+      "name": "add_inventory_redemption_player_workflow_v1",
+      "filename": "20260718113000_add_inventory_redemption_player_workflow_v1.sql",
+      "repository_sha256": "ec33745be7acc3b6a91cc3ced116e6c83a87253710cf4f6e609440228719df62",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718123000",
+      "name": "add_inventory_redemption_admin_review_v1",
+      "filename": "20260718123000_add_inventory_redemption_admin_review_v1.sql",
+      "repository_sha256": "838ccf4220b8414df3875c93c8bf9498e91d880fc143caf7249bbe878cc1a219",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718173000",
+      "name": "add_shared_request_rate_limits_v1",
+      "filename": "20260718173000_add_shared_request_rate_limits_v1.sql",
+      "repository_sha256": "4b6ce35d970c6dc14bec8ace2d6caff25a5b905969eafd99a23941537859eaa0",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260718190000",
+      "name": "add_pre_auth_rate_limit_rpc_v1",
+      "filename": "20260718190000_add_pre_auth_rate_limit_rpc_v1.sql",
+      "repository_sha256": "41911cbbbef1c6b5f395fc3cceb1ae5c6c33ea32d2fe85c65ec2a81002e663d1",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719120000",
+      "name": "add_stock_exchange_calendar_runtime_v1",
+      "filename": "20260719120000_add_stock_exchange_calendar_runtime_v1.sql",
+      "repository_sha256": "cb7c0eb332fa804814534f54c6abf39a4874d57b733a3d8e9689f49f18da3ee0",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719133000",
+      "name": "require_stock_market_timezone_v1",
+      "filename": "20260719133000_require_stock_market_timezone_v1.sql",
+      "repository_sha256": "1bc8609537dc56cf717181c58b29f1571bab403960bde91aac31392abcf06830",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719150000",
+      "name": "add_player_store_public_keys_v1",
+      "filename": "20260719150000_add_player_store_public_keys_v1.sql",
+      "repository_sha256": "6534162bffd20d7f57c39541ce349a1b3b4d28a622fb87b778a272c332113e75",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719170000",
+      "name": "gate_public_store_purchase_by_game_state_v1",
+      "filename": "20260719170000_gate_public_store_purchase_by_game_state_v1.sql",
+      "repository_sha256": "d6e7a0258a1e570d2a85df41293cd39b6c38ea078410daa8a6994b0bb8add7c0",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719193000",
+      "name": "add_idempotent_staff_ledger_adjustment_v1",
+      "filename": "20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql",
+      "repository_sha256": "3192a644524969440bc0966d83bcd7e67d7b280f363d9aa4f4185636c6066ecb",
+      "reconciliation_status": "repository-only"
+    },
+    {
+      "version": "20260719200000",
+      "name": "add_game_lifecycle_controls_v1",
+      "filename": "20260719200000_add_game_lifecycle_controls_v1.sql",
+      "repository_sha256": "04b829effcbe3f138e8c93f1d29f5ce9d800d56a8243b9967c8c7f0ded40cc7f",
+      "reconciliation_status": "repository-only"
+    }
+  ]
+}
