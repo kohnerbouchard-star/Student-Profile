@@ -79,6 +79,19 @@ for version in "${remote_versions[@]}"; do
   applied["$version"]=1
 done
 
+declare -A verified_schema_applied=()
+for version in \
+  20260715001000 \
+  20260715002000 \
+  20260715003000 \
+  20260717090000 \
+  20260718064000 \
+  20260718083500 \
+  20260718112000
+do
+  verified_schema_applied["$version"]=1
+done
+
 while IFS= read -r file; do
   filename="$(basename "$file")"
   version="${filename%%_*}"
@@ -96,7 +109,14 @@ while IFS= read -r file; do
   fi
 
   recovered=false
-  if [[ "$version" == "20260713194500" ]]; then
+
+  if [[ -n "${verified_schema_applied[$version]:-}" ]]; then
+    printf 'Recording independently verified schema-applied migration: %s\n' "$filename"
+    record_migration "$version" "$name" "$file"
+    recovered=true
+  fi
+
+  if [[ "$recovered" == false && "$version" == "20260713194500" ]]; then
     reward_state="$(
       psql "$POOLER_URL" -X -qAt -F '|' -v ON_ERROR_STOP=1 -c "
         select
