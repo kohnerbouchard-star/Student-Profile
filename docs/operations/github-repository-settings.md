@@ -26,6 +26,8 @@ Required checks after their first successful run:
 - `Admin Bundle Contract Audit / audit`
 - `Database Replay / replay`
 - `Repository Quality / quality`
+- `Release Artifact Build / Release platform contract tests`
+- `Release Promote Exact Artifacts / Promotion contract tests`
 
 Do not require browser or database checks until their first clean run proves the
 workflow names and runner prerequisites. A permanently missing required check
@@ -43,12 +45,48 @@ can lock every pull request.
 - restrict Actions to trusted actions and require approval for first-time
   external contributors.
 
-## Environments
+## Protected release environments
 
-Create protected `staging` and `production` environments. Production must have
-a named reviewer, no self-approval, separate secrets, deployment history, and a
-maintenance/rollback owner. Only immutable artifacts already verified in
-staging may be promoted.
+Create GitHub environments named exactly `development`, `staging`, and
+`production`.
 
-These GitHub environments are release controls; they are not substitutes for
-separate Supabase projects and credentials.
+`development`:
+
+- restrict use to repository development workflows;
+- use development-only Supabase and frontend identities;
+- use synthetic data only;
+- keep all secrets environment scoped.
+
+`staging`:
+
+- require a named reviewer;
+- restrict deployment branches to `main`;
+- use staging-only Supabase and frontend identities;
+- use synthetic data only;
+- retain deployment history;
+- configure a rollback owner;
+- authorize only an immutable artifact ID produced by `Release Artifact Build`.
+
+`production`:
+
+- require a named reviewer and prevent self-approval where supported;
+- restrict deployment branches to `main`;
+- use production-only Supabase and frontend identities;
+- retain deployment history and maintenance-window evidence;
+- require a rollback owner through the observation window;
+- authorize only the exact artifact ID and artifact-set digest already verified
+  by connected staging Player and Admin smoke.
+
+Use separate values in every environment for these secret names:
+
+- `FRONTEND_DEPLOY_TOKEN`;
+- `SUPABASE_ACCESS_TOKEN`;
+- `SUPABASE_ANON_KEY`;
+- `SUPABASE_PROJECT_REF`;
+- `SUPABASE_SERVICE_ROLE_KEY`;
+- `SUPABASE_URL`.
+
+Do not put secret values in repository variables, manifests, pull requests,
+workflow output, logs, or evidence. These GitHub environments are release
+controls; they are not substitutes for separate Supabase projects, frontend
+targets, credentials, and data policies.

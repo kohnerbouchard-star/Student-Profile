@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "githubEnvironment": "staging",
+  "identity": "TODO_STAGING_SUPABASE_PROJECT_REF",
+  "dataPolicy": "synthetic-only",
+  "frontend": {
+    "provider": "TODO_APPROVED_STATIC_HOST",
+    "identity": "TODO_STAGING_FRONTEND_TARGET"
+  },
+  "supabase": {
+    "organization": "EconovariaOrg",
+    "projectRef": "TODO_STAGING_SUPABASE_PROJECT_REF"
+  },
+  "secretNames": [
+    "FRONTEND_DEPLOY_TOKEN",
+    "SUPABASE_ACCESS_TOKEN",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_PROJECT_REF",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+  ]
+}

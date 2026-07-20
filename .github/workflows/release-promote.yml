@@ -1,0 +1,208 @@
+name: Release Promote Exact Artifacts
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-promote.yml"
+      - ".github/workflows/release-artifact-build.yml"
+      - "docs/operations/environments/**"
+      - "docs/operations/evidence/**"
+      - "docs/operations/schemas/**"
+      - "docs/operations/*promotion-record.template.json"
+      - "docs/operations/staging-player-admin-smoke.template.json"
+      - "scripts/release-platform*"
+      - "scripts/release-environment-neutrality*"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run ID that created the immutable release artifact
+        required: true
+        type: string
+      source_artifact_id:
+        description: Immutable GitHub Actions artifact ID from the build workflow
+        required: true
+        type: string
+      release_commit:
+        description: Full main commit represented by the release artifact
+        required: true
+        type: string
+      target_environment:
+        description: Protected environment receiving the exact artifact set
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      environment_manifest_path:
+        description: Evidence-backed environment manifest in docs/operations/evidence
+        required: true
+        type: string
+      promotion_record_path:
+        description: Approval, staging evidence, and rollback record in docs/operations/evidence
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-promote-${{ inputs.target_environment || 'contract' }}
+  cancel-in-progress: false
+
+jobs:
+  contract-tests:
+    name: Promotion contract tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Install repository tooling
+        run: npm ci
+      - name: Verify promotion remains download-only and fail-closed
+        run: npm run test:release-platform
+      - name: Scan promotion tooling for credentials
+        run: npm run security:secrets
+
+  authorize-promotion:
+    name: Verify and authorize unchanged artifacts
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - name: Check out current main and committed evidence
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate immutable references and evidence paths
+        id: inputs
+        shell: bash
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_ARTIFACT_ID: ${{ inputs.source_artifact_id }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          ENVIRONMENT_MANIFEST_PATH: ${{ inputs.environment_manifest_path }}
+          PROMOTION_RECORD_PATH: ${{ inputs.promotion_record_path }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SOURCE_ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ENVIRONMENT_MANIFEST_PATH" =~ ^docs/operations/evidence/[a-zA-Z0-9._/-]+\.json$ ]]
+          [[ "$PROMOTION_RECORD_PATH" =~ ^docs/operations/evidence/[a-zA-Z0-9._/-]+\.json$ ]]
+          [[ "$ENVIRONMENT_MANIFEST_PATH" != *".."* ]]
+          [[ "$PROMOTION_RECORD_PATH" != *".."* ]]
+          git cat-file -e "${RELEASE_COMMIT}^{commit}"
+          git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main
+          test -f "$ENVIRONMENT_MANIFEST_PATH"
+          test -f "$PROMOTION_RECORD_PATH"
+
+      - name: Download the exact immutable artifact by ID
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.source_artifact_id }}
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/release
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Validate artifact bytes, source commit, migrations, config, and flags
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        run: >-
+          npm run release:validate --
+          --manifest dist/release/release-manifest.json
+          --artifact-root dist/release
+          --expected-commit "$RELEASE_COMMIT"
+
+      - name: Validate isolated environment identity and secret-name contract
+        env:
+          ENVIRONMENT_MANIFEST_PATH: ${{ inputs.environment_manifest_path }}
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+        run: >-
+          npm run release:validate-environment --
+          --manifest "$ENVIRONMENT_MANIFEST_PATH"
+          --expected-environment "$TARGET_ENVIRONMENT"
+
+      - name: Validate dispatch identity, approval, staging evidence, and rollback target
+        env:
+          PROMOTION_RECORD_PATH: ${{ inputs.promotion_record_path }}
+          ENVIRONMENT_MANIFEST_PATH: ${{ inputs.environment_manifest_path }}
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_ARTIFACT_ID: ${{ inputs.source_artifact_id }}
+        run: >-
+          npm run release:validate-promotion --
+          --record "$PROMOTION_RECORD_PATH"
+          --release-manifest dist/release/release-manifest.json
+          --artifact-root dist/release
+          --expected-environment "$TARGET_ENVIRONMENT"
+          --expected-source-run-id "$SOURCE_RUN_ID"
+          --expected-source-artifact-id "$SOURCE_ARTIFACT_ID"
+          --expected-environment-manifest-path "$ENVIRONMENT_MANIFEST_PATH"
+
+      - name: Verify checksums before handoff to deployment adapters
+        working-directory: dist/release
+        run: sha256sum --check checksums.sha256
+
+      - name: Seal the approved promotion package without rebuilding
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-${{ inputs.target_environment }}-${{ inputs.release_commit }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          overwrite: false
+
+      - name: Record protected-environment authorization
+        shell: bash
+        run: |
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const manifestBytes = fs.readFileSync('dist/release/release-manifest.json');
+          const manifest = JSON.parse(manifestBytes.toString('utf8'));
+          const manifestSha = crypto.createHash('sha256').update(manifestBytes).digest('hex');
+          console.log('## Exact artifact promotion authorized');
+          console.log(`- Target: \`${process.env.TARGET_ENVIRONMENT}\``);
+          console.log(`- Release: \`${manifest.releaseId}\``);
+          console.log(`- Commit: \`${manifest.source.commit}\``);
+          console.log(`- Source workflow run: \`${process.env.SOURCE_RUN_ID}\``);
+          console.log(`- Source artifact ID: \`${process.env.SOURCE_ARTIFACT_ID}\``);
+          console.log(`- Release-manifest SHA-256: \`${manifestSha}\``);
+          console.log(`- Artifact-set SHA-256: \`${manifest.artifactSetSha256}\``);
+          console.log(`- Configuration version: \`${manifest.configuration.version}\``);
+          console.log(`- Configuration SHA-256: \`${manifest.configuration.sha256}\``);
+          console.log(`- Environment-neutrality: \`${manifest.environmentNeutrality.status}\``);
+          console.log('- Rebuilt during promotion: `false`');
+          console.log('- External deployment remains blocked unless the approved environment-specific deployment adapter and credentials exist.');
+          NODE
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_ARTIFACT_ID: ${{ inputs.source_artifact_id }}
