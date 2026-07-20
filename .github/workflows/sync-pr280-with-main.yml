@@ -8,7 +8,7 @@ on:
       - ".github/workflows/sync-pr280-with-main.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: sync-pr280-with-main
@@ -27,25 +27,36 @@ jobs:
         with:
           ref: agent/isolated-staging-release-v1
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Publish merge commit handoff or clean prior handoff
+      - name: Construct merge handoff bundle
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "econovaria-release-controller"
           git config user.email "actions@users.noreply.github.com"
           git fetch --quiet --no-tags origin main
-
-          if git merge-base --is-ancestor origin/main HEAD; then
-            git push origin :refs/tags/pr280-sync-handoff || true
-            echo "Branch already contains current main; handoff tag removed."
-            exit 0
-          fi
-
+          branch_head="$(git rev-parse HEAD)"
+          main_head="$(git rev-parse origin/main)"
           git merge --no-ff --no-commit -X theirs origin/main
+          git rm .github/workflows/sync-pr280-with-main.yml
           git diff --check --cached
           git commit -m "Merge current main into isolated staging release platform"
-          merge_sha="$(git rev-parse HEAD)"
-          git tag -f pr280-sync-handoff "$merge_sha"
-          git push --force origin refs/tags/pr280-sync-handoff
-          printf 'Published merge handoff %s\n' "$merge_sha"
+          merge_head="$(git rev-parse HEAD)"
+          merge_tree="$(git rev-parse HEAD^{tree})"
+          main_tree="$(git rev-parse origin/main^{tree})"
+          printf 'branch_head=%s\nmain_head=%s\nmerge_head=%s\nmerge_tree=%s\nmain_tree=%s\n' \
+            "$branch_head" "$main_head" "$merge_head" "$merge_tree" "$main_tree" \
+            > "$RUNNER_TEMP/pr280-sync-metadata.txt"
+          git bundle create "$RUNNER_TEMP/pr280-sync.bundle" HEAD origin/main
+          cat "$RUNNER_TEMP/pr280-sync-metadata.txt"
+
+      - name: Upload merge handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr280-sync-handoff
+          path: |
+            ${{ runner.temp }}/pr280-sync.bundle
+            ${{ runner.temp }}/pr280-sync-metadata.txt
+          if-no-files-found: error
+          retention-days: 7
