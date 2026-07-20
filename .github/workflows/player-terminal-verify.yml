@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload failed verification log
         if: failure() && steps.player-terminal-verify.outputs.status != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: player-terminal-verify-log
           path: ${{ runner.temp }}/player-terminal-verify.log
@@ -127,7 +127,7 @@ jobs:
 
       - name: Upload failed browser artifacts
         if: failure() && steps.player-terminal-browser.outputs.status != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: player-terminal-browser-failure
           path: |
