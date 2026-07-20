@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -Eeuo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
@@ -15,17 +15,39 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
 fi
 
 BRANCH="agent/seed-content-foundation-v1"
+BOOTSTRAP_HEAD="$(git rev-parse HEAD)"
 KNOWN_LIVE_REF="cgiukdjwicykrmtkhudh"
 ORIGINAL_APPLY="$(mktemp)"
 STATUS_FILE="$(mktemp)"
 LOG_DIR=".seed-audit/logs"
 mkdir -p "$LOG_DIR"
 : > "$STATUS_FILE"
+RUNNER_TRACE="$(mktemp)"
+exec > >(tee -a "$RUNNER_TRACE") 2>&1
+
+on_error() {
+  local status=$?
+  local line="${BASH_LINENO[0]:-unknown}"
+  local command="${BASH_COMMAND:-unknown}"
+  trap - ERR
+  set +e
+  echo "runner failure status=${status} line=${line} command=${command}" | tee -a "$RUNNER_TRACE"
+  git merge --abort >/dev/null 2>&1 || true
+  git reset --hard "$BOOTSTRAP_HEAD" >/dev/null 2>&1 || true
+  mkdir -p docs/seed-content/reviews
+  cp "$RUNNER_TRACE" docs/seed-content/reviews/seed-beta-runner-failure-v1.txt
+  git add docs/seed-content/reviews/seed-beta-runner-failure-v1.txt
+  git commit -m "chore(seed): record executable-pack runner failure [skip ci]" >/dev/null 2>&1 || true
+  git push origin HEAD:"$BRANCH" >/dev/null 2>&1 || true
+  exit "$status"
+}
+trap on_error ERR
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-git show HEAD~1:scripts/apply-seed-simulation-retention-policy.mjs > "$ORIGINAL_APPLY"
+git show 6bea642a5009ca04f257971e6b1196f8316d37cd:scripts/apply-seed-simulation-retention-policy.mjs > "$ORIGINAL_APPLY"
+cp package.json /tmp/seed-beta-ours-package.json
 
 node --input-type=module <<'NODE'
 import { gunzipSync } from 'node:zlib';
@@ -52,14 +74,56 @@ node --check scripts/seed-beta-reconcile-main.mjs
 git fetch origin main
 MAIN_SHA="$(git rev-parse origin/main)"
 BEFORE_SHA="$(git rev-parse HEAD)"
-MERGE_STATUS=0
-git merge --no-ff --no-commit origin/main || MERGE_STATUS=$?
-node scripts/seed-beta-reconcile-main.mjs > "$LOG_DIR/reconcile-main.json"
+git merge --no-ff --no-commit origin/main || true
+
+while IFS= read -r -d '' file_path; do
+  side="--theirs"
+  case "$file_path" in
+    docs/seed-content/*|.github/workflows/seed-*|scripts/*seed*|scripts/build-northreach*|scripts/build-seed-beta*) side="--ours" ;;
+    package.json|package-lock.json) side="--theirs" ;;
+  esac
+  if git checkout "$side" -- "$file_path" 2>/dev/null; then
+    git add -- "$file_path"
+  else
+    stage=3
+    [ "$side" = "--ours" ] && stage=2
+    if git cat-file -e ":${stage}:${file_path}" 2>/dev/null; then
+      git show ":${stage}:${file_path}" > "$file_path"
+      git add -- "$file_path"
+    else
+      git rm --ignore-unmatch -- "$file_path"
+    fi
+  fi
+done < <(git diff --name-only --diff-filter=U -z)
+
+node --input-type=module <<'NODE'
+import { readFile, writeFile } from 'node:fs/promises';
+const ours = JSON.parse(await readFile('/tmp/seed-beta-ours-package.json', 'utf8'));
+const current = JSON.parse(await readFile('package.json', 'utf8'));
+current.scripts ??= {};
+for (const [name, command] of Object.entries(ours.scripts ?? {})) {
+  if (name.includes('seed-content') || name.includes('seed-beta') || String(command).includes('seed-content')) current.scripts[name] = command;
+}
+Object.assign(current.scripts, {
+  'build:seed-beta-pack': 'node scripts/build-seed-beta-pack.mjs',
+  'validate:seed-beta-pack': 'node scripts/seed-beta-pack-validator.mjs',
+  'test:seed-beta-pack': 'node --test scripts/seed-beta-pack.test.mjs',
+  'seed:beta:validate': 'node scripts/seed-beta-importer.mjs --mode validate --environment test',
+  'seed:beta:dry-run': 'node scripts/seed-beta-importer.mjs --mode dry-run --environment staging',
+});
+await writeFile('package.json', `${JSON.stringify(current, null, 2)}\n`);
+NODE
+git add package.json
+if ! grep -qxF '.seed-audit/' .gitignore; then printf '\n.seed-audit/\n' >> .gitignore; fi
+git add .gitignore
+UNRESOLVED="$(git diff --name-only --diff-filter=U)"
+if [ -n "$UNRESOLVED" ]; then echo "Unresolved merge conflicts:"; echo "$UNRESOLVED"; false; fi
 
 cp "$ORIGINAL_APPLY" scripts/apply-seed-simulation-retention-policy.mjs
 rm -rf .seed-bootstrap
 rm -f .github/workflows/seed-beta-pack-bootstrap.yml
 rm -f scripts/seed-beta-runner-bootstrap.sh
+rm -f docs/seed-content/reviews/seed-beta-runner-failure-v1.txt
 
 git add -A
 git diff --cached --check
@@ -168,7 +232,7 @@ if ! git diff --cached --quiet; then
   git push origin HEAD:"$BRANCH"
 fi
 
-rm -f "$ORIGINAL_APPLY" "$STATUS_FILE"
+rm -f "$ORIGINAL_APPLY" "$STATUS_FILE" "$RUNNER_TRACE" /tmp/seed-beta-ours-package.json
 
 if [ "$REQUIRED_FAILURES" -ne 0 ]; then
   echo "Executable beta seed verification has ${REQUIRED_FAILURES} required failure(s)." >&2
