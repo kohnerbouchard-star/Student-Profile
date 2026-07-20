@@ -3,253 +3,212 @@
 **Date:** 2026-07-20  
 **Repository:** `kohnerbouchard-star/Student-Profile`  
 **Branch:** `agent/live-migration-reconciliation-v1`  
-**Repository baseline audited:** `f44b0735763da6700fc18513fa7026dbd95aff86`  
-**Connected Supabase project:** `cgiukdjwicykrmtkhudh` (`ECON SIM`, `ap-northeast-2`)  
-**Roadmap scope:** `OPS-STAGE-001`, `OPS-STAGE-002`, `OPS-STAGE-003`, isolated-staging evidence portion of `BETA-BANK-004`
+**Pull request:** #282  
+**Synchronized main:** `906050e6b963332e2a8ae8af4df395b0d0107db0`  
+**Environment posture:** live project read-only; no production mutation authorized
 
-## Safety boundary
+## 1. Scope and authority
 
-This tranche was conducted as a read-only live-environment audit. It did not apply a migration, alter `supabase_migrations.schema_migrations`, modify schema objects, change grants or RLS policies, change Auth configuration, deploy or update an Edge Function, or write application data.
+This document owns the database-truth and migration-reconciliation tranche for:
 
-The authoritative roadmap was not edited. This document records evidence and disposition only.
+- `OPS-STAGE-001` — repository migration replay and integrity;
+- `OPS-STAGE-002` — connected live schema and configuration evidence;
+- `OPS-STAGE-003` — isolated-staging application and three-way comparison;
+- the isolated-staging evidence portion of `BETA-BANK-004`.
 
-## Executive disposition
+This branch does not edit the authoritative roadmap. It does not modify the live production database, migration ledger, Auth configuration, grants, policies, functions, Edge Functions, or application data.
 
-The reconciliation covers every migration identity visible in the live migration ledger and every migration identity present in the repository at the audited baseline.
+## 2. Executive result
+
+The earlier 66-identity catalog was a stale pre-synchronization view. A real checkout of current `main` found **70 repository migrations**. Exact version/name comparison against the connected live migration ledger produced:
 
 | Disposition | Count | Meaning |
 |---|---:|---|
-| `matched` identity | 53 | Repository and live ledger contain the same version/name identity. Historical repository SHA-256 comparison remains a deterministic checkout step. |
-| `repository-only` | 13 | Migration exists in `main` but is not recorded in the connected live ledger. It is eligible only for ordered isolated-staging replay and verification. |
-| `live-only` | 0 | No live ledger identity was found without a repository identity. |
-| `divergent` identity | 0 | No same-version/different-name identity was found. |
-| `superseded` | 0 | No migration identity was dispositioned as superseded. |
+| Matched identity | 43 | Same migration version and name exist in repository and live ledger. Repository SHA-256 is recorded; live stored-statement MD5 remains available for historical evidence. |
+| Live-only identity | 10 | Live contains a version identity absent from the repository. Each has been paired with a same-name repository migration and explicitly reviewed. |
+| Repository-only identity | 27 | Repository migration is absent from the live ledger under its current version identity. |
+| Total repository identities | 70 | Every repository file has an exact SHA-256 value. |
+| Total live identities | 53 | Every live ledger identity has an explicit disposition. |
 
-The connected live ledger ends at `20260714113345_add_story_notification_tables_v1`. The repository ends at `20260719200000_add_game_lifecycle_controls_v1.sql`.
+The exact comparison is intentionally blocking. The repository and live database must not be treated as migration-identical.
 
-The machine-readable ledger is:
+## 3. Clean repository replay
 
-`docs/operations/evidence/live-migration-reconciliation-v1/migration-ledger.json`
+A disposable Supabase stack replayed all 70 repository migrations from zero twice.
 
-It records all 66 identities, live statement MD5 values and statement counts, repository Git blob identities for the 13 post-live migrations, expected schema effects, review state, and recommended disposition.
+| Check | Result |
+|---|---|
+| Migration source validation | Passed |
+| First clean reset | Passed |
+| Second clean reset | Passed |
+| Database lint at warning level | Passed |
+| Canonical snapshot equivalence | Passed |
+| Difference count | 0 |
+| Canonical schema SHA-256 | `eca6e8a03c79b3a473129a17234d9ec0741d576aca6d4f96ecfc49e5eb3e09a5` |
+| Migration manifest SHA-256 | `8c30419372bf5f8fcf4872c72e6c574fb6111e91344ec75fe50726b2bff72c9f` |
 
-## Repository-only migrations
+The clean replay snapshot contains:
 
-These migrations must not be applied directly to the connected live project. They must be replayed in version order against a clean database and the isolated restored environment supplied by Chat 2.
+- 103 relations in included schemas;
+- 1,199 columns;
+- 771 constraints;
+- 365 indexes;
+- 2 policies;
+- 40 public functions;
+- 31 non-internal triggers;
+- 70 migration-ledger rows.
 
-| Version | Migration | Repository Git blob | Expected effect | Disposition |
-|---|---|---|---|---|
-| `20260718064000` | `add_player_stock_watchlist_v1` | `5ecf2bf8d38003c79c911745ed9b0eb0716789ec` | Player watchlist table, scoped FKs, indexes, active-scope trigger, RLS and grants. | Isolated replay required. |
-| `20260718083500` | `add_player_notification_public_ids_v1` | `dcbe373ccd4c2609e6c65966a170516cbf0cef6b` | Browser-safe notification and delivery identifiers, constraints and indexes. | Isolated replay required. |
-| `20260718112000` | `accept_player_contract_by_key_v2` | `13b8a750f095ced92c24243b5bda4335e2e0bb31` | Atomic service-role Contract acceptance RPC. | Isolated replay required. |
-| `20260718113000` | `add_inventory_redemption_player_workflow_v1` | `0e1a79824720363c41242ce0b22936e842bc62e9` | Player redemption request/transition schema and request RPC. | Isolated replay required. |
-| `20260718123000` | `add_inventory_redemption_admin_review_v1` | `6eea24fb93434b19f0589e4f1c6fb9d639f78bf4` | Admin review metadata, indexes and review/read RPCs. | Isolated replay required. |
-| `20260718173000` | `add_shared_request_rate_limits_v1` | `8ec1680b5614a096e36b4ef8cb801ef2bc236264` | Shared hashed request-rate-limit buckets and atomic consumer RPC. | Isolated replay required. |
-| `20260718190000` | `add_pre_auth_rate_limit_rpc_v1` | `43a8ef7fd3c2aba5eeb4b242dcaa098331fae975` | Pre-auth action/IP rate-limit RPC. | Isolated replay required. |
-| `20260719120000` | `add_stock_exchange_calendar_runtime_v1` | `b29ed3e63eaa053c7b8e50e9d5907accdead9f60` | Market-session calendar and calendar-gated order RPCs. | Isolated replay required. |
-| `20260719133000` | `require_stock_market_timezone_v1` | `abc17d0bba956184b2746fc156c118969219ed25` | Required game-level IANA timezone, validation trigger and game-scoped market decision. | Isolated replay required. |
-| `20260719150000` | `add_player_store_public_keys_v1` | `1ca4b691f53a0f7d180f6ba29b26add9a48d0361` | Public Store quote/receipt keys and service-role purchase wrapper. | Isolated replay required. |
-| `20260719170000` | `gate_public_store_purchase_by_game_state_v1` | `e780dcc3eb2a8f39bdf243b4f0ece8b820187751` | Game-state mutation gate while preserving completed idempotent replay. | Isolated replay required. |
-| `20260719193000` | `add_idempotent_staff_ledger_adjustment_v1` | `0715b732a27eca2f52768fd53f2f2c868a64fc62` | Atomic idempotent staff ledger adjustment and cached replay result. | Isolated replay plus connected retry proof required. |
-| `20260719200000` | `add_game_lifecycle_controls_v1` | `9c0c287f907cf946bf5e60527f145a699b626a6e` | Canonical game lifecycle columns, constraints, transition evidence and RPCs. | Isolated replay required. |
+Evidence:
 
-No corrective migration is proposed. The observed state is an ordered deployment gap, not evidence of a live-only migration or same-version identity conflict.
+- `docs/operations/evidence/live-migration-reconciliation-v1/clean-replay-schema.json`
+- `docs/operations/evidence/live-migration-reconciliation-v1/clean-replay-determinism.json`
+- `docs/operations/evidence/live-migration-reconciliation-v1/clean-replay-summary.json`
+- `docs/operations/evidence/live-migration-reconciliation-v1/repository-migration-sha256.json`
 
-## Live catalog inventory
+## 4. Exact migration identity reconciliation
 
-The read-only live catalog query recorded:
+The authoritative machine-readable ledger is:
 
-| Object class | Count |
-|---|---:|
-| Non-system schemas | 9 |
-| Relations inspected | 91 |
-| Columns | 1,084 |
-| Constraints | 652 |
-| Indexes | 324 |
-| RLS policies | 2 |
-| Functions | 117 |
-| Triggers | 32 |
-| Table-grant rows | 1,570 |
-| Public tables | 48 |
-| Public tables with RLS enabled | 48 |
-| Public tables with forced RLS | 0 |
+`docs/operations/evidence/live-migration-reconciliation-v1/migration-reconciliation-final.json`
 
-Schemas present:
+It contains all repository and live identities, repository file paths, repository SHA-256 values, live stored-statement checksums, status, content-review state, and recommended disposition.
 
-- `auth`
-- `extensions`
-- `graphql`
-- `graphql_public`
-- `public`
-- `realtime`
-- `storage`
-- `supabase_migrations`
-- `vault`
+### 4.1 Ten live-only identities
 
-Installed extensions observed:
+The ten live-only versions are not unreviewed or orphaned. Each has the same migration name as a repository migration under a different version:
 
-| Extension | Schema | Version |
-|---|---|---|
-| `plpgsql` | `pg_catalog` | `1.0` |
-| `supabase_vault` | `vault` | `0.3.1` |
-| `pgcrypto` | `extensions` | `1.3` |
-| `pg_stat_statements` | `extensions` | `1.11` |
-| `uuid-ossp` | `extensions` | `1.1` |
-
-The complete summary, including Edge Function hashes, is:
-
-`docs/operations/evidence/live-migration-reconciliation-v1/live-environment-summary.json`
-
-The deterministic full schema exporter is:
-
-`scripts/operations/live-migration-reconciliation/export-live-schema.sql`
-
-It exports schemas, installed extensions, relations, columns, constraints, indexes, policies, table and routine grants, public functions, triggers and migration history as canonical JSON without selecting application row data.
-
-## Access-control findings
-
-All 48 public tables have RLS enabled, but no public table has forced RLS.
-
-Only two public policies were present:
-
-| Table | Policy | Role | Command |
+| Live version | Repository version | Name | Statement review |
 |---|---|---|---|
-| `staff_users` | `staff_users_select_own` | `authenticated` | `SELECT` |
-| `game_sessions` | `game_sessions_select_owned` | `authenticated` | `SELECT` |
+| `20260713144033` | `20260713193000` | `create_admin_audit_log_flags_v1` | Content differs; schema-effect comparison required. |
+| `20260713144209` | `20260713194500` | `issue_contract_rewards_atomic_v1` | Content differs; function and invariant comparison required. |
+| `20260713223157` | `20260714224000` | `harden_admin_data_api_tables_v1` | Stored statement and repository file SHA-256 are identical. |
+| `20260713223526` | `20260713223000` | `complete_admin_control_surfaces_v1` | Stored statement and repository file SHA-256 are identical. |
+| `20260713224905` | `20260714233000` | `harden_security_definer_rpc_privileges_v1` | Content differs; grants and function-security comparison required. |
+| `20260713225007` | `20260714234500` | `index_admin_control_surface_foreign_keys_v1` | Content differs; index comparison required. |
+| `20260714072030` | `20260714235950` | `add_configurable_player_identity_v1` | Content differs; columns, constraints, functions, and backfill comparison required. |
+| `20260714072127` | `20260715001000` | `harden_configurable_player_identity_rpc_grants_v1` | Content differs; execute-grant comparison required. |
+| `20260714073723` | `20260715002000` | `fix_player_identity_rpc_column_ambiguity_v1` | Content differs; effective function comparison required. |
+| `20260714113345` | `20260715003000` | `add_story_notification_tables_v1` | Content differs; tables, constraints, RLS, grants, and later hardening effects require comparison. |
 
-The catalog also reports broad table grants:
+Detailed SHA-256 evidence and disposition:
 
-- `anon` has `DELETE`, `INSERT`, `REFERENCES`, `SELECT`, `TRIGGER`, `TRUNCATE`, and `UPDATE` on 37 public tables.
-- `authenticated` has the same privilege set on 37 public tables.
-- `service_role` has that privilege set on all 48 public tables.
+`docs/operations/evidence/live-migration-reconciliation-v1/live-renumbered-identity-review.json`
 
-These are high-priority review findings because RLS enablement alone does not replace deliberate grant and policy design, and table owners or bypass roles are not constrained by ordinary RLS behavior. This tranche did not alter any grant, owner, role, policy, or RLS setting. Any correction must be independently scoped, reproduced in isolation, and delivered through forward-only migrations.
+Two pairs are statement-identical and represent version-identity drift only. Eight pairs have same-name content drift. None authorizes a live ledger rewrite. None authorizes blindly replaying the repository counterpart into production.
 
-## Edge Function inventory
+### 4.2 Repository-only identities
 
-Ten active Edge Functions were observed:
+The 27 repository-only versions comprise:
 
-| Function | Version | JWT verification | Review disposition |
-|---|---:|---:|---|
-| `make-server-0dbf686f` | 54 | enabled | Reconcile source and deployment hash. |
-| `server` | 225 | disabled | Explicit security review required. |
-| `classroom-api` | 23 | enabled | Reconcile against repository artifact. |
-| `stock-market-runner` | 6 | enabled | Reconcile against repository artifact. |
-| `stock-market-seed-copy` | 3 | enabled | Reconcile against repository artifact. |
-| `stock-market-read` | 3 | enabled | Reconcile against repository artifact. |
-| `stock-market-trading` | 3 | enabled | Reconcile against repository artifact. |
-| `stock-market-player-read` | 1 | enabled | Reconcile against repository artifact. |
-| `admin-api` | 14 | enabled | Reconcile against repository artifact. |
-| `admin-api-staging` | 3 | disabled | Confirm environment purpose, isolation and exposure before beta. |
+- three pre-existing repository migrations absent from the live ledger: storyline schema, Contracts schema, and demo-story seed RPC;
+- ten current repository versions paired with the renumbered live identities above;
+- `20260717090000_harden_story_notification_scope_v1.sql`;
+- thirteen later Player, Inventory, rate-limit, market-calendar, Store, banking-idempotency, and game-lifecycle migrations.
 
-The exact deployed bundle SHA-256 values are preserved in `live-environment-summary.json`.
+Each remains staging-only until ordered isolated application and schema-effect review.
 
-No function was deployed, updated, deleted, or invoked as part of this audit.
+## 5. Connected live catalog evidence
 
-## Auth configuration boundary
+The read-only live audit recorded:
 
-The connected read-only Supabase tool did not expose the project Auth service configuration. Auth configuration is therefore not claimed as fully captured.
+- 9 included schemas;
+- 91 catalog relations in the original summary boundary;
+- 1,084 columns;
+- 652 constraints;
+- 324 indexes;
+- 117 catalog functions, including 20 public functions in the canonical exporter scope;
+- 32 original trigger records, including 30 non-internal triggers in the canonical exporter scope;
+- 1,570 table-grant rows;
+- 53 live migration identities;
+- 10 active Edge Functions.
 
-`scripts/operations/live-migration-reconciliation/export-management-metadata.sh` provides a deterministic Management API export for:
+All 48 public tables had RLS enabled. None had forced RLS. Only two public policies were observed. `anon` and `authenticated` retained broad table privileges on 37 public tables. These are evidence-backed access-control findings, not changes made by this PR.
 
-- project Auth configuration; and
-- Edge Function inventory.
+The deployed `server` and `admin-api-staging` Edge Functions had platform JWT verification disabled at capture time and require explicit exposure and route-level authorization review.
 
-The script performs broad key-name redaction for secrets, passwords, tokens, private values and provider secrets. Its output still requires human review before evidence is committed. The access token and unredacted output must never be committed.
+## 6. Auth metadata boundary
 
-`OPS-STAGE-002` remains open until this redacted Auth export is captured and reviewed.
+The repository includes a redacted Management API exporter for Auth configuration and Edge Function inventory:
 
-## Deterministic comparison tooling
+`scripts/operations/live-migration-reconciliation/export-management-metadata.sh`
 
-The tranche adds:
+The connected tool boundary used for this audit did not expose the full Auth Management API configuration. Therefore:
 
-- `export-live-schema.sql` — canonical catalog and migration-history snapshot.
-- `export-management-metadata.sh` — redacted Auth and Edge Function metadata export.
-- `reconcile-migrations.mjs` — repository/live migration identity and SHA-256 reconciliation with blocking `live-only` and `divergent` states.
-- `compare-schema-snapshots.mjs` — canonical snapshot hashing and bounded structural diff.
-- `verify-idempotent-staff-ledger-adjustment.sql` — transaction-wrapped isolated retry/replay proof.
-- `README.md` — execution sequence, evidence handling and stop conditions.
+- Auth user/session table inventory was observed read-only;
+- provider, redirect, password, leaked-password, MFA, SMTP, and token configuration remains pending redacted export;
+- no Auth configuration was changed;
+- `OPS-STAGE-002` remains in progress.
 
-The intended three-way comparison is:
+## 7. BETA-BANK-004 isolated retry proof
 
-1. clean repository replay;
-2. connected live schema export; and
-3. restored isolated copy supplied by Chat 2.
+The isolated-only probe is:
 
-A snapshot match is based on canonical JSON SHA-256. Capture timestamps are ignored. Any mismatch produces bounded structural paths and blocks promotion until reviewed.
+`scripts/operations/live-migration-reconciliation/verify-idempotent-staff-ledger-adjustment.sql`
 
-## BETA-BANK-004 isolated retry proof
+It is transaction-wrapped and requires all of the following:
 
-The target migration is:
+1. first invocation returns `applied`;
+2. identical retry returns `replayed`;
+3. both responses return the same ledger-entry and account-balance identifiers;
+4. ledger row count changes by exactly one;
+5. account balance changes by exactly the requested amount once;
+6. exactly one completed idempotency row exists;
+7. same key with changed payload raises `LEDGER_IDEMPOTENCY_CONFLICT`;
+8. final rollback restores the isolated fixture state.
 
-`backend/supabase/migrations/20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql`
+The repository migration `20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql` has SHA-256:
 
-The prepared isolated-staging probe:
+`3192a644524969440bc0966d83bcd7e67d7b280f363d9aa4f4185636c6066ecb`
 
-1. requires explicit non-production game, player and staff fixture UUIDs;
-2. confirms the target RPC and fixture scope exist;
-3. records baseline balance and matching ledger count;
-4. sends one staff adjustment;
-5. repeats the identical request using the same route and idempotency key;
-6. requires `applied` followed by `replayed`;
-7. requires the same ledger-entry ID, balance-row ID and returned balance;
-8. requires exactly one ledger-entry delta;
-9. requires exactly one balance delta;
-10. requires exactly one completed idempotency row linked to the ledger result;
-11. requires changed payload reuse of the same key to raise `LEDGER_IDEMPOTENCY_CONFLICT`; and
-12. rolls the entire probe back.
+The probe was not executed against production. It remains ready for the isolated staging database supplied by Chat 2.
 
-This proves the migration contract without leaving staging fixture data behind.
+## 8. Required isolated-staging sequence
 
-The probe is ready but was not run because Chat 2 has not yet supplied an isolated restored environment and fixture identifiers. It must never be run against the connected live project.
+Once an isolated project or restored database is supplied:
 
-## Roadmap disposition
+1. record the project reference, source backup, restoration point, and environment owner;
+2. verify the target is not production;
+3. apply all 70 repository migrations in version order from a clean or documented restored baseline;
+4. run migration replay validation and database lint;
+5. export the isolated canonical schema;
+6. export the connected live canonical schema using the same exporter and visibility role;
+7. compare repository-clean, live, and isolated snapshots;
+8. review tables, columns, constraints, indexes, grants, RLS enable/force state, policies, functions, triggers, extensions, and migration history;
+9. capture redacted Auth metadata and deployed Edge Function metadata;
+10. execute the `20260719193000` retry probe;
+11. rehearse rollback/restoration;
+12. classify every difference as expected environment metadata, renumbered-equivalent, content-divergent, missing, extra, or corrective-action candidate.
 
-| Item | Current disposition | Evidence still required |
-|---|---|---|
-| `OPS-STAGE-001` | `IN_PROGRESS` | All 66 identities have an explicit disposition. Complete checkout SHA-256 comparison for the 53 historical live identities, clean replay, and isolated replay. |
-| `OPS-STAGE-002` | `IN_PROGRESS` | Catalog and Edge inventory are documented. Capture the complete canonical export and redacted Auth configuration, then review schema, grants, policies, functions and triggers against clean replay. |
-| `OPS-STAGE-003` | `BLOCKED_EXTERNAL` | Chat 2 must provide the restored isolated staging database. Then run three-way schema comparison, runtime verification and rollback rehearsal. |
-| `BETA-BANK-004` staging evidence | `READY_FOR_ISOLATED_EXECUTION` | Run the prepared transaction-wrapped retry probe in isolated staging and preserve the result. |
+## 9. Correction policy
 
-No roadmap checkbox or status was changed by this PR.
+A forward-only correction may be proposed only when all of these are true:
 
-## Promotion stop conditions
+- the discrepancy reproduces in isolation;
+- the expected repository effect is explicit;
+- the live and isolated effective schema definitions are captured;
+- the correction is idempotent or safely guarded;
+- grants, RLS, function security, data backfill, and rollback impact are reviewed;
+- the migration does not rewrite historical identities;
+- the correction passes clean replay and isolated rehearsal.
 
-Production promotion is blocked if any of the following is true:
+No corrective migration is included in PR #282.
 
-- a live-only migration identity appears;
-- a version/name identity diverges;
-- repository SHA-256 differs from the reviewed source for a live identity;
-- clean replay fails;
-- live, clean-replay and isolated snapshots have unexplained structural differences;
-- grants, RLS state or policies differ without an approved forward-only migration;
-- Auth configuration is not captured and reviewed;
-- deployed Edge Function inventory or hashes are unexplained;
-- the BETA-BANK-004 isolated retry probe does not prove exactly one ledger and balance outcome;
-- rollback and restoration rehearsal is absent; or
-- the staging environment is not isolated from production data and credentials.
+## 10. Current status
 
-## Validation performed
+| Roadmap item | Status |
+|---|---|
+| `OPS-STAGE-001` | Repository SHA-256 manifest complete; two clean replays and canonical deterministic snapshot complete. Exact live identity drift remains blocking. |
+| `OPS-STAGE-002` | Live catalog and deployment inventory captured; full canonical live export and redacted Auth configuration remain open. |
+| `OPS-STAGE-003` | Blocked: no isolated Supabase branch or restored staging database exists. |
+| `BETA-BANK-004` staging evidence | Probe prepared and repository migration replayed cleanly; connected isolated retry proof remains open. |
 
-The repository-only tooling was validated before publication:
+## 11. Safety attestation
 
-- `node --check` passed for both Node scripts.
-- `reconcile-migrations.mjs --self-test` passed.
-- `bash -n` passed for the Management API exporter.
-- Evidence JSON parsed successfully.
-- The migration ledger contains exactly 66 reviewed identities: 53 matched identities and 13 repository-only identities.
+During this tranche:
 
-## Required next execution
-
-Once Chat 2 supplies isolated staging:
-
-1. replay all repository migrations from a clean database;
-2. export the clean replay, connected live schema and restored isolated schema;
-3. run migration reconciliation to calculate repository SHA-256 values;
-4. run both schema comparisons;
-5. capture redacted Auth configuration;
-6. reconcile every Edge Function hash with an immutable release artifact;
-7. execute the BETA-BANK-004 retry probe;
-8. rehearse rollback/restoration; and
-9. record exact discrepancies and forward-only proposals without changing the live ledger.
+- no production migration was applied;
+- no production SQL write was executed;
+- no migration-ledger row was changed;
+- no grant, policy, RLS state, function, trigger, extension, Auth setting, Edge Function, or application record was modified;
+- no authoritative-roadmap file was edited;
+- no replacement branch or pull request was created.
