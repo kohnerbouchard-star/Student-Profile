@@ -99,3 +99,5 @@ The final active capability authorities at the audit boundary are:
 Recently completed parallel tranches are merged rather than active authorities: Player recovery PR #247, supply-chain PRs #250/#258, incident-readiness PR #252, and Dashboard/Profile PRs #254/#257. Branch-only work without an open pull request is not authoritative and must not be treated as a capability claim.
 
 This reconciliation leaves no overlapping active pull request over the same capability. Future agents must search current open pull requests and the capability ownership registry before creating a branch, and must use the explicit `duplicate` label before a closed unmerged branch may be deleted automatically.
+
+The final maintainer-authored authority scan was recorded against `main` `ad889a2bdf9d5587fff3275d70751c79992171c7` before PR #259 review.
