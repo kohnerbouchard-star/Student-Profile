@@ -12,14 +12,18 @@ const seed = readArgument("--seed") ??
 const report = runReferenceMarketSimulation(seed);
 
 await Deno.writeTextFile(outputPath, `${JSON.stringify(report, null, 2)}\n`);
-console.log(JSON.stringify({
-  schemaVersion: report.schemaVersion,
-  seed: report.seed,
-  accepted: report.accepted,
-  digest: report.digest,
-  metrics: report.metrics,
-  rejectionReasons: report.rejectionReasons,
-}, null, 2));
+console.log(JSON.stringify(
+  {
+    schemaVersion: report.schemaVersion,
+    seed: report.seed,
+    accepted: report.accepted,
+    digest: report.digest,
+    metrics: report.metrics,
+    rejectionReasons: report.rejectionReasons,
+  },
+  null,
+  2,
+));
 
 if (!report.accepted) {
   throw new Error(
