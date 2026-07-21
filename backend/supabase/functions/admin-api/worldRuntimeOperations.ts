@@ -23,15 +23,18 @@ interface DatabaseResult<T> {
 
 interface QueryBuilder<T = Record<string, unknown>>
   extends PromiseLike<DatabaseResult<T[]>> {
-  select(columns?: string): QueryBuilder<T>;
   eq(column: string, value: unknown): QueryBuilder<T>;
   order(column: string, options?: { ascending?: boolean }): QueryBuilder<T>;
   limit(count: number): QueryBuilder<T>;
   maybeSingle(): Promise<DatabaseResult<T>>;
 }
 
+interface TableBuilder<T = Record<string, unknown>> {
+  select(columns?: string): QueryBuilder<T>;
+}
+
 interface AdminService {
-  from<T = Record<string, unknown>>(table: string): QueryBuilder<T>;
+  from<T = Record<string, unknown>>(table: string): TableBuilder<T>;
   rpc<T = Record<string, unknown>>(
     name: string,
     args: Readonly<Record<string, unknown>>,
