@@ -1,9 +1,9 @@
 name: Seed PR 163 Reconcile Bootstrap
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/seed-content-foundation-v1
+      - main
     paths:
       - .github/workflows/seed-executable-beta-pack.yml
   workflow_dispatch:
@@ -12,11 +12,16 @@ permissions:
   contents: write
 
 concurrency:
-  group: seed-pr163-reconcile-bootstrap
+  group: seed-pr163-reconcile-bootstrap-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   reconcile:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.number == 163 &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'agent/seed-content-foundation-v1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -36,7 +41,7 @@ jobs:
           git fetch origin main
 
           BOOTSTRAP_HEAD="$(git rev-parse HEAD)"
-          SEED_SOURCE_HEAD="$(git rev-parse HEAD^)"
+          SEED_SOURCE_HEAD="$(git rev-parse HEAD^^)"
           MAIN_HEAD="$(git rev-parse origin/main)"
           MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" "$MAIN_HEAD")"
 
