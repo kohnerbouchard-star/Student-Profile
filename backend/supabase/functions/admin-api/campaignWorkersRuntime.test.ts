@@ -106,7 +106,7 @@ Deno.test("protected manual trigger uses server-owned actor game and request key
   }, "campaign_event_invalid");
 });
 
-Deno.test("effect worker completes successes, records failures, and never runs generic payloads", async () => {
+Deno.test("effect worker completes all reviewed kinds, records failures, and never runs generic payloads", async () => {
   const completed: string[] = [];
   const failed: { commandId: string; errorCode: string }[] = [];
   const delivered: string[] = [];
@@ -117,6 +117,7 @@ Deno.test("effect worker completes successes, records failures, and never runs g
   };
   const ports: CampaignEffectPorts = {
     publishNews: async ({ idempotencyKey }) => { delivered.push(`news:${idempotencyKey}`); },
+    publishCutscene: async ({ idempotencyKey }) => { delivered.push(`cutscene:${idempotencyKey}`); },
     createContract: async ({ idempotencyKey }) => { delivered.push(`contract:${idempotencyKey}`); },
     notifyPlayers: async ({ idempotencyKey }) => { delivered.push(`notify:${idempotencyKey}`); },
     applyMarketShock: async ({ idempotencyKey }) => { delivered.push(`market:${idempotencyKey}`); },
@@ -124,26 +125,29 @@ Deno.test("effect worker completes successes, records failures, and never runs g
       throw Object.assign(new Error("catalog missing"), { code: "scarcity_definition_missing" });
     },
     setRouteState: async ({ idempotencyKey }) => { delivered.push(`route:${idempotencyKey}`); },
+    applyPlayerImpact: async ({ idempotencyKey }) => { delivered.push(`impact:${idempotencyKey}`); },
   };
   const result = await runCampaignEffectWorker({
     repository,
     ports,
     claimedAt: NOW,
   });
-  assertEquals(result.claimedCount, 6);
-  assertEquals(result.completedCount, 5);
+  assertEquals(result.claimedCount, 8);
+  assertEquals(result.completedCount, 7);
   assertEquals(result.failedCount, 1);
-  assertEquals(completed.length, 5);
+  assertEquals(completed.length, 7);
   assertEquals(failed, [{
     commandId: id("f"),
     errorCode: "scarcity_definition_missing",
   }]);
   assertEquals(delivered, [
     "news:effect-news",
+    "cutscene:effect-cutscene",
     "contract:effect-contract",
     "notify:effect-notify",
     "market:effect-market",
     "route:effect-route",
+    "impact:effect-impact",
   ]);
 });
 
@@ -165,11 +169,13 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
   };
   const ports: CampaignEffectPorts = {
     publishNews: async () => { portCalls += 1; },
+    publishCutscene: async () => { portCalls += 1; },
     createContract: async () => { portCalls += 1; },
     notifyPlayers: async () => { portCalls += 1; },
     applyMarketShock: async () => { portCalls += 1; },
     setStoreScarcity: async () => { portCalls += 1; },
     setRouteState: async () => { portCalls += 1; },
+    applyPlayerImpact: async () => { portCalls += 1; },
   };
   const result = await runCampaignEffectWorker({ repository, ports, claimedAt: NOW });
   assertEquals(result.failedCount, 1);
@@ -268,6 +274,10 @@ function commands(): readonly ClaimedCampaignEffectCommand[] {
       newsDefinitionId: "news.arrival.v1",
       audience: "all_players",
     }),
+    command("0", "effect-cutscene", "publish_cutscene", {
+      cutsceneDefinitionId: "cutscene.arrival.v1",
+      audience: "all_players",
+    }),
     command("b", "effect-contract", "create_contract", {
       contractDefinitionId: "contract.arrival.v1",
       targetLocationIds: ["loc_eldoran_capital_v1"],
@@ -288,6 +298,11 @@ function commands(): readonly ClaimedCampaignEffectCommand[] {
       routeDefinitionIds: ["rte_eldoran_valerion_v1"],
       state: "closed",
       reason: "war",
+    }),
+    command("1", "effect-impact", "apply_player_impact", {
+      playerImpactDefinitionId: "player-impact.conflict.v1",
+      audience: "affected_locations",
+      magnitudeBasisPoints: -750,
     }),
   ];
 }
