@@ -8,10 +8,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   portfolio: { method: "GET", path: "/portfolio" },
   business: { method: "GET", path: "/business" },
   businessProduction: { method: "POST", path: "/business/production-runs" },
-  businessPrice: {
-    method: "POST",
-    path: "/business/products/:productId/pricing",
-  },
+  businessPrice: { method: "POST", path: "/business/products/:productId/pricing" },
   businessHire: { method: "POST", path: "/business/employees/hire" },
   market: { method: "GET", path: "/market/assets" },
   marketAsset: { method: "GET", path: "/market/assets/:assetId" },
@@ -21,26 +18,16 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   storeQuote: { method: "POST", path: "/store/quotes" },
   storePurchase: { method: "POST", path: "/store/purchases" },
   marketplace: { method: "GET", path: "/marketplace/listings" },
-  marketplacePurchase: {
-    method: "POST",
-    path: "/marketplace/listings/:listingId/purchase",
-  },
   marketplaceListing: { method: "POST", path: "/marketplace/listings" },
-  marketplaceCancel: {
-    method: "POST",
-    path: "/marketplace/listings/:listingId/cancel",
-  },
+  marketplaceActivate: { method: "POST", path: "/marketplace/listings/:listingId/activate" },
+  marketplacePurchase: { method: "POST", path: "/marketplace/listings/:listingId/purchase" },
+  marketplaceCancel: { method: "POST", path: "/marketplace/listings/:listingId/cancel" },
+  marketplaceDispute: { method: "POST", path: "/marketplace/orders/:orderId/disputes" },
   contracts: { method: "GET", path: "/contracts" },
   contractAccept: { method: "POST", path: "/contracts/:contractId/accept" },
-  contractSubmit: {
-    method: "POST",
-    path: "/contracts/:contractId/submissions",
-  },
+  contractSubmit: { method: "POST", path: "/contracts/:contractId/submissions" },
   inventory: { method: "GET", path: "/inventory" },
-  inventoryUse: {
-    method: "POST",
-    path: "/inventory/:inventoryItemId/redemptions",
-  },
+  inventoryUse: { method: "POST", path: "/inventory/:inventoryItemId/redemptions" },
   crafting: { method: "GET", path: "/crafting" },
   craftItem: { method: "POST", path: "/crafting/recipes/:recipeId/craft" },
   banking: { method: "GET", path: "/banking/summary" },
@@ -52,14 +39,8 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   messages: { method: "GET", path: "/messages" },
   messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
   progression: { method: "GET", path: "/progression" },
-  progressionUnlock: {
-    method: "POST",
-    path: "/progression/skills/:skillId/unlock",
-  },
-  progressionClaim: {
-    method: "POST",
-    path: "/progression/rewards/:rewardId/claim",
-  },
+  progressionUnlock: { method: "POST", path: "/progression/skills/:skillId/unlock" },
+  progressionClaim: { method: "POST", path: "/progression/rewards/:rewardId/claim" },
   notifications: { method: "GET", path: "/notifications" },
   notificationsPage: { method: "GET", path: "/notifications" },
   notificationsRead: { method: "POST", path: "/notifications/read" },
@@ -69,8 +50,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
 
 export function resolveEndpoint(endpoint, params = {}) {
   return Object.entries(params).reduce(
-    (path, [key, value]) =>
-      path.replace(`:${key}`, encodeURIComponent(String(value))),
+    (path, [key, value]) => path.replace(`:${key}`, encodeURIComponent(String(value))),
     endpoint.path,
   );
 }
