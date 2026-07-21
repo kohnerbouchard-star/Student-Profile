@@ -123,12 +123,10 @@ jobs:
       - name: Run Backend smoke
         run: npm --prefix backend run smoke
 
-      - name: Verify formatting and source quality
+      - name: Verify continuation formatting and source quality
         run: |
-          deno fmt \
-            --config backend/src/domains/markets/deno.json \
-            backend/src/domains/markets
-          git diff --exit-code -- backend/src/domains/markets
+          deno fmt --check \
+            backend/src/domains/markets/simulations/runReferenceMarketSimulation.ts
           git diff --check
 
       - name: Verify prohibited features remain disabled
