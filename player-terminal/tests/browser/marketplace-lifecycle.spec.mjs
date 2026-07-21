@@ -22,7 +22,7 @@ function session() {
       countryCode: "LUMENOR",
       countryName: "Lumenor",
       currencyCode: "LUM",
-      expiresAt: "2026-07-21T03:00:00.000Z",
+      expiresAt: "2099-07-21T03:00:00.000Z",
     },
     player: {
       id: "PLAYER-42",
@@ -260,7 +260,7 @@ function installSession(page) {
   return page.addInitScript(({ token }) => {
     sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
       playerSessionToken: token,
-      sessionExpiresAt: "2026-07-21T03:00:00.000Z",
+      sessionExpiresAt: "2099-07-21T03:00:00.000Z",
       storedAt: "2026-07-21T01:00:00.000Z",
     }));
   }, { token: SESSION_TOKEN });
