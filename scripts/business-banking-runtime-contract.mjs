@@ -24,14 +24,13 @@ for (const migration of [source.core, source.operating, source.hardening, source
   assert.match(migration.trim(), /commit;$/iu);
 }
 
-for (const table of [
+const loopSecuredTables = [
   "business_entities",
   "business_products",
   "business_inventory",
   "business_employees",
   "business_production_runs",
   "business_sales",
-  "business_compliance_records",
   "banking_transfer_requests",
   "savings_interest_runs",
   "loan_products",
@@ -39,10 +38,23 @@ for (const table of [
   "loan_applications",
   "player_loans",
   "loan_payments",
+];
+for (const table of loopSecuredTables) {
+  assert.match(source.core, new RegExp(`['"]${table}['"]`, "iu"), `missing RLS loop membership ${table}`);
+}
+for (const statement of [
+  "alter table public.%I enable row level security",
+  "alter table public.%I force row level security",
+  "revoke all on table public.%I from public, anon, authenticated",
 ]) {
-  assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "iu"));
-  assert.match(sql, new RegExp(`alter table public\\.${table} force row level security`, "iu"));
-  assert.match(sql, new RegExp(`revoke all on table public\\.${table} from public, ?anon, ?authenticated`, "iu"));
+  assert.match(source.core, new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "iu"));
+}
+for (const statement of [
+  "alter table public.business_compliance_records enable row level security",
+  "alter table public.business_compliance_records force row level security",
+  "revoke all on table public.business_compliance_records from public,anon,authenticated",
+]) {
+  assert.match(source.operating, new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "iu"));
 }
 
 for (const operation of [
@@ -62,7 +74,7 @@ for (const operation of [
   "loan_payment",
   "business_banking_correction",
 ]) {
-  assert.match(sql, new RegExp(`['\"]${operation}['\"]`, "u"), `missing ledger operation ${operation}`);
+  assert.match(sql, new RegExp(`['"]${operation}['"]`, "u"), `missing ledger operation ${operation}`);
 }
 assert.ok((sql.match(/record_player_ledger_entry/gu) ?? []).length >= 20);
 assert.doesNotMatch(sql, /create table public\.(?:business_balances|savings_balances|loan_balances)/iu);
@@ -94,7 +106,7 @@ for (const forbiddenClientScope of [
   "recipientPlayerId",
   "ownerPlayerId",
 ]) {
-  assert.match(source.handler, new RegExp(`['\"]${forbiddenClientScope}['\"]`, "u"));
+  assert.match(source.handler, new RegExp(`['"]${forbiddenClientScope}['"]`, "u"));
 }
 assert.match(source.handler, /resolvePlayerRequestScope/u);
 assert.match(source.handler, /resolve_player_economic_context_v1/u);
@@ -113,7 +125,7 @@ for (const capability of [
   "loanApply",
   "loanRepay",
 ]) {
-  assert.match(source.capabilities, new RegExp(`['\"]${capability}['\"]`, "u"));
+  assert.match(source.capabilities, new RegExp(`['"]${capability}['"]`, "u"));
 }
 assert.match(source.dispatcher, /handlePlayerBusinessBankingRequest/u);
 assert.match(source.dispatcher, /dispatchRateLimitedReviewedPlayerRequest/u);
