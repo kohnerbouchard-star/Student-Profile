@@ -22,6 +22,7 @@ on:
       - "player-terminal/tests/world-runtime-flow.mjs"
       - "player-terminal/package.json"
       - "admin/world-runtime-console.js"
+      - "admin/world-runtime-console-loader.js"
       - "admin/css/world-runtime-console.css"
       - "admin/index.html"
       - "scripts/admin-world-runtime-console-contract.mjs"
@@ -48,6 +49,7 @@ on:
       - "player-terminal/tests/world-runtime-flow.mjs"
       - "player-terminal/package.json"
       - "admin/world-runtime-console.js"
+      - "admin/world-runtime-console-loader.js"
       - "admin/css/world-runtime-console.css"
       - "admin/index.html"
       - "scripts/admin-world-runtime-console-contract.mjs"
@@ -102,6 +104,7 @@ jobs:
 
       - name: Verify Admin World publication
         run: |
+          node --check admin/world-runtime-console-loader.js
           node --check admin/world-runtime-console.js
           node scripts/admin-world-runtime-console-contract.mjs
 
