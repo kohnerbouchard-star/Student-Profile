@@ -49,6 +49,7 @@ export interface ArrivalClassScore {
 export interface ArrivalClassScoreResult {
   readonly questionnaireId: string;
   readonly questionnaireVersion: string;
+  readonly version: string;
   readonly selectedClassId: ArrivalClassId;
   readonly scores: readonly ArrivalClassScore[];
   readonly tieBreakOrder: readonly ArrivalClassId[];
@@ -69,7 +70,7 @@ export interface ArrivalClassAssignment {
   readonly overrideReason: string | null;
   readonly revision: number;
   readonly assignedAt: string;
-  readonly updatedAt: string;
+  readonly updatedAt?: string;
   readonly economicRestrictions: readonly never[];
 }
 
