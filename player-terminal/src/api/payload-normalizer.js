@@ -12,12 +12,8 @@ const MAX_TEXT = 4000;
 const IDENTIFIER_KEY = /(?:Id|Ids)$/;
 
 function invalidPayload(endpointKey, field) {
-  return new ApiRequestError(`Enter a valid value for ${field}.`, {
-    code: "INVALID_REQUEST",
-    endpointKey
-  });
+  return new ApiRequestError(`Enter a valid value for ${field}.`, { code: "INVALID_REQUEST", endpointKey });
 }
-
 function normalizeString(key, value, endpointKey) {
   const clean = String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
   if (IDENTIFIER_KEY.test(key) && clean.length > 160) throw invalidPayload(endpointKey, key);
@@ -35,26 +31,20 @@ function normalizeString(key, value, endpointKey) {
 
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
+  if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
   if (endpointKey === "storyDeliveryState") {
     const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
-    if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) {
-      throw invalidPayload(endpointKey, "action");
-    }
+    if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) throw invalidPayload(endpointKey, "action");
     return { action };
   }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {
     const payload = {};
-    if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") {
-      payload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
-    }
-    if (raw.note !== undefined && raw.note !== null && raw.note !== "") {
-      payload.note = normalizeString("note", raw.note, endpointKey);
-    }
+    if (raw.submissionUrl !== undefined && raw.submissionUrl !== null && raw.submissionUrl !== "") payload.submissionUrl = normalizeString("submissionUrl", raw.submissionUrl, endpointKey);
+    if (raw.note !== undefined && raw.note !== null && raw.note !== "") payload.note = normalizeString("note", raw.note, endpointKey);
     return payload;
   }
   const payload = {};
-
   for (const [key, value] of Object.entries(raw).slice(0, 80)) {
     if (value === undefined || value === null || value === "") continue;
     const rule = NUMBER_RULES[key];
@@ -71,7 +61,6 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
     if (typeof value === "string") payload[key] = normalizeString(key, value, endpointKey);
     else if (typeof value === "boolean") payload[key] = value;
   }
-
   if (endpointKey === "marketOrder") payload.timeInForce = "GTC";
   return payload;
 }

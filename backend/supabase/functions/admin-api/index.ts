@@ -14,6 +14,7 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleProgressionOperation } from "./progressionOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -79,15 +80,15 @@ async function handleGlobalRoute(
           auditLogExport: true,
           overallScore: false,
           marketplaceAdminTrading: false,
+          progressionReview: true,
+          progressionCorrection: true,
         },
       },
     });
   }
 
   if (path === "/games" && request.method === "GET") {
-    return json(request, 200, {
-      data: { games: context.games.map(gameDto) },
-    });
+    return json(request, 200, { data: { games: context.games.map(gameDto) } });
   }
 
   if (path === "/account/profile" && request.method === "GET") {
@@ -155,7 +156,6 @@ async function handleGlobalRoute(
         message: "That game is not available to this administrator.",
       });
   }
-
   return null;
 }
 
@@ -163,14 +163,12 @@ Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
-
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
     return json(request, 500, {
       code: "missing_runtime_config",
       message: "Admin API runtime configuration is incomplete.",
     });
   }
-
   const context = await resolveContext(request);
   if (!context.ok) {
     return json(request, context.status, {
@@ -178,7 +176,6 @@ Deno.serve(async (request: Request) => {
       message: context.message,
     });
   }
-
   const url = new URL(request.url);
   const path = routePath(url);
 
@@ -188,10 +185,7 @@ Deno.serve(async (request: Request) => {
 
     const gameMatch = path.match(/^\/games\/([^/]+)(\/.*)?$/);
     if (!gameMatch) {
-      const unsupported = handleUnsupportedOperation({
-        path,
-        method: request.method,
-      });
+      const unsupported = handleUnsupportedOperation({ path, method: request.method });
       return unsupported.handled
         ? json(request, unsupported.status, unsupported.body)
         : json(request, 404, {
@@ -212,19 +206,10 @@ Deno.serve(async (request: Request) => {
 
     const lifecycleOperation = await handleGameLifecycleOperation(
       context.service,
-      {
-        request,
-        gameId,
-        staffUserId: context.staff.id,
-        suffix,
-      },
+      { request, gameId, staffUserId: context.staff.id, suffix },
     );
     if (lifecycleOperation.handled) {
-      return json(
-        request,
-        lifecycleOperation.status || 500,
-        lifecycleOperation.body,
-      );
+      return json(request, lifecycleOperation.status || 500, lifecycleOperation.body);
     }
 
     const mutationGuard = guardGameScopedMutation({
@@ -236,31 +221,23 @@ Deno.serve(async (request: Request) => {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
     }
 
-    const redemptionOperation = await handleInventoryRedemptionOperation(
+    const progressionOperation = await handleProgressionOperation(
       context.service,
-      {
-        request,
-        gameId,
-        staffUserId: context.staff.id,
-        suffix,
-      },
+      { request, gameId, staffUserId: context.staff.id, suffix },
     );
-    if (redemptionOperation.handled) {
-      return json(
-        request,
-        redemptionOperation.status || 500,
-        redemptionOperation.body,
-      );
+    if (progressionOperation.handled) {
+      return json(request, progressionOperation.status || 500, progressionOperation.body);
     }
 
-    const readResponse = await handleGameRead(
-      request,
-      context,
-      url,
-      game,
-      gameId,
-      suffix,
+    const redemptionOperation = await handleInventoryRedemptionOperation(
+      context.service,
+      { request, gameId, staffUserId: context.staff.id, suffix },
     );
+    if (redemptionOperation.handled) {
+      return json(request, redemptionOperation.status || 500, redemptionOperation.body);
+    }
+
+    const readResponse = await handleGameRead(request, context, url, game, gameId, suffix);
     if (readResponse) return readResponse;
 
     const runtimeMutationResponse = await handleRuntimeMutation(
@@ -280,10 +257,7 @@ Deno.serve(async (request: Request) => {
     );
     if (writeResponse) return writeResponse;
 
-    const unsupported = handleUnsupportedOperation({
-      path,
-      method: request.method,
-    });
+    const unsupported = handleUnsupportedOperation({ path, method: request.method });
     if (unsupported.handled) {
       return json(request, unsupported.status, unsupported.body);
     }
