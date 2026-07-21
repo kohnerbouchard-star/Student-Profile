@@ -1,0 +1,73 @@
+name: PR249 One-Use Host Session Fixture
+
+on:
+  push:
+    branches:
+      - agent/player-marketplace-lifecycle-v1
+    paths:
+      - ".github/workflows/pr249-host-session-fixture.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/player-marketplace-lifecycle-v1
+
+      - name: Seed the authoritative Player host session storage contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("player-terminal/tests/browser/marketplace-lifecycle.spec.mjs")
+          source = path.read_text()
+          old = '''function installSession(page) {
+            return page.addInitScript(({ gameId, token }) => {
+              const value = {
+                gameSessionId: gameId,
+                playerSessionId: "psn_marketplace_browser",
+                playerSessionToken: token,
+                expiresAt: "2026-07-21T03:00:00.000Z",
+              };
+              globalThis.ECONOVARIA_PLAYER_SESSION = value;
+              globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
+                ...(globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
+                usePreviewData: false,
+                gameSessionId: gameId,
+                playerSessionId: value.playerSessionId,
+                playerSessionToken: token,
+              };
+            }, { gameId: GAME_ID, token: SESSION_TOKEN });
+          }
+          '''
+          new = '''function installSession(page) {
+            return page.addInitScript(({ token }) => {
+              sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
+                playerSessionToken: token,
+                sessionExpiresAt: "2026-07-21T03:00:00.000Z",
+                storedAt: "2026-07-21T01:00:00.000Z",
+              }));
+            }, { token: SESSION_TOKEN });
+          }
+          '''
+          if old not in source:
+              raise SystemExit("Direct Marketplace session fixture marker missing")
+          path.write_text(source.replace(old, new, 1))
+          Path(".github/workflows/pr249-host-session-fixture.yml").unlink()
+          PY
+
+      - name: Commit accepted host-session fixture
+        shell: bash
+        run: |
+          git config user.name "econovaria-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "test(marketplace): seed authoritative host session storage"
+          git push origin HEAD:agent/player-marketplace-lifecycle-v1
