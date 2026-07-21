@@ -30,10 +30,10 @@ test("blocked watch records exact staging drift without claiming alignment", asy
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
 
-  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 73);
+  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 76);
   assert.equal(result.migrations.stagingLedger.count, 77);
-  assert.equal(result.migrations.stagingLedger.aheadBy, 4);
-  assert.equal(result.migrations.stagingLedger.additionalVersions.length, 4);
+  assert.equal(result.migrations.stagingLedger.aheadBy, 1);
+  assert.equal(result.migrations.stagingLedger.additionalVersions.length, 1);
   assert.equal(result.migrations.stagingLedger.matchesCanonicalRepository, false);
   assert.equal(result.migrations.stagingLedger.matchesImmutableRelease, false);
 });
@@ -103,7 +103,7 @@ test("capability review set and exact heads are mandatory", async () => {
 
 test("migration collision and staging ahead markers must remain exact", async () => {
   const evidence = await fixture();
-  evidence.migrations.stagingLedger.aheadBy = 3;
+  evidence.migrations.stagingLedger.aheadBy = 2;
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /aheadBy marker is inaccurate/,
