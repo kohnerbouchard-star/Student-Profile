@@ -4,7 +4,7 @@
 `OPS-ACCESS-001`  
 **Branch:** `agent/beta-security-rate-limit-v1`  
 **Architectural foundation:** merged PR #158  
-**Environment changes performed:** isolated-staging validation only; production unchanged
+**Environment changes performed:** none
 
 ## Baseline audit
 
@@ -68,7 +68,7 @@ The historical candidate identity
 The connected isolated-staging ledger had already advanced through
 `20260720235900`, so the recovered candidate was replaced rather than applied
 out of order. Forward migration
-`20260721120000_harden_request_rate_limit_operations_v3.sql` adds:
+`20260721002625_harden_request_rate_limit_operations_v3.sql` adds:
 
 - `prune_request_rate_limit_buckets_v1(integer)`, deleting at most 10,000 expired
   rows with ordered `FOR UPDATE SKIP LOCKED` selection;
