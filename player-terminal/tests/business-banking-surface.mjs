@@ -127,6 +127,7 @@ for (const endpoint of [
 ]) {
   assert.match(markup, new RegExp(`data-endpoint="${endpoint}"`), `missing ${endpoint} control`);
   assert.ok(WRITE_INVALIDATIONS[endpoint]?.includes("business"), `missing ${endpoint} Business invalidation`);
+  assertAccessibleForm(markup, endpoint);
 }
 assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${businessKey}"`));
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
@@ -146,6 +147,7 @@ const unconfigured = renderBusinessPage({
 });
 assert.match(unconfigured, /data-endpoint="businessCreate"/);
 assert.match(unconfigured, /name="acquireBusinessKey"/);
+assertAccessibleForm(unconfigured, "businessCreate");
 
 const bankingMarkup = renderBankingPage(data);
 assert.match(bankingMarkup, /data-endpoint="bankTransfer"/);
@@ -153,7 +155,10 @@ assert.match(bankingMarkup, /name="recipientPlayerIdentifier"/);
 assert.match(bankingMarkup, /data-endpoint="savingsTransfer"/);
 assert.match(bankingMarkup, /name="fromAccount"/);
 assert.match(bankingMarkup, /name="toAccount"/);
+assert.match(bankingMarkup, /<details class="player-terminal-disclosure"[^>]*><summary>/);
 assert.doesNotMatch(bankingMarkup, /recipientPlayerUuid|senderPlayerId/);
+assertAccessibleForm(bankingMarkup, "bankTransfer");
+assertAccessibleForm(bankingMarkup, "savingsTransfer");
 
 const loansMarkup = renderLoansPage(data, { loanOfferId: loanOfferKey });
 assert.match(loansMarkup, /data-endpoint="loanApply"/);
@@ -162,6 +167,9 @@ assert.match(loansMarkup, /APR and fees are disclosed before review/);
 assert.match(loansMarkup, /data-endpoint="loanRepay"/);
 assert.match(loansMarkup, /Delinquent/);
 assert.match(loansMarkup, /accrued interest/);
+assert.match(loansMarkup, /<details class="player-terminal-disclosure"[^>]*><summary>/);
+assertAccessibleForm(loansMarkup, "loanApply");
+assertAccessibleForm(loansMarkup, "loanRepay");
 
 const blockedBusinessLoan = renderLoansPage({
   ...data,
@@ -191,3 +199,15 @@ assert.equal(termination.payload.businessKey, businessKey);
 assert.equal(termination.payload.reason, "Role no longer required");
 
 console.log("Player Business, Banking, and Loans surface contract passed.");
+
+function assertAccessibleForm(source, endpoint) {
+  const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>([\\s\\S]*?)<\\/form>`, "u"));
+  assert.ok(match, `missing ${endpoint} form`);
+  assert.match(match[1], /<label>/u, `${endpoint} must expose labeled controls`);
+  assert.match(match[1], /<button[^>]*type="submit"/u, `${endpoint} must expose a submit control`);
+  assert.doesNotMatch(
+    match[1],
+    /playerUuid|gameSessionId|ownerPlayerId|recipientPlayerUuid|senderPlayerId/u,
+    `${endpoint} must not expose internal ownership fields`,
+  );
+}
