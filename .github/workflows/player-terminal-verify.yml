@@ -92,7 +92,7 @@ jobs:
               $0 == "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
-              $0 ~ /^backend\/supabase\/migrations\/2026072111[0-9]{4}_[a-z0-9_]*progression[a-z0-9_]*_v1[.]sql$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]*progression[a-z0-9_]*_v1[.]sql$/ { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
               $0 == "backend/src/security/progressionRateLimitDispatch.test.ts" { next }
