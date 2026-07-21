@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
+import { isEndpointEnabled } from "../src/api/capabilities.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 import { PreviewTransport } from "../src/api/preview-transport.js";
 import { createResourceSupport } from "../src/api/resource-support.js";
+import { formatCurrency } from "../src/core/format.js";
 import { renderWorldPage } from "../src/pages/world-page.js";
 import { validateStudentProfileCapabilityManifest } from "../src/integrations/student-profile-capability-manifest.js";
 
@@ -31,6 +33,8 @@ const manifest = validateStudentProfileCapabilityManifest({
   ],
 });
 assert.equal(manifest.capabilities.routes.world, true);
+assert.equal(isEndpointEnabled(manifest.capabilities, "arrivalClass"), true);
+assert.equal(isEndpointEnabled({ actions: { arrivalClassSubmit: false } }, "arrivalClass"), false);
 assert.equal(createResourceSupport({ session: { capabilityEndpointKeys: manifest.endpoints.map((item) => item.key) } }).worldRuntime, true);
 
 assert.deepEqual(resolvePlayerBackendRequest({
@@ -94,12 +98,13 @@ const html = renderWorldPage(completed, {
 for (const required of [
   "Campaign, geography, and travel",
   "ARRIVAL CLASS",
-  "GEOGRAPHY & TRAVEL",
+  "GEOGRAPHY &amp; TRAVEL",
   "RESIDENCY",
   'data-world-form="travelQuote"',
   'data-world-form="residencyRequest"',
   'aria-live="polite"',
 ]) assert.match(html, new RegExp(required));
+assert.match(html, new RegExp(formatCurrency(quoteResponse.quote.totalCostMinor / 100, quoteResponse.quote.currencyCode).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.doesNotMatch(html, /playerUuid|gameSessionId|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
 assert.match(renderWorldPage(null, { state: "loading" }), /aria-busy="true"/);
@@ -109,5 +114,6 @@ const controllerSource = await import("node:fs").then((fs) => fs.readFileSync(ne
 assert.doesNotMatch(controllerSource, /@ts-nocheck|\bas any\b|playerUuid|gameSessionId/);
 assert.match(controllerSource, /Refresh failed; the committed result will reconcile/);
 assert.match(controllerSource, /Number\(normalized\.status\) === 401/);
+assert.match(controllerSource, /isEndpointEnabled\(currentCapabilities\(\), endpointKey\)/);
 
 console.log("World runtime Player publication checks passed");
