@@ -1,3 +1,5 @@
+import { readPlayerMessageThreadLifecycleRoutePath } from "../domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
+import { readPlayerMessagingRoutePath } from "../domains/messaging/api/playerMessagingRoutePaths.ts";
 import { sha256Hex } from "../platform/supabase/edgeCrypto.ts";
 import {
   EdgeActivationError,
@@ -66,79 +68,42 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
   >
 > = Object.freeze({
-  bootstrap: byMethod({
-    GET: operation("player.session.read", "read"),
-  }),
-  capabilities: byMethod({
-    GET: operation("player.capabilities.read", "read"),
-  }),
-  banking: byMethod({
-    GET: operation("player.banking.read", "read"),
-  }),
-  contractAccept: byMethod({
-    POST: operation("player.contracts.accept", "write"),
-  }),
-  contractSubmit: byMethod({
-    POST: operation("player.contracts.submit", "write"),
-  }),
-  contracts: byMethod({
-    GET: operation("player.contracts.read", "read"),
-  }),
-  countries: byMethod({
-    GET: operation("player.countries.read", "read"),
-  }),
-  country: byMethod({
-    GET: operation("player.country.read", "read"),
-  }),
-  dashboard: byMethod({
-    GET: operation("player.dashboard.read", "read"),
-  }),
-  inventory: byMethod({
-    GET: operation("player.inventory.read", "read"),
-  }),
+  bootstrap: byMethod({ GET: operation("player.session.read", "read") }),
+  capabilities: byMethod({ GET: operation("player.capabilities.read", "read") }),
+  banking: byMethod({ GET: operation("player.banking.read", "read") }),
+  contractAccept: byMethod({ POST: operation("player.contracts.accept", "write") }),
+  contractSubmit: byMethod({ POST: operation("player.contracts.submit", "write") }),
+  contracts: byMethod({ GET: operation("player.contracts.read", "read") }),
+  countries: byMethod({ GET: operation("player.countries.read", "read") }),
+  country: byMethod({ GET: operation("player.country.read", "read") }),
+  dashboard: byMethod({ GET: operation("player.dashboard.read", "read") }),
+  inventory: byMethod({ GET: operation("player.inventory.read", "read") }),
   inventoryRedemption: redemptionOperations,
   inventoryRedemptions: redemptionOperations,
-  logout: byMethod({
-    POST: operation("player.session.logout", "sensitive"),
-  }),
-  market: byMethod({
-    GET: operation("player.market.read", "read"),
-  }),
-  marketAsset: byMethod({
-    GET: operation("player.asset.read", "read"),
-  }),
-  marketOrder: byMethod({
-    POST: operation("player.market.order", "sensitive"),
-  }),
+  logout: byMethod({ POST: operation("player.session.logout", "sensitive") }),
+  market: byMethod({ GET: operation("player.market.read", "read") }),
+  marketAsset: byMethod({ GET: operation("player.asset.read", "read") }),
+  marketOrder: byMethod({ POST: operation("player.market.order", "sensitive") }),
   marketWatchlist: byMethod({
     DELETE: operation("player.watchlist.write", "write"),
     GET: operation("player.watchlist.read", "read"),
     PUT: operation("player.watchlist.write", "write"),
   }),
-  news: byMethod({
-    GET: operation("player.news.read", "read"),
-  }),
-  notifications: byMethod({
-    GET: operation("player.notifications.read", "read"),
-  }),
-  notificationsRead: byMethod({
-    POST: operation("player.notifications.write", "write"),
-  }),
-  storyDeliveries: byMethod({
-    GET: operation("player.story.deliveries.read", "read"),
-  }),
-  storyDeliveryState: byMethod({
-    POST: operation("player.story.deliveries.write", "write"),
-  }),
-  portfolio: byMethod({
-    GET: operation("player.portfolio.read", "read"),
-  }),
-  store: byMethod({
-    GET: operation("player.store.read", "read"),
-  }),
-  storeQuote: byMethod({
-    POST: operation("player.store.quote", "write"),
-  }),
+  messages: byMethod({ GET: operation("player.messages.read", "read") }),
+  messageThread: byMethod({ GET: operation("player.messages.thread.read", "read") }),
+  messagePolicy: byMethod({ GET: operation("player.messages.policy.read", "read") }),
+  messageSearch: byMethod({ GET: operation("player.messages.search", "read") }),
+  messageThreadCreate: byMethod({ POST: operation("player.messages.thread.create", "sensitive") }),
+  messageSend: byMethod({ POST: operation("player.messages.send", "sensitive") }),
+  messageRead: byMethod({ POST: operation("player.messages.receipt", "write") }),
+  news: byMethod({ GET: operation("player.news.read", "read") }),
+  notifications: byMethod({ GET: operation("player.notifications.read", "read") }),
+  notificationsRead: byMethod({ POST: operation("player.notifications.write", "write") }),
+  storyDeliveries: byMethod({ GET: operation("player.story.deliveries.read", "read") }),
+  storyDeliveryState: byMethod({ POST: operation("player.story.deliveries.write", "write") }),
+  portfolio: byMethod({ GET: operation("player.portfolio.read", "read") }),
+  store: byMethod({ GET: operation("player.store.read", "read") }),
+  storeQuote: byMethod({ POST: operation("player.store.quote", "write") }),
   storePurchase: byMethod({
     GET: operation("player.store.purchases.read", "read"),
     POST: operation("player.store.purchase", "sensitive"),
@@ -160,15 +125,19 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
   next: () => Promise<Response> | Response,
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
+  const resolvedEndpointKey = resolveCommunicationEndpointKey(request, endpointKey);
   const operation = readReviewedPlayerRateLimitOperation(
-    endpointKey,
+    resolvedEndpointKey,
     request.method,
   );
   if (!operation) return next();
 
   const limited = await guardReviewedPlayerRequest(
     request,
-    operation,
+    {
+      ...operation,
+      action: threadScopedAction(request, resolvedEndpointKey) ?? operation.action,
+    },
     dependencies,
   );
   return limited ?? next();
@@ -184,6 +153,39 @@ export async function dispatchRateLimitedPlayerLoginRequest(
   return limited ?? next();
 }
 
+function resolveCommunicationEndpointKey(
+  request: Request,
+  fallback: ReviewedPlayerRateLimitEndpointKey,
+): ReviewedPlayerRateLimitEndpointKey {
+  if (fallback !== "notifications" && fallback !== "notificationsRead") {
+    return fallback;
+  }
+  const pathname = new URL(request.url).pathname;
+  const lifecycle = readPlayerMessageThreadLifecycleRoutePath(pathname);
+  if (lifecycle?.kind === "policy") return "messagePolicy";
+  if (lifecycle?.kind === "createThread") return "messageThreadCreate";
+
+  const route = readPlayerMessagingRoutePath(pathname);
+  if (!route || route.kind === "malformed") return fallback;
+  if (route.kind === "list") return "messages";
+  if (route.kind === "thread") return "messageThread";
+  if (route.kind === "search") return "messageSearch";
+  if (route.kind === "send") return "messageSend";
+  return "messageRead";
+}
+
+function threadScopedAction(
+  request: Request,
+  endpointKey: ReviewedPlayerRateLimitEndpointKey,
+): string | null {
+  if (!["messageThread", "messageSend", "messageRead"].includes(endpointKey)) {
+    return null;
+  }
+  const match = new URL(request.url).pathname.match(/\/messages\/threads\/(thr_([0-9a-f]{32}))(?:\/|$)/);
+  if (!match?.[2]) return null;
+  return `player.messages.thr_${match[2].slice(0, 24)}`;
+}
+
 async function guardReviewedPlayerRequest(
   request: Request,
   operation: ReviewedPlayerRateLimitOperation,
@@ -191,13 +193,8 @@ async function guardReviewedPlayerRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const scope = await (dependencies.resolveScope ?? resolveScope)(
-      request,
-      client,
-    );
-    const decision = await (
-      dependencies.enforcePostAuth ?? enforcePlayerRateLimit
-    )({
+    const scope = await (dependencies.resolveScope ?? resolveScope)(request, client);
+    const decision = await (dependencies.enforcePostAuth ?? enforcePlayerRateLimit)({
       action: operation.action,
       profile: operation.profile,
       request,
@@ -222,9 +219,7 @@ async function guardPlayerLoginRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const decision = await (
-      dependencies.enforcePreAuth ?? enforcePreAuthRateLimit
-    )({
+    const decision = await (dependencies.enforcePreAuth ?? enforcePreAuthRateLimit)({
       action: "player.login.attempt",
       profile: "login",
       request,
