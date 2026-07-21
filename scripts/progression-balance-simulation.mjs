@@ -35,7 +35,7 @@ class Model {
     this.skillPoints = 0;
   }
   record(type, idempotencyKey, day, sourceId = idempotencyKey) {
-    if (this.events.has(idempotencyKey)) return { outcome: "replayed", ...this.events.get(idempotencyKey) };
+    if (this.events.has(idempotencyKey)) return { ...this.events.get(idempotencyKey), outcome: "replayed" };
     const definition = EVENTS[type];
     assert.ok(definition, `unsupported event ${type}`);
     const dailyKey = `${day}:${type}`;
