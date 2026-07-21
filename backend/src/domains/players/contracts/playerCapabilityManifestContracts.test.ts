@@ -89,7 +89,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessProduction",
     "businessPrice",
     "businessHire",
-    "businessTerminate",
+    "businessEmployeeTerminate",
     "businessStatus",
     "loanApply",
     "loanRepay",
@@ -144,10 +144,10 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
-        .replace(":productId", `bpr_${"a".repeat(32)}`)
-        .replace(":employeeId", `emp_${"a".repeat(32)}`)
-        .replace(":offerId", `lop_${"a".repeat(32)}`)
-        .replace(":loanId", `lon_${"a".repeat(32)}`),
+        .replace(":productKey", `bpr_${"a".repeat(32)}`)
+        .replace(":employeeKey", `emp_${"a".repeat(32)}`)
+        .replace(":offerKey", `lop_${"a".repeat(32)}`)
+        .replace(":loanKey", `lon_${"a".repeat(32)}`),
     }))
   );
 
