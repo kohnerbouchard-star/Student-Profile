@@ -1,0 +1,62 @@
+
+> econovaria@0.0.0 test:seed-beta-pack
+> node --test scripts/seed-beta-pack.test.mjs
+
+TAP version 13
+# Subtest: canonical JSON is key-order deterministic
+ok 1 - canonical JSON is key-order deterministic
+  ---
+  duration_ms: 1.040838
+  type: 'test'
+  ...
+# Subtest: stable numeric calibration is deterministic and bounded
+ok 2 - stable numeric calibration is deterministic and bounded
+  ---
+  duration_ms: 0.588381
+  type: 'test'
+  ...
+# Subtest: polygon containment reference handles inside and outside points
+ok 3 - polygon containment reference handles inside and outside points
+  ---
+  duration_ms: 0.200485
+  type: 'test'
+  ...
+# Subtest: generated bounded pack passes the executable validator
+ok 4 - generated bounded pack passes the executable validator
+  ---
+  duration_ms: 35.472412
+  type: 'test'
+  ...
+# Subtest: executable staging preflight is structurally ready but remains connected-environment gated
+ok 5 - executable staging preflight is structurally ready but remains connected-environment gated
+  ---
+  duration_ms: 54.596499
+  type: 'test'
+  ...
+# Subtest: importer dry run is credential-free and bounded
+ok 6 - importer dry run is credential-free and bounded
+  ---
+  duration_ms: 19.663392
+  type: 'test'
+  ...
+# Subtest: importer rejects production before any network write
+ok 7 - importer rejects production before any network write
+  ---
+  duration_ms: 0.698477
+  type: 'test'
+  ...
+# Subtest: importer rejects the known live Supabase project before any network write
+ok 8 - importer rejects the known live Supabase project before any network write
+  ---
+  duration_ms: 18.42856
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 196.307777

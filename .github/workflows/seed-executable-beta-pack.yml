@@ -1,0 +1,294 @@
+name: Seed Executable Beta Pack
+
+on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - ".github/workflows/seed-executable-beta-pack.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/supabase/migrations/**"
+      - "docs/seed-content/**"
+      - "scripts/seed-beta-*.mjs"
+      - "scripts/build-seed-beta-*.mjs"
+      - "scripts/seed-content-*.mjs"
+      - "scripts/generate-*.mjs"
+      - "scripts/apply-seed-*.mjs"
+      - "scripts/reconcile-seed-*.mjs"
+      - "player-terminal/src/data/map-regions.js"
+      - "player-terminal/assets/images/econovaria-world-map.png"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/seed-executable-beta-pack.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/supabase/migrations/**"
+      - "docs/seed-content/**"
+      - "scripts/seed-beta-*.mjs"
+      - "scripts/build-seed-beta-*.mjs"
+      - "scripts/seed-content-*.mjs"
+      - "scripts/generate-*.mjs"
+      - "scripts/apply-seed-*.mjs"
+      - "scripts/reconcile-seed-*.mjs"
+      - "player-terminal/src/data/map-regions.js"
+      - "player-terminal/assets/images/econovaria-world-map.png"
+  workflow_dispatch:
+    inputs:
+      run_connected_staging:
+        description: Run the protected connected staging lifecycle from the exact merged main commit
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-executable-beta-pack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-bounded-pack:
+    name: Verify bounded pack and repository contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out permanent seed head
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix backend ci
+
+      - name: Rebuild deterministic bounded release
+        run: npm run build:seed-beta-pack
+
+      - name: Reject generated pack drift
+        run: git diff --exit-code -- docs/seed-content/executable/beta-pack-v1
+
+      - name: Validate bounded release and immutable digest
+        run: npm run validate:seed-beta-pack
+
+      - name: Run importer and release lifecycle unit tests
+        run: npm run test:seed-beta-pack
+
+      - name: Lock release-scoped rollback semantics
+        run: node --test scripts/seed-beta-rollback-migration.test.mjs
+
+      - name: Validate environment-restricted importer
+        run: npm run seed:beta:validate
+
+      - name: Run credential-free staging plan
+        run: npm run seed:beta:dry-run
+
+      - name: Run all seed audits and simulation reconciliation
+        run: npm run audit:seed-content
+
+      - name: Run complete repository tests
+        run: npm test
+
+      - name: Run Backend typecheck
+        run: npm --prefix backend run typecheck:all
+
+      - name: Run Backend smoke suite
+        run: npm --prefix backend run smoke
+
+      - name: Audit migration source
+        run: npm run audit:migrations
+
+      - name: Run structural isolated-staging preflight
+        run: npm run preflight:seed-content:staging
+
+      - name: Verify branch contains current main
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main
+          test "$(git rev-list --count HEAD..origin/main)" -eq 0
+
+      - name: Check whitespace and patch validity
+        run: git diff --check
+
+      - name: Ensure deterministic builders leave no uncommitted drift
+        run: git diff --exit-code
+
+      - name: Summarize production boundary
+        run: |
+          node - <<'NODE'
+          const p = require('./docs/seed-content/executable/beta-pack-v1/pack-v1.json');
+          if (
+            p.productionAuthorized !== false ||
+            p.activationAuthorized !== false ||
+            p.boundedCounts.marketInstruments !== 240 ||
+            !p.excluded.fullMarketUniverse3200
+          ) throw new Error('Bounded pack production boundary changed.');
+          console.log(JSON.stringify({
+            packId: p.packId,
+            version: p.version,
+            marketInstruments: p.boundedCounts.marketInstruments,
+            productionAuthorized: p.productionAuthorized,
+            activationAuthorized: p.activationAuthorized,
+            fullUniverseExcluded: p.excluded.fullMarketUniverse3200,
+          }, null, 2));
+          NODE
+
+  verify-transactional-release:
+    name: Verify transactional import, replay, rollback, and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start disposable Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/seed-release-supabase-start.log
+          : > "$LOG"
+          STATUS=1
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend \
+              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
+              2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase stop --workdir backend --no-backup || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay all migrations from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Run complete transactional seed lifecycle probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          source <(npx supabase status --workdir backend -o env)
+          set +a
+          node scripts/seed-beta-transactional-release-probe.mjs | tee /tmp/seed-release-probe.json
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Upload transactional evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-transactional-release-${{ github.sha }}
+          path: |
+            /tmp/seed-release-supabase-start.log
+            /tmp/seed-release-probe.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  connected-isolated-staging:
+    name: Execute connected isolated-staging release and rollback
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.run_connected_staging == true
+    needs:
+      - verify-bounded-pack
+      - verify-transactional-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SEED_TARGET_ENVIRONMENT: staging
+      SEED_CONNECTED_EVIDENCE_PATH: /tmp/seed-connected-staging-evidence.json
+    steps:
+      - name: Check out exact seed release head
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute exact migrations, import, activation verification, deactivation, and rollback
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/seed-beta-connected-staging.mjs 2>&1 | tee /tmp/seed-connected-staging.log
+
+      - name: Scan sanitized connected evidence
+        if: success()
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = process.env.SEED_CONNECTED_EVIDENCE_PATH;
+          const text = fs.readFileSync(path, 'utf8');
+          const evidence = JSON.parse(text);
+          if (evidence.credentialsRecorded !== false || evidence.rawInternalIdentifiersRecorded !== false) {
+            throw new Error('Connected evidence privacy flags failed.');
+          }
+          if (evidence.project.ref !== 'eecvbssdvarfcykcfrny' || evidence.project.production !== false) {
+            throw new Error('Connected evidence target identity failed.');
+          }
+          if (evidence.finalState.activeImportedContent !== false || evidence.finalState.productionTouched !== false) {
+            throw new Error('Connected final-state boundary failed.');
+          }
+          const forbidden = /(eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role_key|authorization:\s*bearer)/i;
+          if (forbidden.test(text)) throw new Error('Connected evidence appears to contain a credential.');
+          NODE
+
+      - name: Upload connected staging evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-connected-staging-${{ github.sha }}
+          path: |
+            /tmp/seed-connected-staging.log
+            /tmp/seed-connected-staging-evidence.json
+          if-no-files-found: warn
+          retention-days: 90

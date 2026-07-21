@@ -1,0 +1,256 @@
+{
+  "registryId": "registry.market.references.v1",
+  "version": "1.0.0-design",
+  "maturity": "design-candidate",
+  "productionAuthorized": false,
+  "exchanges": [
+    {
+      "id": "exchange.northreach.fgx.v1",
+      "code": "FGX",
+      "countryKey": "NORTHREACH",
+      "countrySlug": "northreach",
+      "currencyCode": "NRC",
+      "name": "Frostgate Exchange",
+      "primaryRole": "resources, energy, infrastructure, and northern logistics",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.yrethia.sbx.v1",
+      "code": "SBX",
+      "countryKey": "YRETHIA",
+      "countrySlug": "yrethia",
+      "currencyCode": "YRC",
+      "name": "Sableport Exchange",
+      "primaryRole": "shipping, insurance, trade finance, and logistics technology",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.thaloris.dhm.v1",
+      "code": "DHM",
+      "countryKey": "THALORIS",
+      "countrySlug": "thaloris",
+      "currencyCode": "THD",
+      "name": "Dusk Harbor Market",
+      "primaryRole": "repair, re-export, salvage, and secondary markets",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.solvend.aux.v1",
+      "code": "AUX",
+      "countryKey": "SOLVEND",
+      "countrySlug": "solvend",
+      "currencyCode": "SLV",
+      "name": "Aurora Exchange",
+      "primaryRole": "research, technology, aerospace, and precision industry",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.eldoran.cmx.v1",
+      "code": "CMX",
+      "countryKey": "ELDORAN",
+      "countrySlug": "eldoran",
+      "currencyCode": "ELD",
+      "name": "Crescent Market Exchange",
+      "primaryRole": "food, agriculture, wholesale trade, and central logistics",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.valerion.gfx.v1",
+      "code": "GFX",
+      "countryKey": "VALERION",
+      "countrySlug": "valerion",
+      "currencyCode": "VAL",
+      "name": "Glassfall Exchange",
+      "primaryRole": "clean energy, water, green finance, and premium services",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.lumenor.scx.v1",
+      "code": "SCX",
+      "countryKey": "LUMENOR",
+      "countrySlug": "lumenor",
+      "currencyCode": "LUM",
+      "name": "Starfall Civic Exchange",
+      "primaryRole": "education, media, professional services, and civic infrastructure",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.xalvoria.ecx.v1",
+      "code": "ECX",
+      "countryKey": "XALVORIA",
+      "countrySlug": "xalvoria",
+      "currencyCode": "XAL",
+      "name": "Emberhall Capital Exchange",
+      "primaryRole": "banking, infrastructure finance, luxury industry, and sovereign capital",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.dravenlok.ihx.v1",
+      "code": "IHX",
+      "countryKey": "DRAVENLOK",
+      "countrySlug": "dravenlok",
+      "currencyCode": "DRV",
+      "name": "Ironhold Exchange",
+      "primaryRole": "steel, machinery, rail, and industrial production",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    },
+    {
+      "id": "exchange.syndalis.bdx.v1",
+      "code": "BDX",
+      "countryKey": "SYNDALIS",
+      "countrySlug": "syndalis",
+      "currencyCode": "SYN",
+      "name": "Blacklight Digital Exchange",
+      "primaryRole": "cybersecurity, fintech, data infrastructure, and platform services",
+      "calendarStatus": "pending",
+      "runtimeSupport": "unverified"
+    }
+  ],
+  "issuerTypes": [
+    {
+      "id": "issuer-type.corporation.v1",
+      "slug": "corporation",
+      "description": "Privately governed operating company",
+      "typicalInstrumentTypes": ["common_equity", "preferred_convertible", "corporate_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.state-enterprise.v1",
+      "slug": "state-enterprise",
+      "description": "Commercially active state-controlled enterprise",
+      "typicalInstrumentTypes": ["common_equity", "corporate_bond", "sovereign_public_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.sovereign.v1",
+      "slug": "sovereign",
+      "description": "National government treasury or debt authority",
+      "typicalInstrumentTypes": ["sovereign_public_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.public-agency.v1",
+      "slug": "public-agency",
+      "description": "Infrastructure, development, utility, or public-service agency",
+      "typicalInstrumentTypes": ["sovereign_public_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.municipality.v1",
+      "slug": "municipality",
+      "description": "City or regional public authority",
+      "typicalInstrumentTypes": ["sovereign_public_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.bank.v1",
+      "slug": "bank",
+      "description": "Deposit-taking or wholesale financial institution",
+      "typicalInstrumentTypes": ["common_equity", "preferred_convertible", "corporate_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.insurer.v1",
+      "slug": "insurer",
+      "description": "Insurance or reinsurance institution",
+      "typicalInstrumentTypes": ["common_equity", "corporate_bond"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.fund-manager.v1",
+      "slug": "fund-manager",
+      "description": "Administrator of pooled investment products",
+      "typicalInstrumentTypes": ["etf_fund"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.trust-manager.v1",
+      "slug": "trust-manager",
+      "description": "Administrator of property or infrastructure trusts",
+      "typicalInstrumentTypes": ["listed_trust"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.index-administrator.v1",
+      "slug": "index-administrator",
+      "description": "Independent or exchange-linked index administrator",
+      "typicalInstrumentTypes": ["index"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.benchmark-administrator.v1",
+      "slug": "benchmark-administrator",
+      "description": "Administrator of commodity, freight, rate, or sector references",
+      "typicalInstrumentTypes": ["commodity_reference"],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "id": "issuer-type.multilateral-institution.v1",
+      "slug": "multilateral-institution",
+      "description": "Treaty, corridor, reconstruction, or international institution",
+      "typicalInstrumentTypes": ["sovereign_public_bond", "index"],
+      "runtimeSupport": "definition-only"
+    }
+  ],
+  "parentSectors": [
+    {"id": "sector.agriculture-food.v1", "slug": "agriculture-food", "subindustryMappingStatus": "pending"},
+    {"id": "sector.energy-utilities.v1", "slug": "energy-utilities", "subindustryMappingStatus": "pending"},
+    {"id": "sector.mining-materials.v1", "slug": "mining-materials", "subindustryMappingStatus": "pending"},
+    {"id": "sector.industrial-manufacturing.v1", "slug": "industrial-manufacturing", "subindustryMappingStatus": "pending"},
+    {"id": "sector.defense-aerospace.v1", "slug": "defense-aerospace", "subindustryMappingStatus": "pending"},
+    {"id": "sector.transport-logistics.v1", "slug": "transport-logistics", "subindustryMappingStatus": "pending"},
+    {"id": "sector.construction-infrastructure.v1", "slug": "construction-infrastructure", "subindustryMappingStatus": "pending"},
+    {"id": "sector.technology-software.v1", "slug": "technology-software", "subindustryMappingStatus": "pending"},
+    {"id": "sector.telecommunications-data.v1", "slug": "telecommunications-data", "subindustryMappingStatus": "pending"},
+    {"id": "sector.cybersecurity-intelligence.v1", "slug": "cybersecurity-intelligence", "subindustryMappingStatus": "pending"},
+    {"id": "sector.finance-banking.v1", "slug": "finance-banking", "subindustryMappingStatus": "pending"},
+    {"id": "sector.insurance-risk.v1", "slug": "insurance-risk", "subindustryMappingStatus": "pending"},
+    {"id": "sector.healthcare-life-sciences.v1", "slug": "healthcare-life-sciences", "subindustryMappingStatus": "pending"},
+    {"id": "sector.consumer-retail.v1", "slug": "consumer-retail", "subindustryMappingStatus": "pending"},
+    {"id": "sector.real-estate-hospitality.v1", "slug": "real-estate-hospitality", "subindustryMappingStatus": "pending"},
+    {"id": "sector.media-education.v1", "slug": "media-education", "subindustryMappingStatus": "pending"},
+    {"id": "sector.professional-public-services.v1", "slug": "professional-public-services", "subindustryMappingStatus": "pending"},
+    {"id": "sector.funds-indexes-benchmarks.v1", "slug": "funds-indexes-benchmarks", "subindustryMappingStatus": "pending"}
+  ],
+  "benchmarks": [
+    {"id": "benchmark.global.staple-food-basket.v1", "slug": "staple-food-basket", "name": "Econovaria Staple Food Basket", "unitConcept": "index-points", "primaryRelevance": "household affordability and inflation", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.grain.v1", "slug": "grain", "name": "Meridian Grain Reference", "unitConcept": "standardized-mass", "primaryRelevance": "agriculture and food security", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.natural-gas.v1", "slug": "natural-gas", "name": "Northern Natural Gas Reference", "unitConcept": "energy-unit", "primaryRelevance": "energy and industrial costs", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.petroleum.v1", "slug": "petroleum", "name": "Corridor Fuel Reference", "unitConcept": "volume-unit", "primaryRelevance": "transport, industry, and household energy", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.strategic-minerals.v1", "slug": "strategic-minerals", "name": "Strategic Minerals Basket", "unitConcept": "index-points", "primaryRelevance": "technology and strategic supply chains", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.industrial-steel.v1", "slug": "industrial-steel", "name": "Industrial Steel Reference", "unitConcept": "mass-unit", "primaryRelevance": "manufacturing and infrastructure", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.copper-conductors.v1", "slug": "copper-conductors", "name": "Conductive Metals Basket", "unitConcept": "mass-unit", "primaryRelevance": "energy grids, data systems, and manufacturing", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.electronic-components.v1", "slug": "electronic-components", "name": "Advanced Components Index", "unitConcept": "index-points", "primaryRelevance": "technology production", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.construction-materials.v1", "slug": "construction-materials", "name": "Construction Inputs Index", "unitConcept": "index-points", "primaryRelevance": "Meridian and reconstruction activity", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.shipping-capacity.v1", "slug": "shipping-capacity", "name": "Meridian Freight Capacity Index", "unitConcept": "capacity-points", "primaryRelevance": "logistics and trade", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.container-rates.v1", "slug": "container-rates", "name": "Container Rate Reference", "unitConcept": "container-rate", "primaryRelevance": "port congestion and trade costs", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.marine-insurance.v1", "slug": "marine-insurance", "name": "Marine Risk Premium Index", "unitConcept": "basis-points", "primaryRelevance": "shipping insurance and wartime risk", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.water-security.v1", "slug": "water-security", "name": "Water Security Index", "unitConcept": "index-points", "primaryRelevance": "water supply and regional stability", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.hydropower-output.v1", "slug": "hydropower-output", "name": "Hydropower Availability Index", "unitConcept": "output-points", "primaryRelevance": "clean energy availability", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.compute-capacity.v1", "slug": "compute-capacity", "name": "Advanced Compute Capacity Index", "unitConcept": "compute-points", "primaryRelevance": "technology demand and infrastructure", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.data-transit.v1", "slug": "data-transit", "name": "Cross-Border Data Transit Index", "unitConcept": "bandwidth-points", "primaryRelevance": "digital connectivity", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.skilled-labor.v1", "slug": "skilled-labor", "name": "Skilled Labor Availability Index", "unitConcept": "index-points", "primaryRelevance": "talent and wage pressure", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.consumer-medicine.v1", "slug": "consumer-medicine", "name": "Essential Medicine Inputs Index", "unitConcept": "index-points", "primaryRelevance": "healthcare supply chains", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.clean-energy-equipment.v1", "slug": "clean-energy-equipment", "name": "Clean Energy Equipment Index", "unitConcept": "index-points", "primaryRelevance": "green infrastructure investment", "tradable": false, "runtimeSupport": "definition-only"},
+    {"id": "benchmark.global.reconstruction-cost.v1", "slug": "reconstruction-cost", "name": "Reconstruction Cost Index", "unitConcept": "index-points", "primaryRelevance": "postwar infrastructure and public finance", "tradable": false, "runtimeSupport": "definition-only"}
+  ],
+  "instrumentTypes": [
+    {"id": "instrument-type.common_equity.v1", "slug": "common_equity", "assetClass": "equity", "tradableCandidate": true, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.preferred_convertible.v1", "slug": "preferred_convertible", "assetClass": "equity", "tradableCandidate": true, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.corporate_bond.v1", "slug": "corporate_bond", "assetClass": "fixed-income", "tradableCandidate": true, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.sovereign_public_bond.v1", "slug": "sovereign_public_bond", "assetClass": "fixed-income", "tradableCandidate": true, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.etf_fund.v1", "slug": "etf_fund", "assetClass": "pooled-product", "tradableCandidate": false, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.listed_trust.v1", "slug": "listed_trust", "assetClass": "pooled-product", "tradableCandidate": false, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.index.v1", "slug": "index", "assetClass": "reference", "tradableCandidate": false, "runtimeSupport": "unverified"},
+    {"id": "instrument-type.commodity_reference.v1", "slug": "commodity_reference", "assetClass": "reference", "tradableCandidate": false, "runtimeSupport": "unverified"}
+  ]
+}

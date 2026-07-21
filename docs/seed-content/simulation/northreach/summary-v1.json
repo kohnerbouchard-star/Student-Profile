@@ -1,0 +1,1536 @@
+{
+  "simulationId": "econovaria.northreach.market-pilot.v1",
+  "inputSha256": "4e7783ee9267bdb467cf561cdd78ccb622b80001b14276a157fc7ab6a7de42c8",
+  "seeds": 250,
+  "cycles": 60,
+  "scenarios": [
+    "baseline",
+    "inflation_rate_shock",
+    "meridian_disruption",
+    "war_escalation",
+    "commodity_boom",
+    "crisis_recovery"
+  ],
+  "activationAuthorized": false,
+  "instrumentMetrics": [
+    {
+      "scenario": "baseline",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": 0.008125867268453879,
+      "p10TerminalReturn": -0.027221048982104243,
+      "p90TerminalReturn": 0.04217500030302614,
+      "medianMaxDrawdown": -0.02517535109969321,
+      "positiveRunShare": 0.616
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": 0.010971862619829742,
+      "p10TerminalReturn": -0.05529357977226376,
+      "p90TerminalReturn": 0.0818108542855947,
+      "medianMaxDrawdown": -0.04846618860713159,
+      "positiveRunShare": 0.6
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": 0.011236106017798564,
+      "p10TerminalReturn": -0.028102138355723283,
+      "p90TerminalReturn": 0.05726090431202813,
+      "medianMaxDrawdown": -0.028500036203058965,
+      "positiveRunShare": 0.624
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": 0.021665865768796477,
+      "p10TerminalReturn": -0.03594902572401931,
+      "p90TerminalReturn": 0.09024339748537183,
+      "medianMaxDrawdown": -0.037411207434069005,
+      "positiveRunShare": 0.716
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.009120567007310898,
+      "p10TerminalReturn": -0.10445720969756893,
+      "p90TerminalReturn": 0.13005154233693245,
+      "medianMaxDrawdown": -0.08097072219042839,
+      "positiveRunShare": 0.56
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAB",
+      "medianTerminalReturn": 0.021320808153219017,
+      "p10TerminalReturn": -0.14042152291540566,
+      "p90TerminalReturn": 0.17797370586665057,
+      "medianMaxDrawdown": -0.10050238471361456,
+      "positiveRunShare": 0.584
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAC",
+      "medianTerminalReturn": 0.032870911147020676,
+      "p10TerminalReturn": -0.15048854911013718,
+      "p90TerminalReturn": 0.23007125776501489,
+      "medianMaxDrawdown": -0.13427314428319875,
+      "positiveRunShare": 0.572
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAD",
+      "medianTerminalReturn": 0.03103295982903409,
+      "p10TerminalReturn": -0.10133102661412272,
+      "p90TerminalReturn": 0.17844332482538564,
+      "medianMaxDrawdown": -0.09857903497444315,
+      "positiveRunShare": 0.628
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAE",
+      "medianTerminalReturn": 0.015873070136635414,
+      "p10TerminalReturn": -0.15428213486031236,
+      "p90TerminalReturn": 0.20380898342568754,
+      "medianMaxDrawdown": -0.13387531559430887,
+      "positiveRunShare": 0.54
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAG",
+      "medianTerminalReturn": 0.04120687260682254,
+      "p10TerminalReturn": -0.12928027800513697,
+      "p90TerminalReturn": 0.21681999211015227,
+      "medianMaxDrawdown": -0.11191510522737358,
+      "positiveRunShare": 0.624
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAH",
+      "medianTerminalReturn": 0.010358446546102407,
+      "p10TerminalReturn": -0.0950632448766181,
+      "p90TerminalReturn": 0.13534849427308254,
+      "medianMaxDrawdown": -0.07853250126166361,
+      "positiveRunShare": 0.564
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAI",
+      "medianTerminalReturn": -0.004783093350970824,
+      "p10TerminalReturn": -0.1327986346405257,
+      "p90TerminalReturn": 0.1638647935236195,
+      "medianMaxDrawdown": -0.10275706775197119,
+      "positiveRunShare": 0.484
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.0012498546373646557,
+      "p10TerminalReturn": -0.2035721099550253,
+      "p90TerminalReturn": 0.26694784462671123,
+      "medianMaxDrawdown": -0.15881489348850125,
+      "positiveRunShare": 0.496
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAL",
+      "medianTerminalReturn": 0.03332649789615372,
+      "p10TerminalReturn": -0.18169999196645123,
+      "p90TerminalReturn": 0.2809912966293187,
+      "medianMaxDrawdown": -0.14844201409009855,
+      "positiveRunShare": 0.572
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAM",
+      "medianTerminalReturn": 0.04568383444502799,
+      "p10TerminalReturn": -0.12929650782136598,
+      "p90TerminalReturn": 0.19447789036721125,
+      "medianMaxDrawdown": -0.10430816085727523,
+      "positiveRunShare": 0.62
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAN",
+      "medianTerminalReturn": 0.009734719149796178,
+      "p10TerminalReturn": -0.18624791813361102,
+      "p90TerminalReturn": 0.23152441875835528,
+      "medianMaxDrawdown": -0.1344750682326416,
+      "positiveRunShare": 0.532
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NREAO",
+      "medianTerminalReturn": -0.0019080948876625814,
+      "p10TerminalReturn": -0.17270407095625076,
+      "p90TerminalReturn": 0.18980092916659264,
+      "medianMaxDrawdown": -0.12913702795341359,
+      "positiveRunShare": 0.496
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": 0.030125980046541545,
+      "p10TerminalReturn": -0.08635769225680213,
+      "p90TerminalReturn": 0.17744253674115493,
+      "medianMaxDrawdown": -0.08725787716163841,
+      "positiveRunShare": 0.636
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": 0.03123288021865689,
+      "p10TerminalReturn": -0.08670656997192974,
+      "p90TerminalReturn": 0.16070329428215083,
+      "medianMaxDrawdown": -0.07726501861912644,
+      "positiveRunShare": 0.604
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": 0.01872761007624779,
+      "p10TerminalReturn": 0.001958118722208192,
+      "p90TerminalReturn": 0.03550057449788482,
+      "medianMaxDrawdown": -0.008339704245527824,
+      "positiveRunShare": 0.92
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": 0.017858323719442404,
+      "p10TerminalReturn": -0.01117860326724166,
+      "p90TerminalReturn": 0.04903202857136397,
+      "medianMaxDrawdown": -0.017089775993935685,
+      "positiveRunShare": 0.792
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": 0.026112464284651526,
+      "p10TerminalReturn": -0.09451837348111099,
+      "p90TerminalReturn": 0.14607870170195542,
+      "medianMaxDrawdown": -0.09334318322783941,
+      "positiveRunShare": 0.616
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": 0.019561383912869545,
+      "p10TerminalReturn": -0.13075442483104927,
+      "p90TerminalReturn": 0.21015461190581688,
+      "medianMaxDrawdown": -0.11695261045980826,
+      "positiveRunShare": 0.576
+    },
+    {
+      "scenario": "baseline",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": 0.016645938893620205,
+      "p10TerminalReturn": -0.09831796500016746,
+      "p90TerminalReturn": 0.131181904400988,
+      "medianMaxDrawdown": -0.07836123474059237,
+      "positiveRunShare": 0.568
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": -0.08088893112679812,
+      "p10TerminalReturn": -0.11092043905177382,
+      "p90TerminalReturn": -0.05286244859205854,
+      "medianMaxDrawdown": -0.08498619812902886,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": -0.09989490918281291,
+      "p10TerminalReturn": -0.15953080020580723,
+      "p90TerminalReturn": -0.031205487286848035,
+      "medianMaxDrawdown": -0.11223202555750811,
+      "positiveRunShare": 0.024
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": -0.07390659006268319,
+      "p10TerminalReturn": -0.11095213465862042,
+      "p90TerminalReturn": -0.028784261935684802,
+      "medianMaxDrawdown": -0.0801744740465859,
+      "positiveRunShare": 0.008
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": -0.17452440030485306,
+      "p10TerminalReturn": -0.21921931389543267,
+      "p90TerminalReturn": -0.1264472490959342,
+      "medianMaxDrawdown": -0.1795852859553373,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.09223328638953465,
+      "p10TerminalReturn": -0.027563607327682843,
+      "p90TerminalReturn": 0.20944452498147959,
+      "medianMaxDrawdown": -0.05811715010698654,
+      "positiveRunShare": 0.836
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAB",
+      "medianTerminalReturn": 0.019414031717091662,
+      "p10TerminalReturn": -0.12139628085723136,
+      "p90TerminalReturn": 0.1586436232820835,
+      "medianMaxDrawdown": -0.10876609157465639,
+      "positiveRunShare": 0.564
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAC",
+      "medianTerminalReturn": -0.08461241775795453,
+      "p10TerminalReturn": -0.2544004182519409,
+      "p90TerminalReturn": 0.11313722955672739,
+      "medianMaxDrawdown": -0.17328251346179058,
+      "positiveRunShare": 0.288
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAD",
+      "medianTerminalReturn": -0.10507160409373212,
+      "p10TerminalReturn": -0.22763235121415118,
+      "p90TerminalReturn": 0.03329017262022035,
+      "medianMaxDrawdown": -0.16171064702055055,
+      "positiveRunShare": 0.172
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAE",
+      "medianTerminalReturn": -0.08074429202844458,
+      "p10TerminalReturn": -0.23734065257915196,
+      "p90TerminalReturn": 0.11524220382394541,
+      "medianMaxDrawdown": -0.16347815236247987,
+      "positiveRunShare": 0.292
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAG",
+      "medianTerminalReturn": -0.07541678843639932,
+      "p10TerminalReturn": -0.197739494369119,
+      "p90TerminalReturn": 0.11990435039117617,
+      "medianMaxDrawdown": -0.1469019876961538,
+      "positiveRunShare": 0.3
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAH",
+      "medianTerminalReturn": -0.09731819441684886,
+      "p10TerminalReturn": -0.1880667687561368,
+      "p90TerminalReturn": 0.012903434387820083,
+      "medianMaxDrawdown": -0.13106602183971855,
+      "positiveRunShare": 0.124
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAI",
+      "medianTerminalReturn": -0.0925912572139424,
+      "p10TerminalReturn": -0.2037767360440541,
+      "p90TerminalReturn": 0.042941792597973795,
+      "medianMaxDrawdown": -0.14464482814885216,
+      "positiveRunShare": 0.196
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.17402494951780312,
+      "p10TerminalReturn": -0.3284779020995733,
+      "p90TerminalReturn": 0.030034256325317133,
+      "medianMaxDrawdown": -0.2453652498986481,
+      "positiveRunShare": 0.12
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAL",
+      "medianTerminalReturn": -0.09096764884041852,
+      "p10TerminalReturn": -0.2633087025126294,
+      "p90TerminalReturn": 0.1356184104688974,
+      "medianMaxDrawdown": -0.1892636922878419,
+      "positiveRunShare": 0.276
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAM",
+      "medianTerminalReturn": -0.10430216096401024,
+      "p10TerminalReturn": -0.2409339219184645,
+      "p90TerminalReturn": 0.0539534538264919,
+      "medianMaxDrawdown": -0.174930804113685,
+      "positiveRunShare": 0.18
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAN",
+      "medianTerminalReturn": -0.10129811654201815,
+      "p10TerminalReturn": -0.25760007165752435,
+      "p90TerminalReturn": 0.08685489692717094,
+      "medianMaxDrawdown": -0.18883998395854812,
+      "positiveRunShare": 0.228
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NREAO",
+      "medianTerminalReturn": -0.1278363814595716,
+      "p10TerminalReturn": -0.2631756121551734,
+      "p90TerminalReturn": 0.0799348927084382,
+      "medianMaxDrawdown": -0.18732649579778898,
+      "positiveRunShare": 0.172
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": -0.09855368281559734,
+      "p10TerminalReturn": -0.18906120134642043,
+      "p90TerminalReturn": 0.024553831455507776,
+      "medianMaxDrawdown": -0.14494580644351146,
+      "positiveRunShare": 0.152
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": -0.10048229591345148,
+      "p10TerminalReturn": -0.19960196618639786,
+      "p90TerminalReturn": 0.029977434912526243,
+      "medianMaxDrawdown": -0.14243424294263052,
+      "positiveRunShare": 0.16
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": -0.19913950395014246,
+      "p10TerminalReturn": -0.21246718973772194,
+      "p90TerminalReturn": -0.18536992907077238,
+      "medianMaxDrawdown": -0.19913950395014246,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": -0.199383154785312,
+      "p10TerminalReturn": -0.22053673200497825,
+      "p90TerminalReturn": -0.1767549748662266,
+      "medianMaxDrawdown": -0.19963617093415653,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": -0.18122510766475286,
+      "p10TerminalReturn": -0.2658866782967875,
+      "p90TerminalReturn": -0.0701735092169218,
+      "medianMaxDrawdown": -0.20948542755785632,
+      "positiveRunShare": 0.02
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": -0.11554181745371606,
+      "p10TerminalReturn": -0.2593445445110298,
+      "p90TerminalReturn": 0.04650025071354,
+      "medianMaxDrawdown": -0.17638649373769993,
+      "positiveRunShare": 0.2
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": -0.12721303570356896,
+      "p10TerminalReturn": -0.22978291596809586,
+      "p90TerminalReturn": -0.028679016797516145,
+      "medianMaxDrawdown": -0.16088410709194817,
+      "positiveRunShare": 0.048
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": -0.1784605558117216,
+      "p10TerminalReturn": -0.2092487947097929,
+      "p90TerminalReturn": -0.1492138163904432,
+      "medianMaxDrawdown": -0.17941334534067394,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": -0.09545777836428765,
+      "p10TerminalReturn": -0.1523919439695317,
+      "p90TerminalReturn": -0.038922433393415536,
+      "medianMaxDrawdown": -0.11116605204872276,
+      "positiveRunShare": 0.02
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": -0.0205499114798654,
+      "p10TerminalReturn": -0.06244878906614419,
+      "p90TerminalReturn": 0.018629787118978048,
+      "medianMaxDrawdown": -0.04449069519919652,
+      "positiveRunShare": 0.284
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": -0.20230034030075872,
+      "p10TerminalReturn": -0.25034173519636893,
+      "p90TerminalReturn": -0.1623470835456887,
+      "medianMaxDrawdown": -0.20470999989915262,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.1098026312828686,
+      "p10TerminalReturn": 0.0027534622983538936,
+      "p90TerminalReturn": 0.25678129663584376,
+      "medianMaxDrawdown": -0.060217058607280216,
+      "positiveRunShare": 0.912
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAB",
+      "medianTerminalReturn": -0.06393975071594865,
+      "p10TerminalReturn": -0.1966977980726465,
+      "p90TerminalReturn": 0.08389833669620234,
+      "medianMaxDrawdown": -0.13826680130319935,
+      "positiveRunShare": 0.284
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAC",
+      "medianTerminalReturn": -0.1274354203248262,
+      "p10TerminalReturn": -0.27370520002831816,
+      "p90TerminalReturn": 0.05887232034741535,
+      "medianMaxDrawdown": -0.19605524615950387,
+      "positiveRunShare": 0.192
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAD",
+      "medianTerminalReturn": -0.13828549212494134,
+      "p10TerminalReturn": -0.261118814570838,
+      "p90TerminalReturn": 0.0014156320760269694,
+      "medianMaxDrawdown": -0.17832726744287375,
+      "positiveRunShare": 0.112
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAE",
+      "medianTerminalReturn": -0.017374503867638058,
+      "p10TerminalReturn": -0.17753809081375418,
+      "p90TerminalReturn": 0.19011115248633992,
+      "medianMaxDrawdown": -0.1405688603911922,
+      "positiveRunShare": 0.472
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAG",
+      "medianTerminalReturn": -0.15190439073374395,
+      "p10TerminalReturn": -0.2988456875245523,
+      "p90TerminalReturn": -0.023261259833807394,
+      "medianMaxDrawdown": -0.21061904743597382,
+      "positiveRunShare": 0.076
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAH",
+      "medianTerminalReturn": -0.17397323475718857,
+      "p10TerminalReturn": -0.2646078063000792,
+      "p90TerminalReturn": -0.07767347216529007,
+      "medianMaxDrawdown": -0.19495131772183133,
+      "positiveRunShare": 0.008
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAI",
+      "medianTerminalReturn": -0.09352861213020447,
+      "p10TerminalReturn": -0.20879917441852544,
+      "p90TerminalReturn": 0.03185031258285891,
+      "medianMaxDrawdown": -0.15289516479100324,
+      "positiveRunShare": 0.156
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.2200775736863408,
+      "p10TerminalReturn": -0.37832655598727194,
+      "p90TerminalReturn": -0.003514760969792055,
+      "medianMaxDrawdown": -0.2694233446299183,
+      "positiveRunShare": 0.096
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAL",
+      "medianTerminalReturn": -0.11622047842679434,
+      "p10TerminalReturn": -0.2829317260786444,
+      "p90TerminalReturn": 0.05358051994241801,
+      "medianMaxDrawdown": -0.2126292380052599,
+      "positiveRunShare": 0.192
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAM",
+      "medianTerminalReturn": -0.08365157367494147,
+      "p10TerminalReturn": -0.20261881914984683,
+      "p90TerminalReturn": 0.06451576249835227,
+      "medianMaxDrawdown": -0.15858275569156005,
+      "positiveRunShare": 0.244
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAN",
+      "medianTerminalReturn": -0.05183863382830167,
+      "p10TerminalReturn": -0.22231969623059783,
+      "p90TerminalReturn": 0.15259426417016586,
+      "medianMaxDrawdown": -0.16147776647950401,
+      "positiveRunShare": 0.352
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NREAO",
+      "medianTerminalReturn": -0.06391486262579904,
+      "p10TerminalReturn": -0.21654576809214268,
+      "p90TerminalReturn": 0.12482261921570126,
+      "medianMaxDrawdown": -0.1596658801617804,
+      "positiveRunShare": 0.304
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": -0.13104078309172473,
+      "p10TerminalReturn": -0.23775580782405217,
+      "p90TerminalReturn": -0.012395961969977215,
+      "medianMaxDrawdown": -0.16989482339893608,
+      "positiveRunShare": 0.088
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": -0.1358909329348128,
+      "p10TerminalReturn": -0.23479708298400825,
+      "p90TerminalReturn": -0.032672696417775884,
+      "medianMaxDrawdown": -0.16360068739640332,
+      "positiveRunShare": 0.04
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": -0.12656747608915192,
+      "p10TerminalReturn": -0.14088509408089267,
+      "p90TerminalReturn": -0.11220076330895706,
+      "medianMaxDrawdown": -0.1267590005406013,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": -0.1270874229195313,
+      "p10TerminalReturn": -0.1487645538810112,
+      "p90TerminalReturn": -0.10148360026226395,
+      "medianMaxDrawdown": -0.12798520095065913,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": -0.20266376377792117,
+      "p10TerminalReturn": -0.30982258343057845,
+      "p90TerminalReturn": -0.08411086914670889,
+      "medianMaxDrawdown": -0.22668011932789317,
+      "positiveRunShare": 0.016
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": -0.13441339684799036,
+      "p10TerminalReturn": -0.25713315205268544,
+      "p90TerminalReturn": 0.012847550717583795,
+      "medianMaxDrawdown": -0.1936499196874637,
+      "positiveRunShare": 0.124
+    },
+    {
+      "scenario": "meridian_disruption",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": -0.13178863039946498,
+      "p10TerminalReturn": -0.21607451967202868,
+      "p90TerminalReturn": -0.03744859056264037,
+      "medianMaxDrawdown": -0.16279517799603616,
+      "positiveRunShare": 0.052
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": -0.08003682569747039,
+      "p10TerminalReturn": -0.11708076945033,
+      "p90TerminalReturn": -0.050710279200488886,
+      "medianMaxDrawdown": -0.08324094651092973,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": -0.027783335615563176,
+      "p10TerminalReturn": -0.09134499568477737,
+      "p90TerminalReturn": 0.04059815184497151,
+      "medianMaxDrawdown": -0.06193616722073808,
+      "positiveRunShare": 0.32
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": 0.057486054875281245,
+      "p10TerminalReturn": 0.00922876088505287,
+      "p90TerminalReturn": 0.10443338003429918,
+      "medianMaxDrawdown": -0.018899410061235522,
+      "positiveRunShare": 0.936
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": -0.13335588887336158,
+      "p10TerminalReturn": -0.1859137079713584,
+      "p90TerminalReturn": -0.08079810052954114,
+      "medianMaxDrawdown": -0.1414254622048685,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.10417157809264277,
+      "p10TerminalReturn": -0.010829862127572759,
+      "p90TerminalReturn": 0.24535091932045353,
+      "medianMaxDrawdown": -0.05662810887423214,
+      "positiveRunShare": 0.872
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAB",
+      "medianTerminalReturn": 0.08738333647140228,
+      "p10TerminalReturn": -0.06984091302568878,
+      "p90TerminalReturn": 0.2461603847641988,
+      "medianMaxDrawdown": -0.0889385586225635,
+      "positiveRunShare": 0.752
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAC",
+      "medianTerminalReturn": -0.04685096181773596,
+      "p10TerminalReturn": -0.22795980202912905,
+      "p90TerminalReturn": 0.15573747866395476,
+      "medianMaxDrawdown": -0.1631685811552246,
+      "positiveRunShare": 0.372
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAD",
+      "medianTerminalReturn": -0.060508432831954506,
+      "p10TerminalReturn": -0.1890895921634031,
+      "p90TerminalReturn": 0.06065153252491856,
+      "medianMaxDrawdown": -0.13687771065425103,
+      "positiveRunShare": 0.268
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAE",
+      "medianTerminalReturn": 0.021980979301100656,
+      "p10TerminalReturn": -0.1368037150447316,
+      "p90TerminalReturn": 0.21620181072813108,
+      "medianMaxDrawdown": -0.12441131538323552,
+      "positiveRunShare": 0.576
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAG",
+      "medianTerminalReturn": -0.33401085178979506,
+      "p10TerminalReturn": -0.4567273015787688,
+      "p90TerminalReturn": -0.23662318554968922,
+      "medianMaxDrawdown": -0.35820753905183805,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAH",
+      "medianTerminalReturn": -0.07963512929765887,
+      "p10TerminalReturn": -0.1743192513285201,
+      "p90TerminalReturn": 0.02663959364058199,
+      "medianMaxDrawdown": -0.1254670638897477,
+      "positiveRunShare": 0.164
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAI",
+      "medianTerminalReturn": -0.027591517562644052,
+      "p10TerminalReturn": -0.1545869219896705,
+      "p90TerminalReturn": 0.1074267680482382,
+      "medianMaxDrawdown": -0.11548811594977043,
+      "positiveRunShare": 0.424
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.15169011471077087,
+      "p10TerminalReturn": -0.31709636211006825,
+      "p90TerminalReturn": 0.04872352366899956,
+      "medianMaxDrawdown": -0.2328095269878429,
+      "positiveRunShare": 0.16
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAL",
+      "medianTerminalReturn": -0.2770695249216923,
+      "p10TerminalReturn": -0.41799813021199483,
+      "p90TerminalReturn": -0.09966093879983583,
+      "medianMaxDrawdown": -0.31408799514023716,
+      "positiveRunShare": 0.024
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAM",
+      "medianTerminalReturn": -0.02157444179292306,
+      "p10TerminalReturn": -0.18730448558131424,
+      "p90TerminalReturn": 0.15833705764660594,
+      "medianMaxDrawdown": -0.12176011382200003,
+      "positiveRunShare": 0.42
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAN",
+      "medianTerminalReturn": -0.1231391779850532,
+      "p10TerminalReturn": -0.27814906119171035,
+      "p90TerminalReturn": 0.07301580976324441,
+      "medianMaxDrawdown": -0.20105206108779888,
+      "positiveRunShare": 0.176
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NREAO",
+      "medianTerminalReturn": -0.1309196135738384,
+      "p10TerminalReturn": -0.28700551022109755,
+      "p90TerminalReturn": 0.04045442332473617,
+      "medianMaxDrawdown": -0.19279133164280315,
+      "positiveRunShare": 0.14
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": -0.21646101605327184,
+      "p10TerminalReturn": -0.3232028979181002,
+      "p90TerminalReturn": -0.10128548572194276,
+      "medianMaxDrawdown": -0.23766041050467157,
+      "positiveRunShare": 0.016
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": -0.20515535824372683,
+      "p10TerminalReturn": -0.29911964063619223,
+      "p90TerminalReturn": -0.12067268815647933,
+      "medianMaxDrawdown": -0.22885410420991664,
+      "positiveRunShare": 0.008
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": -0.2859935965287245,
+      "p10TerminalReturn": -0.296947396168888,
+      "p90TerminalReturn": -0.2716647327618758,
+      "medianMaxDrawdown": -0.2859935965287245,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": -0.285600706705536,
+      "p10TerminalReturn": -0.3052263794481359,
+      "p90TerminalReturn": -0.26308548174829033,
+      "medianMaxDrawdown": -0.285600706705536,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": -0.14341908730077801,
+      "p10TerminalReturn": -0.25533008853518363,
+      "p90TerminalReturn": -0.0338158565734067,
+      "medianMaxDrawdown": -0.17656217604767221,
+      "positiveRunShare": 0.04
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": -0.15504879005124445,
+      "p10TerminalReturn": -0.27589810215363103,
+      "p90TerminalReturn": 0.005975250412427006,
+      "medianMaxDrawdown": -0.19952603199414665,
+      "positiveRunShare": 0.108
+    },
+    {
+      "scenario": "war_escalation",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": -0.2135780332049514,
+      "p10TerminalReturn": -0.2958987804544784,
+      "p90TerminalReturn": -0.1226250746132235,
+      "medianMaxDrawdown": -0.22700685925016956,
+      "positiveRunShare": 0.008
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": -0.043060290409932755,
+      "p10TerminalReturn": -0.07799597575088725,
+      "p90TerminalReturn": -0.011043865888733856,
+      "medianMaxDrawdown": -0.053329781860902814,
+      "positiveRunShare": 0.044
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": -0.04693164315339443,
+      "p10TerminalReturn": -0.11510229584316892,
+      "p90TerminalReturn": 0.03218859088444531,
+      "medianMaxDrawdown": -0.07521111700349159,
+      "positiveRunShare": 0.196
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": -0.04237187886726529,
+      "p10TerminalReturn": -0.08025593869175565,
+      "p90TerminalReturn": -1.4523962452009369e-05,
+      "medianMaxDrawdown": -0.055754205761815,
+      "positiveRunShare": 0.1
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": -0.04040580775073915,
+      "p10TerminalReturn": -0.0936519192918584,
+      "p90TerminalReturn": 0.003842078772738655,
+      "medianMaxDrawdown": -0.06658831577337826,
+      "positiveRunShare": 0.116
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.07772984871233901,
+      "p10TerminalReturn": -0.021176530749047656,
+      "p90TerminalReturn": 0.19712917295631197,
+      "medianMaxDrawdown": -0.059674325048661436,
+      "positiveRunShare": 0.852
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAB",
+      "medianTerminalReturn": 0.1918093010186699,
+      "p10TerminalReturn": 0.0036303107211960875,
+      "p90TerminalReturn": 0.36144469140724766,
+      "medianMaxDrawdown": -0.06883306168295394,
+      "positiveRunShare": 0.904
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAC",
+      "medianTerminalReturn": -0.0689535655353411,
+      "p10TerminalReturn": -0.2553825407181583,
+      "p90TerminalReturn": 0.13739272056708043,
+      "medianMaxDrawdown": -0.16773383473122783,
+      "positiveRunShare": 0.328
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAD",
+      "medianTerminalReturn": -0.03996537349499102,
+      "p10TerminalReturn": -0.16745830749174573,
+      "p90TerminalReturn": 0.09571266934725503,
+      "medianMaxDrawdown": -0.11623061005086771,
+      "positiveRunShare": 0.328
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAE",
+      "medianTerminalReturn": -0.0498067385878172,
+      "p10TerminalReturn": -0.21054983843896952,
+      "p90TerminalReturn": 0.11810579060804698,
+      "medianMaxDrawdown": -0.15477455007987123,
+      "positiveRunShare": 0.364
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAG",
+      "medianTerminalReturn": 0.0183579882796836,
+      "p10TerminalReturn": -0.15568968947635736,
+      "p90TerminalReturn": 0.203072887640234,
+      "medianMaxDrawdown": -0.12870761037857603,
+      "positiveRunShare": 0.568
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAH",
+      "medianTerminalReturn": -0.020377616099588547,
+      "p10TerminalReturn": -0.13487705142574002,
+      "p90TerminalReturn": 0.08846648734806713,
+      "medianMaxDrawdown": -0.08985678648204887,
+      "positiveRunShare": 0.388
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAI",
+      "medianTerminalReturn": -0.03921610091138328,
+      "p10TerminalReturn": -0.16051653169396415,
+      "p90TerminalReturn": 0.07359857897883144,
+      "medianMaxDrawdown": -0.12371951448260066,
+      "positiveRunShare": 0.304
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.0499281519829024,
+      "p10TerminalReturn": -0.25748454970122475,
+      "p90TerminalReturn": 0.1490486730683064,
+      "medianMaxDrawdown": -0.1818572699545597,
+      "positiveRunShare": 0.384
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAL",
+      "medianTerminalReturn": -0.012960669157994098,
+      "p10TerminalReturn": -0.19884058819922376,
+      "p90TerminalReturn": 0.2490163641668427,
+      "medianMaxDrawdown": -0.156777853816138,
+      "positiveRunShare": 0.468
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAM",
+      "medianTerminalReturn": -0.05215969235482876,
+      "p10TerminalReturn": -0.1688726833619903,
+      "p90TerminalReturn": 0.10590095558402753,
+      "medianMaxDrawdown": -0.14164208903334652,
+      "positiveRunShare": 0.292
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAN",
+      "medianTerminalReturn": 0.021241284894413903,
+      "p10TerminalReturn": -0.14978934428183033,
+      "p90TerminalReturn": 0.23623407795096793,
+      "medianMaxDrawdown": -0.13180373641396192,
+      "positiveRunShare": 0.56
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NREAO",
+      "medianTerminalReturn": 0.023882611420438127,
+      "p10TerminalReturn": -0.12344734134351817,
+      "p90TerminalReturn": 0.2048985550393852,
+      "medianMaxDrawdown": -0.12134521652365332,
+      "positiveRunShare": 0.576
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": 0.009376473090093151,
+      "p10TerminalReturn": -0.11093846470668034,
+      "p90TerminalReturn": 0.12905775355144475,
+      "medianMaxDrawdown": -0.0972117320254623,
+      "positiveRunShare": 0.568
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": 0.020925654867863464,
+      "p10TerminalReturn": -0.10292230190102375,
+      "p90TerminalReturn": 0.1251381199419915,
+      "medianMaxDrawdown": -0.08617373215607244,
+      "positiveRunShare": 0.608
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": 0.006466897376894543,
+      "p10TerminalReturn": -0.007796191256744922,
+      "p90TerminalReturn": 0.02104434431660338,
+      "medianMaxDrawdown": -0.010964702652333791,
+      "positiveRunShare": 0.696
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": 0.005925748788154439,
+      "p10TerminalReturn": -0.02017685235729206,
+      "p90TerminalReturn": 0.03651608845275604,
+      "medianMaxDrawdown": -0.019620836003241382,
+      "positiveRunShare": 0.616
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": -0.055290305499369585,
+      "p10TerminalReturn": -0.15965484766432717,
+      "p90TerminalReturn": 0.08930882643152448,
+      "medianMaxDrawdown": -0.11995820168375121,
+      "positiveRunShare": 0.308
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": -0.05153732832257851,
+      "p10TerminalReturn": -0.18824138620363462,
+      "p90TerminalReturn": 0.10272232886721454,
+      "medianMaxDrawdown": -0.14509160361244883,
+      "positiveRunShare": 0.34
+    },
+    {
+      "scenario": "commodity_boom",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": 0.014236726712844372,
+      "p10TerminalReturn": -0.08355660062986327,
+      "p90TerminalReturn": 0.13162855884551417,
+      "medianMaxDrawdown": -0.0804032775345841,
+      "positiveRunShare": 0.568
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRBAA",
+      "medianTerminalReturn": -0.03718576765932452,
+      "p10TerminalReturn": -0.07333843951751826,
+      "p90TerminalReturn": 0.003614015378175915,
+      "medianMaxDrawdown": -0.07745437853475978,
+      "positiveRunShare": 0.132
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRBAF",
+      "medianTerminalReturn": 0.005484260325268164,
+      "p10TerminalReturn": -0.05090264063023638,
+      "p90TerminalReturn": 0.06105499953966399,
+      "medianMaxDrawdown": -0.056885195748167805,
+      "positiveRunShare": 0.564
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRBAG",
+      "medianTerminalReturn": 0.03239492665805099,
+      "p10TerminalReturn": -0.006776963529810107,
+      "p90TerminalReturn": 0.0813483559496147,
+      "medianMaxDrawdown": -0.02555638473210875,
+      "positiveRunShare": 0.856
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRBAJ",
+      "medianTerminalReturn": -0.029573303515653238,
+      "p10TerminalReturn": -0.07693965858672952,
+      "p90TerminalReturn": 0.02328966570770599,
+      "medianMaxDrawdown": -0.10021883354091088,
+      "positiveRunShare": 0.224
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRCAA",
+      "medianTerminalReturn": 0.07476761323047254,
+      "p10TerminalReturn": -0.02826506835510137,
+      "p90TerminalReturn": 0.19102119111980473,
+      "medianMaxDrawdown": -0.07025862321377052,
+      "positiveRunShare": 0.804
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAB",
+      "medianTerminalReturn": 0.0426752444960784,
+      "p10TerminalReturn": -0.09506386979790547,
+      "p90TerminalReturn": 0.1995359995639257,
+      "medianMaxDrawdown": -0.0976862524020971,
+      "positiveRunShare": 0.632
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAC",
+      "medianTerminalReturn": -0.008629848280602648,
+      "p10TerminalReturn": -0.19392643733879603,
+      "p90TerminalReturn": 0.21185623524004374,
+      "medianMaxDrawdown": -0.1508794468777383,
+      "positiveRunShare": 0.48
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAD",
+      "medianTerminalReturn": -0.014117002525856792,
+      "p10TerminalReturn": -0.16923206813593578,
+      "p90TerminalReturn": 0.1321913657173849,
+      "medianMaxDrawdown": -0.11998370033495032,
+      "positiveRunShare": 0.452
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAE",
+      "medianTerminalReturn": 0.06898621987128084,
+      "p10TerminalReturn": -0.12459310513383745,
+      "p90TerminalReturn": 0.255349787862311,
+      "medianMaxDrawdown": -0.11521960876391074,
+      "positiveRunShare": 0.656
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAG",
+      "medianTerminalReturn": -0.05182175496383762,
+      "p10TerminalReturn": -0.20358368393870652,
+      "p90TerminalReturn": 0.1315015719595261,
+      "medianMaxDrawdown": -0.17725673541354842,
+      "positiveRunShare": 0.348
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAH",
+      "medianTerminalReturn": -0.02580795265774455,
+      "p10TerminalReturn": -0.1357534813605347,
+      "p90TerminalReturn": 0.09081294456833061,
+      "medianMaxDrawdown": -0.10919079952001043,
+      "positiveRunShare": 0.364
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAI",
+      "medianTerminalReturn": 0.00769178683129168,
+      "p10TerminalReturn": -0.11455519332049596,
+      "p90TerminalReturn": 0.16050730299323243,
+      "medianMaxDrawdown": -0.10329401124011628,
+      "positiveRunShare": 0.532
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAK",
+      "medianTerminalReturn": -0.03842780409865154,
+      "p10TerminalReturn": -0.23232567744649069,
+      "p90TerminalReturn": 0.22056834174528303,
+      "medianMaxDrawdown": -0.18836024410932606,
+      "positiveRunShare": 0.404
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAL",
+      "medianTerminalReturn": -0.07940594397055867,
+      "p10TerminalReturn": -0.261361471014904,
+      "p90TerminalReturn": 0.15562207472830708,
+      "medianMaxDrawdown": -0.21041639149976438,
+      "positiveRunShare": 0.356
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAM",
+      "medianTerminalReturn": 0.0012866189962577046,
+      "p10TerminalReturn": -0.1469732738015793,
+      "p90TerminalReturn": 0.15624851991580002,
+      "medianMaxDrawdown": -0.11535016639599005,
+      "positiveRunShare": 0.504
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAN",
+      "medianTerminalReturn": 0.000530363434850023,
+      "p10TerminalReturn": -0.1646057442883795,
+      "p90TerminalReturn": 0.21753668332558615,
+      "medianMaxDrawdown": -0.1555110156133062,
+      "positiveRunShare": 0.504
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NREAO",
+      "medianTerminalReturn": 0.002082741072423122,
+      "p10TerminalReturn": -0.15717304924926143,
+      "p90TerminalReturn": 0.172525544594515,
+      "medianMaxDrawdown": -0.13279578584317164,
+      "positiveRunShare": 0.508
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRFAA",
+      "medianTerminalReturn": -0.037760537686699014,
+      "p10TerminalReturn": -0.16402496732922298,
+      "p90TerminalReturn": 0.08224291608438203,
+      "medianMaxDrawdown": -0.13604050358614272,
+      "positiveRunShare": 0.36
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRFAB",
+      "medianTerminalReturn": -0.029906520326844876,
+      "p10TerminalReturn": -0.149543267984578,
+      "p90TerminalReturn": 0.07434484907257757,
+      "medianMaxDrawdown": -0.13052952024111025,
+      "positiveRunShare": 0.36
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRGAA",
+      "medianTerminalReturn": -0.05720163832403646,
+      "p10TerminalReturn": -0.07678693657849091,
+      "p90TerminalReturn": -0.04306338635016519,
+      "medianMaxDrawdown": -0.10560004522335908,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRGAB",
+      "medianTerminalReturn": -0.06104341429599769,
+      "p10TerminalReturn": -0.08664687169665598,
+      "p90TerminalReturn": -0.02878766247308944,
+      "medianMaxDrawdown": -0.10972758085217915,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRPAE",
+      "medianTerminalReturn": -0.032523941476317764,
+      "p10TerminalReturn": -0.15171824473050088,
+      "p90TerminalReturn": 0.10809764916759247,
+      "medianMaxDrawdown": -0.12967792163639952,
+      "positiveRunShare": 0.32
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRTAC",
+      "medianTerminalReturn": -0.005700109174136714,
+      "p10TerminalReturn": -0.12683041766820147,
+      "p90TerminalReturn": 0.15033419305197032,
+      "medianMaxDrawdown": -0.1355634045940885,
+      "positiveRunShare": 0.484
+    },
+    {
+      "scenario": "crisis_recovery",
+      "symbol": "NRXAA",
+      "medianTerminalReturn": -0.0328112119371638,
+      "p10TerminalReturn": -0.14272434692228506,
+      "p90TerminalReturn": 0.07493649079682925,
+      "medianMaxDrawdown": -0.12455408091738701,
+      "positiveRunShare": 0.34
+    }
+  ],
+  "portfolioMetrics": [
+    {
+      "scenario": "baseline",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": 0.02625420453262206,
+      "p10TerminalReturn": -0.02244626636329879,
+      "p90TerminalReturn": 0.07160778771666525,
+      "medianMaxDrawdown": -0.030489824636977525,
+      "positiveRunShare": 0.756
+    },
+    {
+      "scenario": "baseline",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": 0.020251882101857577,
+      "p10TerminalReturn": -0.02439860241380267,
+      "p90TerminalReturn": 0.06035182962315925,
+      "medianMaxDrawdown": -0.029049732339274714,
+      "positiveRunShare": 0.728
+    },
+    {
+      "scenario": "baseline",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": 0.015379779386616388,
+      "p10TerminalReturn": -0.0479621884626298,
+      "p90TerminalReturn": 0.07765400323938122,
+      "medianMaxDrawdown": -0.047719530347502315,
+      "positiveRunShare": 0.632
+    },
+    {
+      "scenario": "baseline",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": 0.023453922599716237,
+      "p10TerminalReturn": -0.002980421462716209,
+      "p90TerminalReturn": 0.05361189813077729,
+      "medianMaxDrawdown": -0.01776437293100147,
+      "positiveRunShare": 0.856
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": -0.0825322864384036,
+      "p10TerminalReturn": -0.12748342939234758,
+      "p90TerminalReturn": -0.0353792495679253,
+      "medianMaxDrawdown": -0.09145686163205397,
+      "positiveRunShare": 0.012
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": -0.1301403988631492,
+      "p10TerminalReturn": -0.17018683676844565,
+      "p90TerminalReturn": -0.09284885163717227,
+      "medianMaxDrawdown": -0.136026050361299,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": -0.010513983612963074,
+      "p10TerminalReturn": -0.07066108437951871,
+      "p90TerminalReturn": 0.05776950640479686,
+      "medianMaxDrawdown": -0.0562109464999086,
+      "positiveRunShare": 0.42
+    },
+    {
+      "scenario": "inflation_rate_shock",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": -0.1044280772315016,
+      "p10TerminalReturn": -0.13045107212041585,
+      "p90TerminalReturn": -0.07509988268269391,
+      "medianMaxDrawdown": -0.10658914083692245,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": -0.10569971317231369,
+      "p10TerminalReturn": -0.14208568538388217,
+      "p90TerminalReturn": -0.053616126615796,
+      "medianMaxDrawdown": -0.11424659904046341,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": -0.13213320213938423,
+      "p10TerminalReturn": -0.16673214320317659,
+      "p90TerminalReturn": -0.09274274221370332,
+      "medianMaxDrawdown": -0.1338181650350725,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "meridian_disruption",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": 0.00774575881903139,
+      "p10TerminalReturn": -0.05163792577333683,
+      "p90TerminalReturn": 0.07099941869358196,
+      "medianMaxDrawdown": -0.04695475972280788,
+      "positiveRunShare": 0.54
+    },
+    {
+      "scenario": "meridian_disruption",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": -0.11788029216084212,
+      "p10TerminalReturn": -0.1440301838406475,
+      "p90TerminalReturn": -0.09167094500448894,
+      "medianMaxDrawdown": -0.11960023298137773,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": -0.08841554810556324,
+      "p10TerminalReturn": -0.1366979938545837,
+      "p90TerminalReturn": -0.04423252016317628,
+      "medianMaxDrawdown": -0.10052901299571121,
+      "positiveRunShare": 0.008
+    },
+    {
+      "scenario": "war_escalation",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": -0.17814571897244497,
+      "p10TerminalReturn": -0.2175739559686019,
+      "p90TerminalReturn": -0.13423402473418905,
+      "medianMaxDrawdown": -0.18017837580464757,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "war_escalation",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": 0.07471045427922307,
+      "p10TerminalReturn": 0.007481283533044559,
+      "p90TerminalReturn": 0.14466649633751807,
+      "medianMaxDrawdown": -0.03053652309773086,
+      "positiveRunShare": 0.924
+    },
+    {
+      "scenario": "war_escalation",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": -0.11578245597161013,
+      "p10TerminalReturn": -0.1435574016791059,
+      "p90TerminalReturn": -0.08509964313885544,
+      "medianMaxDrawdown": -0.118448527896175,
+      "positiveRunShare": 0.0
+    },
+    {
+      "scenario": "commodity_boom",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": -0.001198182874024345,
+      "p10TerminalReturn": -0.04847646982891965,
+      "p90TerminalReturn": 0.05056372377342625,
+      "medianMaxDrawdown": -0.04027063276409115,
+      "positiveRunShare": 0.488
+    },
+    {
+      "scenario": "commodity_boom",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": -0.008050646495014857,
+      "p10TerminalReturn": -0.0462670016932645,
+      "p90TerminalReturn": 0.031305667769132975,
+      "medianMaxDrawdown": -0.03979155339974777,
+      "positiveRunShare": 0.416
+    },
+    {
+      "scenario": "commodity_boom",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": 0.04540788898775516,
+      "p10TerminalReturn": -0.02117051790771764,
+      "p90TerminalReturn": 0.1078192412344481,
+      "medianMaxDrawdown": -0.038426393460226804,
+      "positiveRunShare": 0.812
+    },
+    {
+      "scenario": "commodity_boom",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": -0.009301343450730748,
+      "p10TerminalReturn": -0.041603666268783535,
+      "p90TerminalReturn": 0.01787719446002258,
+      "medianMaxDrawdown": -0.029366722715870763,
+      "positiveRunShare": 0.344
+    },
+    {
+      "scenario": "crisis_recovery",
+      "portfolio": "equal_weight_equities",
+      "medianTerminalReturn": -0.003052354747531849,
+      "p10TerminalReturn": -0.0500500927893036,
+      "p90TerminalReturn": 0.05326751564967017,
+      "medianMaxDrawdown": -0.060457703788811545,
+      "positiveRunShare": 0.452
+    },
+    {
+      "scenario": "crisis_recovery",
+      "portfolio": "defensive_mix",
+      "medianTerminalReturn": -0.03214490470807213,
+      "p10TerminalReturn": -0.08071534008847836,
+      "p90TerminalReturn": 0.012122905754114848,
+      "medianMaxDrawdown": -0.08872169485896458,
+      "positiveRunShare": 0.196
+    },
+    {
+      "scenario": "crisis_recovery",
+      "portfolio": "strategic_exposure",
+      "medianTerminalReturn": 0.05730070975985779,
+      "p10TerminalReturn": -0.014934684416209976,
+      "p90TerminalReturn": 0.12684628680451399,
+      "medianMaxDrawdown": -0.034003678374988466,
+      "positiveRunShare": 0.856
+    },
+    {
+      "scenario": "crisis_recovery",
+      "portfolio": "diversified_tradable",
+      "medianTerminalReturn": -0.014218439386688264,
+      "p10TerminalReturn": -0.039658406724861095,
+      "p90TerminalReturn": 0.023909042867867162,
+      "medianMaxDrawdown": -0.06232348959294626,
+      "positiveRunShare": 0.32
+    }
+  ],
+  "integrity": {
+    "guaranteedPositiveCases": [],
+    "allWeightsPrevalidated": true,
+    "nonFiniteResults": 0
+  }
+}

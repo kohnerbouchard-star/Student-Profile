@@ -1,0 +1,34 @@
+{
+  "activationAuthorized": false,
+  "packId": "econovaria.beta-seed-pack.v1",
+  "policy": "bounded references only; no Messaging, Marketplace, Progression, or story-delivery mutation",
+  "productionAuthorized": false,
+  "recoveryPolicy": "Every activated campaign event must preserve a named legal substitute, support path, or administrator correction route.",
+  "schemaVersion": "econovaria-beta-campaign-selection-v1",
+  "selectedEventStableIds": [
+    "event.core.northreach.sector-expansion.v1",
+    "event.core.northreach.system-pressure.v1",
+    "event.core.yrethia.sector-expansion.v1",
+    "event.core.yrethia.system-pressure.v1",
+    "event.core.thaloris.sector-expansion.v1",
+    "event.core.thaloris.system-pressure.v1",
+    "event.core.solvend.sector-expansion.v1",
+    "event.core.solvend.system-pressure.v1",
+    "event.core.eldoran.sector-expansion.v1",
+    "event.core.eldoran.system-pressure.v1"
+  ],
+  "selectedNewsTemplateStableIds": [
+    "news-template.northreach.opening.v1",
+    "news-template.northreach.pressure.v1",
+    "news-template.northreach.recovery.v1",
+    "news-template.yrethia.opening.v1",
+    "news-template.yrethia.pressure.v1",
+    "news-template.yrethia.recovery.v1",
+    "news-template.thaloris.opening.v1",
+    "news-template.thaloris.pressure.v1",
+    "news-template.thaloris.recovery.v1",
+    "news-template.solvend.opening.v1"
+  ],
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}
