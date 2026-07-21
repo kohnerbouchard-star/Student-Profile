@@ -125,9 +125,18 @@ jobs:
 
       - name: Verify formatting and source quality
         run: |
-          deno fmt --check \
+          set +e
+          deno fmt \
             --config backend/src/domains/markets/deno.json \
-            backend/src/domains/markets
+            backend/src/domains/markets \
+            > deno-format.log 2>&1
+          format_status=$?
+          cat deno-format.log
+          if [ "$format_status" -ne 0 ]; then
+            exit "$format_status"
+          fi
+          git diff -- backend/src/domains/markets > deno-format.patch
+          test ! -s deno-format.patch
           git diff --check
 
       - name: Verify prohibited features remain disabled
@@ -175,5 +184,7 @@ jobs:
             full-financial-markets-reference-simulation.stdout.json
             financial-market-domain-tests.log
             financial-market-domain-tests.status
+            deno-format.log
+            deno-format.patch
           if-no-files-found: warn
           retention-days: 30
