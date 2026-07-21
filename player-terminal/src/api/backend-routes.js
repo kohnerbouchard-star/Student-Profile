@@ -1,4 +1,9 @@
 import { ApiRequestError } from "./errors.js";
+import {
+  MESSAGING_BACKEND_ROUTE_KEYS,
+  hasMessagingBackendRoute,
+  resolveMessagingBackendRequest,
+} from "./messaging-backend-routes.js";
 
 function requiredText(value, fieldName, endpointKey) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -7,7 +12,6 @@ function requiredText(value, fieldName, endpointKey) {
     body: { code: "player_route_context_missing", fieldName, endpointKey },
   });
 }
-
 
 function publicStoryDeliveryId(value) {
   const deliveryId = requiredText(value, "deliveryId", "storyDeliveryState").toLowerCase();
@@ -48,14 +52,6 @@ function queryPath(path, values) {
 
 function idempotencyKey(payload, endpointKey) {
   return requiredText(payload?.idempotencyKey, "idempotencyKey", endpointKey);
-}
-
-function gameSessionId(payload, session, endpointKey) {
-  return requiredText(
-    payload?.gameSessionId || session?.gameSessionId,
-    "gameSessionId",
-    endpointKey,
-  );
 }
 
 function notificationDeliveryIds(payload, endpointKey) {
@@ -307,6 +303,7 @@ const ROUTE_BUILDERS = Object.freeze({
         },
     },
   }),
+
   notifications: ({ payload = {} }) => ({
     method: "GET",
     path: queryPath("/players/me/notifications", {
@@ -351,17 +348,49 @@ const ROUTE_BUILDERS = Object.freeze({
   logout: () => ({ method: "POST", path: "/players/me/session/logout" }),
 });
 
-export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(
-  Object.keys(ROUTE_BUILDERS),
-);
+const CORE_BACKEND_ROUTE_KEYS = Object.freeze(Object.keys(ROUTE_BUILDERS));
+
+export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
+  ...CORE_BACKEND_ROUTE_KEYS,
+  ...MESSAGING_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_BACKEND_ROUTE_KEYS.includes(key)
+  ),
+]);
 
 export function hasPlayerBackendRoute(endpointKey) {
-  return Object.hasOwn(ROUTE_BUILDERS, endpointKey);
+  return hasMessagingBackendRoute(endpointKey) ||
+    Object.hasOwn(ROUTE_BUILDERS, endpointKey);
 }
 
 export function resolvePlayerBackendRequest(
-  { endpointKey, method, path, payload, params, session },
+  context,
 ) {
+  if (hasMessagingBackendRoute(context.endpointKey)) {
+    const resolved = resolveMessagingBackendRequest(context);
+    if (!resolved) return null;
+    return {
+      endpointKey: context.endpointKey,
+      method: resolved.method,
+      path: resolved.path,
+      payload: Object.hasOwn(resolved, "payload")
+        ? resolved.payload
+        : undefined,
+      provisional: {
+        method: context.method,
+        path: context.path,
+        payload: context.payload,
+      },
+    };
+  }
+
+  const {
+    endpointKey,
+    method,
+    path,
+    payload,
+    params,
+    session,
+  } = context;
   const builder = ROUTE_BUILDERS[endpointKey];
   if (!builder) return null;
   const resolved = builder({

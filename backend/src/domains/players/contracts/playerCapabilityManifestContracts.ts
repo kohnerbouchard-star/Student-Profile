@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.3" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.3" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -72,6 +72,13 @@ export type PlayerCapabilityEndpointKey =
   | "marketAsset"
   | "marketOrder"
   | "marketWatchlist"
+  | "messages"
+  | "messageThread"
+  | "messagePolicy"
+  | "messageSearch"
+  | "messageThreadCreate"
+  | "messageSend"
+  | "messageRead"
   | "news"
   | "notifications"
   | "notificationsRead"
@@ -264,6 +271,65 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["inventory"],
     actionCapabilities: ["inventoryUse"],
+  },
+  {
+    key: "messages",
+    operations: [{ method: "GET", pathTemplate: "/players/me/messages" }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageThread",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/threads/:threadId",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messagePolicy",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/policy",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageSearch",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/search",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSearch"],
+  },
+  {
+    key: "messageThreadCreate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageSend",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads/:threadId/messages",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageRead",
+    operations: [
+      { method: "POST", pathTemplate: "/players/me/messages/read" },
+      {
+        method: "POST",
+        pathTemplate: "/players/me/messages/threads/:threadId/read",
+      },
+    ],
+    routeCapabilities: ["messages"],
   },
   {
     key: "notifications",
