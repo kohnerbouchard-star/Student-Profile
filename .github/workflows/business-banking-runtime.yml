@@ -17,6 +17,8 @@ on:
       - "player-terminal/src/api/resource-plan.js"
       - "player-terminal/src/core/format.js"
       - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/banking-page.js"
+      - "player-terminal/src/pages/loans-page.js"
       - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
@@ -39,6 +41,8 @@ on:
       - "player-terminal/src/api/resource-plan.js"
       - "player-terminal/src/core/format.js"
       - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/banking-page.js"
+      - "player-terminal/src/pages/loans-page.js"
       - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
@@ -122,3 +126,5 @@ jobs:
         run: |
           node --check player-terminal/src/api/business-banking-backend-routes.js
           node --check player-terminal/src/pages/business-page.js
+          node --check player-terminal/src/pages/banking-page.js
+          node --check player-terminal/src/pages/loans-page.js
