@@ -100,7 +100,10 @@ export function calculateFinancialMarketStatementMetrics(
   const income = statement.incomeStatement;
   const balance = statement.balanceSheet;
   const cashFlow = statement.cashFlowStatement;
-  const grossProfit = subtractMarketDecimals(income.revenue, income.costOfRevenue);
+  const grossProfit = subtractMarketDecimals(
+    income.revenue,
+    income.costOfRevenue,
+  );
   const totalAssets = addMarketDecimals(
     balance.cash,
     balance.receivables,
@@ -108,7 +111,10 @@ export function calculateFinancialMarketStatementMetrics(
     balance.propertyPlantEquipment,
     balance.otherAssets,
   );
-  const totalDebt = addMarketDecimals(balance.shortTermDebt, balance.longTermDebt);
+  const totalDebt = addMarketDecimals(
+    balance.shortTermDebt,
+    balance.longTermDebt,
+  );
   const totalLiabilities = addMarketDecimals(
     totalDebt,
     balance.payables,
@@ -127,27 +133,47 @@ export function calculateFinancialMarketStatementMetrics(
     balance.shortTermDebt,
     balance.payables,
   );
-  const quickAssets = addMarketDecimals(balance.cash, balance.receivables);
-  const workingCapital = subtractMarketDecimals(currentAssets, currentLiabilities);
+  const quickAssets = addMarketDecimals(
+    balance.cash,
+    balance.receivables,
+  );
+  const workingCapital = subtractMarketDecimals(
+    currentAssets,
+    currentLiabilities,
+  );
   const bookValuePerShare = safeDecimalRatio(
     statement.bookValue,
     statement.sharesOutstanding,
   );
   const revenueGrowth = priorStatement
     ? safeNumericRatio(
-      subtractMarketDecimals(income.revenue, priorStatement.incomeStatement.revenue),
+      subtractMarketDecimals(
+        income.revenue,
+        priorStatement.incomeStatement.revenue,
+      ),
       priorStatement.incomeStatement.revenue,
     )
     : null;
   const grossMargin = safeNumericRatio(grossProfit, income.revenue);
-  const operatingMargin = safeNumericRatio(income.operatingIncome, income.revenue);
+  const operatingMargin = safeNumericRatio(
+    income.operatingIncome,
+    income.revenue,
+  );
   const netMargin = safeNumericRatio(income.netIncome, income.revenue);
   const operatingCashFlowMargin = safeNumericRatio(
     cashFlow.operatingCashFlow,
     income.revenue,
   );
-  const currentRatio = safeNumericRatio(currentAssets, currentLiabilities, 99);
-  const quickRatio = safeNumericRatio(quickAssets, currentLiabilities, 99);
+  const currentRatio = safeNumericRatio(
+    currentAssets,
+    currentLiabilities,
+    99,
+  );
+  const quickRatio = safeNumericRatio(
+    quickAssets,
+    currentLiabilities,
+    99,
+  );
   const debtToEquity = safeNumericRatio(totalDebt, totalEquity, 99);
   const debtToAssets = safeNumericRatio(totalDebt, totalAssets);
   const interestCoverage = safeNumericRatio(
@@ -155,8 +181,15 @@ export function calculateFinancialMarketStatementMetrics(
     income.interestExpense,
     99,
   );
-  const returnOnAssets = safeNumericRatio(income.netIncome, totalAssets);
-  const returnOnEquity = safeNumericRatio(income.netIncome, totalEquity, 99);
+  const returnOnAssets = safeNumericRatio(
+    income.netIncome,
+    totalAssets,
+  );
+  const returnOnEquity = safeNumericRatio(
+    income.netIncome,
+    totalEquity,
+    99,
+  );
   const cashToDebt = safeNumericRatio(balance.cash, totalDebt, 99);
   const creditMetricScore = calculateCreditMetricScore({
     currentRatio,
@@ -196,12 +229,18 @@ export function calculateFinancialMarketStatementMetrics(
 export function buildEventAdjustedFinancialStatementPolicy(
   policy: FinancialStatementGenerationPolicy,
   adjustment: FinancialMarketStatementEventAdjustment | null | undefined,
-  revenueGrowthBounds?: { readonly minimum: number; readonly maximum: number },
+  revenueGrowthBounds?: {
+    readonly minimum: number;
+    readonly maximum: number;
+  },
 ): FinancialStatementGenerationPolicy {
   const event = adjustment ?? {};
   for (const [key, value] of Object.entries(event)) {
-    if (value !== undefined && (!Number.isFinite(value) || Math.abs(value) > HARD_EVENT_BOUND)) {
-      throw new Error(`${key} exceeds the bounded event-adjustment range.`);
+    if (value !== undefined &&
+      (!Number.isFinite(value) || Math.abs(value) > HARD_EVENT_BOUND)) {
+      throw new Error(
+        `${key} exceeds the bounded event-adjustment range.`,
+      );
     }
   }
   const growthDelta = event.revenueGrowthDelta ?? 0;
@@ -282,12 +321,14 @@ export function buildEventAdjustedFinancialStatementPolicy(
       HARD_INTEREST_RATE_MAXIMUM,
     ),
     minimumDistributionRate: clamp(
-      policy.minimumDistributionRate + (event.distributionRateDelta ?? 0),
+      policy.minimumDistributionRate +
+        (event.distributionRateDelta ?? 0),
       0,
       0.75,
     ),
     maximumDistributionRate: clamp(
-      policy.maximumDistributionRate + (event.distributionRateDelta ?? 0),
+      policy.maximumDistributionRate +
+        (event.distributionRateDelta ?? 0),
       0,
       0.75,
     ),
@@ -302,9 +343,9 @@ export function generateBoundedFinancialMarketStatementSeries(
   }
   const minimumMultiple = input.minimumRevenueMultiple ?? 0.25;
   const maximumMultiple = input.maximumRevenueMultiple ?? 3;
-  if (!Number.isFinite(minimumMultiple) || !Number.isFinite(maximumMultiple) ||
-    minimumMultiple <= 0 || maximumMultiple < minimumMultiple ||
-    maximumMultiple > 10) {
+  if (!Number.isFinite(minimumMultiple) ||
+    !Number.isFinite(maximumMultiple) || minimumMultiple <= 0 ||
+    maximumMultiple < minimumMultiple || maximumMultiple > 10) {
     throw new Error("Statement revenue-multiple bounds are invalid.");
   }
   const minimumRevenue = multiplyMarketDecimals(
@@ -349,10 +390,19 @@ export function generateBoundedFinancialMarketStatementSeries(
     const statement = generateFinancialMarketStatement(generationInput);
     const validation = validateFinancialMarketStatement(statement, prior);
     if (!validation.valid) {
-      throw new Error(`Statement series reconciliation failed: ${validation.errors.join(",")}`);
+      throw new Error(
+        `Statement series reconciliation failed: ${
+          validation.errors.join(",")
+        }`,
+      );
     }
-    if (compareMarketDecimals(statement.incomeStatement.revenue, minimumRevenue) < 0 ||
-      compareMarketDecimals(statement.incomeStatement.revenue, maximumRevenue) > 0) {
+    if (compareMarketDecimals(
+      statement.incomeStatement.revenue,
+      minimumRevenue,
+    ) < 0 || compareMarketDecimals(
+      statement.incomeStatement.revenue,
+      maximumRevenue,
+    ) > 0) {
       throw new Error("Statement series revenue exceeded the bounded range.");
     }
     if (prior && statement.sharesOutstanding !== prior.sharesOutstanding) {
@@ -376,7 +426,7 @@ export function generateBoundedFinancialMarketStatementSeries(
 export function assertFinancialMarketMetricsBounded(
   metrics: FinancialMarketStatementMetrics,
 ): void {
-  const bounded = [
+  const unitScaleRatios = [
     metrics.grossMargin,
     metrics.operatingMargin,
     metrics.netMargin,
@@ -384,19 +434,40 @@ export function assertFinancialMarketMetricsBounded(
     metrics.debtToAssets,
     metrics.returnOnAssets,
   ];
-  if (bounded.some((value) => !Number.isFinite(value) || value < -2 || value > 2)) {
-    throw new Error("Statement ratio exceeded the bounded analytics range.");
+  if (unitScaleRatios.some((value) =>
+    !Number.isFinite(value) || value < -2 || value > 2
+  )) {
+    throw new Error(
+      "Statement ratio exceeded the bounded analytics range.",
+    );
   }
-  const nonNegative = [
+
+  const nonNegativeRatios = [
     metrics.currentRatio,
     metrics.quickRatio,
-    metrics.debtToEquity,
-    metrics.interestCoverage,
     metrics.cashToDebt,
   ];
-  if (nonNegative.some((value) => !Number.isFinite(value) || value < 0 || value > 99)) {
-    throw new Error("Statement credit metric exceeded the bounded analytics range.");
+  if (nonNegativeRatios.some((value) =>
+    !Number.isFinite(value) || value < 0 || value > 99
+  )) {
+    throw new Error(
+      "Statement non-negative credit metric exceeded the bounded range.",
+    );
   }
+
+  const signedCreditRatios = [
+    metrics.debtToEquity,
+    metrics.interestCoverage,
+    metrics.returnOnEquity,
+  ];
+  if (signedCreditRatios.some((value) =>
+    !Number.isFinite(value) || value < -99 || value > 99
+  )) {
+    throw new Error(
+      "Statement signed credit metric exceeded the bounded range.",
+    );
+  }
+
   if (!Number.isFinite(metrics.creditMetricScore) ||
     metrics.creditMetricScore < 0 || metrics.creditMetricScore > 100) {
     throw new Error("Statement credit score exceeded 0-100.");
@@ -408,11 +479,23 @@ function calculateRevenueGrowthBounds(
   minimumRevenue: string,
   maximumRevenue: string,
 ): { readonly minimum: number; readonly maximum: number } {
-  const minimum = marketDecimalToNumber(divideMarketDecimals(minimumRevenue, priorRevenue)) - 1;
-  const maximum = marketDecimalToNumber(divideMarketDecimals(maximumRevenue, priorRevenue)) - 1;
+  const minimum = marketDecimalToNumber(
+    divideMarketDecimals(minimumRevenue, priorRevenue),
+  ) - 1;
+  const maximum = marketDecimalToNumber(
+    divideMarketDecimals(maximumRevenue, priorRevenue),
+  ) - 1;
   return {
-    minimum: clamp(minimum, HARD_REVENUE_GROWTH_MINIMUM, HARD_REVENUE_GROWTH_MAXIMUM),
-    maximum: clamp(maximum, HARD_REVENUE_GROWTH_MINIMUM, HARD_REVENUE_GROWTH_MAXIMUM),
+    minimum: clamp(
+      minimum,
+      HARD_REVENUE_GROWTH_MINIMUM,
+      HARD_REVENUE_GROWTH_MAXIMUM,
+    ),
+    maximum: clamp(
+      maximum,
+      HARD_REVENUE_GROWTH_MINIMUM,
+      HARD_REVENUE_GROWTH_MAXIMUM,
+    ),
   };
 }
 
@@ -426,9 +509,20 @@ function calculateCreditMetricScore(input: {
   const liquidity = clamp(input.currentRatio / 3, 0, 1) * 20;
   const leverage = (1 - clamp(input.debtToAssets, 0, 1)) * 25;
   const coverage = clamp(input.interestCoverage / 8, 0, 1) * 25;
-  const profitability = clamp((input.operatingMargin + 0.2) / 0.6, 0, 1) * 15;
-  const cashGeneration = clamp((input.operatingCashFlowMargin + 0.2) / 0.6, 0, 1) * 15;
-  return round(liquidity + leverage + coverage + profitability + cashGeneration, 4);
+  const profitability = clamp(
+    (input.operatingMargin + 0.2) / 0.6,
+    0,
+    1,
+  ) * 15;
+  const cashGeneration = clamp(
+    (input.operatingCashFlowMargin + 0.2) / 0.6,
+    0,
+    1,
+  ) * 15;
+  return round(
+    liquidity + leverage + coverage + profitability + cashGeneration,
+    4,
+  );
 }
 
 function safeDecimalRatio(
@@ -445,8 +539,12 @@ function safeNumericRatio(
   denominator: string,
   zeroDenominatorValue = 0,
 ): number {
-  if (compareMarketDecimals(denominator, "0") === 0) return zeroDenominatorValue;
-  return marketDecimalToNumber(divideMarketDecimals(numerator, denominator));
+  if (compareMarketDecimals(denominator, "0") === 0) {
+    return zeroDenominatorValue;
+  }
+  return marketDecimalToNumber(
+    divideMarketDecimals(numerator, denominator),
+  );
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
