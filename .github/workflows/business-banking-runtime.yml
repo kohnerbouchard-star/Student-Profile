@@ -11,9 +11,10 @@ on:
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
+      - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
       - "player-terminal/src/api/capabilities.js"
-      - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
       - ".github/workflows/business-banking-runtime.yml"
       - "package.json"
@@ -28,9 +29,10 @@ on:
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
+      - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
       - "player-terminal/src/api/capabilities.js"
-      - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
       - ".github/workflows/business-banking-runtime.yml"
       - "package.json"
@@ -69,7 +71,22 @@ jobs:
       - name: Run deterministic economic simulations
         run: node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
       - name: Validate runtime and migration contract
-        run: node scripts/business-banking-runtime-contract.mjs
+        id: runtime-contract
+        shell: bash
+        run: |
+          set +e
+          node scripts/business-banking-runtime-contract.mjs 2>&1 | tee "$RUNNER_TEMP/business-banking-runtime-contract.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
+      - name: Upload failed runtime contract diagnostics
+        if: failure() && steps.runtime-contract.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-banking-runtime-contract-diagnostics
+          path: ${{ runner.temp }}/business-banking-runtime-contract.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Typecheck business banking domain
         working-directory: backend
         run: |
