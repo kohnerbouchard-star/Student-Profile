@@ -1,5 +1,14 @@
 begin;
 
+alter table public.campaign_effect_commands
+  drop constraint campaign_effect_commands_kind_valid;
+alter table public.campaign_effect_commands
+  add constraint campaign_effect_commands_kind_valid check (effect_kind in (
+    'publish_news', 'publish_cutscene', 'create_contract', 'notify_players',
+    'apply_market_shock', 'set_store_scarcity', 'set_route_state',
+    'apply_player_impact'
+  ));
+
 create or replace function public.execute_campaign_event_atomic_v2(
   p_game_session_id uuid,
   p_campaign_public_id text,
@@ -189,8 +198,9 @@ begin
     v_effect_index := v_effect_index + 1;
     if jsonb_typeof(v_effect) <> 'object'
       or coalesce(v_effect->>'effectKind', '') not in (
-        'publish_news', 'create_contract', 'notify_players',
-        'apply_market_shock', 'set_store_scarcity', 'set_route_state'
+        'publish_news', 'publish_cutscene', 'create_contract', 'notify_players',
+        'apply_market_shock', 'set_store_scarcity', 'set_route_state',
+        'apply_player_impact'
       )
       or coalesce(v_effect->>'idempotencyKey', '') !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
       or jsonb_typeof(v_effect->'payload') <> 'object'
