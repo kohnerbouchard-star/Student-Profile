@@ -3,7 +3,7 @@ declare const Deno: {
   readTextFile(path: URL): Promise<string>;
 };
 const MIGRATION = new URL(
-  "../../../supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql",
+  "../../../../supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql",
   import.meta.url,
 );
 
