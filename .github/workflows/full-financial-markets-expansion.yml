@@ -10,7 +10,9 @@ on:
       - "docs/markets/**"
       - "docs/seed-content/markets/universe/**"
       - "scripts/validate-full-market-universe*.mjs"
+      - "scripts/review-full-market-universe*.mjs"
       - "scripts/lib/full-market-universe-validator.mjs"
+      - "scripts/lib/full-market-editorial-review.mjs"
   pull_request:
     branches:
       - main
@@ -20,7 +22,9 @@ on:
       - "docs/markets/**"
       - "docs/seed-content/markets/universe/**"
       - "scripts/validate-full-market-universe*.mjs"
+      - "scripts/review-full-market-universe*.mjs"
       - "scripts/lib/full-market-universe-validator.mjs"
+      - "scripts/lib/full-market-editorial-review.mjs"
   workflow_dispatch:
 
 permissions:
@@ -32,14 +36,15 @@ concurrency:
 
 jobs:
   validate-domain-and-universe:
-    name: Validate contracts and inactive 3200-instrument library
+    name: Validate safe-hold financial-markets tranche
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - name: Check out exact source
+      - name: Check out exact source head
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -61,14 +66,34 @@ jobs:
       - name: Install Backend dependencies
         run: npm --prefix backend ci
 
-      - name: Validate the complete definition library
+      - name: Enforce controller-hold file boundary
+        run: |
+          git fetch origin main --no-tags
+          merge_base="$(git merge-base HEAD origin/main)"
+          git diff --name-only "$merge_base"...HEAD > full-market-changed-files.txt
+          forbidden='^(backend/supabase/migrations/|backend/supabase/functions/classroom-api/|backend/supabase/functions/admin-api/|backend/src/domains/players/contracts/playerCapabilityManifestContracts\.ts$|backend/src/security/playerRateLimitDispatch\.ts$|player-terminal/src/api/backend-routes\.js$|player-terminal/src/integrations/student-profile-capability-manifest\.js$)'
+          if grep -E "$forbidden" full-market-changed-files.txt; then
+            echo "Controller-hold boundary violation detected."
+            false
+          fi
+
+      - name: Validate complete inactive definition library
         run: |
           node scripts/validate-full-market-universe.mjs \
             --report full-market-universe-validation.json \
             > full-market-universe-validation.stdout.json
 
-      - name: Run universe validator tests
-        run: node --test scripts/validate-full-market-universe.test.mjs
+      - name: Build deterministic editorial reports
+        run: |
+          node scripts/review-full-market-universe.mjs \
+            --report full-market-editorial-review.json \
+            --transformation-plan full-market-editorial-transformation-plan.json \
+            > full-market-editorial-review.stdout.json
+
+      - name: Run universe and editorial validator tests
+        run: |
+          node --test scripts/validate-full-market-universe.test.mjs
+          node --test scripts/review-full-market-universe.test.mjs
 
       - name: Run financial-market domain tests
         run: |
@@ -80,11 +105,28 @@ jobs:
           echo "$status" > financial-market-domain-tests.status
           exit "$status"
 
+      - name: Run relevant existing stock engine tests
+        run: |
+          deno test --no-lock \
+            backend/src/domains/stocks/calculations/stockMarketEngine.test.ts
+
+      - name: Generate deterministic reference simulation
+        run: |
+          deno run --allow-write \
+            backend/src/domains/markets/simulations/runReferenceMarketSimulation.ts \
+            --output full-financial-markets-reference-simulation.json \
+            > full-financial-markets-reference-simulation.stdout.json
+
       - name: Run Backend typecheck
         run: npm --prefix backend run typecheck:all
 
       - name: Run Backend smoke
         run: npm --prefix backend run smoke
+
+      - name: Verify formatting and source quality
+        run: |
+          deno fmt --check backend/src/domains/markets
+          git diff --check
 
       - name: Verify prohibited features remain disabled
         run: |
@@ -94,15 +136,22 @@ jobs:
             'backend/src/domains/markets/contracts/financialMarketContracts.ts',
             'utf8',
           );
+          const guards = fs.readFileSync(
+            'backend/src/domains/markets/validation/publicContractGuards.ts',
+            'utf8',
+          );
           const required = [
             'shortSellingSupported: false',
             'derivativesSupported: false',
             'physicalDeliverySupported: false',
             'complexPricingSupported: false',
             'activationAuthorized: false',
+            'realWorldFeedsSupported: false',
+            'automaticFullUniverseActivationSupported: false',
           ];
+          const source = `${contracts}\n${guards}`;
           for (const marker of required) {
-            if (!contracts.includes(marker)) {
+            if (!source.includes(marker)) {
               throw new Error(`Missing fail-closed contract marker: ${marker}`);
             }
           }
@@ -112,10 +161,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full-financial-markets-validation-${{ github.sha }}
+          name: full-financial-markets-validation-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
+            full-market-changed-files.txt
             full-market-universe-validation.json
             full-market-universe-validation.stdout.json
+            full-market-editorial-review.json
+            full-market-editorial-review.stdout.json
+            full-market-editorial-transformation-plan.json
+            full-financial-markets-reference-simulation.json
+            full-financial-markets-reference-simulation.stdout.json
             financial-market-domain-tests.log
             financial-market-domain-tests.status
           if-no-files-found: warn
