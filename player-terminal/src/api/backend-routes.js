@@ -1,3 +1,4 @@
+import { resolveBusinessBankingBackendRequest } from "./business-banking-backend-routes.js";
 import { ApiRequestError } from "./errors.js";
 
 function requiredText(value, fieldName, endpointKey) {
@@ -7,7 +8,6 @@ function requiredText(value, fieldName, endpointKey) {
     body: { code: "player_route_context_missing", fieldName, endpointKey },
   });
 }
-
 
 function publicStoryDeliveryId(value) {
   const deliveryId = requiredText(value, "deliveryId", "storyDeliveryState").toLowerCase();
@@ -351,19 +351,48 @@ const ROUTE_BUILDERS = Object.freeze({
   logout: () => ({ method: "POST", path: "/players/me/session/logout" }),
 });
 
-export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(
-  Object.keys(ROUTE_BUILDERS),
-);
+const CORE_PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(Object.keys(ROUTE_BUILDERS));
+const BUSINESS_BANKING_ROUTE_KEYS = Object.freeze([
+  "business",
+  "businessCreate",
+  "businessProductCreate",
+  "businessInputPurchase",
+  "businessProduction",
+  "businessPrice",
+  "businessHire",
+  "businessTerminate",
+  "businessStatus",
+  "bankTransfer",
+  "savingsTransfer",
+  "loans",
+  "loanApply",
+  "loanRepay",
+]);
+
+export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
+  ...CORE_PLAYER_BACKEND_ROUTE_KEYS,
+  ...BUSINESS_BANKING_ROUTE_KEYS,
+]);
 
 export function hasPlayerBackendRoute(endpointKey) {
-  return Object.hasOwn(ROUTE_BUILDERS, endpointKey);
+  return Object.hasOwn(ROUTE_BUILDERS, endpointKey) ||
+    BUSINESS_BANKING_ROUTE_KEYS.includes(endpointKey);
 }
 
 export function resolvePlayerBackendRequest(
   { endpointKey, method, path, payload, params, session },
 ) {
   const builder = ROUTE_BUILDERS[endpointKey];
-  if (!builder) return null;
+  if (!builder) {
+    return resolveBusinessBankingBackendRequest({
+      endpointKey,
+      method,
+      path,
+      payload,
+      params,
+      session,
+    });
+  }
   const resolved = builder({
     endpointKey,
     method,
