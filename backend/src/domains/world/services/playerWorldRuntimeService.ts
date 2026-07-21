@@ -57,7 +57,9 @@ export interface PlayerArrivalRuntimeInput {
 export interface PlayerTravelPlanningInput {
   readonly bundle: WorldDefinitionBundle;
   readonly state: WorldRuntimeState;
-  readonly context: PlayerTravelContext;
+  readonly context: Omit<PlayerTravelContext, "allowedModes"> & {
+    readonly allowedModes: readonly string[];
+  };
 }
 
 export interface PlayerWorldRuntimeRepository {
@@ -129,7 +131,7 @@ export function createPlayerWorldRuntimeService(
       const assignment = createArrivalClassAssignment({
         assignmentId: dependencies.createAssignmentId(),
         gameId: input.scope.gameId,
-        gameSessionId: input.scope.activeSessionId,
+        gameSessionId: input.scope.gameId,
         playerUuid: input.scope.playerUuid,
         countryId: runtimeInput.countryId,
         scoreResult,
@@ -171,13 +173,14 @@ export function createPlayerWorldRuntimeService(
           false,
         );
       }
+      const travelContext: PlayerTravelContext = Object.freeze({
+        ...planning.context,
+        allowedModes: input.request.allowedModes,
+      });
       const quote = quoteTravel(
         planning.bundle,
         planning.state,
-        Object.freeze({
-          ...planning.context,
-          allowedModes: input.request.allowedModes,
-        }),
+        travelContext,
         input.request.toLocationId,
       );
       const stored = await dependencies.repository.storeTravelQuote({
@@ -185,7 +188,7 @@ export function createPlayerWorldRuntimeService(
         quote: prepareStoredTravelQuote({
           quote,
           state: planning.state,
-          context: planning.context,
+          context: travelContext,
           publicQuoteId: dependencies.createPublicQuoteId(),
           createdAt: now(),
         }),
