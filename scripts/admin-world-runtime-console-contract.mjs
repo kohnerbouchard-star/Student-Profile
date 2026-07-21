@@ -45,7 +45,9 @@ assert.match(index, /world-runtime-console\.js/);
 assert.match(source, /aria-modal/);
 assert.match(source, /aria-live/);
 assert.match(source, /EconovariaAdminModalAccessibility/);
-assert.match(source, /MutationObserver/);
+assert.match(source, /econovaria:admin-mounted/);
+assert.match(source, /scheduleLauncher/);
+assert.match(source, /window\.setTimeout\(createLauncher/);
 assert.match(source, /AbortController/);
 assert.match(source, /cache:\s*"no-store"/);
 assert.match(source, /window\.addEventListener\("offline"/);
@@ -55,6 +57,7 @@ assert.match(css, /@media\(max-width:560px\)/);
 assert.match(css, /prefers-reduced-motion/);
 assert.match(css, /forced-colors/);
 
+assert.doesNotMatch(source, /MutationObserver/);
 assert.doesNotMatch(source, /@ts-nocheck|\beval\s*\(|new Function|document\.write/);
 assert.doesNotMatch(source, /innerHTML\s*=\s*(?:payload|data|snapshot)/);
 assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
