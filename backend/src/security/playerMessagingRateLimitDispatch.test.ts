@@ -7,7 +7,7 @@ import {
 } from "./playerRateLimitDispatch.ts";
 import type { RateLimitDecision } from "./rateLimitContracts.ts";
 
-declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
+const Deno: { test(name: string, run: () => void | Promise<void>): void } = globalThis.Deno;
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
@@ -32,23 +32,23 @@ Deno.test("Messaging operations have distinct central rate-limit actions", () =>
   }
 });
 
-Deno.test("communication dispatch remaps paths and derives a bounded per-thread action", async () => {
+Deno.test("explicit Messaging endpoint keys derive bounded per-thread actions", async () => {
   const scenarios = [
-    ["GET", "/players/me/messages", "player.messages.read"],
-    ["GET", "/players/me/messages/policy", "player.messages.policy.read"],
-    ["GET", "/players/me/messages/search?q=market", "player.messages.search"],
-    ["POST", "/players/me/messages/threads", "player.messages.thread.create"],
-    ["GET", `/players/me/messages/threads/${THREAD}`, THREAD_ACTION],
-    ["POST", `/players/me/messages/threads/${THREAD}/messages`, THREAD_ACTION],
-    ["POST", `/players/me/messages/threads/${THREAD}/read`, THREAD_ACTION],
+    ["GET", "/players/me/messages", "messages", "player.messages.read"],
+    ["GET", "/players/me/messages/policy", "messagePolicy", "player.messages.policy.read"],
+    ["GET", "/players/me/messages/search?q=market", "messageSearch", "player.messages.search"],
+    ["POST", "/players/me/messages/threads", "messageThreadCreate", "player.messages.thread.create"],
+    ["GET", `/players/me/messages/threads/${THREAD}`, "messageThread", THREAD_ACTION],
+    ["POST", `/players/me/messages/threads/${THREAD}/messages`, "messageSend", THREAD_ACTION],
+    ["POST", `/players/me/messages/threads/${THREAD}/read`, "messageRead", THREAD_ACTION],
   ] as const;
 
-  for (const [method, path, expectedAction] of scenarios) {
+  for (const [method, path, endpointKey, expectedAction] of scenarios) {
     let handlerCalls = 0;
     let observedAction = "";
     const response = await dispatchRateLimitedReviewedPlayerRequest(
       playerRequest(method, path),
-      method === "POST" ? "notificationsRead" : "notifications",
+      endpointKey,
       () => {
         handlerCalls += 1;
         return new Response("ok");
@@ -74,7 +74,7 @@ Deno.test("Messaging rate-limit denial fails closed before message handling", as
   let handlerCalls = 0;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
     playerRequest("POST", `/players/me/messages/threads/${THREAD}/messages`),
-    "notificationsRead",
+    "messageSend",
     () => {
       handlerCalls += 1;
       return new Response("unsafe");
