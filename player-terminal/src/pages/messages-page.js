@@ -11,9 +11,16 @@ function conversationRow(thread, selected) {
   return `<form data-player-form="message-read" data-endpoint="messageRead"><input type="hidden" name="threadId" value="${escapeHtml(thread.id)}">${conversationButton(thread, selected, "submit")}</form>`;
 }
 
+function isWritableThread(thread) {
+  if (thread.rawStatus !== undefined || thread.allowPlayerReplies !== undefined) {
+    return thread.rawStatus === "active" && thread.allowPlayerReplies === true;
+  }
+  return /^thread-[0-9]+$/.test(String(thread.id || "")) &&
+    /^(PLAYER DIRECT|CONTRACT CHANNEL)$/i.test(String(thread.type || ""));
+}
+
 function composer(thread) {
-  const writable = thread.rawStatus === "active" && thread.allowPlayerReplies === true;
-  if (!writable) {
+  if (!isWritableThread(thread)) {
     return `<div class="player-terminal-message-compose" role="status"><small>This thread is ${escapeHtml(thread.rawStatus || "read-only")} and does not accept Player replies. Attachments remain disabled.</small></div>`;
   }
   return `<form class="player-terminal-message-compose" data-player-form="message-send" data-endpoint="messageSend" data-thread-id="${escapeHtml(thread.id)}">
