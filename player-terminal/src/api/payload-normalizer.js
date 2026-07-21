@@ -38,11 +38,7 @@ function normalizeString(key, value, endpointKey) {
 
 function messageText(value, endpointKey) {
   const text = normalizeString("body", value, endpointKey);
-  const links = text.match(/https?:\/\/[^\s<>{}\[\]\"']+/gi)?.length ?? 0;
-  if (!text || text.length > 1000 || text.split(/\r?\n/).length > 50 || links > 10 ||
-      /(?:^|[\s\"'(<])(?:javascript|vbscript|data|file):/i.test(text)) {
-    throw invalidPayload(endpointKey, "body");
-  }
+  if (!text) throw invalidPayload(endpointKey, "body");
   return text;
 }
 
