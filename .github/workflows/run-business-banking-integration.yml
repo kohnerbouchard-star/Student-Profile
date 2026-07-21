@@ -1,0 +1,52 @@
+name: Run Business Banking Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-business-banking-integration.yml"
+      - ".github/workflows/run-business-banking-integration.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/business-banking-credit-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/business-banking-credit-v1
+          fetch-depth: 0
+      - name: Extract and run reviewed applicator
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/apply-business-banking-integration.yml').read_text().splitlines()
+          output = []
+          active = False
+          for line in source:
+              if line.strip() == "python3 <<'PY'":
+                  active = True
+                  continue
+              if active and line.strip() == 'PY':
+                  break
+              if active:
+                  output.append(line[10:] if line.startswith('          ') else line)
+          if not output:
+              raise SystemExit('reviewed integration script was not found')
+          Path('/tmp/apply-business-banking.py').write_text('\n'.join(output) + '\n')
+          PY
+          python3 /tmp/apply-business-banking.py
+          rm -f .github/workflows/run-business-banking-integration.yml
+          git diff --check
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "econovaria-integration-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(runtime): integrate business banking capabilities"
+          git push origin HEAD:agent/business-banking-credit-v1
