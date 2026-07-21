@@ -84,7 +84,7 @@ const html = renderMessagesPage({
     threads: [{
       id: THREAD,
       type: "player",
-      title: "<script>Trade</script>",
+      title: "<SCRIPT>Trade</SCRIPT>",
       preview: "Safe preview",
       time: "Now",
       unread: 1,
@@ -100,7 +100,7 @@ const html = renderMessagesPage({
         initials: "P2",
         sender: "Player Two",
         time: "Now",
-        body: "<img src=x onerror=alert(1)>",
+        body: "<IMG src=x onerror=alert(1)>",
       }],
     }],
   },
@@ -108,9 +108,9 @@ const html = renderMessagesPage({
 assert.match(html, /data-endpoint="messageThreadCreate"/);
 assert.match(html, /data-endpoint="messageSend"/);
 assert.match(html, /Attachments are disabled/);
-assert.doesNotMatch(html, /<script>|<img src=/);
-assert.match(html, /&lt;script&gt;Trade&lt;\/script&gt;/);
-assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+assert.doesNotMatch(html, /<script\b|<img\b/i);
+assert.match(html, /&lt;SCRIPT&gt;Trade&lt;\/SCRIPT&gt;/);
+assert.match(html, /&lt;IMG src=x onerror=alert\(1\)&gt;/);
 assert.doesNotMatch(html, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
 console.log("Connected Messaging lifecycle and committed-success boundary passed.");
