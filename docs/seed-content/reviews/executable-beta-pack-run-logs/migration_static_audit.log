@@ -1,0 +1,10 @@
+
+> econovaria@0.0.0 audit:migrations
+> node scripts/validate-supabase-migrations.mjs
+
+{
+  "status": "pass",
+  "migrationCount": 70,
+  "uniqueVersions": 70,
+  "canonicalTableCreations": 48
+}

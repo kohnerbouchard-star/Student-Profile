@@ -1,0 +1,5870 @@
+{
+  "activationAuthorized": false,
+  "calibrationDate": "2026-07-20",
+  "campaignReferences": {
+    "recoveryPolicy": "Every activated campaign event must preserve a named legal substitute, support path, or administrator correction route.",
+    "selectedEventStableIds": [
+      "event.core.northreach.sector-expansion.v1",
+      "event.core.northreach.system-pressure.v1",
+      "event.core.yrethia.sector-expansion.v1",
+      "event.core.yrethia.system-pressure.v1",
+      "event.core.thaloris.sector-expansion.v1",
+      "event.core.thaloris.system-pressure.v1",
+      "event.core.solvend.sector-expansion.v1",
+      "event.core.solvend.system-pressure.v1",
+      "event.core.eldoran.sector-expansion.v1",
+      "event.core.eldoran.system-pressure.v1"
+    ],
+    "warScenarioPolicy": "severe but bounded disruption; no irreversible base-beta loss; recovery and legal substitution are mandatory"
+  },
+  "checks": {
+    "bankingAffordabilityFailures": 0,
+    "concurrencyFailures": 0,
+    "countrySimulationFailures": 0,
+    "currencyArbitrageFailures": 0,
+    "physicalArbitrageFailures": 0,
+    "recraftingFailures": 0,
+    "routeRecoveryFailures": 0,
+    "salvageFailures": 0,
+    "substitutionFailures": 0,
+    "warHouseholdRecoveryFailures": 0
+  },
+  "countryCount": 10,
+  "countrySimulations": [
+    {
+      "country": "northreach",
+      "instrumentCount": 24,
+      "meanBeta": 1.045,
+      "meanLiquidity": 0.665,
+      "meanLongRunVolatility": 0.176369,
+      "scenarios": [
+        {
+          "endingIndex": 106.3745,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.1772,
+          "minimumIndex": 100,
+          "pathSha256": "ea680dc8eae5400a4c12735104f987031387cb2e7830f9bcf4c7014e4b953dcb",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 1,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.063658
+            },
+            {
+              "day": 30,
+              "index": 101.17778
+            },
+            {
+              "day": 60,
+              "index": 101.942584
+            },
+            {
+              "day": 90,
+              "index": 102.947125
+            },
+            {
+              "day": 120,
+              "index": 103.542156
+            },
+            {
+              "day": 150,
+              "index": 104.974645
+            },
+            {
+              "day": 179,
+              "index": 106.37446
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 0
+        },
+        {
+          "endingIndex": 111.3168,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 1.5445,
+          "minimumIndex": 99.5539,
+          "pathSha256": "272c7e3b3d199cfa3ecdafe6483702d05879ecc7da8e4f07bc65843b62a82796",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.056634
+            },
+            {
+              "day": 30,
+              "index": 100.93112
+            },
+            {
+              "day": 60,
+              "index": 101.478165
+            },
+            {
+              "day": 90,
+              "index": 104.958212
+            },
+            {
+              "day": 120,
+              "index": 108.083545
+            },
+            {
+              "day": 150,
+              "index": 110.632426
+            },
+            {
+              "day": 179,
+              "index": 111.3168
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 113.7946,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 7.2015,
+          "minimumIndex": 93.362,
+          "pathSha256": "6a992a3d669c094db827741c26aa242b2f73320ead05429b3e410e3c37806baf",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 62,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.952261
+            },
+            {
+              "day": 30,
+              "index": 100.307247
+            },
+            {
+              "day": 60,
+              "index": 94.820641
+            },
+            {
+              "day": 90,
+              "index": 100.961102
+            },
+            {
+              "day": 120,
+              "index": 106.183004
+            },
+            {
+              "day": 150,
+              "index": 112.105677
+            },
+            {
+              "day": 179,
+              "index": 113.794628
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 117.9078,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 13.5818,
+          "minimumIndex": 86.9226,
+          "pathSha256": "e0cfda498818f009b42fbfb894046442b89ed0c1d1bdc47fcf5a8e06b303891b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 72,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.099945
+            },
+            {
+              "day": 30,
+              "index": 95.013221
+            },
+            {
+              "day": 60,
+              "index": 91.060272
+            },
+            {
+              "day": 90,
+              "index": 100.382177
+            },
+            {
+              "day": 120,
+              "index": 108.950128
+            },
+            {
+              "day": 150,
+              "index": 116.930315
+            },
+            {
+              "day": 179,
+              "index": 117.907778
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "yrethia",
+      "instrumentCount": 24,
+      "meanBeta": 0.979167,
+      "meanLiquidity": 0.650833,
+      "meanLongRunVolatility": 0.15545,
+      "scenarios": [
+        {
+          "endingIndex": 105.5786,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.3365,
+          "minimumIndex": 99.8335,
+          "pathSha256": "8aeb62c392be0cf27a2b88ca6ad466eaf5684a53579a110482d3050445df9c3b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 10,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.949664
+            },
+            {
+              "day": 30,
+              "index": 100.416519
+            },
+            {
+              "day": 60,
+              "index": 101.066801
+            },
+            {
+              "day": 90,
+              "index": 101.651396
+            },
+            {
+              "day": 120,
+              "index": 102.771673
+            },
+            {
+              "day": 150,
+              "index": 103.966602
+            },
+            {
+              "day": 179,
+              "index": 105.578635
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 9
+        },
+        {
+          "endingIndex": 111.3289,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 1.7381,
+          "minimumIndex": 99.5934,
+          "pathSha256": "cda9495b89ef1b7bedfad669099c76dd71b0daced6d54112317f5e29977d07bd",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.096701
+            },
+            {
+              "day": 30,
+              "index": 101.025386
+            },
+            {
+              "day": 60,
+              "index": 101.286963
+            },
+            {
+              "day": 90,
+              "index": 104.510771
+            },
+            {
+              "day": 120,
+              "index": 108.023328
+            },
+            {
+              "day": 150,
+              "index": 110.428402
+            },
+            {
+              "day": 179,
+              "index": 111.328856
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 112.996,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.5931,
+          "minimumIndex": 93.8309,
+          "pathSha256": "941825231fa389d5224a22a7887cd3ba4de0a8be53214fcd5b6c9c41e6b1f8b3",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 60,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.996071
+            },
+            {
+              "day": 30,
+              "index": 100.293646
+            },
+            {
+              "day": 60,
+              "index": 95.078921
+            },
+            {
+              "day": 90,
+              "index": 101.088371
+            },
+            {
+              "day": 120,
+              "index": 106.819858
+            },
+            {
+              "day": 150,
+              "index": 112.389214
+            },
+            {
+              "day": 179,
+              "index": 112.995975
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 121.2428,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 11.6981,
+          "minimumIndex": 89.1946,
+          "pathSha256": "1d7eb5f4ee62a0f3d0a4107a4f70661267caedabeecec1dea98281eeaa22c1cf",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 66,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.130765
+            },
+            {
+              "day": 30,
+              "index": 96.349433
+            },
+            {
+              "day": 60,
+              "index": 92.943814
+            },
+            {
+              "day": 90,
+              "index": 102.664147
+            },
+            {
+              "day": 120,
+              "index": 111.958786
+            },
+            {
+              "day": 150,
+              "index": 120.398416
+            },
+            {
+              "day": 179,
+              "index": 121.242769
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "thaloris",
+      "instrumentCount": 24,
+      "meanBeta": 1.109167,
+      "meanLiquidity": 0.605833,
+      "meanLongRunVolatility": 0.204713,
+      "scenarios": [
+        {
+          "endingIndex": 104.7611,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.2971,
+          "minimumIndex": 100,
+          "pathSha256": "22605192ad737b86a497d838de87ccdb692669c344d5486b837e840e3884d207",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 1,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.041644
+            },
+            {
+              "day": 30,
+              "index": 100.629203
+            },
+            {
+              "day": 60,
+              "index": 101.588503
+            },
+            {
+              "day": 90,
+              "index": 102.487238
+            },
+            {
+              "day": 120,
+              "index": 102.857143
+            },
+            {
+              "day": 150,
+              "index": 103.945818
+            },
+            {
+              "day": 179,
+              "index": 104.761091
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 0
+        },
+        {
+          "endingIndex": 110.674,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 2.4551,
+          "minimumIndex": 98.4091,
+          "pathSha256": "1d1423e7fafccaa10d5abbffe5bf9664767b05827f676ead305956e0c0f1fdb5",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.945676
+            },
+            {
+              "day": 30,
+              "index": 100.627581
+            },
+            {
+              "day": 60,
+              "index": 100.602743
+            },
+            {
+              "day": 90,
+              "index": 104.029783
+            },
+            {
+              "day": 120,
+              "index": 107.539594
+            },
+            {
+              "day": 150,
+              "index": 110.064242
+            },
+            {
+              "day": 179,
+              "index": 110.673967
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 112.3074,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 7.5061,
+          "minimumIndex": 93.0704,
+          "pathSha256": "e99b623e14ef23c178cb925277b83186322fe9ef25d6257dff92281a58c5d2ca",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 63,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.006217
+            },
+            {
+              "day": 30,
+              "index": 100.240333
+            },
+            {
+              "day": 60,
+              "index": 94.380522
+            },
+            {
+              "day": 90,
+              "index": 100.6345
+            },
+            {
+              "day": 120,
+              "index": 105.8643
+            },
+            {
+              "day": 150,
+              "index": 111.455117
+            },
+            {
+              "day": 179,
+              "index": 112.307354
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 114.874,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 13.6343,
+          "minimumIndex": 87.6199,
+          "pathSha256": "d9f5ca901525fa0dcc381d37fa40048c3ae9d6eb38cd7026e705af0bc4972929",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 70,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.142327
+            },
+            {
+              "day": 30,
+              "index": 96.110181
+            },
+            {
+              "day": 60,
+              "index": 91.265043
+            },
+            {
+              "day": 90,
+              "index": 100.476632
+            },
+            {
+              "day": 120,
+              "index": 107.785021
+            },
+            {
+              "day": 150,
+              "index": 114.895602
+            },
+            {
+              "day": 179,
+              "index": 114.874
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "solvend",
+      "instrumentCount": 24,
+      "meanBeta": 1.094167,
+      "meanLiquidity": 0.66,
+      "meanLongRunVolatility": 0.196423,
+      "scenarios": [
+        {
+          "endingIndex": 104.4359,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.2738,
+          "minimumIndex": 99.898,
+          "pathSha256": "8eea514a972869e34fd4aa9ae503e9f87fc4549de26541ccc739343368e89709",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 3,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.917051
+            },
+            {
+              "day": 30,
+              "index": 100.602
+            },
+            {
+              "day": 60,
+              "index": 101.578714
+            },
+            {
+              "day": 90,
+              "index": 102.242368
+            },
+            {
+              "day": 120,
+              "index": 102.754994
+            },
+            {
+              "day": 150,
+              "index": 103.350249
+            },
+            {
+              "day": 179,
+              "index": 104.435888
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 2
+        },
+        {
+          "endingIndex": 112.8175,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 2.1592,
+          "minimumIndex": 98.4885,
+          "pathSha256": "59e19ce2ff346cdffb9e9e75ffdc6f1363d094de848cab54e9e56db199ed348b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.023887
+            },
+            {
+              "day": 30,
+              "index": 100.391741
+            },
+            {
+              "day": 60,
+              "index": 100.421753
+            },
+            {
+              "day": 90,
+              "index": 104.195925
+            },
+            {
+              "day": 120,
+              "index": 108.702113
+            },
+            {
+              "day": 150,
+              "index": 111.012707
+            },
+            {
+              "day": 179,
+              "index": 112.817497
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 115.2691,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 7.2184,
+          "minimumIndex": 93.8953,
+          "pathSha256": "3b1be94f85fa0cdd159cd0cfa49f435730b733e1e1c55c35b0295f055edf42a6",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 59,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.106735
+            },
+            {
+              "day": 30,
+              "index": 100.937605
+            },
+            {
+              "day": 60,
+              "index": 95.312839
+            },
+            {
+              "day": 90,
+              "index": 101.659513
+            },
+            {
+              "day": 120,
+              "index": 107.503007
+            },
+            {
+              "day": 150,
+              "index": 113.839566
+            },
+            {
+              "day": 179,
+              "index": 115.269103
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 117.9395,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 13.4795,
+          "minimumIndex": 87.0539,
+          "pathSha256": "d34ac240bdc86af173bff26858815c929e339f5250e1a410214b2f08115dcd7e",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 71,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.048162
+            },
+            {
+              "day": 30,
+              "index": 95.504915
+            },
+            {
+              "day": 60,
+              "index": 91.035226
+            },
+            {
+              "day": 90,
+              "index": 100.935948
+            },
+            {
+              "day": 120,
+              "index": 109.132426
+            },
+            {
+              "day": 150,
+              "index": 117.150267
+            },
+            {
+              "day": 179,
+              "index": 117.93955
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "eldoran",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.177291,
+      "scenarios": [
+        {
+          "endingIndex": 104.301,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.3772,
+          "minimumIndex": 99.8808,
+          "pathSha256": "2d9ac48f368d132931f13d2f9c53b09bc54e7a3723d883495555670f4f7329c7",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 17,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.074188
+            },
+            {
+              "day": 30,
+              "index": 100.454902
+            },
+            {
+              "day": 60,
+              "index": 101.487543
+            },
+            {
+              "day": 90,
+              "index": 102.181659
+            },
+            {
+              "day": 120,
+              "index": 103.395769
+            },
+            {
+              "day": 150,
+              "index": 103.854141
+            },
+            {
+              "day": 179,
+              "index": 104.301017
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 16
+        },
+        {
+          "endingIndex": 110.6358,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 2.4332,
+          "minimumIndex": 98.6371,
+          "pathSha256": "9065a51dc4da31ef38b4805b6cfea37597237e94b419de610f070312cc454404",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.09956
+            },
+            {
+              "day": 30,
+              "index": 100.784872
+            },
+            {
+              "day": 60,
+              "index": 100.345275
+            },
+            {
+              "day": 90,
+              "index": 103.904294
+            },
+            {
+              "day": 120,
+              "index": 106.795665
+            },
+            {
+              "day": 150,
+              "index": 109.107624
+            },
+            {
+              "day": 179,
+              "index": 110.63578
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 114.498,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.299,
+          "minimumIndex": 94.1076,
+          "pathSha256": "11473e8bcf9e6b07058cbc4e32bdc5ce0ab8a5a6aaa5e48a88e62f5427285a76",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 59,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.138399
+            },
+            {
+              "day": 30,
+              "index": 100.239683
+            },
+            {
+              "day": 60,
+              "index": 95.182292
+            },
+            {
+              "day": 90,
+              "index": 101.265829
+            },
+            {
+              "day": 120,
+              "index": 107.518162
+            },
+            {
+              "day": 150,
+              "index": 113.254735
+            },
+            {
+              "day": 179,
+              "index": 114.498039
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 118.9162,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 12.687,
+          "minimumIndex": 87.656,
+          "pathSha256": "e85298599387af57c03d7f14e1b51026b5e6a2d4af3a04293feebc9eecd27894",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 70,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.021866
+            },
+            {
+              "day": 30,
+              "index": 95.539235
+            },
+            {
+              "day": 60,
+              "index": 91.577256
+            },
+            {
+              "day": 90,
+              "index": 101.570598
+            },
+            {
+              "day": 120,
+              "index": 109.81056
+            },
+            {
+              "day": 150,
+              "index": 117.894142
+            },
+            {
+              "day": 179,
+              "index": 118.916154
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "valerion",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.177987,
+      "scenarios": [
+        {
+          "endingIndex": 106.0035,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.3687,
+          "minimumIndex": 99.8846,
+          "pathSha256": "6b194c9277fd09e7cbe1da40c7411dbebd5f5f1fbbd91846f7374d106d89fb14",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 5,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.944727
+            },
+            {
+              "day": 30,
+              "index": 100.741458
+            },
+            {
+              "day": 60,
+              "index": 102.515741
+            },
+            {
+              "day": 90,
+              "index": 103.385584
+            },
+            {
+              "day": 120,
+              "index": 104.228352
+            },
+            {
+              "day": 150,
+              "index": 105.442464
+            },
+            {
+              "day": 179,
+              "index": 106.003502
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 4
+        },
+        {
+          "endingIndex": 109.87,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 2.02,
+          "minimumIndex": 99.1149,
+          "pathSha256": "4a8c692e23dccdf8bfdb98ba4b2c56f20cd829fd2bec95e1b913b2e6d7564a7e",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.102867
+            },
+            {
+              "day": 30,
+              "index": 100.980221
+            },
+            {
+              "day": 60,
+              "index": 100.823023
+            },
+            {
+              "day": 90,
+              "index": 103.645125
+            },
+            {
+              "day": 120,
+              "index": 106.443605
+            },
+            {
+              "day": 150,
+              "index": 108.682701
+            },
+            {
+              "day": 179,
+              "index": 109.869966
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 115.0601,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.387,
+          "minimumIndex": 95.1777,
+          "pathSha256": "a937baab0eb4b61d0550a5fb0257de1fd029f0665b9e72decc0751ac3fa5523b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 56,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.132981
+            },
+            {
+              "day": 30,
+              "index": 101.369944
+            },
+            {
+              "day": 60,
+              "index": 96.514533
+            },
+            {
+              "day": 90,
+              "index": 102.364357
+            },
+            {
+              "day": 120,
+              "index": 107.744775
+            },
+            {
+              "day": 150,
+              "index": 113.985868
+            },
+            {
+              "day": 179,
+              "index": 115.060111
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 117.5234,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 12.5412,
+          "minimumIndex": 88.3947,
+          "pathSha256": "62c8e71040430460649932a8e6c0b2a331b3630f7a983faf95bd7a94e310831b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 70,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.062037
+            },
+            {
+              "day": 30,
+              "index": 96.400171
+            },
+            {
+              "day": 60,
+              "index": 92.206519
+            },
+            {
+              "day": 90,
+              "index": 100.677126
+            },
+            {
+              "day": 120,
+              "index": 109.376586
+            },
+            {
+              "day": 150,
+              "index": 117.106916
+            },
+            {
+              "day": 179,
+              "index": 117.523429
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "lumenor",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.179981,
+      "scenarios": [
+        {
+          "endingIndex": 105.8193,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.2881,
+          "minimumIndex": 100,
+          "pathSha256": "b92162e7574f8bdc44853d5d75acb01fd65acdcef0ef41532c093c75df853a02",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 1,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.061371
+            },
+            {
+              "day": 30,
+              "index": 101.19757
+            },
+            {
+              "day": 60,
+              "index": 101.742254
+            },
+            {
+              "day": 90,
+              "index": 103.289218
+            },
+            {
+              "day": 120,
+              "index": 104.443428
+            },
+            {
+              "day": 150,
+              "index": 105.295768
+            },
+            {
+              "day": 179,
+              "index": 105.819278
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 0
+        },
+        {
+          "endingIndex": 112.3964,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 1.8147,
+          "minimumIndex": 99.2116,
+          "pathSha256": "5762e752dcffdb7b9f531c860b01015663f174ffed806a5c9990dd58832348c1",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.057612
+            },
+            {
+              "day": 30,
+              "index": 100.793939
+            },
+            {
+              "day": 60,
+              "index": 101.069753
+            },
+            {
+              "day": 90,
+              "index": 104.437093
+            },
+            {
+              "day": 120,
+              "index": 108.600712
+            },
+            {
+              "day": 150,
+              "index": 111.741334
+            },
+            {
+              "day": 179,
+              "index": 112.396428
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 113.2559,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.8463,
+          "minimumIndex": 94.2672,
+          "pathSha256": "edbc8f2e2bdd52cf166bd04b0f4162600873b1665ad12c9a1e314ccda9f0290f",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 59,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.912287
+            },
+            {
+              "day": 30,
+              "index": 100.810075
+            },
+            {
+              "day": 60,
+              "index": 95.527097
+            },
+            {
+              "day": 90,
+              "index": 101.692128
+            },
+            {
+              "day": 120,
+              "index": 107.343728
+            },
+            {
+              "day": 150,
+              "index": 112.70516
+            },
+            {
+              "day": 179,
+              "index": 113.255854
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 118.7046,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 12.7175,
+          "minimumIndex": 87.6675,
+          "pathSha256": "36478452dc83d89a4fb5701b73806ed4a857a744c3440d3416b65085165572e7",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 70,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.103425
+            },
+            {
+              "day": 30,
+              "index": 95.706691
+            },
+            {
+              "day": 60,
+              "index": 91.522585
+            },
+            {
+              "day": 90,
+              "index": 101.142173
+            },
+            {
+              "day": 120,
+              "index": 109.86093
+            },
+            {
+              "day": 150,
+              "index": 117.518741
+            },
+            {
+              "day": 179,
+              "index": 118.704556
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "xalvoria",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.175706,
+      "scenarios": [
+        {
+          "endingIndex": 104.6896,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.3362,
+          "minimumIndex": 99.6638,
+          "pathSha256": "b2181645536cb3e0a1591a6aa5f52a8c93239e724e0d2a1d3dc2253df917eca2",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 8,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.92853
+            },
+            {
+              "day": 30,
+              "index": 100.547625
+            },
+            {
+              "day": 60,
+              "index": 101.804162
+            },
+            {
+              "day": 90,
+              "index": 102.356394
+            },
+            {
+              "day": 120,
+              "index": 103.392269
+            },
+            {
+              "day": 150,
+              "index": 103.600817
+            },
+            {
+              "day": 179,
+              "index": 104.689596
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 7
+        },
+        {
+          "endingIndex": 109.4932,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 1.4222,
+          "minimumIndex": 99.0689,
+          "pathSha256": "5bfe157a874d978ad5434fb2a12d9ba0a6aba149ee3162f4354c040f6f14a909",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.978159
+            },
+            {
+              "day": 30,
+              "index": 100.474952
+            },
+            {
+              "day": 60,
+              "index": 100.998903
+            },
+            {
+              "day": 90,
+              "index": 103.804585
+            },
+            {
+              "day": 120,
+              "index": 106.598891
+            },
+            {
+              "day": 150,
+              "index": 109.627182
+            },
+            {
+              "day": 179,
+              "index": 109.493163
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 112.6345,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.6315,
+          "minimumIndex": 94.8775,
+          "pathSha256": "146fd4fd63853d420f127d96bd63a913a18ec9276e1abebaa7edca1163956c1c",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 56,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.135542
+            },
+            {
+              "day": 30,
+              "index": 101.232276
+            },
+            {
+              "day": 60,
+              "index": 96.138214
+            },
+            {
+              "day": 90,
+              "index": 101.794475
+            },
+            {
+              "day": 120,
+              "index": 107.13622
+            },
+            {
+              "day": 150,
+              "index": 112.21452
+            },
+            {
+              "day": 179,
+              "index": 112.634479
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 118.7822,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 12.9659,
+          "minimumIndex": 87.0946,
+          "pathSha256": "6a85902272b6b519358c38b73d827f334840d129740a2932fc17f9b0e9b917bb",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 70,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.003517
+            },
+            {
+              "day": 30,
+              "index": 95.077161
+            },
+            {
+              "day": 60,
+              "index": 91.23744
+            },
+            {
+              "day": 90,
+              "index": 100.535389
+            },
+            {
+              "day": 120,
+              "index": 108.975347
+            },
+            {
+              "day": 150,
+              "index": 117.284838
+            },
+            {
+              "day": 179,
+              "index": 118.782244
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "dravenlok",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.182938,
+      "scenarios": [
+        {
+          "endingIndex": 104.0497,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.5138,
+          "minimumIndex": 100,
+          "pathSha256": "2b86c1982adb0db355f01d2b97f1b57025f35dd0931f396ca815b35c31c45352",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 1,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.042883
+            },
+            {
+              "day": 30,
+              "index": 100.510606
+            },
+            {
+              "day": 60,
+              "index": 101.625975
+            },
+            {
+              "day": 90,
+              "index": 101.374998
+            },
+            {
+              "day": 120,
+              "index": 101.911807
+            },
+            {
+              "day": 150,
+              "index": 102.857225
+            },
+            {
+              "day": 179,
+              "index": 104.049749
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 0
+        },
+        {
+          "endingIndex": 110.4671,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 1.7274,
+          "minimumIndex": 98.8506,
+          "pathSha256": "2c7cf067510b66cba81a204ec74ab9e9aa578f417d8ca053c7cdfc132c82e4cb",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.110028
+            },
+            {
+              "day": 30,
+              "index": 100.403965
+            },
+            {
+              "day": 60,
+              "index": 100.518175
+            },
+            {
+              "day": 90,
+              "index": 103.532566
+            },
+            {
+              "day": 120,
+              "index": 107.504153
+            },
+            {
+              "day": 150,
+              "index": 109.68252
+            },
+            {
+              "day": 179,
+              "index": 110.46707
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 113.1245,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.8722,
+          "minimumIndex": 93.6161,
+          "pathSha256": "e9e90b0c85601576fb3e3dab7e944c6ebb602b0877ea7d7b92084158e596de53",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 61,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.077899
+            },
+            {
+              "day": 30,
+              "index": 100.099278
+            },
+            {
+              "day": 60,
+              "index": 94.795194
+            },
+            {
+              "day": 90,
+              "index": 100.807729
+            },
+            {
+              "day": 120,
+              "index": 106.046126
+            },
+            {
+              "day": 150,
+              "index": 111.702738
+            },
+            {
+              "day": 179,
+              "index": 113.124502
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 117.0629,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 12.7048,
+          "minimumIndex": 87.8791,
+          "pathSha256": "2434b0ee9c233e32220524b72e6fb017ee912137020ce0c172fa743142cdadb0",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 69,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.090104
+            },
+            {
+              "day": 30,
+              "index": 95.762832
+            },
+            {
+              "day": 60,
+              "index": 91.847785
+            },
+            {
+              "day": 90,
+              "index": 100.840981
+            },
+            {
+              "day": 120,
+              "index": 108.969807
+            },
+            {
+              "day": 150,
+              "index": 116.451648
+            },
+            {
+              "day": 179,
+              "index": 117.062896
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    },
+    {
+      "country": "syndalis",
+      "instrumentCount": 24,
+      "meanBeta": 1.043333,
+      "meanLiquidity": 0.651667,
+      "meanLongRunVolatility": 0.180135,
+      "scenarios": [
+        {
+          "endingIndex": 104.7333,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 0.2698,
+          "minimumIndex": 99.9303,
+          "pathSha256": "d1a11f06d2783aefadd460da2e343a2a0d8f4acd73f9b4d1e73e88bc7ec9a95b",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 1,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.930268
+            },
+            {
+              "day": 30,
+              "index": 101.088732
+            },
+            {
+              "day": 60,
+              "index": 101.658155
+            },
+            {
+              "day": 90,
+              "index": 103.052482
+            },
+            {
+              "day": 120,
+              "index": 103.457894
+            },
+            {
+              "day": 150,
+              "index": 104.015792
+            },
+            {
+              "day": 179,
+              "index": 104.733304
+            }
+          ],
+          "scenarioId": "baseline",
+          "startingIndex": 100,
+          "troughDay": 0
+        },
+        {
+          "endingIndex": 109.9805,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 2.3935,
+          "minimumIndex": 98.4983,
+          "pathSha256": "acb7e97085dbb2a9dafd3811b677f36be006d50ea72f233a9dc0034aa749e519",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 45,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.056325
+            },
+            {
+              "day": 30,
+              "index": 100.83647
+            },
+            {
+              "day": 60,
+              "index": 100.417774
+            },
+            {
+              "day": 90,
+              "index": 103.079043
+            },
+            {
+              "day": 120,
+              "index": 105.721788
+            },
+            {
+              "day": 150,
+              "index": 109.176548
+            },
+            {
+              "day": 179,
+              "index": 109.980504
+            }
+          ],
+          "scenarioId": "currency-stress",
+          "startingIndex": 100,
+          "troughDay": 44
+        },
+        {
+          "endingIndex": 114.0804,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 6.9321,
+          "minimumIndex": 93.5578,
+          "pathSha256": "8048830b9645d39693f064ea531773570f592cfbee1929018c6c6d9a01b7bd12",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 61,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 99.930104
+            },
+            {
+              "day": 30,
+              "index": 100.055149
+            },
+            {
+              "day": 60,
+              "index": 94.917697
+            },
+            {
+              "day": 90,
+              "index": 101.669777
+            },
+            {
+              "day": 120,
+              "index": 106.776235
+            },
+            {
+              "day": 150,
+              "index": 112.62678
+            },
+            {
+              "day": 179,
+              "index": 114.080391
+            }
+          ],
+          "scenarioId": "route-disruption",
+          "startingIndex": 100,
+          "troughDay": 55
+        },
+        {
+          "endingIndex": 117.8796,
+          "horizonDays": 180,
+          "maximumDrawdownPct": 13.0282,
+          "minimumIndex": 87.3632,
+          "pathSha256": "118121bbabb4ad20b64aab2b50f127d904fe7aeea9b92257e1a4752923b24666",
+          "recoveredTo95PctOfStart": true,
+          "recoveryDay": 72,
+          "sampledPath": [
+            {
+              "day": 0,
+              "index": 100.031411
+            },
+            {
+              "day": 30,
+              "index": 95.611424
+            },
+            {
+              "day": 60,
+              "index": 91.268916
+            },
+            {
+              "day": 90,
+              "index": 101.136148
+            },
+            {
+              "day": 120,
+              "index": 109.004355
+            },
+            {
+              "day": 150,
+              "index": 117.384248
+            },
+            {
+              "day": 179,
+              "index": 117.879605
+            }
+          ],
+          "scenarioId": "war-and-recovery",
+          "startingIndex": 100,
+          "troughDay": 50
+        }
+      ]
+    }
+  ],
+  "crossMarketScenarioSummary": [
+    {
+      "averageEndingIndex": 105.0747,
+      "countriesRecovered": 10,
+      "maximumRecoveryDay": 17,
+      "scenarioId": "baseline",
+      "worstMaximumDrawdownPct": 0.5138
+    },
+    {
+      "averageEndingIndex": 110.898,
+      "countriesRecovered": 10,
+      "maximumRecoveryDay": 45,
+      "scenarioId": "currency-stress",
+      "worstMaximumDrawdownPct": 2.4551
+    },
+    {
+      "averageEndingIndex": 113.7021,
+      "countriesRecovered": 10,
+      "maximumRecoveryDay": 63,
+      "scenarioId": "route-disruption",
+      "worstMaximumDrawdownPct": 7.5061
+    },
+    {
+      "averageEndingIndex": 118.0833,
+      "countriesRecovered": 10,
+      "maximumRecoveryDay": 72,
+      "scenarioId": "war-and-recovery",
+      "worstMaximumDrawdownPct": 13.6343
+    }
+  ],
+  "currency": {
+    "arbitrageFailures": 0,
+    "feeRatePerLeg": 0.01,
+    "maximumRoundTripGainPct": -3.9404,
+    "pairCount": 45,
+    "pairs": [
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "yrethia",
+        "destinationCurrency": "YRC",
+        "destinationUnits": 917.6543,
+        "pairId": "northreach-yrethia",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.985375
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "thaloris",
+        "destinationCurrency": "THD",
+        "destinationUnits": 783.1878,
+        "pairId": "northreach-thaloris",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.986309
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "solvend",
+        "destinationCurrency": "SLV",
+        "destinationUnits": 957.2874,
+        "pairId": "northreach-solvend",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.96284
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "eldoran",
+        "destinationCurrency": "ELD",
+        "destinationUnits": 873.0926,
+        "pairId": "northreach-eldoran",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.089844
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "valerion",
+        "destinationCurrency": "VAL",
+        "destinationUnits": 1170.4792,
+        "pairId": "northreach-valerion",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.034429
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 1080.6625,
+        "pairId": "northreach-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.079359
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1205.8208,
+        "pairId": "northreach-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.089899
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 779.1219,
+        "pairId": "northreach-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.968088
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1262.3843,
+        "pairId": "northreach-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "northreach",
+        "sourceCurrency": "NRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.096425
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "thaloris",
+        "destinationCurrency": "THD",
+        "destinationUnits": 742.5188,
+        "pairId": "yrethia-thaloris",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.943054
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "solvend",
+        "destinationCurrency": "SLV",
+        "destinationUnits": 1116.4003,
+        "pairId": "yrethia-solvend",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.021047
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "eldoran",
+        "destinationCurrency": "ELD",
+        "destinationUnits": 775.9357,
+        "pairId": "yrethia-eldoran",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.008904
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "valerion",
+        "destinationCurrency": "VAL",
+        "destinationUnits": 1311.0195,
+        "pairId": "yrethia-valerion",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.075044
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 950.8298,
+        "pairId": "yrethia-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.994203
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1124.6822,
+        "pairId": "yrethia-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.033624
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 917.431,
+        "pairId": "yrethia-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.031577
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1224.9104,
+        "pairId": "yrethia-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "yrethia",
+        "sourceCurrency": "YRC",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.060567
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "solvend",
+        "destinationCurrency": "SLV",
+        "destinationUnits": 1282.5376,
+        "pairId": "thaloris-solvend",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.010073
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "eldoran",
+        "destinationCurrency": "ELD",
+        "destinationUnits": 751.0957,
+        "pairId": "thaloris-eldoran",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.91615
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "valerion",
+        "destinationCurrency": "VAL",
+        "destinationUnits": 1279.4179,
+        "pairId": "thaloris-valerion",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.980189
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 1311.2106,
+        "pairId": "thaloris-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.077561
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1222.2373,
+        "pairId": "thaloris-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.994506
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 884.0565,
+        "pairId": "thaloris-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.934624
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1188.3352,
+        "pairId": "thaloris-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "thaloris",
+        "sourceCurrency": "THD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.964134
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "eldoran",
+        "destinationCurrency": "ELD",
+        "destinationUnits": 595.1409,
+        "pairId": "solvend-eldoran",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.923583
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "valerion",
+        "destinationCurrency": "VAL",
+        "destinationUnits": 1142.2603,
+        "pairId": "solvend-valerion",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.048898
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 849.647,
+        "pairId": "solvend-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.982363
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 917.608,
+        "pairId": "solvend-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.9759
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 757.9048,
+        "pairId": "solvend-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.980057
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 880.0097,
+        "pairId": "solvend-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "solvend",
+        "sourceCurrency": "SLV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.939634
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "valerion",
+        "destinationCurrency": "VAL",
+        "destinationUnits": 1189.5438,
+        "pairId": "eldoran-valerion",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "eldoran",
+        "sourceCurrency": "ELD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.903108
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 1246.7394,
+        "pairId": "eldoran-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "eldoran",
+        "sourceCurrency": "ELD",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.004013
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1574.1548,
+        "pairId": "eldoran-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "eldoran",
+        "sourceCurrency": "ELD",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.078448
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 1122.5075,
+        "pairId": "eldoran-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "eldoran",
+        "sourceCurrency": "ELD",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.006323
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1378.7696,
+        "pairId": "eldoran-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "eldoran",
+        "sourceCurrency": "ELD",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.992338
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "lumenor",
+        "destinationCurrency": "LUM",
+        "destinationUnits": 907.3123,
+        "pairId": "valerion-lumenor",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "valerion",
+        "sourceCurrency": "VAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.044829
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1004.8811,
+        "pairId": "valerion-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "valerion",
+        "sourceCurrency": "VAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.05111
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 831.9345,
+        "pairId": "valerion-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "valerion",
+        "sourceCurrency": "VAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.056824
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1011.2742,
+        "pairId": "valerion-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "valerion",
+        "sourceCurrency": "VAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.036725
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "xalvoria",
+        "destinationCurrency": "XAL",
+        "destinationUnits": 1256.0919,
+        "pairId": "lumenor-xalvoria",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "lumenor",
+        "sourceCurrency": "LUM",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.08218
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 863.3615,
+        "pairId": "lumenor-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "lumenor",
+        "sourceCurrency": "LUM",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.991408
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 936.8316,
+        "pairId": "lumenor-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "lumenor",
+        "sourceCurrency": "LUM",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.918878
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "dravenlok",
+        "destinationCurrency": "DRV",
+        "destinationUnits": 947.345,
+        "pairId": "xalvoria-dravenlok",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "xalvoria",
+        "sourceCurrency": "XAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 1.086391
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 969.9805,
+        "pairId": "xalvoria-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "xalvoria",
+        "sourceCurrency": "XAL",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.978103
+      },
+      {
+        "arbitrageSafe": true,
+        "destinationCountry": "syndalis",
+        "destinationCurrency": "SYN",
+        "destinationUnits": 1177.8847,
+        "pairId": "dravenlok-syndalis",
+        "roundTripGainPct": -3.9404,
+        "roundTripUnits": 960.596,
+        "settlementBridge": "ECO",
+        "sourceCountry": "dravenlok",
+        "sourceCurrency": "DRV",
+        "startingUnits": 1000,
+        "stressMultiplier": 0.97541
+      }
+    ],
+    "settlementBridge": "ECO"
+  },
+  "deterministic": true,
+  "householdAndBanking": [
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 224,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 20,
+        "minimumOpeningDeposit": 11,
+        "openingDepositShareOfStartingBalance": 0.0222,
+        "weeklyRepaymentShareOfArrivalReward": 0.1786
+      },
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3125,
+        "recoveryCoverageRatio": 1.4881,
+        "recoverySupport": 250,
+        "warShockCost": 168
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 216,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 19,
+        "minimumOpeningDeposit": 11,
+        "openingDepositShareOfStartingBalance": 0.0231,
+        "weeklyRepaymentShareOfArrivalReward": 0.1759
+      },
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3148,
+        "recoveryCoverageRatio": 1.4877,
+        "recoverySupport": 241,
+        "warShockCost": 162
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 184,
+        "maximumMonthlyAccountFee": 1,
+        "maximumWeeklyRepayment": 17,
+        "minimumOpeningDeposit": 9,
+        "openingDepositShareOfStartingBalance": 0.0221,
+        "weeklyRepaymentShareOfArrivalReward": 0.1848
+      },
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3043,
+        "recoveryCoverageRatio": 1.4855,
+        "recoverySupport": 205,
+        "warShockCost": 138
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 236,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 21,
+        "minimumOpeningDeposit": 12,
+        "openingDepositShareOfStartingBalance": 0.023,
+        "weeklyRepaymentShareOfArrivalReward": 0.178
+      },
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3051,
+        "recoveryCoverageRatio": 1.4859,
+        "recoverySupport": 263,
+        "warShockCost": 177
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 168,
+        "maximumMonthlyAccountFee": 1,
+        "maximumWeeklyRepayment": 15,
+        "minimumOpeningDeposit": 8,
+        "openingDepositShareOfStartingBalance": 0.0216,
+        "weeklyRepaymentShareOfArrivalReward": 0.1786
+      },
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3214,
+        "recoveryCoverageRatio": 1.4921,
+        "recoverySupport": 188,
+        "warShockCost": 126
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 252,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 23,
+        "minimumOpeningDeposit": 13,
+        "openingDepositShareOfStartingBalance": 0.0233,
+        "weeklyRepaymentShareOfArrivalReward": 0.1825
+      },
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3095,
+        "recoveryCoverageRatio": 1.4868,
+        "recoverySupport": 281,
+        "warShockCost": 189
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 212,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 19,
+        "minimumOpeningDeposit": 11,
+        "openingDepositShareOfStartingBalance": 0.0235,
+        "weeklyRepaymentShareOfArrivalReward": 0.1792
+      },
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3019,
+        "recoveryCoverageRatio": 1.4843,
+        "recoverySupport": 236,
+        "warShockCost": 159
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 232,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 21,
+        "minimumOpeningDeposit": 12,
+        "openingDepositShareOfStartingBalance": 0.0234,
+        "weeklyRepaymentShareOfArrivalReward": 0.181
+      },
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3017,
+        "recoveryCoverageRatio": 1.4828,
+        "recoverySupport": 258,
+        "warShockCost": 174
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 190,
+        "maximumMonthlyAccountFee": 1,
+        "maximumWeeklyRepayment": 17,
+        "minimumOpeningDeposit": 10,
+        "openingDepositShareOfStartingBalance": 0.0238,
+        "weeklyRepaymentShareOfArrivalReward": 0.1789
+      },
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3053,
+        "recoveryCoverageRatio": 1.4825,
+        "recoverySupport": 212,
+        "warShockCost": 143
+      }
+    },
+    {
+      "bankingAffordability": {
+        "approved": true,
+        "emergencyLoanPrincipal": 240,
+        "maximumMonthlyAccountFee": 2,
+        "maximumWeeklyRepayment": 22,
+        "minimumOpeningDeposit": 12,
+        "openingDepositShareOfStartingBalance": 0.0226,
+        "weeklyRepaymentShareOfArrivalReward": 0.1833
+      },
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "warAndRecovery": {
+        "approved": true,
+        "insolvencyObserved": false,
+        "postShockBasicNeedsWeeks": 4.3167,
+        "recoveryCoverageRatio": 1.4889,
+        "recoverySupport": 268,
+        "warShockCost": 180
+      }
+    }
+  ],
+  "newlyCompletedCountryEnrichment": [
+    "eldoran",
+    "valerion",
+    "lumenor",
+    "xalvoria",
+    "dravenlok",
+    "syndalis"
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "routes": {
+    "adjacency": [
+      {
+        "countries": [
+          "northreach",
+          "yrethia"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 13.892,
+        "pairId": "northreach-yrethia",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "thaloris"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 209.805,
+        "pairId": "northreach-thaloris",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "solvend"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 104.12,
+        "pairId": "northreach-solvend",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "eldoran"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 116.25,
+        "pairId": "northreach-eldoran",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "valerion"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 264.413,
+        "pairId": "northreach-valerion",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "lumenor"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 418.708,
+        "pairId": "northreach-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 410.669,
+        "pairId": "northreach-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 584.857,
+        "pairId": "northreach-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "northreach",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 594.983,
+        "pairId": "northreach-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "thaloris"
+        ],
+        "geometryClassification": "border-touching-candidate",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 1.414,
+        "pairId": "yrethia-thaloris",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "solvend"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 210.278,
+        "pairId": "yrethia-solvend",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "eldoran"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 67.912,
+        "pairId": "yrethia-eldoran",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "valerion"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 133.222,
+        "pairId": "yrethia-valerion",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "lumenor"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 262.393,
+        "pairId": "yrethia-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 461.616,
+        "pairId": "yrethia-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 569.001,
+        "pairId": "yrethia-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "yrethia",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 521.729,
+        "pairId": "yrethia-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "solvend"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 362.327,
+        "pairId": "thaloris-solvend",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "eldoran"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 200.838,
+        "pairId": "thaloris-eldoran",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "valerion"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 171.05,
+        "pairId": "thaloris-valerion",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "lumenor"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 128.891,
+        "pairId": "thaloris-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 580.931,
+        "pairId": "thaloris-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 642.028,
+        "pairId": "thaloris-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "thaloris",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 549.178,
+        "pairId": "thaloris-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "eldoran"
+        ],
+        "geometryClassification": "border-touching-candidate",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 1,
+        "pairId": "solvend-eldoran",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "valerion"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 151.003,
+        "pairId": "solvend-valerion",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "lumenor"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 346.013,
+        "pairId": "solvend-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 90.022,
+        "pairId": "solvend-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 269.431,
+        "pairId": "solvend-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "solvend",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 313.255,
+        "pairId": "solvend-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "eldoran",
+          "valerion"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 21.84,
+        "pairId": "eldoran-valerion",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "eldoran",
+          "lumenor"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 210.77,
+        "pairId": "eldoran-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "eldoran",
+          "xalvoria"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 50.931,
+        "pairId": "eldoran-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "eldoran",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 130.553,
+        "pairId": "eldoran-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "eldoran",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 145.671,
+        "pairId": "eldoran-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "valerion",
+          "lumenor"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 6.083,
+        "pairId": "valerion-lumenor",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "valerion",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 193.982,
+        "pairId": "valerion-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "valerion",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 166.928,
+        "pairId": "valerion-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "valerion",
+          "syndalis"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 58.523,
+        "pairId": "valerion-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "lumenor",
+          "xalvoria"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 364.408,
+        "pairId": "lumenor-xalvoria",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "lumenor",
+          "dravenlok"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 268.412,
+        "pairId": "lumenor-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "lumenor",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 80,
+        "pairId": "lumenor-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "xalvoria",
+          "dravenlok"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 8.062,
+        "pairId": "xalvoria-dravenlok",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "xalvoria",
+          "syndalis"
+        ],
+        "geometryClassification": "separated",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 207.966,
+        "pairId": "xalvoria-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      },
+      {
+        "countries": [
+          "dravenlok",
+          "syndalis"
+        ],
+        "geometryClassification": "near-maritime-or-near-border",
+        "landBorderClaimed": false,
+        "minimumPixelSeparation": 41.773,
+        "pairId": "dravenlok-syndalis",
+        "verifiedAgainstGeometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7"
+      }
+    ],
+    "adjacencyPairCount": 45,
+    "routeCount": 13,
+    "routeFailures": 0,
+    "routes": [
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 22,
+          "baseline": 100,
+          "disruption": 69,
+          "effectiveWarWithSubstitution": 58,
+          "recovered": 100,
+          "recoveryDays": 57,
+          "war": 36
+        },
+        "destinationCountry": "solvend",
+        "destinationLocationId": "location.solvend.aurora-spire.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 830,
+            "y": 235
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 412,
+            "y": 196
+          },
+          "straightLinePixelLength": 419.815
+        },
+        "modes": [
+          "rail",
+          "freight",
+          "technical-supply"
+        ],
+        "originCountry": "northreach",
+        "originLocationId": "location.northreach.frostgate.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.northreach-solvend.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 25,
+          "baseline": 100,
+          "disruption": 59,
+          "effectiveWarWithSubstitution": 68,
+          "recovered": 100,
+          "recoveryDays": 80,
+          "war": 43
+        },
+        "destinationCountry": "yrethia",
+        "destinationLocationId": "location.yrethia.sableport.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 340,
+            "y": 374
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 412,
+            "y": 196
+          },
+          "straightLinePixelLength": 192.01
+        },
+        "modes": [
+          "maritime",
+          "freight"
+        ],
+        "originCountry": "northreach",
+        "originLocationId": "location.northreach.frostgate.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.northreach-yrethia.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 22,
+          "baseline": 100,
+          "disruption": 56,
+          "effectiveWarWithSubstitution": 61,
+          "recovered": 100,
+          "recoveryDays": 55,
+          "war": 39
+        },
+        "destinationCountry": "thaloris",
+        "destinationLocationId": "location.thaloris.dusk-harbor.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 348,
+            "y": 640
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 340,
+            "y": 374
+          },
+          "straightLinePixelLength": 266.12
+        },
+        "modes": [
+          "maritime"
+        ],
+        "originCountry": "yrethia",
+        "originLocationId": "location.yrethia.sableport.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.yrethia-thaloris.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 27,
+          "baseline": 100,
+          "disruption": 65,
+          "effectiveWarWithSubstitution": 69,
+          "recovered": 100,
+          "recoveryDays": 66,
+          "war": 42
+        },
+        "destinationCountry": "eldoran",
+        "destinationLocationId": "location.eldoran.crescent-bay.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 850,
+            "y": 390
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 340,
+            "y": 374
+          },
+          "straightLinePixelLength": 510.251
+        },
+        "modes": [
+          "maritime",
+          "rail-transfer"
+        ],
+        "originCountry": "yrethia",
+        "originLocationId": "location.yrethia.sableport.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.yrethia-eldoran.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 31,
+          "baseline": 100,
+          "disruption": 61,
+          "effectiveWarWithSubstitution": 79,
+          "recovered": 100,
+          "recoveryDays": 79,
+          "war": 48
+        },
+        "destinationCountry": "eldoran",
+        "destinationLocationId": "location.eldoran.crescent-bay.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 850,
+            "y": 390
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 348,
+            "y": 640
+          },
+          "straightLinePixelLength": 560.807
+        },
+        "modes": [
+          "alternate-freight"
+        ],
+        "originCountry": "thaloris",
+        "originLocationId": "location.thaloris.dusk-harbor.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.thaloris-eldoran.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 21,
+          "baseline": 100,
+          "disruption": 60,
+          "effectiveWarWithSubstitution": 58,
+          "recovered": 100,
+          "recoveryDays": 35,
+          "war": 37
+        },
+        "destinationCountry": "eldoran",
+        "destinationLocationId": "location.eldoran.crescent-bay.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 850,
+            "y": 390
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 830,
+            "y": 235
+          },
+          "straightLinePixelLength": 156.285
+        },
+        "modes": [
+          "rail",
+          "air-freight"
+        ],
+        "originCountry": "solvend",
+        "originLocationId": "location.solvend.aurora-spire.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.solvend-eldoran.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 26,
+          "baseline": 100,
+          "disruption": 69,
+          "effectiveWarWithSubstitution": 66,
+          "recovered": 100,
+          "recoveryDays": 71,
+          "war": 40
+        },
+        "destinationCountry": "valerion",
+        "destinationLocationId": "location.valerion.glassfall.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 870,
+            "y": 572
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 850,
+            "y": 390
+          },
+          "straightLinePixelLength": 183.096
+        },
+        "modes": [
+          "rail",
+          "road",
+          "energy"
+        ],
+        "originCountry": "eldoran",
+        "originLocationId": "location.eldoran.crescent-bay.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.eldoran-valerion.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 25,
+          "baseline": 100,
+          "disruption": 70,
+          "effectiveWarWithSubstitution": 68,
+          "recovered": 100,
+          "recoveryDays": 60,
+          "war": 43
+        },
+        "destinationCountry": "lumenor",
+        "destinationLocationId": "location.lumenor.starfall.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 846,
+            "y": 762
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 870,
+            "y": 572
+          },
+          "straightLinePixelLength": 191.51
+        },
+        "modes": [
+          "rail",
+          "civic-corridor"
+        ],
+        "originCountry": "valerion",
+        "originLocationId": "location.valerion.glassfall.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.valerion-lumenor.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 27,
+          "baseline": 100,
+          "disruption": 68,
+          "effectiveWarWithSubstitution": 66,
+          "recovered": 100,
+          "recoveryDays": 50,
+          "war": 39
+        },
+        "destinationCountry": "xalvoria",
+        "destinationLocationId": "location.xalvoria.emberhall.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 1277,
+            "y": 192
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 846,
+            "y": 762
+          },
+          "straightLinePixelLength": 714.605
+        },
+        "modes": [
+          "rail",
+          "finance"
+        ],
+        "originCountry": "lumenor",
+        "originLocationId": "location.lumenor.starfall.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.lumenor-xalvoria.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 22,
+          "baseline": 100,
+          "disruption": 64,
+          "effectiveWarWithSubstitution": 62,
+          "recovered": 100,
+          "recoveryDays": 42,
+          "war": 40
+        },
+        "destinationCountry": "dravenlok",
+        "destinationLocationId": "location.dravenlok.ironhold.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 1382,
+            "y": 386
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 1277,
+            "y": 192
+          },
+          "straightLinePixelLength": 220.592
+        },
+        "modes": [
+          "rail",
+          "infrastructure"
+        ],
+        "originCountry": "xalvoria",
+        "originLocationId": "location.xalvoria.emberhall.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.xalvoria-dravenlok.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 28,
+          "baseline": 100,
+          "disruption": 72,
+          "effectiveWarWithSubstitution": 68,
+          "recovered": 100,
+          "recoveryDays": 59,
+          "war": 40
+        },
+        "destinationCountry": "syndalis",
+        "destinationLocationId": "location.syndalis.blacklight.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 1282,
+            "y": 607
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 1382,
+            "y": 386
+          },
+          "straightLinePixelLength": 242.572
+        },
+        "modes": [
+          "rail",
+          "data"
+        ],
+        "originCountry": "dravenlok",
+        "originLocationId": "location.dravenlok.ironhold.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.dravenlok-syndalis.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 33,
+          "baseline": 100,
+          "disruption": 57,
+          "effectiveWarWithSubstitution": 79,
+          "recovered": 100,
+          "recoveryDays": 44,
+          "war": 46
+        },
+        "destinationCountry": "lumenor",
+        "destinationLocationId": "location.lumenor.starfall.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 846,
+            "y": 762
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 1282,
+            "y": 607
+          },
+          "straightLinePixelLength": 462.732
+        },
+        "modes": [
+          "data"
+        ],
+        "originCountry": "syndalis",
+        "originLocationId": "location.syndalis.blacklight.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.syndalis-lumenor.v1"
+      },
+      {
+        "adjacencyPolicy": "route-connected; no unreviewed land-border claim",
+        "capacity": {
+          "approvedSubstitute": 21,
+          "baseline": 100,
+          "disruption": 71,
+          "effectiveWarWithSubstitution": 65,
+          "recovered": 100,
+          "recoveryDays": 77,
+          "war": 44
+        },
+        "destinationCountry": "syndalis",
+        "destinationLocationId": "location.syndalis.blacklight.v1",
+        "geometry": {
+          "artworkSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a",
+          "coordinateSpace": {
+            "height": 941,
+            "width": 1672
+          },
+          "destination": {
+            "coordinateSpace": "1672x941",
+            "x": 1282,
+            "y": 607
+          },
+          "endpointPolygonVerification": true,
+          "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+          "origin": {
+            "coordinateSpace": "1672x941",
+            "x": 1277,
+            "y": 192
+          },
+          "straightLinePixelLength": 415.03
+        },
+        "modes": [
+          "finance",
+          "data"
+        ],
+        "originCountry": "xalvoria",
+        "originLocationId": "location.xalvoria.emberhall.v1",
+        "recoverySafe": true,
+        "routeId": "route.meridian.xalvoria-syndalis.v1"
+      }
+    ]
+  },
+  "scenarioCountPerCountry": 4,
+  "schemaVersion": "econovaria-beta-cross-market-calibration-v1",
+  "status": "approved-for-isolated-staging",
+  "substitution": {
+    "checkCount": 176,
+    "checks": [
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "orbital-grade-aluminum",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 15.25,
+        "rawCost": 15.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0164,
+        "quotedCost": 15.5,
+        "rawCost": 15.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 17.08,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 17.08,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "orbital-grade-aluminum",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 15.25,
+        "rawCost": 15.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0164,
+        "quotedCost": 15.5,
+        "rawCost": 15.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 17.08,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 17.08,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "orbital-grade-aluminum",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 30.5,
+        "rawCost": 30.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0164,
+        "quotedCost": 31,
+        "rawCost": 31,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 28.06,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 28.06,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "orbital-grade-aluminum",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 30.5,
+        "rawCost": 30.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0164,
+        "quotedCost": 31,
+        "rawCost": 31,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 28.06,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "light-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 28.06,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 12.5,
+        "rawCost": 12.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 12.5,
+        "rawCost": 12.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 25,
+        "rawCost": 25,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 23,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 25,
+        "rawCost": 25,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 23,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "heavy-frame",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24.5,
+        "rawCost": 24.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.44,
+        "rawCost": 34.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9592,
+        "quotedCost": 23.5,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24.5,
+        "rawCost": 24.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.44,
+        "rawCost": 34.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9592,
+        "quotedCost": 23.5,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 49,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 54.88,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.08,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9796,
+        "quotedCost": 48,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 49,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "corrosion-resistant-alloy",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 54.88,
+        "rawCost": 69.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.08,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealed-housing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9796,
+        "quotedCost": 48,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "cryogenic-ceramic",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 18.25,
+        "rawCost": 18.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "thermal-gel",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 23,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "high-density-carbon",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "cryogenic-ceramic",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 18.25,
+        "rawCost": 18.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "thermal-gel",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 23,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "high-density-carbon",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.44,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "cryogenic-ceramic",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 36.5,
+        "rawCost": 36.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "thermal-gel",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 33.58,
+        "rawCost": 23,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 40.88,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "high-density-carbon",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 40.88,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "cryogenic-ceramic",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 36.5,
+        "rawCost": 36.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "thermal-gel",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 33.58,
+        "rawCost": 23,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 40.88,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "thermal-insulation",
+        "itemKey": "high-density-carbon",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 40.88,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "hydrophobic-sealant",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 9.25,
+        "rawCost": 9.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 10.36,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 10.36,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "hydrophobic-sealant",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 9.25,
+        "rawCost": 9.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 10.36,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 10.36,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "hydrophobic-sealant",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 18.5,
+        "rawCost": 18.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.72,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.72,
+        "rawCost": 26.25,
+        "requiredQuantity": 3,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "hydrophobic-sealant",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 18.5,
+        "rawCost": 18.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.72,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "sealing-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 20.72,
+        "rawCost": 26.25,
+        "requiredQuantity": 3,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 6.75,
+        "rawCost": 6.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 7.56,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 7.56,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 6.75,
+        "rawCost": 6.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 7.56,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 7.56,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 13.5,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 15.12,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 15.12,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 13.5,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 15.12,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "documentation-stock",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 15.12,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24,
+        "rawCost": 24,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 26.88,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 22.08,
+        "rawCost": 15.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9792,
+        "quotedCost": 23.5,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24,
+        "rawCost": 24,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 26.88,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 22.08,
+        "rawCost": 15.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9792,
+        "quotedCost": 23.5,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 48,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9375,
+        "quotedCost": 45,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 44.16,
+        "rawCost": 31,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 44.16,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "radiation-shielding-polymer",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 48,
+        "rawCost": 48,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.9375,
+        "quotedCost": 45,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "aerospace-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 44.16,
+        "rawCost": 31,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "protective-casing",
+        "itemKey": "structural-glass-composite",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 44.16,
+        "rawCost": 23.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "filtration-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 17.25,
+        "rawCost": 17.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "ceramic-filter-media",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.32,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0145,
+        "quotedCost": 17.5,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "filter-media",
+        "itemKey": "catalytic-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.32,
+        "rawCost": 30.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "filtration-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 17.25,
+        "rawCost": 17.25,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "ceramic-filter-media",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.32,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0145,
+        "quotedCost": 17.5,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "filter-media",
+        "itemKey": "catalytic-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.32,
+        "rawCost": 30.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "filtration-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 34.5,
+        "rawCost": 34.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "ceramic-filter-media",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "filter-media",
+        "itemKey": "catalytic-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 30.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "filtration-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 34.5,
+        "rawCost": 34.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "ceramic-filter-media",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "filter-media",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "filter-media",
+        "itemKey": "catalytic-membrane",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 31.74,
+        "rawCost": 30.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "broadcast-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24.75,
+        "rawCost": 24.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "acoustic-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.72,
+        "rawCost": 33.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "communications-fiber",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0909,
+        "quotedCost": 27,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "broadcast-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 24.75,
+        "rawCost": 24.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "acoustic-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 27.72,
+        "rawCost": 33.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "communications-fiber",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.0909,
+        "quotedCost": 27,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "broadcast-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 49.5,
+        "rawCost": 49.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "acoustic-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.54,
+        "rawCost": 33.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "communications-fiber",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.54,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "broadcast-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 49.5,
+        "rawCost": 49.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "communications-fiber",
+        "itemKey": "acoustic-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.54,
+        "rawCost": 33.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "communications-fiber",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 45.54,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 22.75,
+        "rawCost": 22.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "precision-optical-glass",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 20.93,
+        "rawCost": 14,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "display-material",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 25.48,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 22.75,
+        "rawCost": 22.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "precision-optical-glass",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 20.93,
+        "rawCost": 14,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "display-material",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 25.48,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 45.5,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "precision-optical-glass",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 41.86,
+        "rawCost": 14,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "display-material",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 41.86,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "educational-display-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 45.5,
+        "rawCost": 45.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "display-material",
+        "itemKey": "precision-optical-glass",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 41.86,
+        "rawCost": 14,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": "strategic-materials-handling-permit",
+        "groupKey": "display-material",
+        "itemKey": "photonic-film",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 41.86,
+        "rawCost": 27,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 12.5,
+        "rawCost": 12.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "reinforced-concrete-additive",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 40.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 12.5,
+        "rawCost": 12.5,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "reinforced-concrete-additive",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 14,
+        "rawCost": 40.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 25,
+        "rawCost": 25,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 23,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "reinforced-concrete-additive",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 60.75,
+        "requiredQuantity": 3,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "hardened-steel-plate",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 25,
+        "rawCost": 25,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "refined-alloy-ingot",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 23,
+        "rawCost": 22.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "machine-steel-billet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 48.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "structural-reinforcement",
+        "itemKey": "reinforced-concrete-additive",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 28,
+        "rawCost": 60.75,
+        "requiredQuantity": 3,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 8.75,
+        "rawCost": 8.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "easy",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 8.75,
+        "rawCost": 8.75,
+        "requiredQuantity": 1,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "moderate",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 9.8,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 17.5,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 16.1,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.6,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "hard",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.6,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "compressed-algae-fiber",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1,
+        "quotedCost": 17.5,
+        "rawCost": 17.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "archival-polymer-sheet",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 0.92,
+        "quotedCost": 16.1,
+        "rawCost": 13.5,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "adaptive-textile-mesh",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.6,
+        "rawCost": 45,
+        "requiredQuantity": 2,
+        "safe": true
+      },
+      {
+        "difficulty": "insane",
+        "entitlementRequired": null,
+        "groupKey": "packaging-material",
+        "itemKey": "marine-grade-resin",
+        "outputQuantityChanged": false,
+        "quoteRatioToCanonical": 1.12,
+        "quotedCost": 19.6,
+        "rawCost": 49,
+        "requiredQuantity": 2,
+        "safe": true
+      }
+    ],
+    "failures": 0,
+    "groupCount": 12,
+    "quotePolicy": "server-resolved before crafting; 8% discount floor and 12% premium ceiling relative to the canonical member"
+  },
+  "version": "1.0.0-beta"
+}

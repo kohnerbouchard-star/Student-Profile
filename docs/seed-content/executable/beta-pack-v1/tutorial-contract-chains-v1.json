@@ -1,0 +1,1234 @@
+{
+  "activationAuthorized": false,
+  "chainCount": 10,
+  "chains": [
+    {
+      "arrivalPackageStableId": "arrival-package.northreach.frostgate-immigrant.v1",
+      "chainId": "tutorial-chain.northreach.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "recoveryRoute": "settlement-office referral, essential-services Contract, and protected basic-housing review",
+      "startingLocationStableId": "location.northreach.frostgate.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.northreach.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 112,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.northreach.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 112,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.northreach.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 62,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.yrethia.sableport-immigrant.v1",
+      "chainId": "tutorial-chain.yrethia.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "recoveryRoute": "supervised records correction and entry-level port-service Contract",
+      "startingLocationStableId": "location.yrethia.sableport.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.yrethia.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 108,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.yrethia.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 108,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.yrethia.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 59,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.thaloris.dusk-harbor-immigrant.v1",
+      "chainId": "tutorial-chain.thaloris.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "recoveryRoute": "licensed repair cooperative, community guarantor, and regulated starter Contract",
+      "startingLocationStableId": "location.thaloris.dusk-harbor.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.thaloris.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 92,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.thaloris.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 92,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.thaloris.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 51,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.solvend.aurora-spire-immigrant.v1",
+      "chainId": "tutorial-chain.solvend.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "recoveryRoute": "accelerated training, supervised research Contract, and temporary professional placement",
+      "startingLocationStableId": "location.solvend.aurora-spire.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.solvend.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 118,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.solvend.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 118,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.solvend.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 65,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.eldoran.crescent-bay-immigrant.v1",
+      "chainId": "tutorial-chain.eldoran.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "recoveryRoute": "food-security work, market-assistant Contract, and basic-needs stabilization",
+      "startingLocationStableId": "location.eldoran.crescent-bay.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.eldoran.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 84,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.eldoran.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 84,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.eldoran.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 46,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.valerion.glassfall-immigrant.v1",
+      "chainId": "tutorial-chain.valerion.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "recoveryRoute": "public-service placement, shared-housing support, and conservation Contract",
+      "startingLocationStableId": "location.valerion.glassfall.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.valerion.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 126,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.valerion.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 126,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.valerion.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 69,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.lumenor.starfall-immigrant.v1",
+      "chainId": "tutorial-chain.lumenor.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "recoveryRoute": "settlement-support work, language or records Contract, and public-housing review",
+      "startingLocationStableId": "location.lumenor.starfall.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.lumenor.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 106,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.lumenor.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 106,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.lumenor.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 58,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.xalvoria.emberhall-immigrant.v1",
+      "chainId": "tutorial-chain.xalvoria.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "recoveryRoute": "development-authority placement, debt counseling, and public-project Contract",
+      "startingLocationStableId": "location.xalvoria.emberhall.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.xalvoria.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 116,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.xalvoria.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 116,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.xalvoria.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 64,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.dravenlok.ironhold-immigrant.v1",
+      "chainId": "tutorial-chain.dravenlok.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "recoveryRoute": "technical retraining, worker-congress support, and essential-maintenance Contract",
+      "startingLocationStableId": "location.dravenlok.ironhold.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.dravenlok.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 95,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.dravenlok.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 95,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.dravenlok.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 52,
+          "sequence": 3
+        }
+      ]
+    },
+    {
+      "arrivalPackageStableId": "arrival-package.syndalis.blacklight-immigrant.v1",
+      "chainId": "tutorial-chain.syndalis.arrival-to-market.v1",
+      "completionPolicy": "sequential-manual-review",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "recoveryRoute": "supervised digital-services Contract, identity appeal, and community-access program",
+      "startingLocationStableId": "location.syndalis.blacklight.v1",
+      "steps": [
+        {
+          "contractStableId": "contract.arrival.syndalis.stabilization.v1",
+          "recoveryCritical": true,
+          "rewardAmount": 120,
+          "sequence": 1
+        },
+        {
+          "contractStableId": "contract.core.syndalis.livelihood.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 120,
+          "sequence": 2
+        },
+        {
+          "contractStableId": "contract.core.syndalis.market.v1",
+          "recoveryCritical": false,
+          "rewardAmount": 66,
+          "sequence": 3
+        }
+      ]
+    }
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-tutorial-contract-chains-v1",
+  "status": "approved-for-isolated-staging",
+  "templateCount": 30,
+  "templates": [
+    {
+      "category": "tutorial-arrival",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "confirm your temporary housing deadline and review essential heating and transport costs",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "northreach",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.northreach.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 112,
+        "currencyCode": "NRC",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.northreach.stabilization.v1",
+      "templateKey": "contract.arrival.northreach.stabilization.v1",
+      "title": "Frostgate Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Frostgate, accounting for winter logistics and energy security",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to strategic resources.\nName the principal risk created by winter logistics and energy security.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "northreach",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.northreach.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.northreach.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 112,
+        "currencyCode": "NRC",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.northreach.livelihood.v1",
+      "templateKey": "contract.core.northreach.livelihood.v1",
+      "title": "Northreach Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Frostgate, accounting for winter logistics and energy security",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to strategic resources.\nName the principal risk created by winter logistics and energy security.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "northreach",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.northreach.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.northreach.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 62,
+        "currencyCode": "NRC",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.northreach.market.v1",
+      "templateKey": "contract.core.northreach.market.v1",
+      "title": "Northreach Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "correct your address and work-document mismatch before accepting port work",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "yrethia",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.yrethia.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 108,
+        "currencyCode": "YRC",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.yrethia.stabilization.v1",
+      "templateKey": "contract.arrival.yrethia.stabilization.v1",
+      "title": "Sableport Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Sableport, accounting for port congestion and customs compliance",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to shipping and trade finance.\nName the principal risk created by port congestion and customs compliance.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "yrethia",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.yrethia.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.yrethia.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 108,
+        "currencyCode": "YRC",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.yrethia.livelihood.v1",
+      "templateKey": "contract.core.yrethia.livelihood.v1",
+      "title": "Yrethia Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Sableport, accounting for port congestion and customs compliance",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to shipping and trade finance.\nName the principal risk created by port congestion and customs compliance.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "yrethia",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.yrethia.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.yrethia.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 59,
+        "currencyCode": "YRC",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.yrethia.market.v1",
+      "templateKey": "contract.core.yrethia.market.v1",
+      "title": "Yrethia Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "verify lodging and a legally recognized work contact",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "thaloris",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.thaloris.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 92,
+        "currencyCode": "THD",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.thaloris.stabilization.v1",
+      "templateKey": "contract.arrival.thaloris.stabilization.v1",
+      "title": "Dusk Harbor Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Dusk Harbor, accounting for legitimacy, salvage quality, and route volatility",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to repair and re-export trade.\nName the principal risk created by legitimacy, salvage quality, and route volatility.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "thaloris",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.thaloris.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.thaloris.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 92,
+        "currencyCode": "THD",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.thaloris.livelihood.v1",
+      "templateKey": "contract.core.thaloris.livelihood.v1",
+      "title": "Thaloris Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Dusk Harbor, accounting for legitimacy, salvage quality, and route volatility",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to repair and re-export trade.\nName the principal risk created by legitimacy, salvage quality, and route volatility.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "thaloris",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.thaloris.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.thaloris.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 51,
+        "currencyCode": "THD",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.thaloris.market.v1",
+      "templateKey": "contract.core.thaloris.market.v1",
+      "title": "Thaloris Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "validate your credentials or book a provisional skills assessment",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "solvend",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.solvend.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 118,
+        "currencyCode": "SLV",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.solvend.stabilization.v1",
+      "templateKey": "contract.arrival.solvend.stabilization.v1",
+      "title": "Aurora Spire Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Aurora Spire, accounting for skills scarcity and cyber concentration",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to advanced technology and aerospace.\nName the principal risk created by skills scarcity and cyber concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "solvend",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.solvend.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.solvend.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 118,
+        "currencyCode": "SLV",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.solvend.livelihood.v1",
+      "templateKey": "contract.core.solvend.livelihood.v1",
+      "title": "Solvend Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Aurora Spire, accounting for skills scarcity and cyber concentration",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to advanced technology and aerospace.\nName the principal risk created by skills scarcity and cyber concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "solvend",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.solvend.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.solvend.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 65,
+        "currencyCode": "SLV",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.solvend.market.v1",
+      "templateKey": "contract.core.solvend.market.v1",
+      "title": "Solvend Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "secure affordable housing and identify reliable food-market access",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "eldoran",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.eldoran.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 84,
+        "currencyCode": "ELD",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.eldoran.stabilization.v1",
+      "templateKey": "contract.arrival.eldoran.stabilization.v1",
+      "title": "Crescent Bay Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Crescent Bay, accounting for harvest variability and affordability",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to food and wholesale distribution.\nName the principal risk created by harvest variability and affordability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "eldoran",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.eldoran.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.eldoran.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 84,
+        "currencyCode": "ELD",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.eldoran.livelihood.v1",
+      "templateKey": "contract.core.eldoran.livelihood.v1",
+      "title": "Eldoran Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Crescent Bay, accounting for harvest variability and affordability",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to food and wholesale distribution.\nName the principal risk created by harvest variability and affordability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "eldoran",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.eldoran.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.eldoran.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 46,
+        "currencyCode": "ELD",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.eldoran.market.v1",
+      "templateKey": "contract.core.eldoran.market.v1",
+      "title": "Eldoran Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "satisfy the address and deposit requirements without exhausting your emergency buffer",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "valerion",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.valerion.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 126,
+        "currencyCode": "VAL",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.valerion.stabilization.v1",
+      "templateKey": "contract.arrival.valerion.stabilization.v1",
+      "title": "Glassfall Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Glassfall, accounting for water allocation and high living costs",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to water, clean energy, and premium services.\nName the principal risk created by water allocation and high living costs.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "valerion",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.valerion.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.valerion.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 126,
+        "currencyCode": "VAL",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.valerion.livelihood.v1",
+      "templateKey": "contract.core.valerion.livelihood.v1",
+      "title": "Valerion Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Glassfall, accounting for water allocation and high living costs",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to water, clean energy, and premium services.\nName the principal risk created by water allocation and high living costs.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "valerion",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.valerion.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.valerion.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 69,
+        "currencyCode": "VAL",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.valerion.market.v1",
+      "templateKey": "contract.core.valerion.market.v1",
+      "title": "Valerion Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "secure a recognized address for work, banking, and residency processing",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "lumenor",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.lumenor.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 106,
+        "currencyCode": "LUM",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.lumenor.stabilization.v1",
+      "templateKey": "contract.arrival.lumenor.stabilization.v1",
+      "title": "Starfall Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Starfall, accounting for credential recognition and public trust",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to education, media, and arbitration.\nName the principal risk created by credential recognition and public trust.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "lumenor",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.lumenor.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.lumenor.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 106,
+        "currencyCode": "LUM",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.lumenor.livelihood.v1",
+      "templateKey": "contract.core.lumenor.livelihood.v1",
+      "title": "Lumenor Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Starfall, accounting for credential recognition and public trust",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to education, media, and arbitration.\nName the principal risk created by credential recognition and public trust.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "lumenor",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.lumenor.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.lumenor.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 58,
+        "currencyCode": "LUM",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.lumenor.market.v1",
+      "templateKey": "contract.core.lumenor.market.v1",
+      "title": "Lumenor Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "establish a bankable identity, address, and verified sponsor",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "xalvoria",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.xalvoria.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 116,
+        "currencyCode": "XAL",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.xalvoria.stabilization.v1",
+      "templateKey": "contract.arrival.xalvoria.stabilization.v1",
+      "title": "Emberhall Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Emberhall, accounting for debt concentration and project accountability",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to banking and infrastructure finance.\nName the principal risk created by debt concentration and project accountability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "xalvoria",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.xalvoria.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.xalvoria.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 116,
+        "currencyCode": "XAL",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.xalvoria.livelihood.v1",
+      "templateKey": "contract.core.xalvoria.livelihood.v1",
+      "title": "Xalvoria Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Emberhall, accounting for debt concentration and project accountability",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to banking and infrastructure finance.\nName the principal risk created by debt concentration and project accountability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "xalvoria",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.xalvoria.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.xalvoria.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 64,
+        "currencyCode": "XAL",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.xalvoria.market.v1",
+      "templateKey": "contract.core.xalvoria.market.v1",
+      "title": "Xalvoria Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "complete technical placement and confirm worker-housing eligibility",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "dravenlok",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.dravenlok.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 95,
+        "currencyCode": "DRV",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.dravenlok.stabilization.v1",
+      "templateKey": "contract.arrival.dravenlok.stabilization.v1",
+      "title": "Ironhold Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Ironhold, accounting for energy intensity and worker safety",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to heavy industry and rail.\nName the principal risk created by energy intensity and worker safety.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "dravenlok",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.dravenlok.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.dravenlok.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 95,
+        "currencyCode": "DRV",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.dravenlok.livelihood.v1",
+      "templateKey": "contract.core.dravenlok.livelihood.v1",
+      "title": "Dravenlok Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Ironhold, accounting for energy intensity and worker safety",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to heavy industry and rail.\nName the principal risk created by energy intensity and worker safety.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "dravenlok",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.dravenlok.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.dravenlok.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 52,
+        "currencyCode": "DRV",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.dravenlok.market.v1",
+      "templateKey": "contract.core.dravenlok.market.v1",
+      "title": "Dravenlok Local Market Brief"
+    },
+    {
+      "category": "tutorial-arrival",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "establish verified digital identity while securing temporary physical housing",
+      "difficulty": "introductory",
+      "estimatedDurationMinutes": 20,
+      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "syndalis",
+        "recoveryCritical": true,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.arrival.syndalis.stabilization.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": null,
+        "sequence": 1,
+        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+      },
+      "rewardPayload": {
+        "amount": 120,
+        "currencyCode": "SYN",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.arrival.syndalis.stabilization.v1",
+      "templateKey": "contract.arrival.syndalis.stabilization.v1",
+      "title": "Blacklight Arrival Stabilization"
+    },
+    {
+      "category": "tutorial-livelihood",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "compare two verified income paths and select one that preserves the emergency buffer in Blacklight, accounting for identity integrity and infrastructure concentration",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to cybersecurity and digital finance.\nName the principal risk created by identity integrity and infrastructure concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "syndalis",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.syndalis.livelihood.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.arrival.syndalis.stabilization.v1",
+        "sequence": 2,
+        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+      },
+      "rewardPayload": {
+        "amount": 120,
+        "currencyCode": "SYN",
+        "rewardPolicySource": "one-week-basic-needs-offset",
+        "type": "currency"
+      },
+      "stableId": "contract.core.syndalis.livelihood.v1",
+      "templateKey": "contract.core.syndalis.livelihood.v1",
+      "title": "Syndalis Verified Livelihood Plan"
+    },
+    {
+      "category": "tutorial-market",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "explain one local industry opportunity and one downside risk using approved market information in Blacklight, accounting for identity integrity and infrastructure concentration",
+      "difficulty": "standard",
+      "estimatedDurationMinutes": 30,
+      "instructions": "Use verified information relevant to cybersecurity and digital finance.\nName the principal risk created by identity integrity and infrastructure concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "isActiveByDefault": false,
+      "metadata": {
+        "activationScope": "isolated-staging-only",
+        "country": "syndalis",
+        "recoveryCritical": false,
+        "seedPackId": "econovaria.beta-seed-pack.v1",
+        "seedStableId": "contract.core.syndalis.market.v1"
+      },
+      "requirementsPayload": {
+        "predecessorStableId": "contract.core.syndalis.livelihood.v1",
+        "sequence": 3,
+        "submissionRequirement": "a concise market brief with sources and a risk statement"
+      },
+      "rewardPayload": {
+        "amount": 66,
+        "currencyCode": "SYN",
+        "rewardPolicySource": "analysis-service-band",
+        "type": "currency"
+      },
+      "stableId": "contract.core.syndalis.market.v1",
+      "templateKey": "contract.core.syndalis.market.v1",
+      "title": "Syndalis Local Market Brief"
+    }
+  ],
+  "version": "1.0.0-beta"
+}

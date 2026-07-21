@@ -1,0 +1,262 @@
+{
+  "acceptedImplementationSourceSha": "a1c88c8451d6ff072b0643bdb029a78426b85988",
+  "activationApproval": {
+    "legacyConvenienceTemplateAtAcceptedHeadIsSufficient": false,
+    "requiredBindings": {
+      "allowActivation": true,
+      "approvedAt": "ISO-8601 timestamp not later than execution time",
+      "approvedBy": "non-empty named approver",
+      "authorizationId": "non-empty external approval identifier",
+      "environment": "staging",
+      "expiresAt": "ISO-8601 timestamp later than execution time and approvedAt",
+      "gameSessionId": "exact target game UUID",
+      "packId": "econovaria.beta-seed-pack.v1",
+      "packSha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8",
+      "productionAuthorized": false,
+      "projectRef": "exact isolated-staging project ref",
+      "sourceSha": "exact approved 40-character Git source SHA",
+      "version": "1.0.0-beta"
+    },
+    "sourceShaRule": "Before merge, authorization may bind only the controller-approved exact PR head. After merge, Chat 2 must bind the exact merged-main source SHA. A mismatched, missing, future-dated, or expired authorization fails closed."
+  },
+  "boundedRelease": {
+    "arrivalPackages": 10,
+    "calibrationPaths": 40,
+    "contractTemplates": 30,
+    "currencyPairChecks": 45,
+    "fullMarketUniverse3200Excluded": true,
+    "gameContracts": 30,
+    "gameMarketAssets": 240,
+    "locations": 50,
+    "marketTemplates": 240,
+    "routeCalibrations": 13,
+    "stableReleaseMembers": 590,
+    "storeItems": 50
+  },
+  "canonicalMigrations": [
+    "20260721093000_add_transactional_seed_content_release_v1",
+    "20260721094000_harden_transactional_seed_release_rollback_v1",
+    "20260721095000_accept_current_service_role_claims_for_seed_release_v1"
+  ],
+  "consumerRules": {
+    "copySeedCatalogFiles": false,
+    "failClosedWhenDefinitionMissingOrInactive": true,
+    "fullUniverseRequired": false,
+    "requireExactDigest": true,
+    "requireExactPackIdAndVersion": true,
+    "stableIdReimportCompatible": true,
+    "treatDeploymentAsActivation": false
+  },
+  "contentIdentifiers": {
+    "arrivalPackages": {
+      "identifiers": [
+        "arrival-package.northreach.frostgate-immigrant.v1",
+        "arrival-package.yrethia.sableport-immigrant.v1",
+        "arrival-package.thaloris.dusk-harbor-immigrant.v1",
+        "arrival-package.solvend.aurora-spire-immigrant.v1",
+        "arrival-package.eldoran.crescent-bay-immigrant.v1",
+        "arrival-package.valerion.glassfall-immigrant.v1",
+        "arrival-package.lumenor.starfall-immigrant.v1",
+        "arrival-package.xalvoria.emberhall-immigrant.v1",
+        "arrival-package.dravenlok.ironhold-immigrant.v1",
+        "arrival-package.syndalis.blacklight-immigrant.v1"
+      ],
+      "source": "docs/seed-content/players/arrival-packages-v1.json#/packages/*/id"
+    },
+    "calibrationPaths": {
+      "compositeIdentifier": "<countryId>:<scenarioId>",
+      "count": 40,
+      "countrySource": "#/contentIdentifiers/countries",
+      "scenarioIds": [
+        "baseline",
+        "currency-stress",
+        "route-disruption",
+        "war-and-recovery"
+      ],
+      "source": "docs/seed-content/executable/beta-pack-v1/calibration-scenarios-v1.json#/countrySimulations/*/scenarios/*/scenarioId"
+    },
+    "contractTemplates": {
+      "count": 30,
+      "runtimeNaturalKey": "templateKey",
+      "source": "docs/seed-content/executable/beta-pack-v1/tutorial-contract-chains-v1.json#/templates/*/templateKey",
+      "stableIdentifier": "stableId"
+    },
+    "countries": [
+      "northreach",
+      "yrethia",
+      "thaloris",
+      "solvend",
+      "eldoran",
+      "valerion",
+      "lumenor",
+      "xalvoria",
+      "dravenlok",
+      "syndalis"
+    ],
+    "gameAssets": {
+      "recordIdSeed": "econovaria-seed|game-stock-asset|<gameSessionId>|<marketTemplateStableId>",
+      "stableKeySource": "#/contentIdentifiers/marketTemplates"
+    },
+    "gameContracts": {
+      "recordIdSeed": "econovaria-seed|game-contract|<gameSessionId>|<lower(contractTemplateKey)>",
+      "stableKeySource": "#/contentIdentifiers/contractTemplates"
+    },
+    "locations": {
+      "count": 50,
+      "source": "docs/seed-content/executable/beta-pack-v1/location-registry-verified-v1.json#/locations/*/id"
+    },
+    "marketTemplates": {
+      "count": 240,
+      "recordIdSeed": "econovaria-seed|stock-template|<stableId>",
+      "runtimeNaturalKey": "ticker",
+      "source": "docs/seed-content/executable/beta-pack-v1/market-templates-v1.json#/templates/*/stableId"
+    },
+    "routes": {
+      "count": 13,
+      "identifiers": [
+        "route.meridian.northreach-solvend.v1",
+        "route.meridian.northreach-yrethia.v1",
+        "route.meridian.yrethia-thaloris.v1",
+        "route.meridian.yrethia-eldoran.v1",
+        "route.meridian.thaloris-eldoran.v1",
+        "route.meridian.solvend-eldoran.v1",
+        "route.meridian.eldoran-valerion.v1",
+        "route.meridian.valerion-lumenor.v1",
+        "route.meridian.lumenor-xalvoria.v1",
+        "route.meridian.xalvoria-dravenlok.v1",
+        "route.meridian.dravenlok-syndalis.v1",
+        "route.meridian.syndalis-lumenor.v1",
+        "route.meridian.xalvoria-syndalis.v1"
+      ],
+      "source": "docs/seed-content/executable/beta-pack-v1/calibration-scenarios-v1.json#/routes/routes/*/routeId"
+    },
+    "storeItems": {
+      "count": 50,
+      "recordIdSeed": "econovaria-seed|store-item|<gameSessionId>|<lower(itemKey)>",
+      "runtimeNaturalKey": "itemKey",
+      "source": "docs/seed-content/executable/beta-pack-v1/store-catalog-v1.json#/items/*/stableId"
+    }
+  },
+  "fileBindings": {
+    "arrivalCalibration": {
+      "path": "docs/seed-content/executable/beta-pack-v1/arrival-calibration-v1.json",
+      "sha256": "a5b4e7e93289d78bd6f354742303a19cb2e1ebd995074b523a67612b71a85164"
+    },
+    "calibrationScenarios": {
+      "path": "docs/seed-content/executable/beta-pack-v1/calibration-scenarios-v1.json",
+      "sha256": "72de5efbf5f9d873dcbf6d0a826abc042a315ae10f4e9a4cd9e7764ed58f4d8c"
+    },
+    "campaign": {
+      "path": "docs/seed-content/executable/beta-pack-v1/campaign-v1.json",
+      "sha256": "dd80a82c9c51155abb869bf2d21ae78b5a55ec191b005888e33f2d666ee4fa4c"
+    },
+    "locations": {
+      "path": "docs/seed-content/executable/beta-pack-v1/location-registry-verified-v1.json",
+      "sha256": "69b36df3adfaa658d844bfcfa940b05f52393217eaf473f5484f4f67bc3ace29"
+    },
+    "marketTemplates": {
+      "path": "docs/seed-content/executable/beta-pack-v1/market-templates-v1.json",
+      "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
+    },
+    "pack": {
+      "path": "docs/seed-content/executable/beta-pack-v1/pack-v1.json",
+      "sha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8"
+    },
+    "physicalEconomy": {
+      "path": "docs/seed-content/executable/beta-pack-v1/physical-economy-calibration-v1.json",
+      "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
+    },
+    "stableIdMap": {
+      "path": "docs/seed-content/executable/beta-pack-v1/stable-id-map-v1.json",
+      "sha256": "e2e3d4053e869f0836292ad59c673f0231b91459204d68f81854b7bd69e33419"
+    },
+    "storeCatalog": {
+      "path": "docs/seed-content/executable/beta-pack-v1/store-catalog-v1.json",
+      "sha256": "ebddac868be1b561665b72eb579eb97fe4f2356a4d8cb3ad09a078c8c74d52b7"
+    },
+    "tutorialContracts": {
+      "path": "docs/seed-content/executable/beta-pack-v1/tutorial-contract-chains-v1.json",
+      "sha256": "dcebe7d25fb62d96903d48c1f99399c010746d537028f4fc43f98784732f9043"
+    }
+  },
+  "lifecycleSemantics": {
+    "activation": {
+      "gameContracts": {
+        "status": "active",
+        "visibility": "public"
+      },
+      "gameMarketAssets": {
+        "isActive": true
+      },
+      "storeItems": {
+        "status": "active",
+        "visibility": "visible"
+      },
+      "templates": {
+        "isActive": true
+      }
+    },
+    "deactivation": {
+      "gameContracts": {
+        "status": "paused",
+        "visibility": "hidden"
+      },
+      "gameMarketAssets": {
+        "isActive": false
+      },
+      "storeItems": {
+        "status": "disabled",
+        "visibility": "hidden"
+      },
+      "templates": "inactive only when no other active release references the shared template"
+    },
+    "inactiveImport": {
+      "gameContracts": {
+        "status": "draft",
+        "visibility": "hidden"
+      },
+      "gameMarketAssets": {
+        "isActive": false
+      },
+      "storeItems": {
+        "status": "disabled",
+        "visibility": "hidden"
+      },
+      "templates": {
+        "isActive": false
+      }
+    },
+    "rollback": {
+      "auditMembershipRetained": true,
+      "playerOwnedHistoryPreserved": true,
+      "releaseOwnedRows": "deleted when safe; otherwise archived, hidden, or deactivated",
+      "releaseStatus": "rolled_back",
+      "stableReimport": "same game, pack, version, digest, and stable keys reproduce the same release and record IDs"
+    }
+  },
+  "memberObjectTypes": [
+    "stock_template",
+    "game_stock_asset",
+    "contract_template",
+    "game_contract",
+    "store_item"
+  ],
+  "packDigest": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "packVersion": "1.0.0-beta",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-seed-downstream-consumer-contract-v1",
+  "stagingMigrationHistory": {
+    "canonicalRepositoryVersions": [
+      "20260721093000",
+      "20260721094000",
+      "20260721095000"
+    ],
+    "precursorAlias": {
+      "name": "accept_current_service_role_claims_for_seed_release_v1",
+      "scope": "synthetic-staging-only-audited-history",
+      "version": "20260721015504"
+    },
+    "reconciliationRule": "Preserve all applied staging history. Do not copy, rename, delete, or conceal the precursor alias to manufacture version-set equality; Chat 1 and Chat 2 must record the explicit compatibility decision."
+  }
+}

@@ -1,0 +1,12 @@
+
+> econovaria@0.0.0 build:seed-beta-pack
+> node scripts/build-seed-beta-pack.mjs
+
+{
+  "result": "BUILT",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "version": "1.0.0-beta",
+  "outputRoot": "docs/seed-content/executable/beta-pack-v1",
+  "files": 11,
+  "packSha256": "d73fd6d0f3e97571196cda671418b95af0b564fadf1fcf9c6451c6cdcd674a17"
+}

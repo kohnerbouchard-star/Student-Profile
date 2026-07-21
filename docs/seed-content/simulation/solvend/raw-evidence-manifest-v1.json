@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "econovaria-simulation-raw-evidence-v1",
+  "simulationId": "solvend-market-simulation-v1",
+  "generatedAt": "2026-07-19",
+  "activationAuthorized": false,
+  "retentionStatus": "summary-only-model-no-raw-output",
+  "repositoryPolicy": "This simulation produces a deterministic summary directly and has no separate raw-output files.",
+  "files": []
+}

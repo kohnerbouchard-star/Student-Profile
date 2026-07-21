@@ -1,0 +1,673 @@
+{
+  "activationAuthorized": false,
+  "artworkEvidence": {
+    "coordinateSpace": {
+      "height": 941,
+      "width": 1672
+    },
+    "geometryPath": "player-terminal/src/data/map-regions.js",
+    "geometrySha256": "2eb1cf20e7d960aa668fcd68d53b97a6ca95bfda2c35b45d11f9e5329a0aa6a7",
+    "imagePath": "player-terminal/assets/images/econovaria-world-map.png",
+    "imageSha256": "c394d988cec1da8b8215e286d894b0276d3a46ecf06d2342d2299acc57ed107a"
+  },
+  "countryPolygonCount": 10,
+  "locations": [
+    {
+      "category": "capital-port",
+      "country": "northreach",
+      "id": "location.northreach.frostgate.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 412,
+        "y": 196
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Frostgate",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "mineral-region",
+      "country": "northreach",
+      "id": "location.northreach.boreal-basin.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 507,
+        "y": 143
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Boreal Basin",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "energy-region",
+      "country": "northreach",
+      "id": "location.northreach.whiteglass-fields.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 468,
+        "y": 313
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Whiteglass Fields",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "logistics-junction",
+      "country": "northreach",
+      "id": "location.northreach.aurora-rail-junction.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 539,
+        "y": 247
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Aurora Rail Junction",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "strategic-chokepoint",
+      "country": "northreach",
+      "id": "location.northreach.kestrel-watch.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 423,
+        "y": 280
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Kestrel Watch",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-port",
+      "country": "yrethia",
+      "id": "location.yrethia.sableport.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 340,
+        "y": 374
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Sableport",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "container-district",
+      "country": "yrethia",
+      "id": "location.yrethia.blue-crane-district.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 378,
+        "y": 457
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Blue Crane District",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "financial-district",
+      "country": "yrethia",
+      "id": "location.yrethia.ledger-quarter.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 502,
+        "y": 401
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Mariner's Ledger Quarter",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "industrial-port",
+      "country": "yrethia",
+      "id": "location.yrethia.tidewall-shipyards.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 277,
+        "y": 410
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Tidewall Shipyards",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "customs-zone",
+      "country": "yrethia",
+      "id": "location.yrethia.eastgate-customs-zone.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 437,
+        "y": 464
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Eastgate Customs Zone",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-port",
+      "country": "thaloris",
+      "id": "location.thaloris.dusk-harbor.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 348,
+        "y": 640
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Dusk Harbor",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "special-trade-zone",
+      "country": "thaloris",
+      "id": "location.thaloris.bonded-quarter.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 417,
+        "y": 738
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Bonded Quarter",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "repair-district",
+      "country": "thaloris",
+      "id": "location.thaloris.ember-yard.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 187,
+        "y": 589
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Ember Yard",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "secondary-port",
+      "country": "thaloris",
+      "id": "location.thaloris.saltwind-freeport.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 410,
+        "y": 575
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Saltwind Freeport",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "industrial-coast",
+      "country": "thaloris",
+      "id": "location.thaloris.breakwater-salvage-coast.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 424,
+        "y": 725
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Breakwater Salvage Coast",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-research-city",
+      "country": "solvend",
+      "id": "location.solvend.aurora-spire.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 830,
+        "y": 235
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Aurora Spire",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "research-hub",
+      "country": "solvend",
+      "id": "location.solvend.helix-campus.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 898,
+        "y": 302
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Helix Research Campus",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "aerospace-site",
+      "country": "solvend",
+      "id": "location.solvend.skybridge-range.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 893,
+        "y": 218
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Skybridge Aerospace Range",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "technology-cluster",
+      "country": "solvend",
+      "id": "location.solvend.lattice-valley.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 801,
+        "y": 307
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Lattice Valley",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "manufacturing-zone",
+      "country": "solvend",
+      "id": "location.solvend.meridian-precision-works.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 796,
+        "y": 297
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Meridian Precision Works",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-market-hub",
+      "country": "eldoran",
+      "id": "location.eldoran.crescent-bay.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 850,
+        "y": 390
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Crescent Bay",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "agricultural-region",
+      "country": "eldoran",
+      "id": "location.eldoran.greenbelt-plain.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 828,
+        "y": 371
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Greenbelt Grain Plain",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "logistics-junction",
+      "country": "eldoran",
+      "id": "location.eldoran.central-freight-junction.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 918,
+        "y": 386
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Central Freight Junction",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "wholesale-district",
+      "country": "eldoran",
+      "id": "location.eldoran.rivergate-market.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 929,
+        "y": 415
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Rivergate Wholesale Market",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "food-security-site",
+      "country": "eldoran",
+      "id": "location.eldoran.sunfield-reserve.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 855,
+        "y": 418
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Sunfield Reserve",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-services-center",
+      "country": "valerion",
+      "id": "location.valerion.glassfall.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 870,
+        "y": 572
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Glassfall",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "hydroelectric-site",
+      "country": "valerion",
+      "id": "location.valerion.silver-cascade-complex.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 768,
+        "y": 571
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Silver Cascade Complex",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "water-security-region",
+      "country": "valerion",
+      "id": "location.valerion.clearwater-basin.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 898,
+        "y": 621
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Clearwater Basin",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "financial-district",
+      "country": "valerion",
+      "id": "location.valerion.verdant-finance-district.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 838,
+        "y": 659
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Verdant Finance District",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "tourism-maritime-zone",
+      "country": "valerion",
+      "id": "location.valerion.azure-coast.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 803,
+        "y": 628
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Azure Coast",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-civic-center",
+      "country": "lumenor",
+      "id": "location.lumenor.starfall.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 846,
+        "y": 762
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Starfall",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "diplomatic-district",
+      "country": "lumenor",
+      "id": "location.lumenor.meridian-forum-district.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 782,
+        "y": 752
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Meridian Forum District",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "institutional-district",
+      "country": "lumenor",
+      "id": "location.lumenor.civic-archive-quarter.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 937,
+        "y": 702
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Civic Archive Quarter",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "research-cultural-site",
+      "country": "lumenor",
+      "id": "location.lumenor.observatory-hill.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 850,
+        "y": 778
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Observatory Hill",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "education-district",
+      "country": "lumenor",
+      "id": "location.lumenor.concord-university-belt.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 680,
+        "y": 752
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Concord University Belt",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-finance-center",
+      "country": "xalvoria",
+      "id": "location.xalvoria.emberhall.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1277,
+        "y": 192
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Emberhall",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "financial-district",
+      "country": "xalvoria",
+      "id": "location.xalvoria.sovereign-finance-district.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1498,
+        "y": 195
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Sovereign Finance District",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "infrastructure-project",
+      "country": "xalvoria",
+      "id": "location.xalvoria.highpass-tunnel-works.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1054,
+        "y": 239
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Highpass Tunnel Works",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "luxury-manufacturing-district",
+      "country": "xalvoria",
+      "id": "location.xalvoria.gilded-forge-quarter.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1243,
+        "y": 145
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Gilded Forge Quarter",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "energy-region",
+      "country": "xalvoria",
+      "id": "location.xalvoria.ashen-ridge-energy-fields.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1322,
+        "y": 117
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Ashen Ridge Energy Fields",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-industrial-center",
+      "country": "dravenlok",
+      "id": "location.dravenlok.ironhold.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1382,
+        "y": 386
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Ironhold",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "heavy-industrial-zone",
+      "country": "dravenlok",
+      "id": "location.dravenlok.redline-steel-belt.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1446,
+        "y": 309
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Redline Steel Belt",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "transport-manufacturing-zone",
+      "country": "dravenlok",
+      "id": "location.dravenlok.eastern-rail-works.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1392,
+        "y": 322
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Eastern Rail Works",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "manufacturing-basin",
+      "country": "dravenlok",
+      "id": "location.dravenlok.foundry-basin.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1414,
+        "y": 366
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Foundry Basin",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "export-terminal",
+      "country": "dravenlok",
+      "id": "location.dravenlok.blackstone-industrial-port.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1361,
+        "y": 453
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Blackstone Industrial Port",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "capital-digital-finance-center",
+      "country": "syndalis",
+      "id": "location.syndalis.blacklight.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1282,
+        "y": 607
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Blacklight",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "cybersecurity-cluster",
+      "country": "syndalis",
+      "id": "location.syndalis.cipher-district.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1303,
+        "y": 593
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Cipher District",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "undersea-data-site",
+      "country": "syndalis",
+      "id": "location.syndalis.deepwave-cable-landing.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1350,
+        "y": 689
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Deepwave Cable Landing",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "data-center-zone",
+      "country": "syndalis",
+      "id": "location.syndalis.nightglass-data-campus.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1454,
+        "y": 565
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Nightglass Data Campus",
+      "runtimeSupport": "bounded-pack-reference"
+    },
+    {
+      "category": "strategic-digital-site",
+      "country": "syndalis",
+      "id": "location.syndalis.meridian-security-center.v1",
+      "mapPoint": {
+        "coordinateSpace": "1672x941",
+        "x": 1139,
+        "y": 545
+      },
+      "mapVerificationStatus": "verified-against-player-artwork-and-polygons",
+      "name": "Meridian Security Operations Center",
+      "runtimeSupport": "bounded-pack-reference"
+    }
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "recordCount": 50,
+  "schemaVersion": "econovaria-beta-location-registry-verified-v1",
+  "status": "approved-for-isolated-staging",
+  "verifiedPointCount": 50,
+  "version": "1.0.0-beta"
+}

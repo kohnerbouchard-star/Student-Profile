@@ -1,0 +1,15 @@
+{
+  "allowActivation": false,
+  "approvedAt": "replace-with-ISO-8601-time",
+  "approvedBy": "replace-with-named-approver",
+  "authorizationId": "replace-with-external-approval-id",
+  "environment": "staging",
+  "expiresAt": "replace-with-ISO-8601-time",
+  "note": "Copy outside the repository, set allowActivation true only after named approval, and never target production.",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "packSha256": "replace-with-integrity-manifest-packSha256",
+  "productionAuthorized": false,
+  "projectRef": "replace-with-isolated-staging-project-ref",
+  "schemaVersion": "econovaria-beta-seed-activation-authorization-v1",
+  "version": "1.0.0-beta"
+}
