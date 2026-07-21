@@ -1,0 +1,76 @@
+name: Progression Runtime
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/progression-runtime-v1.yml"
+      - "backend/src/domains/progression/**"
+      - "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts"
+      - "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql"
+      - "admin/progression-review-*"
+      - "admin/index.html"
+      - "player-terminal/src/api/**"
+      - "player-terminal/src/pages/progression-page.js"
+      - "player-terminal/src/data/empty-read-models.js"
+      - "scripts/admin-progression-contract.mjs"
+      - "scripts/progression-balance-simulation.mjs"
+      - "backend/package.json"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install repository dependencies
+        run: npm ci
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Validate migration catalog
+        run: npm run audit:migrations
+      - name: Run deterministic Progression simulations
+        run: npm run test:progression-simulation
+      - name: Validate Player and Admin browser contracts
+        run: npm run test:admin-progression
+      - name: Run Progression backend contracts
+        working-directory: backend
+        run: npm run test:player-progression
+      - name: Run Player capability contracts
+        working-directory: backend
+        run: npm run test:player-capabilities
+      - name: Run Player security contracts
+        working-directory: backend
+        run: npm run test:player-security
+      - name: Typecheck all backend surfaces
+        working-directory: backend
+        run: npm run typecheck:all
+      - name: Run backend smoke
+        working-directory: backend
+        run: npm run test:smoke
+      - name: Scan repository for committed credentials
+        run: npm run security:secrets
