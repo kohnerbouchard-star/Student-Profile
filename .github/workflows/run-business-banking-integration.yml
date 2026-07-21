@@ -19,7 +19,7 @@ jobs:
         with:
           ref: agent/business-banking-credit-v1
           fetch-depth: 0
-      - name: Extract and run reviewed applicator
+      - name: Extract reviewed applicator
         shell: bash
         run: |
           python3 <<'PY'
@@ -39,24 +39,60 @@ jobs:
               raise SystemExit('reviewed integration script was not found')
           Path('/tmp/apply-business-banking.py').write_text('\n'.join(output) + '\n')
           PY
-          python3 /tmp/apply-business-banking.py
+      - name: Run reviewed applicator
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 /tmp/apply-business-banking.py 2>&1 | tee /tmp/business-banking-applicator.log
+      - name: Upload applicator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-banking-applicator-diagnostics
+          path: /tmp/business-banking-applicator.log
+          if-no-files-found: error
+      - name: Apply focused correctness fixes
+        shell: bash
+        run: |
           python3 <<'PY'
           from pathlib import Path
-          path = Path('backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts')
-          text = path.read_text()
+
+          handler = Path('backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts')
+          text = handler.read_text()
           old = '''    case "playerTransfer":
                 return repository.execute("execute_player_transfer_v1", {
                   ...base,
                   p_sender_player_id: scope.playerId,
           '''
-          new = '''    case "playerTransfer":
-                return repository.execute("execute_player_transfer_v1", {
-                  p_game_session_id: scope.gameSessionId,
-                  p_sender_player_id: scope.playerId,
+          if old not in text:
+              old = '''    case "playerTransfer":
+              return repository.execute("execute_player_transfer_v1", {
+                ...base,
+                p_sender_player_id: scope.playerId,
           '''
+          if old not in text:
+              old = '''    case "playerTransfer":
+              return repository.execute("execute_player_transfer_v1", {
+                ...base,
+                p_sender_player_id: scope.playerId,
+          '''
+          replacement = old.replace('                ...base,\n', '                p_game_session_id: scope.gameSessionId,\n').replace('                  ...base,\n', '                  p_game_session_id: scope.gameSessionId,\n')
           if text.count(old) != 1:
               raise SystemExit('player transfer RPC argument block was not found exactly once')
-          path.write_text(text.replace(old, new, 1))
+          handler.write_text(text.replace(old, replacement, 1))
+
+          migration = Path('backend/supabase/migrations/20260721122000_harden_business_banking_invariants_v1.sql')
+          sql = migration.read_text()
+          invalid = '''      defaulted_at = null,
+      version = version
+  where id = v_loan.id
+          '''
+          corrected = '''      defaulted_at = null
+  where id = v_loan.id
+          '''
+          if sql.count(invalid) != 1:
+              raise SystemExit('loan restructure invalid version assignment was not found exactly once')
+          migration.write_text(sql.replace(invalid, corrected, 1))
           PY
           rm -f .github/workflows/run-business-banking-integration.yml
           git diff --check
