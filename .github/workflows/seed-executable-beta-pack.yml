@@ -90,6 +90,9 @@ jobs:
       - name: Run importer and release lifecycle unit tests
         run: npm run test:seed-beta-pack
 
+      - name: Lock release-scoped rollback semantics
+        run: node --test scripts/seed-beta-rollback-migration.test.mjs
+
       - name: Validate environment-restricted importer
         run: npm run seed:beta:validate
 
