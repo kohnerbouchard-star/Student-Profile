@@ -235,8 +235,10 @@ Deno.serve(async (request: Request) => {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
     }
 
+    // Cast through never to prevent Deno from recursively expanding the full
+    // generated Supabase client type at this bounded marketplace adapter.
     const marketplaceOperation = await handleMarketplaceAdminOperation(
-      context.service,
+      context.service as never,
       {
         request,
         gameId,
