@@ -19,10 +19,28 @@ import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/player
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
+import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
+
+const BUSINESS_BANKING_ENDPOINTS = new Set([
+  "business",
+  "businessCreate",
+  "businessProductCreate",
+  "businessInputPurchase",
+  "businessProduction",
+  "businessPrice",
+  "businessHire",
+  "businessTerminate",
+  "businessStatus",
+  "bankTransfer",
+  "savingsTransfer",
+  "loans",
+  "loanApply",
+  "loanRepay",
+]);
 
 Deno.test("player capability manifest is generated from the reviewed endpoint allowlist", () => {
   const manifest = buildPlayerCapabilityManifest();
@@ -37,43 +55,70 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     ...PLAYER_ACTION_CAPABILITY_KEYS,
   ]);
 
-  assertEquals(manifest.capabilities.routes.dashboard, true);
-  assertEquals(manifest.capabilities.routes.profile, true);
-  assertEquals(manifest.capabilities.routes.news, true);
-  assertEquals(manifest.capabilities.routes.market, true);
-  assertEquals(manifest.capabilities.routes.portfolio, true);
-  assertEquals(manifest.capabilities.routes.contracts, true);
-  assertEquals(manifest.capabilities.routes.inventory, true);
-  assertEquals(manifest.capabilities.routes.store, true);
-  assertEquals(manifest.capabilities.routes.banking, true);
+  for (const route of [
+    "dashboard",
+    "profile",
+    "news",
+    "market",
+    "portfolio",
+    "contracts",
+    "inventory",
+    "store",
+    "banking",
+    "business",
+    "loans",
+  ] as const) {
+    assertEquals(manifest.capabilities.routes[route], true);
+  }
 
-  assertEquals(manifest.capabilities.actions.marketWatchlist, true);
-  assertEquals(manifest.capabilities.actions.notificationsRead, true);
-  assertEquals(manifest.capabilities.actions.logout, true);
-  assertEquals(manifest.capabilities.actions.contractAccept, true);
-  assertEquals(manifest.capabilities.actions.contractSubmit, true);
-  assertEquals(manifest.capabilities.actions.inventoryUse, true);
-  assertEquals(manifest.capabilities.actions.marketOrder, true);
-  assertEquals(manifest.capabilities.actions.storePurchase, true);
-  assertEquals(manifest.capabilities.actions.storyDeliveryState, true);
+  for (const action of [
+    "marketWatchlist",
+    "notificationsRead",
+    "logout",
+    "contractAccept",
+    "contractSubmit",
+    "inventoryUse",
+    "marketOrder",
+    "storePurchase",
+    "storyDeliveryState",
+    "bankTransfer",
+    "savingsTransfer",
+    "businessCreate",
+    "businessProductCreate",
+    "businessInputPurchase",
+    "businessProduction",
+    "businessPrice",
+    "businessHire",
+    "businessTerminate",
+    "businessStatus",
+    "loanApply",
+    "loanRepay",
+  ] as const) {
+    assertEquals(manifest.capabilities.actions[action], true);
+  }
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
-  assertEquals(endpointKeys.includes("bootstrap"), true);
-  assertEquals(endpointKeys.includes("capabilities"), true);
-  assertEquals(endpointKeys.includes("banking"), true);
-  assertEquals(endpointKeys.includes("contractAccept"), true);
-  assertEquals(endpointKeys.includes("contractSubmit"), true);
-  assertEquals(endpointKeys.includes("contracts"), true);
-  assertEquals(endpointKeys.includes("dashboard"), true);
-  assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
-  assertEquals(endpointKeys.includes("marketOrder"), true);
-  assertEquals(endpointKeys.includes("portfolio"), true);
-  assertEquals(endpointKeys.includes("store"), true);
-  assertEquals(endpointKeys.includes("storeQuote"), true);
-  assertEquals(endpointKeys.includes("storePurchase"), true);
-  assertEquals(endpointKeys.includes("storyDeliveries"), true);
-  assertEquals(endpointKeys.includes("storyDeliveryState"), true);
+  for (const endpoint of [
+    "bootstrap",
+    "capabilities",
+    "banking",
+    "contractAccept",
+    "contractSubmit",
+    "contracts",
+    "dashboard",
+    "inventoryRedemptions",
+    "marketOrder",
+    "portfolio",
+    "store",
+    "storeQuote",
+    "storePurchase",
+    "storyDeliveries",
+    "storyDeliveryState",
+    ...BUSINESS_BANKING_ENDPOINTS,
+  ]) {
+    assertEquals(endpointKeys.includes(endpoint), true);
+  }
 });
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
@@ -98,7 +143,11 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":ticker", "AURA")
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
-        .replace(":deliveryId", `ndl_${"a".repeat(32)}`),
+        .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
+        .replace(":productId", `bpr_${"a".repeat(32)}`)
+        .replace(":employeeId", `emp_${"a".repeat(32)}`)
+        .replace(":offerId", `lop_${"a".repeat(32)}`)
+        .replace(":loanId", `lon_${"a".repeat(32)}`),
     }))
   );
 
@@ -111,6 +160,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         : null
       : operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
+      : BUSINESS_BANKING_ENDPOINTS.has(operation.key)
+      ? readPlayerBusinessBankingRoutePath(operation.path)
       : operation.key === "banking"
       ? readPlayerBankingPublicRoutePath(operation.path)
       : operation.key === "contractAccept"
