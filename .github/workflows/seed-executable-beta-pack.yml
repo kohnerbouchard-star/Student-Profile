@@ -40,6 +40,12 @@ on:
       - "player-terminal/src/data/map-regions.js"
       - "player-terminal/assets/images/econovaria-world-map.png"
   workflow_dispatch:
+    inputs:
+      run_connected_staging:
+        description: Run the protected connected staging lifecycle from the exact merged main commit
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -219,6 +225,7 @@ jobs:
 
   connected-isolated-staging:
     name: Execute connected isolated-staging release and rollback
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.run_connected_staging == true
     needs:
       - verify-bounded-pack
       - verify-transactional-release
