@@ -58,6 +58,7 @@ jobs:
               $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
               $0 == "admin/index.html" { next }
               $0 == "admin/world-runtime-console.js" { next }
+              $0 == "admin/world-runtime-console-loader.js" { next }
               $0 == "admin/css/world-runtime-console.css" { next }
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
               $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
