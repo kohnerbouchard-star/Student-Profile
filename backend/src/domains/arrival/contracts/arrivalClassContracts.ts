@@ -60,6 +60,7 @@ export interface ArrivalClassAssignment {
   readonly gameId: string;
   readonly gameSessionId: string;
   readonly playerUuid: string;
+  readonly countryId: string;
   readonly classId: ArrivalClassId;
   readonly source: "questionnaire" | "admin_override";
   readonly questionnaireId: string;
@@ -78,6 +79,7 @@ export interface ArrivalGrantCommand {
   readonly gameId: string;
   readonly gameSessionId: string;
   readonly playerUuid: string;
+  readonly countryId: string;
   readonly classId: ArrivalClassId;
   readonly arrivalPackageDefinitionId: string;
   readonly grantDefinitionId: string;
