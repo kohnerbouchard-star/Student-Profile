@@ -4,7 +4,7 @@ declare const Deno: {
 };
 
 const MIGRATION = new URL(
-  "../../supabase/migrations/20260721120000_harden_request_rate_limit_operations_v3.sql",
+  "../../supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql",
   import.meta.url,
 );
 
