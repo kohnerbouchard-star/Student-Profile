@@ -40,6 +40,24 @@ jobs:
           Path('/tmp/apply-business-banking.py').write_text('\n'.join(output) + '\n')
           PY
           python3 /tmp/apply-business-banking.py
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts')
+          text = path.read_text()
+          old = '''    case "playerTransfer":
+                return repository.execute("execute_player_transfer_v1", {
+                  ...base,
+                  p_sender_player_id: scope.playerId,
+          '''
+          new = '''    case "playerTransfer":
+                return repository.execute("execute_player_transfer_v1", {
+                  p_game_session_id: scope.gameSessionId,
+                  p_sender_player_id: scope.playerId,
+          '''
+          if text.count(old) != 1:
+              raise SystemExit('player transfer RPC argument block was not found exactly once')
+          path.write_text(text.replace(old, new, 1))
+          PY
           rm -f .github/workflows/run-business-banking-integration.yml
           git diff --check
       - name: Commit integration
