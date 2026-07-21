@@ -1,4 +1,4 @@
-name: Business Main Tree Capture
+name: Business Main Merge Diagnostic
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  capture:
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -19,18 +19,23 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Publish merged main tree identity to branch
+      - name: Publish exact merge conflict paths
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          git config user.name "econovaria-controller"
+          git config user.email "controller@users.noreply.github.com"
           git fetch --no-tags origin main
+          set +e
+          git merge --no-commit --no-ff origin/main >/tmp/business-merge-output.txt 2>&1
+          merge_status=$?
+          set -e
+          conflicts="$(git diff --name-only --diff-filter=U | sort)"
           main_commit="$(git rev-parse origin/main)"
-          main_tree="$(git rev-parse 'origin/main^{tree}')"
-          content="$(printf 'main_commit=%s\nmain_tree=%s\ncapture_head=%s\n' "$main_commit" "$main_tree" "$GITHUB_SHA" | base64 -w0)"
-          gh api "repos/${GITHUB_REPOSITORY}/contents/.business-main-tree-identity" \
-            --method PUT \
-            --field message="ci(business): record exact merged main tree identity" \
-            --field branch="agent/business-banking-credit-v1" \
-            --field content="$content"
+          content="$(printf 'main_commit=%s\ncapture_head=%s\nmerge_status=%s\nconflicts_begin\n%s\nconflicts_end\n' "$main_commit" "$GITHUB_SHA" "$merge_status" "$conflicts" | base64 -w0)"
+          existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-conflicts?ref=agent/business-banking-credit-v1" --jq .sha 2>/dev/null || true)"
+          args=(--method PUT --field message="ci(business): record exact World merge conflicts" --field branch="agent/business-banking-credit-v1" --field content="$content")
+          if [ -n "$existing_sha" ]; then args+=(--field sha="$existing_sha"); fi
+          gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-conflicts" "${args[@]}"
