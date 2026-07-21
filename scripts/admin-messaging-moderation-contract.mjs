@@ -10,7 +10,6 @@ const paths = [
   "admin/messaging-policy-surface.js",
   "player-terminal/src/pages/messages-page.js",
   "player-terminal/src/api/backend-routes.js",
-  "player-terminal/src/api/backend-routes-core.js",
   "player-terminal/src/api/messaging-backend-routes.js",
   "player-terminal/src/api/payload-normalizer.js",
   "player-terminal/src/integrations/student-profile-capability-manifest.js",
@@ -69,7 +68,8 @@ assert.match(messagesPage, /Attachments are disabled/);
 assert.match(messagesPage, /escapeHtml\(message\.body\)/);
 
 assert.match(backendRoutes, /resolveMessagingBackendRequest/);
-assert.match(backendRoutes, /resolveCoreBackendRequest/);
+assert.match(backendRoutes, /hasMessagingBackendRoute/);
+assert.doesNotMatch(backendRoutes, /backend-routes-core/);
 assert.match(messagingRoutes, /\/players\/me\/messages\/threads/);
 assert.match(messagingRoutes, /recipientPlayerId/);
 assert.match(messagingRoutes, /UUID\.test/);
