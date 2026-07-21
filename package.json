@@ -68,9 +68,10 @@
     "preflight:seed-content": "node scripts/seed-content-preflight.mjs --environment test --mode design",
     "preflight:seed-content:staging": "node scripts/seed-beta-staging-preflight.mjs",
     "test:seed-content-preflight": "node --test scripts/seed-content-preflight.test.mjs",
-    "build:seed-beta-pack": "node scripts/build-seed-beta-pack.mjs",
+    "build:seed-beta-pack": "node scripts/build-seed-beta-pack.mjs && node scripts/build-seed-beta-calibration.mjs",
     "validate:seed-beta-pack": "node scripts/seed-beta-pack-validator.mjs",
     "test:seed-beta-pack": "node --test scripts/seed-beta-pack.test.mjs",
+    "test:seed-beta-release-db": "node scripts/seed-beta-transactional-release-probe.mjs",
     "seed:beta:validate": "node scripts/seed-beta-importer.mjs --mode validate --environment test",
     "seed:beta:dry-run": "node scripts/seed-beta-importer.mjs --mode dry-run --environment staging"
   },
