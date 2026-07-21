@@ -8,6 +8,7 @@ import {
   applyCampaignControl,
   buildPlayerCampaignContext,
   type CampaignAuditEntry,
+  type CampaignGameLifecycleState,
   type CampaignRepository,
   type CampaignTransaction,
   dispatchCampaignCommand,
@@ -96,6 +97,25 @@ Deno.test("cross-domain enqueue failure leaves campaign, commands, and audit unc
   assertEquals(repository.state.instance.revision, 0);
   assertEquals(repository.state.commands.length, 0);
   assertEquals(repository.state.audit.length, 0);
+});
+
+Deno.test("draft, paused, ended, and archived games reject campaign mutation", async () => {
+  for (const lifecycle of ["draft", "paused", "ended", "archived"] as const) {
+    const repository = memoryRepository(instance(`campaign-${lifecycle}`, NOW), false, lifecycle);
+    await assertRejectsCode(async () => {
+      await executeScheduledCampaignEvent({
+        repository,
+        campaignInstanceId: `campaign-${lifecycle}`,
+        gameId: "game-1",
+        event: EVENT,
+        scheduledFor: NOW,
+        occurredAt: "2026-07-21T00:00:01.000Z",
+      });
+    }, "campaign_game_not_active");
+    assertEquals(repository.state.instance.revision, 0);
+    assertEquals(repository.state.commands.length, 0);
+    assertEquals(repository.state.audit.length, 0);
+  }
 });
 
 Deno.test("manual trigger requires server-resolved game permission and reviewable reason", async () => {
@@ -230,7 +250,11 @@ function instance(id: string, scheduledAt: string | null): CampaignInstance {
   });
 }
 
-function memoryRepository(initial: CampaignInstance, failEnqueue = false): CampaignRepository & {
+function memoryRepository(
+  initial: CampaignInstance,
+  failEnqueue = false,
+  lifecycle: CampaignGameLifecycleState = "active",
+): CampaignRepository & {
   readonly state: { instance: CampaignInstance; commands: CampaignExecutionCommand[]; audit: CampaignAuditEntry[] };
 } {
   const state = { instance: initial, commands: [] as CampaignExecutionCommand[], audit: [] as CampaignAuditEntry[] };
@@ -239,6 +263,12 @@ function memoryRepository(initial: CampaignInstance, failEnqueue = false): Campa
     withTransaction: async <T>(work: (transaction: CampaignTransaction) => Promise<T>) => {
       const staged = { instance: state.instance, commands: [...state.commands], audit: [...state.audit] };
       const transaction: CampaignTransaction = {
+        loadGameLifecycleForUpdate: async ({ gameId }) => {
+          if (gameId !== staged.instance.gameId) {
+            throw Object.assign(new Error("scope"), { code: "campaign_game_scope_mismatch" });
+          }
+          return lifecycle;
+        },
         loadCampaignForUpdate: async ({ gameId, campaignInstanceId }) => {
           if (gameId !== staged.instance.gameId || campaignInstanceId !== staged.instance.campaignInstanceId) {
             throw Object.assign(new Error("scope"), { code: "campaign_game_scope_mismatch" });
