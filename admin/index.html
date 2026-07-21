@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="./css/loading-scope-overrides.css" />
   <link rel="stylesheet" href="./css/data-state-contracts.css" />
   <link rel="stylesheet" href="./css/keyboard-navigation.css" />
+  <link rel="stylesheet" href="./css/marketplace-lifecycle.css" />
   <link rel="preload" as="style" href="./css/game-lifecycle-controls.css" onload="this.onload=null;this.rel='stylesheet'" />
   <script src="../runtime-config.env.js"></script>
   <script src="../frontend/src/core/runtime-config.js"></script>
@@ -46,7 +47,7 @@
   <script defer src="./data-state-contracts.js"></script>
   <script defer src="./interaction-quality-control-reset.js" onload="void import('./scanner-auto-refresh.js').then(() =&gt; import('./scanner-lifecycle-settle.js')).then(() =&gt; import('./scanner-reward-localization.js')).then(() =&gt; import('./attendance-reward-settings-route-bridge-v2.js')).then(() =&gt; import('./attendance-reward-save-controller-v3.js')).then(() =&gt; import('./attendance-reward-settings-v4.js')).then(() =&gt; import('./settings-simplified.js')).then(() =&gt; import('./settings-lifecycle-bridge.js')).then(() =&gt; import('./settings-save-error-bridge.js'))"></script>
   <script defer src="./dist/admin-overview-boot.js"></script>
-  <script defer src="./shape-accurate-skeletons.js" onload="void import('./shape-accurate-skeleton-lifecycle.js').then(() =&gt; import('./inventory-redemption-queue-loader.js')).then(() =&gt; import('./game-lifecycle-controls.js'))"></script>
+  <script defer src="./shape-accurate-skeletons.js" onload="void import('./shape-accurate-skeleton-lifecycle.js').then(() =&gt; import('./inventory-redemption-queue-loader.js')).then(() =&gt; import('./marketplace-lifecycle-loader.js')).then(() =&gt; import('./game-lifecycle-controls.js'))"></script>
 </head>
 <body>
   <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite" aria-label="Verifying administrator access">
