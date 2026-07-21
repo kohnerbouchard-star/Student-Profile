@@ -16,6 +16,15 @@ on:
       - "backend/supabase/functions/admin-api/worldRuntimeOperations*"
       - "backend/supabase/functions/admin-api/campaign*Runtime.test.ts"
       - "backend/supabase/migrations/2026072110*.sql"
+      - "player-terminal/src/**"
+      - "player-terminal/css/player-world-runtime.css"
+      - "player-terminal/index.html"
+      - "player-terminal/tests/world-runtime-flow.mjs"
+      - "player-terminal/package.json"
+      - "admin/world-runtime-console.js"
+      - "admin/css/world-runtime-console.css"
+      - "admin/index.html"
+      - "scripts/admin-world-runtime-console-contract.mjs"
   push:
     branches:
       - agent/story-arrival-world-runtime-v1
@@ -33,6 +42,15 @@ on:
       - "backend/supabase/functions/admin-api/worldRuntimeOperations*"
       - "backend/supabase/functions/admin-api/campaign*Runtime.test.ts"
       - "backend/supabase/migrations/2026072110*.sql"
+      - "player-terminal/src/**"
+      - "player-terminal/css/player-world-runtime.css"
+      - "player-terminal/index.html"
+      - "player-terminal/tests/world-runtime-flow.mjs"
+      - "player-terminal/package.json"
+      - "admin/world-runtime-console.js"
+      - "admin/css/world-runtime-console.css"
+      - "admin/index.html"
+      - "scripts/admin-world-runtime-console-contract.mjs"
   workflow_dispatch:
 
 permissions:
@@ -78,6 +96,14 @@ jobs:
       - name: Run focused World runtime tests
         working-directory: backend
         run: npm run test:world-runtime
+
+      - name: Verify Player World publication
+        run: node player-terminal/tests/world-runtime-flow.mjs
+
+      - name: Verify Admin World publication
+        run: |
+          node --check admin/world-runtime-console.js
+          node scripts/admin-world-runtime-console-contract.mjs
 
       - name: Typecheck all backend surfaces
         working-directory: backend
