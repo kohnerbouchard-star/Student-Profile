@@ -47,11 +47,18 @@ export interface CampaignInstance {
   readonly updatedAt: string;
 }
 
+export type CampaignEffectAudience = "all_players" | "affected_locations";
+
 export type CampaignEffectDefinition =
   | {
       readonly kind: "publish_news";
       readonly newsDefinitionId: string;
-      readonly audience: "all_players" | "affected_locations";
+      readonly audience: CampaignEffectAudience;
+    }
+  | {
+      readonly kind: "publish_cutscene";
+      readonly cutsceneDefinitionId: string;
+      readonly audience: CampaignEffectAudience;
     }
   | {
       readonly kind: "create_contract";
@@ -61,7 +68,7 @@ export type CampaignEffectDefinition =
   | {
       readonly kind: "notify_players";
       readonly notificationDefinitionId: string;
-      readonly audience: "all_players" | "affected_locations";
+      readonly audience: CampaignEffectAudience;
     }
   | {
       readonly kind: "apply_market_shock";
@@ -78,6 +85,12 @@ export type CampaignEffectDefinition =
       readonly routeDefinitionIds: readonly string[];
       readonly state: "open" | "restricted" | "closed";
       readonly reason: "shortage" | "meridian_disruption" | "war" | "recovery";
+    }
+  | {
+      readonly kind: "apply_player_impact";
+      readonly playerImpactDefinitionId: string;
+      readonly audience: CampaignEffectAudience;
+      readonly magnitudeBasisPoints: number;
     };
 
 export interface CampaignEventDefinition {
