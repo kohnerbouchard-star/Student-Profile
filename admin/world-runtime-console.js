@@ -81,7 +81,8 @@
 
   function button(label, onClick, options = {}) {
     return node("button", {
-      className: `admin-world-button${options.secondary ? " is-secondary" : ""}${options.danger ? " is-danger" : ""}`,
+      className:
+        `admin-world-button${options.secondary ? " is-secondary" : ""}${options.danger ? " is-danger" : ""}`,
       text: label,
       type: "button",
       disabled: options.disabled,
@@ -211,12 +212,16 @@
     const topbar = mount.querySelector(
       ".admin-terminal-top-actions, .admin-terminal-app-topbar, header",
     ) || mount;
-    const launcher = node("button", {
+    const launcher = node("div", {
       id: LAUNCHER_ID,
       className: "admin-world-launcher",
       text: "World operations",
-      type: "button",
       attributes: {
+        role: "button",
+        tabindex: "-1",
+        title: "Open World operations (Alt+W)",
+        "aria-label": "Open World operations",
+        "aria-keyshortcuts": "Alt+W",
         "aria-haspopup": "dialog",
         "aria-expanded": "false",
       },
@@ -475,15 +480,19 @@
       text: "Trigger reviewed notification event",
       type: "submit",
     });
-    const eventLabel = node("label", {
-      text: "Event key",
-      attributes: { for: eventInput.id },
-    });
-    const phaseLabel = node("label", {
-      text: "Next phase",
-      attributes: { for: phaseSelect.id },
-    });
-    form.append(eventLabel, eventInput, phaseLabel, phaseSelect, submit);
+    form.append(
+      node("label", {
+        text: "Event key",
+        attributes: { for: eventInput.id },
+      }),
+      eventInput,
+      node("label", {
+        text: "Next phase",
+        attributes: { for: phaseSelect.id },
+      }),
+      phaseSelect,
+      submit,
+    );
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
@@ -584,10 +593,6 @@
           }),
         ]);
         const selectId = `adminWorldClass-${publicId(assignment)}`;
-        const label = node("label", {
-          text: "Corrected class",
-          attributes: { for: selectId },
-        });
         const select = node("select", {
           id: selectId,
           attributes: {
@@ -614,7 +619,14 @@
           },
           "Arrival Class correction committed and audited.",
         ), { secondary: true });
-        article.append(label, select, correct);
+        article.append(
+          node("label", {
+            text: "Corrected class",
+            attributes: { for: selectId },
+          }),
+          select,
+          correct,
+        );
         return article;
       },
       "No Arrival Class assignments.",
@@ -694,19 +706,24 @@
     );
     panel.append(recordList(
       journeys,
-      (journey) => node("article", {}, [
-        node("strong", {
-          text:
-            `${text(journey.from_location_id)} → ${text(journey.to_location_id)}`,
-        }),
-        node("small", {
-          text: `${title(journey.status)} · ${text(journey.public_id)}`,
-        }),
-        node("p", {
-          text:
-            `${text(journey.currency_code)} ${text(journey.total_cost_minor, "0")} · ${text(journey.total_duration_minutes, "0")} minutes`,
-        }),
-      ]),
+      (journey) => {
+        const majorCost = (
+          Number(journey.total_cost_minor ?? 0) / 100
+        ).toFixed(2);
+        return node("article", {}, [
+          node("strong", {
+            text:
+              `${text(journey.from_location_id)} → ${text(journey.to_location_id)}`,
+          }),
+          node("small", {
+            text: `${title(journey.status)} · ${text(journey.public_id)}`,
+          }),
+          node("p", {
+            text:
+              `${text(journey.currency_code)} ${majorCost} · ${text(journey.total_duration_minutes, "0")} minutes`,
+          }),
+        ]);
+      },
       "No travel journeys have been recorded.",
     ));
     return panel;
@@ -747,8 +764,19 @@
     ]);
   }
 
+  function handleWorldShortcut(event) {
+    if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (String(event.key).toLowerCase() !== "w") return;
+    if (document.getElementById(ROOT_ID)) return;
+    event.preventDefault();
+    const launcher = document.getElementById(LAUNCHER_ID);
+    if (!launcher && !createLauncher()) return;
+    openConsole(document.getElementById(LAUNCHER_ID));
+  }
+
   document.addEventListener("DOMContentLoaded", scheduleLauncher, { once: true });
   document.addEventListener("econovaria:admin-mounted", scheduleLauncher);
+  document.addEventListener("keydown", handleWorldShortcut);
   document.addEventListener("econovaria:admin-game-selected", () => {
     snapshot = null;
     loadedAt = 0;
@@ -770,7 +798,10 @@
   scheduleLauncher();
 
   window.EconovariaAdminWorldRuntime = Object.freeze({
-    open: () => openConsole(document.getElementById(LAUNCHER_ID)),
+    open: () => {
+      if (!document.getElementById(LAUNCHER_ID)) createLauncher();
+      openConsole(document.getElementById(LAUNCHER_ID));
+    },
     refresh: refreshConsole,
     getSnapshot: () => snapshot,
   });
