@@ -8,30 +8,19 @@ const NOW = "2026-07-21T01:00:00.000Z";
 
 function session() {
   return {
-    ok: true,
-    session: {
-      playerId: "PLAYER-42",
-      playerSessionId: "psn_marketplace_browser",
-      playerSessionToken: SESSION_TOKEN,
-      gameSessionId: GAME_ID,
-      gameId: GAME_ID,
-      gameCode: "MARKET42",
-      gameName: "Marketplace Browser Game",
-      gameStatus: "active",
-      displayName: "Marketplace Tester",
-      countryCode: "LUMENOR",
-      countryName: "Lumenor",
-      currencyCode: "LUM",
-      expiresAt: "2099-07-21T03:00:00.000Z",
-    },
-    player: {
-      id: "PLAYER-42",
-      name: "Marketplace Tester",
-      displayName: "Marketplace Tester",
-      rosterLabel: "Trader 42",
-      countryCode: "LUMENOR",
-      currencyCode: "LUM",
-    },
+    playerId: "PLAYER-42",
+    playerSessionId: "psn_marketplace_browser",
+    playerSessionToken: SESSION_TOKEN,
+    gameSessionId: GAME_ID,
+    gameCode: "MARKET42",
+    gameName: "Marketplace Browser Game",
+    status: "active",
+    displayName: "Marketplace Tester",
+    rosterLabel: "Trader 42",
+    countryCode: "LUMENOR",
+    countryName: "Lumenor",
+    currencyCode: "LUM",
+    expiresAt: "2099-07-21T03:00:00.000Z",
   };
 }
 
