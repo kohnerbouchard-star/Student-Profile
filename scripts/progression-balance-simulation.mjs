@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-const THRESHOLDS = [0,100,250,450,700,1000,1350,1750,2200,2700,3250,3850,4500,5200,5950,6750,7600,8500,9450,10450];
+const THRESHOLDS = [0,150,375,675,1050,1500,2025,2625,3300,4050,4875,5775,6750,7800,8925,10125,11400,12750,14175,15675];
 const EVENTS = Object.freeze({
   "contract.completed": { xp: 120, cap: 10, counter: "contracts.completed", reputation: ["career", 4] },
   "business.operation.completed": { xp: 90, cap: 12, counter: "business.operations", reputation: ["career", 3] },
