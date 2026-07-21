@@ -157,7 +157,7 @@ jobs:
           test ! -e .business-merge-conflicts
           test ! -e .business-merge-executor-result
           test ! -e .github/workflows/business-main-tree-capture.yml
-          git diff --cached --check
+          git diff --cached origin/main --check
 
           git commit -m "Merge World into Business and Banking authority"
           trap - EXIT
