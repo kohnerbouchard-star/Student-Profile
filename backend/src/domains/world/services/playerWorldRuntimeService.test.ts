@@ -130,7 +130,7 @@ function memoryRepository(): PlayerWorldRuntimeRepository & {
 } {
   const travelState: PlayerTravelState = {
     gameId: SCOPE.gameId,
-    gameSessionId: SCOPE.activeSessionId,
+    gameSessionId: SCOPE.gameId,
     playerUuid: SCOPE.playerUuid,
     currentLocationId: "loc_origin",
     status: "available",
@@ -141,9 +141,10 @@ function memoryRepository(): PlayerWorldRuntimeRepository & {
   };
   const residency: PlayerResidencyState = {
     gameId: SCOPE.gameId,
-    gameSessionId: SCOPE.activeSessionId,
+    gameSessionId: SCOPE.gameId,
     playerUuid: SCOPE.playerUuid,
     currentCountryId: "eldoran",
+    currencyCode: "ELD",
     eligibleCountryIds: ["valerion"],
     pendingCountryId: null,
     revision: 0,
@@ -224,7 +225,7 @@ function memoryRepository(): PlayerWorldRuntimeRepository & {
       state: world,
       context: {
         gameId: SCOPE.gameId,
-        gameSessionId: SCOPE.activeSessionId,
+        gameSessionId: SCOPE.gameId,
         playerUuid: SCOPE.playerUuid,
         currentLocationId: "loc_origin",
         settlementCurrencyCode: "ELD",
