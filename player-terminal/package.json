@@ -21,6 +21,7 @@
     "contracts-connected": "node tests/contracts-connected-acceptance.mjs",
     "contracts-submit": "node tests/contracts-connected-submission.mjs",
     "market-flow": "node tests/market-order-flow.mjs",
+    "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs",
     "banking-read": "node tests/banking-read-model.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
     "inventory-redemption-connected": "node tests/inventory-redemption-connected-lifecycle.mjs",
@@ -31,7 +32,7 @@
     "skeletons": "node tests/skeleton-registry.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run dashboard-profile && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run banking-read && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run story-delivery && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run correctness && npm run adapter && npm run dashboard-profile && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run market-flow && npm run marketplace-connected && npm run banking-read && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run story-delivery && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}",
     "story-delivery": "node tests/story-delivery-flow.mjs"
@@ -39,5 +40,5 @@
   "devDependencies": {
     "@playwright/test": "1.59.1"
   },
-  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Student-Profile adapter contracts, Dashboard and Profile runtime capabilities, Store positive and negative transaction states, Market transactions, Contracts lifecycle states, full connected Inventory redemption lifecycle and committed-success behavior, truthful Banking and Inventory, realtime freshness, safe session timeout exits, explicit Player recovery states, and Chromium browser verification."
+  "description": "Standalone Econovaria player frontend preserving the approved v7 design while hardening route loading, authenticated capability-manifest preflight, manifest-gated connected reads, host-owned logout revocation, transports, request validation, idempotency, authoritative refreshes, Marketplace lifecycle states and committed-success behavior, Student-Profile adapter contracts, Dashboard and Profile runtime capabilities, Store transactions, Market transactions, Contracts lifecycle states, connected Inventory redemption, truthful Banking and Inventory, realtime freshness, safe session timeout exits, recovery states, and Chromium browser verification."
 }
