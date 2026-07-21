@@ -75,7 +75,7 @@ export interface BusinessSnapshotDto {
     readonly quantity: number;
     readonly unitCost: number;
   }[];
-  readonly compliance: readonly {
+  readonly compliance?: readonly {
     readonly requirement: string;
     readonly status: string;
     readonly fee: number;
@@ -127,7 +127,7 @@ export interface LoansSnapshotDto {
 }
 
 export interface PlayerBusinessBankingRepository {
-  readEconomicContext(input: {
+  readEconomicContext?(input: {
     readonly gameSessionId: string;
     readonly playerId: string;
   }): Promise<PlayerEconomicContext>;
