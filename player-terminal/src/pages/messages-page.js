@@ -22,25 +22,39 @@ function composer(thread) {
   </form>`;
 }
 
+function createThreadPanel() {
+  return `<details class="player-terminal-disclosure player-terminal-message-create">
+    <summary><span>${icon("messages")}</span><div><strong>Start a Player thread</strong><small>Same-game public Player IDs only</small></div>${icon("chevronRight")}</summary>
+    <form data-player-form="message-thread-create" data-endpoint="messageThreadCreate">
+      <label>RECIPIENT PLAYER ID<input name="recipientPlayerId" maxlength="160" autocomplete="off" required placeholder="Public Player ID"></label>
+      <label>THREAD TITLE<input name="title" maxlength="160" required placeholder="Conversation title"></label>
+      <label>FIRST MESSAGE<textarea name="body" rows="4" maxlength="1000" required placeholder="Write the first message…"></textarea></label>
+      <p>Player UUIDs and attachments are never accepted. Administrators may moderate or retain this thread under the game policy.</p>
+      <button class="player-terminal-secondary-button" type="submit">${icon("send")} Create thread</button>
+    </form>
+  </details>`;
+}
+
 export function renderMessagesPage(data, ui) {
-  const messages = data.messages;
+  const messages = data.messages || { unread: 0, threads: [] };
   const threads = Array.isArray(messages.threads) ? messages.threads : [];
   const thread = threads.find((item) => item.id === ui.messageThreadId) || threads[0];
+  const heading = `<div class="player-terminal-page-heading"><div><small>PLAYER COMMUNICATIONS</small><h2>Messages</h2><p>Auditable Player, Contract, system, and administrator communication.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`${Number(messages.unread || 0)} UNREAD`, messages.unread ? "amber" : "green")}</div></div>`;
   if (!thread) {
     return `<section class="player-terminal-page player-terminal-messages-page">
-      <div class="player-terminal-page-heading"><div><small>PLAYER COMMUNICATIONS</small><h2>Messages</h2><p>Auditable player, contract, and administrator communication.</p></div></div>
-      <section class="player-terminal-panel">${renderEmptyState({ title: "No conversations yet", detail: "Player, contract, and administrator messages will appear here when available.", iconName: "messages" })}</section>
+      ${heading}
+      ${createThreadPanel()}
+      <section class="player-terminal-panel">${renderEmptyState({ title: "No conversations yet", detail: "Start a same-game Player thread or wait for a Contract, system, or administrator message.", iconName: "messages" })}</section>
     </section>`;
   }
   return `<section class="player-terminal-page player-terminal-messages-page">
-    <div class="player-terminal-page-heading"><div><small>PLAYER COMMUNICATIONS</small><h2>Messages</h2><p>Auditable player, contract, and administrator communication in a compact two-pane workspace.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(`${messages.unread} UNREAD`, messages.unread ? "amber" : "green")}</div></div>
-
+    ${heading}
+    ${createThreadPanel()}
     <div class="player-terminal-messages-layout">
       <section class="player-terminal-panel player-terminal-thread-list">
         <header class="player-terminal-panel-header"><div><span>CONVERSATIONS</span><strong>${escapeHtml(threads.length)} threads</strong></div></header>
         <div>${threads.map((item) => conversationRow(item, item.id === thread.id)).join("")}</div>
       </section>
-
       <section class="player-terminal-panel player-terminal-message-thread">
         <header class="player-terminal-message-thread-head"><div><span class="player-terminal-thread-avatar is-${escapeHtml(thread.tone)}">${escapeHtml(thread.initials)}</span><div><small>${escapeHtml(thread.type)}</small><strong>${escapeHtml(thread.title)}</strong><span>${escapeHtml(thread.members)} · ${escapeHtml(thread.status)}</span></div></div>${renderStatusPill(thread.status, thread.status === "Online" ? "green" : "cyan")}</header>
         <div class="player-terminal-message-log">${thread.messages.map((message) => `<article class="${message.self ? "is-self" : ""}"><span>${escapeHtml(message.initials)}</span><div><header><strong>${escapeHtml(message.sender)}</strong><small>${escapeHtml(message.time)}</small></header><p>${escapeHtml(message.body)}</p></div></article>`).join("")}</div>
