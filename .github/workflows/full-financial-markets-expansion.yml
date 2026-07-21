@@ -1,0 +1,111 @@
+name: Full Financial Markets Expansion
+
+on:
+  push:
+    branches:
+      - agent/full-financial-markets-expansion-v1
+    paths:
+      - ".github/workflows/full-financial-markets-expansion.yml"
+      - "backend/src/domains/markets/**"
+      - "docs/markets/**"
+      - "docs/seed-content/markets/universe/**"
+      - "scripts/validate-full-market-universe*.mjs"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/full-financial-markets-expansion.yml"
+      - "backend/src/domains/markets/**"
+      - "docs/markets/**"
+      - "docs/seed-content/markets/universe/**"
+      - "scripts/validate-full-market-universe*.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-financial-markets-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-domain-and-universe:
+    name: Validate contracts and inactive 3200-instrument library
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install Backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Validate the complete definition library
+        run: |
+          node scripts/validate-full-market-universe.mjs \
+            --report full-market-universe-validation.json \
+            > full-market-universe-validation.stdout.json
+
+      - name: Run universe validator tests
+        run: node --test scripts/validate-full-market-universe.test.mjs
+
+      - name: Run financial-market domain tests
+        run: deno test --no-lock backend/src/domains/markets
+
+      - name: Run Backend typecheck
+        run: npm --prefix backend run typecheck:all
+
+      - name: Run Backend smoke
+        run: npm --prefix backend run smoke
+
+      - name: Verify prohibited features remain disabled
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const contracts = fs.readFileSync(
+            'backend/src/domains/markets/contracts/financialMarketContracts.ts',
+            'utf8',
+          );
+          const required = [
+            'shortSellingSupported: false',
+            'derivativesSupported: false',
+            'physicalDeliverySupported: false',
+            'complexPricingSupported: false',
+            'activationAuthorized: false',
+          ];
+          for (const marker of required) {
+            if (!contracts.includes(marker)) {
+              throw new Error(`Missing fail-closed contract marker: ${marker}`);
+            }
+          }
+          NODE
+
+      - name: Upload deterministic validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-financial-markets-validation-${{ github.sha }}
+          path: |
+            full-market-universe-validation.json
+            full-market-universe-validation.stdout.json
+          if-no-files-found: error
+          retention-days: 30
