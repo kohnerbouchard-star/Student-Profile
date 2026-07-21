@@ -36,11 +36,10 @@ Deno.test("world runtime migration is forward-only, isolated, and atomic", async
   assertIncludes(sql, "security definer");
   assertIncludes(sql, "set search_path = public, pg_temp");
   assertIncludes(sql, "to service_role");
-  assertNotIncludes(sql, "grant execute on function public.execute_campaign_event_atomic_v1");
   const executeGrant = sql.match(/grant execute on function public\.execute_campaign_event_atomic_v1[\s\S]*?to service_role;/);
   if (!executeGrant) throw new Error("Missing service-role execute grant for campaign RPC.");
   for (const role of ["public", "anon", "authenticated"]) {
-    assertIncludes(sql, `from public, anon, authenticated`);
+    assertIncludes(sql, "from public, anon, authenticated");
     assertNotIncludes(executeGrant[0], `to ${role}`);
   }
   assertNotIncludes(sql, "insert into public.players");
