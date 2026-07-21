@@ -8,6 +8,13 @@ import {
 } from "../contracts/campaignRuntimeContracts.ts";
 import { executeCampaignEvent } from "./campaignStateMachine.ts";
 
+export type CampaignGameLifecycleState =
+  | "draft"
+  | "active"
+  | "paused"
+  | "ended"
+  | "archived";
+
 export interface CampaignAuditEntry {
   readonly auditKey: string;
   readonly gameId: string;
@@ -42,6 +49,9 @@ export interface PlayerCampaignContext {
 }
 
 export interface CampaignTransaction {
+  loadGameLifecycleForUpdate(input: {
+    readonly gameId: string;
+  }): Promise<CampaignGameLifecycleState>;
   loadCampaignForUpdate(input: {
     readonly gameId: string;
     readonly campaignInstanceId: string;
@@ -284,6 +294,16 @@ async function executeCoordinated(input: {
   readonly reason?: string;
 }): Promise<CampaignExecutionResult> {
   return input.repository.withTransaction(async (transaction) => {
+    const lifecycle = await transaction.loadGameLifecycleForUpdate({
+      gameId: input.gameId,
+    });
+    if (lifecycle !== "active") {
+      throw new CampaignRuntimeError(
+        "campaign_game_not_active",
+        `Campaign execution is unavailable while the game is ${lifecycle}.`,
+        lifecycle === "paused",
+      );
+    }
     const current = await transaction.loadCampaignForUpdate({
       gameId: input.gameId,
       campaignInstanceId: input.campaignInstanceId,
