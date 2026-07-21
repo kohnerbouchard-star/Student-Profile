@@ -10,7 +10,7 @@ const GEOMETRY_TARGETS = Object.freeze({
   news: ".player-terminal-news-detail",
   market: ".player-terminal-chart-frame",
   portfolio: ".player-terminal-networth-chart",
-  business: ".player-terminal-business-actions",
+  business: ".player-terminal-business-layout > .player-terminal-panel:first-child",
   contracts: ".player-terminal-contract-detail",
   store: ".player-terminal-store-card",
   marketplace: ".player-terminal-marketplace-detail",
