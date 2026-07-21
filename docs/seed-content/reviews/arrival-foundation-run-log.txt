@@ -26,9 +26,9 @@ not ok 1 - current PR \#163 design catalog is structurally valid and reports rea
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -60,9 +60,9 @@ not ok 4 - staging mode remains blocked until executable content is complete
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -148,13 +148,13 @@ exit=0
 
 ## diff check
 docs/seed-content/reviews/arrival-foundation-run-log.txt:29: trailing whitespace.
-+    
++
 docs/seed-content/reviews/arrival-foundation-run-log.txt:31: trailing whitespace.
-+    
++
 docs/seed-content/reviews/arrival-foundation-run-log.txt:63: trailing whitespace.
-+    
++
 docs/seed-content/reviews/arrival-foundation-run-log.txt:65: trailing whitespace.
-+    
++
 exit=2
 
 finalStatus=1
