@@ -7,20 +7,21 @@ import {
 } from "./playerRateLimitDispatch.ts";
 import type { RateLimitDecision } from "./rateLimitContracts.ts";
 
-declare const Deno: {
-  test(name: string, run: () => void | Promise<void>): void;
-};
+declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const SESSION = "00000000-0000-4000-8000-000000000011";
 const THREAD = `thr_${"a".repeat(32)}`;
+const THREAD_ACTION = `player.messages.thr_${"a".repeat(24)}`;
 
 Deno.test("Messaging operations have distinct central rate-limit actions", () => {
   const expected = {
     "messages:GET": ["player.messages.read", "read"],
     "messageThread:GET": ["player.messages.thread.read", "read"],
+    "messagePolicy:GET": ["player.messages.policy.read", "read"],
     "messageSearch:GET": ["player.messages.search", "read"],
+    "messageThreadCreate:POST": ["player.messages.thread.create", "sensitive"],
     "messageSend:POST": ["player.messages.send", "sensitive"],
     "messageRead:POST": ["player.messages.receipt", "write"],
   } as const;
@@ -31,13 +32,15 @@ Deno.test("Messaging operations have distinct central rate-limit actions", () =>
   }
 });
 
-Deno.test("communication dispatch remaps Messaging paths before consuming a bucket", async () => {
+Deno.test("communication dispatch remaps paths and derives a bounded per-thread action", async () => {
   const scenarios = [
     ["GET", "/players/me/messages", "player.messages.read"],
+    ["GET", "/players/me/messages/policy", "player.messages.policy.read"],
     ["GET", "/players/me/messages/search?q=market", "player.messages.search"],
-    ["GET", `/players/me/messages/threads/${THREAD}`, "player.messages.thread.read"],
-    ["POST", `/players/me/messages/threads/${THREAD}/messages`, "player.messages.send"],
-    ["POST", `/players/me/messages/threads/${THREAD}/read`, "player.messages.receipt"],
+    ["POST", "/players/me/messages/threads", "player.messages.thread.create"],
+    ["GET", `/players/me/messages/threads/${THREAD}`, THREAD_ACTION],
+    ["POST", `/players/me/messages/threads/${THREAD}/messages`, THREAD_ACTION],
+    ["POST", `/players/me/messages/threads/${THREAD}/read`, THREAD_ACTION],
   ] as const;
 
   for (const [method, path, expectedAction] of scenarios) {
@@ -60,6 +63,10 @@ Deno.test("communication dispatch remaps Messaging paths before consuming a buck
     assertEquals(response.status, 200);
     assertEquals(handlerCalls, 1);
     assertEquals(observedAction, expectedAction);
+    if (expectedAction === THREAD_ACTION) {
+      assertEquals(observedAction.length <= 64, true);
+      assertEquals(observedAction.includes(THREAD), false);
+    }
   }
 });
 
@@ -92,7 +99,6 @@ const SCOPE: PlayerRequestScope = {
     resourceScope: "own_player",
   },
 };
-
 const ALLOWED: RateLimitDecision = {
   allowed: true,
   retryAfterSeconds: 0,
@@ -101,7 +107,6 @@ const ALLOWED: RateLimitDecision = {
   remaining: 89,
   resetAt: "2026-07-21T00:01:00.000Z",
 };
-
 const DENIED: RateLimitDecision = {
   allowed: false,
   retryAfterSeconds: 12,
@@ -120,10 +125,7 @@ function playerRequest(method: string, path: string): Request {
     },
   });
 }
-
-function dependencies(
-  overrides: Partial<PlayerRateLimitDispatchDependencies> = {},
-): PlayerRateLimitDispatchDependencies {
+function dependencies(overrides: Partial<PlayerRateLimitDispatchDependencies> = {}): PlayerRateLimitDispatchDependencies {
   return {
     createServiceClient: () => ({}) as EdgeSupabaseClient,
     readEnvironment: () => ({
@@ -140,7 +142,6 @@ function dependencies(
     ...overrides,
   };
 }
-
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Actual ${JSON.stringify(actual)} Expected ${JSON.stringify(expected)}`);
