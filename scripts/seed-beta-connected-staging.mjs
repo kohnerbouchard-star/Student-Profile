@@ -207,7 +207,7 @@ async function main() {
     readJson('store-catalog-v1.json'),
   ]);
   requireCondition(pack.productionAuthorized === false && pack.activationAuthorized === false, 'Embedded production or activation authorization is prohibited.');
-  requireCondition(integrity.packSha256 === pack.packSha256, 'Pack and integrity digest mismatch.');
+  requireCondition(integrity.packId === pack.packId && integrity.version === pack.version, 'Pack and integrity identity mismatch.');
 
   const appliedMigrations = [];
   for (const migration of MIGRATIONS) appliedMigrations.push(await applyMigration(context, migration));
