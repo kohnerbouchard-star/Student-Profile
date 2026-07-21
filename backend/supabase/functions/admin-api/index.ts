@@ -14,6 +14,7 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -78,16 +79,14 @@ async function handleGlobalRoute(
           auditLogFlags: true,
           auditLogExport: true,
           overallScore: false,
-          marketplaceAdminTrading: false,
+          marketplaceAdminTrading: true,
         },
       },
     });
   }
 
   if (path === "/games" && request.method === "GET") {
-    return json(request, 200, {
-      data: { games: context.games.map(gameDto) },
-    });
+    return json(request, 200, { data: { games: context.games.map(gameDto) } });
   }
 
   if (path === "/account/profile" && request.method === "GET") {
@@ -234,6 +233,23 @@ Deno.serve(async (request: Request) => {
     });
     if (mutationGuard.handled) {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
+    }
+
+    const marketplaceOperation = await handleMarketplaceAdminOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (marketplaceOperation.handled) {
+      return json(
+        request,
+        marketplaceOperation.status || 500,
+        marketplaceOperation.body,
+      );
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(
