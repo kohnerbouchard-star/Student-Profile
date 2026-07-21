@@ -1,4 +1,7 @@
-import type { CampaignEffectDefinition } from "../contracts/campaignRuntimeContracts.ts";
+import type {
+  CampaignEffectAudience,
+  CampaignEffectDefinition,
+} from "../contracts/campaignRuntimeContracts.ts";
 import { CampaignRuntimeError } from "../contracts/campaignRuntimeContracts.ts";
 
 export interface ClaimedCampaignEffectCommand {
@@ -28,11 +31,13 @@ export interface CampaignEffectWorkerRepository {
 
 export interface CampaignEffectPorts {
   publishNews(input: PurposeBuiltCommand<"publish_news">): Promise<void>;
+  publishCutscene(input: PurposeBuiltCommand<"publish_cutscene">): Promise<void>;
   createContract(input: PurposeBuiltCommand<"create_contract">): Promise<void>;
   notifyPlayers(input: PurposeBuiltCommand<"notify_players">): Promise<void>;
   applyMarketShock(input: PurposeBuiltCommand<"apply_market_shock">): Promise<void>;
   setStoreScarcity(input: PurposeBuiltCommand<"set_store_scarcity">): Promise<void>;
   setRouteState(input: PurposeBuiltCommand<"set_route_state">): Promise<void>;
+  applyPlayerImpact(input: PurposeBuiltCommand<"apply_player_impact">): Promise<void>;
 }
 
 export interface PurposeBuiltCommand<
@@ -143,6 +148,10 @@ async function dispatch(
       return ports.publishNews(
         command as PurposeBuiltCommand<"publish_news">,
       );
+    case "publish_cutscene":
+      return ports.publishCutscene(
+        command as PurposeBuiltCommand<"publish_cutscene">,
+      );
     case "create_contract":
       return ports.createContract(
         command as PurposeBuiltCommand<"create_contract">,
@@ -163,6 +172,10 @@ async function dispatch(
       return ports.setRouteState(
         command as PurposeBuiltCommand<"set_route_state">,
       );
+    case "apply_player_impact":
+      return ports.applyPlayerImpact(
+        command as PurposeBuiltCommand<"apply_player_impact">,
+      );
   }
 }
 
@@ -172,18 +185,28 @@ function decodeEffect(
 ): CampaignEffectDefinition {
   switch (kind) {
     case "publish_news":
+      exactKeys(payload, ["audience", "newsDefinitionId"]);
       return Object.freeze({
         kind,
         newsDefinitionId: definitionId(payload.newsDefinitionId),
         audience: audience(payload.audience),
       });
+    case "publish_cutscene":
+      exactKeys(payload, ["audience", "cutsceneDefinitionId"]);
+      return Object.freeze({
+        kind,
+        cutsceneDefinitionId: definitionId(payload.cutsceneDefinitionId),
+        audience: audience(payload.audience),
+      });
     case "create_contract":
+      exactKeys(payload, ["contractDefinitionId", "targetLocationIds"]);
       return Object.freeze({
         kind,
         contractDefinitionId: definitionId(payload.contractDefinitionId),
         targetLocationIds: publicLocationIds(payload.targetLocationIds),
       });
     case "notify_players":
+      exactKeys(payload, ["audience", "notificationDefinitionId"]);
       return Object.freeze({
         kind,
         notificationDefinitionId: definitionId(
@@ -192,6 +215,7 @@ function decodeEffect(
         audience: audience(payload.audience),
       });
     case "apply_market_shock":
+      exactKeys(payload, ["magnitudeBasisPoints", "marketShockDefinitionId"]);
       return Object.freeze({
         kind,
         marketShockDefinitionId: definitionId(
@@ -205,12 +229,14 @@ function decodeEffect(
         ),
       });
     case "set_store_scarcity":
+      exactKeys(payload, ["scarcityDefinitionId", "targetLocationIds"]);
       return Object.freeze({
         kind,
         scarcityDefinitionId: definitionId(payload.scarcityDefinitionId),
         targetLocationIds: publicLocationIds(payload.targetLocationIds),
       });
     case "set_route_state": {
+      exactKeys(payload, ["reason", "routeDefinitionIds", "state"]);
       const status = String(payload.state);
       const reason = String(payload.reason);
       if (![
@@ -238,6 +264,36 @@ function decodeEffect(
         >["reason"],
       });
     }
+    case "apply_player_impact":
+      exactKeys(payload, [
+        "audience",
+        "magnitudeBasisPoints",
+        "playerImpactDefinitionId",
+      ]);
+      return Object.freeze({
+        kind,
+        playerImpactDefinitionId: definitionId(
+          payload.playerImpactDefinitionId,
+        ),
+        audience: audience(payload.audience),
+        magnitudeBasisPoints: boundedInteger(
+          payload.magnitudeBasisPoints,
+          -10_000,
+          10_000,
+          "Player impact magnitude",
+        ),
+      });
+  }
+}
+
+function exactKeys(
+  payload: Record<string, unknown>,
+  allowed: readonly string[],
+): void {
+  const actual = Object.keys(payload).sort();
+  const expected = [...allowed].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw invalid(`Effect fields must be exactly: ${expected.join(", ")}.`);
   }
 }
 
@@ -249,9 +305,7 @@ function definitionId(value: unknown): string {
   return result;
 }
 
-function audience(
-  value: unknown,
-): "all_players" | "affected_locations" {
+function audience(value: unknown): CampaignEffectAudience {
   if (value !== "all_players" && value !== "affected_locations") {
     throw invalid("Effect audience is invalid.");
   }
