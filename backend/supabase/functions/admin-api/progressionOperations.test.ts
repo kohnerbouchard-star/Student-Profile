@@ -120,6 +120,25 @@ Deno.test("Admin Progression correction preserves replay and maps conflict and o
   }
 });
 
+Deno.test("Admin Progression maps paused, ended, and inactive correction conflicts", async () => {
+  for (const [message, code, retryable] of [
+    ["GAME_SESSION_DISABLED", "progression_game_paused", true],
+    ["GAME_SESSION_ARCHIVED", "progression_game_ended", false],
+    ["GAME_SESSION_NOT_ACTIVE", "progression_game_unavailable", false],
+    ["GAME_SESSION_NOT_FOUND", "progression_game_unavailable", false],
+  ] as const) {
+    const service = new FakeService([{ data: null, error: { message } }]);
+    const result = await handleProgressionOperation(
+      service as never,
+      input("POST", `/progression/players/${PLAYER_ID}/corrections`, correctionBody()),
+      dependencies(),
+    );
+    assertEquals(result.status, 409);
+    assertEquals((result.body as { code: string }).code, code);
+    assertEquals((result.body as { retryable: boolean }).retryable, retryable);
+  }
+});
+
 Deno.test("Admin Progression rejects malformed corrections before mutation RPC", async () => {
   const scenarios = [
     input("POST", `/progression/players/${PLAYER_ID}/corrections`, {
