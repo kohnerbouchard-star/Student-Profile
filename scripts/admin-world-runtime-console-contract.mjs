@@ -4,6 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const source = fs.readFileSync(path.join(root, "admin/world-runtime-console.js"), "utf8");
+const loader = fs.readFileSync(path.join(root, "admin/world-runtime-console-loader.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "admin/index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
 const operations = fs.readFileSync(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
@@ -40,8 +41,11 @@ for (const operation of [
   "apply_world_route_state_v1",
 ]) assert.match(operations, new RegExp(operation));
 
-assert.match(index, /world-runtime-console\.css/);
-assert.match(index, /world-runtime-console\.js/);
+assert.match(index, /world-runtime-console-loader\.js/);
+assert.doesNotMatch(index, /<link[^>]+world-runtime-console\.css/);
+assert.match(loader, /world-runtime-console\.css/);
+assert.match(loader, /data-admin-world-stylesheet/);
+assert.match(loader, /await import\("\.\/world-runtime-console\.js"\)/);
 assert.match(source, /aria-modal/);
 assert.match(source, /aria-live/);
 assert.match(source, /EconovariaAdminModalAccessibility/);
@@ -61,6 +65,7 @@ assert.doesNotMatch(source, /MutationObserver/);
 assert.doesNotMatch(source, /@ts-nocheck|\beval\s*\(|new Function|document\.write/);
 assert.doesNotMatch(source, /innerHTML\s*=\s*(?:payload|data|snapshot)/);
 assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
+assert.doesNotMatch(loader, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
 assert.doesNotMatch(index, /world-runtime-source-snapshot|materializer|reconstruction/);
 
 console.log("Admin World runtime console contract passed");
