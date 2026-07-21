@@ -63,6 +63,7 @@ export interface PlayerResidencyState {
   readonly gameSessionId: string;
   readonly playerUuid: string;
   readonly currentCountryId: string;
+  readonly currencyCode: string;
   readonly eligibleCountryIds: readonly string[];
   readonly pendingCountryId: string | null;
   readonly revision: number;
