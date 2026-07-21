@@ -61,8 +61,8 @@
     const entropy = global.crypto?.randomUUID?.().replaceAll("-", "") || `${Date.now()}${Math.random().toString(16).slice(2)}`;
     return `${prefix}:${publicId}:v${version}:${entropy}`.slice(0, 159);
   }
-  function statusClass(status) { return `admin-marketplace-status is-${text(status).toLowerCase().replaceAll("_", "-")}`; }
-  function status(status) { return create("span", statusClass(status), text(status).replaceAll("_", " ")); }
+  function statusClass(statusValue) { return `admin-marketplace-status is-${text(statusValue).toLowerCase().replaceAll("_", "-")}`; }
+  function status(statusValue) { return create("span", statusClass(statusValue), text(statusValue).replaceAll("_", " ")); }
 
   function mountLaunchButton() {
     const existing = document.querySelector("[data-admin-marketplace-lifecycle-open]");
@@ -318,12 +318,12 @@
     finally { button.disabled = false; }
   }
 
-  const observer = new MutationObserver(scheduleMount);
-  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-current", "aria-selected", "hidden"] });
   global.addEventListener("hashchange", scheduleMount);
   global.addEventListener("popstate", scheduleMount);
   document.addEventListener("click", scheduleMount, true);
+  document.addEventListener("econovaria:admin-data-state-changed", scheduleMount);
+  document.addEventListener("econovaria:admin-request-lifecycle", scheduleMount);
   scheduleMount();
 
-  global.AdminMarketplaceLifecycleSurface = Object.freeze({ open: () => openDrawer(document.activeElement), refresh: () => load({ refresh: true }), destroy: () => { observer.disconnect(); closeDrawer({ restoreFocus: false }); document.getElementById(DRAWER_ID)?.remove(); } });
+  global.AdminMarketplaceLifecycleSurface = Object.freeze({ open: () => openDrawer(document.activeElement), refresh: () => load({ refresh: true }), destroy: () => { closeDrawer({ restoreFocus: false }); document.getElementById(DRAWER_ID)?.remove(); } });
 })(window);
