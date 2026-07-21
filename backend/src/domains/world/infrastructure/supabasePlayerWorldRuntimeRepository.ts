@@ -68,7 +68,7 @@ export interface PlayerWorldRuntimeSupabaseClient {
 export function createSupabasePlayerWorldRuntimeRepository(
   client: PlayerWorldRuntimeSupabaseClient,
 ): PlayerWorldRuntimeRepository {
-  return Object.freeze({
+  const repository: PlayerWorldRuntimeRepository = {
     readSnapshot: async (scope) => readSnapshot(client, scope),
     readArrivalInput: async (scope) => readArrivalInput(client, scope),
     assignArrivalClassAtomic: async (input) => {
@@ -78,7 +78,7 @@ export function createSupabasePlayerWorldRuntimeRepository(
         p_country_id: input.assignment.countryId,
         p_class_id: input.assignment.classId,
         p_questionnaire_id: input.scoreResult.questionnaireId,
-        p_questionnaire_version: input.scoreResult.version,
+        p_questionnaire_version: input.scoreResult.questionnaireVersion,
         p_score_result: input.scoreResult,
         p_assignment_idempotency_key: input.assignmentIdempotencyKey,
         p_arrival_package_definition_id: input.arrivalPackageDefinitionId,
@@ -151,7 +151,7 @@ export function createSupabasePlayerWorldRuntimeRepository(
       const journey = await client.from<TravelJourneyRow>(
         "player_travel_journeys",
       )
-        .select("*")
+        .select("*, quote:player_travel_quotes(public_id)")
         .eq("game_session_id", input.scope.gameId)
         .eq("player_id", input.scope.playerUuid)
         .eq("public_id", input.publicJourneyId)
@@ -174,7 +174,8 @@ export function createSupabasePlayerWorldRuntimeRepository(
         input.scope,
       );
     },
-  });
+  };
+  return Object.freeze(repository);
 }
 
 async function readSnapshot(
@@ -233,15 +234,21 @@ async function readSnapshot(
   const routes = requireRows(routeResult, "world routes");
   assertNoError(campaignResult, "campaign context");
 
-  const travelState = travelResult.data
+  const persistedTravelState = travelResult.data
     ? mapTravelState(travelResult.data, scope)
     : null;
-  const activeJourney = travelState?.activeJourneyId
+  const activeJourney = persistedTravelState?.activeJourneyId
     ? await readJourneyByInternalId(
       client,
       scope,
-      travelState.activeJourneyId,
+      persistedTravelState.activeJourneyId,
     )
+    : null;
+  const travelState = persistedTravelState
+    ? Object.freeze({
+      ...persistedTravelState,
+      activeJourneyId: activeJourney?.publicJourneyId ?? null,
+    })
     : null;
   const campaign = campaignResult.data
     ? await readCampaignContext(client, scope, campaignResult.data)
@@ -348,7 +355,7 @@ async function readTravelPlanningInput(
       currentLocationId: snapshot.travelState.currentLocationId,
       settlementCurrencyCode: requireCurrency(snapshot.residency.currencyCode),
       residency: snapshot.residency,
-      allowedModes: Object.freeze(["land", "sea", "air", "meridian"]),
+      allowedModes: Object.freeze(["land", "sea", "air", "meridian"] as const),
     }),
   });
 }
@@ -430,7 +437,7 @@ async function readJourneyByInternalId(
   journeyId: string,
 ): Promise<PlayerTravelJourney | null> {
   const result = await client.from<TravelJourneyRow>("player_travel_journeys")
-    .select("*")
+    .select("*, quote:player_travel_quotes(public_id)")
     .eq("game_session_id", scope.gameId)
     .eq("player_id", scope.playerUuid)
     .eq("id", journeyId)
@@ -481,6 +488,7 @@ function mapArrivalAssignment(
     overrideReason: typeof row.override_reason === "string" ? row.override_reason : null,
     revision: requireNonnegativeInteger(row.revision, "arrival revision"),
     assignedAt: requireTimestamp(row.assigned_at, "arrival assignment"),
+    updatedAt: requireTimestamp(row.updated_at, "arrival assignment update"),
     economicRestrictions: Object.freeze([]),
   });
 }
@@ -603,7 +611,7 @@ function mapTravelJourney(row: TravelJourneyRpcRow): PlayerTravelJourney {
 function mapTravelJourneyRow(row: TravelJourneyRow): PlayerTravelJourney {
   return Object.freeze({
     publicJourneyId: row.public_id,
-    publicQuoteId: requireString(row.quote_public_id ?? row.quote_id, "quote id"),
+    publicQuoteId: requireString(row.quote.public_id, "quote id"),
     fromLocationId: row.from_location_id,
     toLocationId: row.to_location_id,
     currencyCode: requireCurrency(row.currency_code),
@@ -852,6 +860,7 @@ interface ArrivalAssignmentRow {
   readonly override_reason: unknown;
   readonly revision: unknown;
   readonly assigned_at: unknown;
+  readonly updated_at: unknown;
 }
 interface TravelStateRow {
   readonly current_location_id: string;
@@ -947,8 +956,7 @@ interface TravelQuoteRow {
 }
 interface TravelJourneyRow {
   readonly public_id: string;
-  readonly quote_id: unknown;
-  readonly quote_public_id?: unknown;
+  readonly quote: { readonly public_id: string };
   readonly from_location_id: string;
   readonly to_location_id: string;
   readonly currency_code: string;
