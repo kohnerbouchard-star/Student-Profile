@@ -72,6 +72,24 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   capabilities: byMethod({
     GET: operation("player.capabilities.read", "read"),
   }),
+  worldRuntime: byMethod({
+    GET: operation("player.world.context.read", "read"),
+  }),
+  arrivalClass: byMethod({
+    POST: operation("player.world.arrival.assign", "sensitive"),
+  }),
+  travelQuote: byMethod({
+    POST: operation("player.world.travel.quote", "write"),
+  }),
+  travelExecute: byMethod({
+    POST: operation("player.world.travel.execute", "sensitive"),
+  }),
+  travelComplete: byMethod({
+    POST: operation("player.world.travel.complete", "write"),
+  }),
+  residencyRequest: byMethod({
+    POST: operation("player.world.residency.request", "sensitive"),
+  }),
   banking: byMethod({
     GET: operation("player.banking.read", "read"),
   }),

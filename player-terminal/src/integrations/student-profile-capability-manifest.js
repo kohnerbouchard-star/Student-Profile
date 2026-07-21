@@ -7,6 +7,12 @@ const SUPPORTED_SERVICE = "classroom-api";
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
   capabilities: Object.freeze(["capabilities"]),
+  worldRuntime: Object.freeze(["worldRuntime"]),
+  arrivalClass: Object.freeze(["arrivalClass"]),
+  travelQuote: Object.freeze(["travelQuote"]),
+  travelExecute: Object.freeze(["travelExecute"]),
+  travelComplete: Object.freeze(["travelComplete"]),
+  residencyRequest: Object.freeze(["residencyRequest"]),
   banking: Object.freeze(["banking"]),
   contractAccept: Object.freeze(["contractAccept"]),
   contractSubmit: Object.freeze(["contractSubmit"]),
@@ -34,6 +40,7 @@ const ENDPOINT_COVERAGE = Object.freeze({
 
 const ROUTE_REQUIREMENTS = Object.freeze({
   dashboard: "dashboard",
+  world: "worldRuntime",
   news: "news",
   banking: "banking",
   market: "market",
@@ -45,6 +52,7 @@ const ROUTE_REQUIREMENTS = Object.freeze({
 });
 
 const ACTION_REQUIREMENTS = Object.freeze({
+  arrivalClassSubmit: "arrivalClass",
   contractAccept: "contractAccept",
   contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
@@ -52,8 +60,12 @@ const ACTION_REQUIREMENTS = Object.freeze({
   marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
   notificationsRead: "notificationsRead",
+  residencyRequest: "residencyRequest",
   storePurchase: "storePurchase",
-  storyDeliveryState: "storyDeliveryState"
+  storyDeliveryState: "storyDeliveryState",
+  travelComplete: "travelComplete",
+  travelExecute: "travelExecute",
+  travelQuote: "travelQuote"
 });
 
 function mismatch(message, detail = {}) {
@@ -71,7 +83,6 @@ function object(value) {
 function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
   const group = object(values);
   if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
-
   for (const [key, enabled] of Object.entries(group)) {
     if (typeof enabled !== "boolean") {
       throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });

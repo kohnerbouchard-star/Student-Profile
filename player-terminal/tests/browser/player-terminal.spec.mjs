@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const ROUTES = [
   "dashboard",
+  "world",
   "news",
   "market",
   "portfolio",
@@ -50,6 +51,46 @@ test("all approved routes render in the actual application", async ({ page }) =>
   expect(consoleErrors).toEqual([]);
 });
 
+test("World onboarding and travel lifecycle is keyboard-operable", async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
+      usePreviewData: true,
+      simulatePreviewWrites: true,
+      preserveProductSurface: true,
+    };
+  });
+  await page.goto("/?preview=1#world");
+  await expect(page.getByRole("heading", { name: "Campaign, geography, and travel" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose how you begin" })).toBeVisible();
+
+  const questions = page.locator(".player-world-questionnaire fieldset");
+  expect(await questions.count()).toBe(6);
+  for (let index = 0; index < 6; index += 1) {
+    const option = questions.nth(index).locator('input[type="radio"]').first();
+    await option.focus();
+    await page.keyboard.press("Space");
+  }
+  await page.getByRole("button", { name: "Review and confirm class" }).click();
+  await expect(page.getByRole("heading", { name: "Analyst" })).toBeVisible();
+
+  await page.locator('form[data-world-form="travelQuote"] select[name="toLocationId"]').selectOption("loc_valerion_capital_v1");
+  await page.getByRole("button", { name: "Calculate authoritative quote" }).click();
+  await expect(page.getByText("AUTHORITATIVE QUOTE", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm travel" }).click();
+  await expect(page.getByText("ACTIVE JOURNEY")).toBeVisible();
+  await page.getByRole("button", { name: "Complete eligible arrival" }).click();
+  await expect(page.getByText("loc_valerion_capital_v1", { exact: true }).first()).toBeVisible();
+
+  await page.locator('form[data-world-form="residencyRequest"] select[name="countryId"]').selectOption("valerion");
+  await page.getByRole("button", { name: "Request residency review" }).click();
+  await expect(page.getByText("Request pending")).toBeVisible();
+
+  const overflow = await horizontalOverflow(page);
+  expect(overflow.document).toBeLessThanOrEqual(1);
+  expect(overflow.body).toBeLessThanOrEqual(1);
+  await expect(page.locator(".player-world-page-status")).toHaveAttribute("aria-live", "polite");
+});
+
 test("shell has one main landmark and an operational skip link", async ({ page }) => {
   await openTerminal(page);
   await expect(page.locator("main")).toHaveCount(1);
@@ -68,7 +109,7 @@ test("country map is keyboard operable and restores focus", async ({ page }) => 
   await country.focus();
   await expect(country).toBeFocused();
   await page.keyboard.press("Enter");
-  const dialog = page.locator(".player-terminal-country-modal[role=\"dialog\"]");
+  const dialog = page.locator('.player-terminal-country-modal[role="dialog"]');
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(page.locator(".player-terminal-app-root")).toHaveAttribute("aria-hidden", "true");

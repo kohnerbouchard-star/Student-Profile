@@ -65,6 +65,8 @@
 
   const development = runtimeConfig.environment === "development";
   const session = readStoredSession();
+  const requestedPreviewWrites =
+    runtime.ECONOVARIA_PLAYER_TERMINAL_CONFIG?.simulatePreviewWrites === true;
 
   runtime.ECONOVARIA_PLAYER_SESSION = session;
   runtime.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
@@ -72,7 +74,7 @@
     environment: runtimeConfig.environment,
     allowPreviewMode: development,
     usePreviewData: development && !session,
-    simulatePreviewWrites: false,
+    simulatePreviewWrites: development && !session && requestedPreviewWrites,
     studentProfileMode: true,
     studentProfileApiBaseUrl: CLASSROOM_API_URL,
     apiBaseUrl: CLASSROOM_API_URL,

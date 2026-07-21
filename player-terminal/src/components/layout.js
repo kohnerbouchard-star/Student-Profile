@@ -5,7 +5,10 @@ import { isRouteEnabled } from "../api/capabilities.js";
 
 export const PLAYER_NAV_GROUPS = Object.freeze([
   { id: "home", label: "Home", iconName: "dashboard", defaultRoute: "dashboard", routes: [{ route: "dashboard", label: "Dashboard" }] },
-  { id: "world", label: "World", iconName: "news", defaultRoute: "news", routes: [{ route: "news", label: "News & intelligence" }] },
+  { id: "world", label: "World", iconName: "news", defaultRoute: "world", routes: [
+    { route: "world", label: "World & travel" },
+    { route: "news", label: "News & intelligence" }
+  ]},
   { id: "finance", label: "Finance", iconName: "market", defaultRoute: "market", routes: [
     { route: "market", label: "Market" },
     { route: "portfolio", label: "Portfolio" },

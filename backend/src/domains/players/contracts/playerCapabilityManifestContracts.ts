@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.3" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -17,9 +17,11 @@ export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "messages",
   "progression",
   "profile",
+  "world",
 ] as const;
 
 export const PLAYER_ACTION_CAPABILITY_KEYS = [
+  "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
   "businessHire",
@@ -45,9 +47,13 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
+  "residencyRequest",
   "savingsTransfer",
   "storePurchase",
   "storyDeliveryState",
+  "travelComplete",
+  "travelExecute",
+  "travelQuote",
 ] as const;
 
 export type PlayerRouteCapabilityKey =
@@ -58,6 +64,7 @@ export type PlayerActionCapabilityKey =
 export type PlayerCapabilityEndpointKey =
   | "bootstrap"
   | "capabilities"
+  | "arrivalClass"
   | "banking"
   | "contractAccept"
   | "contractSubmit"
@@ -76,11 +83,16 @@ export type PlayerCapabilityEndpointKey =
   | "notifications"
   | "notificationsRead"
   | "portfolio"
+  | "residencyRequest"
   | "store"
   | "storeQuote"
   | "storePurchase"
   | "storyDeliveries"
-  | "storyDeliveryState";
+  | "storyDeliveryState"
+  | "travelComplete"
+  | "travelExecute"
+  | "travelQuote"
+  | "worldRuntime";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -127,6 +139,44 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   {
     key: "capabilities",
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
+  },
+  {
+    key: "worldRuntime",
+    operations: [{ method: "GET", pathTemplate: "/players/me/world-runtime" }],
+    routeCapabilities: ["world"],
+  },
+  {
+    key: "arrivalClass",
+    operations: [{ method: "POST", pathTemplate: "/players/me/arrival-class" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["arrivalClassSubmit"],
+  },
+  {
+    key: "travelQuote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel/quotes" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelQuote"],
+  },
+  {
+    key: "travelExecute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelExecute"],
+  },
+  {
+    key: "travelComplete",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/travel/:journeyId/complete",
+    }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelComplete"],
+  },
+  {
+    key: "residencyRequest",
+    operations: [{ method: "POST", pathTemplate: "/players/me/residency" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["residencyRequest"],
   },
   {
     key: "banking",
