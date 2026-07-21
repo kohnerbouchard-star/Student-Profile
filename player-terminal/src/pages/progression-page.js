@@ -15,8 +15,18 @@ function nextLevelText(progression, percent) {
   return `${formatNumber(progression.xp)} XP · ${percent}% to next level · Next at ${formatNumber(progression.nextLevelXp)} XP`;
 }
 
+function skillTier(skill) {
+  const value = Number(skill.tier);
+  return Number.isSafeInteger(value) && value > 0 ? value : 1;
+}
+
+function skillMinimumLevel(skill) {
+  const value = Number(skill.minimumLevel);
+  return Number.isSafeInteger(value) && value > 0 ? value : 1;
+}
+
 function skillRequirementText(skill, progression) {
-  const requirements = [`Level ${skill.minimumLevel}`];
+  const requirements = [`Level ${skillMinimumLevel(skill)}`];
   if (skill.prerequisiteSkillId) {
     const prerequisite = progression.skills.find((item) => item.id === skill.prerequisiteSkillId);
     requirements.push(`Requires ${prerequisite?.name || skill.prerequisiteSkillId}`);
@@ -55,8 +65,8 @@ export function renderProgressionPage(data, ui) {
     </div>` : ""}
 
     ${tab === "Skills" ? `<section class="player-terminal-panel player-terminal-skills-panel" role="tabpanel" aria-label="Progression skills"><header class="player-terminal-panel-header"><div><span>SKILL MODULES</span><strong>${escapeHtml(progression.skillPoints)} points available</strong></div>${renderStatusPill("BALANCED TRACK CAPS", "amber")}</header><div>${progression.skills.map((skill) => {
-      const blocked = skill.unlocked || skill.cost > progression.skillPoints || skill.minimumLevel > progression.level || (skill.prerequisiteSkillId && !progression.skills.some((item) => item.id === skill.prerequisiteSkillId && item.unlocked));
-      return `<article class="${skill.unlocked ? "is-unlocked" : ""}"><span>${icon(skill.icon)}</span><div><small>${escapeHtml(skill.category)} · TIER ${escapeHtml(skill.tier)}</small><strong>${escapeHtml(skill.name)}</strong><p>${escapeHtml(skill.description)}</p><small>${escapeHtml(skillRequirementText(skill, progression))}</small></div><div><strong>${escapeHtml(skill.cost)} PT</strong><button class="player-terminal-compact-button" type="button" data-player-skill-unlock="${escapeHtml(skill.id)}" ${blocked ? "disabled" : ""}>${skill.unlocked ? "Unlocked" : "Unlock"}</button></div></article>`;
+      const blocked = skill.unlocked || skill.cost > progression.skillPoints || skillMinimumLevel(skill) > progression.level || (skill.prerequisiteSkillId && !progression.skills.some((item) => item.id === skill.prerequisiteSkillId && item.unlocked));
+      return `<article class="${skill.unlocked ? "is-unlocked" : ""}"><span>${icon(skill.icon)}</span><div><small>${escapeHtml(skill.category)} · TIER ${escapeHtml(skillTier(skill))}</small><strong>${escapeHtml(skill.name)}</strong><p>${escapeHtml(skill.description)}</p><small>${escapeHtml(skillRequirementText(skill, progression))}</small></div><div><strong>${escapeHtml(skill.cost)} PT</strong><button class="player-terminal-compact-button" type="button" data-player-skill-unlock="${escapeHtml(skill.id)}" ${blocked ? "disabled" : ""}>${skill.unlocked ? "Unlocked" : "Unlock"}</button></div></article>`;
     }).join("") || "<p>No skill modules are available.</p>"}</div></section>` : ""}
 
     ${tab === "Achievements" ? `<section class="player-terminal-panel player-terminal-achievements-panel" role="tabpanel" aria-label="Progression achievements"><header class="player-terminal-panel-header"><div><span>ACHIEVEMENTS</span><strong>Completed and in progress</strong></div></header><div>${progression.achievements.map((item) => `<article class="${item.complete ? "is-complete" : ""}"><span>${icon(item.complete ? "trophy" : "lock")}</span><div><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(item.description)}</p><small>${escapeHtml(item.progressText)}</small></div>${item.claimable && item.rewardId ? `<button class="player-terminal-compact-button" type="button" data-player-reward-claim="${escapeHtml(item.rewardId)}">Claim ${escapeHtml(item.rewardKind === "badge" ? "badge" : item.rewardAmount)}</button>` : renderStatusPill(item.complete ? "COMPLETE" : "IN PROGRESS", item.complete ? "green" : "cyan")}</article>`).join("") || "<p>No achievements are available.</p>"}</div></section>` : ""}
