@@ -4,6 +4,7 @@ import {
   PLAYER_CAPABILITY_MANIFEST_VERSION,
   PLAYER_CAPABILITY_SCHEMA_VERSION,
   PLAYER_ROUTE_CAPABILITY_KEYS,
+  type PlayerCapabilityEndpointKey,
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
@@ -25,7 +26,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-const BUSINESS_BANKING_ENDPOINTS = new Set([
+const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "business",
   "businessCreate",
   "businessProductCreate",
@@ -99,7 +100,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
-  for (const endpoint of [
+  const expectedEndpointKeys: readonly PlayerCapabilityEndpointKey[] = [
     "bootstrap",
     "capabilities",
     "banking",
@@ -116,7 +117,8 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "storyDeliveries",
     "storyDeliveryState",
     ...BUSINESS_BANKING_ENDPOINTS,
-  ]) {
+  ];
+  for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
   }
 });
