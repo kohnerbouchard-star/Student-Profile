@@ -1,8 +1,5 @@
 import { sha256Hex } from "../platform/supabase/edgeCrypto.ts";
-import {
-  EdgeActivationError,
-  jsonError,
-} from "../platform/supabase/edgeResponse.ts";
+import { EdgeActivationError, jsonError } from "../platform/supabase/edgeResponse.ts";
 import {
   type EdgeSupabaseClient,
   readSupabaseEnv,
@@ -20,138 +17,76 @@ import {
   enforcePreAuthRateLimit,
   type EnforcePreAuthRateLimitInput,
 } from "./playerRateLimitService.ts";
-import type {
-  PlayerRateLimitProfile,
-  RateLimitDecision,
-} from "./rateLimitContracts.ts";
-import {
-  rateLimitExceededResponse,
-  rateLimitUnavailableResponse,
-} from "./rateLimitHttp.ts";
+import type { PlayerRateLimitProfile, RateLimitDecision } from "./rateLimitContracts.ts";
+import { rateLimitExceededResponse, rateLimitUnavailableResponse } from "./rateLimitHttp.ts";
 
 export interface ReviewedPlayerRateLimitOperation {
   readonly action: string;
   readonly profile: PlayerRateLimitProfile;
 }
-
-export type ReviewedPlayerRateLimitEndpointKey =
-  | PlayerCapabilityEndpointKey
-  | "inventoryRedemption";
-
+export type ReviewedPlayerRateLimitEndpointKey = PlayerCapabilityEndpointKey | "inventoryRedemption";
 export interface PlayerRateLimitDispatchDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly readEnvironment?: typeof readSupabaseEnv;
-  readonly resolveScope?: (
-    request: Request,
-    client: EdgeSupabaseClient,
-  ) => Promise<PlayerRequestScope>;
-  readonly enforcePostAuth?: (
-    input: EnforcePlayerRateLimitInput,
-    client: EdgeSupabaseClient,
-  ) => Promise<RateLimitDecision>;
-  readonly enforcePreAuth?: (
-    input: EnforcePreAuthRateLimitInput,
-    client: EdgeSupabaseClient,
-  ) => Promise<RateLimitDecision>;
+  readonly resolveScope?: (request: Request, client: EdgeSupabaseClient) => Promise<PlayerRequestScope>;
+  readonly enforcePostAuth?: (input: EnforcePlayerRateLimitInput, client: EdgeSupabaseClient) => Promise<RateLimitDecision>;
+  readonly enforcePreAuth?: (input: EnforcePreAuthRateLimitInput, client: EdgeSupabaseClient) => Promise<RateLimitDecision>;
 }
 
-const redemptionOperations = byMethod({
-  GET: operation("player.inventory.redemptions.read", "read"),
-  POST: operation("player.inventory.redemptions.request", "write"),
+const op = (action: string, profile: PlayerRateLimitProfile): ReviewedPlayerRateLimitOperation => Object.freeze({ action, profile });
+const methods = (values: Readonly<Record<string, ReviewedPlayerRateLimitOperation>>) => Object.freeze(values);
+const redemption = methods({
+  GET: op("player.inventory.redemptions.read", "read"),
+  POST: op("player.inventory.redemptions.request", "write"),
 });
 
-const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
-  Record<
-    ReviewedPlayerRateLimitEndpointKey,
-    Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
-  >
-> = Object.freeze({
-  bootstrap: byMethod({
-    GET: operation("player.session.read", "read"),
+const OPERATIONS: Readonly<Record<
+  ReviewedPlayerRateLimitEndpointKey,
+  Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
+>> = Object.freeze({
+  bootstrap: methods({ GET: op("player.session.read", "read") }),
+  capabilities: methods({ GET: op("player.capabilities.read", "read") }),
+  banking: methods({ GET: op("player.banking.read", "read") }),
+  contractAccept: methods({ POST: op("player.contracts.accept", "write") }),
+  contractSubmit: methods({ POST: op("player.contracts.submit", "write") }),
+  contracts: methods({ GET: op("player.contracts.read", "read") }),
+  countries: methods({ GET: op("player.countries.read", "read") }),
+  country: methods({ GET: op("player.country.read", "read") }),
+  dashboard: methods({ GET: op("player.dashboard.read", "read") }),
+  inventory: methods({ GET: op("player.inventory.read", "read") }),
+  inventoryRedemption: redemption,
+  inventoryRedemptions: redemption,
+  logout: methods({ POST: op("player.session.logout", "sensitive") }),
+  market: methods({ GET: op("player.market.read", "read") }),
+  marketAsset: methods({ GET: op("player.asset.read", "read") }),
+  marketOrder: methods({ POST: op("player.market.order", "sensitive") }),
+  marketWatchlist: methods({
+    DELETE: op("player.watchlist.write", "write"),
+    GET: op("player.watchlist.read", "read"),
+    PUT: op("player.watchlist.write", "write"),
   }),
-  capabilities: byMethod({
-    GET: operation("player.capabilities.read", "read"),
+  news: methods({ GET: op("player.news.read", "read") }),
+  notifications: methods({ GET: op("player.notifications.read", "read") }),
+  notificationsRead: methods({ POST: op("player.notifications.write", "write") }),
+  portfolio: methods({ GET: op("player.portfolio.read", "read") }),
+  progression: methods({ GET: op("player.progression.read", "read") }),
+  progressionUnlock: methods({ POST: op("player.progression.skill.unlock", "sensitive") }),
+  progressionClaim: methods({ POST: op("player.progression.reward.claim", "sensitive") }),
+  store: methods({ GET: op("player.store.read", "read") }),
+  storeQuote: methods({ POST: op("player.store.quote", "write") }),
+  storePurchase: methods({
+    GET: op("player.store.purchases.read", "read"),
+    POST: op("player.store.purchase", "sensitive"),
   }),
-  banking: byMethod({
-    GET: operation("player.banking.read", "read"),
-  }),
-  contractAccept: byMethod({
-    POST: operation("player.contracts.accept", "write"),
-  }),
-  contractSubmit: byMethod({
-    POST: operation("player.contracts.submit", "write"),
-  }),
-  contracts: byMethod({
-    GET: operation("player.contracts.read", "read"),
-  }),
-  countries: byMethod({
-    GET: operation("player.countries.read", "read"),
-  }),
-  country: byMethod({
-    GET: operation("player.country.read", "read"),
-  }),
-  dashboard: byMethod({
-    GET: operation("player.dashboard.read", "read"),
-  }),
-  inventory: byMethod({
-    GET: operation("player.inventory.read", "read"),
-  }),
-  inventoryRedemption: redemptionOperations,
-  inventoryRedemptions: redemptionOperations,
-  logout: byMethod({
-    POST: operation("player.session.logout", "sensitive"),
-  }),
-  market: byMethod({
-    GET: operation("player.market.read", "read"),
-  }),
-  marketAsset: byMethod({
-    GET: operation("player.asset.read", "read"),
-  }),
-  marketOrder: byMethod({
-    POST: operation("player.market.order", "sensitive"),
-  }),
-  marketWatchlist: byMethod({
-    DELETE: operation("player.watchlist.write", "write"),
-    GET: operation("player.watchlist.read", "read"),
-    PUT: operation("player.watchlist.write", "write"),
-  }),
-  news: byMethod({
-    GET: operation("player.news.read", "read"),
-  }),
-  notifications: byMethod({
-    GET: operation("player.notifications.read", "read"),
-  }),
-  notificationsRead: byMethod({
-    POST: operation("player.notifications.write", "write"),
-  }),
-  storyDeliveries: byMethod({
-    GET: operation("player.story.deliveries.read", "read"),
-  }),
-  storyDeliveryState: byMethod({
-    POST: operation("player.story.deliveries.write", "write"),
-  }),
-  portfolio: byMethod({
-    GET: operation("player.portfolio.read", "read"),
-  }),
-  store: byMethod({
-    GET: operation("player.store.read", "read"),
-  }),
-  storeQuote: byMethod({
-    POST: operation("player.store.quote", "write"),
-  }),
-  storePurchase: byMethod({
-    GET: operation("player.store.purchases.read", "read"),
-    POST: operation("player.store.purchase", "sensitive"),
-  }),
+  storyDeliveries: methods({ GET: op("player.story.deliveries.read", "read") }),
+  storyDeliveryState: methods({ POST: op("player.story.deliveries.write", "write") }),
 });
 
 export function readReviewedPlayerRateLimitOperation(
   endpointKey: ReviewedPlayerRateLimitEndpointKey,
   method: string,
 ): ReviewedPlayerRateLimitOperation | null {
-  return REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS[endpointKey][
-    method.toUpperCase()
-  ] ?? null;
+  return OPERATIONS[endpointKey][method.toUpperCase()] ?? null;
 }
 
 export async function dispatchRateLimitedReviewedPlayerRequest(
@@ -160,17 +95,9 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
   next: () => Promise<Response> | Response,
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
-  const operation = readReviewedPlayerRateLimitOperation(
-    endpointKey,
-    request.method,
-  );
+  const operation = readReviewedPlayerRateLimitOperation(endpointKey, request.method);
   if (!operation) return next();
-
-  const limited = await guardReviewedPlayerRequest(
-    request,
-    operation,
-    dependencies,
-  );
+  const limited = await guardReviewedPlayerRequest(request, operation, dependencies);
   return limited ?? next();
 }
 
@@ -191,13 +118,8 @@ async function guardReviewedPlayerRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const scope = await (dependencies.resolveScope ?? resolveScope)(
-      request,
-      client,
-    );
-    const decision = await (
-      dependencies.enforcePostAuth ?? enforcePlayerRateLimit
-    )({
+    const scope = await (dependencies.resolveScope ?? resolveScope)(request, client);
+    const decision = await (dependencies.enforcePostAuth ?? enforcePlayerRateLimit)({
       action: operation.action,
       profile: operation.profile,
       request,
@@ -222,9 +144,7 @@ async function guardPlayerLoginRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const decision = await (
-      dependencies.enforcePreAuth ?? enforcePreAuthRateLimit
-    )({
+    const decision = await (dependencies.enforcePreAuth ?? enforcePreAuthRateLimit)({
       action: "player.login.attempt",
       profile: "login",
       request,
@@ -235,31 +155,14 @@ async function guardPlayerLoginRequest(
   }
 }
 
-function createConfiguredClient(
-  dependencies: PlayerRateLimitDispatchDependencies,
-): EdgeSupabaseClient {
+function createConfiguredClient(dependencies: PlayerRateLimitDispatchDependencies): EdgeSupabaseClient {
   const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
   if (!envResult.ok) throw new Error("missing runtime configuration");
   return dependencies.createServiceClient(envResult.value);
 }
-
 function resolveScope(request: Request, client: EdgeSupabaseClient) {
   return resolvePlayerRequestScope(request, {
     hashSessionToken: sha256Hex,
-    resolvePlayerSession: (sessionTokenHash) =>
-      resolveActivePlayerSession(client, sessionTokenHash),
+    resolvePlayerSession: (tokenHash) => resolveActivePlayerSession(client, tokenHash),
   });
-}
-
-function operation(
-  action: string,
-  profile: PlayerRateLimitProfile,
-): ReviewedPlayerRateLimitOperation {
-  return Object.freeze({ action, profile });
-}
-
-function byMethod(
-  operations: Readonly<Record<string, ReviewedPlayerRateLimitOperation>>,
-) {
-  return Object.freeze(operations);
 }
