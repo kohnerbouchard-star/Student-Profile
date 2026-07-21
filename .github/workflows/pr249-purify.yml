@@ -1,0 +1,109 @@
+name: PR249 One-Use Purification
+
+on:
+  push:
+    branches:
+      - agent/player-marketplace-lifecycle-v1
+    paths:
+      - ".github/workflows/pr249-purify.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  purify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/player-marketplace-lifecycle-v1
+
+      - name: Rebuild shared router and repair migration dependency
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          base = "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3"
+          router_path = Path("backend/supabase/functions/classroom-api/index.ts")
+          router = subprocess.check_output(
+              ["git", "show", f"{base}:{router_path.as_posix()}"],
+              text=True,
+          )
+
+          import_marker = '''import {
+            readStaffDemoStorylineInitializeRoutePath,
+          } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";'''
+          marketplace_imports = '''import {
+            handlePlayerMarketplaceRequest,
+          } from "../../../src/domains/marketplace/api/playerMarketplaceHttpHandler.ts";
+          import {
+            readPlayerMarketplaceRoutePath,
+          } from "../../../src/domains/marketplace/api/playerMarketplaceRoutePaths.ts";
+          '''
+          if import_marker not in router:
+              raise SystemExit("Marketplace import marker missing")
+          router = router.replace(import_marker, marketplace_imports + import_marker, 1)
+
+          route_marker = '''  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);'''
+          marketplace_route = '''  const playerMarketplaceRoute = readPlayerMarketplaceRoutePath(url.pathname);
+
+            if (playerMarketplaceRoute) {
+              const endpointKey = playerMarketplaceRoute.kind === "collection"
+                ? request.method === "GET"
+                  ? "marketplace"
+                  : "marketplaceListing"
+                : playerMarketplaceRoute.kind === "activate"
+                ? "marketplaceActivate"
+                : playerMarketplaceRoute.kind === "purchase"
+                ? "marketplacePurchase"
+                : playerMarketplaceRoute.kind === "cancel"
+                ? "marketplaceCancel"
+                : "marketplaceDispute";
+              return dispatchRateLimitedReviewedPlayerRequest(
+                request,
+                endpointKey,
+                () =>
+                  handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
+                    createServiceClient,
+                  }),
+                { createServiceClient },
+              );
+            }
+
+          '''
+          if route_marker not in router:
+              raise SystemExit("Marketplace route marker missing")
+          router = router.replace(route_marker, marketplace_route + route_marker, 1)
+          router_path.write_text(router)
+
+          migration_path = Path("backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql")
+          migration = migration_path.read_text()
+          if "create extension if not exists pgcrypto with schema extensions;" not in migration:
+              migration = migration.replace(
+                  "begin;\n",
+                  "begin;\n\ncreate extension if not exists pgcrypto with schema extensions;\n",
+                  1,
+              )
+          needle = "digest(coalesce(p_value, '{}'::jsonb)::text, 'sha256')"
+          replacement = "extensions.digest(coalesce(p_value, '{}'::jsonb)::text, 'sha256')"
+          if needle not in migration and replacement not in migration:
+              raise SystemExit("Marketplace digest expression missing")
+          migration = migration.replace(needle, replacement, 1)
+          migration_path.write_text(migration)
+
+          workflow = Path(".github/workflows/pr249-purify.yml")
+          workflow.unlink()
+          PY
+
+      - name: Commit purified branch
+        shell: bash
+        run: |
+          git config user.name "econovaria-controller"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor(marketplace): purify shared router and SQL dependency"
+          git push origin HEAD:agent/player-marketplace-lifecycle-v1
