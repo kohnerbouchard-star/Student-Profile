@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const SHA256 = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 const PROJECT_REF = /^[a-z0-9]{20}$/;
+const MIGRATION_VERSION = /^\d{14}$/;
 const FORBIDDEN_VALUE_PATTERNS = [
   /sb_secret_[A-Za-z0-9_-]+/,
   /sb_publishable_[A-Za-z0-9_-]+/,
@@ -66,9 +67,24 @@ function inspectSensitiveValues(value, pointer, errors) {
   }
 }
 
+function sameMigrationIdentity(left, right) {
+  return object(left) && object(right) &&
+    left.count === right.count &&
+    left.head === right.head &&
+    left.versionSetSha256 === right.versionSetSha256;
+}
+
+function validateMigrationIdentity(identity, label, errors) {
+  check(object(identity), `${label} is required`, errors);
+  if (!object(identity)) return;
+  check(Number.isInteger(identity.count) && identity.count > 0, `${label} count is invalid`, errors);
+  check(MIGRATION_VERSION.test(identity.head), `${label} head is invalid`, errors);
+  check(SHA256.test(identity.versionSetSha256), `${label} digest is invalid`, errors);
+}
+
 function validateArtifacts(release, errors) {
   check(Array.isArray(release.artifacts) && release.artifacts.length >= 2, "immutable release artifacts are required", errors);
-  if (!Array.isArray(release.artifacts)) return;
+  if (!Array.isArray(release.artifacts)) return { frontendCount: 0, edgeCount: 0 };
   const files = new Set();
   let frontendCount = 0;
   let edgeCount = 0;
@@ -88,6 +104,7 @@ function validateArtifacts(release, errors) {
   }
   check(frontendCount === 1, "exactly one frontend artifact is required", errors);
   check(edgeCount > 0, "at least one Edge Function artifact is required", errors);
+  return { frontendCount, edgeCount };
 }
 
 function validatePrivacy(privacy, errors) {
@@ -96,13 +113,6 @@ function validatePrivacy(privacy, errors) {
   for (const [name, value] of Object.entries(privacy)) {
     check(value === false, `privacy.${name} must be false`, errors);
   }
-}
-
-function sameMigrationIdentity(left, right) {
-  return object(left) && object(right) &&
-    left.count === right.count &&
-    left.head === right.head &&
-    left.versionSetSha256 === right.versionSetSha256;
 }
 
 export function validateProductionIntegrationEvidence(evidence, { requireReady = false } = {}) {
@@ -137,21 +147,33 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(production.status === "ACTIVE_HEALTHY", "production guard project must be healthy", errors);
     check(SHA256.test(staging.runtimeConfiguration?.publishableKeySha256), "runtime publishable-key fingerprint is invalid", errors);
     check(staging.runtimeConfiguration?.secretValueRetained === false, "runtime configuration must not retain a key value", errors);
+    for (const key of ["edgeFunctionCount", "applicationEdgeFunctionCount", "diagnosticEdgeFunctionCount"]) {
+      check(Number.isInteger(staging[key]) && staging[key] >= 0, `staging.${key} is invalid`, errors);
+    }
+    check(
+      staging.edgeFunctionCount === staging.applicationEdgeFunctionCount + staging.diagnosticEdgeFunctionCount,
+      "staging Edge Function inventory totals are inconsistent",
+      errors,
+    );
   }
   check(evidence.environment?.distinctness?.result === "pass", "environment distinctness must pass", errors);
 
   const canonical = evidence.migrations?.canonicalRepositoryIdentity;
   const ledger = evidence.migrations?.stagingLedger;
-  check(object(canonical) && object(ledger), "canonical and staging migration identities are required", errors);
+  validateMigrationIdentity(canonical, "canonical migration identity", errors);
+  validateMigrationIdentity(ledger, "staging migration identity", errors);
+  let ledgerMatchesCanonical = false;
   if (object(canonical) && object(ledger)) {
-    check(Number.isInteger(canonical.count) && canonical.count > 0, "canonical migration count is invalid", errors);
-    check(/^\d{14}$/.test(canonical.head), "canonical migration head is invalid", errors);
-    check(SHA256.test(canonical.versionSetSha256), "canonical migration digest is invalid", errors);
-    check(ledger.count === canonical.count, "staging migration count does not match canonical count", errors);
-    check(ledger.distinctVersionCount === canonical.count, "staging migration versions are not unique", errors);
-    check(ledger.head === canonical.head, "staging migration head does not match canonical head", errors);
+    check(ledger.distinctVersionCount === ledger.count, "staging migration versions are not unique", errors);
     check(ledger.blankVersionCount === 0 && ledger.blankNameCount === 0, "staging migration ledger contains blanks", errors);
-    check(ledger.matchesCanonicalRepository === true, "staging migration ledger is not bound to the canonical repository", errors);
+    ledgerMatchesCanonical = sameMigrationIdentity(ledger, canonical);
+    check(
+      ledger.matchesCanonicalRepository === ledgerMatchesCanonical,
+      "staging/canonical migration binding marker is inaccurate",
+      errors,
+    );
+    const expectedDrift = ledger.count - canonical.count;
+    check(ledger.aheadBy === expectedDrift, "staging migration aheadBy marker is inaccurate", errors);
   }
   check(evidence.migrations?.productionModified === false, "production must remain unmodified", errors);
 
@@ -159,6 +181,7 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
   check(object(release), "immutable release identity is required", errors);
   let releaseMatchesCanonical = false;
   let ledgerMatchesRelease = false;
+  let artifactCounts = { frontendCount: 0, edgeCount: 0 };
   if (object(release)) {
     check(COMMIT.test(release.sourceCommit), "release sourceCommit is invalid", errors);
     check(release.sourceMergedIntoMain === true, "release source must be merged into main", errors);
@@ -168,25 +191,19 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(SHA256.test(release.releaseManifestSha256), "release manifest digest is invalid", errors);
     check(SHA256.test(release.artifactSetSha256), "artifact-set digest is invalid", errors);
     check(release.checksumsVerified === true, "release checksums must be verified", errors);
-    check(release.configuration?.sha256 && SHA256.test(release.configuration.sha256), "release configuration digest is invalid", errors);
+    check(SHA256.test(release.configuration?.sha256), "release configuration digest is invalid", errors);
     check(release.environmentNeutrality?.status === "pass", "environment-neutrality must pass", errors);
     const requiredRoots = ["admin", "auth", "frontend", "index.html", "player-terminal"];
     check(requiredRoots.every((root) => release.environmentNeutrality?.scannedRoots?.includes(root)), "neutrality evidence must cover every browser root", errors);
 
-    check(object(release.migrations), "immutable release migration identity is required", errors);
+    validateMigrationIdentity(release.migrations, "immutable release migration identity", errors);
     if (object(release.migrations)) {
-      check(Number.isInteger(release.migrations.count) && release.migrations.count > 0, "release migration count is invalid", errors);
-      check(/^\d{14}$/.test(release.migrations.head), "release migration head is invalid", errors);
-      check(SHA256.test(release.migrations.versionSetSha256), "release migration digest is invalid", errors);
       releaseMatchesCanonical = sameMigrationIdentity(release.migrations, canonical);
-      ledgerMatchesRelease =
-        release.migrations.count === ledger?.count &&
-        release.migrations.head === ledger?.head;
+      ledgerMatchesRelease = sameMigrationIdentity(release.migrations, ledger);
       check(release.currentForCanonicalMain === releaseMatchesCanonical, "release current-main marker does not match migration identity", errors);
       check(ledger?.matchesImmutableRelease === ledgerMatchesRelease, "staging/release binding marker is inaccurate", errors);
     }
-
-    validateArtifacts(release, errors);
+    artifactCounts = validateArtifacts(release, errors);
   }
 
   validatePrivacy(evidence.privacy, errors);
@@ -208,8 +225,13 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
 
   if (release?.deployedToStaging === true) {
     check(releaseMatchesCanonical, "a deployed candidate must use the canonical current-main migration identity", errors);
+    check(ledgerMatchesCanonical, "a deployed candidate requires staging to match canonical current main", errors);
     check(ledgerMatchesRelease, "a deployed candidate must match the staging migration ledger", errors);
-    check(staging?.edgeFunctionCount > 0, "a deployed release requires staging Edge Functions", errors);
+    check(
+      staging?.applicationEdgeFunctionCount === artifactCounts.edgeCount,
+      "a deployed release requires the exact application Edge Function inventory",
+      errors,
+    );
     check(typeof staging?.frontendTarget === "string" && staging.frontendTarget.length > 0, "a deployed release requires a frontend target", errors);
   }
 
@@ -219,16 +241,25 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(Array.isArray(gate?.blockers) && gate.blockers.length === 0, "ready gate must have no blockers", errors);
     check(release?.deployedToStaging === true, "ready gate requires exact-artifact staging deployment", errors);
     check(releaseMatchesCanonical, "ready gate requires an immutable release built from the canonical current-main migration set", errors);
+    check(ledgerMatchesCanonical, "ready gate requires staging to match the canonical repository migration identity", errors);
     check(ledgerMatchesRelease, "ready gate requires staging to match the immutable release migration identity", errors);
     check(Array.isArray(dependencyState?.openCapabilityPullRequests) && dependencyState.openCapabilityPullRequests.length === 0, "ready gate requires all capability dependencies merged", errors);
     for (const key of [
+      "stagingEnvironmentProtection",
+      "environmentScopedSecrets",
+      "frontendStagingTarget",
+      "rollbackRehearsal",
       "encryptedBackupRestoreRehearsal",
+      "securityAcceptance",
       "operationalDashboardsAndAlerts",
       "boundedLoad",
+      "postLoadQueryPlans",
+      "boundedSeedAcceptance",
       "connectedAdminSmoke",
       "connectedPlayerDesktopSmoke",
       "connectedPlayerMobileSmoke",
       "continuousScenarioRun",
+      "defectClosure",
     ]) {
       check(dependencyState?.[key] === "pass", `ready gate requires ${key}=pass`, errors);
     }
