@@ -1,0 +1,30 @@
+name: PR 249 Source Snapshot
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pr249-source-snapshot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out PR source
+        uses: actions/checkout@v7
+      - name: Package source
+        run: |
+          set -euo pipefail
+          tar --exclude=.git --exclude=node_modules --exclude=backend/node_modules --exclude=player-terminal/node_modules -czf "$RUNNER_TEMP/pr249-source.tar.gz" .
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr249-source-snapshot
+          path: ${{ runner.temp }}/pr249-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
