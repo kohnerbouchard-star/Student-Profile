@@ -246,6 +246,15 @@ function rpcError(error: RpcError): ProgressionOperationResult {
   if (upper.includes("PROGRESSION_IDEMPOTENCY_CONFLICT")) {
     return errorResult(409, "progression_idempotency_conflict", "This idempotency key was used for another correction.");
   }
+  if (upper.includes("GAME_SESSION_DISABLED")) {
+    return errorResult(409, "progression_game_paused", "Progression corrections are paused for this game.", true);
+  }
+  if (upper.includes("GAME_SESSION_ARCHIVED")) {
+    return errorResult(409, "progression_game_ended", "Progression corrections are closed because this game has ended.");
+  }
+  if (upper.includes("GAME_SESSION_NOT_ACTIVE") || upper.includes("GAME_SESSION_NOT_FOUND")) {
+    return errorResult(409, "progression_game_unavailable", "Progression corrections are unavailable for this game.");
+  }
   if (upper.includes("PROGRESSION_") && upper.includes("INVALID")) return invalid("Progression request is invalid.");
   return failed();
 }
