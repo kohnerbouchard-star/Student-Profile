@@ -57,9 +57,7 @@ export interface PlayerArrivalRuntimeInput {
 export interface PlayerTravelPlanningInput {
   readonly bundle: WorldDefinitionBundle;
   readonly state: WorldRuntimeState;
-  readonly context: Omit<PlayerTravelContext, "allowedModes"> & {
-    readonly allowedModes: readonly string[];
-  };
+  readonly context: PlayerTravelContext;
 }
 
 export interface PlayerWorldRuntimeRepository {
