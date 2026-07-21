@@ -1,4 +1,4 @@
-name: Business Post-World Merge Diagnostic
+name: Business Post-World Merge
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  merge:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -19,32 +19,44 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Rehearse exact additive merge and publish result
+      - name: Merge final World main additively
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -Eeuo pipefail
-          exec > >(tee /tmp/business-merge-executor.log) 2>&1
+          exec > >(tee /tmp/business-post-world-merge.log) 2>&1
 
-          publish_result() {
+          publish_failure() {
             status=$?
-            set +e
-            printf '\nexecutor_exit=%s\n' "$status" >> /tmp/business-merge-executor.log
-            content="$(base64 -w0 /tmp/business-merge-executor.log)"
-            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result?ref=agent/business-banking-credit-v1" --jq .sha 2>/dev/null || true)"
-            args=(--method PUT --field message="ci(business): publish post-World merge rehearsal result" --field branch="agent/business-banking-credit-v1" --field content="$content")
-            if [ -n "$existing_sha" ]; then args+=(--field sha="$existing_sha"); fi
-            gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result" "${args[@]}" >/dev/null
+            if [ "$status" -ne 0 ]; then
+              set +e
+              printf '\nexecutor_exit=%s\n' "$status" >> /tmp/business-post-world-merge.log
+              content="$(base64 -w0 /tmp/business-post-world-merge.log)"
+              existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result?ref=agent/business-banking-credit-v1" --jq .sha 2>/dev/null || true)"
+              args=(--method PUT --field message="ci(business): publish failed post-World merge result" --field branch="agent/business-banking-credit-v1" --field content="$content")
+              if [ -n "$existing_sha" ]; then args+=(--field sha="$existing_sha"); fi
+              gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result" "${args[@]}" >/dev/null
+            fi
             exit "$status"
           }
-          trap publish_result EXIT
+          trap publish_failure EXIT
           set -x
 
           AUDITED_BUSINESS_HEAD="db724e4cbed81789cda3e9db67e8ecacacb62aa5"
           BUSINESS_MERGE_BASE="458137c9193a7066294024098b4d938aa46f6aba"
           WORLD_MERGE_SHA="13a6829b1f658b49910a882fd66bb0fd61c571ff"
           CLASSROOM_PATH="backend/supabase/functions/classroom-api/index.ts"
+          conflict_paths=(
+            ".github/workflows/player-terminal-verify.yml"
+            "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts"
+            "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+            "backend/supabase/functions/admin-api/index.ts"
+            "player-terminal/src/api/backend-routes.js"
+            "player-terminal/src/api/capabilities.js"
+            "player-terminal/src/api/resource-plan.js"
+            "player-terminal/src/integrations/student-profile-capability-manifest.js"
+          )
 
           git config user.name "econovaria-controller"
           git config user.email "controller@users.noreply.github.com"
@@ -57,22 +69,11 @@ jobs:
           set -e
           test "$merge_status" -eq 1
 
-          expected_conflicts="$(cat <<'EOF'
-.github/workflows/player-terminal-verify.yml
-backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
-backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
-backend/supabase/functions/admin-api/index.ts
-player-terminal/src/api/backend-routes.js
-player-terminal/src/api/capabilities.js
-player-terminal/src/api/resource-plan.js
-player-terminal/src/integrations/student-profile-capability-manifest.js
-EOF
-)"
+          expected_conflicts="$(printf '%s\n' "${conflict_paths[@]}")"
           actual_conflicts="$(git diff --name-only --diff-filter=U | sort)"
           test "$actual_conflicts" = "$expected_conflicts"
 
-          while IFS= read -r path; do
-            test -n "$path" || continue
+          for path in "${conflict_paths[@]}"; do
             mkdir -p "$(dirname "/tmp/business-union/$path")" "$(dirname "$path")"
             git show "origin/main:$path" > "/tmp/business-union/$path.main"
             git show "$BUSINESS_MERGE_BASE:$path" > "/tmp/business-union/$path.base"
@@ -80,7 +81,7 @@ EOF
             git merge-file --union -p "/tmp/business-union/$path.main" "/tmp/business-union/$path.base" "/tmp/business-union/$path.business" > "$path" || true
             ! grep -qE '^(<<<<<<<|=======|>>>>>>>)' "$path"
             git add "$path"
-          done <<< "$expected_conflicts"
+          done
 
           git checkout origin/main -- "$CLASSROOM_PATH"
           python3 - <<'PY'
@@ -152,5 +153,12 @@ EOF
           git add -A
 
           test -z "$(git diff --name-only --diff-filter=U)"
+          test ! -e .business-main-tree-identity
+          test ! -e .business-merge-conflicts
+          test ! -e .business-merge-executor-result
+          test ! -e .github/workflows/business-main-tree-capture.yml
           git diff --cached --check
-          echo BUSINESS_MERGE_REHEARSAL_SUCCESS
+
+          git commit -m "Merge World into Business and Banking authority"
+          trap - EXIT
+          git push origin HEAD:agent/business-banking-credit-v1
