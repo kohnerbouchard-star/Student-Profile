@@ -2,6 +2,8 @@ name: Connected Operations Source Snapshot
 
 on:
   pull_request:
+    types:
+      - ready_for_review
     paths:
       - ".github/workflows/connected-operations-source-snapshot.yml"
   push:
