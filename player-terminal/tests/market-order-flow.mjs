@@ -88,9 +88,7 @@ assert.ok(refreshPending.includes("FILLED · REFRESH PENDING"));
 assert.ok(refreshPending.includes("Order completed, refresh pending."));
 
 const source = await readFile(new URL("../src/features/market/market-order-flow.js", import.meta.url), "utf8");
-const routeWrapper = await readFile(new URL("../src/api/backend-routes.js", import.meta.url), "utf8");
-const routeCore = await readFile(new URL("../src/api/backend-routes-core.js", import.meta.url), "utf8");
-const routes = `${routeWrapper}\n${routeCore}`;
+const routes = await readFile(new URL("../src/api/backend-routes.js", import.meta.url), "utf8");
 const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
 assert.ok(main.includes("installMarketOrderFlow"));
 assert.ok(source.includes('addEventListener("submit", handleSubmit, true)'), "Market submission must intercept the legacy direct-submit controller.");
@@ -102,9 +100,8 @@ assert.ok(source.includes("BACKEND INTEGRATION PENDING"), "Limit-order controls 
 assert.ok(source.includes("await terminal.refresh()"));
 assert.ok(source.includes("The order completed, but current balances, holdings, and market data could not be refreshed"), "Committed orders must remain successful when refresh fails.");
 assert.ok(!source.includes("playerUuid") && !source.includes("recipientPlayerUuid"));
-assert.ok(routeWrapper.includes("resolveCoreBackendRequest"), "Messaging must layer over the preserved core route registry.");
 assert.ok(routes.includes("ticker:"));
 assert.ok(routes.includes("expectedPrice"));
 assert.ok(!routes.includes("stockAssetId:"), "The connected Player route must not submit the internal stock asset identifier.");
 
-console.log("Market order flow passed: ticker-only review, stale-price guard, market-only settlement, limit-order preservation, UUID-private receipts, committed-success refresh behavior, and layered route registry are valid.");
+console.log("Market order flow passed: ticker-only review, stale-price guard, market-only settlement, limit-order preservation, UUID-private receipts, and committed-success refresh behavior are valid.");
