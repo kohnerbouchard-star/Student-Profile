@@ -169,6 +169,7 @@ Deno.test("later residency uses public eligibility only and is revision safe", (
     gameSessionId: "session-1",
     playerUuid: "player-1",
     currentCountryId: "country-0",
+    currencyCode: "ELD",
     eligibleCountryIds: ["country-1", "country-2", "country-1"],
     now: NOW,
   });
@@ -209,6 +210,7 @@ function context(
       gameSessionId: "session-1",
       playerUuid: "player-1",
       currentCountryId: "country-0",
+      currencyCode: "ELD",
       eligibleCountryIds: ["country-1"],
       now: NOW,
     }),
