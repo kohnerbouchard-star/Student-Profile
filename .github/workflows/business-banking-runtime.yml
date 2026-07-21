@@ -59,16 +59,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-      - name: Capture synchronization tree
-        shell: bash
-        run: git rev-parse 'HEAD^{tree}' > /tmp/business-banking-tree-sha.txt
-      - name: Upload synchronization tree
-        uses: actions/upload-artifact@v4
-        with:
-          name: business-banking-tree-sha
-          path: /tmp/business-banking-tree-sha.txt
-          if-no-files-found: error
-          retention-days: 1
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
