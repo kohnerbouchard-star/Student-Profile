@@ -39,9 +39,11 @@ export function formatMarketDecimal(
 }
 
 export function addMarketDecimals(...values: readonly MarketDecimalInput[]): string {
-  return formatMarketDecimal(
-    values.reduce((total, value) => total + parseMarketDecimal(value), 0n),
+  const total = values.reduce<bigint>(
+    (sum, value) => sum + parseMarketDecimal(value),
+    0n,
   );
+  return formatMarketDecimal(total);
 }
 
 export function subtractMarketDecimals(
