@@ -443,7 +443,9 @@ function mapRpcError(error: QueryError): Error {
   if (
     code.includes("STALE_VERSION") || code.includes("CONFLICT") ||
     code.includes("TRANSITION") || code.includes("NOT_ACTIVE") ||
-    code.includes("RESERVATION_ACTIVE") || code.includes("EXPIRED") ||
+    code.includes("SCOPE_INACTIVE") || code.includes("GAME_PAUSED") ||
+    code.includes("GAME_ENDED") || code.includes("RESERVATION_ACTIVE") ||
+    code.includes("EXPIRED") ||
     code.includes("SELF_PURCHASE") || code.includes("WINDOW_CLOSED") ||
     code.includes("NOT_DISPUTABLE")
   ) {
