@@ -1,7 +1,7 @@
 begin;
 
 alter table public.world_country_runtime
-  add column country_uuid uuid references public.countries (id) on delete restrict;
+  add column country_uuid uuid references public.country_profiles (id) on delete restrict;
 
 alter table public.world_country_runtime
   alter column country_uuid set not null;
@@ -103,7 +103,7 @@ begin
     end if;
 
     perform 1
-    from public.countries as country_row
+    from public.country_profiles as country_row
     join public.world_location_states as location_row
       on location_row.game_session_id = p_game_session_id
      and location_row.public_location_id = v_country->>'arrivalLocationId'
