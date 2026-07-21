@@ -59,6 +59,7 @@ jobs:
               $0 == "admin/index.html" { next }
               $0 == "admin/modal-accessibility.js" { next }
               $0 == "admin/modal-lifecycle-bridge.js" { next }
+              $0 == "admin/player-create-ux.js" { next }
               $0 == "admin/scanner-auto-refresh.js" { next }
               $0 == "admin/interaction-quality-control-reset.js" { next }
               $0 == "admin/world-runtime-console.js" { next }
