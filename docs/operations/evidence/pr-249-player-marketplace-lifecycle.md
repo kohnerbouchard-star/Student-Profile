@@ -99,7 +99,7 @@ Purification was completed in place without creating a replacement branch or PR.
 - The shared router diff was reduced from 656 deletions to zero deletions.
 - `admin/inventory-redemption-queue-loader.js` was restored to Inventory-only ownership.
 - Marketplace now loads independently through the existing deterministic Admin deferred-loader chain.
-- The one-use purification workflow removed itself and is not part of the permanent diff.
+- All one-use purification and fixture workflows removed themselves and are not part of the permanent diff.
 - No operational, backup, observability, pilot, incident, release, or environment-neutrality implementation was added.
 
 ## Provisional migration state
@@ -134,11 +134,13 @@ That head failed:
 - Player Terminal Chromium coverage;
 - Admin Shell Smoke after unrelated attendance-settings feedback validation.
 
-The digest defect and hidden Admin-loader coupling have been corrected on the purified branch. Exact-head workflows must pass again before any post-Crafting integration decision.
+The purified branch subsequently demonstrated green backend typecheck and Marketplace smoke, two zero-state database resets and lint, Seed compatibility, security, repository quality, Admin API, Admin shell, game lifecycle, timezone, exchange, supply-chain, environment-neutrality, release-promotion, and staging-preflight gates.
 
-## Required pre-Crafting test expansion
+The connected Marketplace browser fixture now uses the accepted direct `ECONOVARIA_PLAYER_TERMINAL_CONFIG` session fields, the accepted `ECONOVARIA_PLAYER_SESSION` handoff, and explicit connected API mode. A normal pull-request workflow run must verify that final fixture on desktop and mobile before this pre-Crafting tranche is considered fully green.
 
-Before the dependency gate lifts, branch-local tests must explicitly cover:
+## Completed pre-Crafting test expansion
+
+Branch-local tests explicitly cover:
 
 - atomic listing and Inventory reservation;
 - concurrent buyers and stale listing versions;
