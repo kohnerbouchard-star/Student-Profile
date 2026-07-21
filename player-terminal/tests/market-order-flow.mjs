@@ -1,107 +1,86 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-import {
-  buildMarketOrderConfirmation,
-  buildMarketOrderReview,
-  buildMarketOrderResult,
-} from "../src/features/market/market-order-flow.js";
+import { renderMarketOrderDialog } from "../src/features/market/market-order-flow.js";
 
 const asset = {
-  symbol: "AUR",
-  name: "Aurelia Systems",
-  price: 24.75,
+  id: "00000000-0000-4000-8000-000000000101",
+  symbol: "NOV",
+  name: "Novaria Industries",
+  price: 25,
+  owned: 12
 };
 
-const buyReview = buildMarketOrderReview({
+const review = renderMarketOrderDialog({
+  stage: "review",
   asset,
   side: "buy",
-  quantity: 3,
   orderType: "market",
+  quantity: 4,
+  estimatedGross: 100,
+  availableCashLabel: "ECO 500",
+  currencyCode: "ECO",
+  error: ""
 });
-assert.equal(buyReview.side, "buy");
-assert.equal(buyReview.quantity, 3);
-assert.equal(buyReview.ticker, "AUR");
-assert.equal(buyReview.expectedPrice, 24.75);
-assert.equal(buyReview.estimatedValue, 74.25);
-assert.equal(buyReview.orderType, "market");
-assert.equal(buyReview.backendSupported, true);
-assert.equal(buyReview.requiresConfirmation, true);
-assert.equal("stockAssetId" in buyReview, false);
+assert.ok(review.includes("MARKET ORDER REVIEW"));
+assert.ok(review.includes("CONFIRMATION REQUIRED"));
+assert.ok(review.includes("Current price and gross value are estimates"));
+assert.ok(review.includes("data-player-market-order-confirm"));
+assert.ok(!review.includes("playerSessionId"));
+assert.ok(!review.includes(asset.id), "The review must not expose the internal stock asset identifier.");
 
-const sellReview = buildMarketOrderReview({
+const limit = renderMarketOrderDialog({
+  stage: "limit-pending",
+  asset,
+  side: "buy",
+  orderType: "limit",
+  quantity: 4,
+  limitPrice: 23,
+  currencyCode: "ECO"
+});
+assert.ok(limit.includes("LIMIT ORDER"));
+assert.ok(limit.includes("BACKEND INTEGRATION PENDING"));
+assert.ok(limit.includes("No order was sent"));
+assert.ok(!limit.includes("data-player-market-order-confirm"), "Limit orders must remain visible without executing against an unsupported backend route.");
+
+const receipt = renderMarketOrderDialog({
+  stage: "receipt",
+  asset,
+  side: "buy",
+  quantity: 4,
+  currencyCode: "ECO",
+  receipt: {
+    order: {
+      ticker: "NOV",
+      side: "buy",
+      quantity: 4,
+      executionPrice: 25.1,
+      grossValue: 100.4,
+      status: "filled",
+      rejectionReason: null
+    },
+    cash: { accountType: "cash", currencyCode: "ECO", balance: 399.6 },
+    holding: { quantity: 16, averageCost: 24.8 }
+  },
+  refreshWarning: ""
+});
+assert.ok(receipt.includes("ORDER RECEIPT"));
+assert.ok(receipt.includes("FILLED"));
+assert.ok(receipt.includes("ECO 25.1"));
+assert.ok(receipt.includes("16 shares"));
+assert.ok(!receipt.includes("ORDER ID"), "Player receipts must not depend on internal order identifiers.");
+assert.ok(!receipt.includes(asset.id), "Player receipts must not expose the internal stock asset identifier.");
+
+const refreshPending = renderMarketOrderDialog({
+  stage: "receipt",
   asset,
   side: "sell",
   quantity: 2,
-  orderType: "market",
-});
-assert.equal(sellReview.estimatedValue, 49.5);
-assert.equal(sellReview.backendSupported, true);
-
-const limitReview = buildMarketOrderReview({
-  asset,
-  side: "buy",
-  quantity: 1,
-  orderType: "limit",
-  limitPrice: 20,
-});
-assert.equal(limitReview.backendSupported, false);
-assert.equal(limitReview.orderType, "limit");
-assert.equal(limitReview.limitPrice, 20);
-
-assert.throws(() => buildMarketOrderReview({ asset, side: "buy", quantity: 0, orderType: "market" }), /quantity/i);
-assert.throws(() => buildMarketOrderReview({ asset, side: "hold", quantity: 1, orderType: "market" }), /side/i);
-assert.throws(() => buildMarketOrderReview({ asset: { ...asset, symbol: "" }, side: "buy", quantity: 1, orderType: "market" }), /ticker/i);
-
-const confirmation = buildMarketOrderConfirmation(buyReview);
-assert.ok(confirmation.includes("AUR"));
-assert.ok(confirmation.includes("3"));
-assert.ok(confirmation.includes("24.75"));
-assert.ok(confirmation.includes("market order"));
-
-const filled = buildMarketOrderResult({
-  transaction: {
-    ...buyReview,
-    response: {
-      ok: true,
-      data: {
-        outcome: "applied",
-        orderId: "ord_public_123",
-        ticker: "AUR",
-        side: "buy",
-        quantity: 3,
-        executedPrice: 24.75,
-        executedValue: 74.25,
-        currencyCode: "LUM",
-        newCashBalance: 925.75,
-        completedAt: "2026-07-21T03:10:00.000Z",
-      },
-    },
-  },
-  refreshWarning: "",
-});
-assert.ok(filled.includes("FILLED"));
-assert.ok(filled.includes("ord_public_123"));
-assert.ok(filled.includes("LUM"));
-assert.ok(!filled.includes("00000000-0000-"));
-
-const refreshPending = buildMarketOrderResult({
-  transaction: {
-    ...buyReview,
-    response: {
-      ok: true,
-      data: {
-        outcome: "applied",
-        orderId: "ord_public_456",
-        ticker: "AUR",
-        side: "buy",
-        quantity: 3,
-        executedPrice: 24.75,
-        executedValue: 74.25,
-        currencyCode: "LUM",
-        completedAt: "2026-07-21T03:10:00.000Z",
-      },
-    },
+  currencyCode: "ECO",
+  receipt: {
+    order: { ticker: "NOV", side: "sell", quantity: 2, executionPrice: 25, grossValue: 50, status: "filled" },
+    cash: { currencyCode: "ECO", balance: 550 },
+    holding: { quantity: 10, averageCost: 24 }
   },
   refreshWarning: "Order completed, refresh pending."
 });
