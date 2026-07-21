@@ -1,4 +1,4 @@
-name: Business Post-World Merge
+name: Business Post-World Merge Diagnostic
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  merge:
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -19,14 +19,32 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Merge final World main additively
+      - name: Rehearse exact additive merge and publish result
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          readonly AUDITED_BUSINESS_HEAD="db724e4cbed81789cda3e9db67e8ecacacb62aa5"
-          readonly BUSINESS_MERGE_BASE="458137c9193a7066294024098b4d938aa46f6aba"
-          readonly WORLD_MERGE_SHA="13a6829b1f658b49910a882fd66bb0fd61c571ff"
-          readonly CLASSROOM_PATH="backend/supabase/functions/classroom-api/index.ts"
+          set -Eeuo pipefail
+          exec > >(tee /tmp/business-merge-executor.log) 2>&1
+
+          publish_result() {
+            status=$?
+            set +e
+            printf '\nexecutor_exit=%s\n' "$status" >> /tmp/business-merge-executor.log
+            content="$(base64 -w0 /tmp/business-merge-executor.log)"
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result?ref=agent/business-banking-credit-v1" --jq .sha 2>/dev/null || true)"
+            args=(--method PUT --field message="ci(business): publish post-World merge rehearsal result" --field branch="agent/business-banking-credit-v1" --field content="$content")
+            if [ -n "$existing_sha" ]; then args+=(--field sha="$existing_sha"); fi
+            gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result" "${args[@]}" >/dev/null
+            exit "$status"
+          }
+          trap publish_result EXIT
+          set -x
+
+          AUDITED_BUSINESS_HEAD="db724e4cbed81789cda3e9db67e8ecacacb62aa5"
+          BUSINESS_MERGE_BASE="458137c9193a7066294024098b4d938aa46f6aba"
+          WORLD_MERGE_SHA="13a6829b1f658b49910a882fd66bb0fd61c571ff"
+          CLASSROOM_PATH="backend/supabase/functions/classroom-api/index.ts"
 
           git config user.name "econovaria-controller"
           git config user.email "controller@users.noreply.github.com"
@@ -37,7 +55,7 @@ jobs:
           git merge --no-commit --no-ff origin/main
           merge_status=$?
           set -e
-          test "$merge_status" -eq 0 || test "$merge_status" -eq 1
+          test "$merge_status" -eq 1
 
           expected_conflicts="$(cat <<'EOF'
 .github/workflows/player-terminal-verify.yml
@@ -59,22 +77,21 @@ EOF
             git show "origin/main:$path" > "/tmp/business-union/$path.main"
             git show "$BUSINESS_MERGE_BASE:$path" > "/tmp/business-union/$path.base"
             git show "$AUDITED_BUSINESS_HEAD:$path" > "/tmp/business-union/$path.business"
-            git merge-file --union -p \
-              "/tmp/business-union/$path.main" \
-              "/tmp/business-union/$path.base" \
-              "/tmp/business-union/$path.business" > "$path" || true
+            git merge-file --union -p "/tmp/business-union/$path.main" "/tmp/business-union/$path.base" "/tmp/business-union/$path.business" > "$path" || true
             ! grep -qE '^(<<<<<<<|=======|>>>>>>>)' "$path"
             git add "$path"
           done <<< "$expected_conflicts"
 
-          # Remove the broad pre-World router rewrite. Start from final World main and
-          # add only the audited Business imports and bounded Player dispatch.
           git checkout origin/main -- "$CLASSROOM_PATH"
           python3 - <<'PY'
           from pathlib import Path
 
           path = Path("backend/supabase/functions/classroom-api/index.ts")
           text = path.read_text()
+          import_anchor = '''import {
+            readPlayerBankingPublicRoutePath,
+          } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
+          '''
           imports = '''import {
             handlePlayerBusinessBankingRequest,
           } from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
@@ -82,15 +99,11 @@ EOF
             readPlayerBusinessBankingRoutePath,
           } from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
           '''
-          import_anchor = '''import {
-            readPlayerBankingPublicRoutePath,
-          } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
-          '''
-          if "handlePlayerBusinessBankingRequest" not in text:
-              if import_anchor not in text:
-                  raise SystemExit("Business import anchor not found")
-              text = text.replace(import_anchor, import_anchor + imports, 1)
+          if import_anchor not in text:
+              raise SystemExit("Business import anchor not found")
+          text = text.replace(import_anchor, import_anchor + imports, 1)
 
+          dispatch_anchor = "  const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);\n"
           dispatch = '''  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
             url.pathname,
           );
@@ -126,28 +139,18 @@ EOF
             }
 
           '''
-          dispatch_anchor = "  const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);\n"
-          if "const playerBusinessBankingRoute" not in text:
-              if dispatch_anchor not in text:
-                  raise SystemExit("Business dispatch anchor not found")
-              text = text.replace(dispatch_anchor, dispatch + dispatch_anchor, 1)
-
+          if dispatch_anchor not in text:
+              raise SystemExit("Business dispatch anchor not found")
+          text = text.replace(dispatch_anchor, dispatch + dispatch_anchor, 1)
           path.write_text(text)
           PY
           git add "$CLASSROOM_PATH"
 
-          # Restore the audited permanent Business workflow and remove all temporary
-          # merge-probe material from the final tree.
           git checkout "$AUDITED_BUSINESS_HEAD" -- .github/workflows/business-banking-runtime.yml
-          rm -f .business-main-tree-identity .business-merge-conflicts
+          rm -f .business-main-tree-identity .business-merge-conflicts .business-merge-executor-result
           rm -f .github/workflows/business-main-tree-capture.yml
           git add -A
 
           test -z "$(git diff --name-only --diff-filter=U)"
-          test ! -e .business-main-tree-identity
-          test ! -e .business-merge-conflicts
-          test ! -e .github/workflows/business-main-tree-capture.yml
           git diff --cached --check
-
-          git commit -m "Merge World into Business and Banking authority"
-          git push origin HEAD:agent/business-banking-credit-v1
+          echo BUSINESS_MERGE_REHEARSAL_SUCCESS
