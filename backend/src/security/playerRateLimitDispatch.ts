@@ -11,6 +11,7 @@ import {
   resolvePlayerRequestScope,
 } from "../domains/players/api/playerRequestScope.ts";
 import { resolveActivePlayerSession } from "../domains/players/api/playerSessionHttpHelpers.ts";
+import { readPlayerProgressionRoutePath } from "../domains/progression/api/playerProgressionRoutePaths.ts";
 import {
   enforcePlayerRateLimit,
   type EnforcePlayerRateLimitInput,
@@ -39,7 +40,6 @@ const redemption = methods({
   GET: op("player.inventory.redemptions.read", "read"),
   POST: op("player.inventory.redemptions.request", "write"),
 });
-
 const OPERATIONS: Readonly<Record<
   ReviewedPlayerRateLimitEndpointKey,
   Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
@@ -95,7 +95,8 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
   next: () => Promise<Response> | Response,
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
-  const operation = readReviewedPlayerRateLimitOperation(endpointKey, request.method);
+  const resolvedKey = resolveReviewedEndpointKey(request, endpointKey);
+  const operation = readReviewedPlayerRateLimitOperation(resolvedKey, request.method);
   if (!operation) return next();
   const limited = await guardReviewedPlayerRequest(request, operation, dependencies);
   return limited ?? next();
@@ -109,6 +110,18 @@ export async function dispatchRateLimitedPlayerLoginRequest(
   if (request.method !== "POST") return next();
   const limited = await guardPlayerLoginRequest(request, dependencies);
   return limited ?? next();
+}
+
+function resolveReviewedEndpointKey(
+  request: Request,
+  fallback: ReviewedPlayerRateLimitEndpointKey,
+): ReviewedPlayerRateLimitEndpointKey {
+  if (fallback !== "capabilities") return fallback;
+  const route = readPlayerProgressionRoutePath(new URL(request.url).pathname);
+  if (!route || route.kind === "malformed") return fallback;
+  if (route.kind === "read") return "progression";
+  if (route.kind === "unlock") return "progressionUnlock";
+  return "progressionClaim";
 }
 
 async function guardReviewedPlayerRequest(
