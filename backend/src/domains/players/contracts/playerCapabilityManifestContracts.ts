@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-20.3" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -17,9 +17,11 @@ export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "messages",
   "progression",
   "profile",
+  "world",
 ] as const;
 
 export const PLAYER_ACTION_CAPABILITY_KEYS = [
+  "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
   "businessHire",
@@ -45,19 +47,22 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
+  "residencyRequest",
   "savingsTransfer",
   "storePurchase",
   "storyDeliveryState",
+  "travelComplete",
+  "travelExecute",
+  "travelQuote",
 ] as const;
 
-export type PlayerRouteCapabilityKey =
-  typeof PLAYER_ROUTE_CAPABILITY_KEYS[number];
-export type PlayerActionCapabilityKey =
-  typeof PLAYER_ACTION_CAPABILITY_KEYS[number];
+export type PlayerRouteCapabilityKey = typeof PLAYER_ROUTE_CAPABILITY_KEYS[number];
+export type PlayerActionCapabilityKey = typeof PLAYER_ACTION_CAPABILITY_KEYS[number];
 
 export type PlayerCapabilityEndpointKey =
   | "bootstrap"
   | "capabilities"
+  | "arrivalClass"
   | "banking"
   | "contractAccept"
   | "contractSubmit"
@@ -76,11 +81,16 @@ export type PlayerCapabilityEndpointKey =
   | "notifications"
   | "notificationsRead"
   | "portfolio"
+  | "residencyRequest"
   | "store"
   | "storeQuote"
   | "storePurchase"
   | "storyDeliveries"
-  | "storyDeliveryState";
+  | "storyDeliveryState"
+  | "travelComplete"
+  | "travelExecute"
+  | "travelQuote"
+  | "worldRuntime";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -119,199 +129,74 @@ export type PlayerCapabilityManifestRoute =
   | { readonly kind: "malformed" };
 
 const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
+  { key: "bootstrap", operations: [{ method: "GET", pathTemplate: "/players/me" }], routeCapabilities: ["profile"] },
+  { key: "capabilities", operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }] },
   {
-    key: "bootstrap",
-    operations: [{ method: "GET", pathTemplate: "/players/me" }],
-    routeCapabilities: ["profile"],
+    key: "worldRuntime",
+    operations: [{ method: "GET", pathTemplate: "/players/me/world-runtime" }],
+    routeCapabilities: ["world"],
   },
   {
-    key: "capabilities",
-    operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
+    key: "arrivalClass",
+    operations: [{ method: "POST", pathTemplate: "/players/me/arrival-class" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["arrivalClassSubmit"],
   },
   {
-    key: "banking",
-    operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }],
-    routeCapabilities: ["banking"],
+    key: "travelQuote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel/quotes" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelQuote"],
   },
   {
-    key: "contractAccept",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/contracts/:contractKey/accept",
-    }],
-    actionCapabilities: ["contractAccept"],
+    key: "travelExecute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelExecute"],
   },
   {
-    key: "contractSubmit",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/contracts/:contractKey/submit",
-    }],
-    actionCapabilities: ["contractSubmit"],
+    key: "travelComplete",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel/:journeyId/complete" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelComplete"],
   },
   {
-    key: "contracts",
-    operations: [{ method: "GET", pathTemplate: "/players/me/contracts" }],
-    routeCapabilities: ["contracts"],
+    key: "residencyRequest",
+    operations: [{ method: "POST", pathTemplate: "/players/me/residency" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["residencyRequest"],
   },
-  {
-    key: "countries",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/world/countries",
-    }],
-  },
-  {
-    key: "country",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/world/countries/:countryCode",
-    }],
-  },
-  {
-    key: "dashboard",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/game/dashboard",
-    }],
-    routeCapabilities: ["dashboard"],
-  },
-  {
-    key: "news",
-    operations: [{ method: "GET", pathTemplate: "/players/me/world/news" }],
-    routeCapabilities: ["news"],
-  },
-  {
-    key: "market",
-    operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets" }],
-    routeCapabilities: ["market"],
-  },
-  {
-    key: "marketAsset",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/stocks/assets/:ticker",
-    }],
-    routeCapabilities: ["market"],
-  },
-  {
-    key: "marketOrder",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/stocks/orders",
-    }],
-    routeCapabilities: ["market"],
-    actionCapabilities: ["marketOrder"],
-  },
-  {
-    key: "marketWatchlist",
-    operations: [
-      { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
-      { method: "PUT", pathTemplate: "/players/me/stocks/watchlist/:ticker" },
-      {
-        method: "DELETE",
-        pathTemplate: "/players/me/stocks/watchlist/:ticker",
-      },
-    ],
-    routeCapabilities: ["market"],
-    actionCapabilities: ["marketWatchlist"],
-  },
-  {
-    key: "portfolio",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/stocks/portfolio",
-    }],
-    routeCapabilities: ["portfolio"],
-  },
-  {
-    key: "store",
-    operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }],
-    routeCapabilities: ["store"],
-  },
-  {
-    key: "storeQuote",
-    operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }],
-  },
-  {
-    key: "storePurchase",
-    operations: [
-      { method: "GET", pathTemplate: "/players/me/store/purchases" },
-      { method: "POST", pathTemplate: "/players/me/store/purchases" },
-    ],
-    actionCapabilities: ["storePurchase"],
-  },
-  {
-    key: "inventory",
-    operations: [{ method: "GET", pathTemplate: "/players/me/inventory" }],
-    routeCapabilities: ["inventory"],
-  },
-  {
-    key: "inventoryRedemptions",
-    operations: [
-      {
-        method: "GET",
-        pathTemplate: "/players/me/inventory/redemptions",
-      },
-      {
-        method: "POST",
-        pathTemplate: "/players/me/inventory/:itemId/redemptions",
-      },
-      {
-        method: "GET",
-        pathTemplate: "/players/me/inventory/redemptions/:requestId",
-      },
-    ],
-    routeCapabilities: ["inventory"],
-    actionCapabilities: ["inventoryUse"],
-  },
-  {
-    key: "notifications",
-    operations: [{ method: "GET", pathTemplate: "/players/me/notifications" }],
-  },
-  {
-    key: "notificationsRead",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/notifications/read",
-    }],
-    actionCapabilities: ["notificationsRead"],
-  },
-  {
-    key: "storyDeliveries",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/story-deliveries",
-    }],
-  },
-  {
-    key: "storyDeliveryState",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/story-deliveries/:deliveryId/state",
-    }],
-    actionCapabilities: ["storyDeliveryState"],
-  },
-  {
-    key: "logout",
-    operations: [{
-      method: "POST",
-      pathTemplate: "/players/me/session/logout",
-    }],
-    actionCapabilities: ["logout"],
-  },
+  { key: "banking", operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }], routeCapabilities: ["banking"] },
+  { key: "contractAccept", operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/accept" }], actionCapabilities: ["contractAccept"] },
+  { key: "contractSubmit", operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/submit" }], actionCapabilities: ["contractSubmit"] },
+  { key: "contracts", operations: [{ method: "GET", pathTemplate: "/players/me/contracts" }], routeCapabilities: ["contracts"] },
+  { key: "countries", operations: [{ method: "GET", pathTemplate: "/players/me/world/countries" }] },
+  { key: "country", operations: [{ method: "GET", pathTemplate: "/players/me/world/countries/:countryCode" }] },
+  { key: "dashboard", operations: [{ method: "GET", pathTemplate: "/players/me/game/dashboard" }], routeCapabilities: ["dashboard"] },
+  { key: "news", operations: [{ method: "GET", pathTemplate: "/players/me/world/news" }], routeCapabilities: ["news"] },
+  { key: "market", operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets" }], routeCapabilities: ["market"] },
+  { key: "marketAsset", operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets/:ticker" }], routeCapabilities: ["market"] },
+  { key: "marketOrder", operations: [{ method: "POST", pathTemplate: "/players/me/stocks/orders" }], routeCapabilities: ["market"], actionCapabilities: ["marketOrder"] },
+  { key: "marketWatchlist", operations: [{ method: "GET", pathTemplate: "/players/me/stocks/watchlist" }, { method: "PUT", pathTemplate: "/players/me/stocks/watchlist/:ticker" }, { method: "DELETE", pathTemplate: "/players/me/stocks/watchlist/:ticker" }], routeCapabilities: ["market"], actionCapabilities: ["marketWatchlist"] },
+  { key: "portfolio", operations: [{ method: "GET", pathTemplate: "/players/me/stocks/portfolio" }], routeCapabilities: ["portfolio"] },
+  { key: "store", operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }], routeCapabilities: ["store"] },
+  { key: "storeQuote", operations: [{ method: "POST", pathTemplate: "/players/me/store/quotes" }] },
+  { key: "storePurchase", operations: [{ method: "GET", pathTemplate: "/players/me/store/purchases" }, { method: "POST", pathTemplate: "/players/me/store/purchases" }], actionCapabilities: ["storePurchase"] },
+  { key: "inventory", operations: [{ method: "GET", pathTemplate: "/players/me/inventory" }], routeCapabilities: ["inventory"] },
+  { key: "inventoryRedemptions", operations: [{ method: "GET", pathTemplate: "/players/me/inventory/redemptions" }, { method: "POST", pathTemplate: "/players/me/inventory/:itemId/redemptions" }, { method: "GET", pathTemplate: "/players/me/inventory/redemptions/:requestId" }], routeCapabilities: ["inventory"], actionCapabilities: ["inventoryUse"] },
+  { key: "notifications", operations: [{ method: "GET", pathTemplate: "/players/me/notifications" }] },
+  { key: "notificationsRead", operations: [{ method: "POST", pathTemplate: "/players/me/notifications/read" }], actionCapabilities: ["notificationsRead"] },
+  { key: "storyDeliveries", operations: [{ method: "GET", pathTemplate: "/players/me/story-deliveries" }] },
+  { key: "storyDeliveryState", operations: [{ method: "POST", pathTemplate: "/players/me/story-deliveries/:deliveryId/state" }], actionCapabilities: ["storyDeliveryState"] },
+  { key: "logout", operations: [{ method: "POST", pathTemplate: "/players/me/session/logout" }], actionCapabilities: ["logout"] },
 ] as const;
 
 export function buildPlayerCapabilityManifest(): PlayerCapabilityManifest {
   const routeCapabilities = new Set(
-    REVIEWED_ENDPOINTS.flatMap((descriptor) =>
-      descriptor.routeCapabilities ?? []
-    ),
+    REVIEWED_ENDPOINTS.flatMap((descriptor) => descriptor.routeCapabilities ?? []),
   );
   const actionCapabilities = new Set(
-    REVIEWED_ENDPOINTS.flatMap((descriptor) =>
-      descriptor.actionCapabilities ?? []
-    ),
+    REVIEWED_ENDPOINTS.flatMap((descriptor) => descriptor.actionCapabilities ?? []),
   );
 
   return Object.freeze({
@@ -320,21 +205,14 @@ export function buildPlayerCapabilityManifest(): PlayerCapabilityManifest {
     service: "classroom-api",
     capabilities: Object.freeze({
       routes: capabilityFlags(PLAYER_ROUTE_CAPABILITY_KEYS, routeCapabilities),
-      actions: capabilityFlags(
-        PLAYER_ACTION_CAPABILITY_KEYS,
-        actionCapabilities,
-      ),
+      actions: capabilityFlags(PLAYER_ACTION_CAPABILITY_KEYS, actionCapabilities),
     }),
-    endpoints: Object.freeze(
-      REVIEWED_ENDPOINTS.map((descriptor) =>
-        Object.freeze({
-          key: descriptor.key,
-          operations: Object.freeze(descriptor.operations.map((operation) =>
-            Object.freeze({ ...operation })
-          )),
-        })
-      ),
-    ),
+    endpoints: Object.freeze(REVIEWED_ENDPOINTS.map((descriptor) =>
+      Object.freeze({
+        key: descriptor.key,
+        operations: Object.freeze(descriptor.operations.map((operation) => Object.freeze({ ...operation }))),
+      })
+    )),
   });
 }
 
