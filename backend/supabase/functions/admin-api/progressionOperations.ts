@@ -12,6 +12,12 @@ interface AdminService {
   rpc<T>(name: string, args: unknown): PromiseLike<RpcResponse<T>>;
 }
 
+type ConsumeProgressionRateLimit = typeof consumeAdminProgressionRateLimit;
+
+export interface ProgressionOperationDependencies {
+  readonly consumeRateLimit?: ConsumeProgressionRateLimit;
+}
+
 export interface ProgressionOperationResult {
   readonly handled: boolean;
   readonly status?: number;
@@ -32,10 +38,18 @@ type ProgressionInput = {
 export async function handleProgressionOperation(
   service: AdminService,
   input: ProgressionInput,
+  dependencies: ProgressionOperationDependencies = {},
 ): Promise<ProgressionOperationResult> {
+  const consumeRateLimit = dependencies.consumeRateLimit ?? consumeAdminProgressionRateLimit;
   if (input.suffix === "/progression") {
     if (input.request.method !== "GET") return methodNotAllowed("Use GET to review Progression.");
-    const limited = await rateLimit(service, input, "staff.progression.read", "read");
+    const limited = await rateLimit(
+      service,
+      input,
+      "staff.progression.read",
+      "read",
+      consumeRateLimit,
+    );
     return limited ?? await readPlayers(service, input);
   }
   const correction = input.suffix.match(
@@ -43,7 +57,13 @@ export async function handleProgressionOperation(
   );
   if (correction) {
     if (input.request.method !== "POST") return methodNotAllowed("Use POST to correct Progression.");
-    const limited = await rateLimit(service, input, "staff.progression.correct", "sensitive");
+    const limited = await rateLimit(
+      service,
+      input,
+      "staff.progression.correct",
+      "sensitive",
+      consumeRateLimit,
+    );
     return limited ?? await correct(service, input, correction[1]);
   }
   return input.suffix.startsWith("/progression")
@@ -56,9 +76,10 @@ async function rateLimit(
   input: ProgressionInput,
   action: string,
   profile: "read" | "sensitive",
+  consumeRateLimit: ConsumeProgressionRateLimit,
 ): Promise<ProgressionOperationResult | null> {
   try {
-    const decision = await consumeAdminProgressionRateLimit(service, {
+    const decision = await consumeRateLimit(service, {
       action,
       profile,
       request: input.request,
