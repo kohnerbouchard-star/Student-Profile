@@ -109,6 +109,7 @@ export class CampaignRuntimeError extends Error {
   constructor(
     readonly code:
       | "campaign_game_scope_mismatch"
+      | "campaign_game_not_active"
       | "campaign_not_active"
       | "campaign_revision_conflict"
       | "campaign_phase_conflict"
