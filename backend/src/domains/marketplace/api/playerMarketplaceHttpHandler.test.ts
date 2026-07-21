@@ -1,3 +1,4 @@
+import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 import { handlePlayerMarketplaceRequest } from "./playerMarketplaceHttpHandler.ts";
 import { readPlayerMarketplaceRoutePath } from "./playerMarketplaceRoutePaths.ts";
 import type {
@@ -23,7 +24,7 @@ Deno.test("Marketplace routes accept only reviewed public identifiers", () => {
   assertEquals(readPlayerMarketplaceRoutePath("/players/me/marketplace/listings/private/purchase"), { kind: "malformed" });
 });
 
-Deno.test("Marketplace read and writes are private, scoped, and public-id only", async () => {
+Deno.test("Marketplace read and writes are private, scoped, replay-aware, and public-id only", async () => {
   const repository = new CapturingRepository();
   const read = await invoke(repository, "GET", "/players/me/marketplace/listings");
   assertEquals(read.status, 200);
@@ -39,6 +40,15 @@ Deno.test("Marketplace read and writes are private, scoped, and public-id only",
   assertEquals(repository.createInputs[0].gameSessionId, GAME);
   assertEquals(repository.createInputs[0].playerId, PLAYER);
 
+  repository.nextOutcome = "replayed";
+  const replayed = await invoke(repository, "POST", "/players/me/marketplace/listings", {
+    itemKey: "data-chip", quantity: 2, unitPrice: 15, currencyCode: "LUM",
+    condition: "Used", durationHours: 72, idempotencyKey: "marketplace.create.0001",
+  });
+  assertEquals(replayed.status, 200);
+  assertEquals((await replayed.json()).outcome, "replayed");
+
+  repository.nextOutcome = "applied";
   const activated = await invoke(repository, "POST", `/players/me/marketplace/listings/${LISTING}/activate`, {
     expectedVersion: 1, idempotencyKey: "marketplace.activate.0001",
   });
@@ -62,13 +72,16 @@ Deno.test("Marketplace read and writes are private, scoped, and public-id only",
   }
 });
 
-Deno.test("Marketplace rejects browser scope, non-JSON, oversized, and unexpected payloads privately", async () => {
+Deno.test("Marketplace rejects browser scope, runner secrets, invalid methods, non-JSON, oversized, and unexpected payloads privately", async () => {
   const repository = new CapturingRepository();
   const cases = [
     new Request("https://example.test/players/me/marketplace/listings?playerId=x", { headers: { "x-player-session-token": "token" } }),
+    new Request("https://example.test/players/me/marketplace/listings", { method: "GET", headers: { "x-player-session-token": "token", "x-stock-market-runner-secret": "forbidden" } }),
+    new Request(`https://example.test/players/me/marketplace/listings/${LISTING}/purchase`, { method: "DELETE", headers: { "x-player-session-token": "token" } }),
     new Request("https://example.test/players/me/marketplace/listings", { method: "POST", headers: { "x-player-session-token": "token", "content-type": "text/plain" }, body: "{}" }),
     request("POST", "/players/me/marketplace/listings", { itemKey: "data-chip", playerUuid: PLAYER }),
     request("POST", "/players/me/marketplace/listings", { padding: "x".repeat(5000) }),
+    request("POST", `/players/me/marketplace/listings/${LISTING}/purchase`, { quantity: 1, expectedVersion: 1, idempotencyKey: "short" }),
   ];
   for (const input of cases) {
     const route = readPlayerMarketplaceRoutePath(new URL(input.url).pathname);
@@ -78,7 +91,29 @@ Deno.test("Marketplace rejects browser scope, non-JSON, oversized, and unexpecte
     assertPrivate(response);
     assertNoUuid(await response.json());
   }
-  assertEquals(repository.createInputs.length, 0);
+  assertEquals(repository.totalCalls(), 0);
+});
+
+Deno.test("expired and revoked Player sessions fail privately before Marketplace repository access", async () => {
+  for (const [code, message] of [
+    ["player_session_expired", "Player session expired."],
+    ["player_session_revoked", "Player session is no longer active."],
+  ] as const) {
+    const repository = new CapturingRepository();
+    const route = readPlayerMarketplaceRoutePath("/players/me/marketplace/listings");
+    if (!route) throw new Error("route missing");
+    const response = await handlePlayerMarketplaceRequest(
+      request("GET", "/players/me/marketplace/listings"),
+      route,
+      dependencies(repository, async () => {
+        throw new EdgeActivationError(code, message, 401);
+      }),
+    );
+    assertEquals(response.status, 401);
+    assertEquals((await response.json()).error.code, code);
+    assertPrivate(response);
+    assertEquals(repository.totalCalls(), 0);
+  }
 });
 
 async function invoke(repository: CapturingRepository, method: string, path: string, body?: unknown): Promise<Response> {
@@ -93,24 +128,36 @@ function request(method: string, path: string, body?: unknown): Request {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
-function dependencies(repository: CapturingRepository) {
+function dependencies(
+  repository: CapturingRepository,
+  resolveScope: () => Promise<any> = async () => ({ gameId: GAME, playerUuid: PLAYER }),
+) {
   return {
     createServiceClient: () => ({}) as never,
     readEnvironment: () => ({ ok: true as const, value: { supabaseUrl: "https://example.test", supabaseAnonKey: "anon", supabaseServiceRoleKey: "service" } }),
-    resolveScope: async () => ({ gameId: GAME, playerUuid: PLAYER }) as never,
+    resolveScope: async () => resolveScope(),
     createRepository: () => repository,
   };
 }
 class CapturingRepository implements PlayerMarketplaceRepository {
-  createInputs: any[] = []; activateInputs: any[] = []; purchaseInputs: any[] = []; cancelInputs: any[] = []; disputeInputs: any[] = [];
-  read(_scope: PlayerMarketplaceScope): Promise<PlayerMarketplaceSnapshotDto> { return Promise.resolve(snapshot()); }
-  createListing(input: any): Promise<MarketplaceCommittedResult> { this.createInputs.push(input); return Promise.resolve(result(LISTING, "draft", 1)); }
-  activateListing(input: any): Promise<MarketplaceCommittedResult> { this.activateInputs.push(input); return Promise.resolve(result(LISTING, "active", 2)); }
-  purchase(input: any): Promise<MarketplaceCommittedResult> { this.purchaseInputs.push(input); return Promise.resolve(result(ORDER, "completed", 2)); }
-  cancel(input: any): Promise<MarketplaceCommittedResult> { this.cancelInputs.push(input); return Promise.resolve(result(LISTING, "cancelled", 3)); }
-  openDispute(input: any): Promise<MarketplaceCommittedResult> { this.disputeInputs.push(input); return Promise.resolve(result("dsp_33333333333333333333333333333333", "open", 1)); }
+  createInputs: any[] = [];
+  activateInputs: any[] = [];
+  purchaseInputs: any[] = [];
+  cancelInputs: any[] = [];
+  disputeInputs: any[] = [];
+  readInputs: any[] = [];
+  nextOutcome: "applied" | "replayed" = "applied";
+  read(scope: PlayerMarketplaceScope): Promise<PlayerMarketplaceSnapshotDto> { this.readInputs.push(scope); return Promise.resolve(snapshot()); }
+  createListing(input: any): Promise<MarketplaceCommittedResult> { this.createInputs.push(input); return Promise.resolve(result(LISTING, "draft", 1, this.nextOutcome)); }
+  activateListing(input: any): Promise<MarketplaceCommittedResult> { this.activateInputs.push(input); return Promise.resolve(result(LISTING, "active", 2, this.nextOutcome)); }
+  purchase(input: any): Promise<MarketplaceCommittedResult> { this.purchaseInputs.push(input); return Promise.resolve(result(ORDER, "completed", 2, this.nextOutcome)); }
+  cancel(input: any): Promise<MarketplaceCommittedResult> { this.cancelInputs.push(input); return Promise.resolve(result(LISTING, "cancelled", 3, this.nextOutcome)); }
+  openDispute(input: any): Promise<MarketplaceCommittedResult> { this.disputeInputs.push(input); return Promise.resolve(result("dsp_33333333333333333333333333333333", "open", 1, this.nextOutcome)); }
+  totalCalls(): number { return this.createInputs.length + this.activateInputs.length + this.purchaseInputs.length + this.cancelInputs.length + this.disputeInputs.length + this.readInputs.length; }
 }
-function result(targetId: string, status: string, version: number): MarketplaceCommittedResult { return { outcome: "applied", targetId, status, version, committedAt: NOW }; }
+function result(targetId: string, status: string, version: number, outcome: "applied" | "replayed" = "applied"): MarketplaceCommittedResult {
+  return { outcome, targetId, status, version, committedAt: NOW };
+}
 function snapshot(): PlayerMarketplaceSnapshotDto {
   return {
     policy: { marketplaceEnabled: true, crossCountryTradingEnabled: true, moderationRequired: false, feeRate: 0.025, taxRate: 0.01, listingDurationHours: 168, purchaseReservationMinutes: 5, disputeWindowDays: 7, disputesEnabled: true },
