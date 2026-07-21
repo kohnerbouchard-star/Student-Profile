@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 async function openProgression(page) {
-  await page.goto("/?preview=1#/progression");
+  await page.goto("/?preview=1#progression");
   await expect(page.locator(".player-terminal-progression-page")).toBeVisible();
 }
 
