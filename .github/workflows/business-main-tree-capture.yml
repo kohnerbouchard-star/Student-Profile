@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   capture:
@@ -19,19 +20,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Capture merged main tree
+      - name: Publish merged main tree identity
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
-          git rev-parse 'origin/main^{tree}' > main-tree-sha.txt
-          git rev-parse origin/main > main-commit-sha.txt
-      - name: Upload main tree identity
-        uses: actions/upload-artifact@v4
-        with:
-          name: business-main-tree-identity
-          path: |
-            main-tree-sha.txt
-            main-commit-sha.txt
-          if-no-files-found: error
-          retention-days: 1
+          main_commit="$(git rev-parse origin/main)"
+          main_tree="$(git rev-parse 'origin/main^{tree}')"
+          gh api "repos/${GITHUB_REPOSITORY}/issues/299/comments" \
+            --method POST \
+            --field body="BUSINESS_MAIN_TREE_IDENTITY main_commit=${main_commit} main_tree=${main_tree} capture_head=${GITHUB_SHA}"
