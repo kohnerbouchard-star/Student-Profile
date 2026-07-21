@@ -258,15 +258,13 @@ async function installRoutes(page) {
 
 function installSession(page) {
   return page.addInitScript(({ gameId, token }) => {
-    const value = JSON.stringify({
+    const value = {
       gameSessionId: gameId,
       playerSessionId: "psn_marketplace_browser",
       playerSessionToken: token,
       expiresAt: "2026-07-21T03:00:00.000Z",
-    });
-    sessionStorage.setItem("econovaria.player.session", value);
-    localStorage.setItem("econovaria.player.session", value);
-    globalThis.__ECONOVARIA_PLAYER_SESSION__ = JSON.parse(value);
+    };
+    globalThis.ECONOVARIA_PLAYER_SESSION = value;
   }, { gameId: GAME_ID, token: SESSION_TOKEN });
 }
 
