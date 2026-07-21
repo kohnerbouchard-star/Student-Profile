@@ -69,11 +69,24 @@ export interface PlayerResidencyState {
   readonly updatedAt: string;
 }
 
+export interface PlayerTravelState {
+  readonly gameId: string;
+  readonly gameSessionId: string;
+  readonly playerUuid: string;
+  readonly currentLocationId: string;
+  readonly status: "available" | "in_transit";
+  readonly activeJourneyId: string | null;
+  readonly arrivalAt: string | null;
+  readonly revision: number;
+  readonly updatedAt: string;
+}
+
 export interface PlayerTravelContext {
   readonly gameId: string;
   readonly gameSessionId: string;
   readonly playerUuid: string;
   readonly currentLocationId: string;
+  readonly settlementCurrencyCode: string;
   readonly residency: PlayerResidencyState;
   readonly allowedModes: readonly WorldRouteMode[];
 }
@@ -92,10 +105,31 @@ export interface TravelQuote {
   readonly playerUuid: string;
   readonly fromLocationId: string;
   readonly toLocationId: string;
+  readonly currencyCode: string;
   readonly totalCostMinor: number;
   readonly totalDurationMinutes: number;
   readonly legs: readonly TravelLegQuote[];
   readonly routeStateRevision: number;
+}
+
+export interface StoredTravelQuote extends TravelQuote {
+  readonly publicQuoteId: string;
+  readonly status: "created" | "consumed" | "expired";
+  readonly expiresAt: string;
+}
+
+export interface PlayerTravelJourney {
+  readonly publicJourneyId: string;
+  readonly publicQuoteId: string;
+  readonly fromLocationId: string;
+  readonly toLocationId: string;
+  readonly currencyCode: string;
+  readonly totalCostMinor: number;
+  readonly totalDurationMinutes: number;
+  readonly status: "in_transit" | "completed";
+  readonly departedAt: string;
+  readonly arrivalAt: string;
+  readonly completedAt: string | null;
 }
 
 export interface WorldRouteStateCommand {
@@ -120,6 +154,10 @@ export class WorldRuntimeError extends Error {
       | "world_location_unavailable"
       | "world_route_unavailable"
       | "world_travel_mode_forbidden"
+      | "world_travel_unavailable"
+      | "world_travel_quote_invalid"
+      | "world_travel_quote_expired"
+      | "world_travel_balance_insufficient"
       | "world_command_invalid",
     message: string,
     readonly retryable: boolean,
