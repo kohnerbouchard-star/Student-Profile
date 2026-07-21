@@ -12,6 +12,7 @@ const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const DEFAULT_PACK_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
 const DEFAULT_AUDIT_ROOT = path.join(REPO_ROOT, '.seed-audit');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const WRITE_MODES = new Set(['import', 'deactivate', 'rollback']);
 const ALLOWED_ENVIRONMENTS = new Set(['local', 'test', 'staging']);
 const KNOWN_LIVE_PROJECT_REFS = new Set(['cgiukdjwicykrmtkhudh']);
@@ -56,6 +57,7 @@ function buildPlan({ pack, market, contracts, store }, options) {
     packId: pack.packId,
     version: pack.version,
     packSha256: options.packSha256,
+    sourceSha: options.sourceSha,
     environment: options.environment,
     mode: options.mode,
     activate: Boolean(options.activate),
@@ -77,35 +79,67 @@ function buildPlan({ pack, market, contracts, store }, options) {
       gameScopedMembership: true,
       playerHistoryPreservingRollback: true,
       activationAuthorizationRequired: Boolean(options.activate),
+      activationAuthorizationBoundToGameAndSource: Boolean(options.activate),
     },
   };
 }
 
-async function validateAuthorization({ authorizationPath, environment, projectRef, integrity }) {
+async function validateAuthorization({
+  authorizationPath,
+  environment,
+  projectRef,
+  gameSessionId,
+  sourceSha,
+  integrity,
+}) {
   requireCondition(authorizationPath, '--authorization is required with --activate.');
+  requireCondition(UUID_PATTERN.test(gameSessionId ?? ''), 'Activation requires a valid game session ID.');
+  requireCondition(SOURCE_SHA_PATTERN.test(sourceSha ?? ''), 'Activation requires an exact 40-character source SHA.');
+
   const authorization = await readJson(path.resolve(authorizationPath));
   requireCondition(authorization.allowActivation === true, 'Authorization does not permit activation.');
   requireCondition(authorization.productionAuthorized === false, 'Authorization must explicitly prohibit production.');
   requireCondition(authorization.environment === environment, 'Authorization environment does not match the requested environment.');
   requireCondition(authorization.projectRef === projectRef, 'Authorization projectRef does not match the target project.');
-  requireCondition(authorization.packId === integrity.packId && authorization.version === integrity.version, 'Authorization pack identity does not match.');
-  requireCondition(authorization.packSha256 === integrity.packSha256, 'Authorization pack checksum does not match the integrity manifest.');
-  requireCondition(typeof authorization.approvedBy === 'string' && authorization.approvedBy.trim(), 'Authorization requires approvedBy.');
-  requireCondition(typeof authorization.authorizationId === 'string' && authorization.authorizationId.trim(), 'Authorization requires authorizationId.');
+  requireCondition(authorization.gameSessionId === gameSessionId, 'Authorization gameSessionId does not match the target game.');
+  requireCondition(
+    typeof authorization.sourceSha === 'string'
+      && authorization.sourceSha.toLowerCase() === sourceSha.toLowerCase(),
+    'Authorization sourceSha does not match the exact source commit.',
+  );
+  requireCondition(
+    authorization.packId === integrity.packId && authorization.version === integrity.version,
+    'Authorization pack identity does not match.',
+  );
+  requireCondition(
+    authorization.packSha256 === integrity.packSha256,
+    'Authorization pack checksum does not match the integrity manifest.',
+  );
+  requireCondition(
+    typeof authorization.approvedBy === 'string' && authorization.approvedBy.trim(),
+    'Authorization requires approvedBy.',
+  );
+  requireCondition(
+    typeof authorization.authorizationId === 'string' && authorization.authorizationId.trim(),
+    'Authorization requires authorizationId.',
+  );
   const approvedAt = Date.parse(authorization.approvedAt);
   const expiresAt = Date.parse(authorization.expiresAt);
   requireCondition(
     Number.isFinite(approvedAt)
       && Number.isFinite(expiresAt)
+      && approvedAt <= Date.now()
       && expiresAt > Date.now()
       && expiresAt > approvedAt,
-    'Authorization timestamps are invalid or expired.',
+    'Authorization timestamps are invalid, future-dated, or expired.',
   );
   return {
     approvedBy: authorization.approvedBy.trim(),
     approvedAt: authorization.approvedAt,
     expiresAt: authorization.expiresAt,
     authorizationId: authorization.authorizationId.trim(),
+    gameSessionId,
+    sourceSha: sourceSha.toLowerCase(),
   };
 }
 
@@ -210,7 +244,9 @@ function releaseIdentityPayload(data, options) {
 function requireSuccessfulOutcome(outcome) {
   requireCondition(outcome && typeof outcome === 'object', 'Seed release RPC returned an invalid response.');
   if (outcome.outcome === 'failed') {
-    const error = new Error(`Seed release transaction failed: ${outcome.failureMessage ?? outcome.failureCode ?? 'unknown failure'}`);
+    const error = new Error(
+      `Seed release transaction failed: ${outcome.failureMessage ?? outcome.failureCode ?? 'unknown failure'}`,
+    );
     error.payload = outcome;
     throw error;
   }
@@ -224,10 +260,11 @@ function usage() {
     '',
     'Write options:',
     '  --expected-project-ref <ref> --game-session-id <uuid>',
-    '  --activate --authorization <external-json>',
+    '  --activate --authorization <external-json> --source-sha <40-char-git-sha>',
     '  --allow-soft-rollback',
     '',
     'Write modes require SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SEED_TARGET_ENVIRONMENT matching --environment.',
+    'Activation authorization must bind the exact project, game, pack identity, digest, and source SHA.',
     'Production is never accepted. Connected staging failure injection is prohibited.',
   ].join('\n');
 }
@@ -241,6 +278,7 @@ export async function runImporter(rawOptions) {
     auditRoot: path.resolve(rawOptions['audit-root'] ?? DEFAULT_AUDIT_ROOT),
     expectedProjectRef: rawOptions['expected-project-ref'] ?? null,
     gameSessionId: rawOptions['game-session-id'] ?? null,
+    sourceSha: rawOptions['source-sha'] ?? null,
     activate: Boolean(rawOptions.activate),
     authorization: rawOptions.authorization ?? null,
     allowSoftRollback: Boolean(rawOptions['allow-soft-rollback']),
@@ -257,7 +295,10 @@ export async function runImporter(rawOptions) {
     '--environment must be local, test, or staging. Production is prohibited.',
   );
   if (options.failAfterOperations !== null) {
-    requireCondition(Number.isInteger(options.failAfterOperations) && options.failAfterOperations >= 1, '--fail-after-operations must be a positive integer.');
+    requireCondition(
+      Number.isInteger(options.failAfterOperations) && options.failAfterOperations >= 1,
+      '--fail-after-operations must be a positive integer.',
+    );
   }
 
   const validation = await validateSeedBetaPack({ packRoot: options.packRoot });
@@ -276,6 +317,8 @@ export async function runImporter(rawOptions) {
       authorizationPath: options.authorization,
       environment: options.environment,
       projectRef,
+      gameSessionId: options.gameSessionId,
+      sourceSha: options.sourceSha,
       integrity: data.integrity,
     });
   }
@@ -308,12 +351,13 @@ export async function runImporter(rawOptions) {
   }
 
   const audit = {
-    schemaVersion: 'econovaria-beta-seed-import-audit-v2',
+    schemaVersion: 'econovaria-beta-seed-import-audit-v3',
     runId,
     recordedAt: isoNow(),
     packId: data.pack.packId,
     version: data.pack.version,
     packSha256: data.integrity.packSha256,
+    sourceSha: options.sourceSha,
     environment: options.environment,
     projectRef,
     gameSessionId: options.gameSessionId,
