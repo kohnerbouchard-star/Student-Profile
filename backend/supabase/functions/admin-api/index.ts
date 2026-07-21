@@ -10,6 +10,7 @@ import {
   SUPABASE_URL,
 } from "./common.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
+import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
@@ -79,6 +80,8 @@ async function handleGlobalRoute(
           auditLogExport: true,
           overallScore: false,
           marketplaceAdminTrading: false,
+          businessBankingOversight: true,
+          loanReview: true,
         },
       },
     });
@@ -234,6 +237,23 @@ Deno.serve(async (request: Request) => {
     });
     if (mutationGuard.handled) {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
+    }
+
+    const businessBankingOperation = await handleBusinessBankingAdminOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (businessBankingOperation.handled) {
+      return json(
+        request,
+        businessBankingOperation.status || 500,
+        businessBankingOperation.body,
+      );
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(
