@@ -58,6 +58,8 @@ jobs:
               $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
               $0 == "admin/index.html" { next }
               $0 == "admin/modal-accessibility.js" { next }
+              $0 == "admin/scanner-auto-refresh.js" { next }
+              $0 == "admin/interaction-quality-control-reset.js" { next }
               $0 == "admin/world-runtime-console.js" { next }
               $0 == "admin/world-runtime-console-loader.js" { next }
               $0 == "admin/css/world-runtime-console.css" { next }
