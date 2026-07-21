@@ -1,121 +1,209 @@
 {
   "schemaVersion": 1,
   "reportType": "preliminary-production-go-no-go",
-  "capturedAt": "2026-07-21T02:32:15.000Z",
-  "terminalState": "EXTERNAL_BLOCKER_ONLY",
+  "capturedAt": "2026-07-21T03:04:11.000Z",
+  "executionState": "ACTIVE_INTEGRATION_WATCH",
   "repository": "kohnerbouchard-star/Student-Profile",
   "auditedMain": "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3",
   "integrationBranch": "agent/production-integration-gate-v1",
+  "reviewedIntegrationHeadBeforeEvidenceUpdate": "e32c9ee5efe576971e8cf2292d4b7a3c239b6995",
   "decision": "NO_GO",
   "productionDeploymentAuthorized": false,
   "productionModified": false,
   "verified": {
+    "integrationBranchBehindMain": 0,
+    "integrationPermanentFileCount": 6,
     "stagingProjectRef": "eecvbssdvarfcykcfrny",
     "productionGuardProjectRef": "cgiukdjwicykrmtkhudh",
     "environmentDistinctness": "pass",
-    "stagingStatus": "ACTIVE_HEALTHY",
-    "stagingRegion": "ap-northeast-2",
-    "stagingDataPolicy": "synthetic-only",
     "canonicalMainMigrationCount": 73,
     "canonicalMainMigrationHead": "20260721003228",
     "canonicalMainMigrationVersionSetSha256": "f15e850f4c75593f77be8da15e6b6546e038ee833f4794722e7b6c978120dd4f",
-    "stagingMigrationCount": 76,
-    "stagingMigrationHead": "20260721094000",
-    "stagingMigrationVersionSetSha256": "d663a2464d034157f11c4001ce5caeb954e7c2f67decf8690a6984b5122bf175",
-    "stagingMigrationLedgerUnique": true,
-    "stagingAheadOfMainBy": 3,
+    "stagingMigrationCount": 77,
+    "stagingMigrationHead": "20260721095000",
+    "stagingMigrationVersionSetSha256": "f51732c788f323a9dd9a0fdd34c818f77fb2b62d758383349c6d6808fb37b171",
+    "stagingAheadOfMainBy": 4,
     "stagingMatchesCurrentMain": false,
     "productionMigrationCount": 53,
     "productionMigrationHead": "20260714113345",
     "productionMigrationVersionSetSha256": "15871a3a9b6b7053f91e471f170947e73c0051a6338057eef753ddd52733dad8",
-    "securityRepositoryAndDatabaseContract": "pass",
-    "stagingTotalEdgeFunctions": 1,
-    "stagingApplicationEdgeFunctions": 0,
-    "stagingDiagnosticEdgeFunctions": 1,
-    "diagnosticFunctionDisposition": "security-config-probe-v7-retired-410",
-    "retainedImmutableReleaseId": "econovaria-93155e96d56323a33f723152d9fd979cea07a8c5",
-    "retainedReleaseSourceCommit": "93155e96d56323a33f723152d9fd979cea07a8c5",
-    "retainedReleaseMigrationCount": 71,
-    "retainedReleaseMigrationHead": "20260720235900",
-    "retainedReleaseCurrentForMain": false,
+    "requiredApplicationEdgeFunctions": [
+      "admin-api",
+      "classroom-api",
+      "stock-market-player-read",
+      "stock-market-read",
+      "stock-market-runner",
+      "stock-market-seed-copy",
+      "stock-market-trading"
+    ],
+    "stagingApplicationEdgeFunctions": [],
+    "stagingDiagnosticFunction": "security-config-probe-v7-retired-410",
+    "frontendArtifactRoots": [
+      "admin",
+      "assets",
+      "auth",
+      "frontend",
+      "index.html",
+      "player-terminal"
+    ],
+    "frontendRuntimeConfigurationTemplate": "docs/operations/environments/runtime-config.env.template.js",
+    "frontendDeploymentAdapterStatus": "missing",
     "retainedReleaseRollbackDecision": "REJECTED",
-    "workflowRunId": "29751531178",
-    "artifactId": "8464765629",
-    "artifactSetSha256": "91903145d99d68e0eed2d3c4bec2bde504d27ba2e144d60d6d85c7205ee1ac95",
-    "releaseManifestSha256": "8d6c1045970885f5404eab69a8eec219976e89b96f055650cf9b1448f3dc54e4",
-    "configurationSha256": "4fe9bbabd70a501e34a2b1f25b81bb8d7d7b47ee06518d520c554298e1ba7386",
-    "artifactChecksums": "pass",
-    "environmentNeutrality": "pass",
     "securityAdvisorErrors": 0,
     "securityAdvisorWarnings": 0,
-    "performanceBaselineCaptured": true,
-    "indexChangeAuthorized": false,
+    "performanceAdvisorWarnings": 2,
     "secretValuesRetainedInEvidence": false
   },
-  "blocked": {
-    "stagingMigrationState": "three-unmerged-seed-migrations-ahead-of-main",
-    "frontendStagingTarget": "missing",
-    "protectedStagingEnvironmentVerification": "unavailable-through-connected-interface",
-    "requiredStagingReviewer": "unidentified",
-    "environmentScopedSecretVerification": "unavailable-through-connected-interface",
-    "currentFinalCapabilityRelease": "not-built",
-    "exactArtifactDeployment": "not-run",
-    "applicationEdgeDeployment": "not-run",
-    "rollbackArtifact": "rejected-no-compatible-known-good-release",
-    "rollbackRehearsal": "not-run",
-    "backupRestoreRehearsal": "not-run",
-    "securityEdgeIngressOutagePrivacy": "incomplete",
-    "boundedSeedAcceptance": "blocked-by-pr-163",
-    "messagingAcceptance": "blocked-by-pr-248",
-    "marketplaceAcceptance": "blocked-by-pr-249",
-    "progressionAcceptance": "blocked-by-pr-261",
-    "completeWorldRuntime": "blocked-by-pr-294",
-    "businessBankingLoansAcceptance": "blocked-by-pr-299",
-    "craftingItemAcceptance": "blocked-by-pr-300",
-    "dashboardsAndAlerts": "not-activated",
-    "expectedLoad30": "not-run",
-    "maximumLoad40": "not-run",
-    "postLoadQueryPlans": "not-run",
-    "adminSmoke": "not-run",
-    "playerDesktopSmoke": "not-run",
-    "playerMobileSmoke": "not-run",
-    "continuous52ScenarioRun": "not-run"
+  "activeCapabilityHeads": [
+    {
+      "number": 163,
+      "head": "a1c88c8451d6ff072b0643bdb029a78426b85988",
+      "aheadBy": 520,
+      "behindBy": 0,
+      "assemblyStatus": "blocked-staging-alias-and-workflow-safety"
+    },
+    {
+      "number": 248,
+      "head": "23455b586daf56f15bd8d0215e06106ebc574067",
+      "aheadBy": 19,
+      "behindBy": 0,
+      "assemblyStatus": "blocked-player-route-and-shared-convergence"
+    },
+    {
+      "number": 249,
+      "head": "b92a349ef47b42306ce7d0be2fee35be7337e4af",
+      "aheadBy": 37,
+      "behindBy": 0,
+      "assemblyStatus": "blocked-migration-collision-and-shared-rewrite"
+    },
+    {
+      "number": 261,
+      "head": "15fcba6f753a1da7f1775db4142cbf5b55f7ae96",
+      "aheadBy": 32,
+      "behindBy": 0,
+      "assemblyStatus": "blocked-player-route-and-shared-convergence"
+    },
+    {
+      "number": 294,
+      "head": "b96e21fe03ad66858d0d9a208893e8341d00e452",
+      "aheadBy": 63,
+      "behindBy": 3,
+      "assemblyStatus": "blocked-migration-collision-sync-and-route-registration"
+    },
+    {
+      "number": 299,
+      "head": "d7fa20225b1cd287f24cb10e07a0f2b3dd03b8cb",
+      "aheadBy": 50,
+      "behindBy": 0,
+      "assemblyStatus": "blocked-admin-route-and-shared-convergence"
+    },
+    {
+      "number": 300,
+      "head": "2d950a118fc90e9c744dfebf236fb48c072a7f82",
+      "aheadBy": 21,
+      "behindBy": 3,
+      "assemblyStatus": "blocked-temporary-transport-no-runtime"
+    }
+  ],
+  "integrationFindings": {
+    "stagingOnlyMigrationVersions": [
+      "20260721015504",
+      "20260721093000",
+      "20260721094000",
+      "20260721095000"
+    ],
+    "seedAliasMismatch": [
+      "20260721015504",
+      "20260721095000"
+    ],
+    "crossPrMigrationCollisions": [
+      {
+        "pullRequests": [
+          249,
+          294
+        ],
+        "versions": [
+          "20260721010000",
+          "20260721011000",
+          "20260721012000"
+        ]
+      }
+    ],
+    "missingPlayerRouteRegistrations": [
+      248,
+      261,
+      294
+    ],
+    "missingAdminRouteRegistrations": [
+      294,
+      299
+    ],
+    "sharedConvergenceRequired": [
+      248,
+      249,
+      261,
+      294,
+      299
+    ],
+    "temporaryTransportOnly": [
+      300
+    ],
+    "unsafePullRequestConnectedMutation": [
+      163
+    ],
+    "ownerCommentsPosted": [
+      163,
+      248,
+      249,
+      261,
+      294,
+      299,
+      300
+    ],
+    "controllerHandoffPostedTo": 301
   },
   "completedIndependentActions": [
-    "synchronized PR #295 with current main while retaining only six intended files",
-    "revalidated staging and production project and database-host distinctness",
-    "calculated canonical, staging, and production complete migration version-set digests",
-    "detected and classified three unmerged seed migrations already present in staging",
-    "confirmed production remains unchanged",
-    "classified the only staging Edge Function as a retired diagnostic rather than an application deployment",
-    "rejected the obsolete retained release as a rollback target under explicit compatibility rules",
-    "hardened the evidence validator to accept truthful blocked drift and reject it in ready mode",
-    "hardened application Edge Function inventory validation",
-    "retained no secret values or sensitive identifiers in evidence"
+    "verified current main and PR #295 synchronization",
+    "reviewed exact current capability heads for migration, route, manifest, rate-limit, workflow, and artifact assembly",
+    "derived exact seven-function application Edge inventory",
+    "verified the immutable frontend wrapper includes Player Terminal and Auth roots",
+    "defined deployment-owned runtime-config.env.js materialization contract",
+    "recalculated repository, staging, and production migration identities and complete digests",
+    "detected the new staging migration and preserved explicit staging-only history",
+    "refreshed security and performance advisors",
+    "posted exact-head integration findings to every capability owner and controller PR #301",
+    "kept production unchanged"
   ],
-  "externalActionsRequired": [
-    "controller-approved capability PRs must merge into main",
-    "staging migration ledger must be reconciled to the selected final main release identity",
-    "a concrete separate staging frontend target must be created and identified",
-    "GitHub staging protection and its named required reviewer must be verified",
-    "environment-scoped release values must be configured and their presence verified without exposing values",
-    "a distinct approved restore target and encrypted backup custody must be available"
-  ],
-  "nextPermittedAction": {
-    "environment": "staging",
-    "action": "resume-after-external-blockers-and-build-one-final-main-immutable-release",
-    "requires": [
-      "controller-approved capability set merged",
-      "canonical repository and staging migration identities reconciled",
-      "recorded separate frontend staging target",
-      "verified protected staging environment and named reviewer",
-      "verified environment-scoped release values outside repository evidence",
-      "selected compatible prior immutable rollback artifact or an explicit no-rollback release decision",
-      "approved distinct restore target"
-    ]
+  "blocked": {
+    "finalCapabilitySet": "unmerged",
+    "stagingMigrationAlignment": "mismatch-four-versions",
+    "seedWorkflowSafety": "connected-job-reachable-from-pr-and-branch-push",
+    "crossPrMigrationVersions": "collision-pr-249-pr-294",
+    "sharedRouteConvergence": "incomplete",
+    "craftingPermanentRuntime": "absent",
+    "frontendStagingTarget": "missing",
+    "protectedStagingEnvironmentVerification": "unavailable-through-connected-interface",
+    "currentFinalImmutableRelease": "not-built",
+    "applicationEdgeDeployment": "not-run",
+    "rollbackArtifact": "rejected-no-compatible-known-good-release",
+    "backupRestoreRehearsal": "not-run",
+    "securityAcceptance": "incomplete",
+    "dashboardsAndAlerts": "not-activated",
+    "load30": "not-run",
+    "load40": "not-run",
+    "postLoadQueryPlans": "not-run",
+    "adminPlayerSmoke": "not-run",
+    "continuous52ScenarioRun": "not-run"
   },
+  "nextAutomaticWatchActions": [
+    "detect main advancement and synchronize PR #295",
+    "re-audit any capability head change before carrying findings forward",
+    "recalculate migration and Edge inventories after any merge or staging change",
+    "rerun exact-head workflow matrix after PR #295 synchronization or evidence correction",
+    "keep production promotion prohibited"
+  ],
   "finalPromotion": {
-    "status": "AWAITING_EXPLICIT_PRODUCT_OWNER_AUTHORIZATION",
+    "status": "PROHIBITED_PENDING_CONNECTED_GATE_COMPLETE_AND_EXPLICIT_OWNER_AUTHORIZATION",
     "workflowMayRun": false,
     "productionDecision": "NO_GO"
   },
