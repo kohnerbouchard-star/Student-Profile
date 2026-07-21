@@ -1,0 +1,44 @@
+name: Progression Source Snapshot
+
+on:
+  push:
+    branches:
+      - agent/progression-reputation-achievements-v1
+    paths:
+      - ".github/workflows/progression-source-snapshot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Progression head
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: agent/progression-reputation-achievements-v1
+
+      - name: Package exact sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git archive --format=tar.gz --output="$RUNNER_TEMP/progression-head.tar.gz" HEAD
+          git archive --format=tar.gz --output="$RUNNER_TEMP/main-head.tar.gz" origin/main
+          printf '%s\n' "$(git rev-parse HEAD)" > "$RUNNER_TEMP/progression-head.sha"
+          printf '%s\n' "$(git rev-parse origin/main)" > "$RUNNER_TEMP/main-head.sha"
+
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v7
+        with:
+          name: progression-source-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/progression-head.tar.gz
+            ${{ runner.temp }}/main-head.tar.gz
+            ${{ runner.temp }}/progression-head.sha
+            ${{ runner.temp }}/main-head.sha
+          if-no-files-found: error
+          retention-days: 1
