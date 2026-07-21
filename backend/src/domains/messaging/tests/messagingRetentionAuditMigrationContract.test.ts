@@ -1,10 +1,12 @@
+export {};
+
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
   readTextFile(path: URL): Promise<string>;
 };
 
 const MIGRATION = new URL(
-  "../../../../supabase/migrations/20260721010000_harden_messaging_retention_and_audit_v1.sql",
+  "../../../../supabase/migrations/20260721131000_harden_messaging_retention_and_audit_v2.sql",
   import.meta.url,
 );
 
@@ -74,11 +76,9 @@ function between(value: string, start: string, end: string): string {
   }
   return value.slice(startIndex, endIndex);
 }
-
 function assertIncludes(value: string, fragment: string): void {
   if (!value.includes(fragment)) throw new Error(`Missing fragment: ${fragment}`);
 }
-
 function assert(value: boolean): void {
   if (!value) throw new Error("Assertion failed");
 }
