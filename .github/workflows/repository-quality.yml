@@ -58,13 +58,17 @@ jobs:
             fi
           done < /tmp/seed-owned-paths.zlist
 
-      - name: Reconcile shared repository files
+      - name: Restore canonical workflows
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- .github/workflows/repository-quality.yml
+          git rm -f --ignore-unmatch .github/workflows/seed-pr163-reconcile.yml
+
+      - name: Synthesize additive seed package scripts
         shell: bash
         run: |
           set -euo pipefail
           git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
-          git checkout origin/main -- .github/workflows/repository-quality.yml
-          git rm -f --ignore-unmatch .github/workflows/seed-pr163-reconcile.yml
           node <<'NODE'
           const fs = require('node:fs');
           const current = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -78,8 +82,17 @@ jobs:
           }
           fs.writeFileSync('package.json', `${JSON.stringify(current, null, 2)}\n`);
           NODE
+
+      - name: Stage and validate synchronized diff
+        shell: bash
+        run: |
+          set -euo pipefail
           git add -A
           git diff --cached --check
+
+      - name: Commit synchronized tree
+        run: |
+          set -euo pipefail
           if ! git diff --cached --quiet; then
             git commit -m "chore(seed): finalize synchronized executable pack tree"
           fi
