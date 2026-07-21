@@ -98,7 +98,7 @@ jobs:
               $0 == "backend/src/security/progressionRateLimitDispatch.test.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
-              $0 ~ /^backend\/supabase\/functions\/admin-api\/progression(RateLimit|Operations)[.]ts$/ { next }
+              $0 ~ /^backend\/supabase\/functions\/admin-api\/progression(RateLimit|Operations)([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
               $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
