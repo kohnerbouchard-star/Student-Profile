@@ -238,7 +238,9 @@ Deno.serve(async (request: Request) => {
     }
 
     const worldOperation = await handleWorldRuntimeAdminOperation(
-      context.service,
+      context.service as unknown as Parameters<
+        typeof handleWorldRuntimeAdminOperation
+      >[0],
       {
         request,
         gameId,
