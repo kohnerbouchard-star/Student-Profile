@@ -1,4 +1,5 @@
 import { PlayerApi } from "../../api/player-api.js";
+import { isEndpointEnabled } from "../../api/capabilities.js";
 import { normalizeApiError } from "../../api/errors.js";
 import { renderWorldPage } from "../../pages/world-page.js";
 
@@ -130,6 +131,13 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   }
 
   async function committedMutation(endpointKey, payload, params, form, successMessage) {
+    if (!isEndpointEnabled(currentCapabilities(), endpointKey)) {
+      const detail = "This World action is not enabled for the current game.";
+      setFormStatus(form, detail, true);
+      message = detail;
+      scheduleRender();
+      return null;
+    }
     api.setSession(config);
     const restore = setProcessing(form, true);
     setFormStatus(form, "Submitting a replay-safe World action.");
