@@ -1,6 +1,9 @@
 name: World Runtime Source Snapshot
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/world-runtime-source-snapshot.yml"
   push:
     branches:
       - agent/story-arrival-world-runtime-v1
