@@ -249,9 +249,13 @@ jobs:
         run: npm ci
 
       - name: Execute exact migrations, import, activation verification, deactivation, and rollback
-        run: node scripts/seed-beta-connected-staging.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/seed-beta-connected-staging.mjs 2>&1 | tee /tmp/seed-connected-staging.log
 
       - name: Scan sanitized connected evidence
+        if: success()
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
@@ -271,10 +275,13 @@ jobs:
           if (forbidden.test(text)) throw new Error('Connected evidence appears to contain a credential.');
           NODE
 
-      - name: Upload connected staging evidence
+      - name: Upload connected staging evidence and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seed-beta-connected-staging-${{ github.sha }}
-          path: /tmp/seed-connected-staging-evidence.json
-          if-no-files-found: error
+          path: |
+            /tmp/seed-connected-staging.log
+            /tmp/seed-connected-staging-evidence.json
+          if-no-files-found: warn
           retention-days: 90
