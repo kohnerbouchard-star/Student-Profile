@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "preliminary-production-go-no-go",
-  "capturedAt": "2026-07-21T03:58:00.000Z",
+  "capturedAt": "2026-07-21T04:04:00.000Z",
   "executionState": "ACTIVE_INTEGRATION_WATCH",
   "repository": "kohnerbouchard-star/Student-Profile",
   "auditedMain": "458137c9193a7066294024098b4d938aa46f6aba",
@@ -33,11 +33,11 @@
   },
   "reviewedHeads": {
     "163": "e8194a45e042193c1b1257f2178e7609a03e472c",
-    "248": "a3722809db926bf75805f3ca2c153b6cf7423947",
-    "249": "cd473a60762a073c6c0af9b4f1e0d90eb8cb639d",
-    "261": "3b6a750a82b01598cfc7d5a9925cfd3869c08a53",
+    "248": "7e7604b36a6bc6f914feea5a0bc97c8b77c42ee5",
+    "249": "4d7b9d1b3f8ee540bc1b6e85cfd145857cd8bad7",
+    "261": "dc874ff714c3db26b71fda0ce7b4e69e8d001a83",
     "294": "b96e21fe03ad66858d0d9a208893e8341d00e452",
-    "299": "3329d68291c6891a31addf3b17fe33479842038a",
+    "299": "8e5eb3ef177bf8fb6526222866377aa829ba94e2",
     "300": "2d950a118fc90e9c744dfebf236fb48c072a7f82",
     "controllerHead": "97407083ab1af71a5c8fa91cc07bdcc6a2badd91",
     "controllerMerge": "458137c9193a7066294024098b4d938aa46f6aba"
@@ -48,7 +48,7 @@
   ],
   "activeBlockers": [
     "staging retains precursor alias 20260721015504 absent from canonical source, so complete version-set equality requires a controller-approved reconciliation or a newly designated isolated staging target",
-    "PRs #163, #249, #294, #299, and #300 do not contain current main",
+    "PRs #163, #249, #294, and #300 do not contain current main",
     "Player and Admin route registration remains incomplete across capability branches",
     "shared manifest, rate-limit, API-router, and Player-adapter convergence is incomplete",
     "PR #300 has no permanent Crafting runtime",
