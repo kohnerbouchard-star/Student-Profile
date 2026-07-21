@@ -45,6 +45,14 @@ export async function handleMessagingOperation(
     return handlePolicy(service, input);
   }
 
+  if (
+    input.suffix === "/messages/threads" &&
+    input.request.method === "POST"
+  ) {
+    const validation = await validateCreateRequestText(input.request);
+    if (validation) return validation;
+  }
+
   const threadAction = input.suffix.match(
     /^\/messages\/threads\/(thr_[0-9a-f]{32})\/(disable|enable|close)$/,
   );
@@ -68,6 +76,56 @@ export async function handleMessagingOperation(
   }
 
   return handleCoreMessagingOperation(service, input);
+}
+
+async function validateCreateRequestText(
+  request: Request,
+): Promise<MessagingOperationResult | null> {
+  const value = await request.clone().json().catch(() => null);
+  if (!record(value)) return null;
+
+  for (const [field, maximum] of [
+    ["contractKey", 160],
+    ["body", 1000],
+  ] as const) {
+    if (!Object.prototype.hasOwnProperty.call(value, field)) continue;
+    const supplied = value[field];
+    if (supplied === null || supplied === undefined || supplied === "") continue;
+    if (!safeInputText(supplied, maximum)) {
+      return response(
+        400,
+        "invalid_admin_message_request",
+        `Messaging ${field} contains unsafe or invalid text.`,
+      );
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, "retentionUntil")) {
+    const supplied = value.retentionUntil;
+    if (
+      supplied !== null && supplied !== undefined && supplied !== "" &&
+      (typeof supplied !== "string" || !Number.isFinite(Date.parse(supplied)))
+    ) {
+      return response(
+        400,
+        "invalid_admin_message_request",
+        "Messaging retentionUntil must be a valid timestamp.",
+      );
+    }
+  }
+
+  return null;
+}
+
+function safeInputText(value: unknown, maximum: number): boolean {
+  if (typeof value !== "string") return false;
+  const result = value.trim();
+  return Boolean(result) &&
+    result.length <= maximum &&
+    !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(result) &&
+    !/(?:^|[\s"'(<])(?:javascript|vbscript|data|file):/i.test(result) &&
+    (result.match(/https?:\/\/[^\s<>{}\[\]"']+/gi)?.length ?? 0) <= 10 &&
+    result.split(/\r?\n/).length <= 50;
 }
 
 async function handlePolicy(
