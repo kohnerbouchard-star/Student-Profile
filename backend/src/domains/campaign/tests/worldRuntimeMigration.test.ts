@@ -4,7 +4,7 @@ declare const Deno: {
 };
 
 const MIGRATION = new URL(
-  "../../../supabase/migrations/20260721010000_add_campaign_arrival_world_runtime_v1.sql",
+  "../../../../supabase/migrations/20260721010000_add_campaign_arrival_world_runtime_v1.sql",
   import.meta.url,
 );
 
@@ -35,6 +35,7 @@ Deno.test("world runtime migration is forward-only, isolated, and atomic", async
   assertIncludes(sql, "assign_arrival_class_atomic_v1");
   assertIncludes(sql, "security definer");
   assertIncludes(sql, "set search_path = public, pg_temp");
+  assertIncludes(sql, "CAMPAIGN_TRANSITION_INVALID");
   assertIncludes(sql, "to service_role");
   const executeGrant = sql.match(/grant execute on function public\.execute_campaign_event_atomic_v1[\s\S]*?to service_role;/);
   if (!executeGrant) throw new Error("Missing service-role execute grant for campaign RPC.");
