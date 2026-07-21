@@ -12,13 +12,37 @@ export const TRUSTED_IP_HEADERS = [
   "x-forwarded-for",
 ] as const;
 
+export const FORWARDED_IP_HEADERS = [
+  ...TRUSTED_IP_HEADERS,
+  "client-ip",
+  "forwarded",
+  "true-client-ip",
+  "x-client-ip",
+] as const;
+
 export type TrustedIpHeader = typeof TRUSTED_IP_HEADERS[number];
+
+export interface AuthenticatedRateLimitContext {
+  readonly action: string;
+  readonly gameUuid: string;
+  readonly identityUuid: string;
+  readonly ipAddress: string;
+  readonly profile: PlayerRateLimitProfile;
+}
 
 export interface PlayerRateLimitContext {
   readonly action: string;
   readonly gameUuid: string;
   readonly ipAddress: string;
   readonly playerUuid: string;
+  readonly profile: PlayerRateLimitProfile;
+}
+
+export interface StaffRateLimitContext {
+  readonly action: string;
+  readonly gameUuid: string;
+  readonly ipAddress: string;
+  readonly staffUuid: string;
   readonly profile: PlayerRateLimitProfile;
 }
 
@@ -29,25 +53,52 @@ export interface PreAuthRateLimitContext {
 }
 
 const ACTION_PATTERN =
-  /^player\.[a-z][a-z0-9_-]{1,31}\.[a-z][a-z0-9_-]{1,31}$/u;
+  /^(?:player|staff)(?:\.[a-z][a-z0-9_-]{1,31}){2,4}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
-const MINIMUM_HMAC_SECRET_LENGTH = 32;
+const HMAC_SECRET_PATTERN = /^[A-Za-z0-9_-]{43,128}$/u;
+const MINIMUM_HMAC_SECRET_DISTINCT_CHARACTERS = 20;
 
-export async function buildPlayerRateLimitBuckets(
+export function buildPlayerRateLimitBuckets(
   context: PlayerRateLimitContext,
   hmacSecret: string,
 ): Promise<readonly RateLimitBucketInput[]> {
+  return buildAuthenticatedRateLimitBuckets({
+    action: context.action,
+    gameUuid: context.gameUuid,
+    identityUuid: context.playerUuid,
+    ipAddress: context.ipAddress,
+    profile: context.profile,
+  }, hmacSecret);
+}
+
+export function buildStaffRateLimitBuckets(
+  context: StaffRateLimitContext,
+  hmacSecret: string,
+): Promise<readonly RateLimitBucketInput[]> {
+  return buildAuthenticatedRateLimitBuckets({
+    action: context.action,
+    gameUuid: context.gameUuid,
+    identityUuid: context.staffUuid,
+    ipAddress: context.ipAddress,
+    profile: context.profile,
+  }, hmacSecret);
+}
+
+export async function buildAuthenticatedRateLimitBuckets(
+  context: AuthenticatedRateLimitContext,
+  hmacSecret: string,
+): Promise<readonly RateLimitBucketInput[]> {
   validateContext(context);
-  validateHmacSecret(hmacSecret);
+  validateRateLimitHmacSecret(hmacSecret);
 
   const normalizedIp = normalizeIpAddress(context.ipAddress);
   const rawKeys = {
     action:
-      `${context.action}\u0000${context.gameUuid}\u0000${context.playerUuid}`,
+      `${context.action}\u0000${context.gameUuid}\u0000${context.identityUuid}`,
     game: context.gameUuid,
-    identity: context.playerUuid,
+    identity: context.identityUuid,
     ip: normalizedIp,
   } as const;
   const policy = PLAYER_RATE_LIMIT_POLICIES[context.profile];
@@ -67,7 +118,7 @@ export async function buildPreAuthRateLimitBuckets(
   hmacSecret: string,
 ): Promise<readonly RateLimitBucketInput[]> {
   validatePreAuthContext(context);
-  validateHmacSecret(hmacSecret);
+  validateRateLimitHmacSecret(hmacSecret);
 
   const normalizedIp = normalizeIpAddress(context.ipAddress);
   const policy = PLAYER_RATE_LIMIT_POLICIES[context.profile];
@@ -91,15 +142,27 @@ export function readTrustedClientIp(
   trustedHeader: TrustedIpHeader,
 ): string {
   const headerValue = request.headers.get(trustedHeader)?.trim() ?? "";
-  if (!headerValue || headerValue.length > 512) {
-    throw invalidContext("Trusted client IP metadata is missing or invalid.");
+  if (
+    !headerValue || headerValue.length > 512 || headerValue.includes(",") ||
+    /[\r\n]/u.test(headerValue)
+  ) {
+    throw invalidContext(
+      "Trusted client IP metadata must be one proxy-overwritten address.",
+    );
   }
 
-  const candidate = trustedHeader === "x-forwarded-for"
-    ? headerValue.split(",", 1)[0]?.trim() ?? ""
-    : headerValue;
+  return normalizeIpAddress(headerValue);
+}
 
-  return normalizeIpAddress(candidate);
+export function overwriteTrustedClientIpHeaders(
+  source: HeadersInit,
+  trustedHeader: TrustedIpHeader,
+  clientIp: string,
+): Headers {
+  const headers = new Headers(source);
+  for (const header of FORWARDED_IP_HEADERS) headers.delete(header);
+  headers.set(trustedHeader, normalizeIpAddress(clientIp));
+  return headers;
 }
 
 export function normalizeIpAddress(value: string): string {
@@ -138,7 +201,7 @@ export async function hmacSha256Hex(
   secret: string,
   value: string,
 ): Promise<string> {
-  validateHmacSecret(secret);
+  validateRateLimitHmacSecret(secret);
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -164,12 +227,24 @@ export async function hmacSha256Hex(
   return digest;
 }
 
-function validateContext(context: PlayerRateLimitContext): void {
+export function validateRateLimitHmacSecret(secret: string): void {
+  if (
+    !HMAC_SECRET_PATTERN.test(secret) ||
+    new Set(secret).size < MINIMUM_HMAC_SECRET_DISTINCT_CHARACTERS
+  ) {
+    throw new RateLimitError(
+      "invalid_rate_limit_config",
+      "Rate limit HMAC configuration is invalid.",
+    );
+  }
+}
+
+function validateContext(context: AuthenticatedRateLimitContext): void {
   if (!ACTION_PATTERN.test(context.action)) {
     throw invalidContext("Rate limit action is not a reviewed server action.");
   }
   if (
-    !UUID_PATTERN.test(context.playerUuid) ||
+    !UUID_PATTERN.test(context.identityUuid) ||
     !UUID_PATTERN.test(context.gameUuid)
   ) {
     throw invalidContext("Rate limit ownership scope is invalid.");
@@ -185,18 +260,6 @@ function validatePreAuthContext(context: PreAuthRateLimitContext): void {
   }
   if (!(context.profile in PLAYER_RATE_LIMIT_POLICIES)) {
     throw invalidContext("Rate limit policy profile is invalid.");
-  }
-}
-
-function validateHmacSecret(secret: string): void {
-  if (
-    secret.length < MINIMUM_HMAC_SECRET_LENGTH || secret.length > 4_096 ||
-    new Set(secret).size < 8
-  ) {
-    throw new RateLimitError(
-      "invalid_rate_limit_config",
-      "Rate limit HMAC configuration is invalid.",
-    );
   }
 }
 

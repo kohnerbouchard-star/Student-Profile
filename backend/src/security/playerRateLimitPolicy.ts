@@ -28,6 +28,31 @@ export const PLAYER_RATE_LIMIT_POLICIES: Readonly<
     game: [300, 300, 300],
     action: [10, 300, 300],
   }),
+  login: policy({
+    // A classroom NAT can legitimately carry an entire roster through login.
+    // The action-per-IP bucket remains narrower than the broad IP bucket and
+    // blocks longer to retain credential-stuffing resistance.
+    ip: [150, 300, 300],
+    identity: [15, 300, 900],
+    game: [300, 300, 300],
+    action: [90, 300, 600],
+  }),
+  attendance: policy({
+    // Player clock-in is idempotent in the domain RPC, but repeated device or
+    // browser retries are still bounded tightly per authenticated player.
+    ip: [600, 60, 30],
+    identity: [6, 60, 60],
+    game: [600, 60, 30],
+    action: [6, 60, 60],
+  }),
+  scanner: policy({
+    // One staff device may scan a full classroom in a short burst. The game,
+    // staff identity, and action buckets still cap runaway scanner loops.
+    ip: [900, 60, 30],
+    identity: [300, 60, 60],
+    game: [900, 60, 30],
+    action: [300, 60, 60],
+  }),
 });
 
 type PolicyTuple = readonly [
