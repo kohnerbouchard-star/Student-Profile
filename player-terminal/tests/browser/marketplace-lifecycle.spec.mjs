@@ -257,22 +257,13 @@ async function installRoutes(page) {
 }
 
 function installSession(page) {
-  return page.addInitScript(({ gameId, token }) => {
-    const value = {
-      gameSessionId: gameId,
-      playerSessionId: "psn_marketplace_browser",
+  return page.addInitScript(({ token }) => {
+    sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
       playerSessionToken: token,
-      expiresAt: "2026-07-21T03:00:00.000Z",
-    };
-    globalThis.ECONOVARIA_PLAYER_SESSION = value;
-    globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
-      ...(globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
-      usePreviewData: false,
-      gameSessionId: gameId,
-      playerSessionId: value.playerSessionId,
-      playerSessionToken: token,
-    };
-  }, { gameId: GAME_ID, token: SESSION_TOKEN });
+      sessionExpiresAt: "2026-07-21T03:00:00.000Z",
+      storedAt: "2026-07-21T01:00:00.000Z",
+    }));
+  }, { token: SESSION_TOKEN });
 }
 
 test("Marketplace purchase remains committed when authoritative refresh fails", async ({ page }) => {
