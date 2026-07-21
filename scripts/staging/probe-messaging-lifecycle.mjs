@@ -171,7 +171,7 @@ try {
     config.playerBToken,
     `/players/me/messages/threads/${threadId}`,
   ));
-  assert(threadRead.threads?.[0]?.id === threadId, "Thread read did not return the requested public thread.");
+  assert(threadRead.thread?.id === threadId, "Thread read did not return the requested public thread.");
   evidence.checks.threadRead = true;
 
   const sendKey = key("player-message-send");
