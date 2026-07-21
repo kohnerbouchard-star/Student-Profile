@@ -9,9 +9,11 @@ const files = {
   handler: "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
   routes: "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
   capabilities: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+  playerScope: "backend/src/domains/players/api/playerRequestScope.ts",
   dispatcher: "backend/supabase/functions/classroom-api/index.ts",
   admin: "backend/supabase/functions/admin-api/businessBankingOperations.ts",
   adminDispatcher: "backend/supabase/functions/admin-api/index.ts",
+  adminLifecycle: "backend/supabase/functions/admin-api/gameLifecycleOperations.ts",
   playerAdapter: "player-terminal/src/api/business-banking-backend-routes.js",
   playerEndpoints: "player-terminal/src/api/endpoints.js",
   playerCapabilities: "player-terminal/src/api/capabilities.js",
@@ -62,6 +64,8 @@ for (const operation of [
   assert.match(sql, new RegExp(`['"]${operation}['"]`, "u"), `missing ledger operation ${operation}`);
 }
 assert.ok((sql.match(/record_player_ledger_entry/gu) ?? []).length >= 20);
+assert.ok((sql.match(/for update/giu) ?? []).length >= 10, "insufficient row-lock coverage for concurrent mutations");
+assert.match(sql, /from public\.account_balances[\s\S]{0,600}for update/iu);
 assert.doesNotMatch(sql, /create table public\.(?:business_balances|savings_balances|loan_balances)/iu);
 assert.match(sql, /business_account_type_v1/iu);
 assert.match(sql, /idempotency_key/iu);
@@ -87,6 +91,17 @@ for (const forbiddenClientScope of [
 assert.match(source.handler, /resolvePlayerRequestScope/u);
 assert.match(source.handler, /resolve_player_economic_context_v1/u);
 assert.doesNotMatch(source.handler, /p_currency_code:\s*body\./u);
+
+for (const scopeGuard of [
+  /rejectClientSuppliedPlayerIdentity/u,
+  /rejectClientSuppliedBodyIdentity/u,
+  /requireMatchingPlayerGameSession/u,
+  /gameSession\.status !== "active"/u,
+  /player\.status !== "active"/u,
+]) {
+  assert.match(source.playerScope, scopeGuard);
+}
+assert.match(source.playerScope, /invalid_player_session_scope/u);
 
 for (const routeKind of [
   "businessCreate", "businessProductCreate", "businessInputPurchase",
@@ -127,6 +142,11 @@ assert.match(source.admin, /review_player_loan_application_v1/u);
 assert.match(source.admin, /admin_business_banking_correction_v1/u);
 assert.match(source.adminDispatcher, /handleBusinessBankingAdminOperation/u);
 assert.match(source.adminDispatcher, /const businessBankingOperation = await handleBusinessBankingAdminOperation/u);
+assert.match(source.adminLifecycle, /game_mutations_paused/u);
+assert.match(source.adminLifecycle, /game_lifecycle_terminal/u);
+const adminGuardPosition = source.adminDispatcher.indexOf("const mutationGuard = guardGameScopedMutation");
+const adminBusinessPosition = source.adminDispatcher.indexOf("const businessBankingOperation = await handleBusinessBankingAdminOperation");
+assert.ok(adminGuardPosition >= 0 && adminBusinessPosition > adminGuardPosition, "Admin lifecycle guard must run before Business/Banking operations");
 assert.match(source.playerCapabilities, /businessTerminate:\s*"businessEmployeeTerminate"/u);
 assert.match(source.playerAdapter, /recipientPlayerIdentifier/u);
 assert.doesNotMatch(source.playerAdapter, /recipientPlayerUuid/u);
