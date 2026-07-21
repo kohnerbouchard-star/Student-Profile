@@ -110,7 +110,7 @@ Deno.test("Player Progression denies revoked, expired, paused, ended, wrong-game
     );
     assertEquals(response.status, expectedStatus);
     const body = await response.json();
-    assertEquals(body.code, expectedCode);
+    assertEquals(body.error.code, expectedCode);
     assertEquals(client.calls.length, 0);
     if (!name) throw new Error("scenario name is required");
   }
@@ -129,7 +129,7 @@ Deno.test("Player Progression rejects conflicting idempotency and maps stable un
     dependencies(conflictingClient),
   );
   assertEquals(conflicting.status, 400);
-  assertEquals((await conflicting.json()).code, "invalid_player_progression_request");
+  assertEquals((await conflicting.json()).error.code, "invalid_player_progression_request");
   assertEquals(conflictingClient.calls.length, 0);
 
   const idempotencyClient = new FakeClient(null, { message: "PROGRESSION_IDEMPOTENCY_CONFLICT" });
@@ -139,7 +139,7 @@ Deno.test("Player Progression rejects conflicting idempotency and maps stable un
     dependencies(idempotencyClient),
   );
   assertEquals(conflict.status, 409);
-  assertEquals((await conflict.json()).code, "progression_idempotency_conflict");
+  assertEquals((await conflict.json()).error.code, "progression_idempotency_conflict");
 
   const unavailableClient = new FakeClient(null, { message: "function read_player_progression_v1 does not exist" });
   const unavailable = await handlePlayerProgressionRequest(
@@ -149,8 +149,8 @@ Deno.test("Player Progression rejects conflicting idempotency and maps stable un
   );
   assertEquals(unavailable.status, 503);
   const unavailableBody = await unavailable.json();
-  assertEquals(unavailableBody.code, "progression_schema_not_applied");
-  assertEquals(unavailableBody.retryable, true);
+  assertEquals(unavailableBody.error.code, "progression_schema_not_applied");
+  assertEquals(unavailableBody.error.retryable, true);
 });
 
 class FakeClient {
