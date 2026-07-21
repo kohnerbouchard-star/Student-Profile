@@ -273,7 +273,7 @@ function installSession(page) {
 test("Marketplace purchase remains committed when authoritative refresh fails", async ({ page }) => {
   await installSession(page);
   const harness = await installRoutes(page);
-  await page.goto("/player-terminal/#marketplace");
+  await page.goto("/#marketplace");
 
   const marketplacePage = page.locator(".player-terminal-marketplace-page");
   await expect(marketplacePage).toBeVisible();
