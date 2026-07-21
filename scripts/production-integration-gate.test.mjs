@@ -23,7 +23,7 @@ test("active integration watch validates as blocked and production-safe", async 
   assert.equal(result.gate.productionPromotionAuthorized, false);
   assert.equal(result.migrations.productionModified, false);
   assert.equal(result.repository.behindMain, 0);
-  assert.equal(result.repository.permanentChangedFileCount, 6);
+  assert.equal(result.repository.permanentChangedFileCount, 7);
 });
 
 test("blocked watch records exact staging drift without claiming alignment", async () => {
