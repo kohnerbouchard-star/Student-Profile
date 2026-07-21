@@ -427,6 +427,161 @@ begin
 end;
 $function$;
 
+create table public.campaign_effect_recovery_audit (
+  id uuid primary key default gen_random_uuid(),
+  public_id text not null default ('cra_' || replace(gen_random_uuid()::text, '-', '')),
+  game_session_id uuid not null,
+  campaign_instance_id uuid not null,
+  command_id uuid not null references public.campaign_effect_commands (id) on delete cascade,
+  actor_staff_user_id uuid not null references public.staff_users (id) on delete restrict,
+  reason text not null,
+  idempotency_key text not null,
+  occurred_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  constraint campaign_effect_recovery_audit_campaign_fk
+    foreign key (game_session_id, campaign_instance_id)
+    references public.campaign_instances (game_session_id, id) on delete cascade,
+  constraint campaign_effect_recovery_audit_public_id_unique unique (public_id),
+  constraint campaign_effect_recovery_audit_idempotency_unique unique (game_session_id, idempotency_key),
+  constraint campaign_effect_recovery_audit_public_id_valid check (public_id ~ '^cra_[0-9a-f]{32}$'),
+  constraint campaign_effect_recovery_audit_reason_valid check (
+    length(reason) between 12 and 1000 and reason = btrim(reason)
+  ),
+  constraint campaign_effect_recovery_audit_idempotency_valid check (
+    idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$'
+  )
+);
+
+alter table public.campaign_effect_recovery_audit enable row level security;
+revoke all on table public.campaign_effect_recovery_audit
+  from public, anon, authenticated, service_role;
+grant select, insert on table public.campaign_effect_recovery_audit to service_role;
+
+create index campaign_effect_recovery_audit_game_time_idx
+  on public.campaign_effect_recovery_audit (game_session_id, occurred_at desc, public_id desc);
+
+create or replace function public.recover_campaign_effect_command_v1(
+  p_game_session_id uuid,
+  p_command_public_id text,
+  p_actor_staff_user_id uuid,
+  p_reason text,
+  p_idempotency_key text,
+  p_recovered_at timestamptz
+)
+returns table (
+  recovery_outcome text,
+  command_id text,
+  command_status text,
+  attempt_count integer,
+  recovered_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_command public.campaign_effect_commands%rowtype;
+  v_existing public.campaign_effect_recovery_audit%rowtype;
+begin
+  if p_game_session_id is null
+    or p_command_public_id !~ '^cec_[0-9a-f]{32}$'
+    or p_actor_staff_user_id is null
+    or length(btrim(coalesce(p_reason, ''))) not between 12 and 1000
+    or p_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$'
+    or p_recovered_at is null
+  then
+    raise exception 'CAMPAIGN_EFFECT_RECOVERY_INVALID' using errcode = 'P0001';
+  end if;
+
+  perform 1
+  from public.game_sessions as game_row
+  where game_row.id = p_game_session_id
+    and game_row.status in ('active', 'paused')
+  for share;
+  if not found then
+    raise exception 'CAMPAIGN_EFFECT_GAME_NOT_MUTABLE' using errcode = 'P0001';
+  end if;
+
+  perform 1 from public.staff_users where id = p_actor_staff_user_id;
+  if not found then
+    raise exception 'CAMPAIGN_EFFECT_ACTOR_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  select audit_row.* into v_existing
+  from public.campaign_effect_recovery_audit as audit_row
+  where audit_row.game_session_id = p_game_session_id
+    and audit_row.idempotency_key = p_idempotency_key;
+  if found then
+    select command_row.* into v_command
+    from public.campaign_effect_commands as command_row
+    where command_row.id = v_existing.command_id;
+    return query select
+      'replayed'::text,
+      v_command.public_id,
+      v_command.status,
+      v_command.attempt_count,
+      v_existing.occurred_at;
+    return;
+  end if;
+
+  select command_row.* into v_command
+  from public.campaign_effect_commands as command_row
+  where command_row.game_session_id = p_game_session_id
+    and command_row.public_id = p_command_public_id
+  for update;
+  if not found then
+    raise exception 'CAMPAIGN_EFFECT_COMMAND_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_command.status <> 'failed' then
+    raise exception 'CAMPAIGN_EFFECT_RECOVERY_STATE_INVALID' using errcode = 'P0001';
+  end if;
+  if v_command.attempt_count >= 25 then
+    raise exception 'CAMPAIGN_EFFECT_RETRY_EXHAUSTED' using errcode = 'P0001';
+  end if;
+
+  update public.campaign_effect_commands
+  set status = 'pending',
+      claimed_at = null,
+      completed_at = null,
+      last_error_code = null,
+      updated_at = p_recovered_at
+  where id = v_command.id
+  returning * into v_command;
+
+  insert into public.campaign_effect_recovery_audit (
+    game_session_id,
+    campaign_instance_id,
+    command_id,
+    actor_staff_user_id,
+    reason,
+    idempotency_key,
+    occurred_at
+  ) values (
+    p_game_session_id,
+    v_command.campaign_instance_id,
+    v_command.id,
+    p_actor_staff_user_id,
+    btrim(p_reason),
+    p_idempotency_key,
+    p_recovered_at
+  );
+
+  return query select
+    'recovered'::text,
+    v_command.public_id,
+    v_command.status,
+    v_command.attempt_count,
+    p_recovered_at;
+end;
+$function$;
+
+revoke all on function public.recover_campaign_effect_command_v1(
+  uuid, text, uuid, text, text, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.recover_campaign_effect_command_v1(
+  uuid, text, uuid, text, text, timestamptz
+) to service_role;
+
 revoke all on function public.initialize_campaign_instance_v1(
   uuid, text, text, text, text, timestamptz, timestamptz
 ) from public, anon, authenticated;
