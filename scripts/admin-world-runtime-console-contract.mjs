@@ -55,9 +55,11 @@ for (const operation of [
 
 assert.match(index, /world-runtime-console-loader\.js/);
 assert.doesNotMatch(index, /<link[^>]+world-runtime-console\.css/);
-assert.match(loader, /world-runtime-console\.css/);
+assert.match(loader, /const WORLD_STYLESHEET = "\.\/css\/world-runtime-console\.css"/);
 assert.match(loader, /data-admin-world-stylesheet/);
 assert.match(loader, /await import\("\.\/world-runtime-console\.js"\)/);
+assert.doesNotMatch(loader, /MutationObserver|fetch\s*\(|XMLHttpRequest|SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
+assert.doesNotMatch(loader, /import\s*\(\s*[^"']/);
 assert.match(source, /aria-modal/);
 assert.match(source, /aria-live/);
 assert.match(source, /EconovariaAdminModalAccessibility/);
@@ -68,16 +70,25 @@ assert.match(source, /AbortController/);
 assert.match(source, /cache:\s*"no-store"/);
 assert.match(source, /window\.addEventListener\("offline"/);
 assert.match(source, /Connection restored/);
+assert.match(source, /Number\(journey\.total_cost_minor\s*\?\?\s*0\)\s*\/\s*100/);
+assert.doesNotMatch(source, /\$\{text\(journey\.currency_code\)\}\s+\$\{text\(journey\.total_cost_minor/);
 assert.match(css, /@media\(max-width:900px\)/);
 assert.match(css, /@media\(max-width:560px\)/);
 assert.match(css, /prefers-reduced-motion/);
 assert.match(css, /forced-colors/);
+for (const forbidden of [
+  /(^|[},\s])body\s*\{/m,
+  /(^|[},\s])html\s*\{/m,
+  /\.admin-terminal-shell\s*\{/m,
+  /\[data-admin-section\]\s*\{/m,
+]) {
+  assert.doesNotMatch(css, forbidden);
+}
 
 assert.doesNotMatch(source, /MutationObserver/);
 assert.doesNotMatch(source, /@ts-nocheck|\beval\s*\(|new Function|document\.write/);
 assert.doesNotMatch(source, /innerHTML\s*=\s*(?:payload|data|snapshot)/);
 assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
-assert.doesNotMatch(loader, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
 assert.doesNotMatch(index, /world-runtime-source-snapshot|materializer|reconstruction/);
 
 console.log("Admin World runtime console contract passed");
