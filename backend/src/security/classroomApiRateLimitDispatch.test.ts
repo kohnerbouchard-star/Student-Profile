@@ -13,7 +13,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
 
   assertEquals(
     occurrences(source, "dispatchRateLimitedReviewedPlayerRequest("),
-    20,
+    21,
   );
   assertEquals(
     occurrences(source, "dispatchRateLimitedPlayerLoginRequest("),
@@ -25,6 +25,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
       "return handlePlayerBankingPublicRequest(",
       "return handlePlayerGameDashboardRequest(",
       "return handlePlayerWorldReadRequest(",
+      "return handlePlayerWorldRuntimeEdgeRequest(",
       "return handlePlayerInventoryReadRequest(",
       "return handlePlayerInventoryRedemptionRequest(",
       "return handlePlayerContractAcceptanceRequest(",
