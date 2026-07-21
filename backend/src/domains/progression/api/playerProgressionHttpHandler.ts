@@ -71,13 +71,7 @@ export async function handlePlayerProgressionRequest(
   }
 
   try {
-    if (new URL(request.url).searchParams.size) {
-      throw new ProgressionError(
-        "invalid_player_progression_request",
-        "Progression routes do not accept query parameters.",
-        400,
-      );
-    }
+    validateRequestShape(request);
     const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
     if (!envResult.ok) {
       return jsonError(500, {
@@ -147,6 +141,28 @@ export async function handlePlayerProgressionRequest(
   }
 }
 
+function validateRequestShape(request: Request): void {
+  if (new URL(request.url).searchParams.size) {
+    throw new ProgressionError(
+      "invalid_player_progression_request",
+      "Progression routes do not accept query parameters.",
+      400,
+    );
+  }
+  for (const headerName of [
+    "x-econovaria-game-id",
+    "x-econovaria-game-session-id",
+  ]) {
+    if (request.headers.has(headerName)) {
+      throw new ProgressionError(
+        "invalid_player_progression_request",
+        "Progression game scope derives only from the authenticated Player session.",
+        400,
+      );
+    }
+  }
+}
+
 async function readIdempotencyKey(request: Request): Promise<string> {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   if (!contentType.includes("application/json")) {
@@ -194,7 +210,7 @@ function normalizeCommand(
   if (!row) throw failed();
   const outcome = text(route.kind === "unlock" ? row.unlock_outcome : row.claim_outcome);
   const commandId = text(row.command_id);
-  if (!["applied", "replayed"].includes(outcome) || !PROGRESSION_COMMAND_ID_PATTERN.test(commandId)) {
+  if (!['applied', 'replayed'].includes(outcome) || !PROGRESSION_COMMAND_ID_PATTERN.test(commandId)) {
     throw failed();
   }
   if (route.kind === "unlock") {
