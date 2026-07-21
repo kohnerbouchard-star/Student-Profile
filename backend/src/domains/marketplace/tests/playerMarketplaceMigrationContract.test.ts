@@ -21,11 +21,10 @@ Deno.test("Marketplace provisional migration sequence is forward-only and transa
 Deno.test("Marketplace reference scopes preserve game-bound Store and Inventory lookups", async () => {
   const sql = await Deno.readTextFile(REFERENCES);
   for (const required of [
-    "store_items_game_item_key_unique",
-    "player_inventory_game_player_item_unique",
-    "game_session_id",
-    "player_id",
-    "item_key",
+    "store_items_marketplace_reference_scope_unique",
+    "inventory_holdings_marketplace_reference_scope_unique",
+    "on public.store_items (game_session_id, id, item_key)",
+    "on public.inventory_holdings (game_session_id, player_id, id, store_item_id)",
   ]) {
     if (!sql.includes(required)) throw new Error(`Marketplace reference migration is missing ${required}`);
   }
@@ -62,8 +61,8 @@ Deno.test("Marketplace settlement and refund posting groups are independently ba
   if (!sql.includes("round(sum(amount), 4)")) throw new Error("Posting balance uses unbounded arithmetic.");
   for (const evidence of [
     "marketplace_orders_reservation_unique",
-    "marketplace_financial_postings_reference_unique",
-    "marketplace_receipts_reference_unique",
+    "marketplace_postings_unique",
+    "marketplace_receipts_unique",
   ]) {
     if (!sql.includes(evidence)) throw new Error(`Exactly-once evidence is missing ${evidence}`);
   }
