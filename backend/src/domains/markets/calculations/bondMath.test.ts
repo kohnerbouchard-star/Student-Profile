@@ -105,7 +105,7 @@ Deno.test("default suppresses future coupons and applies bounded recovery", () =
   assertEquals(calculateBondRecoveryValue("1000", "4", 0.35), "1400");
 });
 
-Deno.test("zero coupon bonds reject coupon rates and value only principal", () => {
+Deno.test("zero coupon bonds retain audit periods but value only principal", () => {
   const zero = {
     ...baseBond(),
     bondPublicId: "bond.northreach.sovereign.0002.v1",
@@ -123,7 +123,12 @@ Deno.test("zero coupon bonds reject coupon rates and value only principal", () =
     faceQuantity: "1",
   });
   assertEquals(value.accruedInterest, "0");
-  assert(value.remainingCashFlows.every((flow) => flow.kind === "maturity"));
+  const positiveFlows = value.remainingCashFlows.filter((flow) =>
+    Number(flow.amount) > 0
+  );
+  assertEquals(positiveFlows.length, 1);
+  assertEquals(positiveFlows[0].kind, "maturity");
+  assertEquals(positiveFlows[0].amount, "1000");
 });
 
 function baseBond(): FinancialMarketBondDefinition {
