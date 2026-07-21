@@ -136,7 +136,7 @@ That head failed:
 
 The purified branch subsequently demonstrated green backend typecheck and Marketplace smoke, two zero-state database resets and lint, Seed compatibility, security, repository quality, Admin API, Admin shell, game lifecycle, timezone, exchange, supply-chain, environment-neutrality, release-promotion, and staging-preflight gates.
 
-The connected Marketplace browser fixture now uses explicit connected API mode, the host runtime’s authoritative `econovaria.player.auth.v1` session-storage contract, a non-expired synthetic session, and the accepted top-level public Player bootstrap envelope. A normal pull-request workflow run must verify that final fixture on desktop and mobile before this pre-Crafting tranche is considered fully green.
+The connected Marketplace browser fixture now uses explicit connected API mode, the host runtime’s authoritative `econovaria.player.auth.v1` session-storage contract, a non-expired synthetic session, the accepted top-level public Player bootstrap envelope, and the existing terminal configuration contract for the synthetic dashboard game scope. The Marketplace write assertion continues to reject `gameSessionId`, Player UUID, or ownership fields in the purchase payload. A normal pull-request workflow run must verify that final fixture on desktop and mobile before this pre-Crafting tranche is considered fully green.
 
 ## Completed pre-Crafting test expansion
 
