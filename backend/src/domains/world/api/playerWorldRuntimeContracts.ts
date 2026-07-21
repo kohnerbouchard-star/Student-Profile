@@ -45,13 +45,22 @@ export interface PlayerWorldRuntimeContextPayload {
     readonly assignment: PlayerArrivalAssignmentPayload | null;
   };
   readonly travel: {
-    readonly state: PlayerTravelState | null;
+    readonly state: Omit<
+      PlayerTravelState,
+      "gameId" | "gameSessionId" | "playerUuid"
+    > | null;
     readonly activeJourney: PlayerTravelJourney | null;
   };
-  readonly residency: Omit<PlayerResidencyState, "gameId" | "gameSessionId" | "playerUuid"> | null;
+  readonly residency: Omit<
+    PlayerResidencyState,
+    "gameId" | "gameSessionId" | "playerUuid"
+  > | null;
   readonly world: {
     readonly revision: number;
-    readonly locations: readonly Pick<WorldLocationState, "publicLocationId" | "availability" | "revision">[];
+    readonly locations: readonly Pick<
+      WorldLocationState,
+      "publicLocationId" | "availability" | "revision"
+    >[];
     readonly routes: readonly Pick<
       WorldRouteState,
       | "publicRouteId"
