@@ -1,4 +1,3 @@
-import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
 import {
   buildAuthenticatedRateLimitBuckets,
   readTrustedClientIp,
@@ -6,12 +5,31 @@ import {
   type TrustedIpHeader,
   validateRateLimitHmacSecret,
 } from "./rateLimitKeying.ts";
-import type { PlayerRateLimitProfile, RateLimitDecision } from "./rateLimitContracts.ts";
-import { SupabaseRateLimitRepository } from "./supabaseRateLimitRepository.ts";
+import {
+  RATE_LIMIT_DIMENSIONS,
+  type PlayerRateLimitProfile,
+  type RateLimitBucketInput,
+  type RateLimitDecision,
+} from "./rateLimitContracts.ts";
 
 declare const Deno: {
   readonly env: { get(name: string): string | undefined };
 };
+
+interface RateLimitRpcRow {
+  readonly allowed: boolean;
+  readonly retry_after_seconds: number;
+  readonly limiting_dimension: string | null;
+  readonly limit_count: number;
+  readonly remaining_count: number;
+  readonly reset_at: string;
+}
+interface RateLimitClient {
+  rpc<T>(name: string, args: Record<string, unknown>): PromiseLike<{
+    readonly data: T | null;
+    readonly error: { readonly message: string } | null;
+  }>;
+}
 
 export interface StaffMessagingRateLimitInput {
   readonly request: Request;
@@ -33,7 +51,7 @@ export interface StaffMessagingRateLimitDependencies {
       staffUuid: string;
       gameUuid: string;
     }>,
-    client: EdgeSupabaseClient,
+    client: RateLimitClient,
   ) => Promise<RateLimitDecision>;
   readonly readConfig?: () => Readonly<{
     hmacSecret: string;
@@ -51,20 +69,20 @@ export async function guardStaffMessagingRateLimit(
   if (!operation) return null;
 
   try {
-    const edgeClient = client as EdgeSupabaseClient;
+    const rateLimitClient = client as RateLimitClient;
     const decision = dependencies.enforce
       ? await dependencies.enforce({
         ...operation,
         request: input.request,
         staffUuid: input.staffUserId,
         gameUuid: input.gameId,
-      }, edgeClient)
+      }, rateLimitClient)
       : await enforceStaffMessagingRateLimit({
         ...operation,
         request: input.request,
         staffUuid: input.staffUserId,
         gameUuid: input.gameId,
-      }, edgeClient, dependencies.readConfig);
+      }, rateLimitClient, dependencies.readConfig);
     if (decision.allowed) return null;
     return {
       handled: true,
@@ -122,7 +140,7 @@ async function enforceStaffMessagingRateLimit(
     staffUuid: string;
     gameUuid: string;
   }>,
-  client: EdgeSupabaseClient,
+  client: RateLimitClient,
   readConfig?: StaffMessagingRateLimitDependencies["readConfig"],
 ): Promise<RateLimitDecision> {
   const config = (readConfig ?? readRuntimeConfig)();
@@ -134,7 +152,41 @@ async function enforceStaffMessagingRateLimit(
     ipAddress,
     profile: input.profile,
   }, config.hmacSecret);
-  return new SupabaseRateLimitRepository(client).consume(buckets);
+  return consumeRateLimitBuckets(client, buckets);
+}
+
+async function consumeRateLimitBuckets(
+  client: RateLimitClient,
+  buckets: readonly RateLimitBucketInput[],
+): Promise<RateLimitDecision> {
+  const response = await client.rpc<RateLimitRpcRow[] | RateLimitRpcRow>(
+    "consume_request_rate_limits_v1",
+    { p_buckets: buckets },
+  );
+  if (response.error) throw new Error("rate limit unavailable");
+  const row = Array.isArray(response.data) ? response.data[0] : response.data;
+  if (!validRow(row)) throw new Error("rate limit unavailable");
+  return {
+    allowed: row.allowed,
+    retryAfterSeconds: row.retry_after_seconds,
+    limitingDimension: row.limiting_dimension,
+    limit: row.limit_count,
+    remaining: row.remaining_count,
+    resetAt: row.reset_at,
+  };
+}
+
+function validRow(value: unknown): value is RateLimitRpcRow & {
+  readonly limiting_dimension: RateLimitDecision["limitingDimension"];
+} {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Partial<RateLimitRpcRow>;
+  return typeof row.allowed === "boolean" &&
+    Number.isInteger(row.retry_after_seconds) && Number(row.retry_after_seconds) >= 0 &&
+    (row.limiting_dimension === null || RATE_LIMIT_DIMENSIONS.includes(row.limiting_dimension as never)) &&
+    Number.isInteger(row.limit_count) && Number(row.limit_count) > 0 &&
+    Number.isInteger(row.remaining_count) && Number(row.remaining_count) >= 0 &&
+    typeof row.reset_at === "string" && Number.isFinite(Date.parse(row.reset_at));
 }
 
 function readRuntimeConfig() {
