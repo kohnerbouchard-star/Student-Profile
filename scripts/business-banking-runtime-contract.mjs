@@ -121,7 +121,11 @@ for (const routeKind of [
   "loanApply",
   "loanRepay",
 ]) {
-  assert.match(source.routes, new RegExp(`kind:\s*['"]${routeKind}['"]`, "u"));
+  assert.equal(
+    source.routes.includes(`kind: "${routeKind}"`),
+    true,
+    `missing route kind ${routeKind}`,
+  );
 }
 
 for (const capability of [
