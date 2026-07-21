@@ -332,11 +332,12 @@ export function createResidencyState(input: {
   readonly gameSessionId: string;
   readonly playerUuid: string;
   readonly currentCountryId: string;
+  readonly currencyCode: string;
   readonly eligibleCountryIds: readonly string[];
   readonly now: string;
 }): PlayerResidencyState {
   requireDate(input.now);
-  if ([input.gameId, input.gameSessionId, input.playerUuid, input.currentCountryId].some((value) => !value.trim())) {
+  if ([input.gameId, input.gameSessionId, input.playerUuid, input.currentCountryId, input.currencyCode].some((value) => !value.trim())) {
     throw new WorldRuntimeError("world_command_invalid", "Residency scope is required.", false);
   }
   const eligible = [...new Set(input.eligibleCountryIds)].filter((countryId) => countryId.trim());
@@ -345,6 +346,7 @@ export function createResidencyState(input: {
     gameSessionId: input.gameSessionId,
     playerUuid: input.playerUuid,
     currentCountryId: input.currentCountryId,
+    currencyCode: input.currencyCode,
     eligibleCountryIds: Object.freeze(eligible),
     pendingCountryId: null,
     revision: 0,
