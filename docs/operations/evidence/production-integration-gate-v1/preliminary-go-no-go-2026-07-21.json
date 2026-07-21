@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "reportType": "preliminary-production-go-no-go",
-  "capturedAt": "2026-07-21T03:30:34.000Z",
+  "capturedAt": "2026-07-21T03:48:00.000Z",
   "executionState": "ACTIVE_INTEGRATION_WATCH",
   "repository": "kohnerbouchard-star/Student-Profile",
-  "auditedMain": "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3",
+  "auditedMain": "458137c9193a7066294024098b4d938aa46f6aba",
   "integrationBranch": "agent/production-integration-gate-v1",
+  "synchronizationState": "main-advanced-merge-ref-refresh-requested",
   "decision": "NO_GO",
   "productionDeploymentAuthorized": false,
   "productionModified": false,
@@ -58,7 +59,7 @@
     "294": "b96e21fe03ad66858d0d9a208893e8341d00e452",
     "299": "804c7068f329859750f8179f4c581882eb838d1b",
     "300": "2d950a118fc90e9c744dfebf236fb48c072a7f82",
-    "controller301": "07a44feff028235380d743b07efdec8cbf826b6e"
+    "controllerMain": "458137c9193a7066294024098b4d938aa46f6aba"
   },
   "resolved": [
     {
