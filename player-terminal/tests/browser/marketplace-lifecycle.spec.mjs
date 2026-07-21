@@ -265,15 +265,16 @@ test("Marketplace purchase remains committed when authoritative refresh fails", 
   await page.goto("/?api=1#marketplace");
 
   const marketplacePage = page.locator(".player-terminal-marketplace-page");
+  const purchaseForm = marketplacePage.locator('form[data-endpoint="marketplacePurchase"]');
   await expect(marketplacePage).toBeVisible();
   await expect(marketplacePage.getByRole("heading", { name: "Marketplace" })).toBeVisible();
   await expect(marketplacePage.getByText("Data Chip", { exact: true }).first()).toBeVisible();
-  await expect(marketplacePage.locator('input[name="listingId"]')).toHaveValue(LISTING_ID);
-  await expect(marketplacePage.locator('input[name="expectedVersion"]')).toHaveValue("7");
+  await expect(purchaseForm.locator('input[name="listingId"]')).toHaveValue(LISTING_ID);
+  await expect(purchaseForm.locator('input[name="expectedVersion"]')).toHaveValue("7");
   await expect(marketplacePage.getByText("Create a draft listing", { exact: true })).toBeVisible();
   await expect(marketplacePage.getByText("Disputes and refunds", { exact: true })).toBeVisible();
 
-  await marketplacePage.getByRole("button", { name: /Buy listing/i }).click();
+  await purchaseForm.getByRole("button", { name: /Buy listing/i }).click();
   await expect.poll(harness.purchasePosts).toBe(1);
   await expect(page.locator(".player-terminal-toast")).toContainText(/Action completed|refresh/i);
   await page.waitForTimeout(150);
