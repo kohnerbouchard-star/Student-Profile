@@ -23,9 +23,14 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
 });
 
 export const WRITE_INVALIDATIONS = Object.freeze({
+  businessCreate: Object.freeze(["dashboard", "business", "banking"]),
+  businessProductCreate: Object.freeze(["business"]),
+  businessInputPurchase: Object.freeze(["dashboard", "business", "banking", "inventory"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
   businessPrice: Object.freeze(["business"]),
   businessHire: Object.freeze(["dashboard", "business", "banking"]),
+  businessTerminate: Object.freeze(["dashboard", "business", "banking"]),
+  businessStatus: Object.freeze(["dashboard", "business", "banking"]),
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking"]),
   marketWatchlist: Object.freeze(["market"]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
