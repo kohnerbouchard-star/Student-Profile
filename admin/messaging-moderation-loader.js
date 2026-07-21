@@ -8,7 +8,10 @@
     link.href = stylesheetUrl;
     document.head.append(link);
   }
-  import(new URL("./messaging-moderation-surface.js", baseUrl).href).catch((error) => {
-    console.error("Messaging moderation surface failed to load.", error);
+  Promise.all([
+    import(new URL("./messaging-moderation-surface.js", baseUrl).href),
+    import(new URL("./messaging-policy-surface.js", baseUrl).href),
+  ]).catch((error) => {
+    console.error("Messaging administration surface failed to load.", error);
   });
 })();
