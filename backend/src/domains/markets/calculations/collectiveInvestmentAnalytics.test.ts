@@ -134,15 +134,20 @@ Deno.test("rebalance replacement preserves historical continuity", () => {
     maximumConstituents: 3,
     methodologyVersion: "index-method.v1",
   };
-  const prior = components().slice(0, 3);
+  const prior = components().slice(0, 3).map((entry) => ({
+    ...entry,
+    currentPrice: "100",
+  }));
   const priorValue = calculateIndexValue(methodology, prior).value;
   const candidates = [
-    ...components().map((component, index) =>
-      index === 0 ? { ...component, delisted: true } : component
-    ),
+    ...components().map((entry, index) => ({
+      ...entry,
+      currentPrice: "100",
+      delisted: index === 0,
+    })),
     component(
       "instrument.northreach.replacement.v1",
-      "120",
+      "100",
       "900000",
       0.9,
       0.9,
@@ -174,11 +179,8 @@ Deno.test("rebalance replacement preserves historical continuity", () => {
       "instrument.northreach.replacement.v1",
     ),
   );
-  assert(
-    Math.abs(
-      Number(first.continuityValueAfter) - Number(priorValue),
-    ) < 0.00001,
-  );
+  assertEquals(first.continuityValueBefore, priorValue);
+  assertEquals(first.continuityValueAfter, priorValue);
 });
 
 Deno.test("suspension and delisting exclude components while insufficient universes fail closed", () => {
