@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const root = path.resolve(import.meta.dirname, "..");
+const source = fs.readFileSync(path.join(root, "admin/world-runtime-console.js"), "utf8");
+const index = fs.readFileSync(path.join(root, "admin/index.html"), "utf8");
+const css = fs.readFileSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
+const operations = fs.readFileSync(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
+
+for (const route of [
+  "/campaign",
+  "/campaign/history?limit=100",
+  "/campaign/effects?status=all&limit=100",
+  "/campaign/control",
+  "/campaign/manual-trigger",
+  "/arrival-classes?limit=100",
+  "/geography",
+  "/routes/state",
+  "/travel?limit=100",
+  "/residency?limit=100",
+]) assert.match(source, new RegExp(route.replace(/[/?]/g, "\\$&")));
+
+for (const capability of [
+  "Scheduler due",
+  "Emergency Disable",
+  "Recover effect",
+  "Correct class",
+  "Close route",
+  "TRAVEL OVERSIGHT",
+  "RESIDENCY OVERSIGHT",
+]) assert.match(source, new RegExp(capability, "i"));
+
+for (const operation of [
+  "handleWorldRuntimeAdminOperation",
+  "control_campaign_instance_atomic_v1",
+  "execute_campaign_event_atomic_v2",
+  "recover_campaign_effect_command_v1",
+  "correct_arrival_class_assignment_v1",
+  "apply_world_route_state_v1",
+]) assert.match(operations, new RegExp(operation));
+
+assert.match(index, /world-runtime-console\.css/);
+assert.match(index, /world-runtime-console\.js/);
+assert.match(source, /aria-modal/);
+assert.match(source, /aria-live/);
+assert.match(source, /EconovariaAdminModalAccessibility/);
+assert.match(source, /MutationObserver/);
+assert.match(source, /AbortController/);
+assert.match(source, /cache:\s*"no-store"/);
+assert.match(source, /window\.addEventListener\("offline"/);
+assert.match(source, /Connection restored/);
+assert.match(css, /@media\(max-width:900px\)/);
+assert.match(css, /@media\(max-width:560px\)/);
+assert.match(css, /prefers-reduced-motion/);
+assert.match(css, /forced-colors/);
+
+assert.doesNotMatch(source, /@ts-nocheck|\beval\s*\(|new Function|document\.write/);
+assert.doesNotMatch(source, /innerHTML\s*=\s*(?:payload|data|snapshot)/);
+assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|authorization\s*:/i);
+assert.doesNotMatch(index, /world-runtime-source-snapshot|materializer|reconstruction/);
+
+console.log("Admin World runtime console contract passed");
