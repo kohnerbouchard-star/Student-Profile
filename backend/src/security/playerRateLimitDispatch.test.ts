@@ -27,21 +27,26 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "contracts:GET": ["player.contracts.read", "read"],
     "countries:GET": ["player.countries.read", "read"],
     "country:GET": ["player.country.read", "read"],
+    "dashboard:GET": ["player.dashboard.read", "read"],
     "inventory:GET": ["player.inventory.read", "read"],
     "inventoryRedemption:GET": ["player.inventory.redemptions.read", "read"],
     "inventoryRedemption:POST": ["player.inventory.redemptions.request", "write"],
     "logout:POST": ["player.session.logout", "sensitive"],
     "market:GET": ["player.market.read", "read"],
     "marketAsset:GET": ["player.asset.read", "read"],
+    "marketOrder:POST": ["player.market.order", "sensitive"],
     "marketWatchlist:DELETE": ["player.watchlist.write", "write"],
     "marketWatchlist:GET": ["player.watchlist.read", "read"],
     "marketWatchlist:PUT": ["player.watchlist.write", "write"],
     "news:GET": ["player.news.read", "read"],
     "notifications:GET": ["player.notifications.read", "read"],
     "notificationsRead:POST": ["player.notifications.write", "write"],
-    "storyDeliveries:GET": ["player.story.deliveries.read", "read"],
-    "storyDeliveryState:POST": ["player.story.deliveries.write", "write"],
-  };
+    "portfolio:GET": ["player.portfolio.read", "read"],
+    "store:GET": ["player.store.read", "read"],
+    "storeQuote:POST": ["player.store.quote", "write"],
+    "storePurchase:GET": ["player.store.purchases.read", "read"],
+    "storePurchase:POST": ["player.store.purchase", "sensitive"],
+  } as const;
 
   const actual: Record<string, readonly string[]> = {};
   for (const key of Object.keys(expected)) {
@@ -121,7 +126,7 @@ Deno.test("post-auth denial and outage fail closed before route work", async () 
   }
 });
 
-Deno.test("post-auth dispatch preserves session errors without consuming a bucket", async () => {
+Deno.test("post-auth session errors are preserved without limiter consumption", async () => {
   let limiterCalls = 0;
   let handlerCalls = 0;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
@@ -173,7 +178,7 @@ Deno.test("unsupported route methods bypass consumption and retain handler seman
   assertEquals([limiterCalls, handlerCalls], [0, 1]);
 });
 
-Deno.test("login dispatch consumes only pre-auth IP/action context before parsing credentials", async () => {
+Deno.test("login dispatch uses classroom policy without parsing credentials", async () => {
   let captured: unknown = null;
   let handlerCalls = 0;
   const request = new Request("https://example.test/players/login", {
@@ -205,7 +210,7 @@ Deno.test("login dispatch consumes only pre-auth IP/action context before parsin
   assertEquals(response.status, 200);
   assertEquals(handlerCalls, 1);
   assertEquals((captured as { action: string }).action, "player.login.attempt");
-  assertEquals((captured as { profile: string }).profile, "sensitive");
+  assertEquals((captured as { profile: string }).profile, "login");
   const serialized = JSON.stringify(captured);
   for (const secret of ["SECRET-GAME", "SECRET-PLAYER", "SECRET-CODE"]) {
     assertEquals(serialized.includes(secret), false);
@@ -213,7 +218,7 @@ Deno.test("login dispatch consumes only pre-auth IP/action context before parsin
   assertEquals("scope" in (captured as Record<string, unknown>), false);
 });
 
-Deno.test("login denial and limiter outage fail closed without invoking credential handler", async () => {
+Deno.test("login denial, outage, and missing configuration fail closed", async () => {
   for (
     const testCase of [
       {
@@ -250,7 +255,7 @@ Deno.test("login denial and limiter outage fail closed without invoking credenti
   }
 });
 
-Deno.test("unsupported login method is not consumed and remains method-not-allowed", async () => {
+Deno.test("unsupported login method is not consumed", async () => {
   let limiterCalls = 0;
   const response = await dispatchRateLimitedPlayerLoginRequest(
     playerRequest("GET", "/players/login"),
@@ -264,40 +269,6 @@ Deno.test("unsupported login method is not consumed and remains method-not-allow
   );
   assertEquals(response.status, 405);
   assertEquals(limiterCalls, 0);
-});
-
-Deno.test("missing limiter runtime configuration blocks both authenticated and login dispatch", async () => {
-  let handlerCalls = 0;
-  const {
-    enforcePostAuth: _postAuthOverride,
-    ...postAuthDependencies
-  } = dependencies();
-  const authenticated = await dispatchRateLimitedReviewedPlayerRequest(
-    playerRequest("GET", "/players/me/capabilities"),
-    "capabilities",
-    () => {
-      handlerCalls += 1;
-      return new Response("unsafe");
-    },
-    postAuthDependencies,
-  );
-
-  const {
-    enforcePreAuth: _preAuthOverride,
-    ...loginDependencies
-  } = dependencies();
-  const login = await dispatchRateLimitedPlayerLoginRequest(
-    playerRequest("POST", "/players/login"),
-    () => {
-      handlerCalls += 1;
-      return new Response("unsafe");
-    },
-    loginDependencies,
-  );
-
-  assertEquals(authenticated.status, 503);
-  assertEquals(login.status, 503);
-  assertEquals(handlerCalls, 0);
 });
 
 const SCOPE: PlayerRequestScope = {

@@ -226,7 +226,7 @@ async function guardPlayerLoginRequest(
       dependencies.enforcePreAuth ?? enforcePreAuthRateLimit
     )({
       action: "player.login.attempt",
-      profile: "sensitive",
+      profile: "login",
       request,
     }, client);
     return decision.allowed ? null : rateLimitExceededResponse(decision);

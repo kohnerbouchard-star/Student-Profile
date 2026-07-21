@@ -6,7 +6,13 @@ export const RATE_LIMIT_DIMENSIONS = [
 ] as const;
 
 export type RateLimitDimension = typeof RATE_LIMIT_DIMENSIONS[number];
-export type PlayerRateLimitProfile = "read" | "sensitive" | "write";
+export type PlayerRateLimitProfile =
+  | "attendance"
+  | "login"
+  | "read"
+  | "scanner"
+  | "sensitive"
+  | "write";
 
 export interface RateLimitBucketPolicy {
   readonly limit: number;

@@ -1,0 +1,71 @@
+name: Beta Security Contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/beta-security-contract.yml"
+      - "backend/src/security/**"
+      - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
+      - "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts"
+      - "backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql"
+      - "backend/package.json"
+      - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
+      - "docs/operations/beta-security-rate-limit-staging-runbook.md"
+      - "docs/operations/staff-access-security-policy.md"
+      - "scripts/staging/probe-beta-security-http.mjs"
+      - "scripts/staging/probe-beta-security-rate-limit-sql.mjs"
+      - "scripts/staging/scan-beta-security-evidence.mjs"
+      - "scripts/staging/scan-beta-security-evidence.test.mjs"
+      - "package.json"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run security contracts
+        working-directory: backend
+        run: npm run test:player-security
+
+      - name: Typecheck all backend surfaces
+        working-directory: backend
+        run: npm run typecheck:all
+
+      - name: Validate connected probe contracts
+        run: npm run test:security-probes
+
+      - name: Scan repository for committed credentials
+        run: npm run security:secrets

@@ -16,6 +16,15 @@ import {
   readLocalMinutesForTimeZone,
 } from "../../../platform/supabase/edgeTime.ts";
 import {
+  rateLimitExceededResponse,
+  rateLimitUnavailableResponse,
+} from "../../../security/rateLimitHttp.ts";
+import {
+  enforceScopedRateLimit,
+  type EnforceScopedRateLimitInput,
+} from "../../../security/playerRateLimitService.ts";
+import type { RateLimitDecision } from "../../../security/rateLimitContracts.ts";
+import {
   mapAttendanceClockInRpcError,
   readPlayerAttendanceClockInRpcRow,
   readPlayerAttendanceWindowConfig,
@@ -28,6 +37,10 @@ import {
 
 interface PlayerAttendanceClockInDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly enforceRateLimit?: (
+    input: EnforceScopedRateLimitInput,
+    client: EdgeSupabaseClient,
+  ) => Promise<RateLimitDecision>;
 }
 
 interface PlayerAttendanceClockInSuccessBody {
@@ -89,9 +102,7 @@ export async function handlePlayerAttendanceClockInRequest(
     }
 
     const sessionTokenHash = await sha256Hex(sessionToken);
-
     const serviceClient = createServiceClient(envResult.value);
-
     const sessionResolution = await resolveActivePlayerSession(
       serviceClient,
       sessionTokenHash,
@@ -99,6 +110,25 @@ export async function handlePlayerAttendanceClockInRequest(
 
     if (!sessionResolution.ok) {
       return jsonError(sessionResolution.status, sessionResolution.error);
+    }
+
+    let rateLimitDecision: RateLimitDecision;
+    try {
+      rateLimitDecision = await (
+        dependencies.enforceRateLimit ?? enforceScopedRateLimit
+      )({
+        action: "player.attendance.clock-in",
+        profile: "attendance",
+        request,
+        identityUuid: sessionResolution.session.player_id,
+        gameUuid: sessionResolution.session.game_session_id,
+      }, serviceClient);
+    } catch {
+      return rateLimitUnavailableResponse();
+    }
+
+    if (!rateLimitDecision.allowed) {
+      return rateLimitExceededResponse(rateLimitDecision);
     }
 
     const settingsResponse = await serviceClient

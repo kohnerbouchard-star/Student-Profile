@@ -17,6 +17,15 @@ import {
   readLocalMinutesForTimeZone,
   readValidTimeZone,
 } from "../../../platform/supabase/edgeTime.ts";
+import {
+  rateLimitExceededResponse,
+  rateLimitUnavailableResponse,
+} from "../../../security/rateLimitHttp.ts";
+import {
+  enforceScopedRateLimit,
+  type EnforceScopedRateLimitInput,
+} from "../../../security/playerRateLimitService.ts";
+import type { RateLimitDecision } from "../../../security/rateLimitContracts.ts";
 import { normalizeStudentCode } from "../../players/domain/playerAccessCodes.ts";
 import { normalizePlayerIdentifier } from "../../players/domain/playerIdentifiers.ts";
 import {
@@ -46,6 +55,10 @@ export interface StaffAttendanceScanHttpHandlerDependencies {
         readonly error: EdgeErrorBody["error"];
       }
   >;
+  readonly enforceRateLimit?: (
+    input: EnforceScopedRateLimitInput,
+    client: EdgeSupabaseClient,
+  ) => Promise<RateLimitDecision>;
 }
 
 interface AttendancePlayerRow {
@@ -115,9 +128,14 @@ export async function handleStaffAttendanceScanRequest(
       });
     }
 
-    const staffResult = await dependencies.resolveStaffForRequest(request, envResult.value, {
-      missingMessage: "A verified Supabase Auth user is required to scan attendance.",
-    });
+    const staffResult = await dependencies.resolveStaffForRequest(
+      request,
+      envResult.value,
+      {
+        missingMessage:
+          "A verified Supabase Auth user is required to scan attendance.",
+      },
+    );
 
     if (!staffResult.ok) {
       return jsonError(staffResult.status, staffResult.error);
@@ -131,6 +149,25 @@ export async function handleStaffAttendanceScanRequest(
 
     if (!ownershipResult.ok) {
       return jsonError(ownershipResult.status, ownershipResult.error);
+    }
+
+    let rateLimitDecision: RateLimitDecision;
+    try {
+      rateLimitDecision = await (
+        dependencies.enforceRateLimit ?? enforceScopedRateLimit
+      )({
+        action: "staff.attendance.scan",
+        profile: "scanner",
+        request,
+        identityUuid: staffResult.staff.id,
+        gameUuid: gameSessionId,
+      }, staffResult.serviceClient);
+    } catch {
+      return rateLimitUnavailableResponse();
+    }
+
+    if (!rateLimitDecision.allowed) {
+      return rateLimitExceededResponse(rateLimitDecision);
     }
 
     const body = await readStaffAttendanceScanRequestBody(request);
@@ -217,7 +254,9 @@ export async function handleStaffAttendanceScanRequest(
     );
 
     if (attendanceResponse.error) {
-      const safeError = mapAttendanceClockInRpcError(attendanceResponse.error.message);
+      const safeError = mapAttendanceClockInRpcError(
+        attendanceResponse.error.message,
+      );
 
       return jsonError(safeError.status, {
         code: safeError.code,
@@ -226,7 +265,9 @@ export async function handleStaffAttendanceScanRequest(
       });
     }
 
-    const attendanceRow = readPlayerAttendanceClockInRpcRow(attendanceResponse.data);
+    const attendanceRow = readPlayerAttendanceClockInRpcRow(
+      attendanceResponse.data,
+    );
 
     if (!attendanceRow) {
       return jsonError(500, {
