@@ -16,16 +16,16 @@ declare const Deno: {
 };
 
 const COUNTRIES = [
+  "northreach",
+  "yrethia",
+  "thaloris",
+  "solvend",
   "eldoran",
   "valerion",
   "lumenor",
   "xalvoria",
   "dravenlok",
   "syndalis",
-  "aurelia",
-  "caelora",
-  "norvane",
-  "velmora",
 ] as const;
 
 const ANSWERS: Readonly<Record<ArrivalClassId, readonly string[]>> = {
