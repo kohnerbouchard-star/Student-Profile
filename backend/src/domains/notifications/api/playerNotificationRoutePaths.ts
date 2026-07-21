@@ -1,26 +1,8 @@
-import type { PlayerMessageThreadLifecycleRoute } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
-import { readPlayerMessageThreadLifecycleRoutePath } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
-import type { PlayerMessagingRoute } from "../../messaging/api/playerMessagingRoutePaths.ts";
-import { readPlayerMessagingRoutePath } from "../../messaging/api/playerMessagingRoutePaths.ts";
 import type { PlayerNotificationRoute } from "../contracts/playerNotificationContracts.ts";
-
-export type PlayerCommunicationDeliveryRoute =
-  | PlayerNotificationRoute
-  | { readonly kind: "messaging"; readonly route: PlayerMessagingRoute }
-  | {
-    readonly kind: "messagingLifecycle";
-    readonly route: PlayerMessageThreadLifecycleRoute;
-  };
 
 export function readPlayerNotificationRoutePath(
   pathname: string,
-): PlayerCommunicationDeliveryRoute | null {
-  const lifecycleRoute = readPlayerMessageThreadLifecycleRoutePath(pathname);
-  if (lifecycleRoute) return { kind: "messagingLifecycle", route: lifecycleRoute };
-
-  const messagingRoute = readPlayerMessagingRoutePath(pathname);
-  if (messagingRoute) return { kind: "messaging", route: messagingRoute };
-
+): PlayerNotificationRoute | null {
   const segments = pathname.split("/").filter(Boolean);
   const routeSegments = readRouteSegments(segments);
 
