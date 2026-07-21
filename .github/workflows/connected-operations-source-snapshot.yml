@@ -1,6 +1,9 @@
 name: Connected Operations Source Snapshot
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/connected-operations-source-snapshot.yml"
   push:
     branches:
       - agent/production-integration-gate-v1
