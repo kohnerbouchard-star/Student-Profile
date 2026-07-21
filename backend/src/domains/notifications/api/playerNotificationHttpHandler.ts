@@ -11,13 +11,14 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { handlePlayerMessageThreadLifecycleRequest } from "../../messaging/api/playerMessageThreadLifecycleHttpHandler.ts";
+import { handlePlayerMessagingRequest } from "../../messaging/api/playerMessagingHttpHandler.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
 import {
   PlayerNotificationError,
   type PlayerNotificationListResponseBody,
   type PlayerNotificationRepository,
-  type PlayerNotificationRoute,
 } from "../contracts/playerNotificationContracts.ts";
 import { SupabasePlayerNotificationRepository } from "../infrastructure/supabasePlayerNotificationRepository.ts";
 import { PlayerNotificationService } from "../services/playerNotificationService.ts";
@@ -26,6 +27,7 @@ import {
   parsePlayerNotificationListRequest,
   parsePlayerNotificationReadRequest,
 } from "./playerNotificationRequestParser.ts";
+import type { PlayerCommunicationDeliveryRoute } from "./playerNotificationRoutePaths.ts";
 
 export interface PlayerNotificationHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -43,9 +45,35 @@ export interface PlayerNotificationHttpHandlerDependencies {
 
 export async function handlePlayerNotificationRequest(
   request: Request,
-  route: PlayerNotificationRoute,
+  route: PlayerCommunicationDeliveryRoute,
   dependencies: PlayerNotificationHttpHandlerDependencies,
 ): Promise<Response> {
+  if (route.kind === "messagingLifecycle") {
+    return handlePlayerMessageThreadLifecycleRequest(
+      request,
+      route.route,
+      dependencies,
+    );
+  }
+  if (route.kind === "messaging") {
+    if (route.route.kind === "markRead" && route.route.threadId === null) {
+      const threadId = await readPublicThreadId(request);
+      if (!threadId) {
+        return jsonError(400, {
+          code: "invalid_player_message_request",
+          message: "A valid public message thread ID is required.",
+          retryable: false,
+        });
+      }
+      return handlePlayerMessagingRequest(
+        request,
+        { kind: "markRead", threadId },
+        dependencies,
+      );
+    }
+    return handlePlayerMessagingRequest(request, route.route, dependencies);
+  }
+
   if (route.kind === "list" && request.method !== "GET") {
     return jsonError(405, {
       code: "method_not_allowed",
@@ -174,9 +202,21 @@ export async function handlePlayerNotificationRequest(
   }
 }
 
+async function readPublicThreadId(request: Request): Promise<string | null> {
+  const value = await request.clone().json().catch(() => null);
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== "threadId")) return null;
+  const threadId = typeof (value as { threadId?: unknown }).threadId === "string"
+    ? (value as { threadId: string }).threadId.trim().toLowerCase()
+    : "";
+  return /^thr_[0-9a-f]{32}$/.test(threadId) ? threadId : null;
+}
+
 function privateJsonResponse<T>(status: number, body: T): Response {
   const response = jsonResponse<T>(status, body);
   response.headers.set("cache-control", "private, no-store");
+  response.headers.set("pragma", "no-cache");
   response.headers.set("vary", "authorization, x-player-session-token");
   return response;
 }
