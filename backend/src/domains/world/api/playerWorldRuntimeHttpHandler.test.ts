@@ -52,7 +52,7 @@ Deno.test("arrival assignment accepts exact answers and server-derived scope", a
         return context().arrival;
       },
     }),
-    { "x-idempotency-key": "arrival-class-0001" },
+    { "idempotency-key": "arrival-class-0001" },
   );
   assertEquals(response.status, 200);
   assertEquals((captured as { scope: PlayerRequestScope }).scope, SCOPE);
@@ -76,7 +76,7 @@ Deno.test("travel quote, execution, completion, and residency use public IDs", a
     "/players/me/travel",
     { quoteId: QUOTE },
     service(),
-    { "x-idempotency-key": "travel-execute-0001" },
+    { "idempotency-key": "travel-execute-0001" },
   );
   assertEquals(executeResponse.status, 200);
   assertEquals((await executeResponse.json()).journey.publicJourneyId, JOURNEY);
@@ -108,7 +108,7 @@ Deno.test("request parsing rejects unknown keys, query parameters, internal IDs,
       allowedModes: ["land"],
     }, service()),
     await request("POST", "/players/me/travel", { quoteId: QUOTE, gameId: SCOPE.gameId }, service(), {
-      "x-idempotency-key": "travel-execute-0002",
+      "idempotency-key": "travel-execute-0002",
     }),
     await request("POST", "/players/me/travel", { quoteId: QUOTE }, service()),
     await request("POST", "/players/me/residency", {
@@ -137,7 +137,7 @@ Deno.test("wrong methods, malformed JSON, and oversized bodies fail before servi
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-idempotency-key": "arrival-class-0002",
+        "idempotency-key": "arrival-class-0002",
       },
       body: "{",
     }),
@@ -151,7 +151,7 @@ Deno.test("wrong methods, malformed JSON, and oversized bodies fail before servi
       headers: {
         "content-type": "application/json",
         "content-length": "20000",
-        "x-idempotency-key": "arrival-class-0003",
+        "idempotency-key": "arrival-class-0003",
       },
       body: JSON.stringify({ answers: [] }),
     }),
@@ -200,6 +200,7 @@ function context() {
     },
     residency: {
       currentCountryId: "eldoran",
+      currencyCode: "ELD",
       eligibleCountryIds: ["valerion"],
       pendingCountryId: "valerion",
       revision: 2,
