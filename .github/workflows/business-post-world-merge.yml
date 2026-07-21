@@ -1,0 +1,155 @@
+name: Business Post-World Merge Executor
+
+on:
+  push:
+    branches:
+      - agent/business-banking-credit-v1
+    paths:
+      - ".github/workflows/business-post-world-merge.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out existing Business branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Merge final World main additively
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          exec > >(tee /tmp/business-post-world-merge.log) 2>&1
+          publish_failure() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              set +e
+              printf '\nexecutor_exit=%s\n' "$status" >> /tmp/business-post-world-merge.log
+              content="$(base64 -w0 /tmp/business-post-world-merge.log)"
+              existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result?ref=agent/business-banking-credit-v1" --jq .sha 2>/dev/null || true)"
+              args=(--method PUT --field message="ci(business): publish failed post-World merge result" --field branch="agent/business-banking-credit-v1" --field content="$content")
+              if [ -n "$existing_sha" ]; then args+=(--field sha="$existing_sha"); fi
+              gh api "repos/${GITHUB_REPOSITORY}/contents/.business-merge-executor-result" "${args[@]}" >/dev/null
+            fi
+            exit "$status"
+          }
+          trap publish_failure EXIT
+
+          AUDITED_BUSINESS_HEAD="db724e4cbed81789cda3e9db67e8ecacacb62aa5"
+          BUSINESS_MERGE_BASE="458137c9193a7066294024098b4d938aa46f6aba"
+          WORLD_MERGE_SHA="13a6829b1f658b49910a882fd66bb0fd61c571ff"
+          CLASSROOM_PATH="backend/supabase/functions/classroom-api/index.ts"
+          conflict_paths=(
+            ".github/workflows/player-terminal-verify.yml"
+            "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts"
+            "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+            "backend/supabase/functions/admin-api/index.ts"
+            "player-terminal/src/api/backend-routes.js"
+            "player-terminal/src/api/capabilities.js"
+            "player-terminal/src/api/resource-plan.js"
+            "player-terminal/src/integrations/student-profile-capability-manifest.js"
+          )
+
+          git config user.name "econovaria-controller"
+          git config user.email "controller@users.noreply.github.com"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$WORLD_MERGE_SHA"
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+          test "$merge_status" -eq 1
+          expected_conflicts="$(printf '%s\n' "${conflict_paths[@]}")"
+          actual_conflicts="$(git diff --name-only --diff-filter=U | sort)"
+          test "$actual_conflicts" = "$expected_conflicts"
+
+          for path in "${conflict_paths[@]}"; do
+            mkdir -p "$(dirname "/tmp/business-union/$path")" "$(dirname "$path")"
+            git show "origin/main:$path" > "/tmp/business-union/$path.main"
+            git show "$BUSINESS_MERGE_BASE:$path" > "/tmp/business-union/$path.base"
+            git show "$AUDITED_BUSINESS_HEAD:$path" > "/tmp/business-union/$path.business"
+            git merge-file --union -p "/tmp/business-union/$path.main" "/tmp/business-union/$path.base" "/tmp/business-union/$path.business" > "$path" || true
+            ! grep -qE '^(<<<<<<<|=======|>>>>>>>)' "$path"
+            git add "$path"
+          done
+
+          git checkout origin/main -- "$CLASSROOM_PATH"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("backend/supabase/functions/classroom-api/index.ts")
+          text = path.read_text()
+          import_anchor = '''import {
+            readPlayerBankingPublicRoutePath,
+          } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
+          '''
+          imports = '''import {
+            handlePlayerBusinessBankingRequest,
+          } from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
+          import {
+            readPlayerBusinessBankingRoutePath,
+          } from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
+          '''
+          if import_anchor not in text:
+              raise SystemExit("Business import anchor not found")
+          text = text.replace(import_anchor, import_anchor + imports, 1)
+          dispatch_anchor = "  const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);\n"
+          dispatch = '''  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
+            url.pathname,
+          );
+
+            if (playerBusinessBankingRoute) {
+              const endpointKey = ({
+                businessRead: "business",
+                businessCreate: "businessCreate",
+                businessProductCreate: "businessProductCreate",
+                businessInputPurchase: "businessInputPurchase",
+                businessProduction: "businessProduction",
+                businessPrice: "businessPrice",
+                businessHire: "businessHire",
+                businessTerminate: "businessTerminate",
+                businessStatus: "businessStatus",
+                playerTransfer: "bankTransfer",
+                savingsTransfer: "savingsTransfer",
+                loansRead: "loans",
+                loanApply: "loanApply",
+                loanRepay: "loanRepay",
+              } as const)[playerBusinessBankingRoute.kind];
+              return dispatchRateLimitedReviewedPlayerRequest(
+                request,
+                endpointKey,
+                () =>
+                  handlePlayerBusinessBankingRequest(
+                    request,
+                    playerBusinessBankingRoute,
+                    { createServiceClient },
+                  ),
+                { createServiceClient },
+              );
+            }
+
+          '''
+          if dispatch_anchor not in text:
+              raise SystemExit("Business dispatch anchor not found")
+          text = text.replace(dispatch_anchor, dispatch + dispatch_anchor, 1)
+          path.write_text(text)
+          PY
+          git add "$CLASSROOM_PATH"
+
+          git checkout "$AUDITED_BUSINESS_HEAD" -- .github/workflows/business-banking-runtime.yml
+          rm -f .business-main-tree-identity .business-merge-conflicts .business-merge-executor-result
+          rm -f .github/workflows/business-main-tree-capture.yml
+          rm -f .github/workflows/business-post-world-merge.yml
+          git add -A
+
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git diff --cached origin/main --check
+          git commit -m "Merge World into Business and Banking authority"
+          trap - EXIT
+          git push origin HEAD:agent/business-banking-credit-v1
