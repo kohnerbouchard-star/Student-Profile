@@ -125,7 +125,7 @@ Deno.test("index weighting respects concentration and deterministic methodology"
 Deno.test("rebalance replacement preserves historical continuity", () => {
   const methodology = {
     indexPublicId: "index.northreach.continuity.v1",
-    weightingMethod: "fundamental_weight" as const,
+    weightingMethod: "fixed_weight" as const,
     baseDate: "2026-01-01",
     baseValue: "1000",
     divisor: "0.1",
@@ -134,24 +134,28 @@ Deno.test("rebalance replacement preserves historical continuity", () => {
     maximumConstituents: 3,
     methodologyVersion: "index-method.v1",
   };
-  const prior = components().slice(0, 3).map((entry) => ({
+  const base = components().map((entry) => ({
     ...entry,
     currentPrice: "100",
   }));
+  const prior = [
+    { ...base[0], targetWeight: 0.5 },
+    { ...base[1], targetWeight: 0.25 },
+    { ...base[2], targetWeight: 0.25 },
+  ];
   const priorValue = calculateIndexValue(methodology, prior).value;
   const candidates = [
-    ...components().map((entry, index) => ({
-      ...entry,
-      currentPrice: "100",
-      delisted: index === 0,
-    })),
+    { ...base[0], targetWeight: 0.5, delisted: true },
+    { ...base[1], targetWeight: 0.25 },
+    { ...base[2], targetWeight: 0.25 },
+    { ...base[3], targetWeight: 0.1 },
     component(
       "instrument.northreach.replacement.v1",
       "100",
       "900000",
       0.9,
       0.9,
-      0.25,
+      0.5,
     ),
   ];
   const first = rebalanceIndexDeterministically({
