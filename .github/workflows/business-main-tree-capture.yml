@@ -1,7 +1,9 @@
 name: Business Main Tree Capture
 
 on:
-  pull_request:
+  push:
+    branches:
+      - agent/business-banking-credit-v1
     paths:
       - ".github/workflows/business-main-tree-capture.yml"
 
