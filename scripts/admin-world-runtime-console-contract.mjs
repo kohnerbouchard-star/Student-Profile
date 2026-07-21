@@ -23,7 +23,7 @@ for (const route of [
 
 for (const capability of [
   "Scheduler due",
-  "Emergency Disable",
+  "emergency_disable",
   "Recover effect",
   "Correct class",
   "Close route",
