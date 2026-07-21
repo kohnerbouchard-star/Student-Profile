@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { PlayerApi } from "../src/api/player-api.js";
+import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
 import { renderMessagesPage } from "../src/pages/messages-page.js";
 
@@ -43,13 +44,18 @@ const api = new PlayerApi({
 api.readCache.set("GET:messages:cached", { unread: 0, threads: [] });
 api.readCacheUpdatedAt.set("GET:messages:cached", Date.now());
 
-const committed = await api.execute("messageThreadCreate", {
+const normalizedCommand = normalizeWritePayload("messageThreadCreate", {
   recipientPlayerId: "PLAYER-002",
   title: "Trade coordination",
   body: "Can we coordinate after class?",
   gameSessionId: "must-not-cross-boundary",
   playerUuid: "must-not-cross-boundary",
 });
+assert.deepEqual(Object.keys(normalizedCommand).sort(), ["body", "recipientPlayerId", "title"]);
+assert.equal("gameSessionId" in normalizedCommand, false);
+assert.equal("playerUuid" in normalizedCommand, false);
+
+const committed = await api.execute("messageThreadCreate", normalizedCommand);
 assert.equal(committed.result.outcome, "applied");
 assert.equal(committed.result.threadId, THREAD);
 assert.equal(committed.result.messageId, MESSAGE);
