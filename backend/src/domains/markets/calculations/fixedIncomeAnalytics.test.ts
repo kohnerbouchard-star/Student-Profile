@@ -83,7 +83,7 @@ Deno.test("zero coupon and leap-year references remain numerically stable", () =
   assertEquals(analytics.accruedInterest, "0");
   assertEquals(analytics.currentYield, 0);
   assertEquals(analytics.remainingCashFlowCount, 1);
-  assert(analytics.cleanPrice < "1000");
+  assert(Number(analytics.cleanPrice) < 1000);
 });
 
 Deno.test("negative yields require explicit policy and zero yields are supported", () => {
@@ -93,7 +93,7 @@ Deno.test("negative yields require explicit policy and zero yields are supported
     faceQuantity: "1",
     annualYield: 0,
   });
-  assert(zeroYield.dirtyPrice > "0");
+  assert(Number(zeroYield.dirtyPrice) > 0);
   assertThrows(() =>
     calculateFixedIncomeAnalytics({
       bond: bond(),
@@ -109,7 +109,7 @@ Deno.test("negative yields require explicit policy and zero yields are supported
     annualYield: -0.01,
     yieldPolicy: NEGATIVE_YIELD_REFERENCE_POLICY,
   });
-  assert(negative.cleanPrice > "0");
+  assert(Number(negative.cleanPrice) > 0);
   assert(Math.abs(negative.yieldToMaturity - (-0.01)) < 0.00001);
 });
 
@@ -228,7 +228,9 @@ function assert(condition: unknown): asserts condition {
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
+    );
   }
 }
 
