@@ -1,5 +1,10 @@
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
-import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
+import { jsonError } from "../../../platform/supabase/edgeResponse.ts";
+import {
+  type EdgeSupabaseClient,
+  readSupabaseEnv,
+  type SupabaseEnv,
+} from "../../../platform/supabase/edgeStaffSession.ts";
 import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
 import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
 import {
@@ -10,14 +15,23 @@ import { createPlayerWorldRuntimeService } from "../services/playerWorldRuntimeS
 import { handlePlayerWorldRuntimeRequest } from "./playerWorldRuntimeHttpHandler.ts";
 
 export interface PlayerWorldRuntimeEdgeDependencies {
-  readonly createServiceClient: () => EdgeSupabaseClient;
+  readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readEnvironment?: typeof readSupabaseEnv;
 }
 
 export function handlePlayerWorldRuntimeEdgeRequest(
   request: Request,
   dependencies: PlayerWorldRuntimeEdgeDependencies,
-): Promise<Response> {
-  const client = dependencies.createServiceClient();
+): Promise<Response> | Response {
+  const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
+  if (!envResult.ok) {
+    return jsonError(503, {
+      code: "world_runtime_configuration_missing",
+      message: "World runtime configuration is unavailable.",
+      retryable: true,
+    });
+  }
+  const client = dependencies.createServiceClient(envResult.value);
   const repository = createSupabasePlayerWorldRuntimeRepository(
     client as unknown as PlayerWorldRuntimeSupabaseClient,
   );
