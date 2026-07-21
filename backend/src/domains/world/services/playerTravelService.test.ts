@@ -48,6 +48,7 @@ const CONTEXT: PlayerTravelContext = {
     gameSessionId: "session-1",
     playerUuid: "player-1",
     currentCountryId: "eldoran",
+    currencyCode: "ELD",
     eligibleCountryIds: [],
     pendingCountryId: null,
     revision: 0,
@@ -87,69 +88,47 @@ Deno.test("stored travel quote binds currency and every route revision", () => {
   assertEquals(stored.expiresAt, "2026-07-21T00:02:00.000Z");
   validateStoredTravelQuoteForExecution({
     quote: stored,
-    gameId: "game-1",
-    playerUuid: "player-1",
-    currentLocationId: "loc_origin",
-    now: "2026-07-21T00:01:59.000Z",
+    state: STATE,
+    context: CONTEXT,
+    now: "2026-07-21T00:01:00.000Z",
   });
 });
 
-Deno.test("stored travel quote rejects missing currency, stale world revision, and closed routes", () => {
-  assertThrowsCode(() => prepareStoredTravelQuote({
-    quote: QUOTE,
-    state: STATE,
-    context: { ...CONTEXT, settlementCurrencyCode: undefined },
-    publicQuoteId: `trq_${"a".repeat(32)}`,
-    createdAt: NOW,
-  }), "world_travel_quote_invalid");
-  assertThrowsCode(() => prepareStoredTravelQuote({
-    quote: { ...QUOTE, routeStateRevision: 8 },
-    state: STATE,
-    context: CONTEXT,
-    publicQuoteId: `trq_${"a".repeat(32)}`,
-    createdAt: NOW,
-  }), "world_travel_quote_invalid");
-  assertThrowsCode(() => prepareStoredTravelQuote({
-    quote: QUOTE,
-    state: {
-      ...STATE,
-      routeStates: [{ ...STATE.routeStates[0]!, status: "closed" }],
-    },
-    context: CONTEXT,
-    publicQuoteId: `trq_${"a".repeat(32)}`,
-    createdAt: NOW,
-  }), "world_travel_quote_invalid");
-});
-
-Deno.test("execution validation rejects expiry, wrong scope, and stale origin", () => {
+Deno.test("execution rejects stale state, closed routes, foreign players, and expiry", () => {
   const stored = prepareStoredTravelQuote({
     quote: QUOTE,
     state: STATE,
     context: CONTEXT,
-    publicQuoteId: `trq_${"b".repeat(32)}`,
+    publicQuoteId: `trq_${"a".repeat(32)}`,
     createdAt: NOW,
   });
   assertThrowsCode(() => validateStoredTravelQuoteForExecution({
     quote: stored,
-    gameId: "game-1",
-    playerUuid: "player-1",
-    currentLocationId: "loc_origin",
-    now: "2026-07-21T00:02:00.000Z",
-  }), "world_travel_quote_expired");
+    state: { ...STATE, revision: 10 },
+    context: CONTEXT,
+    now: "2026-07-21T00:01:00.000Z",
+  }), "world_revision_conflict");
   assertThrowsCode(() => validateStoredTravelQuoteForExecution({
     quote: stored,
-    gameId: "game-2",
-    playerUuid: "player-1",
-    currentLocationId: "loc_origin",
+    state: {
+      ...STATE,
+      routeStates: STATE.routeStates.map((route) => ({ ...route, status: "closed" as const })),
+    },
+    context: CONTEXT,
+    now: "2026-07-21T00:01:00.000Z",
+  }), "world_route_unavailable");
+  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
+    quote: stored,
+    state: STATE,
+    context: { ...CONTEXT, playerUuid: "player-2" },
     now: "2026-07-21T00:01:00.000Z",
   }), "world_game_scope_mismatch");
   assertThrowsCode(() => validateStoredTravelQuoteForExecution({
     quote: stored,
-    gameId: "game-1",
-    playerUuid: "player-1",
-    currentLocationId: "loc_other",
-    now: "2026-07-21T00:01:00.000Z",
-  }), "world_travel_quote_invalid");
+    state: STATE,
+    context: CONTEXT,
+    now: "2026-07-21T00:03:00.000Z",
+  }), "world_travel_quote_expired");
 });
 
 function assertThrowsCode(run: () => unknown, expectedCode: string): void {
