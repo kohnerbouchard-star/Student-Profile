@@ -7,7 +7,7 @@ import {
 } from "./playerRateLimitDispatch.ts";
 import type { RateLimitDecision } from "./rateLimitContracts.ts";
 
-const Deno: { test(name: string, run: () => void | Promise<void>): void } = globalThis.Deno;
+declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
