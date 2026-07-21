@@ -6,7 +6,9 @@ import {
   validateFinancialMarketIssuerDomain,
 } from "./issuerDomain.ts";
 
-const Deno = globalThis.Deno;
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
 
 Deno.test("issuer domain accepts all administrator and issuer categories", () => {
   const issuers = [
@@ -17,26 +19,82 @@ Deno.test("issuer domain accepts all administrator and issuer categories", () =>
     issuer("issuer.northreach.trust.1.v1", "trust_administrator"),
     issuer("issuer.northreach.index.1.v1", "index_administrator"),
     issuer("issuer.northreach.exchange.1.v1", "exchange_operator"),
-    issuer("issuer.northreach.commodity.1.v1", "commodity_benchmark_administrator"),
+    issuer(
+      "issuer.northreach.commodity.1.v1",
+      "commodity_benchmark_administrator",
+    ),
   ];
   const instruments = [
-    instrument("instrument.northreach.equity.1.v1", issuers[0].issuerPublicId, "common_equity"),
-    instrument("instrument.northreach.sovereign.1.v1", issuers[1].issuerPublicId, "sovereign_bond"),
-    instrument("instrument.northreach.agency.1.v1", issuers[2].issuerPublicId, "agency_bond"),
-    instrument("instrument.northreach.fund.1.v1", issuers[3].issuerPublicId, "etf"),
-    instrument("instrument.northreach.trust.1.v1", issuers[4].issuerPublicId, "listed_trust"),
-    instrument("instrument.northreach.index.1.v1", issuers[5].issuerPublicId, "country_index"),
-    instrument("instrument.northreach.commodity.1.v1", issuers[7].issuerPublicId, "commodity_benchmark"),
+    instrument(
+      "instrument.northreach.equity.1.v1",
+      issuers[0].issuerPublicId,
+      "common_equity",
+    ),
+    instrument(
+      "instrument.northreach.sovereign.1.v1",
+      issuers[1].issuerPublicId,
+      "sovereign_bond",
+    ),
+    instrument(
+      "instrument.northreach.agency.1.v1",
+      issuers[2].issuerPublicId,
+      "agency_bond",
+    ),
+    instrument(
+      "instrument.northreach.fund.1.v1",
+      issuers[3].issuerPublicId,
+      "etf",
+    ),
+    instrument(
+      "instrument.northreach.trust.1.v1",
+      issuers[4].issuerPublicId,
+      "listed_trust",
+    ),
+    instrument(
+      "instrument.northreach.index.1.v1",
+      issuers[5].issuerPublicId,
+      "country_index",
+    ),
+    instrument(
+      "instrument.northreach.commodity.1.v1",
+      issuers[7].issuerPublicId,
+      "commodity_benchmark",
+    ),
   ];
   const report = validateFinancialMarketIssuerDomain({
     issuers,
     instruments,
     administratorAssignments: [
-      assignment("assignment.northreach.fund.1.v1", issuers[3].issuerPublicId, "fund.northreach.1.v1", "fund"),
-      assignment("assignment.northreach.trust.1.v1", issuers[4].issuerPublicId, "trust.northreach.1.v1", "trust"),
-      assignment("assignment.northreach.index.1.v1", issuers[5].issuerPublicId, "index.northreach.1.v1", "index"),
-      assignment("assignment.northreach.exchange.1.v1", issuers[6].issuerPublicId, "exchange.northreach.1.v1", "exchange"),
-      assignment("assignment.northreach.commodity.1.v1", issuers[7].issuerPublicId, "benchmark.northreach.1.v1", "commodity_benchmark"),
+      assignment(
+        "assignment.northreach.fund.1.v1",
+        issuers[3].issuerPublicId,
+        "fund.northreach.1.v1",
+        "fund",
+      ),
+      assignment(
+        "assignment.northreach.trust.1.v1",
+        issuers[4].issuerPublicId,
+        "trust.northreach.1.v1",
+        "trust",
+      ),
+      assignment(
+        "assignment.northreach.index.1.v1",
+        issuers[5].issuerPublicId,
+        "index.northreach.1.v1",
+        "index",
+      ),
+      assignment(
+        "assignment.northreach.exchange.1.v1",
+        issuers[6].issuerPublicId,
+        "exchange.northreach.1.v1",
+        "exchange",
+      ),
+      assignment(
+        "assignment.northreach.commodity.1.v1",
+        issuers[7].issuerPublicId,
+        "benchmark.northreach.1.v1",
+        "commodity_benchmark",
+      ),
     ],
   });
 
@@ -49,13 +107,27 @@ Deno.test("issuer domain accepts all administrator and issuer categories", () =>
 });
 
 Deno.test("issuer domain rejects orphaning, invalid types, cycles, and duplicate administrators", () => {
-  const corporation = issuer("issuer.northreach.corporation.1.v1", "corporation");
-  const government = issuer("issuer.northreach.government.1.v1", "government");
+  const corporation = issuer(
+    "issuer.northreach.corporation.1.v1",
+    "corporation",
+  );
+  const government = issuer(
+    "issuer.northreach.government.1.v1",
+    "government",
+  );
   const report = validateFinancialMarketIssuerDomain({
     issuers: [corporation, government],
     instruments: [
-      instrument("instrument.northreach.bad.1.v1", corporation.issuerPublicId, "sovereign_bond"),
-      instrument("instrument.northreach.orphan.1.v1", "issuer.northreach.missing.1.v1", "common_equity"),
+      instrument(
+        "instrument.northreach.bad.1.v1",
+        corporation.issuerPublicId,
+        "sovereign_bond",
+      ),
+      instrument(
+        "instrument.northreach.orphan.1.v1",
+        "issuer.northreach.missing.1.v1",
+        "common_equity",
+      ),
     ],
     relationships: [
       {
@@ -74,17 +146,35 @@ Deno.test("issuer domain rejects orphaning, invalid types, cycles, and duplicate
       },
     ],
     administratorAssignments: [
-      assignment("assignment.northreach.1.v1", corporation.issuerPublicId, "fund.northreach.1.v1", "fund"),
-      assignment("assignment.northreach.2.v1", corporation.issuerPublicId, "fund.northreach.1.v1", "fund"),
+      assignment(
+        "assignment.northreach.1.v1",
+        corporation.issuerPublicId,
+        "fund.northreach.1.v1",
+        "fund",
+      ),
+      assignment(
+        "assignment.northreach.2.v1",
+        corporation.issuerPublicId,
+        "fund.northreach.1.v1",
+        "fund",
+      ),
     ],
   });
 
   assertEquals(report.valid, false);
-  assert(report.errors.some((entry) => entry.code === "invalid_instrument_issuer_type"));
+  assert(report.errors.some((entry) =>
+    entry.code === "invalid_instrument_issuer_type"
+  ));
   assert(report.errors.some((entry) => entry.code === "orphaned_instrument"));
-  assert(report.errors.some((entry) => entry.code === "circular_issuer_relationship"));
-  assert(report.errors.some((entry) => entry.code === "invalid_administrator_type"));
-  assert(report.errors.some((entry) => entry.code === "duplicate_administrator_assignment"));
+  assert(report.errors.some((entry) =>
+    entry.code === "circular_issuer_relationship"
+  ));
+  assert(report.errors.some((entry) =>
+    entry.code === "invalid_administrator_type"
+  ));
+  assert(report.errors.some((entry) =>
+    entry.code === "duplicate_administrator_assignment"
+  ));
 });
 
 Deno.test("inactive issuers block activation without exposing internal identifiers", () => {
@@ -104,7 +194,9 @@ Deno.test("inactive issuers block activation without exposing internal identifie
 
   assertEquals(report.valid, true);
   assertEquals(report.inactiveIssuerPublicIds, [inactive.issuerPublicId]);
-  assertEquals(report.activationBlockedInstrumentPublicIds, [owned.instrumentPublicId]);
+  assertEquals(report.activationBlockedInstrumentPublicIds, [
+    owned.instrumentPublicId,
+  ]);
   assertEquals(JSON.stringify(report).includes("00000000-0000"), false);
 });
 
@@ -120,8 +212,12 @@ function issuer(
     issuerType,
     homeCountryCode: "NORTHREACH",
     reportingCurrencyCode: "NRC",
-    sectorPublicId: issuerType === "corporation" ? "sector.industrial.v1" : null,
-    industryPublicId: issuerType === "corporation" ? "industry.industrial.general.v1" : null,
+    sectorPublicId: issuerType === "corporation"
+      ? "sector.industrial.v1"
+      : null,
+    industryPublicId: issuerType === "corporation"
+      ? "industry.industrial.general.v1"
+      : null,
     riskProfilePublicId: "risk.northreach.standard.v1",
     eventExposureProfilePublicId: "event-exposure.northreach.standard.v1",
     status: "approved_inactive",
@@ -177,7 +273,12 @@ function assignment(
   assignmentPublicId: string,
   administratorIssuerPublicId: string,
   administeredPublicId: string,
-  administeredKind: "fund" | "trust" | "index" | "exchange" | "commodity_benchmark",
+  administeredKind:
+    | "fund"
+    | "trust"
+    | "index"
+    | "exchange"
+    | "commodity_benchmark",
 ) {
   return {
     assignmentPublicId,
@@ -194,6 +295,8 @@ function assert(condition: unknown): asserts condition {
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
+    );
   }
 }
