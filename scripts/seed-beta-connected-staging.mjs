@@ -14,19 +14,29 @@ const MIGRATIONS = [
   {
     version: '20260721093000',
     name: 'add_transactional_seed_content_release_v1',
+    kind: 'seed-release',
     path: path.join(REPO_ROOT, 'backend', 'supabase', 'migrations', '20260721093000_add_transactional_seed_content_release_v1.sql'),
   },
   {
     version: '20260721094000',
     name: 'harden_transactional_seed_release_rollback_v1',
+    kind: 'seed-release',
     path: path.join(REPO_ROOT, 'backend', 'supabase', 'migrations', '20260721094000_harden_transactional_seed_release_rollback_v1.sql'),
+  },
+  {
+    version: '20260721095000',
+    name: 'accept_current_service_role_claims_for_seed_release_v1',
+    kind: 'forward-authorization-correction',
+    path: path.join(REPO_ROOT, 'backend', 'supabase', 'migrations', '20260721095000_accept_current_service_role_claims_for_seed_release_v1.sql'),
   },
 ];
 const PRODUCTION_PROJECT_REF = 'cgiukdjwicykrmtkhudh';
+const STAGING_PROJECT_REF = 'eecvbssdvarfcykcfrny';
 const SYNTHETIC_STAFF_ID = '16300000-0000-4000-8000-000000000001';
 const SYNTHETIC_AUTH_ID = '16300000-0000-4000-8000-000000000011';
 const SYNTHETIC_GAME_ID = '16300000-0000-4000-8000-000000000101';
 const SYNTHETIC_GAME_LABEL = 'PR163-STAGING-SYNTHETIC-V1';
+const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 
 function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
@@ -48,6 +58,21 @@ function dollarQuote(tag, value) {
 
 async function readJson(name) {
   return JSON.parse(await readFile(path.join(PACK_ROOT, name), 'utf8'));
+}
+
+async function resolveSourceSha() {
+  const explicit = process.env.SEED_SOURCE_SHA?.trim();
+  if (explicit) {
+    requireCondition(SOURCE_SHA_PATTERN.test(explicit), 'SEED_SOURCE_SHA must be an exact 40-character Git SHA.');
+    return explicit.toLowerCase();
+  }
+
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  requireCondition(eventPath, 'GITHUB_EVENT_PATH or SEED_SOURCE_SHA is required to bind activation to the permanent source head.');
+  const event = JSON.parse(await readFile(eventPath, 'utf8'));
+  const resolved = event.pull_request?.head?.sha ?? event.after ?? event.workflow_run?.head_sha ?? null;
+  requireCondition(SOURCE_SHA_PATTERN.test(resolved ?? ''), 'GitHub event did not contain a valid permanent source SHA.');
+  return resolved.toLowerCase();
 }
 
 async function managementQuery({ projectRef, accessToken, query }) {
@@ -77,41 +102,70 @@ async function managementQuery({ projectRef, accessToken, query }) {
   return payload;
 }
 
-async function migrationAlreadyApplied(context, version) {
+async function migrationIdentity(context, version) {
   const rows = await managementQuery({
     ...context,
-    query: `select version from supabase_migrations.schema_migrations where version = ${sqlLiteral(version)};`,
+    query: `select version, name, idempotency_key from supabase_migrations.schema_migrations where version = ${sqlLiteral(version)};`,
   });
-  return Array.isArray(rows) && rows.length === 1;
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
 }
 
 async function applyMigration(context, migration) {
   const source = await readFile(migration.path, 'utf8');
   const sourceSha256 = sha256(source);
-  if (!(await migrationAlreadyApplied(context, migration.version))) {
-    await managementQuery({ ...context, query: source });
-    const statement = dollarQuote(`seed_migration_${migration.version}`, source);
-    await managementQuery({
-      ...context,
-      query: `
-        insert into supabase_migrations.schema_migrations
-          (version, statements, name, created_by, idempotency_key, rollback)
-        values (
-          ${sqlLiteral(migration.version)},
-          array[${statement}]::text[],
-          ${sqlLiteral(migration.name)},
-          'github-actions[bot]',
-          ${sqlLiteral(`pr163:${migration.version}:${sourceSha256}`)},
-          array[]::text[]
-        )
-        on conflict (version) do nothing;
-      `,
-    });
+  const expectedKey = `pr163:${migration.version}:${sourceSha256}`;
+  const existing = await migrationIdentity(context, migration.version);
+
+  if (existing) {
+    requireCondition(existing.name === migration.name, `Migration version collision at ${migration.version}.`);
+    if (existing.idempotency_key) {
+      requireCondition(existing.idempotency_key === expectedKey, `Migration digest identity mismatch at ${migration.version}.`);
+    }
+    return {
+      version: migration.version,
+      name: migration.name,
+      kind: migration.kind,
+      sourceSha256,
+      disposition: 'already-applied',
+    };
   }
-  return { version: migration.version, name: migration.name, sourceSha256 };
+
+  await managementQuery({ ...context, query: source });
+  const statement = dollarQuote(`seed_migration_${migration.version}`, source);
+  await managementQuery({
+    ...context,
+    query: `
+      insert into supabase_migrations.schema_migrations
+        (version, statements, name, created_by, idempotency_key, rollback)
+      values (
+        ${sqlLiteral(migration.version)},
+        array[${statement}]::text[],
+        ${sqlLiteral(migration.name)},
+        'github-actions[bot]',
+        ${sqlLiteral(expectedKey)},
+        array[]::text[]
+      );
+    `,
+  });
+
+  return {
+    version: migration.version,
+    name: migration.name,
+    kind: migration.kind,
+    sourceSha256,
+    disposition: 'applied',
+  };
 }
 
-function importerOptions({ mode, projectRef, gameSessionId, auditRoot, activate = false, authorization = null }) {
+function importerOptions({
+  mode,
+  projectRef,
+  gameSessionId,
+  sourceSha,
+  auditRoot,
+  activate = false,
+  authorization = null,
+}) {
   return {
     mode,
     environment: 'staging',
@@ -119,6 +173,7 @@ function importerOptions({ mode, projectRef, gameSessionId, auditRoot, activate 
     'audit-root': auditRoot,
     'expected-project-ref': projectRef,
     'game-session-id': gameSessionId,
+    'source-sha': sourceSha,
     activate,
     authorization,
     'allow-soft-rollback': mode === 'rollback',
@@ -152,6 +207,37 @@ async function connectedCounts(context, activeOnly) {
   return Object.fromEntries(rows.map((row) => [row.object_type, Number(row.count)]));
 }
 
+async function crossGameLeakCounts(context, packId) {
+  const rows = await managementQuery({
+    ...context,
+    query: `
+      with release as (
+        select id, game_session_id
+        from public.seed_content_releases
+        where game_session_id = '${SYNTHETIC_GAME_ID}' and pack_id = ${sqlLiteral(packId)}
+      )
+      select 'assets' as object_type, count(*)::integer as count
+      from public.seed_content_release_members m
+      join release r on r.id = m.release_id
+      join public.game_session_stock_assets a on a.id = m.record_id
+      where m.object_type = 'game_stock_asset' and a.game_session_id <> r.game_session_id
+      union all
+      select 'contracts', count(*)::integer
+      from public.seed_content_release_members m
+      join release r on r.id = m.release_id
+      join public.game_session_contracts c on c.id = m.record_id
+      where m.object_type = 'game_contract' and c.game_session_id <> r.game_session_id
+      union all
+      select 'store', count(*)::integer
+      from public.seed_content_release_members m
+      join release r on r.id = m.release_id
+      join public.store_items s on s.id = m.record_id
+      where m.object_type = 'store_item' and s.game_session_id <> r.game_session_id;
+    `,
+  });
+  return Object.fromEntries(rows.map((row) => [row.object_type, Number(row.count)]));
+}
+
 async function countryDistribution(context) {
   const rows = await managementQuery({
     ...context,
@@ -166,6 +252,21 @@ async function countryDistribution(context) {
   requireCondition(rows.length === 10, `Expected ten country distributions, received ${rows.length}.`);
   for (const row of rows) assertCounts(row, 24, `Country ${row.country_code}`);
   return rows;
+}
+
+async function membershipDigest(context, packId) {
+  const rows = await managementQuery({
+    ...context,
+    query: `
+      select m.object_type, m.stable_key, m.record_id::text
+      from public.seed_content_release_members m
+      join public.seed_content_releases r on r.id = m.release_id
+      where r.game_session_id = '${SYNTHETIC_GAME_ID}' and r.pack_id = ${sqlLiteral(packId)}
+      order by m.object_type, m.stable_key;
+    `,
+  });
+  requireCondition(rows.length === 590, `Expected 590 release members, received ${rows.length}.`);
+  return sha256(JSON.stringify(rows));
 }
 
 async function restCount({ url, serviceRoleKey, table, filters }) {
@@ -191,9 +292,10 @@ async function main() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const evidencePath = process.env.SEED_CONNECTED_EVIDENCE_PATH
     ?? path.join(os.tmpdir(), 'seed-connected-staging-evidence.json');
+  const sourceSha = await resolveSourceSha();
 
   requireCondition(projectRef && accessToken && url && serviceRoleKey, 'Protected staging Supabase credentials are required.');
-  requireCondition(projectRef === 'eecvbssdvarfcykcfrny', `Unexpected staging project ref ${projectRef}.`);
+  requireCondition(projectRef === STAGING_PROJECT_REF, `Unexpected staging project ref ${projectRef}.`);
   requireCondition(projectRef !== PRODUCTION_PROJECT_REF, 'Production project ref is prohibited.');
   requireCondition(new URL(url).hostname === `${projectRef}.supabase.co`, 'SUPABASE_URL does not match the protected project ref.');
   requireCondition(process.env.SEED_TARGET_ENVIRONMENT === 'staging', 'SEED_TARGET_ENVIRONMENT must be staging.');
@@ -206,11 +308,19 @@ async function main() {
     readJson('tutorial-contract-chains-v1.json'),
     readJson('store-catalog-v1.json'),
   ]);
-  requireCondition(pack.productionAuthorized === false && pack.activationAuthorized === false, 'Embedded production or activation authorization is prohibited.');
-  requireCondition(integrity.packId === pack.packId && integrity.version === pack.version, 'Pack and integrity identity mismatch.');
+  requireCondition(
+    pack.productionAuthorized === false && pack.activationAuthorized === false,
+    'Embedded production or activation authorization is prohibited.',
+  );
+  requireCondition(
+    integrity.packId === pack.packId && integrity.version === pack.version,
+    'Pack and integrity identity mismatch.',
+  );
 
   const appliedMigrations = [];
-  for (const migration of MIGRATIONS) appliedMigrations.push(await applyMigration(context, migration));
+  for (const migration of MIGRATIONS) {
+    appliedMigrations.push(await applyMigration(context, migration));
+  }
 
   await managementQuery({
     ...context,
@@ -240,11 +350,14 @@ async function main() {
   const authorizationPath = path.join(auditRoot, 'activation-authorization.json');
   const now = Date.now();
   const authorization = {
+    schemaVersion: 'econovaria-beta-seed-activation-authorization-v2',
     authorizationId: 'chat3-pr163-isolated-staging-20260721',
     allowActivation: true,
     productionAuthorized: false,
     environment: 'staging',
     projectRef,
+    gameSessionId: SYNTHETIC_GAME_ID,
+    sourceSha,
     packId: integrity.packId,
     version: integrity.version,
     packSha256: integrity.packSha256,
@@ -255,15 +368,19 @@ async function main() {
   await writeFile(authorizationPath, `${JSON.stringify(authorization, null, 2)}\n`, 'utf8');
 
   try {
-    const inactive = await runImporter(importerOptions({
-      mode: 'import', projectRef, gameSessionId: SYNTHETIC_GAME_ID, auditRoot,
-    }));
+    const options = (overrides) => importerOptions({
+      projectRef,
+      gameSessionId: SYNTHETIC_GAME_ID,
+      sourceSha,
+      auditRoot,
+      ...overrides,
+    });
+
+    const inactive = await runImporter(options({ mode: 'import' }));
     requireCondition(['applied', 'replayed'].includes(inactive.outcome.outcome), 'Inactive connected import failed.');
     requireCondition(inactive.outcome.activated === false, 'Inactive import unexpectedly activated content.');
 
-    const inactiveReplay = await runImporter(importerOptions({
-      mode: 'import', projectRef, gameSessionId: SYNTHETIC_GAME_ID, auditRoot,
-    }));
+    const inactiveReplay = await runImporter(options({ mode: 'import' }));
     requireCondition(inactiveReplay.outcome.outcome === 'replayed', 'Repeated inactive import was not replayed.');
     requireCondition(inactiveReplay.outcome.releaseId === inactive.outcome.releaseId, 'Release identity changed during replay.');
 
@@ -285,15 +402,13 @@ async function main() {
         p_fail_after_operations: null,
       });
     } catch (error) {
-      conflictRejected = JSON.stringify(error.payload ?? error.message).includes('SEED_RELEASE_CONFLICTING_VERSION_OR_DIGEST');
+      conflictRejected = JSON.stringify(error.payload ?? error.message)
+        .includes('SEED_RELEASE_CONFLICTING_VERSION_OR_DIGEST');
     }
     requireCondition(conflictRejected, 'Conflicting connected release version was not rejected.');
 
-    const activated = await runImporter(importerOptions({
+    const activated = await runImporter(options({
       mode: 'import',
-      projectRef,
-      gameSessionId: SYNTHETIC_GAME_ID,
-      auditRoot,
       activate: true,
       authorization: authorizationPath,
     }));
@@ -305,6 +420,11 @@ async function main() {
     requireCondition(activeCounts.contracts === 30, `Expected 30 active Contracts, received ${activeCounts.contracts}.`);
     requireCondition(activeCounts.store === 50, `Expected 50 active Store items, received ${activeCounts.store}.`);
     const countries = await countryDistribution(context);
+    const crossGameLeaks = await crossGameLeakCounts(context, integrity.packId);
+    requireCondition(
+      crossGameLeaks.assets === 0 && crossGameLeaks.contracts === 0 && crossGameLeaks.store === 0,
+      'Connected release leaked content into another game.',
+    );
 
     const restSurfaceCounts = {
       marketAssets: await restCount({
@@ -330,30 +450,48 @@ async function main() {
     requireCondition(restSurfaceCounts.contracts === 30, 'REST Contract surface count mismatch.');
     requireCondition(restSurfaceCounts.storeItems === 50, 'REST Store surface count mismatch.');
 
-    const deactivated = await runImporter(importerOptions({
-      mode: 'deactivate', projectRef, gameSessionId: SYNTHETIC_GAME_ID, auditRoot,
-    }));
+    const deactivated = await runImporter(options({ mode: 'deactivate' }));
     requireCondition(deactivated.outcome.outcome === 'deactivated', 'Connected deactivation failed.');
     const inactiveCounts = await connectedCounts(context, true);
-    requireCondition(inactiveCounts.assets === 0 && inactiveCounts.contracts === 0 && inactiveCounts.store === 0, 'Deactivation left active connected rows.');
+    requireCondition(
+      inactiveCounts.assets === 0 && inactiveCounts.contracts === 0 && inactiveCounts.store === 0,
+      'Deactivation left active connected rows.',
+    );
 
-    const reactivated = await runImporter(importerOptions({
+    const reactivated = await runImporter(options({
       mode: 'import',
-      projectRef,
-      gameSessionId: SYNTHETIC_GAME_ID,
-      auditRoot,
       activate: true,
       authorization: authorizationPath,
     }));
-    requireCondition(reactivated.outcome.releaseId === inactive.outcome.releaseId, 'Reactivation changed immutable release identity.');
+    requireCondition(
+      reactivated.outcome.releaseId === inactive.outcome.releaseId,
+      'Reactivation changed immutable release identity.',
+    );
 
-    const rolledBack = await runImporter(importerOptions({
-      mode: 'rollback', projectRef, gameSessionId: SYNTHETIC_GAME_ID, auditRoot,
-    }));
+    const memberDigestBeforeRollback = await membershipDigest(context, integrity.packId);
+    const rolledBack = await runImporter(options({ mode: 'rollback' }));
     requireCondition(rolledBack.outcome.outcome === 'rolled_back', 'Connected rollback failed.');
     requireCondition(rolledBack.outcome.playerHistoryPreserved === true, 'Rollback did not attest history preservation.');
+
+    const reimported = await runImporter(options({ mode: 'import' }));
+    requireCondition(
+      reimported.outcome.releaseId === inactive.outcome.releaseId,
+      'Re-import changed immutable release identity.',
+    );
+    const memberDigestAfterReimport = await membershipDigest(context, integrity.packId);
+    requireCondition(
+      memberDigestAfterReimport === memberDigestBeforeRollback,
+      'Stable member IDs changed after rollback and re-import.',
+    );
+
+    const finalRollback = await runImporter(options({ mode: 'rollback' }));
+    requireCondition(finalRollback.outcome.outcome === 'rolled_back', 'Final connected cleanup rollback failed.');
+    requireCondition(finalRollback.outcome.playerHistoryPreserved === true, 'Final rollback did not preserve history.');
     const finalCounts = await connectedCounts(context, false);
-    requireCondition(finalCounts.assets === 0 && finalCounts.contracts === 0 && finalCounts.store === 0, 'Rollback left game-scoped imported rows.');
+    requireCondition(
+      finalCounts.assets === 0 && finalCounts.contracts === 0 && finalCounts.store === 0,
+      'Rollback left game-scoped imported rows.',
+    );
 
     const releaseRows = await managementQuery({
       ...context,
@@ -364,15 +502,22 @@ async function main() {
         where game_session_id = '${SYNTHETIC_GAME_ID}' and pack_id = ${sqlLiteral(integrity.packId)};
       `,
     });
-    requireCondition(releaseRows.length === 1 && releaseRows[0].status === 'rolled_back', 'Final release journal is not rolled_back.');
+    requireCondition(
+      releaseRows.length === 1
+        && releaseRows[0].status === 'rolled_back'
+        && Number(releaseRows[0].member_count) === 590,
+      'Final release journal is not a complete rolled-back release.',
+    );
 
     const evidence = {
-      schemaVersion: 'econovaria-connected-seed-staging-evidence-v1',
+      schemaVersion: 'econovaria-connected-seed-staging-evidence-v2',
       generatedAt: new Date().toISOString(),
-      sourceCommit: process.env.GITHUB_SHA ?? null,
+      sourceCommit: sourceSha,
+      workflowCommit: process.env.GITHUB_SHA ?? null,
       project: { name: 'ECON SIM STAGING', ref: projectRef, production: false },
       syntheticGameLabel: SYNTHETIC_GAME_LABEL,
       syntheticGameIdSha256: sha256(SYNTHETIC_GAME_ID),
+      setupPath: 'protected-staging-management-sql',
       pack: {
         packId: integrity.packId,
         version: integrity.version,
@@ -380,38 +525,56 @@ async function main() {
         activationAuthorizedInPack: false,
         productionAuthorized: false,
       },
+      authorizationBinding: {
+        exactProject: authorization.projectRef === projectRef,
+        exactGame: authorization.gameSessionId === SYNTHETIC_GAME_ID,
+        exactPackIdentity: authorization.packId === integrity.packId && authorization.version === integrity.version,
+        exactDigest: authorization.packSha256 === integrity.packSha256,
+        exactSourceSha: authorization.sourceSha === sourceSha,
+        unexpiredAtExecution: Date.parse(authorization.expiresAt) > now,
+        productionProhibited: authorization.productionAuthorized === false,
+      },
       migrations: appliedMigrations,
       lifecycle: {
         inactiveImport: inactive.outcome.outcome,
         repeatedImport: inactiveReplay.outcome.outcome,
         immutableReleaseIdentity: inactiveReplay.outcome.releaseId === inactive.outcome.releaseId,
         conflictingVersionRejected: conflictRejected,
+        injectedFailureAndResumabilityProvenInDisposableDatabaseJob: true,
+        connectedFailureInjectionProhibited: true,
         temporaryStagingActivationAuthorizedExternally: true,
         deactivated: deactivated.outcome.outcome === 'deactivated',
         reactivatedWithStableIdentity: reactivated.outcome.releaseId === inactive.outcome.releaseId,
         rolledBack: rolledBack.outcome.outcome === 'rolled_back',
         playerHistoryPreserved: rolledBack.outcome.playerHistoryPreserved === true,
+        reimportedAfterRollback: ['applied', 'replayed'].includes(reimported.outcome.outcome),
+        stableIdsAfterReimport: memberDigestAfterReimport === memberDigestBeforeRollback,
+        finalRollback: finalRollback.outcome.outcome === 'rolled_back',
       },
       activeVerification: {
         databaseCounts: activeCounts,
         restSurfaceCounts,
+        crossGameLeakCounts: crossGameLeaks,
         instrumentsPerCountry: countries,
         tutorialContractsAvailable: activeCounts.contracts === 30,
         storePricesAvailable: activeCounts.store === 50,
       },
       finalState: {
         releaseStatus: releaseRows[0].status,
+        releaseMemberCount: Number(releaseRows[0].member_count),
         gameScopedRows: finalCounts,
         activeImportedContent: false,
+        auditHistoryRetained: true,
         productionActivationAuthorized: false,
         productionTouched: false,
       },
       connectedRuntimeBoundary: {
-        postgrestDataSurfacesVerified: true,
+        postgrestAdminAndPlayerConsumerDataSurfacesVerified: true,
         adminAndPlayerEdgeFunctionsPresent: false,
         frontendDeploymentVerified: false,
         mapRuntimeSchemaPresent: false,
         repositoryMapArtworkAndFiftyLocationRegistryVerifiedByFinalHeadCI: true,
+        runtimeShellDeploymentOwnedByIntegrationWorkstreams: true,
       },
       credentialsRecorded: false,
       rawInternalIdentifiersRecorded: false,
