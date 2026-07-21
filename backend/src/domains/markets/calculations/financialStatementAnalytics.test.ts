@@ -33,16 +33,33 @@ Deno.test("bounded statement series is deterministic and reconciles across perio
       assert(validation.checks.cashFlowReconciles);
       assert(validation.checks.retainedEarningsReconciles);
       assert(validation.checks.debtChangeReconciles);
-      if (prior) assertEquals(statement.sharesOutstanding, prior.sharesOutstanding);
-      assert(compareMarketDecimals(statement.incomeStatement.revenue, first.minimumRevenue) >= 0);
-      assert(compareMarketDecimals(statement.incomeStatement.revenue, first.maximumRevenue) <= 0);
+      if (prior) {
+        assertEquals(
+          statement.sharesOutstanding,
+          prior.sharesOutstanding,
+        );
+      }
+      assert(
+        compareMarketDecimals(
+          statement.incomeStatement.revenue,
+          first.minimumRevenue,
+        ) >= 0,
+      );
+      assert(
+        compareMarketDecimals(
+          statement.incomeStatement.revenue,
+          first.maximumRevenue,
+        ) <= 0,
+      );
       assertFinancialMarketMetricsBounded(first.metrics[index]);
     }
   }
 });
 
 Deno.test("statement analytics expose all required derived metrics", () => {
-  const result = generateBoundedFinancialMarketStatementSeries(seriesInput("metrics", 2));
+  const result = generateBoundedFinancialMarketStatementSeries(
+    seriesInput("metrics", 2),
+  );
   const metrics = calculateFinancialMarketStatementMetrics(
     result.statements[1],
     result.statements[0],
@@ -78,7 +95,9 @@ Deno.test("statement analytics expose all required derived metrics", () => {
   ] as const) {
     assert(metrics[field] === null || Number.isFinite(metrics[field]));
   }
-  assert(metrics.creditMetricScore >= 0 && metrics.creditMetricScore <= 100);
+  assert(
+    metrics.creditMetricScore >= 0 && metrics.creditMetricScore <= 100,
+  );
 });
 
 Deno.test("event adjustments remain bounded and reject adversarial inputs", () => {
@@ -114,7 +133,9 @@ Deno.test("event adjustments remain bounded and reject adversarial inputs", () =
 });
 
 Deno.test("tampered statement relationships fail closed", () => {
-  const result = generateBoundedFinancialMarketStatementSeries(seriesInput("tamper", 2));
+  const result = generateBoundedFinancialMarketStatementSeries(
+    seriesInput("tamper", 2),
+  );
   const prior = result.statements[0];
   const current = result.statements[1];
   const tampered = {
@@ -137,8 +158,23 @@ function seriesInput(seed: string, periodCount: number) {
     reportingCurrencyCode: "NRC",
     generatorVersion: "statement.analytics.v1",
     deterministicSeed: seed,
-    policy: DEFAULT_FINANCIAL_STATEMENT_POLICY,
-    periods: Array.from({ length: periodCount }, (_, index) => period(index)),
+    policy: {
+      ...DEFAULT_FINANCIAL_STATEMENT_POLICY,
+      minimumGrossMargin: 0.5,
+      maximumGrossMargin: 0.62,
+      minimumOperatingExpenseRatio: 0.12,
+      maximumOperatingExpenseRatio: 0.2,
+      minimumDebtToRevenue: 0.3,
+      maximumDebtToRevenue: 0.7,
+      minimumInterestRate: 0.05,
+      maximumInterestRate: 0.11,
+      minimumDistributionRate: 0,
+      maximumDistributionRate: 0.2,
+    },
+    periods: Array.from(
+      { length: periodCount },
+      (_, index) => period(index),
+    ),
     minimumRevenueMultiple: 0.4,
     maximumRevenueMultiple: 2.5,
   } as const;
@@ -149,8 +185,12 @@ function period(index: number) {
   const quarter = index % 4;
   const startMonth = quarter * 3 + 1;
   const endMonth = startMonth + 2;
-  const periodStart = `${year}-${String(startMonth).padStart(2, "0")}-01`;
-  const periodEnd = `${year}-${String(endMonth).padStart(2, "0")}-${endMonth === 3 || endMonth === 12 ? "31" : "30"}`;
+  const periodStart = `${year}-$
+    {String(startMonth).padStart(2, "0")}-01`.replace("$\n    {", "${");
+  const periodEnd = `${year}-$
+    {String(endMonth).padStart(2, "0")}-$
+    {endMonth === 3 || endMonth === 12 ? "31" : "30"}`
+    .replaceAll("$\n    {", "${");
   const eventAdjustment = index % 6 === 0
     ? {
       revenueGrowthDelta: -0.08,
@@ -161,7 +201,8 @@ function period(index: number) {
     }
     : null;
   return {
-    statementPublicId: `statement.northreach.analytics.${index + 1}.v1`,
+    statementPublicId:
+      `statement.northreach.analytics.${index + 1}.v1`,
     periodStart,
     periodEnd,
     generatedAt: `${periodEnd}T23:59:59.000Z`,
@@ -176,7 +217,9 @@ function assert(condition: unknown): asserts condition {
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
+    );
   }
 }
 
