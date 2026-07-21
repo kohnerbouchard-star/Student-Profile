@@ -10,6 +10,7 @@ on:
       - "docs/markets/**"
       - "docs/seed-content/markets/universe/**"
       - "scripts/validate-full-market-universe*.mjs"
+      - "scripts/lib/full-market-universe-validator.mjs"
   pull_request:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - "docs/markets/**"
       - "docs/seed-content/markets/universe/**"
       - "scripts/validate-full-market-universe*.mjs"
+      - "scripts/lib/full-market-universe-validator.mjs"
   workflow_dispatch:
 
 permissions:
@@ -69,7 +71,14 @@ jobs:
         run: node --test scripts/validate-full-market-universe.test.mjs
 
       - name: Run financial-market domain tests
-        run: deno test --no-lock backend/src/domains/markets
+        run: |
+          set +e
+          deno test --no-lock backend/src/domains/markets \
+            > financial-market-domain-tests.log 2>&1
+          status=$?
+          cat financial-market-domain-tests.log
+          echo "$status" > financial-market-domain-tests.status
+          exit "$status"
 
       - name: Run Backend typecheck
         run: npm --prefix backend run typecheck:all
@@ -107,5 +116,7 @@ jobs:
           path: |
             full-market-universe-validation.json
             full-market-universe-validation.stdout.json
-          if-no-files-found: error
+            financial-market-domain-tests.log
+            financial-market-domain-tests.status
+          if-no-files-found: warn
           retention-days: 30
