@@ -27,8 +27,10 @@ jobs:
       - name: Build source archives
         shell: bash
         run: |
+          git fetch origin agent/seed-content-foundation-v1 --depth=1
           git archive --format=zip --output=/tmp/world-runtime-source.zip HEAD
           git archive --format=zip --output=/tmp/current-main-source.zip origin/main
+          git archive --format=zip --output=/tmp/seed-interface-source.zip FETCH_HEAD
 
       - name: Upload source archives
         uses: actions/upload-artifact@v4
@@ -37,5 +39,6 @@ jobs:
           path: |
             /tmp/world-runtime-source.zip
             /tmp/current-main-source.zip
+            /tmp/seed-interface-source.zip
           if-no-files-found: error
           retention-days: 1
