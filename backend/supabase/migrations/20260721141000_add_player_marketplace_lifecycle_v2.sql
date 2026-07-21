@@ -1,5 +1,7 @@
 begin;
 
+create extension if not exists pgcrypto with schema extensions;
+
 create table public.marketplace_policies (
   game_session_id uuid primary key references public.game_sessions (id) on delete cascade,
   marketplace_enabled boolean not null default true,
@@ -438,7 +440,7 @@ language sql
 immutable
 set search_path = public, pg_temp
 as $$
-  select encode(digest(coalesce(p_value, '{}'::jsonb)::text, 'sha256'), 'hex');
+  select encode(extensions.digest(coalesce(p_value, '{}'::jsonb)::text, 'sha256'), 'hex');
 $$;
 
 create or replace function public.marketplace_player_country_v1(
