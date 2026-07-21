@@ -33,7 +33,7 @@ interface TableBuilder<T = Record<string, unknown>> {
   select(columns?: string): QueryBuilder<T>;
 }
 
-interface AdminService {
+export interface WorldRuntimeAdminService {
   from<T = Record<string, unknown>>(table: string): TableBuilder<T>;
   rpc<T = Record<string, unknown>>(
     name: string,
@@ -77,73 +77,87 @@ const EFFECT_KINDS = [
   "set_route_state",
 ] as const;
 
+export function adaptWorldRuntimeAdminService(
+  service: unknown,
+): WorldRuntimeAdminService {
+  if (
+    !isRecord(service) ||
+    typeof service.from !== "function" ||
+    typeof service.rpc !== "function"
+  ) {
+    throw new Error("World administration database service is unavailable.");
+  }
+  return service as unknown as WorldRuntimeAdminService;
+}
+
 export async function handleWorldRuntimeAdminOperation(
-  service: AdminService,
+  serviceSource: unknown,
   input: Input,
 ): Promise<OperationResult> {
   try {
+    const service = adaptWorldRuntimeAdminService(serviceSource);
     if (input.suffix === "/world/campaign" && input.request.method === "GET") {
-      return readCampaign(service, input);
+      return await readCampaign(service, input);
     }
     if (
       input.suffix === "/world/campaign/history" &&
       input.request.method === "GET"
     ) {
-      return readCampaignHistory(service, input);
+      return await readCampaignHistory(service, input);
     }
     if (
       input.suffix === "/world/campaign/effects" &&
       input.request.method === "GET"
     ) {
-      return readCampaignEffects(service, input);
+      return await readCampaignEffects(service, input);
     }
     if (
       input.suffix === "/world/campaign/control" &&
       input.request.method === "POST"
     ) {
-      return controlCampaign(service, input);
+      return await controlCampaign(service, input);
     }
     if (
       input.suffix === "/world/campaign/manual-trigger" &&
       input.request.method === "POST"
     ) {
-      return manualTrigger(service, input);
+      return await manualTrigger(service, input);
     }
 
     const recovery = input.suffix.match(
       /^\/world\/campaign\/effects\/(cec_[0-9a-f]{32})\/recover$/u,
     );
     if (recovery && input.request.method === "POST") {
-      return recoverEffect(service, input, recovery[1]!);
+      return await recoverEffect(service, input, recovery[1]!);
     }
 
     if (
       input.suffix === "/world/arrival-classes" &&
       input.request.method === "GET"
     ) {
-      return readArrivalClasses(service, input);
+      return await readArrivalClasses(service, input);
     }
     const correction = input.suffix.match(
       /^\/world\/arrival-classes\/(acl_[0-9a-f]{32})\/correct$/u,
     );
     if (correction && input.request.method === "POST") {
-      return correctArrivalClass(service, input, correction[1]!);
+      return await correctArrivalClass(service, input, correction[1]!);
     }
 
     if (input.suffix === "/world/geography" && input.request.method === "GET") {
-      return readGeography(service, input);
+      return await readGeography(service, input);
     }
     if (
       input.suffix === "/world/routes/state" &&
       input.request.method === "POST"
     ) {
-      return updateRouteState(service, input);
+      return await updateRouteState(service, input);
     }
     if (input.suffix === "/world/travel" && input.request.method === "GET") {
-      return readTravel(service, input);
+      return await readTravel(service, input);
     }
     if (input.suffix === "/world/residency" && input.request.method === "GET") {
-      return readResidency(service, input);
+      return await readResidency(service, input);
     }
 
     return input.suffix.startsWith("/world/")
@@ -157,7 +171,7 @@ export async function handleWorldRuntimeAdminOperation(
 }
 
 async function readCampaign(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   rejectQuery(input.request, []);
@@ -189,7 +203,7 @@ async function readCampaign(
 }
 
 async function readCampaignHistory(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const url = new URL(input.request.url);
@@ -217,7 +231,7 @@ async function readCampaignHistory(
 }
 
 async function readCampaignEffects(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const url = new URL(input.request.url);
@@ -250,7 +264,7 @@ async function readCampaignEffects(
 }
 
 async function controlCampaign(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const body = await strictBody(input.request, [
@@ -286,7 +300,7 @@ async function controlCampaign(
 }
 
 async function manualTrigger(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const body = await strictBody(input.request, [
@@ -338,7 +352,7 @@ async function manualTrigger(
 }
 
 async function recoverEffect(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
   effectId: string,
 ): Promise<OperationResult> {
@@ -355,7 +369,7 @@ async function recoverEffect(
 }
 
 async function readArrivalClasses(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const url = new URL(input.request.url);
@@ -373,7 +387,7 @@ async function readArrivalClasses(
 }
 
 async function correctArrivalClass(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
   assignmentId: string,
 ): Promise<OperationResult> {
@@ -401,7 +415,7 @@ async function correctArrivalClass(
 }
 
 async function readGeography(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   rejectQuery(input.request, []);
@@ -434,7 +448,7 @@ async function readGeography(
 }
 
 async function updateRouteState(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const body = await strictBody(input.request, [
@@ -476,7 +490,7 @@ async function updateRouteState(
 }
 
 async function readTravel(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const url = new URL(input.request.url);
@@ -507,7 +521,7 @@ async function readTravel(
 }
 
 async function readResidency(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   input: Input,
 ): Promise<OperationResult> {
   const url = new URL(input.request.url);
@@ -525,7 +539,7 @@ async function readResidency(
 }
 
 async function internalCampaignId(
-  service: AdminService,
+  service: WorldRuntimeAdminService,
   gameId: string,
   campaignId: string,
 ): Promise<string> {
