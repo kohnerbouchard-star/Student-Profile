@@ -1,4 +1,5 @@
 import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
+import { resolveBusinessBankingBackendRequest } from "../api/business-banking-backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
@@ -24,7 +25,9 @@ const READ_MODEL_KEYS = new Set([
   "marketAsset",
   "portfolio",
   "store",
+  "business",
   "banking",
+  "loans",
   "notifications"
 ]);
 
@@ -68,7 +71,7 @@ function headersFor(context) {
     "x-player-session-token": token,
     "x-request-id": String(context.requestId || "")
   };
-  if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
+  if (context.idempotencyKey) headers["x-idempotency-key"] = String(context.idempotencyKey);
   return headers;
 }
 
@@ -200,11 +203,13 @@ export function createStudentProfileApiCall({ request } = {}) {
     }
 
     const payload = backendPayload(context);
-    const backendRequest = resolvePlayerBackendRequest({
+    const routeContext = {
       ...context,
       payload,
       session: context.session
-    });
+    };
+    const backendRequest = resolvePlayerBackendRequest(routeContext) ||
+      resolveBusinessBankingBackendRequest(routeContext);
     if (!backendRequest) {
       throw new ApiConnectionPendingError({
         endpointKey: context.endpointKey,
