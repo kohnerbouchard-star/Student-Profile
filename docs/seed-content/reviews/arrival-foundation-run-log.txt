@@ -8,7 +8,7 @@ npm error Missing script: "audit:seed-content-arrivals"
 npm error
 npm error To see a list of scripts, run:
 npm error   npm run
-npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_18_975Z-debug-0.log
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_40_41_084Z-debug-0.log
 exit=1
 
 ## test seed preflight
@@ -16,7 +16,7 @@ npm error Missing script: "test:seed-content-preflight"
 npm error
 npm error To see a list of scripts, run:
 npm error   npm run
-npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_19_086Z-debug-0.log
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_40_41_198Z-debug-0.log
 exit=1
 
 ## design seed preflight
@@ -24,7 +24,7 @@ npm error Missing script: "preflight:seed-content"
 npm error
 npm error To see a list of scripts, run:
 npm error   npm run
-npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_19_196Z-debug-0.log
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_40_41_310Z-debug-0.log
 exit=1
 
 ## diff check
