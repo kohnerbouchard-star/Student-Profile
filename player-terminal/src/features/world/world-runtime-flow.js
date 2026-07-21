@@ -9,6 +9,10 @@ function isWorldRoute(state) {
   return state?.status === "ready" && state?.route === "world";
 }
 
+function hasReadyWorldResource(state) {
+  return state?.data?.resourceStatus?.worldRuntime?.state === "ready";
+}
+
 function statusNode(form) {
   return form?.querySelector("[data-world-form-status]") || null;
 }
@@ -240,13 +244,13 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
 
   const unsubscribe = terminal.subscribe((terminalState) => {
     if (!isWorldRoute(terminalState)) return;
-    if (terminalState.data?.worldRuntime && !model) {
+    if (hasReadyWorldResource(terminalState) && terminalState.data?.worldRuntime && !model) {
       model = terminalState.data.worldRuntime;
       state = "ready";
       updatedAt = Date.now();
     }
     scheduleRender();
-    if (state === "idle") void load({ force: true });
+    if (!model && state === "idle") void load({ force: true });
   });
   mount.addEventListener("submit", handleSubmit);
   mount.addEventListener("click", handleClick);
@@ -254,7 +258,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   globalThis.addEventListener("offline", handleConnectivity);
   const staleTimer = globalThis.setInterval(scheduleRender, 15_000);
 
-  if (isWorldRoute(terminal.getState())) void load({ force: true });
+  if (isWorldRoute(terminal.getState()) && !model && state === "idle") void load({ force: true });
 
   return Object.freeze({
     refresh: () => load({ force: true }),
