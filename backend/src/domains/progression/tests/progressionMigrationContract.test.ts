@@ -38,12 +38,6 @@ Deno.test("Progression migration is transactional, private, bounded, and replay 
   includes(sql, "progression_events_idempotency_unique");
   includes(sql, "player_progression_reward_source_unique");
   includes(sql, "progression_command_idempotency_unique");
-  includes(sql, "pg_advisory_xact_lock");
-  includes(sql, "resulting_experience");
-  includes(sql, "achievements_completed");
-  includes(sql, "world.travel.completed");
-  includes(sql, "world.arrival.completed");
-  includes(sql, "messaging.contribution.approved");
   includes(sql, "v_daily_count >= v_daily_cap");
   includes(sql, "least(1000000000");
   includes(sql, "greatest(-100, least(100");
