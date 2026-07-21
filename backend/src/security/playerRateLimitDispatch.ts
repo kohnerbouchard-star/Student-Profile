@@ -75,48 +75,6 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   banking: byMethod({
     GET: operation("player.banking.read", "read"),
   }),
-  bankTransfer: byMethod({
-    POST: operation("player.banking.transfer", "sensitive"),
-  }),
-  savingsTransfer: byMethod({
-    POST: operation("player.banking.savings.transfer", "sensitive"),
-  }),
-  business: byMethod({
-    GET: operation("player.business.read", "read"),
-  }),
-  businessCreate: byMethod({
-    POST: operation("player.business.create", "sensitive"),
-  }),
-  businessProductCreate: byMethod({
-    POST: operation("player.business.product.create", "write"),
-  }),
-  businessInputPurchase: byMethod({
-    POST: operation("player.business.input.purchase", "sensitive"),
-  }),
-  businessProduction: byMethod({
-    POST: operation("player.business.production", "sensitive"),
-  }),
-  businessPrice: byMethod({
-    POST: operation("player.business.price", "write"),
-  }),
-  businessHire: byMethod({
-    POST: operation("player.business.employee.hire", "sensitive"),
-  }),
-  businessTerminate: byMethod({
-    POST: operation("player.business.employee.terminate", "write"),
-  }),
-  businessStatus: byMethod({
-    POST: operation("player.business.status", "sensitive"),
-  }),
-  loans: byMethod({
-    GET: operation("player.loans.read", "read"),
-  }),
-  loanApply: byMethod({
-    POST: operation("player.loans.apply", "sensitive"),
-  }),
-  loanRepay: byMethod({
-    POST: operation("player.loans.repay", "sensitive"),
-  }),
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
   }),
