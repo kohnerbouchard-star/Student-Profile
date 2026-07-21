@@ -2,6 +2,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COUNTRY_IDS, canonicalJson, pointInPolygon, readJson, stableNumber } from './seed-beta-pack-lib.mjs';
@@ -12,6 +14,8 @@ import { runSeedBetaStagingPreflight } from './seed-beta-staging-preflight.mjs';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const PACK_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
+const TEST_GAME_ID = '11111111-1111-4111-8111-111111111111';
+const TEST_SOURCE_SHA = 'a'.repeat(40);
 
 async function calibration() {
   return readJson(path.join(PACK_ROOT, 'calibration-scenarios-v1.json'));
@@ -85,10 +89,102 @@ test('executable staging preflight is structurally ready but remains connected-e
 });
 
 test('importer dry run is credential-free and bounded', async () => {
-  const result = await runImporter({ mode: 'dry-run', environment: 'staging', 'pack-root': PACK_ROOT, 'expected-project-ref': 'isolatedstagingref', 'game-session-id': '11111111-1111-4111-8111-111111111111' });
+  const result = await runImporter({
+    mode: 'dry-run',
+    environment: 'staging',
+    'pack-root': PACK_ROOT,
+    'expected-project-ref': 'isolatedstagingref',
+    'game-session-id': TEST_GAME_ID,
+  });
   assert.equal(result.result, 'DRY_RUN_COMPLETE');
   assert.equal(result.plan.operations.stockTemplates, 240);
   assert.equal(result.plan.safety.productionProhibited, true);
+});
+
+test('activation authorization is bound to exact project, game, pack, digest, and source SHA', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'seed-auth-test-'));
+  const authorizationPath = path.join(root, 'authorization.json');
+  const integrity = await readJson(path.join(PACK_ROOT, 'integrity-manifest-v1.json'));
+  const now = Date.now();
+  await writeFile(authorizationPath, `${JSON.stringify({
+    schemaVersion: 'econovaria-beta-seed-activation-authorization-v2',
+    authorizationId: 'test-authorization',
+    allowActivation: true,
+    productionAuthorized: false,
+    environment: 'staging',
+    projectRef: 'isolatedstagingref',
+    gameSessionId: TEST_GAME_ID,
+    sourceSha: TEST_SOURCE_SHA,
+    packId: integrity.packId,
+    version: integrity.version,
+    packSha256: integrity.packSha256,
+    approvedBy: 'Seed Test Approver',
+    approvedAt: new Date(now - 60_000).toISOString(),
+    expiresAt: new Date(now + 60_000).toISOString(),
+  }, null, 2)}\n`, 'utf8');
+
+  const client = {
+    async callRpc(name) {
+      assert.equal(name, 'apply_seed_content_release_v1');
+      return { outcome: 'applied', activated: true, releaseId: TEST_GAME_ID };
+    },
+  };
+
+  try {
+    const result = await runImporter({
+      mode: 'import',
+      environment: 'staging',
+      'pack-root': PACK_ROOT,
+      'audit-root': root,
+      'expected-project-ref': 'isolatedstagingref',
+      'game-session-id': TEST_GAME_ID,
+      'source-sha': TEST_SOURCE_SHA,
+      activate: true,
+      authorization: authorizationPath,
+      __client: client,
+      __projectRef: 'isolatedstagingref',
+      __testBypassEnvironment: true,
+    });
+    assert.equal(result.result, 'WRITE_COMPLETE');
+
+    await assert.rejects(
+      () => runImporter({
+        mode: 'import',
+        environment: 'staging',
+        'pack-root': PACK_ROOT,
+        'audit-root': root,
+        'expected-project-ref': 'isolatedstagingref',
+        'game-session-id': TEST_GAME_ID,
+        'source-sha': 'b'.repeat(40),
+        activate: true,
+        authorization: authorizationPath,
+        __client: client,
+        __projectRef: 'isolatedstagingref',
+        __testBypassEnvironment: true,
+      }),
+      /sourceSha does not match/,
+    );
+
+    await assert.rejects(
+      () => runImporter({
+        mode: 'import',
+        environment: 'staging',
+        'pack-root': PACK_ROOT,
+        'audit-root': root,
+        'expected-project-ref': 'isolatedstagingref',
+        'game-session-id': '22222222-2222-4222-8222-222222222222',
+        'source-sha': TEST_SOURCE_SHA,
+        activate: true,
+        authorization: authorizationPath,
+        __client: client,
+        __projectRef: 'isolatedstagingref',
+        __testBypassEnvironment: true,
+      }),
+      /gameSessionId does not match/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('importer rejects production before any network write', async () => {
@@ -114,7 +210,7 @@ test('importer rejects the known live Supabase project before any network write'
         environment: 'staging',
         'pack-root': PACK_ROOT,
         'expected-project-ref': 'cgiukdjwicykrmtkhudh',
-        'game-session-id': '11111111-1111-4111-8111-111111111111',
+        'game-session-id': TEST_GAME_ID,
       }),
       /Refusing known production\/live project/,
     );
