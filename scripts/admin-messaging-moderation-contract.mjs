@@ -52,11 +52,15 @@ assert.match(policySurface, /defaultRetentionDays/);
 assert.match(policySurface, /Attachments are disabled/);
 assert.match(loader, /messaging-moderation-surface\.js/);
 assert.match(loader, /messaging-policy-surface\.js/);
-assert.doesNotMatch(loader, /createElement\("style"\)|style\.cssText|MutationObserver|window\.fetch\s*=/);
+assert.match(loader, /econovaria:admin-route-mounted/);
+assert.match(loader, /mountReady\(\)/);
+assert.doesNotMatch(loader, /DOMContentLoaded|MutationObserver|window\.fetch\s*=/);
 assert.match(stylesheet, /@media \(max-width:620px\)/);
 assert.match(stylesheet, /@media \(forced-colors:active\)/);
 assert.doesNotMatch(stylesheet, /(^|})button:disabled/);
-assert.match(adminIndex, /messaging-moderation-loader\.js/);
+assert.match(adminIndex, /admin-overview-boot\.js" onload="void import\('\.\/messaging-moderation-loader\.js'\)"/);
+assert.match(adminIndex, /shape-accurate-skeletons\.js" onload="void import\('\.\/shape-accurate-skeleton-lifecycle\.js'\).*game-lifecycle-controls\.js/);
+assert.doesNotMatch(adminIndex, /game-lifecycle-controls\.js'\)\.then\(\(\) =&gt; import\('\.\/messaging-moderation-loader\.js'\)/);
 assert.doesNotMatch(adminIndex, /<script[^>]+src=["']\.\/messaging-moderation-loader\.js["']/);
 assert.doesNotMatch(adminIndex, /<link[^>]+messaging-moderation\.css/);
 
@@ -78,4 +82,4 @@ assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, privacy, capability, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, privacy, capability, independent boot, and attachment-disablement contracts passed.");
