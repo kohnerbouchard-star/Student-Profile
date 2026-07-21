@@ -12,8 +12,12 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
   const source = await Deno.readTextFile(CLASSROOM_API);
 
   assertEquals(
-    occurrences(source, "dispatchRateLimitedReviewedPlayerRequest("),
-    20,
+    occurrences(source, "return dispatchRateLimitedReviewedPlayerRequest("),
+    1,
+  );
+  assertEquals(
+    occurrences(source, "reviewed(request,"),
+    21,
   );
   assertEquals(
     occurrences(source, "dispatchRateLimitedPlayerLoginRequest("),
@@ -33,6 +37,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
       "return handlePlayerStorePublicRequest(",
       "return handlePlayerNotificationRequest(",
       "return handlePlayerStoryDeliveryRequest(",
+      "return handlePlayerMarketplaceRequest(",
       "return handlePlayerSessionLogoutRequest(",
       "return handlePlayerStockAssetListRequest(",
       "return handlePlayerStockMarketReadRequest(",
