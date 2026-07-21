@@ -322,6 +322,176 @@ begin
 end;
 $function$;
 
+create table public.arrival_class_admin_audit (
+  id uuid primary key default gen_random_uuid(),
+  public_id text not null default ('aaa_' || replace(gen_random_uuid()::text, '-', '')),
+  game_session_id uuid not null references public.game_sessions (id) on delete cascade,
+  assignment_id uuid not null,
+  player_id uuid not null,
+  actor_staff_user_id uuid not null references public.staff_users (id) on delete restrict,
+  from_class_id text not null,
+  to_class_id text not null,
+  reason text not null,
+  idempotency_key text not null,
+  occurred_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  constraint arrival_class_admin_audit_assignment_fk
+    foreign key (game_session_id, assignment_id)
+    references public.arrival_class_assignments (game_session_id, id) on delete cascade,
+  constraint arrival_class_admin_audit_player_fk
+    foreign key (game_session_id, player_id)
+    references public.players (game_session_id, id) on delete cascade,
+  constraint arrival_class_admin_audit_public_id_unique unique (public_id),
+  constraint arrival_class_admin_audit_idempotency_unique unique (game_session_id, idempotency_key),
+  constraint arrival_class_admin_audit_public_id_valid check (public_id ~ '^aaa_[0-9a-f]{32}$'),
+  constraint arrival_class_admin_audit_class_valid check (
+    from_class_id in ('analyst','builder','maker','mediator','navigator','operator','steward','trader')
+    and to_class_id in ('analyst','builder','maker','mediator','navigator','operator','steward','trader')
+  ),
+  constraint arrival_class_admin_audit_reason_valid check (
+    length(reason) between 12 and 1000 and reason = btrim(reason)
+  ),
+  constraint arrival_class_admin_audit_idempotency_valid check (
+    idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$'
+  )
+);
+
+alter table public.arrival_class_admin_audit enable row level security;
+revoke all on table public.arrival_class_admin_audit from public, anon, authenticated, service_role;
+grant select, insert on table public.arrival_class_admin_audit to service_role;
+
+create index arrival_class_admin_audit_game_time_idx
+  on public.arrival_class_admin_audit (game_session_id, occurred_at desc, public_id desc);
+
+create or replace function public.correct_arrival_class_assignment_v1(
+  p_game_session_id uuid,
+  p_assignment_public_id text,
+  p_expected_revision bigint,
+  p_class_id text,
+  p_actor_staff_user_id uuid,
+  p_reason text,
+  p_idempotency_key text,
+  p_corrected_at timestamptz
+)
+returns table (
+  correction_outcome text,
+  assignment_id text,
+  class_id text,
+  revision bigint,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_assignment public.arrival_class_assignments%rowtype;
+  v_existing public.arrival_class_admin_audit%rowtype;
+  v_from_class text;
+begin
+  if p_game_session_id is null
+    or p_assignment_public_id !~ '^acl_[0-9a-f]{32}$'
+    or p_expected_revision is null or p_expected_revision < 0
+    or p_class_id not in ('analyst','builder','maker','mediator','navigator','operator','steward','trader')
+    or p_actor_staff_user_id is null
+    or length(btrim(coalesce(p_reason, ''))) not between 12 and 1000
+    or p_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$'
+    or p_corrected_at is null
+  then
+    raise exception 'ARRIVAL_CLASS_CORRECTION_INVALID' using errcode = 'P0001';
+  end if;
+
+  perform 1
+  from public.game_sessions as game_row
+  where game_row.id = p_game_session_id
+    and game_row.status in ('active', 'paused')
+  for share;
+  if not found then
+    raise exception 'ARRIVAL_CLASS_GAME_NOT_MUTABLE' using errcode = 'P0001';
+  end if;
+
+  perform 1 from public.staff_users where id = p_actor_staff_user_id;
+  if not found then
+    raise exception 'ARRIVAL_CLASS_ACTOR_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  select audit_row.* into v_existing
+  from public.arrival_class_admin_audit as audit_row
+  where audit_row.game_session_id = p_game_session_id
+    and audit_row.idempotency_key = p_idempotency_key;
+  if found then
+    select assignment_row.* into v_assignment
+    from public.arrival_class_assignments as assignment_row
+    where assignment_row.id = v_existing.assignment_id;
+    return query select
+      'replayed'::text,
+      v_assignment.public_id,
+      v_assignment.class_id,
+      v_assignment.revision,
+      v_assignment.updated_at;
+    return;
+  end if;
+
+  select assignment_row.* into v_assignment
+  from public.arrival_class_assignments as assignment_row
+  where assignment_row.game_session_id = p_game_session_id
+    and assignment_row.public_id = p_assignment_public_id
+  for update;
+  if not found then
+    raise exception 'ARRIVAL_CLASS_ASSIGNMENT_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_assignment.revision <> p_expected_revision then
+    raise exception 'ARRIVAL_CLASS_REVISION_CONFLICT' using errcode = '40001';
+  end if;
+
+  v_from_class := v_assignment.class_id;
+  update public.arrival_class_assignments
+  set class_id = p_class_id,
+      source = 'admin_override',
+      override_reason = btrim(p_reason),
+      revision = revision + 1,
+      updated_at = p_corrected_at
+  where id = v_assignment.id
+  returning * into v_assignment;
+
+  insert into public.arrival_class_admin_audit (
+    game_session_id,
+    assignment_id,
+    player_id,
+    actor_staff_user_id,
+    from_class_id,
+    to_class_id,
+    reason,
+    idempotency_key,
+    occurred_at
+  ) values (
+    p_game_session_id,
+    v_assignment.id,
+    v_assignment.player_id,
+    p_actor_staff_user_id,
+    v_from_class,
+    v_assignment.class_id,
+    btrim(p_reason),
+    p_idempotency_key,
+    p_corrected_at
+  );
+
+  return query select
+    'corrected'::text,
+    v_assignment.public_id,
+    v_assignment.class_id,
+    v_assignment.revision,
+    v_assignment.updated_at;
+end;
+$function$;
+
+revoke all on function public.correct_arrival_class_assignment_v1(
+  uuid, text, bigint, text, uuid, text, text, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.correct_arrival_class_assignment_v1(
+  uuid, text, bigint, text, uuid, text, text, timestamptz
+) to service_role;
+
 revoke execute on function public.initialize_world_country_runtime_v1(uuid, jsonb)
   from service_role;
 revoke execute on function public.assign_arrival_class_atomic_v1(
