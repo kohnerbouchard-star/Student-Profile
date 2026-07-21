@@ -14,6 +14,7 @@ import { readPlayerContractPublicListRoutePath } from "../../contracts/api/playe
 import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/playerContractPublicSubmitRoutePaths.ts";
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerInventoryRedemptionRoutePath } from "../../inventory/api/playerInventoryRedemptionRoutePaths.ts";
+import { readPlayerMarketplaceRoutePath } from "../../marketplace/api/playerMarketplaceRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
 import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/playerStoryDeliveryRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
@@ -46,6 +47,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.routes.inventory, true);
   assertEquals(manifest.capabilities.routes.store, true);
   assertEquals(manifest.capabilities.routes.banking, true);
+  assertEquals(manifest.capabilities.routes.marketplace, true);
 
   assertEquals(manifest.capabilities.actions.marketWatchlist, true);
   assertEquals(manifest.capabilities.actions.notificationsRead, true);
@@ -56,6 +58,11 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.capabilities.actions.marketOrder, true);
   assertEquals(manifest.capabilities.actions.storePurchase, true);
   assertEquals(manifest.capabilities.actions.storyDeliveryState, true);
+  assertEquals(manifest.capabilities.actions.marketplaceListing, true);
+  assertEquals(manifest.capabilities.actions.marketplaceActivate, true);
+  assertEquals(manifest.capabilities.actions.marketplacePurchase, true);
+  assertEquals(manifest.capabilities.actions.marketplaceCancel, true);
+  assertEquals(manifest.capabilities.actions.marketplaceDispute, true);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
@@ -68,6 +75,12 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(endpointKeys.includes("dashboard"), true);
   assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
   assertEquals(endpointKeys.includes("marketOrder"), true);
+  assertEquals(endpointKeys.includes("marketplace"), true);
+  assertEquals(endpointKeys.includes("marketplaceListing"), true);
+  assertEquals(endpointKeys.includes("marketplaceActivate"), true);
+  assertEquals(endpointKeys.includes("marketplacePurchase"), true);
+  assertEquals(endpointKeys.includes("marketplaceCancel"), true);
+  assertEquals(endpointKeys.includes("marketplaceDispute"), true);
   assertEquals(endpointKeys.includes("portfolio"), true);
   assertEquals(endpointKeys.includes("store"), true);
   assertEquals(endpointKeys.includes("storeQuote"), true);
@@ -98,6 +111,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":ticker", "AURA")
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
+        .replace(":listingId", `lst_${"b".repeat(32)}`)
+        .replace(":orderId", `ord_${"c".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`),
     }))
   );
@@ -134,6 +149,13 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       ? readPlayerInventoryRoutePath(operation.path)
       : operation.key === "inventoryRedemptions"
       ? readPlayerInventoryRedemptionRoutePath(operation.path)
+      : operation.key === "marketplace" ||
+          operation.key === "marketplaceListing" ||
+          operation.key === "marketplaceActivate" ||
+          operation.key === "marketplacePurchase" ||
+          operation.key === "marketplaceCancel" ||
+          operation.key === "marketplaceDispute"
+      ? readPlayerMarketplaceRoutePath(operation.path)
       : operation.key === "notifications" ||
           operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
