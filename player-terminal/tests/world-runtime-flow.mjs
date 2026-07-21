@@ -98,7 +98,7 @@ const html = renderWorldPage(completed, {
 for (const required of [
   "Campaign, geography, and travel",
   "ARRIVAL CLASS",
-  "GEOGRAPHY &amp; TRAVEL",
+  "GEOGRAPHY & TRAVEL",
   "RESIDENCY",
   'data-world-form="travelQuote"',
   'data-world-form="residencyRequest"',
