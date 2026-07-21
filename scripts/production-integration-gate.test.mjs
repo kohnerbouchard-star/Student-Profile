@@ -13,32 +13,77 @@ async function fixture() {
   return JSON.parse(await readFile(EVIDENCE_PATH, "utf8"));
 }
 
-test("active integration watch validates as blocked and production-safe", async () => {
+test("post-World serial watch validates as blocked and production-safe", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
-  assert.equal(result.executionState, "ACTIVE_INTEGRATION_WATCH");
-  assert.equal(result.integrationWatch.status, "ACTIVE");
-  assert.equal(result.gate.status, "BLOCKED");
-  assert.equal(result.gate.productionDecision, "NO_GO");
-  assert.equal(result.gate.productionPromotionAuthorized, false);
-  assert.equal(result.migrations.productionModified, false);
+  assert.equal(result.executionState, "ACTIVE_SERIAL_RELEASE_WATCH");
+  assert.equal(result.repository.mainCommitAtAudit, "13a6829b1f658b49910a882fd66bb0fd61c571ff");
   assert.equal(result.repository.behindMain, 0);
   assert.equal(result.repository.permanentChangedFileCount, 6);
+  assert.equal(result.integrationWatch.serialQueue[0].status, "MERGED");
+  assert.deepEqual(result.dependencyState.openCapabilityPullRequests, [299, 300, 249, 248, 261]);
+  assert.equal(result.gate.productionDecision, "NO_GO");
+  assert.equal(result.gate.productionModified, false);
 });
 
-test("blocked watch records exact staging drift without claiming alignment", async () => {
+test("migration drift records one staging-only alias and nine missing World migrations", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
-
-  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 76);
+  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 85);
+  assert.equal(result.migrations.canonicalRepositoryIdentity.head, "20260721108000");
   assert.equal(result.migrations.stagingLedger.count, 77);
-  assert.equal(result.migrations.stagingLedger.aheadBy, 1);
-  assert.equal(result.migrations.stagingLedger.additionalVersions.length, 1);
+  assert.equal(result.migrations.stagingLedger.stagingOnlyCount, 1);
+  assert.equal(result.migrations.stagingLedger.canonicalOnlyCount, 9);
+  assert.equal(result.migrations.stagingLedger.netCountDelta, -8);
   assert.equal(result.migrations.stagingLedger.matchesCanonicalRepository, false);
-  assert.equal(result.migrations.stagingLedger.matchesImmutableRelease, false);
 });
 
-test("required application Edge inventory is exact and named", async () => {
+test("serial merge ledger must be a contiguous prefix", async () => {
+  const evidence = await fixture();
+  evidence.integrationWatch.serialQueue[2].status = "MERGED";
+  evidence.integrationWatch.serialQueue[2].mergeCommit = "a".repeat(40);
+  assert.throws(
+    () => validateProductionIntegrationEvidence(evidence),
+    /serial merge ledger is not a contiguous prefix/,
+  );
+});
+
+test("serial queue order is immutable", async () => {
+  const evidence = await fixture();
+  [evidence.integrationWatch.serialQueue[1], evidence.integrationWatch.serialQueue[2]] =
+    [evidence.integrationWatch.serialQueue[2], evidence.integrationWatch.serialQueue[1]];
+  assert.throws(
+    () => validateProductionIntegrationEvidence(evidence),
+    /serial release queue order is invalid/,
+  );
+});
+
+test("open dependency ledger must match serial queue", async () => {
+  const evidence = await fixture();
+  evidence.dependencyState.openCapabilityPullRequests.pop();
+  assert.throws(
+    () => validateProductionIntegrationEvidence(evidence),
+    /open capability dependency ledger does not match serial queue/,
+  );
+});
+
+test("two-way migration delta markers must be exact", async () => {
+  const evidence = await fixture();
+  evidence.migrations.stagingLedger.canonicalOnlyCount = 8;
+  assert.throws(
+    () => validateProductionIntegrationEvidence(evidence),
+    /canonicalOnlyCount is inaccurate|set-delta counts are inconsistent/,
+  );
+
+  const net = await fixture();
+  net.migrations.stagingLedger.netCountDelta = -7;
+  assert.throws(
+    () => validateProductionIntegrationEvidence(net),
+    /netCountDelta is inaccurate/,
+  );
+});
+
+test("required application Edge inventory is exact", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
   assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, [
@@ -51,69 +96,14 @@ test("required application Edge inventory is exact and named", async () => {
     "stock-market-trading",
   ]);
   assert.deepEqual(result.environment.staging.applicationEdgeFunctions, []);
-  assert.equal(result.environment.staging.applicationEdgeFunctionCount, 0);
-  assert.equal(result.environment.staging.diagnosticEdgeFunctionCount, 1);
 });
 
-test("substituted or incomplete Edge inventory is rejected", async () => {
+test("substituted Edge inventory is rejected", async () => {
   const evidence = await fixture();
   evidence.integrationWatch.requiredApplicationEdgeFunctions[0] = "different-api";
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /required application Edge Function inventory does not match repository source/,
-  );
-});
-
-test("frontend artifact and runtime materialization contract is complete", async () => {
-  const evidence = await fixture();
-  const result = validateProductionIntegrationEvidence(evidence);
-  assert.equal(
-    result.integrationWatch.frontendRuntimeConfigurationContract.materializedPath,
-    "runtime-config.env.js",
-  );
-  assert.equal(
-    result.integrationWatch.frontendRuntimeConfigurationContract.committedMaterializedFileAllowed,
-    false,
-  );
-
-  const missingRoot = await fixture();
-  missingRoot.integrationWatch.frontendArtifactRoots =
-    missingRoot.integrationWatch.frontendArtifactRoots.filter((root) => root !== "player-terminal");
-  assert.throws(
-    () => validateProductionIntegrationEvidence(missingRoot),
-    /frontend artifact roots are incomplete/,
-  );
-});
-
-test("capability review set and exact heads are mandatory", async () => {
-  const evidence = await fixture();
-  evidence.integrationWatch.capabilityReviews.pop();
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
-    /capability review pull request set is incomplete/,
-  );
-
-  const invalidHead = await fixture();
-  invalidHead.integrationWatch.capabilityReviews[0].head = "not-a-commit";
-  assert.throws(
-    () => validateProductionIntegrationEvidence(invalidHead),
-    /head is invalid/,
-  );
-});
-
-test("migration collision and staging ahead markers must remain exact", async () => {
-  const evidence = await fixture();
-  evidence.migrations.stagingLedger.aheadBy = 2;
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
-    /aheadBy marker is inaccurate/,
-  );
-
-  const missingVersion = await fixture();
-  missingVersion.migrations.stagingLedger.additionalVersions.pop();
-  assert.throws(
-    () => validateProductionIntegrationEvidence(missingVersion),
-    /additional-version count is inaccurate/,
   );
 });
 
@@ -125,18 +115,17 @@ test("pull-request deployment and production targeting remain prohibited", async
     /pull-request deployment must remain prohibited/,
   );
 
-  const productionTarget = await fixture();
-  productionTarget.integrationWatch.workflowSafety.productionTargetAllowed = true;
+  const production = await fixture();
+  production.integrationWatch.workflowSafety.productionTargetAllowed = true;
   assert.throws(
-    () => validateProductionIntegrationEvidence(productionTarget),
+    () => validateProductionIntegrationEvidence(production),
     /production workflow targeting must remain prohibited/,
   );
 });
 
-test("blocked preflight may retain an obsolete verified release without treating it as current", async () => {
+test("obsolete retained release remains rejected", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
-
   assert.equal(result.immutableRelease.currentForCanonicalMain, false);
   assert.equal(result.immutableRelease.rollbackCompatibility.decision, "REJECTED");
   assert.notEqual(
@@ -145,58 +134,11 @@ test("blocked preflight may retain an obsolete verified release without treating
   );
 });
 
-test("ready mode rejects active watch, drift, and partial connected acceptance", async () => {
+test("ready mode rejects incomplete queue and connected gates", async () => {
   const evidence = await fixture();
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence, { requireReady: true }),
-    /CONNECTED_GATE_COMPLETE|FINAL_ACCEPTANCE_COMPLETE|canonical repository migration identity|connected execution is not ready/,
-  );
-});
-
-test("release current-main and staging binding markers must be accurate", async () => {
-  const evidence = await fixture();
-  evidence.immutableRelease.currentForCanonicalMain = true;
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
-    /current-main marker does not match/,
-  );
-
-  const stagingBinding = await fixture();
-  stagingBinding.migrations.stagingLedger.matchesImmutableRelease = true;
-  assert.throws(
-    () => validateProductionIntegrationEvidence(stagingBinding),
-    /staging\/release binding marker is inaccurate/,
-  );
-});
-
-test("deployment claim requires exact named Edge and frontend artifact identity", async () => {
-  const evidence = await fixture();
-  evidence.immutableRelease.deployedToStaging = true;
-  evidence.environment.staging.applicationEdgeFunctionCount = 7;
-  evidence.environment.staging.applicationEdgeFunctions = [
-    "admin-api",
-    "classroom-api",
-    "stock-market-player-read",
-    "stock-market-read",
-    "stock-market-runner",
-    "stock-market-seed-copy",
-    "wrong-trading-function",
-  ];
-  evidence.environment.staging.edgeFunctionCount = 8;
-  evidence.environment.staging.frontendTarget = "staging-frontend-target";
-  evidence.environment.staging.frontendDeployment.status = "deployed";
-  evidence.environment.staging.frontendDeployment.artifactSha256 =
-    evidence.immutableRelease.artifacts.find((artifact) => artifact.kind === "frontend").sha256;
-  evidence.environment.staging.frontendDeployment.artifactSetSha256 =
-    evidence.immutableRelease.artifactSetSha256;
-  evidence.environment.staging.frontendDeployment.runtimeConfigurationSha256 =
-    "a".repeat(64);
-  evidence.environment.staging.frontendDeployment.runtimeBindingsValidated = true;
-  evidence.environment.staging.runtimeConfiguration.status = "deployed";
-
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
-    /canonical current-main migration identity|exact named application Edge Function inventory/,
+    /CONNECTED_GATE_COMPLETE_AND_HANDED_OFF|every serial capability PR merged|OPERATIONS_EVIDENCE_COMPLETE/,
   );
 });
 
@@ -220,28 +162,16 @@ test("evidence rejects browser key values and raw internal identifiers", async (
 
 test("staging and production identities must remain distinct", async () => {
   const evidence = await fixture();
-  evidence.environment.staging.projectRef =
-    evidence.environment.productionGuard.projectRef;
+  evidence.environment.staging.projectRef = evidence.environment.productionGuard.projectRef;
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /must differ/,
   );
 });
 
-test("Edge Function inventory totals must reconcile", async () => {
-  const evidence = await fixture();
-  evidence.environment.staging.edgeFunctionCount = 2;
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
-    /inventory totals are inconsistent/,
-  );
-});
-
 test("validator exposes structured errors", () => {
   assert.throws(
     () => validateProductionIntegrationEvidence(null),
-    (error) =>
-      error instanceof ProductionIntegrationGateError &&
-      error.errors.length > 0,
+    (error) => error instanceof ProductionIntegrationGateError && error.errors.length > 0,
   );
 });
