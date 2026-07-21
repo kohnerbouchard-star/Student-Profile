@@ -1,3 +1,5 @@
+export {};
+
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
 type ListingStatus = "draft" | "active" | "moderation_hold" | "sold_out" | "cancelled" | "expired" | "rejected";
