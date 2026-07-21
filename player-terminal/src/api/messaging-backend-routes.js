@@ -15,31 +15,44 @@ export const MESSAGING_BACKEND_ROUTE_KEYS = Object.freeze([
 ]);
 const KEYS = new Set(MESSAGING_BACKEND_ROUTE_KEYS);
 
-function required(value, field, endpointKey) {
-  const result = typeof value === "string" ? value.trim() : "";
-  if (result) return result;
-  throw new ApiRequestError(`${field} is required for ${endpointKey}.`, {
+function invalid(message, endpointKey) {
+  throw new ApiRequestError(message, {
     code: "INVALID_REQUEST",
     endpointKey,
   });
+}
+
+function required(value, field, endpointKey) {
+  const result = typeof value === "string" ? value.trim() : "";
+  if (result) return result;
+  return invalid(`${field} is required for ${endpointKey}.`, endpointKey);
+}
+
+function boundedText(value, field, maximum, endpointKey) {
+  const result = required(value, field, endpointKey);
+  if (result.length > maximum) return invalid(`${field} is too long for ${endpointKey}.`, endpointKey);
+  return result;
+}
+
+function messageBody(value, endpointKey) {
+  const result = boundedText(value, "body", 1000, endpointKey);
+  const links = result.match(/https?:\/\/[^\s<>{}\[\]"']+/gi)?.length ?? 0;
+  if (result.split(/\r?\n/).length > 50 || links > 10) {
+    return invalid("Message body exceeds the safe line or link limit.", endpointKey);
+  }
+  return result;
 }
 
 function threadId(value, endpointKey) {
   const result = required(value, "threadId", endpointKey).toLowerCase();
   if (THREAD_ID.test(result)) return result;
-  throw new ApiRequestError("A valid public thread ID is required.", {
-    code: "INVALID_REQUEST",
-    endpointKey,
-  });
+  return invalid("A valid public thread ID is required.", endpointKey);
 }
 
 function idempotency(payload, endpointKey) {
   const result = required(payload?.idempotencyKey, "idempotencyKey", endpointKey);
   if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(result)) return result;
-  throw new ApiRequestError("A safe idempotency key is required.", {
-    code: "INVALID_REQUEST",
-    endpointKey,
-  });
+  return invalid("A safe idempotency key is required.", endpointKey);
 }
 
 function queryPath(path, values) {
@@ -74,7 +87,7 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
     return {
       method: "GET",
       path: queryPath("/players/me/messages/search", {
-        q: required(payload.query || payload.q, "query", endpointKey),
+        q: boundedText(payload.query || payload.q, "query", 100, endpointKey),
         threadLimit: payload.threadLimit,
         messageLimit: payload.messageLimit,
       }),
@@ -87,18 +100,15 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
   if (endpointKey === "messageThreadCreate") {
     const recipientPlayerId = required(payload.recipientPlayerId, "recipientPlayerId", endpointKey);
     if (!PLAYER_ID.test(recipientPlayerId) || UUID.test(recipientPlayerId)) {
-      throw new ApiRequestError("Recipient must use a public Player ID.", {
-        code: "INVALID_REQUEST",
-        endpointKey,
-      });
+      return invalid("Recipient must use a public Player ID.", endpointKey);
     }
     return {
       method: "POST",
       path: "/players/me/messages/threads",
       payload: {
         recipientPlayerId,
-        title: required(payload.title, "title", endpointKey),
-        body: required(payload.body, "body", endpointKey),
+        title: boundedText(payload.title, "title", 160, endpointKey),
+        body: messageBody(payload.body, endpointKey),
         idempotencyKey: idempotency(payload, endpointKey),
       },
     };
@@ -109,7 +119,7 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
       method: "POST",
       path: `/players/me/messages/threads/${encodeURIComponent(id)}/messages`,
       payload: {
-        body: required(payload.body, "body", endpointKey),
+        body: messageBody(payload.body, endpointKey),
         idempotencyKey: idempotency(payload, endpointKey),
       },
     };
