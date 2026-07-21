@@ -1,0 +1,973 @@
+{
+  "activationAuthorized": false,
+  "itemCount": 50,
+  "items": [
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.071,
+        "shareOfMarketContractReward": 0.129
+      },
+      "category": "beta-materials",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "Bounded beta supply sourced from northreach; stable source item.precision-optical-glass.v1.",
+      "itemKey": "beta-nort-precision-optical-glass",
+      "name": "Precision Optical Glass",
+      "price": 8,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.precision-optical-glass.v1",
+      "stableId": "store.northreach.precision-optical-glass.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.134,
+        "shareOfMarketContractReward": 0.242
+      },
+      "category": "beta-components",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "Bounded beta supply sourced from northreach; stable source item.sensor-board.v1.",
+      "itemKey": "beta-nort-sensor-board",
+      "name": "Sensor Board",
+      "price": 15,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.sensor-board.v1",
+      "stableId": "store.northreach.sensor-board.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.143,
+        "shareOfMarketContractReward": 0.258
+      },
+      "category": "beta-materials",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "Bounded beta supply sourced from northreach; stable source item.rare-earth-concentrate.v1.",
+      "itemKey": "beta-nort-rare-earth-concentrate",
+      "name": "Rare-Earth Concentrate",
+      "price": 16,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.rare-earth-concentrate.v1",
+      "stableId": "store.northreach.rare-earth-concentrate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.179,
+        "shareOfMarketContractReward": 0.323
+      },
+      "category": "beta-materials",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "Bounded beta supply sourced from northreach; stable source item.cryogenic-ceramic.v1.",
+      "itemKey": "beta-nort-cryogenic-ceramic",
+      "name": "Cryogenic Ceramic",
+      "price": 20,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.cryogenic-ceramic.v1",
+      "stableId": "store.northreach.cryogenic-ceramic.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.241,
+        "shareOfMarketContractReward": 0.435
+      },
+      "category": "beta-materials",
+      "country": "northreach",
+      "currencyCode": "NRC",
+      "description": "Bounded beta supply sourced from northreach; stable source item.superconductive-filament.v1.",
+      "itemKey": "beta-nort-superconductive-filament",
+      "name": "Superconductive Filament",
+      "price": 27,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.superconductive-filament.v1",
+      "stableId": "store.northreach.superconductive-filament.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.083,
+        "shareOfMarketContractReward": 0.153
+      },
+      "category": "beta-materials",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "Bounded beta supply sourced from yrethia; stable source item.compressed-algae-fiber.v1.",
+      "itemKey": "beta-yret-compressed-algae-fiber",
+      "name": "Compressed Algae Fiber",
+      "price": 9,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.compressed-algae-fiber.v1",
+      "stableId": "store.yrethia.compressed-algae-fiber.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.148,
+        "shareOfMarketContractReward": 0.271
+      },
+      "category": "beta-materials",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "Bounded beta supply sourced from yrethia; stable source item.deepwater-lubricant.v1.",
+      "itemKey": "beta-yret-deepwater-lubricant",
+      "name": "Deepwater Lubricant",
+      "price": 16,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.deepwater-lubricant.v1",
+      "stableId": "store.yrethia.deepwater-lubricant.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.194,
+        "shareOfMarketContractReward": 0.356
+      },
+      "category": "beta-components",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "Bounded beta supply sourced from yrethia; stable source item.marine-seal-assembly.v1.",
+      "itemKey": "beta-yret-marine-seal-assembly",
+      "name": "Marine Seal Assembly",
+      "price": 21,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.marine-seal-assembly.v1",
+      "stableId": "store.yrethia.marine-seal-assembly.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.241,
+        "shareOfMarketContractReward": 0.441
+      },
+      "category": "beta-materials",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "Bounded beta supply sourced from yrethia; stable source item.marine-grade-resin.v1.",
+      "itemKey": "beta-yret-marine-grade-resin",
+      "name": "Marine-Grade Resin",
+      "price": 26,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.marine-grade-resin.v1",
+      "stableId": "store.yrethia.marine-grade-resin.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.352,
+        "shareOfMarketContractReward": 0.644
+      },
+      "category": "beta-materials",
+      "country": "yrethia",
+      "currencyCode": "YRC",
+      "description": "Bounded beta supply sourced from yrethia; stable source item.corrosion-resistant-alloy.v1.",
+      "itemKey": "beta-yret-corrosion-resistant-alloy",
+      "name": "Corrosion-Resistant Alloy",
+      "price": 38,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.corrosion-resistant-alloy.v1",
+      "stableId": "store.yrethia.corrosion-resistant-alloy.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.12,
+        "shareOfMarketContractReward": 0.216
+      },
+      "category": "beta-materials",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "Bounded beta supply sourced from thaloris; stable source item.thermal-gel.v1.",
+      "itemKey": "beta-thal-thermal-gel",
+      "name": "Thermal Gel",
+      "price": 11,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.thermal-gel.v1",
+      "stableId": "store.thaloris.thermal-gel.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.239,
+        "shareOfMarketContractReward": 0.431
+      },
+      "category": "beta-materials",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "Bounded beta supply sourced from thaloris; stable source item.high-density-carbon.v1.",
+      "itemKey": "beta-thal-high-density-carbon",
+      "name": "High-Density Carbon",
+      "price": 22,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.high-density-carbon.v1",
+      "stableId": "store.thaloris.high-density-carbon.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.272,
+        "shareOfMarketContractReward": 0.49
+      },
+      "category": "beta-components",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "Bounded beta supply sourced from thaloris; stable source item.thermal-regulator.v1.",
+      "itemKey": "beta-thal-thermal-regulator",
+      "name": "Thermal Regulator",
+      "price": 25,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.thermal-regulator.v1",
+      "stableId": "store.thaloris.thermal-regulator.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.304,
+        "shareOfMarketContractReward": 0.549
+      },
+      "category": "beta-materials",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "Bounded beta supply sourced from thaloris; stable source item.catalytic-membrane.v1.",
+      "itemKey": "beta-thal-catalytic-membrane",
+      "name": "Catalytic Membrane",
+      "price": 28,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.catalytic-membrane.v1",
+      "stableId": "store.thaloris.catalytic-membrane.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.326,
+        "shareOfMarketContractReward": 0.588
+      },
+      "category": "beta-materials",
+      "country": "thaloris",
+      "currencyCode": "THD",
+      "description": "Bounded beta supply sourced from thaloris; stable source item.lithium-salt.v1.",
+      "itemKey": "beta-thal-lithium-salt",
+      "name": "Lithium Salt",
+      "price": 30,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.lithium-salt.v1",
+      "stableId": "store.thaloris.lithium-salt.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.153,
+        "shareOfMarketContractReward": 0.277
+      },
+      "category": "beta-materials",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "Bounded beta supply sourced from solvend; stable source item.orbital-grade-aluminum.v1.",
+      "itemKey": "beta-solv-orbital-grade-aluminum",
+      "name": "Orbital-Grade Aluminum",
+      "price": 18,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.orbital-grade-aluminum.v1",
+      "stableId": "store.solvend.orbital-grade-aluminum.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.153,
+        "shareOfMarketContractReward": 0.277
+      },
+      "category": "beta-materials",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "Bounded beta supply sourced from solvend; stable source item.aerospace-composite.v1.",
+      "itemKey": "beta-solv-aerospace-composite",
+      "name": "Aerospace Composite",
+      "price": 18,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.aerospace-composite.v1",
+      "stableId": "store.solvend.aerospace-composite.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.237,
+        "shareOfMarketContractReward": 0.431
+      },
+      "category": "beta-materials",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "Bounded beta supply sourced from solvend; stable source item.radiation-shielding-polymer.v1.",
+      "itemKey": "beta-solv-radiation-shielding-polymer",
+      "name": "Radiation-Shielding Polymer",
+      "price": 28,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.radiation-shielding-polymer.v1",
+      "stableId": "store.solvend.radiation-shielding-polymer.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.271,
+        "shareOfMarketContractReward": 0.492
+      },
+      "category": "beta-components",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "Bounded beta supply sourced from solvend; stable source item.research-instrument-core.v1.",
+      "itemKey": "beta-solv-research-instrument-core",
+      "name": "Research Instrument Core",
+      "price": 32,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.research-instrument-core.v1",
+      "stableId": "store.solvend.research-instrument-core.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.297,
+        "shareOfMarketContractReward": 0.538
+      },
+      "category": "beta-materials",
+      "country": "solvend",
+      "currencyCode": "SLV",
+      "description": "Bounded beta supply sourced from solvend; stable source item.research-crystal-substrate.v1.",
+      "itemKey": "beta-solv-research-crystal-substrate",
+      "name": "Research Crystal Substrate",
+      "price": 35,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.research-crystal-substrate.v1",
+      "stableId": "store.solvend.research-crystal-substrate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.131,
+        "shareOfMarketContractReward": 0.239
+      },
+      "category": "beta-materials",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "Bounded beta supply sourced from eldoran; stable source item.secure-ledger-substrate.v1.",
+      "itemKey": "beta-eldo-secure-ledger-substrate",
+      "name": "Secure Ledger Substrate",
+      "price": 11,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.secure-ledger-substrate.v1",
+      "stableId": "store.eldoran.secure-ledger-substrate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.131,
+        "shareOfMarketContractReward": 0.239
+      },
+      "category": "beta-materials",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "Bounded beta supply sourced from eldoran; stable source item.identity-laminate.v1.",
+      "itemKey": "beta-eldo-identity-laminate",
+      "name": "Identity Laminate",
+      "price": 11,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.identity-laminate.v1",
+      "stableId": "store.eldoran.identity-laminate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.226,
+        "shareOfMarketContractReward": 0.413
+      },
+      "category": "beta-materials",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "Bounded beta supply sourced from eldoran; stable source item.anti-tamper-mesh.v1.",
+      "itemKey": "beta-eldo-anti-tamper-mesh",
+      "name": "Anti-Tamper Mesh",
+      "price": 19,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.anti-tamper-mesh.v1",
+      "stableId": "store.eldoran.anti-tamper-mesh.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.226,
+        "shareOfMarketContractReward": 0.413
+      },
+      "category": "beta-components",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "Bounded beta supply sourced from eldoran; stable source item.encrypted-data-chip.v1.",
+      "itemKey": "beta-eldo-encrypted-data-chip",
+      "name": "Encrypted Data Chip",
+      "price": 19,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.encrypted-data-chip.v1",
+      "stableId": "store.eldoran.encrypted-data-chip.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.417,
+        "shareOfMarketContractReward": 0.761
+      },
+      "category": "beta-materials",
+      "country": "eldoran",
+      "currencyCode": "ELD",
+      "description": "Bounded beta supply sourced from eldoran; stable source item.conductive-gold-foil.v1.",
+      "itemKey": "beta-eldo-conductive-gold-foil",
+      "name": "Conductive Gold Foil",
+      "price": 35,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.conductive-gold-foil.v1",
+      "stableId": "store.eldoran.conductive-gold-foil.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.095,
+        "shareOfMarketContractReward": 0.174
+      },
+      "category": "beta-materials",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "Bounded beta supply sourced from valerion; stable source item.hydrophobic-sealant.v1.",
+      "itemKey": "beta-vale-hydrophobic-sealant",
+      "name": "Hydrophobic Sealant",
+      "price": 12,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.hydrophobic-sealant.v1",
+      "stableId": "store.valerion.hydrophobic-sealant.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.111,
+        "shareOfMarketContractReward": 0.203
+      },
+      "category": "beta-materials",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "Bounded beta supply sourced from valerion; stable source item.ceramic-filter-media.v1.",
+      "itemKey": "beta-vale-ceramic-filter-media",
+      "name": "Ceramic Filter Media",
+      "price": 14,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.ceramic-filter-media.v1",
+      "stableId": "store.valerion.ceramic-filter-media.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.119,
+        "shareOfMarketContractReward": 0.217
+      },
+      "category": "beta-materials",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "Bounded beta supply sourced from valerion; stable source item.structural-glass-composite.v1.",
+      "itemKey": "beta-vale-structural-glass-composite",
+      "name": "Structural Glass Composite",
+      "price": 15,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.structural-glass-composite.v1",
+      "stableId": "store.valerion.structural-glass-composite.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.175,
+        "shareOfMarketContractReward": 0.319
+      },
+      "category": "beta-materials",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "Bounded beta supply sourced from valerion; stable source item.filtration-membrane.v1.",
+      "itemKey": "beta-vale-filtration-membrane",
+      "name": "Filtration Membrane",
+      "price": 22,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.filtration-membrane.v1",
+      "stableId": "store.valerion.filtration-membrane.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.198,
+        "shareOfMarketContractReward": 0.362
+      },
+      "category": "beta-components",
+      "country": "valerion",
+      "currencyCode": "VAL",
+      "description": "Bounded beta supply sourced from valerion; stable source item.pump-assembly.v1.",
+      "itemKey": "beta-vale-pump-assembly",
+      "name": "Pump Assembly",
+      "price": 25,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.pump-assembly.v1",
+      "stableId": "store.valerion.pump-assembly.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.066,
+        "shareOfMarketContractReward": 0.121
+      },
+      "category": "beta-materials",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "Bounded beta supply sourced from lumenor; stable source item.archival-polymer-sheet.v1.",
+      "itemKey": "beta-lume-archival-polymer-sheet",
+      "name": "Archival Polymer Sheet",
+      "price": 7,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.archival-polymer-sheet.v1",
+      "stableId": "store.lumenor.archival-polymer-sheet.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.17,
+        "shareOfMarketContractReward": 0.31
+      },
+      "category": "beta-materials",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "Bounded beta supply sourced from lumenor; stable source item.acoustic-fiber.v1.",
+      "itemKey": "beta-lume-acoustic-fiber",
+      "name": "Acoustic Fiber",
+      "price": 18,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.acoustic-fiber.v1",
+      "stableId": "store.lumenor.acoustic-fiber.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.226,
+        "shareOfMarketContractReward": 0.414
+      },
+      "category": "beta-materials",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "Bounded beta supply sourced from lumenor; stable source item.adaptive-textile-mesh.v1.",
+      "itemKey": "beta-lume-adaptive-textile-mesh",
+      "name": "Adaptive Textile Mesh",
+      "price": 24,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.adaptive-textile-mesh.v1",
+      "stableId": "store.lumenor.adaptive-textile-mesh.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.226,
+        "shareOfMarketContractReward": 0.414
+      },
+      "category": "beta-materials",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "Bounded beta supply sourced from lumenor; stable source item.educational-display-film.v1.",
+      "itemKey": "beta-lume-educational-display-film",
+      "name": "Educational Display Film",
+      "price": 24,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.educational-display-film.v1",
+      "stableId": "store.lumenor.educational-display-film.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.236,
+        "shareOfMarketContractReward": 0.431
+      },
+      "category": "beta-components",
+      "country": "lumenor",
+      "currencyCode": "LUM",
+      "description": "Bounded beta supply sourced from lumenor; stable source item.learning-interface-module.v1.",
+      "itemKey": "beta-lume-learning-interface-module",
+      "name": "Learning Interface Module",
+      "price": 25,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.learning-interface-module.v1",
+      "stableId": "store.lumenor.learning-interface-module.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.155,
+        "shareOfMarketContractReward": 0.281
+      },
+      "category": "beta-materials",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "Bounded beta supply sourced from xalvoria; stable source item.universal-fastener-set.v1.",
+      "itemKey": "beta-xalv-universal-fastener-set",
+      "name": "Universal Fastener Set",
+      "price": 18,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.universal-fastener-set.v1",
+      "stableId": "store.xalvoria.universal-fastener-set.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.19,
+        "shareOfMarketContractReward": 0.344
+      },
+      "category": "beta-materials",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "Bounded beta supply sourced from xalvoria; stable source item.hydraulic-fluid.v1.",
+      "itemKey": "beta-xalv-hydraulic-fluid",
+      "name": "Hydraulic Fluid",
+      "price": 22,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.hydraulic-fluid.v1",
+      "stableId": "store.xalvoria.hydraulic-fluid.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.198,
+        "shareOfMarketContractReward": 0.359
+      },
+      "category": "beta-materials",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "Bounded beta supply sourced from xalvoria; stable source item.reinforced-concrete-additive.v1.",
+      "itemKey": "beta-xalv-reinforced-concrete-additive",
+      "name": "Reinforced Concrete Additive",
+      "price": 23,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.reinforced-concrete-additive.v1",
+      "stableId": "store.xalvoria.reinforced-concrete-additive.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.241,
+        "shareOfMarketContractReward": 0.438
+      },
+      "category": "beta-materials",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "Bounded beta supply sourced from xalvoria; stable source item.machine-steel-billet.v1.",
+      "itemKey": "beta-xalv-machine-steel-billet",
+      "name": "Machine Steel Billet",
+      "price": 28,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.machine-steel-billet.v1",
+      "stableId": "store.xalvoria.machine-steel-billet.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.25,
+        "shareOfMarketContractReward": 0.453
+      },
+      "category": "beta-materials",
+      "country": "xalvoria",
+      "currencyCode": "XAL",
+      "description": "Bounded beta supply sourced from xalvoria; stable source item.industrial-bearing-stock.v1.",
+      "itemKey": "beta-xalv-industrial-bearing-stock",
+      "name": "Industrial Bearing Stock",
+      "price": 29,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.industrial-bearing-stock.v1",
+      "stableId": "store.xalvoria.industrial-bearing-stock.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.095,
+        "shareOfMarketContractReward": 0.173
+      },
+      "category": "beta-materials",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "Bounded beta supply sourced from dravenlok; stable source item.iron-ore-concentrate.v1.",
+      "itemKey": "beta-drav-iron-ore-concentrate",
+      "name": "Iron Ore Concentrate",
+      "price": 9,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.iron-ore-concentrate.v1",
+      "stableId": "store.dravenlok.iron-ore-concentrate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.116,
+        "shareOfMarketContractReward": 0.212
+      },
+      "category": "beta-materials",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "Bounded beta supply sourced from dravenlok; stable source item.refined-alloy-ingot.v1.",
+      "itemKey": "beta-drav-refined-alloy-ingot",
+      "name": "Refined Alloy Ingot",
+      "price": 11,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.refined-alloy-ingot.v1",
+      "stableId": "store.dravenlok.refined-alloy-ingot.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.126,
+        "shareOfMarketContractReward": 0.231
+      },
+      "category": "beta-materials",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "Bounded beta supply sourced from dravenlok; stable source item.hardened-steel-plate.v1.",
+      "itemKey": "beta-drav-hardened-steel-plate",
+      "name": "Hardened Steel Plate",
+      "price": 12,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.hardened-steel-plate.v1",
+      "stableId": "store.dravenlok.hardened-steel-plate.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.137,
+        "shareOfMarketContractReward": 0.25
+      },
+      "category": "beta-materials",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "Bounded beta supply sourced from dravenlok; stable source item.industrial-coke-composite.v1.",
+      "itemKey": "beta-drav-industrial-coke-composite",
+      "name": "Industrial Coke Composite",
+      "price": 13,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.industrial-coke-composite.v1",
+      "stableId": "store.dravenlok.industrial-coke-composite.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.137,
+        "shareOfMarketContractReward": 0.25
+      },
+      "category": "beta-components",
+      "country": "dravenlok",
+      "currencyCode": "DRV",
+      "description": "Bounded beta supply sourced from dravenlok; stable source item.structural-reinforcement-kit.v1.",
+      "itemKey": "beta-drav-structural-reinforcement-kit",
+      "name": "Structural Reinforcement Kit",
+      "price": 13,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.structural-reinforcement-kit.v1",
+      "stableId": "store.dravenlok.structural-reinforcement-kit.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.25,
+        "shareOfMarketContractReward": 0.455
+      },
+      "category": "beta-materials",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "Bounded beta supply sourced from syndalis; stable source item.broadcast-fiber.v1.",
+      "itemKey": "beta-synd-broadcast-fiber",
+      "name": "Broadcast Fiber",
+      "price": 30,
+      "sortOrder": 1,
+      "sourceItemStableId": "item.broadcast-fiber.v1",
+      "stableId": "store.syndalis.broadcast-fiber.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.267,
+        "shareOfMarketContractReward": 0.485
+      },
+      "category": "beta-materials",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "Bounded beta supply sourced from syndalis; stable source item.photonic-film.v1.",
+      "itemKey": "beta-synd-photonic-film",
+      "name": "Photonic Film",
+      "price": 32,
+      "sortOrder": 2,
+      "sourceItemStableId": "item.photonic-film.v1",
+      "stableId": "store.syndalis.photonic-film.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.292,
+        "shareOfMarketContractReward": 0.53
+      },
+      "category": "beta-materials",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "Bounded beta supply sourced from syndalis; stable source item.signal-grade-silicon.v1.",
+      "itemKey": "beta-synd-signal-grade-silicon",
+      "name": "Signal-Grade Silicon",
+      "price": 35,
+      "sortOrder": 3,
+      "sourceItemStableId": "item.signal-grade-silicon.v1",
+      "stableId": "store.syndalis.signal-grade-silicon.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.383,
+        "shareOfMarketContractReward": 0.697
+      },
+      "category": "beta-materials",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "Bounded beta supply sourced from syndalis; stable source item.encryption-crystal-matrix.v1.",
+      "itemKey": "beta-synd-encryption-crystal-matrix",
+      "name": "Encryption Crystal Matrix",
+      "price": 46,
+      "sortOrder": 4,
+      "sourceItemStableId": "item.encryption-crystal-matrix.v1",
+      "stableId": "store.syndalis.encryption-crystal-matrix.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    },
+    {
+      "affordability": {
+        "shareOfArrivalContractReward": 0.417,
+        "shareOfMarketContractReward": 0.758
+      },
+      "category": "beta-blueprints-authorizations",
+      "country": "syndalis",
+      "currencyCode": "SYN",
+      "description": "Bounded beta supply sourced from syndalis; stable source item.secure-communications-blueprint.v1.",
+      "itemKey": "beta-synd-secure-communications-blueprint",
+      "name": "Secure Communications Blueprint",
+      "price": 50,
+      "sortOrder": 5,
+      "sourceItemStableId": "item.secure-communications-blueprint.v1",
+      "stableId": "store.syndalis.secure-communications-blueprint.v1",
+      "statusByDefault": "disabled",
+      "stockQuantity": 20,
+      "visibilityByDefault": "hidden"
+    }
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "perCountryCount": {
+    "dravenlok": 5,
+    "eldoran": 5,
+    "lumenor": 5,
+    "northreach": 5,
+    "solvend": 5,
+    "syndalis": 5,
+    "thaloris": 5,
+    "valerion": 5,
+    "xalvoria": 5,
+    "yrethia": 5
+  },
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-store-catalog-v1",
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}

@@ -1,0 +1,46 @@
+
+> econovaria@0.0.0 preflight:seed-content:staging
+> node scripts/seed-beta-staging-preflight.mjs
+
+{
+  "schemaVersion": "econovaria-beta-seed-staging-preflight-v1",
+  "status": "structurally-ready-awaiting-connected-isolated-staging",
+  "structuralReady": true,
+  "connectedImportReady": false,
+  "connectedBlocker": "A distinct Chat 2 isolated project identity, game session, and credentials are required for connected import.",
+  "productionAuthorized": false,
+  "fullMarketUniverse3200Excluded": true,
+  "validationSummary": {
+    "errors": 0,
+    "warnings": 0,
+    "marketInstruments": 240,
+    "storeItems": 50,
+    "contractChains": 10,
+    "locations": 50,
+    "physicalItems": 144,
+    "campaignEvents": 10
+  },
+  "dryRunPlan": {
+    "packId": "econovaria.beta-seed-pack.v1",
+    "version": "1.0.0-beta",
+    "environment": "staging",
+    "mode": "dry-run",
+    "activate": false,
+    "targetProjectRef": "isolated-staging-required",
+    "targetGameSessionSupplied": true,
+    "operations": {
+      "stockTemplates": 240,
+      "contractTemplates": 30,
+      "storeItems": 50,
+      "gameSessionContracts": 30
+    },
+    "safety": {
+      "productionProhibited": true,
+      "fullMarketUniverseExcluded": true,
+      "stableIdCollisionChecks": true,
+      "idempotentNaturalKeyReplay": true,
+      "rollbackBundleRequiredBeforeWrite": true,
+      "activationAuthorizationRequired": false
+    }
+  }
+}

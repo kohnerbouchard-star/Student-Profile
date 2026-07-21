@@ -1,0 +1,168 @@
+{
+  "allocationPerCountry": {
+    "commodity_reference": 15,
+    "common_equity": 150,
+    "corporate_bond": 60,
+    "etf_fund": 20,
+    "index": 15,
+    "listed_trust": 15,
+    "preferred_convertible": 10,
+    "sovereign_public_bond": 35
+  },
+  "curatedActiveOverlay": {
+    "status": "canonical-active-identities-overlaid",
+    "overlayCount": 96,
+    "propagatedIssuerNameCount": 16,
+    "sharedIssuerIdsReconciled": [
+      "issuer.northreach.public.01.v1",
+      "issuer.solvend.public.01.v1",
+      "issuer.thaloris.public.01.v1",
+      "issuer.yrethia.public.01.v1"
+    ],
+    "countries": [
+      "northreach",
+      "solvend",
+      "thaloris",
+      "yrethia"
+    ],
+    "sourceFiles": [
+      "northreach-active-market-candidate-v1.json",
+      "solvend-active-market-candidate-and-issuers-v1.json",
+      "thaloris-active-market-candidate-and-issuers-v1.json",
+      "yrethia-active-market-candidate-and-issuers-v1.json"
+    ],
+    "activationAuthorized": false
+  },
+  "countries": {
+    "dravenlok": {
+      "capital": "Ironhold",
+      "currency": "DRV",
+      "displayName": "Dravenlok",
+      "exchange": "IHX",
+      "file": "universe/dravenlok.jsonl",
+      "instrumentCount": 320,
+      "sha256": "61fd39e6f1f0b13a5b4725d18683c28ee7be4535577f5677d997d6b5c043a310"
+    },
+    "eldoran": {
+      "capital": "Crescent Bay",
+      "currency": "ELD",
+      "displayName": "Eldoran",
+      "exchange": "CMX",
+      "file": "universe/eldoran.jsonl",
+      "instrumentCount": 320,
+      "sha256": "6b1473c0fde87a7510315afd2e621279f723a13ee3c92a28bbdde045e39c45ca"
+    },
+    "lumenor": {
+      "capital": "Starfall",
+      "currency": "LUM",
+      "displayName": "Lumenor",
+      "exchange": "SCX",
+      "file": "universe/lumenor.jsonl",
+      "instrumentCount": 320,
+      "sha256": "6adf712a08bc8e91701a27899908265ad524e0853ba9054edfb14f17cae1d027"
+    },
+    "northreach": {
+      "capital": "Frostgate",
+      "currency": "NRC",
+      "displayName": "Northreach",
+      "exchange": "FGX",
+      "file": "universe/northreach.jsonl",
+      "instrumentCount": 320,
+      "sha256": "e078835185ace79de2e254f7de9c37bdced3cc9545905c78e32ee5d49d256051"
+    },
+    "solvend": {
+      "capital": "Aurora Spire",
+      "currency": "SLV",
+      "displayName": "Solvend",
+      "exchange": "AUX",
+      "file": "universe/solvend.jsonl",
+      "instrumentCount": 320,
+      "sha256": "0c63dabfb62199e00af3e9346268e6cda09ed55945fa95703e8ef5ed43cf44f9"
+    },
+    "syndalis": {
+      "capital": "Blacklight",
+      "currency": "SYN",
+      "displayName": "Syndalis",
+      "exchange": "BDX",
+      "file": "universe/syndalis.jsonl",
+      "instrumentCount": 320,
+      "sha256": "5888febd84754f3372a4e35cc5b5236de7d8074dc28e57e8dcc67d47f96aab35"
+    },
+    "thaloris": {
+      "capital": "Dusk Harbor",
+      "currency": "THD",
+      "displayName": "Thaloris",
+      "exchange": "DHM",
+      "file": "universe/thaloris.jsonl",
+      "instrumentCount": 320,
+      "sha256": "7868a552cffdb7345de28b8c6ff6f49eeed5283ba4145306c4ce3401b5220037"
+    },
+    "valerion": {
+      "capital": "Glassfall",
+      "currency": "VAL",
+      "displayName": "Valerion",
+      "exchange": "GFX",
+      "file": "universe/valerion.jsonl",
+      "instrumentCount": 320,
+      "sha256": "2ad5e75f392a55f2de1739cfa41d4ea3ef0247a4fc26f6827e1051ac29df38e4"
+    },
+    "xalvoria": {
+      "capital": "Emberhall",
+      "currency": "XAL",
+      "displayName": "Xalvoria",
+      "exchange": "ECX",
+      "file": "universe/xalvoria.jsonl",
+      "instrumentCount": 320,
+      "sha256": "29ab7a155bdd88db8b421b69f2fbd2704bfd496e88528fe43ed8598ac185d7e2"
+    },
+    "yrethia": {
+      "capital": "Sableport",
+      "currency": "YRC",
+      "displayName": "Yrethia",
+      "exchange": "SBX",
+      "file": "universe/yrethia.jsonl",
+      "instrumentCount": 320,
+      "sha256": "6132d1bb4db009496eaa8f2627e3b161c6e05401d682a2d4a68b48ac1ec4d917"
+    }
+  },
+  "generatedAt": "2026-07-19",
+  "generationSeed": 20260718,
+  "generator": "scripts/generate-seed-market-universe.mjs",
+  "instrumentTypeCounts": {
+    "commodity_reference": 150,
+    "common_equity": 1500,
+    "corporate_bond": 600,
+    "etf_fund": 200,
+    "index": 150,
+    "listed_trust": 150,
+    "preferred_convertible": 100,
+    "sovereign_public_bond": 350
+  },
+  "maturity": "design-candidate",
+  "packId": "econovaria.market-universe.v1",
+  "productionAuthorized": false,
+  "runtimeSupportVerified": false,
+  "sourceFilesCommitted": true,
+  "totalInstrumentCount": 3200,
+  "validation": {
+    "allCountryCountsEqual": true,
+    "currencyCodes": [
+      "DRV",
+      "ELD",
+      "LUM",
+      "NRC",
+      "SLV",
+      "SYN",
+      "THD",
+      "VAL",
+      "XAL",
+      "YRC"
+    ],
+    "exactly320PerCountry": true,
+    "uniqueIssuerIds": 1675,
+    "uniqueNames": 3200,
+    "uniqueStableIds": 3200,
+    "uniqueSymbols": 3200
+  },
+  "version": "1.0.0-draft"
+}

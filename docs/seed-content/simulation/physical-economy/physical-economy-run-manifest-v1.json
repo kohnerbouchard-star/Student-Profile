@@ -1,0 +1,38 @@
+{
+  "activationAuthorized": false,
+  "configuration": {
+    "countries": 10,
+    "cycles": 30,
+    "difficulties": 4,
+    "playersPerCountry": 12,
+    "runCount": 16000,
+    "scenarios": 4,
+    "seeds": 100
+  },
+  "files": {
+    "aggregateResults": "physical-economy-aggregate-results-v1.json",
+    "input": "physical-economy-simulation-input-v1.json",
+    "rawResults": "physical-economy-raw-results-v1.csv",
+    "rawResultsArchive": "physical-economy-raw-results-v1.csv.gz",
+    "review": "../../reviews/physical-economy-simulation-review-v1.md",
+    "script": "run_physical_economy_simulation_v1.py"
+  },
+  "repositoryIngestion": {
+    "aggregateResults": false,
+    "input": false,
+    "rawEvidenceNote": "The complete input, runner, aggregate JSON, raw CSV, and compressed archive were generated and hashed. Connector-backed evidence records are committed now; normal Git or immutable artifact ingestion remains required for the large generated files.",
+    "rawResults": false,
+    "rawResultsArchive": false,
+    "review": true,
+    "script": false
+  },
+  "schemaVersion": "econovaria-physical-economy-run-manifest-v1",
+  "sha256": {
+    "aggregateResults": "f421f95095499e037e421a2fe92b17bea65cee8ff19b275385585fa9105f6de3",
+    "input": "7f3b136b9b914df039d431701bd5fff2b8e9e45fcd7dc711ff2d905322e5a199",
+    "rawResults": "f6d500c9d9e3f3db22e16080c090c74c033a53f407163f9014ccc583c85919d2",
+    "rawResultsArchive": "e9e3e09073580f02b0b7a16264b9327fcd6ef13b153fbaa096e4371fd5038f76",
+    "script": "04cebef418b4064449b48b98366032e651d36e38918e4240e8be4cbcb86adaf0"
+  },
+  "status": "executed-candidate-calibration"
+}
