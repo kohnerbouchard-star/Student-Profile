@@ -17,7 +17,7 @@ import {
 } from "./playerWorldRuntimeRoutePaths.ts";
 
 const MAX_BODY_BYTES = 16_384;
-const IDEMPOTENCY_HEADER = "x-idempotency-key";
+const IDEMPOTENCY_HEADER = "idempotency-key";
 
 export interface PlayerWorldRuntimeService {
   readContext(scope: PlayerRequestScope): Promise<PlayerWorldRuntimeContextPayload>;
