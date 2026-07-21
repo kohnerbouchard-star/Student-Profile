@@ -1,0 +1,39 @@
+name: Observability and Performance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/observability-performance.yml"
+      - "backend/src/platform/observability/**"
+      - "docs/operations/observability-dashboard-alerts.json"
+      - "docs/operations/performance/**"
+      - "scripts/observability-contract*"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/observability-performance.yml"
+      - "backend/src/platform/observability/**"
+      - "docs/operations/observability-dashboard-alerts.json"
+      - "docs/operations/performance/**"
+      - "scripts/observability-contract*"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:observability
+      - run: npm run test:observability
+      - run: npm run security:secrets

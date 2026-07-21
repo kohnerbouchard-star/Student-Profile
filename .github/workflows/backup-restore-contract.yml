@@ -1,0 +1,52 @@
+name: Backup and Restore Contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/backup-restore-contract.yml"
+      - "docs/operations/backup-*.json"
+      - "docs/operations/restore-*.json"
+      - "docs/operations/connected-access-smoke.template.json"
+      - "docs/operations/backup-restore-runbook.md"
+      - "docs/operations/backup-retention-policy.md"
+      - "scripts/recovery-contract.mjs"
+      - "scripts/recovery-contract.test.mjs"
+      - "scripts/restore-integrity-checks.sql"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/backup-restore-contract.yml"
+      - "docs/operations/backup-*.json"
+      - "docs/operations/restore-*.json"
+      - "docs/operations/connected-access-smoke.template.json"
+      - "docs/operations/backup-restore-runbook.md"
+      - "docs/operations/backup-retention-policy.md"
+      - "scripts/recovery-contract.mjs"
+      - "scripts/recovery-contract.test.mjs"
+      - "scripts/restore-integrity-checks.sql"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:recovery
+      - run: npm run test:recovery-contract
+      - run: npm run security:secrets
+      - name: Verify integrity SQL remains read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eiq '\b(insert|update|delete|alter|drop|truncate|create|grant|revoke|copy|vacuum|reindex)\b' scripts/restore-integrity-checks.sql

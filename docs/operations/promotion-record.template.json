@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "promotionId": "TODO",
+  "targetEnvironment": "staging",
+  "releaseId": "TODO",
+  "sourceCommit": "TODO",
+  "sourceRunId": "TODO",
+  "sourceArtifactId": "TODO",
+  "releaseManifestSha256": "TODO",
+  "artifactSetSha256": "TODO",
+  "configurationVersion": "TODO",
+  "configurationSha256": "TODO",
+  "environmentManifestEvidence": {
+    "path": "TODO",
+    "sha256": "TODO",
+    "capturedAt": "TODO"
+  },
+  "approval": {
+    "githubEnvironment": "staging",
+    "approver": "TODO",
+    "approvedAt": "TODO"
+  },
+  "deployment": {
+    "operator": "TODO",
+    "requestedAt": "TODO",
+    "mode": "deploy"
+  },
+  "rollback": {
+    "releaseId": "TODO",
+    "artifactSetSha256": "TODO",
+    "manifestEvidence": {
+      "path": "TODO",
+      "sha256": "TODO",
+      "capturedAt": "TODO"
+    }
+  }
+}

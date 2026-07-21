@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "browserScanRoots": [
+    "index.html",
+    "frontend",
+    "admin",
+    "player-terminal",
+    "auth"
+  ],
+  "allowedBrowserTransports": [
+    "runtime-configured canonical Admin API",
+    "runtime-configured canonical Classroom API"
+  ],
+  "forbiddenBrowserMarkers": [
+    "workers.dev",
+    "make-server-0dbf686f",
+    "stock-market-sim",
+    "stock-market-simulation",
+    "stock-market-game-api",
+    "stock-market-data"
+  ],
+  "serviceOnlyTransports": [
+    "stock-market-runner",
+    "stock-market-seed-copy",
+    "stock-market-read",
+    "stock-market-trading",
+    "stock-market-player-read"
+  ],
+  "authProbePlans": {
+    "admin-api": {"path": "/health", "method": "GET"},
+    "classroom-api": {"path": "/health", "method": "GET"}
+  }
+}

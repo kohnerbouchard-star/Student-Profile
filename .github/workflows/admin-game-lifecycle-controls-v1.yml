@@ -86,6 +86,19 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Materialize browser-only runtime fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+
       - name: Start static preview
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-game-lifecycle-server.log 2>&1 &

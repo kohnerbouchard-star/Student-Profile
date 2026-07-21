@@ -1,0 +1,1391 @@
+{
+  "format": "econovaria-migration-reconciliation-v1",
+  "repositoryMigrationCount": 70,
+  "liveMigrationCount": 53,
+  "statusCounts": {
+    "live-only": 10,
+    "matched": 43,
+    "repository-only": 27
+  },
+  "blocking": true,
+  "rows": [
+    {
+      "version": "20260615161835",
+      "repository": {
+        "version": "20260615161835",
+        "name": "create_core_tables_v1",
+        "filename": "20260615161835_create_core_tables_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260615161835_create_core_tables_v1.sql",
+        "repositorySha256": "b37e3a66ebc96d19e6884991954ab022b8d928ff0282b73e83364fd4e2dd3651"
+      },
+      "live": {
+        "version": "20260615161835",
+        "name": "create_core_tables_v1",
+        "liveChecksum": "1fe4c486b7b7f0da2ea4e65d2186c3ce",
+        "repositorySha256": null,
+        "statementCount": 68
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260615220305",
+      "repository": {
+        "version": "20260615220305",
+        "name": "add_rls_policies_v1",
+        "filename": "20260615220305_add_rls_policies_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260615220305_add_rls_policies_v1.sql",
+        "repositorySha256": "857a110c37a5b6889a90b07b71d74925715047ed1fc155e577fe51e967dbc953"
+      },
+      "live": {
+        "version": "20260615220305",
+        "name": "add_rls_policies_v1",
+        "liveChecksum": "b88ed1b711d29e685f19c37e610047fc",
+        "repositorySha256": null,
+        "statementCount": 24
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260616142000",
+      "repository": {
+        "version": "20260616142000",
+        "name": "add_licensing_activation_rpc_v1",
+        "filename": "20260616142000_add_licensing_activation_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260616142000_add_licensing_activation_rpc_v1.sql",
+        "repositorySha256": "19baf1d50fa963fde0cdf8a919581ed27980e50aff707147b0580647a653f981"
+      },
+      "live": {
+        "version": "20260616142000",
+        "name": "add_licensing_activation_rpc_v1",
+        "liveChecksum": "91072311059704e008bed41f5362bdc2",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260617072000",
+      "repository": {
+        "version": "20260617072000",
+        "name": "fix_licensing_activation_rpc_column_refs_v1",
+        "filename": "20260617072000_fix_licensing_activation_rpc_column_refs_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260617072000_fix_licensing_activation_rpc_column_refs_v1.sql",
+        "repositorySha256": "89c98e84b693665ab431fdb497b8120d6973d13e415c3da0248f61e92fca8685"
+      },
+      "live": {
+        "version": "20260617072000",
+        "name": "fix_licensing_activation_rpc_column_refs_v1",
+        "liveChecksum": "31485da799f42515d694c6e7f3b3b6ff",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260617113000",
+      "repository": {
+        "version": "20260617113000",
+        "name": "add_ledger_transaction_rpc_v1",
+        "filename": "20260617113000_add_ledger_transaction_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260617113000_add_ledger_transaction_rpc_v1.sql",
+        "repositorySha256": "787038282c74bed09f1a3fb0885f811410a464d3bb47339e22b195ed184b91fe"
+      },
+      "live": {
+        "version": "20260617113000",
+        "name": "add_ledger_transaction_rpc_v1",
+        "liveChecksum": "98c74d0fd7b5195793435f2b68ce7faf",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260617114500",
+      "repository": {
+        "version": "20260617114500",
+        "name": "add_initial_balance_seed_rpc_v1",
+        "filename": "20260617114500_add_initial_balance_seed_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260617114500_add_initial_balance_seed_rpc_v1.sql",
+        "repositorySha256": "e39272c05756308c357fcd2384ccf6cda4754b00d00bdb4f453900650e776471"
+      },
+      "live": {
+        "version": "20260617114500",
+        "name": "add_initial_balance_seed_rpc_v1",
+        "liveChecksum": "159e108f95b9229b6403918419638bf4",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260617120000",
+      "repository": {
+        "version": "20260617120000",
+        "name": "add_player_attendance_clock_in_v1",
+        "filename": "20260617120000_add_player_attendance_clock_in_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260617120000_add_player_attendance_clock_in_v1.sql",
+        "repositorySha256": "d3d73dc266f69fe43f88ad5060da4c260db932a411af348d8308c60b9bdba90b"
+      },
+      "live": {
+        "version": "20260617120000",
+        "name": "add_player_attendance_clock_in_v1",
+        "liveChecksum": "4d0eb71b83c1e0ea52d637d0e7e5a827",
+        "repositorySha256": null,
+        "statementCount": 10
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260617133000",
+      "repository": {
+        "version": "20260617133000",
+        "name": "create_store_items_v1",
+        "filename": "20260617133000_create_store_items_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260617133000_create_store_items_v1.sql",
+        "repositorySha256": "9c2e8e90548452c23f44031d9b520f8ff4cb1e4ff228da0300fba353e30a3900"
+      },
+      "live": {
+        "version": "20260617133000",
+        "name": "create_store_items_v1",
+        "liveChecksum": "b3623af4a27cf29179625e07c00713b5",
+        "repositorySha256": null,
+        "statementCount": 16
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260621002500",
+      "repository": {
+        "version": "20260621002500",
+        "name": "create_store_purchase_foundation_v1",
+        "filename": "20260621002500_create_store_purchase_foundation_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260621002500_create_store_purchase_foundation_v1.sql",
+        "repositorySha256": "880af1c498ca2d77b1c95e2c7ed03d55b4fc68b408a8ffc5c4dd959d5054d1dd"
+      },
+      "live": {
+        "version": "20260621002500",
+        "name": "create_store_purchase_foundation_v1",
+        "liveChecksum": "cbc7f38ab0fb5b550da880b6d5f9cac5",
+        "repositorySha256": null,
+        "statementCount": 40
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260621004500",
+      "repository": {
+        "version": "20260621004500",
+        "name": "create_country_profiles_v1",
+        "filename": "20260621004500_create_country_profiles_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260621004500_create_country_profiles_v1.sql",
+        "repositorySha256": "643ad17884c2a4c8cecd5be8da6c6f23f1f4fad6e46855b33e87e439778ced4a"
+      },
+      "live": {
+        "version": "20260621004500",
+        "name": "create_country_profiles_v1",
+        "liveChecksum": "e30212a39d7280efd2ccf07d71d5fa15",
+        "repositorySha256": null,
+        "statementCount": 60
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260621015000",
+      "repository": {
+        "version": "20260621015000",
+        "name": "add_store_purchase_execution_rpc_v1",
+        "filename": "20260621015000_add_store_purchase_execution_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260621015000_add_store_purchase_execution_rpc_v1.sql",
+        "repositorySha256": "b03b0a99768a359d6f812136ad454ffd07f34beed36c66d5adf4a887a4f5e178"
+      },
+      "live": {
+        "version": "20260621015000",
+        "name": "add_store_purchase_execution_rpc_v1",
+        "liveChecksum": "cb4fa3f9e18ad64f4c3d69a7143d10df",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260621021000",
+      "repository": {
+        "version": "20260621021000",
+        "name": "add_balanced_player_country_assignment_v1",
+        "filename": "20260621021000_add_balanced_player_country_assignment_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260621021000_add_balanced_player_country_assignment_v1.sql",
+        "repositorySha256": "abdaee896b349895230860cca4fe440db355ef1830047bfdf9aad09c03e3db5f"
+      },
+      "live": {
+        "version": "20260621021000",
+        "name": "add_balanced_player_country_assignment_v1",
+        "liveChecksum": "bb3a59e4aedc8ce7a9e154014f0f4ec2",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260621023000",
+      "repository": {
+        "version": "20260621023000",
+        "name": "patch_balanced_player_country_assignment_lock_v1",
+        "filename": "20260621023000_patch_balanced_player_country_assignment_lock_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260621023000_patch_balanced_player_country_assignment_lock_v1.sql",
+        "repositorySha256": "408e50b9483054465954b551d769f0cf690dc913e452f190e282b935c334b977"
+      },
+      "live": {
+        "version": "20260621023000",
+        "name": "patch_balanced_player_country_assignment_lock_v1",
+        "liveChecksum": "ff50826cd820fa23cef7f72b139c4bf1",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623093000",
+      "repository": {
+        "version": "20260623093000",
+        "name": "add_stock_market_schema_foundation_v1",
+        "filename": "20260623093000_add_stock_market_schema_foundation_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623093000_add_stock_market_schema_foundation_v1.sql",
+        "repositorySha256": "e9b8105aea7569e44d554dc7ba95d45c533ae27b72ba5e180051cf2dc3f6845e"
+      },
+      "live": {
+        "version": "20260623093000",
+        "name": "add_stock_market_schema_foundation_v1",
+        "liveChecksum": "2c42e18eaab841b5628cd3464006ae48",
+        "repositorySha256": null,
+        "statementCount": 43
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623103000",
+      "repository": {
+        "version": "20260623103000",
+        "name": "add_stock_market_runner_apply_rpc_v1",
+        "filename": "20260623103000_add_stock_market_runner_apply_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623103000_add_stock_market_runner_apply_rpc_v1.sql",
+        "repositorySha256": "78521f74bcafae446e6bd4499f26bfb45002509a267a70ca00c6ca5081e5adaa"
+      },
+      "live": {
+        "version": "20260623103000",
+        "name": "add_stock_market_runner_apply_rpc_v1",
+        "liveChecksum": "686c5cfb0e5f6867746826a355f4f7a3",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623113000",
+      "repository": {
+        "version": "20260623113000",
+        "name": "seed_default_stock_templates_v1",
+        "filename": "20260623113000_seed_default_stock_templates_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623113000_seed_default_stock_templates_v1.sql",
+        "repositorySha256": "19fe24aa2f9e5c9f86078044217f1dc3b85ea94deeb30d6e2bfe5fc381852215"
+      },
+      "live": {
+        "version": "20260623113000",
+        "name": "seed_default_stock_templates_v1",
+        "liveChecksum": "abf48511cec93c0be4bbcdb6824c63ba",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623114000",
+      "repository": {
+        "version": "20260623114000",
+        "name": "add_stock_market_seed_copy_rpc_v1",
+        "filename": "20260623114000_add_stock_market_seed_copy_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623114000_add_stock_market_seed_copy_rpc_v1.sql",
+        "repositorySha256": "eff0355b1734a62e917b4d21ba56d32e910a59f51c947d8ec3f613c48a266933"
+      },
+      "live": {
+        "version": "20260623114000",
+        "name": "add_stock_market_seed_copy_rpc_v1",
+        "liveChecksum": "6ad6e705b20c98c0843480bebe7fe750",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623115000",
+      "repository": {
+        "version": "20260623115000",
+        "name": "add_stock_market_latest_ticks_read_rpc_v1",
+        "filename": "20260623115000_add_stock_market_latest_ticks_read_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623115000_add_stock_market_latest_ticks_read_rpc_v1.sql",
+        "repositorySha256": "334e693f77a06c8fa5659440cf71d827146dfaa67e14f48e5da52d1d9300238e"
+      },
+      "live": {
+        "version": "20260623115000",
+        "name": "add_stock_market_latest_ticks_read_rpc_v1",
+        "liveChecksum": "4104786efdbde06c8c8e2a76928dbc63",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623123000",
+      "repository": {
+        "version": "20260623123000",
+        "name": "add_stock_market_trading_foundation_v1",
+        "filename": "20260623123000_add_stock_market_trading_foundation_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623123000_add_stock_market_trading_foundation_v1.sql",
+        "repositorySha256": "b6be4ae8ed9b5762d7fc2fb83bfa44ec98551c73752b4b7e60cc6e25dce12a18"
+      },
+      "live": {
+        "version": "20260623123000",
+        "name": "add_stock_market_trading_foundation_v1",
+        "liveChecksum": "4e3f503e8d32fdd1a896d0f1b23b0512",
+        "repositorySha256": null,
+        "statementCount": 23
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623123500",
+      "repository": {
+        "version": "20260623123500",
+        "name": "harden_stock_market_trading_active_session_v1",
+        "filename": "20260623123500_harden_stock_market_trading_active_session_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623123500_harden_stock_market_trading_active_session_v1.sql",
+        "repositorySha256": "06a9d67fd169c3007a21c3632f306086938d477ad51badb8d7a1b2be18db0b6e"
+      },
+      "live": {
+        "version": "20260623123500",
+        "name": "harden_stock_market_trading_active_session_v1",
+        "liveChecksum": "511d2d639f5ff8ddffd8af047d9b4918",
+        "repositorySha256": null,
+        "statementCount": 6
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623124500",
+      "repository": {
+        "version": "20260623124500",
+        "name": "fix_stock_market_seed_copy_ambiguous_columns_v1",
+        "filename": "20260623124500_fix_stock_market_seed_copy_ambiguous_columns_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623124500_fix_stock_market_seed_copy_ambiguous_columns_v1.sql",
+        "repositorySha256": "bfadccaefcff883a8c2dc45ea238959fed9ef2f05636e7e5d49dd6efa1212d04"
+      },
+      "live": {
+        "version": "20260623124500",
+        "name": "fix_stock_market_seed_copy_ambiguous_columns_v1",
+        "liveChecksum": "d16f9ac8081ac20b1b6e834f7be05dd6",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623125000",
+      "repository": {
+        "version": "20260623125000",
+        "name": "fix_country_snapshot_initializer_conflict_v1",
+        "filename": "20260623125000_fix_country_snapshot_initializer_conflict_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623125000_fix_country_snapshot_initializer_conflict_v1.sql",
+        "repositorySha256": "bff9a4c8d2658968550857525e67f245fb4d5064b65ca870785bd50f98c0d160"
+      },
+      "live": {
+        "version": "20260623125000",
+        "name": "fix_country_snapshot_initializer_conflict_v1",
+        "liveChecksum": "387b6cf8daf31a3f8f8cc69f2fe1b822",
+        "repositorySha256": null,
+        "statementCount": 2
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260623125500",
+      "repository": {
+        "version": "20260623125500",
+        "name": "fix_country_snapshot_default_baseline_v1",
+        "filename": "20260623125500_fix_country_snapshot_default_baseline_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260623125500_fix_country_snapshot_default_baseline_v1.sql",
+        "repositorySha256": "535bdd30b4e7a4efeda110d477790303474c3434eda423926bea29778710396c"
+      },
+      "live": {
+        "version": "20260623125500",
+        "name": "fix_country_snapshot_default_baseline_v1",
+        "liveChecksum": "deab7e8c9a93d5352e93fa32ae657137",
+        "repositorySha256": null,
+        "statementCount": 2
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624051000",
+      "repository": {
+        "version": "20260624051000",
+        "name": "repair_store_purchase_foundation_schema",
+        "filename": "20260624051000_repair_store_purchase_foundation_schema.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624051000_repair_store_purchase_foundation_schema.sql",
+        "repositorySha256": "3ea996857b1e559ae03125163308867417b3399eb28e3a4774479506844cfad7"
+      },
+      "live": {
+        "version": "20260624051000",
+        "name": "repair_store_purchase_foundation_schema",
+        "liveChecksum": "f78e1ff93f509969b94025f3c39b7cec",
+        "repositorySha256": null,
+        "statementCount": 30
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624064500",
+      "repository": {
+        "version": "20260624064500",
+        "name": "repair_store_purchase_execution_rpc",
+        "filename": "20260624064500_repair_store_purchase_execution_rpc.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624064500_repair_store_purchase_execution_rpc.sql",
+        "repositorySha256": "4e5686bc396d32970f268816d7cb04a68a2b69ccce75de2aa2f95bf41463a7ed"
+      },
+      "live": {
+        "version": "20260624064500",
+        "name": "repair_store_purchase_execution_rpc",
+        "liveChecksum": "43a26e04ae324fde3fe40351378de375",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624065500",
+      "repository": {
+        "version": "20260624065500",
+        "name": "fix_store_purchase_rpc_digest_schema",
+        "filename": "20260624065500_fix_store_purchase_rpc_digest_schema.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624065500_fix_store_purchase_rpc_digest_schema.sql",
+        "repositorySha256": "61d66119e319c3a7c72c7f84d9c4f51e346ab2aeb9b2fa097b1af98324fb1fe3"
+      },
+      "live": {
+        "version": "20260624065500",
+        "name": "fix_store_purchase_rpc_digest_schema",
+        "liveChecksum": "58be657a4e9d938442982228ea67a423",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624070500",
+      "repository": {
+        "version": "20260624070500",
+        "name": "fix_store_purchase_rpc_ambiguous_columns",
+        "filename": "20260624070500_fix_store_purchase_rpc_ambiguous_columns.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624070500_fix_store_purchase_rpc_ambiguous_columns.sql",
+        "repositorySha256": "b28cdeaed2e24f9cbc4346f93b5535282f10818b1d43342e3927e345d9bc1308"
+      },
+      "live": {
+        "version": "20260624070500",
+        "name": "fix_store_purchase_rpc_ambiguous_columns",
+        "liveChecksum": "11d19952eb8d27bcd6e22cb5ffc12d93",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624072000",
+      "repository": {
+        "version": "20260624072000",
+        "name": "add_multi_currency_foundation_v1",
+        "filename": "20260624072000_add_multi_currency_foundation_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624072000_add_multi_currency_foundation_v1.sql",
+        "repositorySha256": "123ad4b9cb1eeb79208249e3cb6dfa195d0774844a1f20aa0c14a481d7018d25"
+      },
+      "live": {
+        "version": "20260624072000",
+        "name": "add_multi_currency_foundation_v1",
+        "liveChecksum": "f7c7b81bbe838388172623bc963f3eb1",
+        "repositorySha256": null,
+        "statementCount": 5
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624073500",
+      "repository": {
+        "version": "20260624073500",
+        "name": "seed_initial_currency_exchange_rates_v1",
+        "filename": "20260624073500_seed_initial_currency_exchange_rates_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624073500_seed_initial_currency_exchange_rates_v1.sql",
+        "repositorySha256": "4f64a0064ae1161a0eb90b2fd31ee634664fdd5155244b68d71ef6fecf8cbd15"
+      },
+      "live": {
+        "version": "20260624073500",
+        "name": "seed_initial_currency_exchange_rates_v1",
+        "liveChecksum": "0cc6e9582d2c299ffcd47c6600bfa626",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624075000",
+      "repository": {
+        "version": "20260624075000",
+        "name": "align_country_profiles_with_country_currencies_v1",
+        "filename": "20260624075000_align_country_profiles_with_country_currencies_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624075000_align_country_profiles_with_country_currencies_v1.sql",
+        "repositorySha256": "4a0126d59753aa737e2a721715ea85437c475179a83299d33ef627adb9488cc7"
+      },
+      "live": {
+        "version": "20260624075000",
+        "name": "align_country_profiles_with_country_currencies_v1",
+        "liveChecksum": "36c68e2357564e4cac7b2d96673eb1a5",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624075500",
+      "repository": {
+        "version": "20260624075500",
+        "name": "fix_official_country_currencies_v1",
+        "filename": "20260624075500_fix_official_country_currencies_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624075500_fix_official_country_currencies_v1.sql",
+        "repositorySha256": "28cda9ab58ef9bde933b9ebc22990c77aa9ae79bc6c4f255691fba99bf622f30"
+      },
+      "live": {
+        "version": "20260624075500",
+        "name": "fix_official_country_currencies_v1",
+        "liveChecksum": "ee9e4e222412585fe09b4d91d473f6f8",
+        "repositorySha256": null,
+        "statementCount": 5
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624081500",
+      "repository": {
+        "version": "20260624081500",
+        "name": "repair_country_profile_currency_codes_v1",
+        "filename": "20260624081500_repair_country_profile_currency_codes_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624081500_repair_country_profile_currency_codes_v1.sql",
+        "repositorySha256": "7af8884a6a516a38806ffe97daf3ea537b1523ae51269d0d3336233dbcd19bbe"
+      },
+      "live": {
+        "version": "20260624081500",
+        "name": "repair_country_profile_currency_codes_v1",
+        "liveChecksum": "647e834c8af9370190c1d2731b668269",
+        "repositorySha256": null,
+        "statementCount": 7
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624082000",
+      "repository": {
+        "version": "20260624082000",
+        "name": "delete_invalid_country_currencies_v1",
+        "filename": "20260624082000_delete_invalid_country_currencies_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624082000_delete_invalid_country_currencies_v1.sql",
+        "repositorySha256": "0e81ada9729002f57fbd389d84e586ce1db150dcaea765cd7f2bb831bc6bb39d"
+      },
+      "live": {
+        "version": "20260624082000",
+        "name": "delete_invalid_country_currencies_v1",
+        "liveChecksum": "c36e91edb1fa55fd8c0240ba667d760e",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624083500",
+      "repository": {
+        "version": "20260624083500",
+        "name": "cleanup_currency_metadata_v1",
+        "filename": "20260624083500_cleanup_currency_metadata_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624083500_cleanup_currency_metadata_v1.sql",
+        "repositorySha256": "262439da2d0d7b146e752eff647eaa712ef61844b3e40d0f6fd23f442fe7b373"
+      },
+      "live": {
+        "version": "20260624083500",
+        "name": "cleanup_currency_metadata_v1",
+        "liveChecksum": "d62b83983a505c51d8377c8a3482e2a6",
+        "repositorySha256": null,
+        "statementCount": 4
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624084500",
+      "repository": {
+        "version": "20260624084500",
+        "name": "add_store_country_currency_purchase_fields_v1",
+        "filename": "20260624084500_add_store_country_currency_purchase_fields_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624084500_add_store_country_currency_purchase_fields_v1.sql",
+        "repositorySha256": "79b0ac9a295082934f77680ac8a00024540d4928eb806bfb3fe2817127d05c90"
+      },
+      "live": {
+        "version": "20260624084500",
+        "name": "add_store_country_currency_purchase_fields_v1",
+        "liveChecksum": "9f0ff50a5e84acff598acd2d94dc2463",
+        "repositorySha256": null,
+        "statementCount": 12
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624123000",
+      "repository": {
+        "version": "20260624123000",
+        "name": "remove_legacy_eco_store_defaults_v1",
+        "filename": "20260624123000_remove_legacy_eco_store_defaults_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624123000_remove_legacy_eco_store_defaults_v1.sql",
+        "repositorySha256": "008b5d0b65a0eaa1f334e24dc4333c0695b95078eca6c052a3f52e2375be0623"
+      },
+      "live": {
+        "version": "20260624123000",
+        "name": "remove_legacy_eco_store_defaults_v1",
+        "liveChecksum": "51b4458e2842fed4e6cf43cb9d3777bd",
+        "repositorySha256": null,
+        "statementCount": 3
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624130000",
+      "repository": {
+        "version": "20260624130000",
+        "name": "stock_country_cash_currency_v1",
+        "filename": "20260624130000_stock_country_cash_currency_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624130000_stock_country_cash_currency_v1.sql",
+        "repositorySha256": "fa3d1e670300bc504218479a7456962f6cdd4a4e2d1bdfce1fa536aff3d0895d"
+      },
+      "live": {
+        "version": "20260624130000",
+        "name": "stock_country_cash_currency_v1",
+        "liveChecksum": "149b4a7d9616423ffa1944f72443daa0",
+        "repositorySha256": null,
+        "statementCount": 2
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624131500",
+      "repository": {
+        "version": "20260624131500",
+        "name": "fix_stock_market_order_country_cash_rpc_v1",
+        "filename": "20260624131500_fix_stock_market_order_country_cash_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624131500_fix_stock_market_order_country_cash_rpc_v1.sql",
+        "repositorySha256": "7bb98aa18409787cd3802dcd7d054f3b8e17315b2c4d6b9301607a1615180ef4"
+      },
+      "live": {
+        "version": "20260624131500",
+        "name": "fix_stock_market_order_country_cash_rpc_v1",
+        "liveChecksum": "548bd699ac7d8c44afdcbbe5e7a76667",
+        "repositorySha256": null,
+        "statementCount": 2
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260624132500",
+      "repository": {
+        "version": "20260624132500",
+        "name": "drop_unused_stock_order_rpc_v1",
+        "filename": "20260624132500_drop_unused_stock_order_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260624132500_drop_unused_stock_order_rpc_v1.sql",
+        "repositorySha256": "76a3fe8258681ba58550863f73dd66c9204bbf32991706885dd5afb48e978fed"
+      },
+      "live": {
+        "version": "20260624132500",
+        "name": "drop_unused_stock_order_rpc_v1",
+        "liveChecksum": "1d0bc718ee338cb74332c322cf2bd91c",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260625103000",
+      "repository": {
+        "version": "20260625103000",
+        "name": "extend_stock_market_events_news_metadata_v1",
+        "filename": "20260625103000_extend_stock_market_events_news_metadata_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260625103000_extend_stock_market_events_news_metadata_v1.sql",
+        "repositorySha256": "192f06f99cccd64ec6c0db0740e45367421cd00a2dcbf9821940bfd6cd1db1a1"
+      },
+      "live": {
+        "version": "20260625103000",
+        "name": "extend_stock_market_events_news_metadata_v1",
+        "liveChecksum": "165f99f0babeb21c9428c1d73d438823",
+        "repositorySha256": null,
+        "statementCount": 17
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260625120000",
+      "repository": {
+        "version": "20260625120000",
+        "name": "add_storyline_schema_v1",
+        "filename": "20260625120000_add_storyline_schema_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260625120000_add_storyline_schema_v1.sql",
+        "repositorySha256": "9f3c1128815ab477fdcbc4d50affd3bcd3c421d352b9c0864f9fa508f59bd557"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260625123000",
+      "repository": {
+        "version": "20260625123000",
+        "name": "add_contracts_schema_v1",
+        "filename": "20260625123000_add_contracts_schema_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260625123000_add_contracts_schema_v1.sql",
+        "repositorySha256": "5221984f1452e0f688a4fe3a97674a6c30cd69edae2cd1f844cbbf424616ff7a"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260625143000",
+      "repository": {
+        "version": "20260625143000",
+        "name": "add_demo_storyline_seed_rpc_v1",
+        "filename": "20260625143000_add_demo_storyline_seed_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260625143000_add_demo_storyline_seed_rpc_v1.sql",
+        "repositorySha256": "665a9c4861d8c3f20b1e1223ec4ff5a8f597d1d8a9850eb7d48ce553c9a9d2cd"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260713085704",
+      "repository": {
+        "version": "20260713085704",
+        "name": "repair_player_attendance_clock_in_v1",
+        "filename": "20260713085704_repair_player_attendance_clock_in_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260713085704_repair_player_attendance_clock_in_v1.sql",
+        "repositorySha256": "e43738f4ef8a80fe895988a56217aa1a3a133e35f7d0f659b4d6e037672d760e"
+      },
+      "live": {
+        "version": "20260713085704",
+        "name": "repair_player_attendance_clock_in_v1",
+        "liveChecksum": "e7354862d4ea5422db0b443c879cd5ac",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260713085743",
+      "repository": {
+        "version": "20260713085743",
+        "name": "repair_contracts_schema_v1",
+        "filename": "20260713085743_repair_contracts_schema_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260713085743_repair_contracts_schema_v1.sql",
+        "repositorySha256": "da1c2990624b7dbe8c3da9dc648000596ab4fe13256ba69dc9a59777efd9a849"
+      },
+      "live": {
+        "version": "20260713085743",
+        "name": "repair_contracts_schema_v1",
+        "liveChecksum": "ba7a8c48c75f6c9aa19a56823ab7336b",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260713144033",
+      "repository": null,
+      "live": {
+        "version": "20260713144033",
+        "name": "create_admin_audit_log_flags_v1",
+        "liveChecksum": "66a0c8a087907899c5a854a874543be3",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260713144209",
+      "repository": null,
+      "live": {
+        "version": "20260713144209",
+        "name": "issue_contract_rewards_atomic_v1",
+        "liveChecksum": "38148f2b38969ed64ac5abdc8b09f0df",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260713193000",
+      "repository": {
+        "version": "20260713193000",
+        "name": "create_admin_audit_log_flags_v1",
+        "filename": "20260713193000_create_admin_audit_log_flags_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260713193000_create_admin_audit_log_flags_v1.sql",
+        "repositorySha256": "7f4ef054e2fcad2bc3ad5e1731ebffa322973728e6b769946406b1d8afd9be87"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260713194500",
+      "repository": {
+        "version": "20260713194500",
+        "name": "issue_contract_rewards_atomic_v1",
+        "filename": "20260713194500_issue_contract_rewards_atomic_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260713194500_issue_contract_rewards_atomic_v1.sql",
+        "repositorySha256": "aa78ad118a2ea87cba62dba42e8fa159a8462f0a63050a942e4841c1baaccf03"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260713223000",
+      "repository": {
+        "version": "20260713223000",
+        "name": "complete_admin_control_surfaces_v1",
+        "filename": "20260713223000_complete_admin_control_surfaces_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260713223000_complete_admin_control_surfaces_v1.sql",
+        "repositorySha256": "1402a0aadc40b697ae187cdf44bca79a6125de4eb69824561a07ad7cdea379fd"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260713223157",
+      "repository": null,
+      "live": {
+        "version": "20260713223157",
+        "name": "harden_admin_data_api_tables_v1",
+        "liveChecksum": "a8a016624ee179def392ea9b5dded8ce",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260713223526",
+      "repository": null,
+      "live": {
+        "version": "20260713223526",
+        "name": "complete_admin_control_surfaces_v1",
+        "liveChecksum": "99c0e0745ca58d54371b833fee483bad",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260713224905",
+      "repository": null,
+      "live": {
+        "version": "20260713224905",
+        "name": "harden_security_definer_rpc_privileges_v1",
+        "liveChecksum": "4ff11635d51d10840641dcae605430be",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260713225007",
+      "repository": null,
+      "live": {
+        "version": "20260713225007",
+        "name": "index_admin_control_surface_foreign_keys_v1",
+        "liveChecksum": "92c56ec177954917f5e1142160795713",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260714034518",
+      "repository": {
+        "version": "20260714034518",
+        "name": "post_merge_admin_performance_cleanup_v1",
+        "filename": "20260714034518_post_merge_admin_performance_cleanup_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260714034518_post_merge_admin_performance_cleanup_v1.sql",
+        "repositorySha256": "0b99d80f4a465f252ecdeea1e910825411c438532e2b9a67ff3edeb426386b30"
+      },
+      "live": {
+        "version": "20260714034518",
+        "name": "post_merge_admin_performance_cleanup_v1",
+        "liveChecksum": "055ed5cacd29068c4d7256c033338ab1",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "matched",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Retain the identity. Compare the clean-replay schema fingerprint with the live export before promotion."
+    },
+    {
+      "version": "20260714072030",
+      "repository": null,
+      "live": {
+        "version": "20260714072030",
+        "name": "add_configurable_player_identity_v1",
+        "liveChecksum": "c5374dfad75fe60d26a7afd2a4328025",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260714072127",
+      "repository": null,
+      "live": {
+        "version": "20260714072127",
+        "name": "harden_configurable_player_identity_rpc_grants_v1",
+        "liveChecksum": "120a58d5567b652683be237bbd2a5560",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260714073723",
+      "repository": null,
+      "live": {
+        "version": "20260714073723",
+        "name": "fix_player_identity_rpc_column_ambiguity_v1",
+        "liveChecksum": "1b266fb552b2c996a3dc1eea23cb7d37",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260714113345",
+      "repository": null,
+      "live": {
+        "version": "20260714113345",
+        "name": "add_story_notification_tables_v1",
+        "liveChecksum": "1a8237864f8666f3f224f563aea51398",
+        "repositorySha256": null,
+        "statementCount": 1
+      },
+      "status": "live-only",
+      "contentReview": "requires review",
+      "recommendedDisposition": "Do not delete or rewrite the live ledger. Determine the originating change and reproduce it in an isolated copy before creating any forward-only repository correction."
+    },
+    {
+      "version": "20260714224000",
+      "repository": {
+        "version": "20260714224000",
+        "name": "harden_admin_data_api_tables_v1",
+        "filename": "20260714224000_harden_admin_data_api_tables_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260714224000_harden_admin_data_api_tables_v1.sql",
+        "repositorySha256": "b09c4cd6bd25ee7573c498b676954330b04db666ac2adeaacf402c7a9a054cea"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260714233000",
+      "repository": {
+        "version": "20260714233000",
+        "name": "harden_security_definer_rpc_privileges_v1",
+        "filename": "20260714233000_harden_security_definer_rpc_privileges_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260714233000_harden_security_definer_rpc_privileges_v1.sql",
+        "repositorySha256": "4ddef93929ee064bddeb4e1147516fe244014bfd7fc0255d20896a31874357e7"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260714234500",
+      "repository": {
+        "version": "20260714234500",
+        "name": "index_admin_control_surface_foreign_keys_v1",
+        "filename": "20260714234500_index_admin_control_surface_foreign_keys_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260714234500_index_admin_control_surface_foreign_keys_v1.sql",
+        "repositorySha256": "e64607edeb7eb6e3e6ad23f21ea93e628c871a0eb4068117cd3b4c9c0030e522"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260714235950",
+      "repository": {
+        "version": "20260714235950",
+        "name": "add_configurable_player_identity_v1",
+        "filename": "20260714235950_add_configurable_player_identity_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260714235950_add_configurable_player_identity_v1.sql",
+        "repositorySha256": "d0f5d50c319ad64b739c743d1fac629e9241ded7625f8b009551cca444adf608"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260715001000",
+      "repository": {
+        "version": "20260715001000",
+        "name": "harden_configurable_player_identity_rpc_grants_v1",
+        "filename": "20260715001000_harden_configurable_player_identity_rpc_grants_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260715001000_harden_configurable_player_identity_rpc_grants_v1.sql",
+        "repositorySha256": "246cc5e5c91b4024f24952c81924a1f5f1d9c60663c15d644a390dfe7824b690"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260715002000",
+      "repository": {
+        "version": "20260715002000",
+        "name": "fix_player_identity_rpc_column_ambiguity_v1",
+        "filename": "20260715002000_fix_player_identity_rpc_column_ambiguity_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260715002000_fix_player_identity_rpc_column_ambiguity_v1.sql",
+        "repositorySha256": "e5222df535dafde723e82f3219066d5c7b0050d23024e450b395505c33ae07b9"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260715003000",
+      "repository": {
+        "version": "20260715003000",
+        "name": "add_story_notification_tables_v1",
+        "filename": "20260715003000_add_story_notification_tables_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260715003000_add_story_notification_tables_v1.sql",
+        "repositorySha256": "8a81b2a0250bb6463f45c6869c74f6b9d94f6a8a6dd6b3f201d2c9e0389ca9ba"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260717090000",
+      "repository": {
+        "version": "20260717090000",
+        "name": "harden_story_notification_scope_v1",
+        "filename": "20260717090000_harden_story_notification_scope_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260717090000_harden_story_notification_scope_v1.sql",
+        "repositorySha256": "fb80e8b02d5369d52fca1bdaa7278ffa41b01e742df033310b3c576b04325ef1"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718064000",
+      "repository": {
+        "version": "20260718064000",
+        "name": "add_player_stock_watchlist_v1",
+        "filename": "20260718064000_add_player_stock_watchlist_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718064000_add_player_stock_watchlist_v1.sql",
+        "repositorySha256": "1f71aa580927fb4a45b25f20a56648780f3d622469a8c12fd188ef1b48e68136"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718083500",
+      "repository": {
+        "version": "20260718083500",
+        "name": "add_player_notification_public_ids_v1",
+        "filename": "20260718083500_add_player_notification_public_ids_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718083500_add_player_notification_public_ids_v1.sql",
+        "repositorySha256": "9e33f0bb29d9f062eca79fef839709eff3059d3467d4ed171a5a60cd02927726"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718112000",
+      "repository": {
+        "version": "20260718112000",
+        "name": "accept_player_contract_by_key_v2",
+        "filename": "20260718112000_accept_player_contract_by_key_v2.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718112000_accept_player_contract_by_key_v2.sql",
+        "repositorySha256": "17ba5aebc7a35da5905ccfe03c59af5b3fc212dcf659a4746db32ca3479084e9"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718113000",
+      "repository": {
+        "version": "20260718113000",
+        "name": "add_inventory_redemption_player_workflow_v1",
+        "filename": "20260718113000_add_inventory_redemption_player_workflow_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718113000_add_inventory_redemption_player_workflow_v1.sql",
+        "repositorySha256": "ec33745be7acc3b6a91cc3ced116e6c83a87253710cf4f6e609440228719df62"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718123000",
+      "repository": {
+        "version": "20260718123000",
+        "name": "add_inventory_redemption_admin_review_v1",
+        "filename": "20260718123000_add_inventory_redemption_admin_review_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718123000_add_inventory_redemption_admin_review_v1.sql",
+        "repositorySha256": "838ccf4220b8414df3875c93c8bf9498e91d880fc143caf7249bbe878cc1a219"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718173000",
+      "repository": {
+        "version": "20260718173000",
+        "name": "add_shared_request_rate_limits_v1",
+        "filename": "20260718173000_add_shared_request_rate_limits_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718173000_add_shared_request_rate_limits_v1.sql",
+        "repositorySha256": "4b6ce35d970c6dc14bec8ace2d6caff25a5b905969eafd99a23941537859eaa0"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260718190000",
+      "repository": {
+        "version": "20260718190000",
+        "name": "add_pre_auth_rate_limit_rpc_v1",
+        "filename": "20260718190000_add_pre_auth_rate_limit_rpc_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260718190000_add_pre_auth_rate_limit_rpc_v1.sql",
+        "repositorySha256": "41911cbbbef1c6b5f395fc3cceb1ae5c6c33ea32d2fe85c65ec2a81002e663d1"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719120000",
+      "repository": {
+        "version": "20260719120000",
+        "name": "add_stock_exchange_calendar_runtime_v1",
+        "filename": "20260719120000_add_stock_exchange_calendar_runtime_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719120000_add_stock_exchange_calendar_runtime_v1.sql",
+        "repositorySha256": "cb7c0eb332fa804814534f54c6abf39a4874d57b733a3d8e9689f49f18da3ee0"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719133000",
+      "repository": {
+        "version": "20260719133000",
+        "name": "require_stock_market_timezone_v1",
+        "filename": "20260719133000_require_stock_market_timezone_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719133000_require_stock_market_timezone_v1.sql",
+        "repositorySha256": "1bc8609537dc56cf717181c58b29f1571bab403960bde91aac31392abcf06830"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719150000",
+      "repository": {
+        "version": "20260719150000",
+        "name": "add_player_store_public_keys_v1",
+        "filename": "20260719150000_add_player_store_public_keys_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql",
+        "repositorySha256": "6534162bffd20d7f57c39541ce349a1b3b4d28a622fb87b778a272c332113e75"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719170000",
+      "repository": {
+        "version": "20260719170000",
+        "name": "gate_public_store_purchase_by_game_state_v1",
+        "filename": "20260719170000_gate_public_store_purchase_by_game_state_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719170000_gate_public_store_purchase_by_game_state_v1.sql",
+        "repositorySha256": "d6e7a0258a1e570d2a85df41293cd39b6c38ea078410daa8a6994b0bb8add7c0"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719193000",
+      "repository": {
+        "version": "20260719193000",
+        "name": "add_idempotent_staff_ledger_adjustment_v1",
+        "filename": "20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719193000_add_idempotent_staff_ledger_adjustment_v1.sql",
+        "repositorySha256": "3192a644524969440bc0966d83bcd7e67d7b280f363d9aa4f4185636c6066ecb"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    },
+    {
+      "version": "20260719200000",
+      "repository": {
+        "version": "20260719200000",
+        "name": "add_game_lifecycle_controls_v1",
+        "filename": "20260719200000_add_game_lifecycle_controls_v1.sql",
+        "path": "/home/runner/work/Student-Profile/Student-Profile/backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql",
+        "repositorySha256": "04b829effcbe3f138e8c93f1d29f5ce9d800d56a8243b9967c8c7f0ded40cc7f"
+      },
+      "live": null,
+      "status": "repository-only",
+      "contentReview": "reviewed",
+      "recommendedDisposition": "Apply only in isolated staging in repository order. Capture clean replay, schema diff, runtime probes, rollback rehearsal, and approval before production promotion."
+    }
+  ]
+}

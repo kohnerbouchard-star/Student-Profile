@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="econovaria-admin-api-base" content="https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/admin-api" />
+  <meta name="econovaria-admin-api-base" content="" />
   <meta name="econovaria-csrf-token" content="" />
   <meta name="econovaria-admin-reauth-url" content="../?mode=admin&amp;reason=session-expired" />
   <meta name="econovaria-admin-asset-origins" content="" />
@@ -25,6 +25,8 @@
   <link rel="stylesheet" href="./css/data-state-contracts.css" />
   <link rel="stylesheet" href="./css/keyboard-navigation.css" />
   <link rel="preload" as="style" href="./css/game-lifecycle-controls.css" onload="this.onload=null;this.rel='stylesheet'" />
+  <script src="../runtime-config.env.js"></script>
+  <script src="../frontend/src/core/runtime-config.js"></script>
   <script defer src="./auth-session-manager.js" onload="void import('./session-timeout-safe-exit.js')"></script>
   <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>

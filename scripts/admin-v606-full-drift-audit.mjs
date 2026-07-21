@@ -27,6 +27,7 @@ const html = readText("admin/index.html");
 const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
 const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map((match) => match[1]);
 const expectedScripts = [
+  "../runtime-config.env.js", "../frontend/src/core/runtime-config.js",
   "./auth-session-manager.js", "./session-gate.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
@@ -36,6 +37,7 @@ const expectedScripts = [
   "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);
+assert(html.includes('meta name="econovaria-admin-api-base" content=""'), "Admin API metadata is not reserved for validated runtime configuration.");
 assert(!/<style(?:\s|>)/i.test(html), "Admin entrypoint contains an inline style block.");
 
 const expectedStyles = [

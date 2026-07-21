@@ -1,0 +1,46 @@
+{
+  "format": "econovaria-live-migration-final-head-v2",
+  "generated_at": "2026-07-20T08:00:00Z",
+  "branch": "agent/live-migration-reconciliation-v1",
+  "synchronized_main": "906050e6b963332e2a8ae8af4df395b0d0107db0",
+  "commits_behind_main_at_validation": 0,
+  "repository_checks": {
+    "root_tests": "passed",
+    "backend_typecheck_all": "passed_with_deno_installed",
+    "backend_smoke": "passed_with_deno_installed",
+    "migration_audit": "passed",
+    "reconciliation_tools": "passed",
+    "database_replay_and_lint": "passed"
+  },
+  "check_evidence": {
+    "database_replay_clean_run": 29725257283,
+    "deno_complete_final_head_run": 29726253148,
+    "deno_complete_job": 88299926070,
+    "initial_missing_tool_diagnosis": "The earlier Backend typecheck and smoke attempts stopped only because deno was not installed on the temporary runner. After denoland/setup-deno, both commands passed without source changes."
+  },
+  "migration_reconciliation": {
+    "repository_migration_count": 70,
+    "live_migration_count": 53,
+    "status_counts": {
+      "live-only": 10,
+      "matched": 43,
+      "repository-only": 27
+    },
+    "renumbered_pairs_reviewed": 10,
+    "renumbered_statement_sha256_identical": 2,
+    "renumbered_content_divergent": 8,
+    "blocking": true,
+    "blocking_reason": "Exact migration identity and content drift requires isolated schema-effect comparison; the nonzero reconciliation result is intentional."
+  },
+  "clean_replay": {
+    "replay_count": 2,
+    "deterministic_schema": true,
+    "migration_count": 70,
+    "database_lint": "passed",
+    "canonical_schema_sha256": "eca6e8a03c79b3a473129a17234d9ec0741d576aca6d4f96ecfc49e5eb3e09a5",
+    "repository_migration_manifest_sha256": "8c30419372bf5f8fcf4872c72e6c574fb6111e91344ec75fe50726b2bff72c9f"
+  },
+  "connected_isolated_staging": "blocked_not_provided",
+  "live_production_modified": false,
+  "authoritative_roadmap_modified_by_branch": false
+}

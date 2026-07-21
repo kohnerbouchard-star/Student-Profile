@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "status": "planned",
+  "environment": "isolated-staging",
+  "sourceProjectRef": "REQUIRED_NON_PRODUCTION_SOURCE_REF",
+  "sourceCommit": "REQUIRED_FULL_COMMIT_SHA",
+  "migrationHead": "REQUIRED_MIGRATION_VERSION",
+  "createdAt": "REQUIRED_ISO_TIMESTAMP",
+  "completedAt": null,
+  "archive": {
+    "format": "encrypted-archive",
+    "sha256": null,
+    "sizeBytes": null,
+    "storageClass": "approved-immutable-off-platform",
+    "locationReference": null,
+    "encryptionKeyReference": "secret-name-or-custodian-reference-only"
+  },
+  "coverage": {
+    "schema": "planned",
+    "migrationLedger": "planned",
+    "applicationData": "planned",
+    "authMapping": "planned",
+    "storageInventory": "planned",
+    "edgeFunctionSource": "planned",
+    "configurationNames": "planned"
+  },
+  "productionModified": false,
+  "containsSecretValues": false
+}

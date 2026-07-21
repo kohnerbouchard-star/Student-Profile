@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "name": "admin-api",
+      "retirementDisposition": "retain",
+      "rollbackInstructions": "Redeploy the last approved immutable release.",
+      "owner": "Admin service owner",
+      "evidenceStatus": "canonical-runtime"
+    },
+    {
+      "name": "classroom-api",
+      "retirementDisposition": "retain",
+      "rollbackInstructions": "Redeploy the last approved immutable release.",
+      "owner": "Classroom service owner",
+      "evidenceStatus": "canonical-runtime"
+    },
+    {
+      "name": "canonical-stock-market-functions",
+      "members": [
+        "stock-market-runner",
+        "stock-market-seed-copy",
+        "stock-market-read",
+        "stock-market-trading",
+        "stock-market-player-read"
+      ],
+      "retirementDisposition": "retain-service-only",
+      "rollbackInstructions": "Restore the last approved service-only function set.",
+      "owner": "Market service owner",
+      "evidenceStatus": "canonical-runtime"
+    }
+  ]
+}

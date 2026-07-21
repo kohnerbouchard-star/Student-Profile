@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "status": "planned",
+  "sourceProjectRef": "REQUIRED_SOURCE_REF",
+  "targetProjectRef": "REQUIRED_DISTINCT_ISOLATED_TARGET_REF",
+  "productionProjectRef": "REQUIRED_PRODUCTION_GUARD_REF",
+  "releaseCommit": "REQUIRED_FULL_COMMIT_SHA",
+  "backupSha256": "REQUIRED_ARCHIVE_SHA256",
+  "startedAt": null,
+  "completedAt": null,
+  "rpoMinutes": null,
+  "rtoMinutes": null,
+  "checks": {
+    "targetIdentityDistinct": "pending",
+    "migrationLedger": "pending",
+    "balancesAndLedger": "pending",
+    "inventoryAndContracts": "pending",
+    "stockHoldingsAndOrders": "pending",
+    "notifications": "pending",
+    "authMapping": "pending",
+    "storageInventory": "pending",
+    "edgeFunctionSource": "pending",
+    "adminSmoke": "pending",
+    "playerSmoke": "pending"
+  },
+  "manualInterventions": [],
+  "failures": [],
+  "productionModified": false,
+  "containsSecretValues": false
+}

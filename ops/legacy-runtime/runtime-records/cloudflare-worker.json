@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "name": "silent-haze-ca17",
+      "deployedVersion": "unknown",
+      "retirementDisposition": "retain-until-provider-evidence",
+      "rollbackInstructions": "Use retained provider configuration only after owner review.",
+      "owner": "External runtime owner",
+      "evidenceStatus": "provider-access-required"
+    }
+  ]
+}

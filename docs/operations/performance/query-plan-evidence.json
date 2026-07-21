@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "status": "pending-connected-load",
+  "environment": "isolated-staging",
+  "queries": [
+    {"id": "session-lookup", "route": "/session", "evidence": null},
+    {"id": "banking-summary", "route": "/players/me/banking", "evidence": null},
+    {"id": "contracts-list", "route": "/players/me/contracts", "evidence": null},
+    {"id": "contract-progress", "route": "/players/me/contracts/:key", "evidence": null},
+    {"id": "store-items", "route": "/players/me/store/items", "evidence": null}
+  ],
+  "blockingRules": {
+    "largeSequentialScanMinimumRows": 10000,
+    "largeSequentialScanEstimatedRows": 5000,
+    "maximumTotalCost": 10000,
+    "requirePostLoadCapture": true
+  },
+  "indexPolicy": "Add or remove indexes only after connected load and query-plan evidence demonstrates need."
+}

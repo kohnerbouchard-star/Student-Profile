@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "TODO",
+  "environment": {
+    "name": "staging",
+    "supabaseProjectRef": "TODO",
+    "frontendTarget": "TODO",
+    "dataPolicy": "synthetic-only"
+  },
+  "release": {
+    "releaseId": "TODO",
+    "sourceCommit": "TODO",
+    "artifactSetSha256": "TODO",
+    "migrationHead": "TODO",
+    "configurationVersion": "TODO"
+  },
+  "player": {
+    "desktopConnectedBootstrap": "TODO",
+    "mobileConnectedBootstrap": "TODO",
+    "sessionReplacementAbort": "TODO",
+    "staleResultRejection": "TODO",
+    "ownershipUuidExposure": "TODO",
+    "evidencePaths": []
+  },
+  "admin": {
+    "authenticatedBootstrap": "TODO",
+    "overviewRead": "TODO",
+    "playersRead": "TODO",
+    "contractsRead": "TODO",
+    "attendanceRead": "TODO",
+    "logsRead": "TODO",
+    "settingsRead": "TODO",
+    "sessionExpiryExit": "TODO",
+    "evidencePaths": []
+  },
+  "operator": "TODO",
+  "reviewer": "TODO",
+  "notes": "TODO"
+}
