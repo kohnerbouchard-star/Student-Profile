@@ -1,8 +1,7 @@
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
-import type { PlayerRequestScope } from "../domains/players/api/playerRequestScope.ts";
 import {
-  enforcePlayerRateLimit,
-  type EnforcePlayerRateLimitInput,
+  enforceStaffRateLimit,
+  type EnforceStaffRateLimitInput,
 } from "./playerRateLimitService.ts";
 import type { PlayerRateLimitProfile, RateLimitDecision } from "./rateLimitContracts.ts";
 
@@ -21,7 +20,7 @@ export interface StaffMessagingRateLimitResult {
 
 export interface StaffMessagingRateLimitDependencies {
   readonly enforce?: (
-    input: EnforcePlayerRateLimitInput,
+    input: EnforceStaffRateLimitInput,
     client: EdgeSupabaseClient,
   ) => Promise<RateLimitDecision>;
 }
@@ -40,11 +39,12 @@ export async function guardStaffMessagingRateLimit(
   if (!operation) return null;
 
   try {
-    const decision = await (dependencies.enforce ?? enforcePlayerRateLimit)({
+    const decision = await (dependencies.enforce ?? enforceStaffRateLimit)({
       action: operation.action,
       profile: operation.profile,
       request: input.request,
-      scope: staffScope(input),
+      staffUuid: input.staffUserId,
+      gameUuid: input.gameId,
     }, client);
     if (decision.allowed) return null;
     return {
@@ -79,44 +79,20 @@ export function readStaffMessagingRateLimitOperation(
       ? operation("staff.messages.search", "read")
       : operation("staff.messages.read", "read");
   }
+  if (input.suffix === "/messages/policy" && method === "GET") {
+    return operation("staff.messages.policy.read", "read");
+  }
+  if (input.suffix === "/messages/policy" && method === "POST") {
+    return operation("staff.messages.policy.write", "sensitive");
+  }
   if (input.suffix === "/messages/threads" && method === "POST") {
     return operation("staff.messages.create", "sensitive");
   }
-  if (
-    method === "POST" &&
-    /^\/messages\/threads\/thr_[0-9a-f]{32}\/(disable|enable|close)$/.test(input.suffix)
-  ) {
-    return operation("staff.messages.moderate", "sensitive");
-  }
-  if (
-    method === "POST" &&
-    /^\/messages\/threads\/thr_[0-9a-f]{32}\/messages\/msg_[0-9a-f]{32}\/(hide|unhide)$/.test(input.suffix)
-  ) {
-    return operation("staff.messages.moderate", "sensitive");
-  }
-  if (
-    method === "POST" &&
-    /^\/messages\/threads\/thr_[0-9a-f]{32}\/delete$/.test(input.suffix)
-  ) {
-    return operation("staff.messages.retention.delete", "sensitive");
+  const threadMatch = input.suffix.match(/^\/messages\/threads\/thr_([0-9a-f]{32})(?:\/|$)/);
+  if (threadMatch?.[1] && method === "POST") {
+    return operation(`staff.messages.thr_${threadMatch[1].slice(0, 24)}`, "sensitive");
   }
   return null;
-}
-
-function staffScope(input: StaffMessagingRateLimitInput): PlayerRequestScope {
-  return {
-    playerUuid: input.staffUserId,
-    gameId: input.gameId,
-    activeSessionId: input.staffUserId,
-    sessionValid: true,
-    sessionExpiresAt: new Date(Date.now() + 60_000).toISOString(),
-    authorizationContext: {
-      actorType: "player",
-      source: "player_session",
-      gameScope: "session",
-      resourceScope: "own_player",
-    },
-  };
 }
 
 function operation(
