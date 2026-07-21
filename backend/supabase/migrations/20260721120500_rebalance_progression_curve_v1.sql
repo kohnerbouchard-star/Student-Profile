@@ -35,4 +35,50 @@ $$;
 comment on function public.progression_level_threshold_v1(integer) is
   'Bounded level curve with linearly increasing XP increments. Level 20 requires 15,675 XP; the curve is intentionally non-exponential and does not alter economic rewards.';
 
+create or replace function public.enforce_progression_admin_correction_game_active_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_lifecycle_state text;
+  v_operational_status text;
+begin
+  select lifecycle_state, status
+  into v_lifecycle_state, v_operational_status
+  from public.game_sessions
+  where id = new.game_session_id
+  for share;
+
+  if not found then
+    raise exception 'GAME_SESSION_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state = 'paused' then
+    raise exception 'GAME_SESSION_DISABLED' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state in ('ended', 'archived') or v_operational_status = 'archived' then
+    raise exception 'GAME_SESSION_ARCHIVED' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state <> 'active' or v_operational_status <> 'active' then
+    raise exception 'GAME_SESSION_NOT_ACTIVE' using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists enforce_progression_admin_correction_game_active_v1
+on public.progression_admin_corrections;
+
+create trigger enforce_progression_admin_correction_game_active_v1
+before insert on public.progression_admin_corrections
+for each row execute function public.enforce_progression_admin_correction_game_active_v1();
+
+revoke all on function public.enforce_progression_admin_correction_game_active_v1()
+from public, anon, authenticated;
+
+comment on function public.enforce_progression_admin_correction_game_active_v1() is
+  'Serializes Progression corrections with game lifecycle transitions. New corrections require an active game; committed idempotent replays remain available because they do not insert new audit rows.';
+
 commit;
