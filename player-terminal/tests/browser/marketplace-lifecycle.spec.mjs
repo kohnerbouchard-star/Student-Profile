@@ -246,13 +246,17 @@ async function installRoutes(page) {
 }
 
 function installSession(page) {
-  return page.addInitScript(({ token }) => {
+  return page.addInitScript(({ token, gameId }) => {
+    globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
+      ...(globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
+      gameSessionId: gameId,
+    };
     sessionStorage.setItem("econovaria.player.auth.v1", JSON.stringify({
       playerSessionToken: token,
       sessionExpiresAt: "2099-07-21T03:00:00.000Z",
       storedAt: "2026-07-21T01:00:00.000Z",
     }));
-  }, { token: SESSION_TOKEN });
+  }, { token: SESSION_TOKEN, gameId: GAME_ID });
 }
 
 test("Marketplace purchase remains committed when authoritative refresh fails", async ({ page }) => {
