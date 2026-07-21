@@ -1,15 +1,44 @@
 name: Seed Executable Beta Pack
 
 on:
+  push:
+    branches:
+      - agent/seed-content-foundation-v1
+    paths:
+      - ".github/workflows/seed-executable-beta-pack.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/supabase/migrations/**"
+      - "docs/seed-content/**"
+      - "scripts/seed-beta-*.mjs"
+      - "scripts/build-seed-beta-*.mjs"
+      - "scripts/seed-content-*.mjs"
+      - "scripts/generate-*.mjs"
+      - "scripts/apply-seed-*.mjs"
+      - "scripts/reconcile-seed-*.mjs"
+      - "player-terminal/src/data/map-regions.js"
+      - "player-terminal/assets/images/econovaria-world-map.png"
   pull_request:
     branches:
       - main
     paths:
       - ".github/workflows/seed-executable-beta-pack.yml"
-      - "docs/seed-content/executable/beta-pack-v1/**"
-      - "docs/seed-content/reviews/executable-beta-pack-readiness-v1.md"
-      - "scripts/seed-beta-*.mjs"
       - "package.json"
+      - "package-lock.json"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/supabase/migrations/**"
+      - "docs/seed-content/**"
+      - "scripts/seed-beta-*.mjs"
+      - "scripts/build-seed-beta-*.mjs"
+      - "scripts/seed-content-*.mjs"
+      - "scripts/generate-*.mjs"
+      - "scripts/apply-seed-*.mjs"
+      - "scripts/reconcile-seed-*.mjs"
+      - "player-terminal/src/data/map-regions.js"
+      - "player-terminal/assets/images/econovaria-world-map.png"
   workflow_dispatch:
 
 permissions:
@@ -20,11 +49,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  verify-bounded-pack:
+    name: Verify bounded pack and repository contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
-      - name: Check out pull-request head
+      - name: Check out permanent seed head
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -35,36 +65,151 @@ jobs:
           node-version: "22.23.1"
           cache: npm
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
       - name: Pin npm
         run: npm install --global npm@10.9.8
 
-      - name: Install repository dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix backend ci
 
-      - name: Build bounded pack deterministically
+      - name: Rebuild deterministic bounded release
         run: npm run build:seed-beta-pack
 
       - name: Reject generated pack drift
-        shell: bash
         run: git diff --exit-code -- docs/seed-content/executable/beta-pack-v1
 
-      - name: Validate executable pack and calibration
+      - name: Validate bounded release and immutable digest
         run: npm run validate:seed-beta-pack
 
-      - name: Run executable pack tests
+      - name: Run importer and release lifecycle unit tests
         run: npm run test:seed-beta-pack
 
-      - name: Validate importer contract
+      - name: Validate environment-restricted importer
         run: npm run seed:beta:validate
 
-      - name: Run credential-free staging dry run
+      - name: Run credential-free staging plan
         run: npm run seed:beta:dry-run
 
-      - name: Run complete seed-content audit
+      - name: Run all seed audits and simulation reconciliation
         run: npm run audit:seed-content
 
-      - name: Run repository staging preflight
-        run: npm run preflight:staging
+      - name: Run complete repository tests
+        run: npm test
 
-      - name: Scan committed source for credentials
-        run: npm run security:secrets
+      - name: Run Backend typecheck
+        run: npm --prefix backend run typecheck:all
+
+      - name: Run Backend smoke suite
+        run: npm --prefix backend run smoke
+
+      - name: Audit migration source
+        run: npm run audit:migrations
+
+      - name: Run structural isolated-staging preflight
+        run: npm run preflight:seed-content:staging
+
+      - name: Verify branch contains current main
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main
+          test "$(git rev-list --count HEAD..origin/main)" -eq 0
+
+      - name: Check whitespace and patch validity
+        run: git diff --check
+
+      - name: Ensure deterministic builders leave no uncommitted drift
+        run: git diff --exit-code
+
+      - name: Summarize production boundary
+        run: |
+          node - <<'NODE'
+          const p = require('./docs/seed-content/executable/beta-pack-v1/pack-v1.json');
+          if (
+            p.productionAuthorized !== false ||
+            p.activationAuthorized !== false ||
+            p.boundedCounts.marketInstruments !== 240 ||
+            !p.excluded.fullMarketUniverse3200
+          ) throw new Error('Bounded pack production boundary changed.');
+          console.log(JSON.stringify({
+            packId: p.packId,
+            version: p.version,
+            marketInstruments: p.boundedCounts.marketInstruments,
+            productionAuthorized: p.productionAuthorized,
+            activationAuthorized: p.activationAuthorized,
+            fullUniverseExcluded: p.excluded.fullMarketUniverse3200,
+          }, null, 2));
+          NODE
+
+  verify-transactional-release:
+    name: Verify transactional import, replay, rollback, and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start disposable Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/seed-release-supabase-start.log
+          : > "$LOG"
+          STATUS=1
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend \
+              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
+              2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase stop --workdir backend --no-backup || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Replay all migrations from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Run complete transactional seed lifecycle probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          source <(npx supabase status --workdir backend -o env)
+          set +a
+          node scripts/seed-beta-transactional-release-probe.mjs | tee /tmp/seed-release-probe.json
+
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Upload transactional evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-beta-transactional-release-${{ github.sha }}
+          path: |
+            /tmp/seed-release-supabase-start.log
+            /tmp/seed-release-probe.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
