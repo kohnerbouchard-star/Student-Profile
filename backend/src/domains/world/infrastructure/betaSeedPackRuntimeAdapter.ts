@@ -7,18 +7,49 @@ import { WorldRuntimeError } from "../contracts/worldRuntimeContracts.ts";
 
 export const BETA_SEED_PACK_ID = "econovaria.beta-seed-pack.v1";
 export const BETA_SEED_PACK_VERSION = "1.0.0-beta";
-export const BETA_COUNTRY_IDS = Object.freeze([
-  "northreach",
-  "yrethia",
-  "thaloris",
-  "solvend",
-  "eldoran",
-  "valerion",
-  "lumenor",
-  "xalvoria",
-  "dravenlok",
-  "syndalis",
-] as const);
+export const BETA_SEED_STABLE_MEMBER_COUNT = 590;
+
+export interface BetaSeedDownstreamContractInput {
+  readonly schemaVersion: string;
+  readonly packId: string;
+  readonly packVersion: string;
+  readonly packDigest: string;
+  readonly productionAuthorized: boolean;
+  readonly boundedRelease: {
+    readonly arrivalPackages: number;
+    readonly locations: number;
+    readonly routeCalibrations: number;
+    readonly stableReleaseMembers: number;
+  };
+  readonly consumerRules: {
+    readonly copySeedCatalogFiles: boolean;
+    readonly failClosedWhenDefinitionMissingOrInactive: boolean;
+    readonly requireExactDigest: boolean;
+    readonly requireExactPackIdAndVersion: boolean;
+    readonly stableIdReimportCompatible: boolean;
+    readonly treatDeploymentAsActivation: boolean;
+  };
+  readonly contentIdentifiers: {
+    readonly countries: readonly string[];
+    readonly arrivalPackages: {
+      readonly identifiers: readonly string[];
+      readonly source: string;
+    };
+    readonly locations: {
+      readonly count: number;
+      readonly source: string;
+    };
+    readonly routes: {
+      readonly count: number;
+      readonly identifiers: readonly string[];
+      readonly source: string;
+    };
+  };
+  readonly fileBindings: Readonly<Record<string, {
+    readonly path: string;
+    readonly sha256: string;
+  }>>;
+}
 
 export interface BetaPackManifestInput {
   readonly activationAuthorized: boolean;
@@ -61,22 +92,6 @@ export interface BetaLocationRegistryInput {
   readonly version: string;
 }
 
-export interface BetaArrivalCalibrationInput {
-  readonly activationAuthorized: boolean;
-  readonly productionAuthorized: boolean;
-  readonly status: string;
-  readonly version: string;
-  readonly calibrations: readonly {
-    readonly country: string;
-    readonly currencyCode: string;
-    readonly approvedStartingBalance: number;
-    readonly recoveryRoute: string;
-    readonly viability: {
-      readonly approved: boolean;
-    };
-  }[];
-}
-
 export interface BetaCampaignSelectionInput {
   readonly activationAuthorized: boolean;
   readonly packId: string;
@@ -90,13 +105,16 @@ export interface BetaCampaignSelectionInput {
   readonly version: string;
 }
 
+export interface BetaApprovedRouteInput extends WorldRouteDefinition {
+  readonly seedRouteDefinitionId: string;
+}
+
 export interface BetaPackRuntimeInput {
+  readonly downstreamContract: BetaSeedDownstreamContractInput;
   readonly manifest: BetaPackManifestInput;
   readonly locations: BetaLocationRegistryInput;
-  readonly arrival: BetaArrivalCalibrationInput;
   readonly campaign: BetaCampaignSelectionInput;
-  readonly packDigest: string;
-  readonly approvedRoutes: readonly WorldRouteDefinition[];
+  readonly approvedRoutes: readonly BetaApprovedRouteInput[];
 }
 
 export interface BetaPackRuntimeReference {
@@ -107,37 +125,45 @@ export interface BetaPackRuntimeReference {
   readonly arrivalPackageDefinitionIds: Readonly<Record<string, string>>;
   readonly selectedCampaignEventIds: readonly string[];
   readonly selectedNewsTemplateIds: readonly string[];
+  readonly sourceFileBindings: BetaSeedDownstreamContractInput["fileBindings"];
 }
 
 export function adaptBetaSeedPackForRuntime(
   input: BetaPackRuntimeInput,
 ): BetaPackRuntimeReference {
-  validateManifest(input.manifest, input.packDigest);
-  validateArrival(input.arrival);
-  const locations = adaptLocations(input.locations);
+  const countries = validateDownstreamContract(input.downstreamContract);
+  validateManifest(input.manifest, input.downstreamContract);
+  const locations = adaptLocations(input.locations, countries);
   validateCampaign(input.campaign);
-  validateApprovedRoutes(input.approvedRoutes, locations);
+  const routes = validateApprovedRoutes(
+    input.approvedRoutes,
+    input.downstreamContract,
+    locations,
+  );
+  const arrivalPackageDefinitionIds = bindArrivalPackages(
+    input.downstreamContract.contentIdentifiers.arrivalPackages.identifiers,
+    countries,
+  );
 
   return Object.freeze({
     packId: BETA_SEED_PACK_ID,
     packVersion: BETA_SEED_PACK_VERSION,
-    packDigest: input.packDigest,
+    packDigest: input.downstreamContract.packDigest,
     world: Object.freeze({
       definition: Object.freeze({
         packId: BETA_SEED_PACK_ID,
         packVersion: BETA_SEED_PACK_VERSION,
-        definitionDigest: input.packDigest,
+        definitionDigest: `sha256:${input.downstreamContract.packDigest}`,
       }),
       locations,
-      routes: Object.freeze([...input.approvedRoutes]),
+      routes,
     }),
-    arrivalPackageDefinitionIds: Object.freeze(Object.fromEntries(
-      BETA_COUNTRY_IDS.map((countryId) => [countryId, `arrival.${countryId}.v1`]),
-    )),
+    arrivalPackageDefinitionIds,
     selectedCampaignEventIds: Object.freeze([...input.campaign.selectedEventStableIds]),
     selectedNewsTemplateIds: Object.freeze([
       ...input.campaign.selectedNewsTemplateStableIds,
     ]),
+    sourceFileBindings: Object.freeze({ ...input.downstreamContract.fileBindings }),
   });
 }
 
@@ -149,59 +175,79 @@ export function publicLocationIdFromStableId(stableId: string): string {
   return `loc_${country}_${location.replaceAll("-", "_")}_${version}`;
 }
 
+function validateDownstreamContract(
+  contract: BetaSeedDownstreamContractInput,
+): readonly string[] {
+  if (
+    contract.schemaVersion !== "econovaria-beta-seed-downstream-consumer-contract-v1" ||
+    contract.packId !== BETA_SEED_PACK_ID ||
+    contract.packVersion !== BETA_SEED_PACK_VERSION ||
+    !/^[0-9a-f]{64}$/.test(contract.packDigest) ||
+    contract.productionAuthorized ||
+    contract.boundedRelease.arrivalPackages !== 10 ||
+    contract.boundedRelease.locations !== 50 ||
+    contract.boundedRelease.routeCalibrations !== 13 ||
+    contract.boundedRelease.stableReleaseMembers !== BETA_SEED_STABLE_MEMBER_COUNT ||
+    contract.consumerRules.copySeedCatalogFiles ||
+    !contract.consumerRules.failClosedWhenDefinitionMissingOrInactive ||
+    !contract.consumerRules.requireExactDigest ||
+    !contract.consumerRules.requireExactPackIdAndVersion ||
+    !contract.consumerRules.stableIdReimportCompatible ||
+    contract.consumerRules.treatDeploymentAsActivation
+  ) {
+    throw invalid("Merged Seed downstream contract does not match the approved bounded release.");
+  }
+  const countries = contract.contentIdentifiers.countries;
+  if (
+    countries.length !== 10 ||
+    new Set(countries).size !== 10 ||
+    countries.some((country) => !/^[a-z0-9][a-z0-9-]{1,63}$/.test(country)) ||
+    contract.contentIdentifiers.locations.count !== 50 ||
+    contract.contentIdentifiers.routes.count !== 13 ||
+    contract.contentIdentifiers.routes.identifiers.length !== 13 ||
+    contract.contentIdentifiers.arrivalPackages.identifiers.length !== 10
+  ) {
+    throw invalid("Merged Seed identifier counts are invalid.");
+  }
+  for (const binding of Object.values(contract.fileBindings)) {
+    if (!binding.path.trim() || !/^[0-9a-f]{64}$/.test(binding.sha256)) {
+      throw invalid("Merged Seed file binding is invalid.");
+    }
+  }
+  for (const required of ["pack", "locations", "campaign", "arrivalCalibration", "calibrationScenarios"]) {
+    if (!contract.fileBindings[required]) {
+      throw invalid(`Merged Seed file binding ${required} is missing.`);
+    }
+  }
+  return Object.freeze([...countries]);
+}
+
 function validateManifest(
   manifest: BetaPackManifestInput,
-  packDigest: string,
+  contract: BetaSeedDownstreamContractInput,
 ): void {
   if (
-    manifest.packId !== BETA_SEED_PACK_ID ||
-    manifest.version !== BETA_SEED_PACK_VERSION ||
+    manifest.packId !== contract.packId ||
+    manifest.version !== contract.packVersion ||
     manifest.schemaVersion !== "econovaria-beta-seed-pack-v1" ||
     manifest.maturity !== "executable-bounded-beta-pack" ||
     manifest.status !== "approved-for-isolated-staging" ||
     manifest.activationAuthorized ||
     manifest.productionAuthorized ||
     !manifest.allowedEnvironments.includes("staging") ||
-    manifest.boundedCounts.arrivalPackages !== 10 ||
-    manifest.boundedCounts.locationsVerified !== 50 ||
+    manifest.boundedCounts.arrivalPackages !== contract.boundedRelease.arrivalPackages ||
+    manifest.boundedCounts.locationsVerified !== contract.boundedRelease.locations ||
     manifest.domainFiles.arrival !== "arrival-calibration-v1.json" ||
     manifest.domainFiles.campaign !== "campaign-v1.json" ||
-    manifest.domainFiles.locations !== "location-registry-verified-v1.json" ||
-    !/^sha256:[0-9a-f]{64}$/.test(packDigest)
+    manifest.domainFiles.locations !== "location-registry-verified-v1.json"
   ) {
-    throw invalid("Seed pack manifest does not match the approved bounded staging contract.");
-  }
-}
-
-function validateArrival(arrival: BetaArrivalCalibrationInput): void {
-  if (
-    arrival.activationAuthorized ||
-    arrival.productionAuthorized ||
-    arrival.status !== "approved-for-isolated-staging" ||
-    arrival.version !== BETA_SEED_PACK_VERSION ||
-    arrival.calibrations.length !== BETA_COUNTRY_IDS.length
-  ) {
-    throw invalid("Arrival calibration does not match the approved staging pack.");
-  }
-  const countries = new Set<string>();
-  for (const calibration of arrival.calibrations) {
-    if (
-      !BETA_COUNTRY_IDS.includes(calibration.country as never) ||
-      countries.has(calibration.country) ||
-      !/^[A-Z]{3}$/.test(calibration.currencyCode) ||
-      !Number.isSafeInteger(calibration.approvedStartingBalance) ||
-      calibration.approvedStartingBalance <= 0 ||
-      !calibration.recoveryRoute.trim() ||
-      !calibration.viability.approved
-    ) {
-      throw invalid(`Arrival calibration for ${calibration.country} is invalid.`);
-    }
-    countries.add(calibration.country);
+    throw invalid("Seed pack manifest does not match the merged downstream contract.");
   }
 }
 
 function adaptLocations(
   registry: BetaLocationRegistryInput,
+  countries: readonly string[],
 ): readonly WorldLocationDefinition[] {
   if (
     registry.activationAuthorized ||
@@ -213,6 +259,7 @@ function adaptLocations(
   ) {
     throw invalid("Location registry is not the approved verified staging registry.");
   }
+  const allowedCountries = new Set(countries);
   const stableIds = new Set<string>();
   const publicIds = new Set<string>();
   const countryCounts = new Map<string, number>();
@@ -222,10 +269,9 @@ function adaptLocations(
     if (
       stableIds.has(location.id) ||
       publicIds.has(publicLocationId) ||
-      !BETA_COUNTRY_IDS.includes(location.country as never) ||
+      !allowedCountries.has(location.country) ||
       !location.name.trim() ||
-      location.mapVerificationStatus !==
-        "verified-against-player-artwork-and-polygons" ||
+      location.mapVerificationStatus !== "verified-against-player-artwork-and-polygons" ||
       location.runtimeSupport !== "bounded-pack-reference" ||
       location.mapPoint.coordinateSpace !== "1672x941" ||
       !Number.isInteger(location.mapPoint.x) ||
@@ -239,10 +285,7 @@ function adaptLocations(
     }
     stableIds.add(location.id);
     publicIds.add(publicLocationId);
-    countryCounts.set(
-      location.country,
-      (countryCounts.get(location.country) ?? 0) + 1,
-    );
+    countryCounts.set(location.country, (countryCounts.get(location.country) ?? 0) + 1);
     adapted.push(Object.freeze({
       publicLocationId,
       countryId: location.country,
@@ -251,7 +294,7 @@ function adaptLocations(
       enabled: true,
     }));
   }
-  for (const countryId of BETA_COUNTRY_IDS) {
+  for (const countryId of countries) {
     if (countryCounts.get(countryId) !== 5) {
       throw invalid(`Country ${countryId} must contribute exactly five locations.`);
     }
@@ -271,71 +314,84 @@ function validateCampaign(campaign: BetaCampaignSelectionInput): void {
     !campaign.policy.includes("bounded references only") ||
     campaign.selectedEventStableIds.length === 0 ||
     campaign.selectedNewsTemplateStableIds.length === 0 ||
-    new Set(campaign.selectedEventStableIds).size !==
-      campaign.selectedEventStableIds.length ||
-    new Set(campaign.selectedNewsTemplateStableIds).size !==
-      campaign.selectedNewsTemplateStableIds.length ||
-    campaign.selectedEventStableIds.some((id) =>
-      !/^event\.[a-z0-9.-]+\.v[0-9]+$/.test(id)
-    ) ||
-    campaign.selectedNewsTemplateStableIds.some((id) =>
-      !/^news-template\.[a-z0-9.-]+\.v[0-9]+$/.test(id)
-    )
+    new Set(campaign.selectedEventStableIds).size !== campaign.selectedEventStableIds.length ||
+    new Set(campaign.selectedNewsTemplateStableIds).size !== campaign.selectedNewsTemplateStableIds.length ||
+    campaign.selectedEventStableIds.some((id) => !/^event\.[a-z0-9.-]+\.v[0-9]+$/.test(id)) ||
+    campaign.selectedNewsTemplateStableIds.some((id) => !/^news-template\.[a-z0-9.-]+\.v[0-9]+$/.test(id))
   ) {
     throw invalid("Campaign selection is not a valid bounded runtime reference set.");
   }
 }
 
 function validateApprovedRoutes(
-  routes: readonly WorldRouteDefinition[],
+  routes: readonly BetaApprovedRouteInput[],
+  contract: BetaSeedDownstreamContractInput,
   locations: readonly WorldLocationDefinition[],
-): void {
-  if (routes.length === 0) {
-    throw invalid(
-      "No approved executable route definitions were supplied; proposed seed routes cannot be activated by inference.",
-    );
+): readonly WorldRouteDefinition[] {
+  if (routes.length !== contract.contentIdentifiers.routes.count) {
+    throw invalid("Approved route count does not match the merged Seed contract.");
+  }
+  const expected = new Set(contract.contentIdentifiers.routes.identifiers);
+  const supplied = new Set(routes.map((route) => route.seedRouteDefinitionId));
+  if (supplied.size !== expected.size || [...expected].some((id) => !supplied.has(id))) {
+    throw invalid("Approved route identities do not match the merged Seed contract.");
   }
   const locationIds = new Set(locations.map((location) => location.publicLocationId));
-  const routeIds = new Set<string>();
+  const publicRouteIds = new Set<string>();
+  const modes = new Set<string>();
+  const result: WorldRouteDefinition[] = [];
   for (const route of routes) {
     if (
-      routeIds.has(route.publicRouteId) ||
+      !expected.has(route.seedRouteDefinitionId) ||
+      publicRouteIds.has(route.publicRouteId) ||
       !/^rte_[a-z0-9_]+$/.test(route.publicRouteId) ||
       !locationIds.has(route.fromLocationId) ||
-      !locationIds.has(route.toLocationId)
+      !locationIds.has(route.toLocationId) ||
+      route.fromLocationId === route.toLocationId ||
+      !Number.isSafeInteger(route.baseCostMinor) ||
+      route.baseCostMinor < 0 ||
+      !Number.isSafeInteger(route.baseDurationMinutes) ||
+      route.baseDurationMinutes <= 0
     ) {
       throw invalid(`Approved route ${route.publicRouteId} is invalid.`);
     }
-    routeIds.add(route.publicRouteId);
+    publicRouteIds.add(route.publicRouteId);
+    modes.add(route.mode);
+    const { seedRouteDefinitionId: _seedRouteDefinitionId, ...runtimeRoute } = route;
+    result.push(Object.freeze(runtimeRoute));
   }
+  for (const mode of ["land", "sea", "air", "meridian"]) {
+    if (!modes.has(mode)) throw invalid(`Approved route set is missing ${mode} coverage.`);
+  }
+  return Object.freeze(result);
 }
 
-function classifyLocation(
-  category: string,
-): WorldLocationDefinition["kind"] {
+function bindArrivalPackages(
+  identifiers: readonly string[],
+  countries: readonly string[],
+): Readonly<Record<string, string>> {
+  const result = new Map<string, string>();
+  for (const identifier of identifiers) {
+    const match = identifier.match(/^arrival-package\.([a-z0-9-]+)\.[a-z0-9-]+\.v[0-9]+$/);
+    if (!match || !countries.includes(match[1]!) || result.has(match[1]!)) {
+      throw invalid(`Arrival package ${identifier} is invalid or duplicated.`);
+    }
+    result.set(match[1]!, identifier);
+  }
+  if (result.size !== countries.length) throw invalid("Arrival package coverage is incomplete.");
+  return Object.freeze(Object.fromEntries(result));
+}
+
+function classifyLocation(category: string): WorldLocationDefinition["kind"] {
   const normalized = category.toLowerCase();
-  if (normalized.includes("airport") || normalized.includes("aerospace")) {
-    return "airport";
-  }
+  if (normalized.includes("airport") || normalized.includes("aerospace")) return "airport";
+  if (normalized.includes("port") || normalized.includes("harbor") || normalized.includes("coast")) return "port";
+  if (normalized.includes("meridian") || normalized.includes("junction")) return "meridian_hub";
   if (
-    normalized.includes("port") ||
-    normalized.includes("harbor") ||
-    normalized.includes("coast")
-  ) {
-    return "port";
-  }
-  if (normalized.includes("meridian") || normalized.includes("junction")) {
-    return "meridian_hub";
-  }
-  if (
-    normalized.includes("industrial") ||
-    normalized.includes("manufacturing") ||
-    normalized.includes("works") ||
-    normalized.includes("energy") ||
+    normalized.includes("industrial") || normalized.includes("manufacturing") ||
+    normalized.includes("works") || normalized.includes("energy") ||
     normalized.includes("mineral")
-  ) {
-    return "industrial";
-  }
+  ) return "industrial";
   if (normalized.includes("capital")) return "capital";
   return "city";
 }
