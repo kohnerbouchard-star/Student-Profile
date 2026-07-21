@@ -4,114 +4,30 @@ Generated ten arrival packages, messages, tutorials, and stabilization Contracts
 exit=0
 
 ## check arrival graph
-
-> econovaria@0.0.0 audit:seed-content-arrivals
-> node scripts/generate-arrival-foundation-content.mjs --check
-
-Verified ten arrival packages, messages, tutorials, and stabilization Contracts.
-exit=0
+npm error Missing script: "audit:seed-content-arrivals"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_18_975Z-debug-0.log
+exit=1
 
 ## test seed preflight
-
-> econovaria@0.0.0 test:seed-content-preflight
-> node --test scripts/seed-content-preflight.test.mjs
-
-TAP version 13
-# Subtest: current PR \#163 design catalog is structurally valid and reports readiness blockers
-ok 1 - current PR \#163 design catalog is structurally valid and reports readiness blockers
-  ---
-  duration_ms: 115.348917
-  type: 'test'
-  ...
-# Subtest: preflight report is deterministic for unchanged inputs
-ok 2 - preflight report is deterministic for unchanged inputs
-  ---
-  duration_ms: 153.31324
-  type: 'test'
-  ...
-# Subtest: production environment fails closed for the unauthorized design pack
-ok 3 - production environment fails closed for the unauthorized design pack
-  ---
-  duration_ms: 78.699976
-  type: 'test'
-  ...
-# Subtest: staging mode remains blocked until executable content is complete
-ok 4 - staging mode remains blocked until executable content is complete
-  ---
-  duration_ms: 82.487127
-  type: 'test'
-  ...
-# Subtest: reusable definitions reject runtime ownership fields and UUID values
-ok 5 - reusable definitions reject runtime ownership fields and UUID values
-  ---
-  duration_ms: 0.40007
-  type: 'test'
-  ...
-# Subtest: definition arrays reject duplicate stable keys
-ok 6 - definition arrays reject duplicate stable keys
-  ---
-  duration_ms: 0.129333
-  type: 'test'
-  ...
-# Subtest: declared paths cannot escape the content root
-ok 7 - declared paths cannot escape the content root
-  ---
-  duration_ms: 0.446957
-  type: 'test'
-  ...
-# Subtest: operator must provide an explicit valid environment
-ok 8 - operator must provide an explicit valid environment
-  ---
-  duration_ms: 0.269826
-  type: 'test'
-  ...
-# Subtest: simulation manifests normalize both supported checksum schemas
-ok 9 - simulation manifests normalize both supported checksum schemas
-  ---
-  duration_ms: 0.515576
-  type: 'test'
-  ...
-1..9
-# tests 9
-# suites 0
-# pass 9
-# fail 0
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 499.230608
-exit=0
+npm error Missing script: "test:seed-content-preflight"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_19_086Z-debug-0.log
+exit=1
 
 ## design seed preflight
-
-> econovaria@0.0.0 preflight:seed-content
-> node scripts/seed-content-preflight.mjs --environment test --mode design
-
-Seed content preflight: content-pack.econovaria.seed-foundation.v1 0.2.0-design
-Environment: test
-Mode: design
-JSON files checked: 94
-Errors: 0; blockers: 16; warnings: 0
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-classes is blocked; dependencies: arrival-package-viability-simulation, skills-and-credentials, class-scoring-model, progression-persistence.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: arrival-packages is definition-only; dependencies: starting-value-calibration, housing-cost-simulation, relationship-persistence, authoritative-instantiation-route.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: banking-products is definition-only; dependencies: banking-write-capability, rate-and-affordability-simulation.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: contracts is definition-only; dependencies: backend-contract-lifecycle, reward-calibration, targeting-capability-map.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: events-news-interactions is definition-only; dependencies: event-application-authority, narrative-persistence, effect-capability-map.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: exchanges is definition-only; dependencies: market-calendar-policy, backend-exchange-support.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: industries-and-commodities is definition-only; dependencies: subindustry-editorial-review, benchmark-methodology-review.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: issuers is definition-only; dependencies: financial-profile-enrichment-six-countries, issuer-runtime-schema.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: locations is blocked; dependencies: active-map-artwork, map-coordinate-verification, adjacency-verification, runtime-location-schema.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: market-instruments is definition-only; dependencies: instrument-capability-mapping, financial-calibration-six-countries, market-simulation-six-countries, bounded-active-market-approval.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: progression is definition-only; dependencies: progression-persistence, threshold-calibration.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: routes is blocked; dependencies: map-verification, route-runtime-model.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: staging-import is blocked; dependencies: backend-baseline, stable-id-storage, import-schema-mapping, rollback-rehearsal.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: store-items is definition-only; dependencies: item-effect-capability-map, redemption-lifecycle, price-calibration, recipe-approval.
-[BLOCKER] DESIGN_DOMAIN_BLOCKED docs/seed-content/manifests/design-manifest-v1.json: tutorials-and-notifications is definition-only; dependencies: route-capability-map, notification-deduplication, tutorial-completion-persistence.
-[BLOCKER] LOCATION_MAP_PENDING docs/seed-content/locations/location-registry-v1.json: 50 locations still lack verified map points.
-Result: DESIGN_VALID_WITH_BLOCKERS
-exit=0
+npm error Missing script: "preflight:seed-content"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-07-21T00_33_19_196Z-debug-0.log
+exit=1
 
 ## diff check
 exit=0
 
-finalStatus=0
+finalStatus=1
