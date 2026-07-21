@@ -5,18 +5,18 @@ on:
     paths:
       - ".github/workflows/progression-runtime-v1.yml"
       - "backend/src/domains/progression/**"
-      - "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts"
-      - "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/src/security/progressionRateLimitDispatch.test.ts"
       - "backend/supabase/functions/admin-api/**"
-      - "backend/supabase/migrations/2026072111*_progression_*"
+      - "backend/supabase/migrations/*progression*.sql"
       - "admin/progression-review-*"
       - "admin/index.html"
       - "player-terminal/src/api/**"
       - "player-terminal/src/pages/progression-page.js"
       - "player-terminal/src/data/empty-read-models.js"
+      - "player-terminal/tests/browser/player-progression.spec.mjs"
       - "scripts/admin-progression-contract.mjs"
       - "scripts/progression-balance-simulation.mjs"
       - "backend/package.json"
@@ -41,6 +41,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
+            player-terminal/package-lock.json
       - name: Pin npm
         run: npm install --global npm@10.9.8
       - name: Set up Deno
@@ -51,6 +52,9 @@ jobs:
         run: npm ci
       - name: Install backend dependencies
         working-directory: backend
+        run: npm ci
+      - name: Install Player dependencies
+        working-directory: player-terminal
         run: npm ci
       - name: Validate migration catalog
         run: npm run audit:migrations
@@ -66,6 +70,15 @@ jobs:
       - name: Run Player capability contracts
         working-directory: backend
         run: npm run test:player-capabilities
+      - name: Run Player static verification
+        working-directory: player-terminal
+        run: npm run verify
+      - name: Install Chromium
+        working-directory: player-terminal
+        run: npx playwright install --with-deps chromium
+      - name: Run Progression browser verification
+        working-directory: player-terminal
+        run: npx playwright test tests/browser/player-progression.spec.mjs
       - name: Run Player security contracts
         working-directory: backend
         run: npm run test:player-security

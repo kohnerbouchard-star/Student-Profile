@@ -91,6 +91,13 @@ function mapRpcError(message: string): ProgressionError {
       true,
     );
   }
+  if (upper.includes("PROGRESSION_IDEMPOTENCY_CONFLICT")) {
+    return new ProgressionError(
+      "progression_idempotency_conflict",
+      "This idempotency key was used for another Progression event.",
+      409,
+    );
+  }
   if (upper.includes("PROGRESSION_EVENT_TYPE_UNSUPPORTED")) {
     return new ProgressionError(
       "progression_event_type_unsupported",

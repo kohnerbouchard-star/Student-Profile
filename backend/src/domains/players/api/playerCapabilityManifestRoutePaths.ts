@@ -1,40 +1,39 @@
 import type {
   PlayerCapabilityManifestRoute,
 } from "../contracts/playerCapabilityManifestContracts.ts";
-import {
-  readPlayerProgressionRoutePath,
-} from "../../progression/api/playerProgressionRoutePaths.ts";
-import type {
-  PlayerProgressionRoute,
-} from "../../progression/contracts/progressionContracts.ts";
 
 export function readPlayerCapabilityManifestRoutePath(
   pathname: string,
-): PlayerCapabilityManifestRoute | PlayerProgressionRoute | null {
+): PlayerCapabilityManifestRoute | null {
   const segments = pathname.split("/").filter(Boolean);
   const routeSegments = readExactRouteSegments(segments);
 
   if (
-    routeSegments?.[0] === "players" &&
-    routeSegments[1] === "me" &&
-    routeSegments[2] === "capabilities"
+    !routeSegments ||
+    routeSegments[0] !== "players" ||
+    routeSegments[1] !== "me" ||
+    routeSegments[2] !== "capabilities"
   ) {
-    return routeSegments.length === 3
-      ? { kind: "manifest" }
-      : { kind: "malformed" };
+    return null;
   }
 
-  return readPlayerProgressionRoutePath(pathname);
+  return routeSegments.length === 3
+    ? { kind: "manifest" }
+    : { kind: "malformed" };
 }
 
 function readExactRouteSegments(
   segments: readonly string[],
 ): readonly string[] | null {
   if (segments[0] === "players") return segments;
+
   if (
     segments[0] === "functions" &&
     segments[1] === "v1" &&
     segments[2] === "classroom-api"
-  ) return segments.slice(3);
+  ) {
+    return segments.slice(3);
+  }
+
   return null;
 }

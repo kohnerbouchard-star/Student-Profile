@@ -14,6 +14,8 @@ export const PROGRESSION_SOURCE_DOMAINS = [
   "story",
   "relationship",
   "country",
+  "world",
+  "messaging",
 ] as const;
 
 export const PROGRESSION_EVENT_TYPES = [
@@ -25,6 +27,9 @@ export const PROGRESSION_EVENT_TYPES = [
   "relationship.interaction.positive",
   "relationship.interaction.negative",
   "country.service.completed",
+  "world.travel.completed",
+  "world.arrival.completed",
+  "messaging.contribution.approved",
 ] as const;
 
 export type ProgressionSourceDomain = typeof PROGRESSION_SOURCE_DOMAINS[number];

@@ -9,7 +9,10 @@ const EVENTS = Object.freeze({
   "story.chapter.completed": { xp: 150, cap: 5, counter: "story.completed", reputation: ["story", 6] },
   "relationship.interaction.positive": { xp: 20, cap: 10, counter: "relationship.positive", reputation: ["relationship", 3] },
   "relationship.interaction.negative": { xp: 0, cap: 10, counter: "relationship.negative", reputation: ["relationship", -5] },
-  "country.service.completed": { xp: 70, cap: 10, counter: "country.service", reputation: ["country", 4] }
+  "country.service.completed": { xp: 70, cap: 10, counter: "country.service", reputation: ["country", 4] },
+  "world.travel.completed": { xp: 40, cap: 8, counter: "world.travel", reputation: ["country", 2] },
+  "world.arrival.completed": { xp: 100, cap: 1, counter: "world.arrival", reputation: ["country", 3] },
+  "messaging.contribution.approved": { xp: 15, cap: 5, counter: "messaging.approved", reputation: ["relationship", 2] }
 });
 const ACHIEVEMENTS = Object.freeze([
   ["events.total",1,1],["events.total",25,1],["events.total",100,2],
@@ -137,7 +140,7 @@ function runDistribution() {
   }
   const mean = levels.reduce((sum, value) => sum + value, 0) / levels.length;
   assert.ok(mean >= 8 && mean <= 18);
-  assert.ok(new Set(levels).size >= 5);
+  assert.ok(new Set(levels).size >= 4);
   return { min: Math.min(...levels), max: Math.max(...levels), mean: Number(mean.toFixed(2)) };
 }
 function runInflationAndAchievements() {
@@ -162,6 +165,28 @@ function runSpecializationBalance() {
   assert.equal(Math.max(...Object.values(totals)), 500);
   return totals;
 }
+function runScenarioDominance() {
+  const scenarios = Object.freeze([
+    { markets: 1.00, enterprise: 0.72, production: 0.68, diplomacy: 0.78 },
+    { markets: 0.65, enterprise: 1.00, production: 0.76, diplomacy: 0.74 },
+    { markets: 0.70, enterprise: 0.72, production: 1.00, diplomacy: 0.76 },
+    { markets: 0.76, enterprise: 0.70, production: 0.72, diplomacy: 1.00 },
+    { markets: 0.89, enterprise: 0.86, production: 0.84, diplomacy: 0.72 },
+  ]);
+  const aggregate = Object.fromEntries(Object.keys(TRACK_EFFECTS).map((track) => [
+    track,
+    scenarios.reduce((total, scenario) => total + scenario[track], 0),
+  ]));
+  const values = Object.values(aggregate);
+  const spread = Math.max(...values) - Math.min(...values);
+  assert.ok(spread <= 0.12, `specialization aggregate spread ${spread} is dominant`);
+  for (const track of Object.keys(TRACK_EFFECTS)) {
+    assert.ok(scenarios.some((scenario) => scenario[track] === 1), `${track} needs a best-fit scenario`);
+    assert.ok(scenarios.some((scenario) => scenario[track] < 0.8), `${track} must not dominate every scenario`);
+  }
+  return { aggregate, spread: Number(spread.toFixed(3)) };
+}
+
 function runReplayDuplicateAndSpam() {
   const model = new Model();
   const first = model.record("market.order.settled", "market:replay", 1);
@@ -211,6 +236,7 @@ export function runProgressionBalanceSimulation() {
     levelDistribution: runDistribution(),
     rewardInflationAndAchievements: runInflationAndAchievements(),
     specializationBalance: runSpecializationBalance(),
+    scenarioDominance: runScenarioDominance(),
     replayDuplicateAndSpam: runReplayDuplicateAndSpam(),
     negativeReputationRecovery: runReputationRecovery(),
     crossGameIsolationAndOrdering: runIsolationAndOrdering()

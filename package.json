@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "description": "Repository-wide validation and production-readiness tooling for Econovaria.",
-  "engines": { "node": ">=22.23.1 <23", "npm": ">=10.9.8 <11" },
+  "engines": {
+    "node": ">=22.23.1 <23",
+    "npm": ">=10.9.8 <11"
+  },
   "packageManager": "npm@10.9.8",
   "scripts": {
     "audit": "npm run audit:migrations && npm run audit:architecture && npm run audit:assets && npm run audit:admin-contracts && npm run audit:incident-readiness && npm run audit:legacy-runtime && npm run audit:recovery && npm run audit:observability && npm run audit:beta-e2e",
@@ -50,5 +53,8 @@
     "db:reset": "supabase db reset --workdir backend --local",
     "test": "npm run audit && npm run test:deployment-readiness && npm run test:release-platform && npm run test:branch-hygiene && npm run test:incident-readiness && npm run test:legacy-runtime && npm run test:recovery-contract && npm run test:observability && npm run test:beta-e2e && npm run test:market-trigger && npm run test:admin-mounted-event && npm run test:admin-redemptions && npm run test:admin-game-lifecycle && npm run test:admin-progression && npm run test:progression-simulation && npm run test:player-runtime-cutover && npm run test:security-probes && node scripts/admin-session-manager-smoke.mjs && node scripts/admin-shell-smoke.mjs && node scripts/admin-v606-full-drift-audit.mjs"
   },
-  "devDependencies": { "playwright": "1.61.1", "supabase": "2.109.1" }
+  "devDependencies": {
+    "playwright": "1.61.1",
+    "supabase": "2.109.1"
+  }
 }

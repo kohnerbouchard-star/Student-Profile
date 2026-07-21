@@ -67,6 +67,34 @@ Deno.test("trusted Progression event preserves replay outcome", async () => {
   assertEquals(result.outcome, "replayed");
 });
 
+Deno.test("trusted Progression contract accepts bounded World and Messaging events", async () => {
+  for (const [sourceDomain, eventType, sourcePublicId] of [
+    ["world", "world.travel.completed", "journey_001"],
+    ["world", "world.arrival.completed", "arrival_001"],
+    ["messaging", "messaging.contribution.approved", "message_001"],
+  ] as const) {
+    const client = new FakeClient([{
+      event_outcome: "applied",
+      event_id: EVENT,
+      experience_awarded: 40,
+      resulting_experience: 160,
+      resulting_level: 2,
+      achievements_completed: 0,
+    }]);
+    await recordTrustedProgressionEventV1(client as never, {
+      gameId: GAME,
+      playerUuid: PLAYER,
+      sourceDomain,
+      eventType,
+      sourcePublicId,
+      idempotencyKey: `${sourceDomain}:${sourcePublicId}`,
+      occurredAt: "2026-07-21T01:00:00.000Z",
+    });
+    assertEquals((client.calls[0]?.args as { p_source_domain?: string }).p_source_domain, sourceDomain);
+    assertEquals((client.calls[0]?.args as { p_event_type?: string }).p_event_type, eventType);
+  }
+});
+
 Deno.test("trusted Progression event rejects client-shaped event types before RPC", async () => {
   const client = new FakeClient([]);
   let failed = false;

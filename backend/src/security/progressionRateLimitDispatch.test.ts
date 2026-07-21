@@ -19,16 +19,16 @@ Deno.test("Progression operations have distinct server-owned actions", () => {
   assertEquals(readReviewedPlayerRateLimitOperation("progressionClaim", "POST"), { action: "player.progression.reward.claim", profile: "sensitive" });
 });
 
-Deno.test("capability dispatch seam remaps Progression before consuming a bucket", async () => {
-  for (const [method, path, action] of [
-    ["GET", "/players/me/progression", "player.progression.read"],
-    ["POST", "/players/me/progression/skills/skl_market_literacy_v1/unlock", "player.progression.skill.unlock"],
-    ["POST", `/players/me/progression/rewards/${REWARD}/claim`, "player.progression.reward.claim"],
+Deno.test("explicit Progression endpoints consume only their reviewed buckets", async () => {
+  for (const [endpointKey, method, path, action] of [
+    ["progression", "GET", "/players/me/progression", "player.progression.read"],
+    ["progressionUnlock", "POST", "/players/me/progression/skills/skl_market_literacy_v1/unlock", "player.progression.skill.unlock"],
+    ["progressionClaim", "POST", `/players/me/progression/rewards/${REWARD}/claim`, "player.progression.reward.claim"],
   ] as const) {
     let observed = "";
     const response = await dispatchRateLimitedReviewedPlayerRequest(
       new Request(`https://example.test${path}`, { method, headers: { "x-player-session-token": "token", "x-real-ip": "203.0.113.42" } }),
-      "capabilities",
+      endpointKey,
       () => new Response("ok"),
       dependencies({ enforcePostAuth: (input) => { observed = input.action; return Promise.resolve(ALLOWED); } }),
     );
