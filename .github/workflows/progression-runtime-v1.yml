@@ -9,8 +9,9 @@ on:
       - "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
       - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/security/progressionRateLimitDispatch.test.ts"
       - "backend/supabase/functions/admin-api/**"
-      - "backend/supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql"
+      - "backend/supabase/migrations/2026072111*_progression_*"
       - "admin/progression-review-*"
       - "admin/index.html"
       - "player-terminal/src/api/**"
@@ -59,7 +60,9 @@ jobs:
         run: npm run test:admin-progression
       - name: Run Progression backend contracts
         working-directory: backend
-        run: npm run test:player-progression
+        run: |
+          npm run test:player-progression
+          deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/security/progressionRateLimitDispatch.test.ts
       - name: Run Player capability contracts
         working-directory: backend
         run: npm run test:player-capabilities
