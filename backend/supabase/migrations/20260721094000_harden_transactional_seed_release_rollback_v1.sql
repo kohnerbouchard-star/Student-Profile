@@ -18,7 +18,6 @@ declare
   v_deleted integer := 0;
   v_soft integer := 0;
   v_other_reference boolean;
-  v_created_by_any_release boolean;
   v_previous_row jsonb;
 begin
   if not public.seed_content_request_is_privileged_v1() then
@@ -62,21 +61,10 @@ begin
         and r.status not in ('rolled_back', 'failed')
     );
 
-    v_created_by_any_release := exists (
-      select 1
-      from public.seed_content_release_members m
-      where m.object_type = v_member.object_type
-        and m.record_id = v_member.record_id
-        and m.created_by_release
-    );
-
-    select m.previous_row into v_previous_row
-    from public.seed_content_release_members m
-    where m.object_type = v_member.object_type
-      and m.record_id = v_member.record_id
-      and m.previous_row is not null
-    order by m.created_at
-    limit 1;
+    -- The snapshot and ownership decision must come from this release member.
+    -- Using another release's earliest snapshot or creation flag can corrupt a
+    -- later release during rollback.
+    v_previous_row := v_member.previous_row;
 
     if v_member.object_type in ('stock_template', 'contract_template')
        and v_other_reference then
@@ -101,7 +89,7 @@ begin
             and game_session_id = p_game_session_id;
 
         when 'contract_template' then
-          if v_created_by_any_release then
+          if v_member.created_by_release then
             delete from public.contract_templates where id = v_member.record_id;
           elsif v_previous_row is not null then
             update public.contract_templates
@@ -121,7 +109,7 @@ begin
           end if;
 
         when 'stock_template' then
-          if v_created_by_any_release then
+          if v_member.created_by_release then
             delete from public.stock_templates where id = v_member.record_id;
           elsif v_previous_row is not null then
             update public.stock_templates
