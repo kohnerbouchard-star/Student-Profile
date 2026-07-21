@@ -12,8 +12,8 @@ const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const CONTRACT_PATH = path.join(
   REPO_ROOT,
   'docs',
-  'seed-content',
-  'technical',
+  'operations',
+  'contracts',
   'beta-seed-downstream-consumer-contract-v1.json',
 );
 const PACK_ROOT = path.join(
