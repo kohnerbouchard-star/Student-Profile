@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "reportType": "preliminary-production-go-no-go",
+  "capturedAt": "2026-07-21T00:22:20.000Z",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "auditedMain": "0ee9e121c3d556b2b3e4c1fa89e860a3a913a618",
+  "integrationBranch": "agent/production-integration-gate-v1",
+  "decision": "NO_GO",
+  "productionDeploymentAuthorized": false,
+  "productionModified": false,
+  "verified": {
+    "stagingProjectRef": "eecvbssdvarfcykcfrny",
+    "productionGuardProjectRef": "cgiukdjwicykrmtkhudh",
+    "environmentDistinctness": "pass",
+    "stagingStatus": "ACTIVE_HEALTHY",
+    "stagingRegion": "ap-northeast-2",
+    "stagingDataPolicy": "synthetic-only",
+    "stagingMigrationCount": 71,
+    "stagingMigrationHead": "20260720235900",
+    "stagingMigrationLedgerUnique": true,
+    "immutableReleaseId": "econovaria-93155e96d56323a33f723152d9fd979cea07a8c5",
+    "sourceCommit": "93155e96d56323a33f723152d9fd979cea07a8c5",
+    "workflowRunId": "29751531178",
+    "artifactId": "8464765629",
+    "artifactSetSha256": "91903145d99d68e0eed2d3c4bec2bde504d27ba2e144d60d6d85c7205ee1ac95",
+    "releaseManifestSha256": "8d6c1045970885f5404eab69a8eec219976e89b96f055650cf9b1448f3dc54e4",
+    "configurationSha256": "4fe9bbabd70a501e34a2b1f25b81bb8d7d7b47ee06518d520c554298e1ba7386",
+    "artifactChecksums": "pass",
+    "environmentNeutrality": "pass",
+    "securityAdvisorErrors": 0,
+    "securityAdvisorWarnings": 0,
+    "performanceBaselineCaptured": true,
+    "indexChangeAuthorized": false
+  },
+  "blocked": {
+    "frontendStagingTarget": "missing",
+    "protectedStagingEnvironmentVerification": "unavailable",
+    "stagingEdgeFunctionCount": 0,
+    "exactArtifactDeployment": "not-run",
+    "rollbackArtifact": "not-selected",
+    "backupRestoreRehearsal": "not-run",
+    "securityAcceptance": "blocked-by-pr-284",
+    "boundedSeedAcceptance": "blocked-by-pr-163",
+    "completeWorldRuntime": "blocked-by-pr-294",
+    "dashboardsAndAlerts": "not-activated",
+    "expectedLoad30": "not-run",
+    "maximumLoad40": "not-run",
+    "postLoadQueryPlans": "not-run",
+    "adminSmoke": "not-run",
+    "playerDesktopSmoke": "not-run",
+    "playerMobileSmoke": "not-run",
+    "continuous52ScenarioRun": "not-run"
+  },
+  "nextPermittedAction": {
+    "environment": "staging",
+    "action": "deploy-one-complete-immutable-artifact-set",
+    "requires": [
+      "recorded separate frontend staging target",
+      "verified protected staging environment and named reviewer",
+      "environment-scoped runtime values outside repository evidence",
+      "original workflow run and artifact identity without rebuilding",
+      "selected prior compatible rollback artifact"
+    ]
+  },
+  "finalPromotion": {
+    "status": "AWAITING_EXPLICIT_PRODUCT_OWNER_AUTHORIZATION",
+    "workflowMayRun": false,
+    "productionDecision": "NO_GO"
+  },
+  "privacy": {
+    "credentialValuesRetained": false,
+    "accessCodesRetained": false,
+    "sessionTokensRetained": false,
+    "rawInternalUuidsRetained": false,
+    "authorizationHeadersRetained": false,
+    "sensitiveRequestBodiesRetained": false,
+    "productionDataCopied": false
+  }
+}
