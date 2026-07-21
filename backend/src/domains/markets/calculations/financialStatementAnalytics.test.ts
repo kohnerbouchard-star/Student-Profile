@@ -185,12 +185,10 @@ function period(index: number) {
   const quarter = index % 4;
   const startMonth = quarter * 3 + 1;
   const endMonth = startMonth + 2;
-  const periodStart = `${year}-$
-    {String(startMonth).padStart(2, "0")}-01`.replace("$\n    {", "${");
-  const periodEnd = `${year}-$
-    {String(endMonth).padStart(2, "0")}-$
-    {endMonth === 3 || endMonth === 12 ? "31" : "30"}`
-    .replaceAll("$\n    {", "${");
+  const periodStart = `${year}-${String(startMonth).padStart(2, "0")}-01`;
+  const periodEnd = `${year}-${String(endMonth).padStart(2, "0")}-${
+    endMonth === 3 || endMonth === 12 ? "31" : "30"
+  }`;
   const eventAdjustment = index % 6 === 0
     ? {
       revenueGrowthDelta: -0.08,
