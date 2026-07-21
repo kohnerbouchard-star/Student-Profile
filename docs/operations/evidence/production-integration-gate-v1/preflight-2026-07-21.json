@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "production-integration-preflight",
+  "capturedAt": "2026-07-21T00:22:20.000Z",
+  "repository": {
+    "name": "kohnerbouchard-star/Student-Profile",
+    "mainCommitAtAudit": "0ee9e121c3d556b2b3e4c1fa89e860a3a913a618",
+    "integrationBranch": "agent/production-integration-gate-v1",
+    "branchBaseCommit": "0ee9e121c3d556b2b3e4c1fa89e860a3a913a618"
+  },
+  "environment": {
+    "staging": {
+      "name": "ECON SIM STAGING",
+      "projectRef": "eecvbssdvarfcykcfrny",
+      "region": "ap-northeast-2",
+      "status": "ACTIVE_HEALTHY",
+      "postgresEngine": "17",
+      "dataPolicy": "synthetic-only",
+      "edgeFunctionCount": 0,
+      "frontendTarget": null,
+      "runtimeConfiguration": {
+        "status": "validated-not-deployed",
+        "supabaseOrigin": "https://eecvbssdvarfcykcfrny.supabase.co",
+        "publishableKeySha256": "73d4f93b899c0e6fdcd6bb9fe4c44444c5f3715ca8d09d41a7dc868dc86856aa",
+        "secretValueRetained": false
+      }
+    },
+    "productionGuard": {
+      "name": "ECON SIM",
+      "projectRef": "cgiukdjwicykrmtkhudh",
+      "region": "ap-northeast-2",
+      "status": "ACTIVE_HEALTHY",
+      "postgresEngine": "17"
+    },
+    "distinctness": {
+      "projectRefDistinct": true,
+      "databaseHostDistinct": true,
+      "projectIdentityDistinct": true,
+      "result": "pass"
+    }
+  },
+  "migrations": {
+    "canonicalRepositoryIdentity": {
+      "count": 71,
+      "head": "20260720235900",
+      "versionSetSha256": "67d4a427a5c41a46f0aee49e7365deb7c01632333e397598ff6d7206d5a81d57"
+    },
+    "stagingLedger": {
+      "count": 71,
+      "distinctVersionCount": 71,
+      "firstVersion": "20260615161835",
+      "head": "20260720235900",
+      "blankVersionCount": 0,
+      "blankNameCount": 0,
+      "matchesCanonicalRelease": true
+    },
+    "productionReadOnlyComparison": {
+      "count": 53,
+      "distinctVersionCount": 53,
+      "firstVersion": "20260615161835",
+      "head": "20260714113345"
+    },
+    "productionModified": false
+  },
+  "immutableRelease": {
+    "releaseId": "econovaria-93155e96d56323a33f723152d9fd979cea07a8c5",
+    "sourceCommit": "93155e96d56323a33f723152d9fd979cea07a8c5",
+    "sourceMergedIntoMain": true,
+    "workflow": "Release Artifact Build",
+    "workflowRunId": "29751531178",
+    "workflowRunAttempt": "1",
+    "artifactId": "8464765629",
+    "githubArtifactSha256": "29221545332ce7e999fd318d9d3a520a2743fd212f33fa962c18552f0b44c0e1",
+    "releaseManifestSha256": "8d6c1045970885f5404eab69a8eec219976e89b96f055650cf9b1448f3dc54e4",
+    "artifactSetSha256": "91903145d99d68e0eed2d3c4bec2bde504d27ba2e144d60d6d85c7205ee1ac95",
+    "attestationId": "36172197",
+    "checksumsVerified": true,
+    "artifacts": [
+      {
+        "file": "artifacts/frontend.tar.gz",
+        "kind": "frontend",
+        "sha256": "22366292ce2b33de0af746a79ab3d367f74c127970c86151cabc5f9b89487188",
+        "sizeBytes": 32481638
+      },
+      {
+        "file": "artifacts/edge-admin-api.tar.gz",
+        "kind": "edge-function",
+        "name": "admin-api",
+        "sha256": "1101d2c9ad3d990aed42baf0e25ef7f1162185b35a4578bd5297848b8b552a02",
+        "sizeBytes": 55686
+      },
+      {
+        "file": "artifacts/edge-classroom-api.tar.gz",
+        "kind": "edge-function",
+        "name": "classroom-api",
+        "sha256": "7c4184b94a4930c0d093cc9557a409260cb4c920b4f9b52c2575aaaca8d8ab3d",
+        "sizeBytes": 5910
+      },
+      {
+        "file": "artifacts/edge-stock-market-player-read.tar.gz",
+        "kind": "edge-function",
+        "name": "stock-market-player-read",
+        "sha256": "5394e3a83ab6d9e9510f49255e308d0cd14ede95c0e703e8b8aed2fb5dbe0a4b",
+        "sizeBytes": 1633
+      },
+      {
+        "file": "artifacts/edge-stock-market-read.tar.gz",
+        "kind": "edge-function",
+        "name": "stock-market-read",
+        "sha256": "cefe5d6f3b8780e46734fa3dea10dfd6c21e8fa5f17e321edb802c37b051a5b5",
+        "sizeBytes": 1621
+      },
+      {
+        "file": "artifacts/edge-stock-market-runner.tar.gz",
+        "kind": "edge-function",
+        "name": "stock-market-runner",
+        "sha256": "bae10c1becc1c953d7f4b48937e26e394d77374207245a03e19a0ae8d66bf847",
+        "sizeBytes": 2788
+      },
+      {
+        "file": "artifacts/edge-stock-market-seed-copy.tar.gz",
+        "kind": "edge-function",
+        "name": "stock-market-seed-copy",
+        "sha256": "2b7e9d492264ce565fd2d3d0a577486b0a5d97968d61e2d7fa058eb16949ac75",
+        "sizeBytes": 1630
+      },
+      {
+        "file": "artifacts/edge-stock-market-trading.tar.gz",
+        "kind": "edge-function",
+        "name": "stock-market-trading",
+        "sha256": "1cb0d9e36f51189e9f1ee8a0fbd3757442b2669272694ae571f97240dba8c329",
+        "sizeBytes": 1625
+      }
+    ],
+    "configuration": {
+      "schemaVersion": 1,
+      "version": "2026-07-20.1",
+      "sha256": "4fe9bbabd70a501e34a2b1f25b81bb8d7d7b47ee06518d520c554298e1ba7386",
+      "featureFlags": {
+        "betaReleaseApproved": false,
+        "marketplaceExpansionEnabled": false,
+        "messagingExpansionEnabled": false,
+        "progressionExpansionEnabled": false,
+        "seedActivationAuthorized": false,
+        "storyNotificationDeliveryEnabled": false
+      }
+    },
+    "environmentNeutrality": {
+      "status": "pass",
+      "verifier": "release-environment-neutrality-v1",
+      "scannedRoots": [
+        "admin",
+        "auth",
+        "frontend",
+        "index.html",
+        "player-terminal"
+      ]
+    },
+    "deployedToStaging": false
+  },
+  "advisors": {
+    "security": {
+      "errorCount": 0,
+      "warningCount": 0,
+      "result": "pass-with-info",
+      "notes": "Current findings are INFO-level default-deny RLS notices."
+    },
+    "performance": {
+      "warningCount": 2,
+      "result": "baseline-captured",
+      "warningClasses": [
+        "auth_rls_initplan"
+      ],
+      "indexDecision": "none-before-connected-load-and-post-load-plans"
+    }
+  },
+  "dependencyState": {
+    "openCapabilityPullRequests": [
+      {
+        "number": 163,
+        "capability": "bounded executable seed release",
+        "requiredBeforePilot": true
+      },
+      {
+        "number": 284,
+        "capability": "security, privacy, rate limiting, and access",
+        "requiredBeforeSecurityAcceptance": true
+      },
+      {
+        "number": 294,
+        "capability": "campaign, arrival class, geography, and travel runtime",
+        "requiredBeforeCompletePilot": true
+      }
+    ],
+    "frontendStagingTarget": "missing",
+    "protectedStagingEnvironmentVerification": "unavailable",
+    "priorCompatibleRollbackArtifact": "not-selected",
+    "encryptedBackupRestoreRehearsal": "not-run",
+    "operationalDashboardsAndAlerts": "not-activated",
+    "boundedLoad": "not-run",
+    "connectedAdminSmoke": "not-run",
+    "connectedPlayerDesktopSmoke": "not-run",
+    "connectedPlayerMobileSmoke": "not-run",
+    "continuousScenarioRun": "not-run"
+  },
+  "gate": {
+    "status": "BLOCKED",
+    "productionDecision": "NO_GO",
+    "productionPromotionAuthorized": false,
+    "promotionAwaitingProductOwnerAuthorization": true,
+    "failClosed": true,
+    "blockers": [
+      "No separate frontend staging target is recorded.",
+      "Protected GitHub staging environment and named reviewer cannot be verified.",
+      "The immutable release has not been deployed to staging.",
+      "Staging currently has zero deployed Edge Functions.",
+      "No prior compatible immutable rollback artifact is selected.",
+      "Backup and isolated restore rehearsal has not run.",
+      "Security PR #284 has not merged or completed connected probes.",
+      "Seed PR #163 has not completed connected import and rollback evidence.",
+      "World runtime PR #294 is unfinished and blocks complete pilot coverage.",
+      "Operational dashboards, alerts, 30/40-player load, and post-load plans are absent.",
+      "Admin and Player connected smoke and the continuous 52-scenario run are absent."
+    ]
+  },
+  "privacy": {
+    "credentialValuesRetained": false,
+    "accessCodesRetained": false,
+    "sessionMaterialRetained": false,
+    "rawInternalUuidsRetained": false,
+    "authorizationHeadersRetained": false,
+    "sensitiveRequestBodiesRetained": false,
+    "productionDataCopied": false
+  }
+}
