@@ -20,6 +20,8 @@ jobs:
        github.event.pull_request.head.ref == 'agent/seed-content-foundation-v1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      SEED_SOURCE_HEAD: 74bcac12127244f232c563b4b018703b53cab4ff
     steps:
       - name: Check out permanent seed branch
         uses: actions/checkout@v7
@@ -28,22 +30,21 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge current main and restore canonical seed-owned tree
+      - name: Merge current main
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
+          git merge --no-edit --no-ff origin/main
 
-          SEED_SOURCE_HEAD="74bcac12127244f232c563b4b018703b53cab4ff"
-          MAIN_HEAD="$(git rev-parse origin/main)"
-          MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" "$MAIN_HEAD")"
-
-          git merge --no-edit --no-ff "$MAIN_HEAD"
-          git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
+      - name: Restore canonical seed-owned files
+        shell: bash
+        run: |
+          set -euo pipefail
+          MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" origin/main)"
           git diff --name-only -z "$MERGE_BASE" "$SEED_SOURCE_HEAD" > /tmp/seed-owned-paths.zlist
-
           while IFS= read -r -d '' path; do
             case "$path" in
               package.json|.github/workflows/repository-quality.yml|.github/workflows/seed-pr163-reconcile.yml)
@@ -57,9 +58,13 @@ jobs:
             fi
           done < /tmp/seed-owned-paths.zlist
 
-          git checkout "$MAIN_HEAD" -- .github/workflows/repository-quality.yml
+      - name: Reconcile shared repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
+          git checkout origin/main -- .github/workflows/repository-quality.yml
           git rm -f --ignore-unmatch .github/workflows/seed-pr163-reconcile.yml
-
           node <<'NODE'
           const fs = require('node:fs');
           const current = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -73,13 +78,22 @@ jobs:
           }
           fs.writeFileSync('package.json', `${JSON.stringify(current, null, 2)}\n`);
           NODE
-
           git add -A
           git diff --cached --check
-          git commit -m "chore(seed): finalize synchronized executable pack tree"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(seed): finalize synchronized executable pack tree"
+          fi
+
+      - name: Verify synchronized tree
+        shell: bash
+        run: |
+          set -euo pipefail
           test "$(git rev-list --count HEAD..origin/main)" -eq 0
           test ! -e .github/workflows/seed-pr163-reconcile.yml
-          cmp .github/workflows/repository-quality.yml <(git show "$MAIN_HEAD:.github/workflows/repository-quality.yml")
+          cmp .github/workflows/repository-quality.yml <(git show origin/main:.github/workflows/repository-quality.yml)
           grep -q 'name: Seed Executable Beta Pack' .github/workflows/seed-executable-beta-pack.yml
-          npm run seed:beta:validate
-          git push origin HEAD:agent/seed-content-foundation-v1
+          node -e "const p=require('./package.json'); if(!p.scripts['seed:beta:validate']) process.exit(1)"
+          git diff --check
+
+      - name: Publish synchronized permanent head
+        run: git push origin HEAD:agent/seed-content-foundation-v1
