@@ -152,6 +152,12 @@ import {
   readPlayerWorldRoutePath,
 } from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
 import {
+  handlePlayerWorldRuntimeEdgeRequest,
+} from "../../../src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts";
+import {
+  parsePlayerWorldRuntimeRoute,
+} from "../../../src/domains/world/api/playerWorldRuntimeRoutePaths.ts";
+import {
   handlePlayerInventoryReadRequest,
 } from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
 import {
@@ -221,6 +227,25 @@ Deno.serve(async (request) => {
           playerCapabilityManifestRoute,
           { createServiceClient },
         ),
+      { createServiceClient },
+    );
+  }
+
+  const playerWorldRuntimeRoute = parsePlayerWorldRuntimeRoute(url.pathname);
+
+  if (playerWorldRuntimeRoute) {
+    const endpointKey = ({
+      context: "worldRuntime",
+      arrivalClass: "arrivalClass",
+      travelQuote: "travelQuote",
+      travelExecute: "travelExecute",
+      travelComplete: "travelComplete",
+      residencyRequest: "residencyRequest",
+    } as const)[playerWorldRuntimeRoute.operation];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
