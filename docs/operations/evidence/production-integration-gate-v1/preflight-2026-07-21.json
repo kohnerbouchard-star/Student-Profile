@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
   "evidenceType": "production-integration-preflight",
-  "capturedAt": "2026-07-21T01:26:00.000Z",
+  "capturedAt": "2026-07-21T02:32:15.000Z",
+  "executionState": "EXTERNAL_BLOCKER_ONLY",
   "repository": {
     "name": "kohnerbouchard-star/Student-Profile",
     "mainCommitAtAudit": "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3",
@@ -15,14 +16,43 @@
       "region": "ap-northeast-2",
       "status": "ACTIVE_HEALTHY",
       "postgresEngine": "17",
+      "databaseHost": "db.eecvbssdvarfcykcfrny.supabase.co",
       "dataPolicy": "synthetic-only",
-      "edgeFunctionCount": 0,
+      "edgeFunctionCount": 1,
+      "applicationEdgeFunctionCount": 0,
+      "diagnosticEdgeFunctionCount": 1,
+      "diagnosticEdgeFunctions": [
+        {
+          "slug": "security-config-probe",
+          "version": 7,
+          "status": "ACTIVE",
+          "verifyJwt": true,
+          "deploymentSha256": "d0541a17d3faf18b8006dfbb64e4c47daaab6354217f484025d775917ed548c9",
+          "disposition": "retired-diagnostic-returning-410"
+        }
+      ],
       "frontendTarget": null,
       "runtimeConfiguration": {
         "status": "validated-not-deployed",
         "supabaseOrigin": "https://eecvbssdvarfcykcfrny.supabase.co",
         "publishableKeySha256": "73d4f93b899c0e6fdcd6bb9fe4c44444c5f3715ca8d09d41a7dc868dc86856aa",
         "secretValueRetained": false
+      },
+      "githubEnvironment": {
+        "name": "staging",
+        "protectionStatus": "unverified-through-available-interface",
+        "requiredReviewer": null,
+        "deploymentBranchPolicy": "unverified-through-available-interface",
+        "environmentScopedSecretStatus": "unverified-through-available-interface",
+        "requiredSecretNames": [
+          "FRONTEND_DEPLOY_TOKEN",
+          "SUPABASE_ACCESS_TOKEN",
+          "SUPABASE_ANON_KEY",
+          "SUPABASE_PROJECT_REF",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "SUPABASE_URL"
+        ],
+        "secretValuesRetained": false
       }
     },
     "productionGuard": {
@@ -30,7 +60,8 @@
       "projectRef": "cgiukdjwicykrmtkhudh",
       "region": "ap-northeast-2",
       "status": "ACTIVE_HEALTHY",
-      "postgresEngine": "17"
+      "postgresEngine": "17",
+      "databaseHost": "db.cgiukdjwicykrmtkhudh.supabase.co"
     },
     "distinctness": {
       "projectRefDistinct": true,
@@ -46,20 +77,38 @@
       "versionSetSha256": "f15e850f4c75593f77be8da15e6b6546e038ee833f4794722e7b6c978120dd4f"
     },
     "stagingLedger": {
-      "count": 73,
-      "distinctVersionCount": 73,
+      "count": 76,
+      "distinctVersionCount": 76,
       "firstVersion": "20260615161835",
-      "head": "20260721003228",
+      "head": "20260721094000",
+      "versionSetSha256": "d663a2464d034157f11c4001ce5caeb954e7c2f67decf8690a6984b5122bf175",
       "blankVersionCount": 0,
       "blankNameCount": 0,
-      "matchesCanonicalRepository": true,
-      "matchesImmutableRelease": false
+      "aheadBy": 3,
+      "matchesCanonicalRepository": false,
+      "matchesImmutableRelease": false,
+      "driftClassification": "unmerged-seed-migrations-present",
+      "additionalVersions": [
+        {
+          "version": "20260721015504",
+          "name": "accept_current_service_role_claims_for_seed_release_v1"
+        },
+        {
+          "version": "20260721093000",
+          "name": "add_transactional_seed_content_release_v1"
+        },
+        {
+          "version": "20260721094000",
+          "name": "harden_transactional_seed_release_rollback_v1"
+        }
+      ]
     },
     "productionReadOnlyComparison": {
       "count": 53,
       "distinctVersionCount": 53,
       "firstVersion": "20260615161835",
-      "head": "20260714113345"
+      "head": "20260714113345",
+      "versionSetSha256": "15871a3a9b6b7053f91e471f170947e73c0051a6338057eef753ddd52733dad8"
     },
     "productionModified": false
   },
@@ -82,6 +131,13 @@
       "versionSetSha256": "67d4a427a5c41a46f0aee49e7365deb7c01632333e397598ff6d7206d5a81d57"
     },
     "currentForCanonicalMain": false,
+    "rollbackCompatibility": {
+      "decision": "REJECTED",
+      "knownGoodConnectedStagingEvidence": false,
+      "forwardDatabaseCompatibility": "unproven",
+      "exactRuntimeInventoryCompatibility": false,
+      "reason": "The release predates the security and seed migration identities, lacks connected staging acceptance, and cannot be promoted or used for rollback without a reviewed forward-compatibility proof."
+    },
     "artifacts": [
       {
         "file": "artifacts/frontend.tar.gz",
@@ -169,8 +225,7 @@
     "security": {
       "errorCount": 0,
       "warningCount": 0,
-      "result": "pass-with-info",
-      "notes": "No WARN or ERROR findings after the staging security DDL; remaining findings are INFO-level default-deny RLS notices."
+      "result": "pass-with-info"
     },
     "performance": {
       "warningCount": 2,
@@ -185,28 +240,53 @@
     "openCapabilityPullRequests": [
       {
         "number": 163,
-        "capability": "bounded executable seed release",
-        "requiredBeforePilot": true
+        "capability": "bounded executable seed release"
+      },
+      {
+        "number": 248,
+        "capability": "messaging and communication"
+      },
+      {
+        "number": 249,
+        "capability": "player marketplace lifecycle"
+      },
+      {
+        "number": 261,
+        "capability": "progression reputation and achievements"
       },
       {
         "number": 294,
-        "capability": "campaign, arrival class, geography, and travel runtime",
-        "requiredBeforeCompletePilot": true
+        "capability": "campaign arrival class geography and travel runtime"
+      },
+      {
+        "number": 299,
+        "capability": "business banking savings loans and credit"
+      },
+      {
+        "number": 300,
+        "capability": "crafting item effects equipment and physical economy"
       }
     ],
+    "stagingMigrationState": "drifted-ahead-of-main",
     "securityRepositoryAndDatabaseContract": "pass",
-    "securityEdgeIngressOutagePrivacy": "not-run",
-    "frontendStagingTarget": "missing",
-    "protectedStagingEnvironmentVerification": "unavailable",
-    "priorCompatibleRollbackArtifact": "not-selected",
+    "securityEdgeIngressOutagePrivacy": "partial-diagnostic-only",
+    "stagingEnvironmentProtection": "blocked-unverified",
+    "environmentScopedSecrets": "blocked-unverified",
+    "frontendStagingTarget": "blocked-missing",
+    "priorCompatibleRollbackArtifact": "rejected",
     "currentMainImmutableRelease": "not-built",
+    "rollbackRehearsal": "not-run",
     "encryptedBackupRestoreRehearsal": "not-run",
+    "securityAcceptance": "not-run",
     "operationalDashboardsAndAlerts": "not-activated",
     "boundedLoad": "not-run",
+    "postLoadQueryPlans": "not-run",
+    "boundedSeedAcceptance": "blocked-by-pr-163",
     "connectedAdminSmoke": "not-run",
     "connectedPlayerDesktopSmoke": "not-run",
     "connectedPlayerMobileSmoke": "not-run",
-    "continuousScenarioRun": "not-run"
+    "continuousScenarioRun": "not-run",
+    "defectClosure": "not-run"
   },
   "gate": {
     "status": "BLOCKED",
@@ -215,17 +295,17 @@
     "promotionAwaitingProductOwnerAuthorization": true,
     "failClosed": true,
     "blockers": [
+      "Staging is three migrations ahead of current main because unmerged seed migrations are present.",
       "No separate frontend staging target is recorded.",
-      "Protected GitHub staging environment and named reviewer cannot be verified.",
-      "The retained immutable release predates the security merge and current 73-migration repository; a new current-main release must be built.",
-      "The current immutable release has not been deployed to staging.",
-      "Staging currently has zero deployed Edge Functions.",
-      "No prior compatible immutable rollback artifact is selected.",
-      "Backup and isolated restore rehearsal has not run.",
-      "Security Edge, ingress, outage, scanner, true-concurrency, and retained-evidence privacy probes remain incomplete.",
-      "Seed PR #163 has not completed connected import and rollback evidence.",
-      "World runtime PR #294 is unfinished and blocks complete pilot coverage.",
-      "Operational dashboards, alerts, 30/40-player load, and post-load plans are absent.",
+      "Protected GitHub staging environment settings and the named required reviewer are not available through the connected interface.",
+      "Environment-scoped secret presence cannot be verified through the connected interface; no secret values are retained in evidence.",
+      "No immutable release exists for the final controller-approved capability set.",
+      "The only active staging Edge Function is a retired diagnostic probe, not an application release function.",
+      "The retained 71-migration artifact is rejected as a rollback target pending forward-compatibility and connected known-good proof.",
+      "Backup and distinct-target restore rehearsal has not run.",
+      "Security Edge, ingress, outage, scanner, concurrency, privacy, and staff-access acceptance is incomplete.",
+      "Seed, messaging, marketplace, progression, world, business, banking, loans, crafting, and item capability authorities remain unmerged.",
+      "Operational dashboards, alerts, 30-player and 40-player load, and post-load plans are absent.",
       "Admin and Player connected smoke and the continuous 52-scenario run are absent."
     ]
   },
