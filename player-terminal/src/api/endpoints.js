@@ -16,10 +16,7 @@ export const PLAYER_ENDPOINTS = Object.freeze({
     path: "/business/products/:productId/pricing",
   },
   businessHire: { method: "POST", path: "/business/employees/hire" },
-  businessTerminate: {
-    method: "POST",
-    path: "/business/employees/:employeeId/terminate",
-  },
+  businessTerminate: { method: "POST", path: "/business/employees/terminate" },
   businessStatus: { method: "POST", path: "/business/status" },
   market: { method: "GET", path: "/market/assets" },
   marketAsset: { method: "GET", path: "/market/assets/:assetId" },
