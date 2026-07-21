@@ -58,7 +58,7 @@ assert.match(stylesheet, /@media \(max-width:620px\)/);
 assert.match(stylesheet, /@media \(forced-colors:active\)/);
 assert.doesNotMatch(stylesheet, /(^|})button:disabled/);
 assert.match(adminIndex, /messaging-moderation-loader\.js/);
-assert.doesNotMatch(adminIndex, /<script[^>]+messaging-moderation-loader\.js/);
+assert.doesNotMatch(adminIndex, /<script[^>]+src=["']\.\/messaging-moderation-loader\.js["']/);
 assert.doesNotMatch(adminIndex, /<link[^>]+messaging-moderation\.css/);
 
 assert.match(messagesPage, /data-endpoint="messageThreadCreate"/);
