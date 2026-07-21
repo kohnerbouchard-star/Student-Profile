@@ -14,6 +14,10 @@ on:
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
       - "player-terminal/src/api/capabilities.js"
+      - "player-terminal/src/api/resource-plan.js"
+      - "player-terminal/src/core/format.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
       - ".github/workflows/business-banking-runtime.yml"
@@ -32,6 +36,10 @@ on:
       - "player-terminal/src/api/backend-routes.js"
       - "player-terminal/src/api/endpoints.js"
       - "player-terminal/src/api/capabilities.js"
+      - "player-terminal/src/api/resource-plan.js"
+      - "player-terminal/src/core/format.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/student-profile-adapter.mjs"
       - "scripts/business-banking-*.mjs"
       - ".github/workflows/business-banking-runtime.yml"
@@ -87,6 +95,8 @@ jobs:
           path: ${{ runner.temp }}/business-banking-runtime-contract.log
           if-no-files-found: error
           retention-days: 7
+      - name: Verify complete Player Business surface
+        run: node player-terminal/tests/business-banking-surface.mjs
       - name: Run focused Player and Admin tests
         working-directory: backend
         run: |
@@ -109,4 +119,6 @@ jobs:
             --lock=supabase/functions/deno.lock --frozen \
             supabase/functions/admin-api/index.ts
       - name: Check Player route adapter syntax
-        run: node --check player-terminal/src/api/business-banking-backend-routes.js
+        run: |
+          node --check player-terminal/src/api/business-banking-backend-routes.js
+          node --check player-terminal/src/pages/business-page.js
