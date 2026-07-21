@@ -25,9 +25,7 @@ const READ_MODEL_KEYS = new Set([
   "marketAsset",
   "portfolio",
   "store",
-  "business",
   "banking",
-  "loans",
   "notifications"
 ]);
 
@@ -277,6 +275,11 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (context.endpointKey === "inventory") {
       snapshot = { ...snapshot, inventory: normalizePlayerInventory(raw) };
       return snapshot.inventory;
+    }
+
+    if (context.endpointKey === "business" || context.endpointKey === "loans") {
+      snapshot = { ...snapshot, [context.endpointKey]: raw };
+      return snapshot[context.endpointKey];
     }
 
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
