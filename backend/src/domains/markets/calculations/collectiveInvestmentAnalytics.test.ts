@@ -15,7 +15,8 @@ Deno.test("ETF, fund, and trust NAV calculations are deterministic", () => {
     const definition = {
       vehiclePublicId: `vehicle.northreach.${vehicleKind}.v1`,
       vehicleKind,
-      administratorIssuerPublicId: `issuer.northreach.${vehicleKind}.admin.v1`,
+      administratorIssuerPublicId:
+        `issuer.northreach.${vehicleKind}.admin.v1`,
       sharesOutstanding: "1000",
       cash: "5000",
       liabilities: "1000",
@@ -57,7 +58,12 @@ Deno.test("collective investment validation rejects duplicate, unavailable, conc
     sourceVersion: "collective.v1",
     activationAuthorized: false as const,
   };
-  const duplicate = holding("instrument.northreach.a.v1", "1", "1", 0.7);
+  const duplicate = holding(
+    "instrument.northreach.a.v1",
+    "1",
+    "1",
+    0.7,
+  );
   const report = validateCollectiveInvestment(definition, [
     duplicate,
     duplicate,
@@ -99,8 +105,19 @@ Deno.test("index weighting respects concentration and deterministic methodology"
     const result = calculateIndexValue(methodology, components());
     assert(Number(result.value) > 0);
     assertEquals(result.constituentPublicIds.length, 4);
-    assert(Math.abs(Object.values(result.constituentWeights).reduce((sum, value) => sum + value, 0) - 1) < 0.000001);
-    assert(Object.values(result.constituentWeights).every((weight) => weight <= 0.500001));
+    assert(
+      Math.abs(
+        Object.values(result.constituentWeights).reduce(
+          (sum, value) => sum + value,
+          0,
+        ) - 1,
+      ) < 0.000001,
+    );
+    assert(
+      Object.values(result.constituentWeights).every((weight) =>
+        weight <= 0.500001
+      ),
+    );
     assertEquals(result, calculateIndexValue(methodology, components()));
   }
 });
@@ -108,7 +125,7 @@ Deno.test("index weighting respects concentration and deterministic methodology"
 Deno.test("rebalance replacement preserves historical continuity", () => {
   const methodology = {
     indexPublicId: "index.northreach.continuity.v1",
-    weightingMethod: "equal_weight" as const,
+    weightingMethod: "fundamental_weight" as const,
     baseDate: "2026-01-01",
     baseValue: "1000",
     divisor: "0.1",
@@ -120,8 +137,17 @@ Deno.test("rebalance replacement preserves historical continuity", () => {
   const prior = components().slice(0, 3);
   const priorValue = calculateIndexValue(methodology, prior).value;
   const candidates = [
-    ...components().map((component, index) => index === 0 ? { ...component, delisted: true } : component),
-    component("instrument.northreach.replacement.v1", "120", "900000", 0.9, 0.9, 0.25),
+    ...components().map((component, index) =>
+      index === 0 ? { ...component, delisted: true } : component
+    ),
+    component(
+      "instrument.northreach.replacement.v1",
+      "120",
+      "900000",
+      0.9,
+      0.9,
+      0.25,
+    ),
   ];
   const first = rebalanceIndexDeterministically({
     methodology,
@@ -138,9 +164,21 @@ Deno.test("rebalance replacement preserves historical continuity", () => {
     priorConstituents: prior,
   });
   assertEquals(first, second);
-  assert(first.removedComponentPublicIds.includes("instrument.northreach.a.v1"));
-  assert(first.addedComponentPublicIds.includes("instrument.northreach.replacement.v1"));
-  assert(Math.abs(Number(first.continuityValueAfter) - Number(priorValue)) < 0.00001);
+  assert(
+    first.removedComponentPublicIds.includes(
+      "instrument.northreach.a.v1",
+    ),
+  );
+  assert(
+    first.addedComponentPublicIds.includes(
+      "instrument.northreach.replacement.v1",
+    ),
+  );
+  assert(
+    Math.abs(
+      Number(first.continuityValueAfter) - Number(priorValue),
+    ) < 0.00001,
+  );
 });
 
 Deno.test("suspension and delisting exclude components while insufficient universes fail closed", () => {
@@ -156,9 +194,12 @@ Deno.test("suspension and delisting exclude components while insufficient univer
     methodologyVersion: "index-method.v1",
   };
   assertThrows(() =>
-    calculateIndexValue(methodology, components().map((entry, index) =>
-      index < 2 ? { ...entry, suspended: true } : entry
-    ))
+    calculateIndexValue(
+      methodology,
+      components().map((entry, index) =>
+        index < 2 ? { ...entry, suspended: true } : entry
+      ),
+    )
   );
   assertThrows(() =>
     calculateIndexValue(methodology, [
@@ -169,28 +210,46 @@ Deno.test("suspension and delisting exclude components while insufficient univer
 });
 
 Deno.test("commodity and economic reference benchmarks are reproducible and bounded", () => {
-  const components = [
-    { componentPublicId: "commodity.energy.v1", observedValue: "80", weight: 0.4, available: true },
-    { componentPublicId: "commodity.metals.v1", observedValue: "120", weight: 0.35, available: true },
-    { componentPublicId: "economic.shipping.v1", observedValue: "95", weight: 0.25, available: true },
+  const benchmarkComponents = [
+    {
+      componentPublicId: "commodity.energy.v1",
+      observedValue: "80",
+      weight: 0.4,
+      available: true,
+    },
+    {
+      componentPublicId: "commodity.metals.v1",
+      observedValue: "120",
+      weight: 0.35,
+      available: true,
+    },
+    {
+      componentPublicId: "economic.shipping.v1",
+      observedValue: "95",
+      weight: 0.25,
+      available: true,
+    },
   ];
   const result = calculateReferenceBenchmark({
     benchmarkPublicId: "benchmark.northreach.composite.v1",
     observedAt: "2026-01-01T00:00:00.000Z",
-    components,
+    components: benchmarkComponents,
   });
   assertEquals(result.value, "97.75");
   assertEquals(result.weightSum, 1);
-  assertEquals(result, calculateReferenceBenchmark({
-    benchmarkPublicId: "benchmark.northreach.composite.v1",
-    observedAt: "2026-01-01T00:00:00.000Z",
-    components,
-  }));
+  assertEquals(
+    result,
+    calculateReferenceBenchmark({
+      benchmarkPublicId: "benchmark.northreach.composite.v1",
+      observedAt: "2026-01-01T00:00:00.000Z",
+      components: benchmarkComponents,
+    }),
+  );
   assertThrows(() =>
     calculateReferenceBenchmark({
       benchmarkPublicId: "benchmark.northreach.bad.v1",
       observedAt: "2026-01-01T00:00:00.000Z",
-      components: [...components, components[0]],
+      components: [...benchmarkComponents, benchmarkComponents[0]],
     })
   );
 });
@@ -215,10 +274,38 @@ function holding(
 
 function components() {
   return [
-    component("instrument.northreach.a.v1", "100", "1000000", 1, 0.7, 0.25),
-    component("instrument.northreach.b.v1", "80", "700000", 0.8, 0.6, 0.25),
-    component("instrument.northreach.c.v1", "60", "400000", 0.7, 0.8, 0.25),
-    component("instrument.northreach.d.v1", "40", "200000", 0.6, 0.5, 0.25),
+    component(
+      "instrument.northreach.a.v1",
+      "100",
+      "1000000",
+      1,
+      0.7,
+      0.25,
+    ),
+    component(
+      "instrument.northreach.b.v1",
+      "80",
+      "700000",
+      0.8,
+      0.6,
+      0.25,
+    ),
+    component(
+      "instrument.northreach.c.v1",
+      "60",
+      "400000",
+      0.7,
+      0.8,
+      0.25,
+    ),
+    component(
+      "instrument.northreach.d.v1",
+      "40",
+      "200000",
+      0.6,
+      0.5,
+      0.25,
+    ),
   ];
 }
 
@@ -250,7 +337,9 @@ function assert(condition: unknown): asserts condition {
 
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
+    );
   }
 }
 
