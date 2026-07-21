@@ -89,7 +89,7 @@ jobs:
               $0 == "backend/src/domains/store/contracts/playerStorePublicContracts.ts" { next }
               $0 == "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 == "backend/supabase/functions/admin-api/businessBankingOperations.ts" { next }
+              $0 ~ /^backend\/supabase\/functions\/admin-api\/businessBankingOperations([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072112[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
@@ -184,9 +184,10 @@ jobs:
         if: failure() && steps.player-terminal-browser.outputs.status != '0'
         uses: actions/upload-artifact@v4
         with:
-          name: player-terminal-browser-artifacts
+          name: player-terminal-browser-failure
           path: |
-            player-terminal/test-results
-            player-terminal/playwright-report
+            ${{ runner.temp }}/player-terminal-browser.log
+            player-terminal/playwright-report/
+            player-terminal/test-results/
           if-no-files-found: warn
           retention-days: 7
