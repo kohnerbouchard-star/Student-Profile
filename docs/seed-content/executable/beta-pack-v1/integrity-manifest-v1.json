@@ -1,0 +1,74 @@
+{
+  "activationAuthorized": false,
+  "fileCount": 12,
+  "files": [
+    {
+      "bytes": 1232,
+      "path": "README.md",
+      "sha256": "f5dbcd70783bcf2f6a9594df0da9cda11ade6890d36f157fd31cf59eb79e97e6"
+    },
+    {
+      "bytes": 676,
+      "path": "activation-authorization.template.json",
+      "sha256": "a51d67a822fe1d34afcacfdb7f4e62a50dc804ae574aabbc4f029db4e52865be"
+    },
+    {
+      "bytes": 9636,
+      "path": "arrival-calibration-v1.json",
+      "sha256": "a5b4e7e93289d78bd6f354742303a19cb2e1ebd995074b523a67612b71a85164"
+    },
+    {
+      "bytes": 171777,
+      "path": "calibration-scenarios-v1.json",
+      "sha256": "72de5efbf5f9d873dcbf6d0a826abc042a315ae10f4e9a4cd9e7764ed58f4d8c"
+    },
+    {
+      "bytes": 1451,
+      "path": "campaign-v1.json",
+      "sha256": "dd80a82c9c51155abb869bf2d21ae78b5a55ec191b005888e33f2d666ee4fa4c"
+    },
+    {
+      "bytes": 20926,
+      "path": "location-registry-verified-v1.json",
+      "sha256": "69b36df3adfaa658d844bfcfa940b05f52393217eaf473f5484f4f67bc3ace29"
+    },
+    {
+      "bytes": 330639,
+      "path": "market-templates-v1.json",
+      "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
+    },
+    {
+      "bytes": 1946,
+      "path": "pack-v1.json",
+      "sha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8"
+    },
+    {
+      "bytes": 74019,
+      "path": "physical-economy-calibration-v1.json",
+      "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
+    },
+    {
+      "bytes": 63517,
+      "path": "stable-id-map-v1.json",
+      "sha256": "e2e3d4053e869f0836292ad59c673f0231b91459204d68f81854b7bd69e33419"
+    },
+    {
+      "bytes": 35387,
+      "path": "store-catalog-v1.json",
+      "sha256": "ebddac868be1b561665b72eb579eb97fe4f2356a4d8cb3ad09a078c8c74d52b7"
+    },
+    {
+      "bytes": 56165,
+      "path": "tutorial-contract-chains-v1.json",
+      "sha256": "dcebe7d25fb62d96903d48c1f99399c010746d537028f4fc43f98784732f9043"
+    }
+  ],
+  "hashAlgorithm": "sha256",
+  "manifestContentSha256": "6da756aa92c57c28960a49ae83d968239138ed84685f87bfeb66bce050886fb7",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "packSha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-integrity-manifest-v1",
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}

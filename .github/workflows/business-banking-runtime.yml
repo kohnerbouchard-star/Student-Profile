@@ -59,24 +59,14 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Capture integration trees
+      - name: Capture synchronization tree
         shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin main
-          git rev-parse 'HEAD^{tree}' > /tmp/business-banking-tree-sha.txt
-          git rev-parse 'origin/main^{tree}' > /tmp/business-main-tree-sha.txt
-          git rev-parse origin/main > /tmp/business-main-commit-sha.txt
-      - name: Upload integration trees
+        run: git rev-parse 'HEAD^{tree}' > /tmp/business-banking-tree-sha.txt
+      - name: Upload synchronization tree
         uses: actions/upload-artifact@v4
         with:
-          name: business-integration-tree-identities
-          path: |
-            /tmp/business-banking-tree-sha.txt
-            /tmp/business-main-tree-sha.txt
-            /tmp/business-main-commit-sha.txt
+          name: business-banking-tree-sha
+          path: /tmp/business-banking-tree-sha.txt
           if-no-files-found: error
           retention-days: 1
       - name: Set up Node

@@ -7,6 +7,7 @@ import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
 import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
 import { installStorePurchaseFlow } from "./features/store/store-purchase-flow.js";
+import { installWorldRuntimeFlow } from "./features/world/world-runtime-flow.js";
 import { installFormDraftPreserver } from "./forms/form-draft-preserver.js";
 import { installPlayerLogoutController } from "./integrations/player-logout-controller.js";
 import { installStudentProfileRuntime } from "./integrations/student-profile-runtime.js";
@@ -23,23 +24,21 @@ const formDrafts = installFormDraftPreserver(mount, {
 });
 
 const terminal = createPlayerTerminal({ mount, config });
-const sessionSafeExit = installPlayerSessionSafeExit({
-  terminal,
-  config,
-  mount,
-});
+const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
 const logout = installPlayerLogoutController({ terminal, config, mount });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
+const worldRuntime = installWorldRuntimeFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
 terminal.destroy = () => {
   logout.destroy();
   sessionSafeExit.destroy();
   invalidations.destroy();
+  worldRuntime.destroy();
   storyDeliveries.destroy();
   notifications.destroy();
   bankingReads.destroy();
@@ -53,3 +52,4 @@ terminal.destroy = () => {
 
 globalThis.Econovaria = globalThis.Econovaria || {};
 globalThis.Econovaria.playerTerminal = terminal;
+globalThis.Econovaria.playerWorldRuntime = worldRuntime;

@@ -54,9 +54,18 @@ jobs:
               $0 == ".github/workflows/environment-neutral-browser.yml" { next }
               $0 == ".github/workflows/admin-shell-smoke.yml" { next }
               $0 == ".github/workflows/admin-game-lifecycle-controls-v1.yml" { next }
+              $0 == ".github/workflows/world-runtime.yml" { next }
               $0 == ".github/workflows/business-banking-runtime.yml" { next }
               $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
               $0 == "admin/index.html" { next }
+              $0 == "admin/modal-accessibility.js" { next }
+              $0 == "admin/modal-lifecycle-bridge.js" { next }
+              $0 == "admin/player-create-ux.js" { next }
+              $0 == "admin/scanner-auto-refresh.js" { next }
+              $0 == "admin/interaction-quality-control-reset.js" { next }
+              $0 == "admin/world-runtime-console.js" { next }
+              $0 == "admin/world-runtime-console-loader.js" { next }
+              $0 == "admin/css/world-runtime-console.css" { next }
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
               $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
               $0 == "frontend/src/core/runtime-config.js" { next }
@@ -66,11 +75,13 @@ jobs:
               $0 == "scripts/admin-session-manager-smoke.mjs" { next }
               $0 == "scripts/admin-shell-identity-smoke.mjs" { next }
               $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
+              $0 == "scripts/admin-world-runtime-console-contract.mjs" { next }
               $0 == "scripts/environment-neutral-browser-integration.test.mjs" { next }
               $0 == "scripts/runtime-config-contract.test.mjs" { next }
               $0 ~ /^scripts\/business-banking-[A-Za-z0-9.-]*[.]mjs$/ { next }
               $0 ~ /^(\.github\/workflows\/(database-replay|player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
               $0 == "backend/package.json" { next }
+              $0 ~ /^backend\/src\/domains\/(arrival|campaign|world)\// { next }
               $0 ~ /^backend\/src\/domains\/business-banking\/(api|contracts|domain|infrastructure)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
@@ -92,11 +103,14 @@ jobs:
               $0 ~ /^backend\/supabase\/functions\/admin-api\/businessBankingOperations([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072110[0-8]000_/ { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072112[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
+              $0 == "backend/supabase/functions/admin-api/index.ts" { next }
+              $0 ~ /^backend\/supabase\/functions\/admin-api\/(worldRuntimeOperations|campaignProgramRuntime|campaignWorkersRuntime)([.]test)?[.]ts$/ { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
               $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
               $0 == "docs/roadmaps/active/player-market-reconciliation-v1.md" { next }

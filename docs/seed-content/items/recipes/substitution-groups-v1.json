@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "econovaria-recipe-substitution-groups-v1",
+  "status": "definition-only",
+  "selectionPolicy": {
+    "chosenBeforeQuote": true,
+    "serverResolved": true,
+    "quantityFormula": "ceil(baseQuantity * member.quantityRatio * difficultySubstitutionPenalty)",
+    "changesOutputQuantity": false,
+    "changesEquipmentEffectPower": false,
+    "mayChangeDurationOrEnergy": true,
+    "fixedIdentityComponentsSubstitutable": false,
+    "strategicMembersRequirePermit": true,
+    "difficultySubstitutionPenalty": {
+      "easy": 1.0,
+      "moderate": 1.0,
+      "hard": 1.1,
+      "insane": 1.25
+    }
+  },
+  "groups": [
+    {"groupKey":"light-frame","members":[{"itemKey":"orbital-grade-aluminum","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"aerospace-composite","quantityRatio":1.0,"durationDeltaMinutes":5},{"itemKey":"structural-glass-composite","quantityRatio":1.25,"durationDeltaMinutes":10},{"itemKey":"refined-alloy-ingot","quantityRatio":1.5,"durationDeltaMinutes":15}]},
+    {"groupKey":"heavy-frame","members":[{"itemKey":"hardened-steel-plate","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"refined-alloy-ingot","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"machine-steel-billet","quantityRatio":1.5,"durationDeltaMinutes":10},{"itemKey":"corrosion-resistant-alloy","quantityRatio":1.25,"durationDeltaMinutes":10}]},
+    {"groupKey":"sealed-housing","members":[{"itemKey":"marine-grade-resin","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"corrosion-resistant-alloy","quantityRatio":1.0,"durationDeltaMinutes":5},{"itemKey":"structural-glass-composite","quantityRatio":1.25,"durationDeltaMinutes":10},{"itemKey":"radiation-shielding-polymer","quantityRatio":1.25,"durationDeltaMinutes":10}]},
+    {"groupKey":"thermal-insulation","members":[{"itemKey":"cryogenic-ceramic","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"thermal-gel","quantityRatio":1.5,"durationDeltaMinutes":0},{"itemKey":"radiation-shielding-polymer","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"high-density-carbon","quantityRatio":1.5,"durationDeltaMinutes":10}]},
+    {"groupKey":"sealing-material","members":[{"itemKey":"hydrophobic-sealant","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"marine-grade-resin","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"compressed-algae-fiber","quantityRatio":2.0,"durationDeltaMinutes":10}]},
+    {"groupKey":"documentation-stock","members":[{"itemKey":"archival-polymer-sheet","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"educational-display-film","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"adaptive-textile-mesh","quantityRatio":1.5,"durationDeltaMinutes":5}]},
+    {"groupKey":"protective-casing","members":[{"itemKey":"radiation-shielding-polymer","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"adaptive-textile-mesh","quantityRatio":1.5,"durationDeltaMinutes":5},{"itemKey":"aerospace-composite","quantityRatio":1.0,"durationDeltaMinutes":5},{"itemKey":"structural-glass-composite","quantityRatio":1.25,"durationDeltaMinutes":10}]},
+    {"groupKey":"filter-media","members":[{"itemKey":"filtration-membrane","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"ceramic-filter-media","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"compressed-algae-fiber","quantityRatio":1.5,"durationDeltaMinutes":10},{"itemKey":"catalytic-membrane","quantityRatio":0.75,"durationDeltaMinutes":0,"requiresEntitlement":"strategic-materials-handling-permit"}]},
+    {"groupKey":"communications-fiber","members":[{"itemKey":"broadcast-fiber","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"acoustic-fiber","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"photonic-film","quantityRatio":0.75,"durationDeltaMinutes":0,"requiresEntitlement":"strategic-materials-handling-permit"}]},
+    {"groupKey":"display-material","members":[{"itemKey":"educational-display-film","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"precision-optical-glass","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"photonic-film","quantityRatio":0.75,"durationDeltaMinutes":0,"requiresEntitlement":"strategic-materials-handling-permit"}]},
+    {"groupKey":"structural-reinforcement","members":[{"itemKey":"hardened-steel-plate","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"refined-alloy-ingot","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"machine-steel-billet","quantityRatio":1.5,"durationDeltaMinutes":10},{"itemKey":"reinforced-concrete-additive","quantityRatio":2.0,"durationDeltaMinutes":15}]},
+    {"groupKey":"packaging-material","members":[{"itemKey":"compressed-algae-fiber","quantityRatio":1.0,"durationDeltaMinutes":0},{"itemKey":"archival-polymer-sheet","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"adaptive-textile-mesh","quantityRatio":1.25,"durationDeltaMinutes":5},{"itemKey":"marine-grade-resin","quantityRatio":1.5,"durationDeltaMinutes":10}]}
+  ]
+}

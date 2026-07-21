@@ -1,6 +1,7 @@
 import { ROUTES } from "../core/router.js";
 
 export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
+  "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
   "businessCreate",
@@ -31,9 +32,13 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
+  "residencyRequest",
   "savingsTransfer",
   "storePurchase",
-  "storyDeliveryState"
+  "storyDeliveryState",
+  "travelComplete",
+  "travelExecute",
+  "travelQuote"
 ]);
 
 const ENDPOINT_ACTIONS = Object.freeze({
@@ -42,6 +47,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
       .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
       .map((key) => [key, key])
   ),
+  arrivalClass: "arrivalClassSubmit",
   businessTerminate: "businessEmployeeTerminate",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"

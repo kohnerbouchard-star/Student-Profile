@@ -6,6 +6,7 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
     required: Object.freeze(["dashboard", "countries"]),
     optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory"])
   }),
+  world: Object.freeze({ required: Object.freeze(["worldRuntime"]), optional: Object.freeze(["countries", "storyDeliveries"]) }),
   news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
   market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking"]) }),
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
@@ -23,6 +24,11 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
 });
 
 export const WRITE_INVALIDATIONS = Object.freeze({
+  arrivalClass: Object.freeze(["worldRuntime", "dashboard"]),
+  travelQuote: Object.freeze([]),
+  travelExecute: Object.freeze(["worldRuntime", "dashboard", "banking"]),
+  travelComplete: Object.freeze(["worldRuntime", "dashboard"]),
+  residencyRequest: Object.freeze(["worldRuntime", "dashboard"]),
   businessCreate: Object.freeze(["dashboard", "business", "banking"]),
   businessProductCreate: Object.freeze(["business"]),
   businessInputPurchase: Object.freeze(["dashboard", "business", "banking", "inventory"]),

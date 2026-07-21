@@ -1,0 +1,263 @@
+{
+  "schemaVersion": "econovaria-market-universe-editorial-review-v1",
+  "generatedAt": "2026-07-19",
+  "sourcePackId": "econovaria.market-universe.v1",
+  "sourceVersion": "1.0.0-draft",
+  "reviewStatus": "automated-screen-complete-human-editorial-review-pending",
+  "productionAuthorized": false,
+  "summary": {
+    "universeRecords": 3200,
+    "generatedIssuerIds": 1675,
+    "activeCandidateIssuersCompared": 180,
+    "blockers": 0,
+    "warnings": 11,
+    "exactDuplicateNames": 0,
+    "duplicateSymbols": 0,
+    "symbolCurrencyCollisions": 0,
+    "inappropriateTermHits": 0,
+    "highRiskBrandTermHits": 0,
+    "universeIssuerNameInconsistencies": 0,
+    "activeCandidateIssuerInconsistencies": 0,
+    "activeCandidateIdentityConflicts": 0,
+    "crossCountryNearDuplicateGroups": 11,
+    "longDisplayNames": 0
+  },
+  "reviewCandidates": {
+    "crossCountryNearDuplicates": [
+      {
+        "normalizedName": "benchmark administration",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "development bank",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "energy board",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "exchange fund administration",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "infrastructure authority",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "listed trust administration",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "national treasury",
+        "issuerCount": 6,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "syndalis",
+          "valerion",
+          "xalvoria"
+        ]
+      },
+      {
+        "normalizedName": "public investment office",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "resilience fund",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "transport agency",
+        "issuerCount": 10,
+        "countries": [
+          "dravenlok",
+          "eldoran",
+          "lumenor",
+          "northreach",
+          "solvend",
+          "syndalis",
+          "thaloris",
+          "valerion",
+          "xalvoria",
+          "yrethia"
+        ]
+      },
+      {
+        "normalizedName": "treasury",
+        "issuerCount": 4,
+        "countries": [
+          "northreach",
+          "solvend",
+          "thaloris",
+          "yrethia"
+        ]
+      }
+    ],
+    "templateDensity": [
+      {
+        "root": "central",
+        "issuerCount": 100
+      },
+      {
+        "root": "civic",
+        "issuerCount": 100
+      },
+      {
+        "root": "crown",
+        "issuerCount": 100
+      },
+      {
+        "root": "eastern",
+        "issuerCount": 100
+      },
+      {
+        "root": "frontier",
+        "issuerCount": 100
+      },
+      {
+        "root": "harbor",
+        "issuerCount": 100
+      },
+      {
+        "root": "horizon",
+        "issuerCount": 100
+      },
+      {
+        "root": "meridian",
+        "issuerCount": 100
+      },
+      {
+        "root": "national",
+        "issuerCount": 100
+      },
+      {
+        "root": "northern",
+        "issuerCount": 100
+      },
+      {
+        "root": "river",
+        "issuerCount": 100
+      },
+      {
+        "root": "southern",
+        "issuerCount": 100
+      },
+      {
+        "root": "summit",
+        "issuerCount": 100
+      },
+      {
+        "root": "western",
+        "issuerCount": 100
+      },
+      {
+        "root": "capital",
+        "issuerCount": 97
+      }
+    ]
+  },
+  "limitations": [
+    "This deterministic lexical screen is not legal trademark clearance.",
+    "Cultural, linguistic, pronunciation, and market-confusion review still requires human editorial judgment.",
+    "A zero-hit brand screen does not prove that a fictional name is safe for public commercial use.",
+    "Generated definition-library issuers remain separate from curated active-market issuers until explicit reconciliation is approved."
+  ]
+}

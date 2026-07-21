@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "econovaria-recipe-manifest-v1",
+  "status": "definition-only",
+  "totalRecipes": 60,
+  "allocation": {
+    "tier1": 18,
+    "tier2": 24,
+    "tier3": 12,
+    "regulated": 6
+  },
+  "outputs": {
+    "consumables": 24,
+    "equipment": 30,
+    "regulatedComponents": 6
+  },
+  "files": {
+    "tier1": "tier-1-recipes-v1.json",
+    "tier2": "tier-2-recipes-v1.json",
+    "tier3": "tier-3-recipes-v1.json",
+    "regulated": "regulated-recipes-v1.json",
+    "difficultyPolicy": "difficulty-policy-v1.json",
+    "difficultyResolvedMatrix": "difficulty-resolved-matrix-v1.json",
+    "substitutions": "substitution-groups-v1.json",
+    "maintenanceSalvage": "equipment-maintenance-salvage-v1.json",
+    "demandMatrix": "item-demand-matrix-v1.json"
+  },
+  "rules": {
+    "deterministic": true,
+    "hiddenFailureRolls": false,
+    "activeJobDifficultySnapshot": true,
+    "outputPowerScalesWithDifficulty": false,
+    "clientTrustedPricesOrQuantities": false,
+    "backendActivationAuthorized": false
+  }
+}

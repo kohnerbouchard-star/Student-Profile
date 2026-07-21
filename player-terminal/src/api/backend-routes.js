@@ -74,109 +74,79 @@ function notificationDeliveryIds(payload, endpointKey) {
   if (deliveryIds.length >= 1 && deliveryIds.length <= 50) return deliveryIds;
   throw new ApiRequestError(
     "Provide between 1 and 50 notification delivery IDs.",
-    {
-      body: { code: "player_notification_delivery_ids_invalid", endpointKey },
-    },
+    { body: { code: "player_notification_delivery_ids_invalid", endpointKey } },
   );
 }
 
 const ROUTE_BUILDERS = Object.freeze({
   session: () => ({ method: "GET", path: "/players/me" }),
-
-  capabilities: () => ({
-    method: "GET",
-    path: "/players/me/capabilities",
-  }),
-
+  capabilities: () => ({ method: "GET", path: "/players/me/capabilities" }),
   dashboard: ({ session }) => ({
     method: "GET",
     path: queryPath("/players/me/game/dashboard", {
-      gameSessionId: requiredText(
-        session?.gameSessionId,
-        "gameSessionId",
-        "dashboard",
-      ),
+      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "dashboard"),
     }),
   }),
-
-  countries: () => ({
-    method: "GET",
-    path: "/players/me/world/countries",
-  }),
-
+  countries: () => ({ method: "GET", path: "/players/me/world/countries" }),
   country: ({ params = {}, payload = {} }) => ({
     method: "GET",
-    path: `/players/me/world/countries/${
-      encodeURIComponent(requiredText(
-        params.countryId || payload.countryId,
-        "countryId",
-        "country",
-      ))
-    }`,
+    path: `/players/me/world/countries/${encodeURIComponent(requiredText(params.countryId || payload.countryId, "countryId", "country"))}`,
   }),
-
   news: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/world/news", {
-      limit: payload.limit ?? 100,
-      category: payload.category,
-    }),
+    path: queryPath("/players/me/world/news", { limit: payload.limit ?? 100, category: payload.category }),
   }),
-
+  worldRuntime: () => ({ method: "GET", path: "/players/me/world-runtime" }),
+  arrivalClass: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/arrival-class",
+    payload: { answers: payload.answers },
+  }),
+  travelQuote: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/travel/quotes",
+    payload: { toLocationId: payload.toLocationId, allowedModes: payload.allowedModes },
+  }),
+  travelExecute: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/travel",
+    payload: { quoteId: payload.quoteId },
+  }),
+  travelComplete: ({ params = {}, payload = {} }) => ({
+    method: "POST",
+    path: `/players/me/travel/${encodeURIComponent(requiredText(params.journeyId || payload.journeyId, "journeyId", "travelComplete"))}/complete`,
+    payload: {},
+  }),
+  residencyRequest: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/residency",
+    payload: { countryId: payload.countryId, expectedRevision: payload.expectedRevision },
+  }),
   portfolio: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/stocks/portfolio", {
-      limit: payload.limit,
-    }),
+    path: queryPath("/players/me/stocks/portfolio", { limit: payload.limit }),
   }),
-
   market: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/stocks/assets", {
-      limit: payload.limit ?? 100,
-      offset: payload.offset ?? 0,
-    }),
+    path: queryPath("/players/me/stocks/assets", { limit: payload.limit ?? 100, offset: payload.offset ?? 0 }),
   }),
-
   marketAsset: ({ params = {}, payload = {} }) => ({
     method: "GET",
-    path: queryPath(
-      `/players/me/stocks/assets/${
-        encodeURIComponent(requiredText(
-          params.assetId || payload.assetId,
-          "assetId",
-          "marketAsset",
-        ))
-      }`,
-      {
-        historyLimit: payload.historyLimit ?? 200,
-      },
-    ),
+    path: queryPath(`/players/me/stocks/assets/${encodeURIComponent(requiredText(params.assetId || payload.assetId, "assetId", "marketAsset"))}`, { historyLimit: payload.historyLimit ?? 200 }),
   }),
-
   marketOrder: ({ payload = {} }) => {
     if (String(payload.orderType || "market").toLowerCase() !== "market") {
-      throw new ApiRequestError(
-        "Limit orders are not supported by the current player stock-order route.",
-        { body: { code: "player_limit_orders_not_supported" } },
-      );
+      throw new ApiRequestError("Limit orders are not supported by the current player stock-order route.", { body: { code: "player_limit_orders_not_supported" } });
     }
     const expectedPrice = Number(payload.expectedPrice ?? payload.price);
     if (!Number.isFinite(expectedPrice) || expectedPrice <= 0) {
-      throw new ApiRequestError(
-        "expectedPrice is required for marketOrder.",
-        { body: { code: "player_market_expected_price_invalid" } },
-      );
+      throw new ApiRequestError("expectedPrice is required for marketOrder.", { body: { code: "player_market_expected_price_invalid" } });
     }
     return {
       method: "POST",
       path: "/players/me/stocks/orders",
       payload: {
-        ticker: requiredText(
-          payload.ticker || payload.symbol || payload.assetId,
-          "ticker",
-          "marketOrder",
-        ).toUpperCase(),
+        ticker: requiredText(payload.ticker || payload.symbol || payload.assetId, "ticker", "marketOrder").toUpperCase(),
         expectedPrice,
         side: requiredText(payload.side, "side", "marketOrder").toLowerCase(),
         quantity: Number(payload.quantity),
@@ -184,170 +154,73 @@ const ROUTE_BUILDERS = Object.freeze({
       },
     };
   },
-
   marketWatchlist: ({ params = {}, payload = {} }) => {
     if (typeof payload.enabled !== "boolean") {
-      throw new ApiRequestError(
-        "enabled must be a boolean for marketWatchlist.",
-        {
-          body: {
-            code: "player_watchlist_state_invalid",
-            endpointKey: "marketWatchlist",
-          },
-        },
-      );
+      throw new ApiRequestError("enabled must be a boolean for marketWatchlist.", { body: { code: "player_watchlist_state_invalid", endpointKey: "marketWatchlist" } });
     }
     return {
       method: payload.enabled ? "PUT" : "DELETE",
-      path: `/players/me/stocks/watchlist/${
-        encodeURIComponent(requiredText(
-          params.assetId || payload.assetId,
-          "assetId",
-          "marketWatchlist",
-        ))
-      }`,
+      path: `/players/me/stocks/watchlist/${encodeURIComponent(requiredText(params.assetId || payload.assetId, "assetId", "marketWatchlist"))}`,
     };
   },
-
   store: () => ({ method: "GET", path: "/players/me/store/items" }),
-
   storeQuote: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/store/quotes",
-    payload: {
-      itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"),
-      quantity: Number(payload.quantity ?? 1),
-    },
+    payload: { itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"), quantity: Number(payload.quantity ?? 1) },
   }),
-
   storePurchase: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/store/purchases",
     payload: {
       quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
-      clientSubmittedAt: typeof payload.clientSubmittedAt === "string"
-        ? payload.clientSubmittedAt
-        : null,
+      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
     },
   }),
-
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
-
   inventoryUse: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/inventory/${
-      encodeURIComponent(requiredText(
-        params.inventoryItemId ||
-          params.itemId ||
-          payload.itemId ||
-          resolvedPathValue(path, /^\/inventory\/([^/]+)\/redemptions$/),
-        "itemId",
-        "inventoryUse",
-      ))
-    }/redemptions`,
-    payload: {
-      quantity: Number(payload.quantity ?? 1),
-      note: typeof payload.note === "string" ? payload.note.trim() : "",
-      idempotencyKey: idempotencyKey(payload, "inventoryUse"),
-    },
+    path: `/players/me/inventory/${encodeURIComponent(requiredText(params.inventoryItemId || params.itemId || payload.itemId || resolvedPathValue(path, /^\/inventory\/([^/]+)\/redemptions$/), "itemId", "inventoryUse"))}/redemptions`,
+    payload: { quantity: Number(payload.quantity ?? 1), note: typeof payload.note === "string" ? payload.note.trim() : "", idempotencyKey: idempotencyKey(payload, "inventoryUse") },
   }),
-
   banking: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/ledger", {
-      limit: payload.limit ?? 50,
-      cursor: payload.cursor,
-    }),
+    path: queryPath("/players/me/ledger", { limit: payload.limit ?? 50, cursor: payload.cursor }),
   }),
-
-  contracts: () => ({
-    method: "GET",
-    path: "/players/me/contracts",
-  }),
-
+  contracts: () => ({ method: "GET", path: "/players/me/contracts" }),
   contractAccept: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/contracts/${
-      encodeURIComponent(requiredText(
-        params.contractKey ||
-          params.contractId ||
-          payload.contractKey ||
-          payload.contractId ||
-          resolvedPathValue(path, /^\/contracts\/([^/]+)\/accept$/),
-        "contractKey",
-        "contractAccept",
-      ))
-    }/accept`,
+    path: `/players/me/contracts/${encodeURIComponent(requiredText(params.contractKey || params.contractId || payload.contractKey || payload.contractId || resolvedPathValue(path, /^\/contracts\/([^/]+)\/accept$/), "contractKey", "contractAccept"))}/accept`,
   }),
-
   contractSubmit: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/contracts/${
-      encodeURIComponent(requiredText(
-        params.contractKey ||
-          params.contractId ||
-          payload.contractKey ||
-          payload.contractId ||
-          resolvedPathValue(path, /^\/contracts\/([^/]+)\/submissions?$/),
-        "contractKey",
-        "contractSubmit",
-      ))
-    }/submit`,
+    path: `/players/me/contracts/${encodeURIComponent(requiredText(params.contractKey || params.contractId || payload.contractKey || payload.contractId || resolvedPathValue(path, /^\/contracts\/([^/]+)\/submissions?$/), "contractKey", "contractSubmit"))}/submit`,
     payload: {
-      evidencePayload: payload.evidencePayload &&
-          typeof payload.evidencePayload === "object" &&
-          !Array.isArray(payload.evidencePayload)
+      evidencePayload: payload.evidencePayload && typeof payload.evidencePayload === "object" && !Array.isArray(payload.evidencePayload)
         ? payload.evidencePayload
-        : {
-          submissionUrl: typeof payload.submissionUrl === "string"
-            ? payload.submissionUrl.trim()
-            : "",
-          note: typeof payload.note === "string" ? payload.note.trim() : "",
-        },
+        : { submissionUrl: typeof payload.submissionUrl === "string" ? payload.submissionUrl.trim() : "", note: typeof payload.note === "string" ? payload.note.trim() : "" },
     },
   }),
   notifications: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/notifications", {
-      status: payload.status ?? "unread",
-      limit: payload.limit ?? 50,
-      cursor: payload.cursor,
-    }),
+    path: queryPath("/players/me/notifications", { status: payload.status ?? "unread", limit: payload.limit ?? 50, cursor: payload.cursor }),
   }),
-
   notificationsPage: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/notifications", {
-      status: payload.status ?? "unread",
-      limit: payload.limit ?? 20,
-      cursor: payload.cursor,
-    }),
+    path: queryPath("/players/me/notifications", { status: payload.status ?? "unread", limit: payload.limit ?? 20, cursor: payload.cursor }),
   }),
-
   notificationsRead: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/notifications/read",
-    payload: {
-      deliveryIds: notificationDeliveryIds(payload, "notificationsRead"),
-    },
+    payload: { deliveryIds: notificationDeliveryIds(payload, "notificationsRead") },
   }),
-
-  storyDeliveries: () => ({
-    method: "GET",
-    path: "/players/me/story-deliveries",
-  }),
-
+  storyDeliveries: () => ({ method: "GET", path: "/players/me/story-deliveries" }),
   storyDeliveryState: ({ params = {}, payload = {} }) => ({
     method: "POST",
-    path: `/players/me/story-deliveries/${encodeURIComponent(
-      publicStoryDeliveryId(params.deliveryId || payload.deliveryId),
-    )}/state`,
-    payload: {
-      action: storyDeliveryAction(payload.action),
-    },
+    path: `/players/me/story-deliveries/${encodeURIComponent(publicStoryDeliveryId(params.deliveryId || payload.deliveryId))}/state`,
+    payload: { action: storyDeliveryAction(payload.action) },
   }),
-
   logout: () => ({ method: "POST", path: "/players/me/session/logout" }),
 });
 
@@ -379,9 +252,7 @@ export function hasPlayerBackendRoute(endpointKey) {
     BUSINESS_BANKING_ROUTE_KEYS.includes(endpointKey);
 }
 
-export function resolvePlayerBackendRequest(
-  { endpointKey, method, path, payload, params, session },
-) {
+export function resolvePlayerBackendRequest({ endpointKey, method, path, payload, params, session }) {
   const builder = ROUTE_BUILDERS[endpointKey];
   if (!builder) {
     return resolveBusinessBankingBackendRequest({
@@ -393,14 +264,7 @@ export function resolvePlayerBackendRequest(
       session,
     });
   }
-  const resolved = builder({
-    endpointKey,
-    method,
-    path,
-    payload,
-    params,
-    session,
-  });
+  const resolved = builder({ endpointKey, method, path, payload, params, session });
   return {
     endpointKey,
     method: resolved.method,

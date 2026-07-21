@@ -66,121 +66,55 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
   >
 > = Object.freeze({
-  bootstrap: byMethod({
-    GET: operation("player.session.read", "read"),
-  }),
-  capabilities: byMethod({
-    GET: operation("player.capabilities.read", "read"),
-  }),
-  banking: byMethod({
-    GET: operation("player.banking.read", "read"),
-  }),
-  bankTransfer: byMethod({
-    POST: operation("player.banking.transfers.create", "sensitive"),
-  }),
-  business: byMethod({
-    GET: operation("player.business.read", "read"),
-  }),
-  businessCreate: byMethod({
-    POST: operation("player.business.create", "sensitive"),
-  }),
-  businessHire: byMethod({
-    POST: operation("player.business.employees.hire", "sensitive"),
-  }),
-  businessInputPurchase: byMethod({
-    POST: operation("player.business.inputs.purchase", "sensitive"),
-  }),
-  businessPrice: byMethod({
-    POST: operation("player.business.pricing.write", "write"),
-  }),
-  businessProductCreate: byMethod({
-    POST: operation("player.business.products.write", "write"),
-  }),
-  businessProduction: byMethod({
-    POST: operation("player.business.production.run", "sensitive"),
-  }),
-  businessStatus: byMethod({
-    POST: operation("player.business.status.write", "sensitive"),
-  }),
-  businessTerminate: byMethod({
-    POST: operation("player.business.employees.terminate", "write"),
-  }),
-  contractAccept: byMethod({
-    POST: operation("player.contracts.accept", "write"),
-  }),
-  contractSubmit: byMethod({
-    POST: operation("player.contracts.submit", "write"),
-  }),
-  contracts: byMethod({
-    GET: operation("player.contracts.read", "read"),
-  }),
-  countries: byMethod({
-    GET: operation("player.countries.read", "read"),
-  }),
-  country: byMethod({
-    GET: operation("player.country.read", "read"),
-  }),
-  dashboard: byMethod({
-    GET: operation("player.dashboard.read", "read"),
-  }),
-  inventory: byMethod({
-    GET: operation("player.inventory.read", "read"),
-  }),
+  bootstrap: byMethod({ GET: operation("player.session.read", "read") }),
+  capabilities: byMethod({ GET: operation("player.capabilities.read", "read") }),
+  worldRuntime: byMethod({ GET: operation("player.world.context.read", "read") }),
+  arrivalClass: byMethod({ POST: operation("player.world.arrival.assign", "sensitive") }),
+  travelQuote: byMethod({ POST: operation("player.world.travel.quote", "write") }),
+  travelExecute: byMethod({ POST: operation("player.world.travel.execute", "sensitive") }),
+  travelComplete: byMethod({ POST: operation("player.world.travel.complete", "write") }),
+  residencyRequest: byMethod({ POST: operation("player.world.residency.request", "sensitive") }),
+  banking: byMethod({ GET: operation("player.banking.read", "read") }),
+  bankTransfer: byMethod({ POST: operation("player.banking.transfers.create", "sensitive") }),
+  business: byMethod({ GET: operation("player.business.read", "read") }),
+  businessCreate: byMethod({ POST: operation("player.business.create", "sensitive") }),
+  businessHire: byMethod({ POST: operation("player.business.employees.hire", "sensitive") }),
+  businessInputPurchase: byMethod({ POST: operation("player.business.inputs.purchase", "sensitive") }),
+  businessPrice: byMethod({ POST: operation("player.business.pricing.write", "write") }),
+  businessProductCreate: byMethod({ POST: operation("player.business.products.write", "write") }),
+  businessProduction: byMethod({ POST: operation("player.business.production.run", "sensitive") }),
+  businessStatus: byMethod({ POST: operation("player.business.status.write", "sensitive") }),
+  businessTerminate: byMethod({ POST: operation("player.business.employees.terminate", "write") }),
+  contractAccept: byMethod({ POST: operation("player.contracts.accept", "write") }),
+  contractSubmit: byMethod({ POST: operation("player.contracts.submit", "write") }),
+  contracts: byMethod({ GET: operation("player.contracts.read", "read") }),
+  countries: byMethod({ GET: operation("player.countries.read", "read") }),
+  country: byMethod({ GET: operation("player.country.read", "read") }),
+  dashboard: byMethod({ GET: operation("player.dashboard.read", "read") }),
+  inventory: byMethod({ GET: operation("player.inventory.read", "read") }),
   inventoryRedemption: redemptionOperations,
   inventoryRedemptions: redemptionOperations,
-  loanApply: byMethod({
-    POST: operation("player.loans.apply", "sensitive"),
-  }),
-  loanRepay: byMethod({
-    POST: operation("player.loans.repay", "sensitive"),
-  }),
-  loans: byMethod({
-    GET: operation("player.loans.read", "read"),
-  }),
-  logout: byMethod({
-    POST: operation("player.session.logout", "sensitive"),
-  }),
-  market: byMethod({
-    GET: operation("player.market.read", "read"),
-  }),
-  marketAsset: byMethod({
-    GET: operation("player.asset.read", "read"),
-  }),
-  marketOrder: byMethod({
-    POST: operation("player.market.order", "sensitive"),
-  }),
+  loanApply: byMethod({ POST: operation("player.loans.apply", "sensitive") }),
+  loanRepay: byMethod({ POST: operation("player.loans.repay", "sensitive") }),
+  loans: byMethod({ GET: operation("player.loans.read", "read") }),
+  logout: byMethod({ POST: operation("player.session.logout", "sensitive") }),
+  market: byMethod({ GET: operation("player.market.read", "read") }),
+  marketAsset: byMethod({ GET: operation("player.asset.read", "read") }),
+  marketOrder: byMethod({ POST: operation("player.market.order", "sensitive") }),
   marketWatchlist: byMethod({
     DELETE: operation("player.watchlist.write", "write"),
     GET: operation("player.watchlist.read", "read"),
     PUT: operation("player.watchlist.write", "write"),
   }),
-  news: byMethod({
-    GET: operation("player.news.read", "read"),
-  }),
-  notifications: byMethod({
-    GET: operation("player.notifications.read", "read"),
-  }),
-  notificationsRead: byMethod({
-    POST: operation("player.notifications.write", "write"),
-  }),
-  storyDeliveries: byMethod({
-    GET: operation("player.story.deliveries.read", "read"),
-  }),
-  storyDeliveryState: byMethod({
-    POST: operation("player.story.deliveries.write", "write"),
-  }),
-  portfolio: byMethod({
-    GET: operation("player.portfolio.read", "read"),
-  }),
-  savingsTransfer: byMethod({
-    POST: operation("player.banking.savings.transfer", "sensitive"),
-  }),
-  store: byMethod({
-    GET: operation("player.store.read", "read"),
-  }),
-  storeQuote: byMethod({
-    POST: operation("player.store.quote", "write"),
-  }),
+  news: byMethod({ GET: operation("player.news.read", "read") }),
+  notifications: byMethod({ GET: operation("player.notifications.read", "read") }),
+  notificationsRead: byMethod({ POST: operation("player.notifications.write", "write") }),
+  storyDeliveries: byMethod({ GET: operation("player.story.deliveries.read", "read") }),
+  storyDeliveryState: byMethod({ POST: operation("player.story.deliveries.write", "write") }),
+  portfolio: byMethod({ GET: operation("player.portfolio.read", "read") }),
+  savingsTransfer: byMethod({ POST: operation("player.banking.savings.transfer", "sensitive") }),
+  store: byMethod({ GET: operation("player.store.read", "read") }),
+  storeQuote: byMethod({ POST: operation("player.store.quote", "write") }),
   storePurchase: byMethod({
     GET: operation("player.store.purchases.read", "read"),
     POST: operation("player.store.purchase", "sensitive"),

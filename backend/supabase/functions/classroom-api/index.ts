@@ -158,6 +158,12 @@ import {
   readPlayerWorldRoutePath,
 } from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
 import {
+  handlePlayerWorldRuntimeEdgeRequest,
+} from "../../../src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts";
+import {
+  parsePlayerWorldRuntimeRoute,
+} from "../../../src/domains/world/api/playerWorldRuntimeRoutePaths.ts";
+import {
   handlePlayerInventoryReadRequest,
 } from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
 import {
@@ -201,7 +207,10 @@ interface EdgeHealthBody {
 Deno.serve(async (request) => {
   const url = new URL(request.url);
 
-  if (request.method === "OPTIONS") return jsonResponse(204, null);
+  if (request.method === "OPTIONS") {
+    return jsonResponse(204, null);
+  }
+
   if (url.pathname.endsWith("/health")) {
     return jsonResponse<EdgeHealthBody>(200, {
       ok: true,
@@ -210,47 +219,91 @@ Deno.serve(async (request) => {
     });
   }
 
-  const playerCapabilityManifestRoute = readPlayerCapabilityManifestRoutePath(url.pathname);
+  const playerCapabilityManifestRoute = readPlayerCapabilityManifestRoutePath(
+    url.pathname,
+  );
+
   if (playerCapabilityManifestRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "capabilities",
-      () => handlePlayerCapabilityManifestRequest(request, playerCapabilityManifestRoute, { createServiceClient }),
+      () =>
+        handlePlayerCapabilityManifestRequest(
+          request,
+          playerCapabilityManifestRoute,
+          { createServiceClient },
+        ),
+      { createServiceClient },
+    );
+  }
+
+  const playerWorldRuntimeRoute = parsePlayerWorldRuntimeRoute(url.pathname);
+
+  if (playerWorldRuntimeRoute) {
+    const endpointKey = ({
+      context: "worldRuntime",
+      arrivalClass: "arrivalClass",
+      travelQuote: "travelQuote",
+      travelExecute: "travelExecute",
+      travelComplete: "travelComplete",
+      residencyRequest: "residencyRequest",
+    } as const)[playerWorldRuntimeRoute.operation];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
 
   const playerWorldRoute = readPlayerWorldRoutePath(url.pathname);
+
   if (playerWorldRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       playerWorldRoute.kind,
-      () => handlePlayerWorldReadRequest(request, playerWorldRoute, { createServiceClient }),
+      () =>
+        handlePlayerWorldReadRequest(request, playerWorldRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
-  const playerInventoryRedemptionRoute = readPlayerInventoryRedemptionRoutePath(url.pathname);
+  const playerInventoryRedemptionRoute = readPlayerInventoryRedemptionRoutePath(
+    url.pathname,
+  );
+
   if (playerInventoryRedemptionRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventoryRedemption",
-      () => handlePlayerInventoryRedemptionRequest(request, playerInventoryRedemptionRoute, { createServiceClient }),
+      () =>
+        handlePlayerInventoryRedemptionRequest(
+          request,
+          playerInventoryRedemptionRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
   const playerInventoryRoute = readPlayerInventoryRoutePath(url.pathname);
+
   if (playerInventoryRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "inventory",
-      () => handlePlayerInventoryReadRequest(request, playerInventoryRoute, { createServiceClient }),
+      () =>
+        handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
   const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
+
   if (playerStoryDeliveryRoute) {
     const endpointKey = playerStoryDeliveryRoute.kind === "state"
       ? "storyDeliveryState"
@@ -258,12 +311,18 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerStoryDeliveryRequest(request, playerStoryDeliveryRoute, { createServiceClient }),
+      () =>
+        handlePlayerStoryDeliveryRequest(
+          request,
+          playerStoryDeliveryRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
   const playerNotificationRoute = readPlayerNotificationRoutePath(url.pathname);
+
   if (playerNotificationRoute) {
     const endpointKey = playerNotificationRoute.kind === "markRead"
       ? "notificationsRead"
@@ -271,22 +330,34 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerNotificationRequest(request, playerNotificationRoute, { createServiceClient }),
+      () =>
+        handlePlayerNotificationRequest(
+          request,
+          playerNotificationRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
   const playerLogoutRoute = readPlayerSessionLogoutRoutePath(url.pathname);
+
   if (playerLogoutRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "logout",
-      () => handlePlayerSessionLogoutRequest(request, playerLogoutRoute, { createServiceClient }),
+      () =>
+        handlePlayerSessionLogoutRequest(request, playerLogoutRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
-  const playerStockAssetListRoute = readPlayerStockAssetListRoutePath(url.pathname);
+  const playerStockAssetListRoute = readPlayerStockAssetListRoutePath(
+    url.pathname,
+  );
+
   if (playerStockAssetListRoute) {
     const endpointKey = playerStockAssetListRoute.kind === "assets"
       ? "market"
@@ -296,12 +367,18 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerStockAssetListRequest(request, playerStockAssetListRoute, { createServiceClient }),
+      () =>
+        handlePlayerStockAssetListRequest(
+          request,
+          playerStockAssetListRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
   const playerStoreRoute = readPlayerStorePublicRoutePath(url.pathname);
+
   if (playerStoreRoute) {
     const endpointKey = playerStoreRoute.kind === "items"
       ? "store"
@@ -311,7 +388,10 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerStorePublicRequest(request, playerStoreRoute, { createServiceClient }),
+      () =>
+        handlePlayerStorePublicRequest(request, playerStoreRoute, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -320,88 +400,135 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "dashboard",
-      () => handlePlayerGameDashboardRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerGameDashboardRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
-  const playerContractAcceptanceRoute = readPlayerContractAcceptanceRoutePath(url.pathname);
+  const playerContractAcceptanceRoute =
+    readPlayerContractAcceptanceRoutePath(url.pathname);
+
   if (playerContractAcceptanceRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contractAccept",
-      () => handlePlayerContractAcceptanceRequest(request, playerContractAcceptanceRoute, { createServiceClient }),
+      () =>
+        handlePlayerContractAcceptanceRequest(
+          request,
+          playerContractAcceptanceRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
-  const playerContractPublicSubmitRoute = readPlayerContractPublicSubmitRoutePath(url.pathname);
+  const playerContractPublicSubmitRoute =
+    readPlayerContractPublicSubmitRoutePath(url.pathname);
+
   if (playerContractPublicSubmitRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contractSubmit",
-      () => handlePlayerContractPublicSubmitRequest(request, playerContractPublicSubmitRoute, { createServiceClient }),
+      () =>
+        handlePlayerContractPublicSubmitRequest(
+          request,
+          playerContractPublicSubmitRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
-  const playerContractPublicListRoute = readPlayerContractPublicListRoutePath(url.pathname);
+  const playerContractPublicListRoute =
+    readPlayerContractPublicListRoutePath(url.pathname);
+
   if (playerContractPublicListRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "contracts",
-      () => handlePlayerContractPublicListRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerContractPublicListRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
   const playerContractRoute = readPlayerContractRoutePath(url.pathname);
+
   if (playerContractRoute) {
-    return handlePlayerContractRequest(request, playerContractRoute, { createServiceClient });
+    return handlePlayerContractRequest(request, playerContractRoute, {
+      createServiceClient,
+    });
   }
 
   if (url.pathname.endsWith("/players/me/stocks/portfolio")) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_portfolio", { createServiceClient }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_portfolio", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
+
   if (url.pathname.endsWith("/players/me/stocks/holdings")) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_holdings", { createServiceClient }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_holdings", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
+
   if (url.pathname.endsWith("/players/me/stocks/orders")) {
     if (request.method === "POST") {
       return dispatchRateLimitedReviewedPlayerRequest(
         request,
         "marketOrder",
-        () => handlePlayerStockMarketTradingRequest(request, { createServiceClient }),
+        () =>
+          handlePlayerStockMarketTradingRequest(request, {
+            createServiceClient,
+          }),
         { createServiceClient },
       );
     }
+
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_orders", { createServiceClient }),
-      { createServiceClient },
-    );
-  }
-  if (url.pathname.endsWith("/players/me/stocks/trades")) {
-    return dispatchRateLimitedReviewedPlayerRequest(
-      request,
-      "portfolio",
-      () => handlePlayerStockMarketReadRequest(request, "read_trades", { createServiceClient }),
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_orders", {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
 
-  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(url.pathname);
+  if (url.pathname.endsWith("/players/me/stocks/trades")) {
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      "portfolio",
+      () =>
+        handlePlayerStockMarketReadRequest(request, "read_trades", {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
+    url.pathname,
+  );
+
   if (playerBusinessBankingRoute) {
     const endpointKey = ({
       businessRead: "business",
@@ -422,17 +549,26 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       endpointKey,
-      () => handlePlayerBusinessBankingRequest(request, playerBusinessBankingRoute, { createServiceClient }),
+      () =>
+        handlePlayerBusinessBankingRequest(
+          request,
+          playerBusinessBankingRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }
 
   const playerBankingRoute = readPlayerBankingPublicRoutePath(url.pathname);
+
   if (playerBankingRoute) {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "banking",
-      () => handlePlayerBankingPublicRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerBankingPublicRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
@@ -441,10 +577,14 @@ Deno.serve(async (request) => {
     return dispatchRateLimitedReviewedPlayerRequest(
       request,
       "bootstrap",
-      () => handlePlayerSessionBootstrapRequest(request, { createServiceClient }),
+      () =>
+        handlePlayerSessionBootstrapRequest(request, {
+          createServiceClient,
+        }),
       { createServiceClient },
     );
   }
+
   if (url.pathname.endsWith("/players/login")) {
     return dispatchRateLimitedPlayerLoginRequest(
       request,
@@ -452,66 +592,111 @@ Deno.serve(async (request) => {
       { createServiceClient },
     );
   }
+
   if (url.pathname.endsWith("/players/attendance/clock-in")) {
-    return handlePlayerAttendanceClockInRequest(request, { createServiceClient });
+    return handlePlayerAttendanceClockInRequest(request, {
+      createServiceClient,
+    });
   }
 
   const gameJoinCodeRoute = readGameJoinCodeRoutePath(url.pathname);
+
   if (gameJoinCodeRoute) {
-    return handleResetGameJoinCodeRequest(request, gameJoinCodeRoute.gameSessionId, { resolveStaffForRequest });
+    return handleResetGameJoinCodeRequest(
+      request,
+      gameJoinCodeRoute.gameSessionId,
+      {
+        resolveStaffForRequest,
+      },
+    );
   }
+
   const gameSettingsRoute = readGameSettingsRoutePath(url.pathname);
+
   if (gameSettingsRoute) {
-    return handleGameSettingsRequest(request, gameSettingsRoute.gameSessionId, { resolveStaffForRequest });
+    return handleGameSettingsRequest(request, gameSettingsRoute.gameSessionId, {
+      resolveStaffForRequest,
+    });
   }
+
   const staffStoreCatalogRoute = readStaffStoreCatalogRoutePath(url.pathname);
+
   if (staffStoreCatalogRoute) {
-    return handleStaffStoreCatalogRequest(request, staffStoreCatalogRoute, { resolveStaffForRequest });
+    return handleStaffStoreCatalogRequest(request, staffStoreCatalogRoute, {
+      resolveStaffForRequest,
+    });
   }
+
   const staffContractRoute = readStaffContractRoutePath(url.pathname);
+
   if (staffContractRoute) {
-    return handleStaffContractRequest(request, staffContractRoute, { resolveStaffForRequest });
+    return handleStaffContractRequest(request, staffContractRoute, {
+      resolveStaffForRequest,
+    });
   }
-  const staffDemoStorylineInitializeRoute = readStaffDemoStorylineInitializeRoutePath(url.pathname);
+
+  const staffDemoStorylineInitializeRoute =
+    readStaffDemoStorylineInitializeRoutePath(url.pathname);
+
   if (staffDemoStorylineInitializeRoute) {
     return handleStaffDemoStorylineInitializationRequest(
       request,
       staffDemoStorylineInitializeRoute,
-      { resolveStaffForRequest },
+      {
+        resolveStaffForRequest,
+      },
     );
   }
 
   const playerRosterRoute = readPlayerRosterRoutePath(url.pathname);
+
   if (playerRosterRoute?.kind === "players") {
-    return handlePlayerRosterRequest(request, playerRosterRoute.gameSessionId, { resolveStaffForRequest });
+    return handlePlayerRosterRequest(request, playerRosterRoute.gameSessionId, {
+      resolveStaffForRequest,
+    });
   }
+
   if (playerRosterRoute?.kind === "resetAccessCode") {
     return handleResetPlayerAccessCodeRequest(
       request,
       playerRosterRoute.gameSessionId,
       playerRosterRoute.playerId,
-      { resolveStaffForRequest },
+      {
+        resolveStaffForRequest,
+      },
     );
   }
 
-  const staffAttendanceDailyRoute = readStaffAttendanceDailyRoutePath(url.pathname);
+  const staffAttendanceDailyRoute = readStaffAttendanceDailyRoutePath(
+    url.pathname,
+  );
+
   if (staffAttendanceDailyRoute) {
     return handleStaffAttendanceDailyRequest(
       request,
       staffAttendanceDailyRoute.gameSessionId,
-      { resolveStaffForRequest },
+      {
+        resolveStaffForRequest,
+      },
     );
   }
-  const staffAttendanceScanRoute = readStaffAttendanceScanRoutePath(url.pathname);
+
+  const staffAttendanceScanRoute = readStaffAttendanceScanRoutePath(
+    url.pathname,
+  );
+
   if (staffAttendanceScanRoute) {
     return handleStaffAttendanceScanRequest(
       request,
       staffAttendanceScanRoute.gameSessionId,
-      { resolveStaffForRequest },
+      {
+        resolveStaffForRequest,
+      },
     );
   }
 
   const initialBalanceSeedRoute = readInitialBalanceSeedRoutePath(url.pathname);
+
   if (initialBalanceSeedRoute) {
     return handleInitialBalanceSeedRequest(
       request,
@@ -519,7 +704,11 @@ Deno.serve(async (request) => {
       { resolveStaffForRequest },
     );
   }
-  const staffPlayerLedgerHistoryRoute = readStaffPlayerLedgerHistoryRoutePath(url.pathname);
+
+  const staffPlayerLedgerHistoryRoute = readStaffPlayerLedgerHistoryRoutePath(
+    url.pathname,
+  );
+
   if (staffPlayerLedgerHistoryRoute) {
     return handleStaffPlayerLedgerHistoryRequest(
       request,
@@ -528,7 +717,11 @@ Deno.serve(async (request) => {
       { resolveStaffForRequest },
     );
   }
-  const staffLedgerAdjustmentRoute = readStaffLedgerAdjustmentRoutePath(url.pathname);
+
+  const staffLedgerAdjustmentRoute = readStaffLedgerAdjustmentRoutePath(
+    url.pathname,
+  );
+
   if (staffLedgerAdjustmentRoute) {
     return handleStaffLedgerAdjustmentRequest(
       request,
@@ -539,13 +732,23 @@ Deno.serve(async (request) => {
   }
 
   if (url.pathname.endsWith("/staff/bootstrap")) {
-    return handleStaffBootstrapRequest(request, { createAuthClient, createServiceClient });
+    return handleStaffBootstrapRequest(request, {
+      createAuthClient,
+      createServiceClient,
+    });
   }
+
   if (url.pathname.endsWith("/staff/signup")) {
-    return handleStaffSignupRequest(request, { createServiceClient });
+    return handleStaffSignupRequest(request, {
+      createServiceClient,
+    });
   }
+
   if (url.pathname.endsWith("/licensing/activate")) {
-    return handleLicensingActivationRequest(request, { createAuthClient, createServiceClient });
+    return handleLicensingActivationRequest(request, {
+      createAuthClient,
+      createServiceClient,
+    });
   }
 
   return jsonError(404, {
@@ -556,7 +759,10 @@ Deno.serve(async (request) => {
 });
 
 function createAuthClient(env: SupabaseEnv): EdgeSupabaseClient {
-  return createClient(env.supabaseUrl, env.supabaseAnonKey) as unknown as EdgeSupabaseClient;
+  return createClient(
+    env.supabaseUrl,
+    env.supabaseAnonKey,
+  ) as unknown as EdgeSupabaseClient;
 }
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
