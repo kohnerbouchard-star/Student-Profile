@@ -49,7 +49,11 @@ async function mountMessagingFixture(page) {
 test("Messages page exposes safe public-ID lifecycle controls without attachments", async ({ page }) => {
   const fixture = await mountMessagingFixture(page);
   await expect(fixture.getByRole("heading", { name: "Messages" })).toBeVisible();
-  const createForm = fixture.locator('[data-endpoint="messageThreadCreate"]');
+  const disclosure = fixture.locator("details.player-terminal-message-create");
+  await expect(disclosure).not.toHaveAttribute("open", "");
+  await disclosure.locator("summary").click();
+  await expect(disclosure).toHaveAttribute("open", "");
+  const createForm = disclosure.locator('[data-endpoint="messageThreadCreate"]');
   await expect(createForm).toBeVisible();
   await expect(createForm.locator('[name="recipientPlayerId"]')).toHaveAttribute("maxlength", "160");
   await expect(createForm.locator('[name="body"]')).toHaveAttribute("maxlength", "1000");
