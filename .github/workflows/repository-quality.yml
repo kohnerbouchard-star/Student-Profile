@@ -8,11 +8,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: seed-pr163-trusted-reconcile-${{ github.ref }}
+  group: seed-pr163-final-sync-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  reconcile-seed-pr163:
+  synchronize-seed-pr163:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.number == 163 &&
@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Rebuild seed-owned tree on current main
+      - name: Merge current main and restore canonical seed-owned tree
         shell: bash
         run: |
           set -euo pipefail
@@ -36,19 +36,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
 
-          CURRENT_HEAD="$(git rev-parse HEAD)"
           SEED_SOURCE_HEAD="74bcac12127244f232c563b4b018703b53cab4ff"
           MAIN_HEAD="$(git rev-parse origin/main)"
           MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" "$MAIN_HEAD")"
 
-          git diff --name-only "$MERGE_BASE" "$SEED_SOURCE_HEAD" > /tmp/seed-owned-paths.txt
+          git merge --no-edit --no-ff "$MAIN_HEAD"
           git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
+          git diff --name-only -z "$MERGE_BASE" "$SEED_SOURCE_HEAD" > /tmp/seed-owned-paths.zlist
 
-          git read-tree --reset -u "$MAIN_HEAD"
-
-          while IFS= read -r path; do
+          while IFS= read -r -d '' path; do
             case "$path" in
-              package.json|.gitignore|.github/workflows/repository-quality.yml|.github/workflows/seed-pr163-reconcile.yml|.github/workflows/seed-executable-beta-pack.yml)
+              package.json|.github/workflows/repository-quality.yml|.github/workflows/seed-pr163-reconcile.yml)
                 continue
                 ;;
             esac
@@ -57,9 +55,8 @@ jobs:
             else
               git rm -f --ignore-unmatch -- "$path"
             fi
-          done < /tmp/seed-owned-paths.txt
+          done < /tmp/seed-owned-paths.zlist
 
-          git checkout "$SEED_SOURCE_HEAD" -- .github/workflows/seed-executable-beta-pack.yml
           git checkout "$MAIN_HEAD" -- .github/workflows/repository-quality.yml
           git rm -f --ignore-unmatch .github/workflows/seed-pr163-reconcile.yml
 
@@ -77,18 +74,12 @@ jobs:
           fs.writeFileSync('package.json', `${JSON.stringify(current, null, 2)}\n`);
           NODE
 
-          if ! grep -qxF '.seed-audit/' .gitignore; then
-            printf '\n.seed-audit/\n' >> .gitignore
-          fi
-
           git add -A
           git diff --cached --check
-          TREE="$(git write-tree)"
-          MERGE_COMMIT="$(printf '%s\n' 'merge(seed): synchronize executable pack with current main' | git commit-tree "$TREE" -p "$CURRENT_HEAD" -p "$MAIN_HEAD")"
-          git reset --hard "$MERGE_COMMIT"
-
+          git commit -m "chore(seed): finalize synchronized executable pack tree"
           test "$(git rev-list --count HEAD..origin/main)" -eq 0
           test ! -e .github/workflows/seed-pr163-reconcile.yml
           cmp .github/workflows/repository-quality.yml <(git show "$MAIN_HEAD:.github/workflows/repository-quality.yml")
           grep -q 'name: Seed Executable Beta Pack' .github/workflows/seed-executable-beta-pack.yml
+          npm run seed:beta:validate
           git push origin HEAD:agent/seed-content-foundation-v1
