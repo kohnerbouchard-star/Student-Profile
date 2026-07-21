@@ -2,12 +2,16 @@ import { escapeHtml } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 
+const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
+
 function conversationButton(thread, selected, type) {
   return `<button class="player-terminal-thread-row${selected ? " active" : ""}" type="${type}" data-player-message-thread="${escapeHtml(thread.id)}"${selected ? ' aria-current="true"' : ""} aria-label="Open conversation with ${escapeHtml(thread.title)}"><span class="player-terminal-thread-avatar is-${escapeHtml(thread.tone)}">${escapeHtml(thread.initials)}</span><div><strong>${escapeHtml(thread.title)}</strong><small>${escapeHtml(thread.preview)}</small><em>${escapeHtml(thread.time)}</em></div>${thread.unread ? `<i>${escapeHtml(thread.unread)}</i>` : ""}</button>`;
 }
 
 function conversationRow(thread, selected) {
-  if (!thread.unread) return conversationButton(thread, selected, "button");
+  if (!thread.unread || !PUBLIC_THREAD_ID.test(String(thread.id || ""))) {
+    return conversationButton(thread, selected, "button");
+  }
   return `<form data-player-form="message-read" data-endpoint="messageRead"><input type="hidden" name="threadId" value="${escapeHtml(thread.id)}">${conversationButton(thread, selected, "submit")}</form>`;
 }
 
