@@ -41,9 +41,11 @@ jobs:
       - name: Install repository tooling
         run: npm ci
       - name: Validate blocked connected preflight
-        run: npm run audit:production-integration
+        run: >-
+          node scripts/production-integration-gate.mjs
+          --evidence docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json
       - name: Run integration gate tests
-        run: npm run test:production-integration
+        run: node --test scripts/production-integration-gate.test.mjs
       - name: Scan integration evidence for credentials
         run: npm run security:secrets
 
