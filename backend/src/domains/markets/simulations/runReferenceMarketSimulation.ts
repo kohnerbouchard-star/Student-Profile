@@ -1,5 +1,10 @@
 import { runReferenceMarketSimulation } from "./referenceMarketSimulation.ts";
 
+declare const Deno: {
+  readonly args: readonly string[];
+  writeTextFile(path: string, data: string): Promise<void>;
+};
+
 const outputPath = readArgument("--output") ??
   "full-financial-markets-reference-simulation.json";
 const seed = readArgument("--seed") ??
@@ -17,7 +22,9 @@ console.log(JSON.stringify({
 }, null, 2));
 
 if (!report.accepted) {
-  throw new Error(`Reference simulation rejected: ${report.rejectionReasons.join(",")}`);
+  throw new Error(
+    `Reference simulation rejected: ${report.rejectionReasons.join(",")}`,
+  );
 }
 
 function readArgument(flag: string): string | null {
