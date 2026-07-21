@@ -5,6 +5,7 @@ const RESOURCE_ENDPOINT_KEYS = Object.freeze({
   countries: "countries",
   country: "country",
   news: "news",
+  worldRuntime: "worldRuntime",
   market: "market",
   marketAsset: "marketAsset",
   portfolio: "portfolio",
@@ -14,7 +15,7 @@ const RESOURCE_ENDPOINT_KEYS = Object.freeze({
   marketplace: "marketplace",
   inventory: "inventory",
   crafting: "crafting",
-  banking: "ledger",
+  banking: "banking",
   loans: "loans",
   messages: "messages",
   progression: "progression"

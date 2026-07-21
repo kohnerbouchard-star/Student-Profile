@@ -14,6 +14,7 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -234,6 +235,25 @@ Deno.serve(async (request: Request) => {
     });
     if (mutationGuard.handled) {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
+    }
+
+    const worldOperation = await handleWorldRuntimeAdminOperation(
+      context.service as unknown as Parameters<
+        typeof handleWorldRuntimeAdminOperation
+      >[0],
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (worldOperation.handled) {
+      return json(
+        request,
+        worldOperation.status || 500,
+        worldOperation.body,
+      );
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(

@@ -68,7 +68,18 @@
     return manualVisible ? current.manualInput : (current.autoInput || current.manualInput);
   }
 
-  function prepareNextCard(current) {
+  function focusActiveInput(current, forceFocus) {
+    const latest = elements() || current;
+    const input = activeInput(latest);
+    if (!(input instanceof HTMLElement)) return;
+    const active = document.activeElement;
+    const activeInsideScanner = active instanceof HTMLElement &&
+      latest.consoleElement.contains(active);
+    if (!forceFocus && activeInsideScanner && active !== input) return;
+    input.focus({ preventScroll: true });
+  }
+
+  function prepareNextCard(current, options = {}) {
     for (const input of [current.manualInput, current.autoInput]) {
       if (!(input instanceof HTMLInputElement)) continue;
       input.value = "";
@@ -80,7 +91,9 @@
       current.submit.removeAttribute("disabled");
       current.submit.removeAttribute("aria-disabled");
     }
-    window.requestAnimationFrame(() => activeInput(elements() || current)?.focus({ preventScroll: true }));
+    window.requestAnimationFrame(() => {
+      focusActiveInput(current, options.forceFocus === true);
+    });
   }
 
   function ensurePlayerIdLine(current) {
@@ -172,7 +185,7 @@
     if (current.state) current.state.textContent = "Ready";
     setPanel(current.autoPanel, "Listening", "Auto-submit is active.");
     setPanel(current.manualPanel, "Manual entry", "Fallback mode");
-    prepareNextCard(current);
+    prepareNextCard(current, { forceFocus: options.forceFocus === true });
 
     if (options.clearResult !== false) {
       if (current.player) {
@@ -204,7 +217,7 @@
     const rearm = window.setTimeout(() => {
       const latest = elements();
       if (!latest || text(latest.consoleElement.dataset.adminQolScannerState).toLowerCase() !== state) return;
-      prepareNextCard(latest);
+      prepareNextCard(latest, { forceFocus: true });
     }, REARM_MS);
 
     const reset = window.setTimeout(() => {
@@ -213,7 +226,7 @@
       const dataState = text(latest.consoleElement.dataset.adminQolScannerState).toLowerCase();
       const visibleState = text(latest.state?.textContent).toLowerCase();
       if (![state, "armed"].includes(dataState) && ![state, "armed"].includes(visibleState)) return;
-      setReady();
+      setReady({ forceFocus: true });
     }, state === "completed" ? SUCCESS_RESET_MS : ERROR_RESET_MS);
 
     jobs.set(current.consoleElement, { state, rearm, reset });

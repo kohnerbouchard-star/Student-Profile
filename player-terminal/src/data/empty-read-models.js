@@ -7,6 +7,13 @@ export function createEmptyReadModels() {
     notifications: [],
     countries: [],
     news: { categories: ["All"], selectedId: "", items: [] },
+    worldRuntime: {
+      campaign: null,
+      arrival: { required: false, questionnaire: null, assignment: null },
+      travel: { state: null, activeJourney: null },
+      residency: null,
+      world: { revision: 0, locations: [], routes: [] }
+    },
     market: { status: "UNAVAILABLE", nextClose: "", selectedAssetId: "", sectors: ["All"], assets: [] },
     portfolio: {
       netWorth: 0,

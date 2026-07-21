@@ -10,6 +10,12 @@ const NUMBER_RULES = Object.freeze({
 });
 const MAX_TEXT = 4000;
 const IDENTIFIER_KEY = /(?:Id|Ids)$/;
+const PUBLIC_LOCATION_ID = /^loc_[a-z0-9_]+$/;
+const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
+const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
+const COUNTRY_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const TOKEN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
+const TRAVEL_MODES = new Set(["land", "sea", "air", "meridian"]);
 
 function invalidPayload(endpointKey, field) {
   return new ApiRequestError(`Enter a valid value for ${field}.`, {
@@ -33,8 +39,62 @@ function normalizeString(key, value, endpointKey) {
   return clean.slice(0, IDENTIFIER_KEY.test(key) ? 160 : MAX_TEXT);
 }
 
+function requirePattern(value, pattern, endpointKey, field) {
+  const clean = normalizeString(field, value, endpointKey).toLowerCase();
+  if (!pattern.test(clean)) throw invalidPayload(endpointKey, field);
+  return clean;
+}
+
+function normalizeArrivalAnswers(raw, endpointKey) {
+  if (!Array.isArray(raw) || raw.length < 6 || raw.length > 8) {
+    throw invalidPayload(endpointKey, "answers");
+  }
+  const questionIds = new Set();
+  return raw.map((answer) => {
+    if (!answer || typeof answer !== "object" || Array.isArray(answer)) {
+      throw invalidPayload(endpointKey, "answers");
+    }
+    const questionId = requirePattern(answer.questionId, TOKEN, endpointKey, "questionId");
+    const optionId = requirePattern(answer.optionId, TOKEN, endpointKey, "optionId");
+    if (questionIds.has(questionId)) throw invalidPayload(endpointKey, "answers");
+    questionIds.add(questionId);
+    return Object.freeze({ questionId, optionId });
+  });
+}
+
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
+  if (endpointKey === "arrivalClass") {
+    return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
+  }
+  if (endpointKey === "travelQuote") {
+    const allowedModes = Array.isArray(raw.allowedModes)
+      ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))]
+      : [];
+    if (!allowedModes.length || allowedModes.length > 4 || allowedModes.some((mode) => !TRAVEL_MODES.has(mode))) {
+      throw invalidPayload(endpointKey, "allowedModes");
+    }
+    return {
+      toLocationId: requirePattern(raw.toLocationId, PUBLIC_LOCATION_ID, endpointKey, "toLocationId"),
+      allowedModes
+    };
+  }
+  if (endpointKey === "travelExecute") {
+    return { quoteId: requirePattern(raw.quoteId, PUBLIC_QUOTE_ID, endpointKey, "quoteId") };
+  }
+  if (endpointKey === "travelComplete") {
+    return { journeyId: requirePattern(raw.journeyId, PUBLIC_JOURNEY_ID, endpointKey, "journeyId") };
+  }
+  if (endpointKey === "residencyRequest") {
+    const expectedRevision = Number(raw.expectedRevision);
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+      throw invalidPayload(endpointKey, "expectedRevision");
+    }
+    return {
+      countryId: requirePattern(raw.countryId, COUNTRY_ID, endpointKey, "countryId"),
+      expectedRevision
+    };
+  }
   if (endpointKey === "storyDeliveryState") {
     const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
     if (!new Set(["seen", "dismissed", "acknowledged"]).has(action)) {
