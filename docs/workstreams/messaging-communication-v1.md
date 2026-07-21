@@ -4,57 +4,89 @@
 **Roadmap items:** `EXP-MSG-001` through `EXP-MSG-007`  
 **Authority branch:** `agent/messaging-communication-v1`  
 **Pull request:** #248  
-**Status:** `IMPLEMENTED_NOT_MERGED — PRODUCT_OWNER_PAUSED`  
+**Status:** `IMPLEMENTED_NOT_MERGED — BLOCKED_ON_MARKETPLACE`  
 **Started:** 2026-07-20  
-**Controller gate recorded:** 2026-07-20
+**Reactivated:** 2026-07-21
 
 ## Scope
 
-This branch owns the complete repository-integrated messaging tranche:
+This branch owns the complete repository-integrated Messaging tranche:
 
-- teacher announcements;
-- system messages;
-- player-to-player threads;
-- Contract-linked messages;
-- private, game-scoped inbox and thread reads;
-- safe send and idempotent replay;
-- unread state and metadata-only notification integration;
-- Admin moderation, thread disable/enable/close, message hide/unhide, and immutable audit;
-- retention, privacy, abuse, role, cross-game, replay, and UUID-leak tests;
-- Player Terminal and Admin integration without redesigning the accepted visual systems;
-- capability-manifest and central rate-limit registration prepared for synchronization.
+- teacher announcements and system messages;
+- Player-to-Player and Contract-linked threads;
+- participant-scoped inbox, search, thread reads, unread counts, and read receipts;
+- safe, idempotent Player thread creation and message sends;
+- Admin policy, creation, moderation, hiding, closing, disabling, retention deletion, and immutable audit;
+- metadata-only notification delivery with no message body in notification payloads;
+- public browser identifiers with no internal UUID exposure;
+- explicit Player publication through `classroom-api` and Admin publication through `admin-api`;
+- additive capability-manifest, rate-limit, endpoint, resource, loader, and package registrations;
+- accepted Player and Admin surfaces with desktop/mobile, keyboard, overflow, and accessibility verification.
+
+Attachments remain disabled. The branch does not introduce attachment storage, upload, malware scanning, content-type handling, or attachment deletion.
+
+## Purified branch boundary
+
+The current pull-request diff contains Messaging implementation and narrowly necessary shared publication points only. It does not carry inherited backup, restore, observability, release, pilot, incident, environment-neutrality, or production-deployment implementations.
+
+The only workflow changes are:
+
+- Messaging migration paths in database-replay diagnostics;
+- a Messaging-specific, fail-closed isolated-staging harness;
+- narrow Player verification scope registration for Messaging-owned files.
+
+Notifications remain Notifications-only. Messaging is dispatched explicitly through `classroom-api`; it does not route through the Notifications domain or a URL-derived fallback. The accepted global Player route registry remains authoritative and composes Messaging additively.
 
 ## Implemented evidence
 
-The branch contains the bounded messaging schema, authenticated Player handlers, Admin operations, Player and Admin surfaces, migration contracts, source-boundary contracts, and the corrected central rate-limit dispatch ratchet.
+Repository verification covers:
 
-The exact-branch verification runs established the following before the controller pause was enforced:
+- teacher, system, Player, and Contract thread types;
+- game and participant authorization;
+- public-ID-only browser payloads and cross-game denial;
+- applied and replayed thread creation, sends, moderation, and retention commands;
+- unread-count consistency and participant-scoped read receipts;
+- closed, disabled, expired, and replies-disabled thread behavior;
+- Player-session expiry, paused-game, ended-game, and race-to-inactive write denial;
+- unsafe ownership fields, UUID recipients, attachments, unsafe URI schemes, excessive lines, excessive links, and participant overflow;
+- per-player, per-game, per-thread, per-staff, per-action, and per-IP rate-limit policies;
+- immutable message content and immutable moderation audit;
+- metadata-only notifications;
+- desktop and mobile Chromium behavior, keyboard focus, inert hostile markup, and horizontal-overflow limits;
+- migration replay from zero twice and database lint.
 
-- Admin messaging source, privacy, accessibility, and architecture contract passed;
-- Player route parsing passed;
-- authenticated Player inbox, send, replay, and read-receipt handler tests passed;
-- migration structure, forced RLS, public identifiers, idempotency, moderation, retention, and reply-policy contracts passed;
-- Backend `typecheck:all` passed;
-- root repository test suite passed;
-- the remaining Backend smoke failure was isolated to the stale exhaustive rate-limit source-count assertion, which is corrected on this branch.
+Applicable exact-head workflows include Backend Typecheck and smoke, Player Terminal Verify, Admin API Check, Admin Shell Smoke, Admin Game Lifecycle Controls, Beta Security Contract, Repository Quality, Supply Chain Security, Database Replay, Exchange Calendar Runtime, Required Game Market Timezone, Seed preservation, release artifact checks, and the credential-free Messaging staging-plan validation.
 
-No migration was applied, no environment was changed, and no production deployment occurred.
+No Messaging migration has been applied to production. No production function or frontend has been deployed or activated by this branch.
 
-## Controller disposition
+## Current dependency gate
 
-The production-beta controller merged in `7bbd08e19641146282b58023a0a911c90f6a148b` reserves authoritative-roadmap edits to Chat 1 and classifies PR #248, PR #249, and PR #261 as product-owner-paused expansion work outside the beta merge queue until explicit controller reactivation. Default-branch enforcement removed the attempted synchronization unblocker in `92563c58304517e911816627a9cac0c74db92aef`.
+Marketplace PR #249 is still unmerged. Until Marketplace merges:
 
-Accordingly:
+- PR #248 remains draft;
+- Messaging migrations retain temporary identities and must not be finalized;
+- no merge is permitted;
+- the protected connected-staging job cannot execute from the pull request;
+- final shared-file convergence against Marketplace is deferred.
 
-- PR #248 remains the sole preserved messaging authority;
-- the implementation is not merged and cannot be marked `VERIFIED_COMPLETE`;
-- this branch must not edit the authoritative roadmap;
-- synchronization, final-head CI, roadmap reconciliation, and merge resume only after the controller records reactivation.
+## Post-Marketplace integration
+
+After Marketplace merges, this same branch and pull request must:
+
+1. record the exact Marketplace merge SHA;
+2. synchronize with final `main` without dropping Marketplace, Crafting, Business, World, Story, Notifications, login, or security behavior;
+3. obtain one controller-assigned migration range later than Marketplace and earlier than Progression;
+4. rekey the four unmerged Messaging migrations once;
+5. reconcile shared publication points additively;
+6. replay migrations from zero twice and lint;
+7. run the complete exact-head repository, browser, security, privacy, retention, moderation, replay, rate-limit, and accessibility matrix;
+8. run protected isolated-staging acceptance with synthetic Player and staff identities;
+9. clear review threads, move the pull request out of draft, merge through the controller, and publish the final public contract and rollback handoff.
 
 ## Collision boundary
 
-This branch does not own PR #163 seed content, PR #244 story delivery, generic notification delivery, Contracts lifecycle, Inventory redemption, market orders, staging operations, production deployment, or authoritative-roadmap control.
+This branch does not own Seed definitions, World, Business and Banking, Crafting, Marketplace, Progression, Story delivery internals, generic Notifications, production deployment, connected release approval, or authoritative roadmap control.
 
 ## Completion rule
 
-The workstream becomes complete only after controller reactivation, synchronization with current `main`, a permanent human-authored implementation head, all required final-head workflows passing, PR #248 merging, and Chat 1 reconciling the authoritative roadmap with immutable evidence.
+Messaging becomes complete only after Marketplace has merged, the migrations have been rekeyed into the assigned post-Marketplace range, protected isolated-staging acceptance has passed, PR #248 has merged, and the exact merge SHA, migration identities, public contracts, rollback notes, and Progression handoff have been delivered to Chat 1 and Chat 2.
