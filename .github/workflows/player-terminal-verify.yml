@@ -97,6 +97,7 @@ jobs:
               $0 == "backend/src/security/staffMessagingRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
+              $0 == "backend/supabase/functions/classroom-api/messagingDispatch.ts" { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/messagingOperations(Core)?([.]test|Extended[.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072113[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
