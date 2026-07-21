@@ -7,7 +7,7 @@ on:
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/supabase/functions/classroom-api/index.ts"
-      - "backend/supabase/functions/admin-api/businessBankingOperations.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
@@ -25,7 +25,7 @@ on:
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/supabase/functions/classroom-api/index.ts"
-      - "backend/supabase/functions/admin-api/businessBankingOperations.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/2026072112*.sql"
       - "player-terminal/src/api/business-banking-backend-routes.js"
@@ -87,7 +87,16 @@ jobs:
           path: ${{ runner.temp }}/business-banking-runtime-contract.log
           if-no-files-found: error
           retention-days: 7
-      - name: Typecheck business banking domain
+      - name: Run focused Player and Admin tests
+        working-directory: backend
+        run: |
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
+          deno test --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/businessBankingOperations.test.ts
+      - name: Typecheck Business Banking domain and Admin publication
         working-directory: backend
         run: |
           deno check --config supabase/functions/classroom-api/deno.json \
@@ -96,5 +105,8 @@ jobs:
             src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts \
             src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts \
             src/domains/business-banking/domain/businessBankingEconomicSimulation.ts
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/index.ts
       - name: Check Player route adapter syntax
         run: node --check player-terminal/src/api/business-banking-backend-routes.js
