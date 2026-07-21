@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "evidenceType": "production-integration-preflight",
-  "capturedAt": "2026-07-21T00:22:20.000Z",
+  "capturedAt": "2026-07-21T01:26:00.000Z",
   "repository": {
     "name": "kohnerbouchard-star/Student-Profile",
-    "mainCommitAtAudit": "0ee9e121c3d556b2b3e4c1fa89e860a3a913a618",
+    "mainCommitAtAudit": "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3",
     "integrationBranch": "agent/production-integration-gate-v1",
-    "branchBaseCommit": "0ee9e121c3d556b2b3e4c1fa89e860a3a913a618"
+    "branchBaseCommit": "3a1b2a00785d4d0e755365e9f7a49c38c3110fb3"
   },
   "environment": {
     "staging": {
@@ -41,18 +41,19 @@
   },
   "migrations": {
     "canonicalRepositoryIdentity": {
-      "count": 71,
-      "head": "20260720235900",
-      "versionSetSha256": "67d4a427a5c41a46f0aee49e7365deb7c01632333e397598ff6d7206d5a81d57"
+      "count": 73,
+      "head": "20260721003228",
+      "versionSetSha256": "f15e850f4c75593f77be8da15e6b6546e038ee833f4794722e7b6c978120dd4f"
     },
     "stagingLedger": {
-      "count": 71,
-      "distinctVersionCount": 71,
+      "count": 73,
+      "distinctVersionCount": 73,
       "firstVersion": "20260615161835",
-      "head": "20260720235900",
+      "head": "20260721003228",
       "blankVersionCount": 0,
       "blankNameCount": 0,
-      "matchesCanonicalRelease": true
+      "matchesCanonicalRepository": true,
+      "matchesImmutableRelease": false
     },
     "productionReadOnlyComparison": {
       "count": 53,
@@ -75,6 +76,12 @@
     "artifactSetSha256": "91903145d99d68e0eed2d3c4bec2bde504d27ba2e144d60d6d85c7205ee1ac95",
     "attestationId": "36172197",
     "checksumsVerified": true,
+    "migrations": {
+      "count": 71,
+      "head": "20260720235900",
+      "versionSetSha256": "67d4a427a5c41a46f0aee49e7365deb7c01632333e397598ff6d7206d5a81d57"
+    },
+    "currentForCanonicalMain": false,
     "artifacts": [
       {
         "file": "artifacts/frontend.tar.gz",
@@ -163,7 +170,7 @@
       "errorCount": 0,
       "warningCount": 0,
       "result": "pass-with-info",
-      "notes": "Current findings are INFO-level default-deny RLS notices."
+      "notes": "No WARN or ERROR findings after the staging security DDL; remaining findings are INFO-level default-deny RLS notices."
     },
     "performance": {
       "warningCount": 2,
@@ -182,19 +189,17 @@
         "requiredBeforePilot": true
       },
       {
-        "number": 284,
-        "capability": "security, privacy, rate limiting, and access",
-        "requiredBeforeSecurityAcceptance": true
-      },
-      {
         "number": 294,
         "capability": "campaign, arrival class, geography, and travel runtime",
         "requiredBeforeCompletePilot": true
       }
     ],
+    "securityRepositoryAndDatabaseContract": "pass",
+    "securityEdgeIngressOutagePrivacy": "not-run",
     "frontendStagingTarget": "missing",
     "protectedStagingEnvironmentVerification": "unavailable",
     "priorCompatibleRollbackArtifact": "not-selected",
+    "currentMainImmutableRelease": "not-built",
     "encryptedBackupRestoreRehearsal": "not-run",
     "operationalDashboardsAndAlerts": "not-activated",
     "boundedLoad": "not-run",
@@ -212,11 +217,12 @@
     "blockers": [
       "No separate frontend staging target is recorded.",
       "Protected GitHub staging environment and named reviewer cannot be verified.",
-      "The immutable release has not been deployed to staging.",
+      "The retained immutable release predates the security merge and current 73-migration repository; a new current-main release must be built.",
+      "The current immutable release has not been deployed to staging.",
       "Staging currently has zero deployed Edge Functions.",
       "No prior compatible immutable rollback artifact is selected.",
       "Backup and isolated restore rehearsal has not run.",
-      "Security PR #284 has not merged or completed connected probes.",
+      "Security Edge, ingress, outage, scanner, true-concurrency, and retained-evidence privacy probes remain incomplete.",
       "Seed PR #163 has not completed connected import and rollback evidence.",
       "World runtime PR #294 is unfinished and blocks complete pilot coverage.",
       "Operational dashboards, alerts, 30/40-player load, and post-load plans are absent.",
