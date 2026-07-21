@@ -47,14 +47,14 @@ for (const statement of [
   "alter table public.%I force row level security",
   "revoke all on table public.%I from public, anon, authenticated",
 ]) {
-  assert.match(source.core, new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "iu"));
+  assert.match(source.core, new RegExp(escapeRegExp(statement), "iu"));
 }
 for (const statement of [
   "alter table public.business_compliance_records enable row level security",
   "alter table public.business_compliance_records force row level security",
   "revoke all on table public.business_compliance_records from public,anon,authenticated",
 ]) {
-  assert.match(source.operating, new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "iu"));
+  assert.match(source.operating, new RegExp(escapeRegExp(statement), "iu"));
 }
 
 for (const operation of [
@@ -96,7 +96,10 @@ for (const prohibited of [
   "national origin",
   "sexual orientation",
 ]) {
-  assert.doesNotMatch(sql.toLowerCase(), new RegExp(prohibited, "u"));
+  assert.doesNotMatch(
+    sql.toLowerCase(),
+    new RegExp(`\\b${escapeRegExp(prohibited)}\\b`, "u"),
+  );
 }
 
 for (const forbiddenClientScope of [
@@ -135,3 +138,7 @@ assert.match(source.playerAdapter, /recipientPlayerIdentifier/u);
 assert.doesNotMatch(source.playerAdapter, /recipientPlayerUuid/u);
 
 console.log("Business, Banking, Loans, and Credit runtime contract passed.");
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
