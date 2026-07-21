@@ -3,9 +3,14 @@ import { ROUTES } from "../core/router.js";
 export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "bankingExport",
   "bankTransfer",
+  "businessCreate",
+  "businessEmployeeTerminate",
   "businessHire",
+  "businessInputPurchase",
   "businessPrice",
+  "businessProductCreate",
   "businessProduction",
+  "businessStatus",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -37,6 +42,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
       .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
       .map((key) => [key, key])
   ),
+  businessTerminate: "businessEmployeeTerminate",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });
