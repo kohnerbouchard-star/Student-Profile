@@ -265,6 +265,13 @@ function installSession(page) {
       expiresAt: "2026-07-21T03:00:00.000Z",
     };
     globalThis.ECONOVARIA_PLAYER_SESSION = value;
+    globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
+      ...(globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG || {}),
+      usePreviewData: false,
+      gameSessionId: gameId,
+      playerSessionId: value.playerSessionId,
+      playerSessionToken: token,
+    };
   }, { gameId: GAME_ID, token: SESSION_TOKEN });
 }
 
