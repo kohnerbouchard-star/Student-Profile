@@ -100,6 +100,10 @@ export interface TravelLegQuote {
   readonly durationMinutes: number;
 }
 
+export interface StoredTravelLegQuote extends TravelLegQuote {
+  readonly routeRevision: number;
+}
+
 export interface TravelQuote {
   readonly gameId: string;
   readonly playerUuid: string;
@@ -112,9 +116,10 @@ export interface TravelQuote {
   readonly routeStateRevision: number;
 }
 
-export interface StoredTravelQuote extends TravelQuote {
+export interface StoredTravelQuote extends Omit<TravelQuote, "legs"> {
   readonly publicQuoteId: string;
   readonly currencyCode: string;
+  readonly legs: readonly StoredTravelLegQuote[];
   readonly status: "created" | "consumed" | "expired";
   readonly expiresAt: string;
 }
