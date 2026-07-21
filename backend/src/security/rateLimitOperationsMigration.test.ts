@@ -4,7 +4,7 @@ declare const Deno: {
 };
 
 const MIGRATION = new URL(
-  "../../supabase/migrations/20260720150000_harden_request_rate_limit_operations_v2.sql",
+  "../../supabase/migrations/20260721120000_harden_request_rate_limit_operations_v3.sql",
   import.meta.url,
 );
 
@@ -59,8 +59,7 @@ Deno.test("rate-limit operations migration is bounded, privacy-safe, and service
   assert(!sql.includes("session_token"));
   assert(!sql.includes("access_code"));
   assert(!sql.includes("credential"));
-}
-);
+});
 
 function assertIncludes(actual: string, expected: string): void {
   if (!actual.includes(expected)) {
