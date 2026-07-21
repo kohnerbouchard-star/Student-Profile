@@ -88,7 +88,10 @@ release path. Verify the migration ledger contains:
 
 - `20260718173000_add_shared_request_rate_limits_v1.sql`;
 - `20260718190000_add_pre_auth_rate_limit_rpc_v1.sql`;
-- `20260720150000_harden_request_rate_limit_operations_v2.sql`.
+- `20260721120000_harden_request_rate_limit_operations_v3.sql`.
+
+The historical `20260720150000` candidate was never merged and must not be
+introduced after a staging ledger that already contains `20260720235900`.
 
 Repository CI must replay all migrations from zero twice and run database lint.
 Then run the connected SQL probe with protected service-role credentials:
