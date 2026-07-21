@@ -1,5 +1,4 @@
-import type { EdgeSupabaseClient } from "../../../src/platform/supabase/edgeStaffSession.ts";
-import { enforceStaffRateLimit } from "../../../src/security/playerRateLimitService.ts";
+import { consumeAdminProgressionRateLimit } from "./progressionRateLimit.ts";
 
 interface RpcError {
   readonly code?: string;
@@ -9,7 +8,7 @@ interface RpcResponse<T> {
   readonly data: T | null;
   readonly error: RpcError | null;
 }
-interface AdminService extends EdgeSupabaseClient {
+interface AdminService {
   rpc<T>(name: string, args: unknown): PromiseLike<RpcResponse<T>>;
 }
 
@@ -23,14 +22,16 @@ const PLAYER_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const REPUTATION_TYPES = new Set(["country", "career", "story", "relationship"]);
 
+type ProgressionInput = {
+  readonly request: Request;
+  readonly gameId: string;
+  readonly staffUserId: string;
+  readonly suffix: string;
+};
+
 export async function handleProgressionOperation(
   service: AdminService,
-  input: {
-    readonly request: Request;
-    readonly gameId: string;
-    readonly staffUserId: string;
-    readonly suffix: string;
-  },
+  input: ProgressionInput,
 ): Promise<ProgressionOperationResult> {
   if (input.suffix === "/progression") {
     if (input.request.method !== "GET") return methodNotAllowed("Use GET to review Progression.");
@@ -52,18 +53,18 @@ export async function handleProgressionOperation(
 
 async function rateLimit(
   service: AdminService,
-  input: Parameters<typeof handleProgressionOperation>[1],
+  input: ProgressionInput,
   action: string,
   profile: "read" | "sensitive",
 ): Promise<ProgressionOperationResult | null> {
   try {
-    const decision = await enforceStaffRateLimit({
+    const decision = await consumeAdminProgressionRateLimit(service, {
       action,
       profile,
       request: input.request,
-      staffUuid: input.staffUserId,
-      gameUuid: input.gameId,
-    }, service);
+      staffUserId: input.staffUserId,
+      gameId: input.gameId,
+    });
     if (decision.allowed) return null;
     return {
       handled: true,
@@ -90,12 +91,12 @@ async function rateLimit(
 
 async function readPlayers(
   service: AdminService,
-  input: Parameters<typeof handleProgressionOperation>[1],
+  input: ProgressionInput,
 ): Promise<ProgressionOperationResult> {
   try {
     const url = new URL(input.request.url);
     for (const key of url.searchParams.keys()) {
-      if (!['limit', 'offset'].includes(key) || url.searchParams.getAll(key).length !== 1) {
+      if (!["limit", "offset"].includes(key) || url.searchParams.getAll(key).length !== 1) {
         return invalid(`Unsupported or repeated query parameter: ${key}.`);
       }
     }
@@ -113,11 +114,7 @@ async function readPlayers(
     );
     if (response.error) return rpcError(response.error);
     if (!isRecord(response.data) || !Array.isArray(response.data.players)) return failed();
-    return {
-      handled: true,
-      status: 200,
-      body: { data: response.data },
-    };
+    return { handled: true, status: 200, body: { data: response.data } };
   } catch {
     return failed();
   }
@@ -125,7 +122,7 @@ async function readPlayers(
 
 async function correct(
   service: AdminService,
-  input: Parameters<typeof handleProgressionOperation>[1],
+  input: ProgressionInput,
   playerId: string,
 ): Promise<ProgressionOperationResult> {
   try {
@@ -135,12 +132,8 @@ async function correct(
     const value = await input.request.clone().json().catch(() => null);
     if (!isRecord(value)) return invalid("Provide a valid correction JSON object.");
     const allowed = new Set([
-      "correctionType",
-      "amount",
-      "reputationType",
-      "reputationScope",
-      "reason",
-      "idempotencyKey",
+      "correctionType", "amount", "reputationType", "reputationScope",
+      "reason", "idempotencyKey",
     ]);
     if (Object.keys(value).some((key) => !allowed.has(key))) {
       return invalid("Progression correction contains unsupported fields.");
@@ -194,8 +187,8 @@ async function correct(
     if (
       !["applied", "replayed"].includes(outcome) ||
       !/^pcr_[0-9a-f]{32}$/.test(correctionId) ||
-      returnedPlayerId !== playerId ||
-      beforeValue === null || afterValue === null || !createdAt
+      returnedPlayerId !== playerId || beforeValue === null ||
+      afterValue === null || !createdAt
     ) return failed();
     return {
       handled: true,
@@ -235,7 +228,6 @@ function rpcError(error: RpcError): ProgressionOperationResult {
   if (upper.includes("PROGRESSION_") && upper.includes("INVALID")) return invalid("Progression request is invalid.");
   return failed();
 }
-
 function methodNotAllowed(message: string): ProgressionOperationResult {
   return errorResult(405, "method_not_allowed", message);
 }
