@@ -86,7 +86,7 @@ export interface PlayerTravelContext {
   readonly gameSessionId: string;
   readonly playerUuid: string;
   readonly currentLocationId: string;
-  readonly settlementCurrencyCode: string;
+  readonly settlementCurrencyCode?: string;
   readonly residency: PlayerResidencyState;
   readonly allowedModes: readonly WorldRouteMode[];
 }
@@ -105,7 +105,7 @@ export interface TravelQuote {
   readonly playerUuid: string;
   readonly fromLocationId: string;
   readonly toLocationId: string;
-  readonly currencyCode: string;
+  readonly currencyCode?: string;
   readonly totalCostMinor: number;
   readonly totalDurationMinutes: number;
   readonly legs: readonly TravelLegQuote[];
@@ -114,6 +114,7 @@ export interface TravelQuote {
 
 export interface StoredTravelQuote extends TravelQuote {
   readonly publicQuoteId: string;
+  readonly currencyCode: string;
   readonly status: "created" | "consumed" | "expired";
   readonly expiresAt: string;
 }
