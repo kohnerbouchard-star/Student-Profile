@@ -1,0 +1,35 @@
+name: Business Main Tree Capture
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/business-main-tree-capture.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out Business branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Capture merged main tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git rev-parse 'origin/main^{tree}' > main-tree-sha.txt
+          git rev-parse origin/main > main-commit-sha.txt
+      - name: Upload main tree identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-main-tree-identity
+          path: |
+            main-tree-sha.txt
+            main-commit-sha.txt
+          if-no-files-found: error
+          retention-days: 1
