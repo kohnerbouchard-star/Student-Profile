@@ -1,0 +1,42 @@
+name: Connected Operations Source Snapshot
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/connected-operations-source-snapshot.yml"
+  push:
+    branches:
+      - agent/production-integration-gate-v1
+    paths:
+      - ".github/workflows/connected-operations-source-snapshot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Capture source and tree identities
+        shell: bash
+        run: |
+          git archive --format=zip --output=/tmp/integration-branch-source.zip HEAD
+          git archive --format=zip --output=/tmp/current-main-source.zip origin/main
+          git rev-parse 'HEAD^{tree}' > /tmp/integration-branch-tree.txt
+          git rev-parse 'origin/main^{tree}' > /tmp/current-main-tree.txt
+      - name: Upload source identities
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-operations-sources-${{ github.sha }}
+          path: |
+            /tmp/integration-branch-source.zip
+            /tmp/current-main-source.zip
+            /tmp/integration-branch-tree.txt
+            /tmp/current-main-tree.txt
+          if-no-files-found: error
+          retention-days: 1
