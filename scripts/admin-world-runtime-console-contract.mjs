@@ -20,7 +20,9 @@ for (const route of [
   "/routes/state",
   "/travel?limit=100",
   "/residency?limit=100",
-]) assert.match(source, new RegExp(route.replace(/[/?]/g, "\\$&")));
+]) {
+  assert.ok(source.includes(route), `Missing Admin World route ${route}.`);
+}
 
 for (const capability of [
   "Scheduler due",
@@ -30,7 +32,12 @@ for (const capability of [
   "Close route",
   "TRAVEL OVERSIGHT",
   "RESIDENCY OVERSIGHT",
-]) assert.match(source, new RegExp(capability, "i"));
+]) {
+  assert.ok(
+    source.toLowerCase().includes(capability.toLowerCase()),
+    `Missing Admin World capability ${capability}.`,
+  );
+}
 
 for (const operation of [
   "handleWorldRuntimeAdminOperation",
@@ -39,7 +46,12 @@ for (const operation of [
   "recover_campaign_effect_command_v1",
   "correct_arrival_class_assignment_v1",
   "apply_world_route_state_v1",
-]) assert.match(operations, new RegExp(operation));
+]) {
+  assert.ok(
+    operations.includes(operation),
+    `Missing Admin World operation ${operation}.`,
+  );
+}
 
 assert.match(index, /world-runtime-console-loader\.js/);
 assert.doesNotMatch(index, /<link[^>]+world-runtime-console\.css/);
