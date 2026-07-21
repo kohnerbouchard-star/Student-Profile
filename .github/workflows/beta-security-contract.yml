@@ -7,7 +7,7 @@ on:
       - "backend/src/security/**"
       - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
       - "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts"
-      - "backend/supabase/migrations/20260721120000_harden_request_rate_limit_operations_v3.sql"
+      - "backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql"
       - "backend/package.json"
       - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
       - "docs/operations/beta-security-rate-limit-staging-runbook.md"
