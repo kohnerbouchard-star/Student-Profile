@@ -1,7 +1,6 @@
-import type { WorldRouteDefinition } from "../contracts/worldRuntimeContracts.ts";
+import type { WorldRouteMode } from "../contracts/worldRuntimeContracts.ts";
 import {
   adaptBetaSeedPackForRuntime,
-  BETA_COUNTRY_IDS,
   BETA_SEED_PACK_ID,
   BETA_SEED_PACK_VERSION,
   publicLocationIdFromStableId,
@@ -12,74 +11,59 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("adapter consumes the bounded PR 163 contract without copying seed values", () => {
+Deno.test("adapter derives runtime references from the merged downstream contract", () => {
   const input = fixture();
   const result = adaptBetaSeedPackForRuntime(input);
   assertEquals(result.packId, BETA_SEED_PACK_ID);
   assertEquals(result.packVersion, BETA_SEED_PACK_VERSION);
+  assertEquals(result.packDigest, input.downstreamContract.packDigest);
+  assertEquals(result.world.definition.definitionDigest, `sha256:${input.downstreamContract.packDigest}`);
   assertEquals(result.world.locations.length, 50);
-  assertEquals(result.world.routes.length, 9);
-  assertEquals(Object.keys(result.arrivalPackageDefinitionIds), BETA_COUNTRY_IDS);
-  assertEquals(
-    result.world.locations[0]?.publicLocationId,
-    "loc_northreach_location_0_v1",
-  );
-  assertEquals(
-    result.selectedCampaignEventIds,
-    input.campaign.selectedEventStableIds,
-  );
-  assertEquals(
-    "approvedStartingBalance" in result.arrivalPackageDefinitionIds,
-    false,
-  );
+  assertEquals(result.world.routes.length, 13);
+  assertEquals(Object.keys(result.arrivalPackageDefinitionIds).sort(), [...input.downstreamContract.contentIdentifiers.countries].sort());
+  assertEquals(new Set(result.world.routes.map((route) => route.mode)), new Set(["land", "sea", "air", "meridian"]));
+  assertEquals("approvedStartingBalance" in result.arrivalPackageDefinitionIds, false);
 });
 
-Deno.test("adapter rejects activation flags, count drift, unverified locations, and inferred routes", () => {
+Deno.test("adapter rejects digest drift, copied-catalog policy, identity drift, and incomplete mode coverage", () => {
+  const base = fixture();
   assertThrowsCode(() => adaptBetaSeedPackForRuntime({
-    ...fixture(),
-    manifest: { ...fixture().manifest, activationAuthorized: true },
+    ...base,
+    downstreamContract: { ...base.downstreamContract, packDigest: `sha256:${"a".repeat(64)}` },
   }), "world_definition_invalid");
-
   assertThrowsCode(() => adaptBetaSeedPackForRuntime({
-    ...fixture(),
-    locations: {
-      ...fixture().locations,
-      locations: fixture().locations.locations.slice(0, 49),
+    ...base,
+    downstreamContract: {
+      ...base.downstreamContract,
+      consumerRules: { ...base.downstreamContract.consumerRules, copySeedCatalogFiles: true },
     },
   }), "world_definition_invalid");
-
-  const unverified = fixture();
   assertThrowsCode(() => adaptBetaSeedPackForRuntime({
-    ...unverified,
-    locations: {
-      ...unverified.locations,
-      locations: unverified.locations.locations.map((location, index) =>
-        index === 0
-          ? { ...location, mapVerificationStatus: "pending" }
-          : location
-      ),
-    },
+    ...base,
+    approvedRoutes: base.approvedRoutes.map((route, index) =>
+      index === 0 ? { ...route, seedRouteDefinitionId: "route.foreign.v1" } : route
+    ),
   }), "world_definition_invalid");
-
   assertThrowsCode(() => adaptBetaSeedPackForRuntime({
-    ...fixture(),
-    approvedRoutes: [],
+    ...base,
+    approvedRoutes: base.approvedRoutes.map((route) => ({ ...route, mode: "land" as const })),
   }), "world_definition_invalid");
 });
 
-Deno.test("stable location identifiers map deterministically and reject foreign forms", () => {
+Deno.test("stable location identifiers map deterministically and reject internal forms", () => {
   assertEquals(
     publicLocationIdFromStableId("location.yrethia.sableport.v1"),
     "loc_yrethia_sableport_v1",
   );
   assertThrowsCode(
-    () => publicLocationIdFromStableId("internal-uuid-or-free-text"),
+    () => publicLocationIdFromStableId("00000000-0000-4000-8000-000000000001"),
     "world_definition_invalid",
   );
 });
 
 function fixture(): BetaPackRuntimeInput {
-  const locations = BETA_COUNTRY_IDS.flatMap((country, countryIndex) =>
+  const countries = Array.from({ length: 10 }, (_, index) => `country-${index}`);
+  const locations = countries.flatMap((country, countryIndex) =>
     Array.from({ length: 5 }, (_, locationIndex) => ({
       id: `location.${country}.location-${locationIndex}.v1`,
       country,
@@ -94,25 +78,60 @@ function fixture(): BetaPackRuntimeInput {
       },
     }))
   );
-  const routes: WorldRouteDefinition[] = Array.from({ length: 9 }, (_, index) => ({
-    publicRouteId: `rte_meridian_${index}`,
-    fromLocationId: publicLocationIdFromStableId(
-      `location.${BETA_COUNTRY_IDS[index]}.location-0.v1`,
-    ),
-    toLocationId: publicLocationIdFromStableId(
-      `location.${BETA_COUNTRY_IDS[index + 1]}.location-0.v1`,
-    ),
-    mode: "meridian",
+  const routeIds = Array.from({ length: 13 }, (_, index) => `route.meridian.segment-${index}.v1`);
+  const modes: readonly WorldRouteMode[] = ["land", "sea", "air", "meridian"];
+  const approvedRoutes = routeIds.map((seedRouteDefinitionId, index) => ({
+    seedRouteDefinitionId,
+    publicRouteId: `rte_segment_${index}`,
+    fromLocationId: publicLocationIdFromStableId(locations[index]!.id),
+    toLocationId: publicLocationIdFromStableId(locations[index + 1]!.id),
+    mode: modes[index % modes.length]!,
     bidirectional: true,
-    baseCostMinor: 500,
-    baseDurationMinutes: 90,
+    baseCostMinor: 100 + index,
+    baseDurationMinutes: 30 + index,
   }));
+  const fileBindings = Object.fromEntries(
+    ["pack", "locations", "campaign", "arrivalCalibration", "calibrationScenarios"].map((key, index) => [key, {
+      path: `docs/seed-content/${key}.json`,
+      sha256: String(index + 1).repeat(64).slice(0, 64),
+    }]),
+  );
   return {
-    packDigest: `sha256:${"a".repeat(64)}`,
+    downstreamContract: {
+      schemaVersion: "econovaria-beta-seed-downstream-consumer-contract-v1",
+      packId: BETA_SEED_PACK_ID,
+      packVersion: BETA_SEED_PACK_VERSION,
+      packDigest: "a".repeat(64),
+      productionAuthorized: false,
+      boundedRelease: {
+        arrivalPackages: 10,
+        locations: 50,
+        routeCalibrations: 13,
+        stableReleaseMembers: 590,
+      },
+      consumerRules: {
+        copySeedCatalogFiles: false,
+        failClosedWhenDefinitionMissingOrInactive: true,
+        requireExactDigest: true,
+        requireExactPackIdAndVersion: true,
+        stableIdReimportCompatible: true,
+        treatDeploymentAsActivation: false,
+      },
+      contentIdentifiers: {
+        countries,
+        arrivalPackages: {
+          identifiers: countries.map((country) => `arrival-package.${country}.capital-immigrant.v1`),
+          source: "arrival-packages.json#/packages/*/id",
+        },
+        locations: { count: 50, source: "locations.json#/locations/*/id" },
+        routes: { count: 13, identifiers: routeIds, source: "routes.json#/routes/*/routeId" },
+      },
+      fileBindings,
+    },
     manifest: {
       activationAuthorized: false,
       productionAuthorized: false,
-      allowedEnvironments: ["local", "test", "staging"],
+      allowedEnvironments: ["staging"],
       boundedCounts: { arrivalPackages: 10, locationsVerified: 50 },
       domainFiles: {
         arrival: "arrival-calibration-v1.json",
@@ -133,19 +152,6 @@ function fixture(): BetaPackRuntimeInput {
       status: "approved-for-isolated-staging",
       version: BETA_SEED_PACK_VERSION,
     },
-    arrival: {
-      activationAuthorized: false,
-      productionAuthorized: false,
-      status: "approved-for-isolated-staging",
-      version: BETA_SEED_PACK_VERSION,
-      calibrations: BETA_COUNTRY_IDS.map((country) => ({
-        country,
-        currencyCode: country.slice(0, 3).toUpperCase(),
-        approvedStartingBalance: 500,
-        recoveryRoute: `Reviewed recovery route for ${country}`,
-        viability: { approved: true },
-      })),
-    },
     campaign: {
       activationAuthorized: false,
       packId: BETA_SEED_PACK_ID,
@@ -153,12 +159,12 @@ function fixture(): BetaPackRuntimeInput {
       productionAuthorized: false,
       recoveryPolicy: "Every event preserves a named recovery route.",
       schemaVersion: "econovaria-beta-campaign-selection-v1",
-      selectedEventStableIds: ["event.core.northreach.opening.v1"],
-      selectedNewsTemplateStableIds: ["news-template.northreach.opening.v1"],
+      selectedEventStableIds: ["event.core.opening.v1"],
+      selectedNewsTemplateStableIds: ["news-template.core.opening.v1"],
       status: "approved-for-isolated-staging",
       version: BETA_SEED_PACK_VERSION,
     },
-    approvedRoutes: routes,
+    approvedRoutes,
   };
 }
 
@@ -173,7 +179,8 @@ function assertThrowsCode(run: () => unknown, expectedCode: string): void {
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Actual ${JSON.stringify(actual)} Expected ${JSON.stringify(expected)}`);
+  const normalize = (value: unknown) => value instanceof Set ? [...value].sort() : value;
+  if (JSON.stringify(normalize(actual)) !== JSON.stringify(normalize(expected))) {
+    throw new Error(`Actual ${JSON.stringify(normalize(actual))} Expected ${JSON.stringify(normalize(expected))}`);
   }
 }
