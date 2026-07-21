@@ -21,17 +21,15 @@ const STATE: WorldRuntimeState = {
     definitionDigest: "sha256:world",
   },
   locationStates: [],
-  routeStates: [
-    {
-      publicRouteId: "rte_land_1",
-      status: "open",
-      reason: "normal",
-      costMultiplierBasisPoints: 10_000,
-      durationMultiplierBasisPoints: 10_000,
-      revision: 4,
-      updatedAt: NOW,
-    },
-  ],
+  routeStates: [{
+    publicRouteId: "rte_land_1",
+    status: "open",
+    reason: "normal",
+    costMultiplierBasisPoints: 10_000,
+    durationMultiplierBasisPoints: 10_000,
+    revision: 4,
+    updatedAt: NOW,
+  }],
   executedCommandKeys: [],
   revision: 9,
   updatedAt: NOW,
@@ -62,16 +60,14 @@ const QUOTE: TravelQuote = {
   toLocationId: "loc_destination",
   totalCostMinor: 125,
   totalDurationMinutes: 45,
-  legs: [
-    {
-      publicRouteId: "rte_land_1",
-      fromLocationId: "loc_origin",
-      toLocationId: "loc_destination",
-      mode: "land",
-      costMinor: 125,
-      durationMinutes: 45,
-    },
-  ],
+  legs: [{
+    publicRouteId: "rte_land_1",
+    fromLocationId: "loc_origin",
+    toLocationId: "loc_destination",
+    mode: "land",
+    costMinor: 125,
+    durationMinutes: 45,
+  }],
   routeStateRevision: 9,
 };
 
@@ -88,13 +84,14 @@ Deno.test("stored travel quote binds currency and every route revision", () => {
   assertEquals(stored.expiresAt, "2026-07-21T00:02:00.000Z");
   validateStoredTravelQuoteForExecution({
     quote: stored,
-    state: STATE,
-    context: CONTEXT,
+    gameId: CONTEXT.gameId,
+    playerUuid: CONTEXT.playerUuid,
+    currentLocationId: CONTEXT.currentLocationId,
     now: "2026-07-21T00:01:00.000Z",
   });
 });
 
-Deno.test("execution rejects stale state, closed routes, foreign players, and expiry", () => {
+Deno.test("execution rejects foreign scope, changed origin, consumed quotes, and expiry", () => {
   const stored = prepareStoredTravelQuote({
     quote: QUOTE,
     state: STATE,
@@ -104,29 +101,37 @@ Deno.test("execution rejects stale state, closed routes, foreign players, and ex
   });
   assertThrowsCode(() => validateStoredTravelQuoteForExecution({
     quote: stored,
-    state: { ...STATE, revision: 10 },
-    context: CONTEXT,
-    now: "2026-07-21T00:01:00.000Z",
-  }), "world_revision_conflict");
-  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
-    quote: stored,
-    state: {
-      ...STATE,
-      routeStates: STATE.routeStates.map((route) => ({ ...route, status: "closed" as const })),
-    },
-    context: CONTEXT,
-    now: "2026-07-21T00:01:00.000Z",
-  }), "world_route_unavailable");
-  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
-    quote: stored,
-    state: STATE,
-    context: { ...CONTEXT, playerUuid: "player-2" },
+    gameId: "game-2",
+    playerUuid: CONTEXT.playerUuid,
+    currentLocationId: CONTEXT.currentLocationId,
     now: "2026-07-21T00:01:00.000Z",
   }), "world_game_scope_mismatch");
   assertThrowsCode(() => validateStoredTravelQuoteForExecution({
     quote: stored,
-    state: STATE,
-    context: CONTEXT,
+    gameId: CONTEXT.gameId,
+    playerUuid: "player-2",
+    currentLocationId: CONTEXT.currentLocationId,
+    now: "2026-07-21T00:01:00.000Z",
+  }), "world_game_scope_mismatch");
+  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
+    quote: stored,
+    gameId: CONTEXT.gameId,
+    playerUuid: CONTEXT.playerUuid,
+    currentLocationId: "loc_changed",
+    now: "2026-07-21T00:01:00.000Z",
+  }), "world_travel_quote_invalid");
+  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
+    quote: { ...stored, status: "consumed" },
+    gameId: CONTEXT.gameId,
+    playerUuid: CONTEXT.playerUuid,
+    currentLocationId: CONTEXT.currentLocationId,
+    now: "2026-07-21T00:01:00.000Z",
+  }), "world_travel_quote_invalid");
+  assertThrowsCode(() => validateStoredTravelQuoteForExecution({
+    quote: stored,
+    gameId: CONTEXT.gameId,
+    playerUuid: CONTEXT.playerUuid,
+    currentLocationId: CONTEXT.currentLocationId,
     now: "2026-07-21T00:03:00.000Z",
   }), "world_travel_quote_expired");
 });
