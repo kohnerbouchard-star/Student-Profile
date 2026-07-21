@@ -1,3 +1,5 @@
+export {};
+
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void; readTextFile(path: string): Promise<string> };
 const MIGRATION = "supabase/migrations/20260721011000_add_player_marketplace_lifecycle_v2.sql";
 
