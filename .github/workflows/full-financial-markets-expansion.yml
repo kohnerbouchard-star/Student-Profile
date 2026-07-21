@@ -125,9 +125,10 @@ jobs:
 
       - name: Verify formatting and source quality
         run: |
-          deno fmt --check \
+          deno fmt \
             --config backend/src/domains/markets/deno.json \
             backend/src/domains/markets
+          git diff --exit-code -- backend/src/domains/markets
           git diff --check
 
       - name: Verify prohibited features remain disabled
