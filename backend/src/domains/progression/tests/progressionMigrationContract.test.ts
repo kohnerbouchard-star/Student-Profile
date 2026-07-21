@@ -6,6 +6,10 @@ const MIGRATION = new URL(
   "../../../../supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql",
   import.meta.url,
 );
+const CURVE_AND_LIFECYCLE_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260721120500_rebalance_progression_curve_v1.sql",
+  import.meta.url,
+);
 
 Deno.test("Progression migration is transactional, private, bounded, and replay safe", async () => {
   const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
@@ -60,6 +64,21 @@ Deno.test("Progression definitions use equal specialization ceilings and bounded
   includes(sql.toLowerCase(), "reward_kind in ('skill_points','reputation','badge')");
   assert(!sql.toLowerCase().includes("reward_kind in ('currency"));
   assert(!sql.toLowerCase().includes("exponential"));
+});
+
+Deno.test("Admin corrections serialize with lifecycle transitions and preserve committed replay", async () => {
+  const sql = (await Deno.readTextFile(CURVE_AND_LIFECYCLE_MIGRATION)).toLowerCase();
+  assert(sql.startsWith("begin;"));
+  assert(sql.trimEnd().endsWith("commit;"));
+  includes(sql, "enforce_progression_admin_correction_game_active_v1");
+  includes(sql, "before insert on public.progression_admin_corrections");
+  includes(sql, "for share");
+  includes(sql, "game_session_disabled");
+  includes(sql, "game_session_archived");
+  includes(sql, "game_session_not_active");
+  includes(sql, "game_session_not_found");
+  includes(sql, "committed idempotent replays remain available because they do not insert new audit rows");
+  assert(!sql.includes("before update on public.progression_admin_corrections"));
 });
 
 function includes(value: string, expected: string): void {
