@@ -127,6 +127,7 @@ export function scoreArrivalQuestionnaire(
   return Object.freeze({
     questionnaireId: definition.questionnaireId,
     questionnaireVersion: definition.version,
+    version: definition.version,
     selectedClassId,
     scores: Object.freeze(scores),
     tieBreakOrder: ARRIVAL_CLASS_IDS,
