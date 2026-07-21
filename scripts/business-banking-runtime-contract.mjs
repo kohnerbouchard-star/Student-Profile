@@ -114,9 +114,15 @@ for (const forbiddenClientScope of [
 assert.match(source.handler, /resolvePlayerRequestScope/u);
 assert.match(source.handler, /resolve_player_economic_context_v1/u);
 assert.doesNotMatch(source.handler, /p_currency_code:\s*body\./u);
-assert.match(source.routes, /banking\/savings/u);
-assert.match(source.routes, /business\/production-runs/u);
-assert.match(source.routes, /banking\/loans/u);
+for (const routeKind of [
+  "savingsTransfer",
+  "businessProduction",
+  "loansRead",
+  "loanApply",
+  "loanRepay",
+]) {
+  assert.match(source.routes, new RegExp(`kind:\s*['"]${routeKind}['"]`, "u"));
+}
 
 for (const capability of [
   "business",
