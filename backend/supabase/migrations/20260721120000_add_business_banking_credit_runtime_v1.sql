@@ -1080,8 +1080,8 @@ revoke all on function public.set_business_product_price_v1(uuid,uuid,text,text,
 grant execute on function public.set_business_product_price_v1(uuid,uuid,text,text,numeric,integer,text) to service_role;
 revoke all on function public.hire_business_employee_v1(uuid,uuid,text,text,text,text,numeric,numeric,text) from public,anon,authenticated;
 grant execute on function public.hire_business_employee_v1(uuid,uuid,text,text,text,text,numeric,numeric,text) to service_role;
-revoke all on function public.terminate_business_employee_v1(uuid,uuid,text,text,text,text,text) from public,anon,authenticated;
-grant execute on function public.terminate_business_employee_v1(uuid,uuid,text,text,text,text,text) to service_role;
+revoke all on function public.terminate_business_employee_v1(uuid,uuid,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.terminate_business_employee_v1(uuid,uuid,text,text,text,text) to service_role;
 revoke all on function public.run_business_production_v1(uuid,uuid,text,text,integer,text,text) from public,anon,authenticated;
 grant execute on function public.run_business_production_v1(uuid,uuid,text,text,integer,text,text) to service_role;
 revoke all on function public.settle_business_cycle_v1(uuid,text,text,numeric,numeric,numeric,numeric) from public,anon,authenticated;
