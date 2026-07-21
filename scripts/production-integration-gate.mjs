@@ -6,6 +6,24 @@ const SHA256 = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const MIGRATION_VERSION = /^\d{14}$/;
+const REQUIRED_APPLICATION_EDGE_FUNCTIONS = Object.freeze([
+  "admin-api",
+  "classroom-api",
+  "stock-market-player-read",
+  "stock-market-read",
+  "stock-market-runner",
+  "stock-market-seed-copy",
+  "stock-market-trading",
+]);
+const REQUIRED_FRONTEND_ROOTS = Object.freeze([
+  "admin",
+  "assets",
+  "auth",
+  "frontend",
+  "index.html",
+  "player-terminal",
+]);
+const ACTIVE_CAPABILITY_PULL_REQUESTS = Object.freeze([163, 248, 249, 261, 294, 299, 300]);
 const FORBIDDEN_VALUE_PATTERNS = [
   /sb_secret_[A-Za-z0-9_-]+/,
   /sb_publishable_[A-Za-z0-9_-]+/,
@@ -74,6 +92,16 @@ function sameMigrationIdentity(left, right) {
     left.versionSetSha256 === right.versionSetSha256;
 }
 
+function sortedUniqueStrings(value, label, errors) {
+  check(Array.isArray(value), `${label} must be an array`, errors);
+  if (!Array.isArray(value)) return [];
+  check(value.every((entry) => typeof entry === "string" && entry.length > 0), `${label} must contain non-empty strings`, errors);
+  const normalized = [...new Set(value)].sort();
+  check(normalized.length === value.length, `${label} must not contain duplicates`, errors);
+  check(JSON.stringify(value) === JSON.stringify(normalized), `${label} must be sorted`, errors);
+  return normalized;
+}
+
 function validateMigrationIdentity(identity, label, errors) {
   check(object(identity), `${label} is required`, errors);
   if (!object(identity)) return;
@@ -84,10 +112,14 @@ function validateMigrationIdentity(identity, label, errors) {
 
 function validateArtifacts(release, errors) {
   check(Array.isArray(release.artifacts) && release.artifacts.length >= 2, "immutable release artifacts are required", errors);
-  if (!Array.isArray(release.artifacts)) return { frontendCount: 0, edgeCount: 0 };
+  if (!Array.isArray(release.artifacts)) {
+    return { frontendCount: 0, edgeCount: 0, edgeNames: [], frontendArtifact: null };
+  }
   const files = new Set();
+  const edgeNames = [];
   let frontendCount = 0;
   let edgeCount = 0;
+  let frontendArtifact = null;
   for (const [index, artifact] of release.artifacts.entries()) {
     check(object(artifact), `artifact ${index} must be an object`, errors);
     if (!object(artifact)) continue;
@@ -96,15 +128,21 @@ function validateArtifacts(release, errors) {
     files.add(artifact.file);
     check(SHA256.test(artifact.sha256), `artifact ${artifact.file} SHA-256 is invalid`, errors);
     check(Number.isInteger(artifact.sizeBytes) && artifact.sizeBytes > 0, `artifact ${artifact.file} size is invalid`, errors);
-    if (artifact.kind === "frontend") frontendCount += 1;
+    if (artifact.kind === "frontend") {
+      frontendCount += 1;
+      frontendArtifact = artifact;
+    }
     if (artifact.kind === "edge-function") {
       edgeCount += 1;
       check(typeof artifact.name === "string" && artifact.name.length > 0, `edge artifact ${artifact.file} name is required`, errors);
+      if (typeof artifact.name === "string") edgeNames.push(artifact.name);
     }
   }
+  edgeNames.sort();
   check(frontendCount === 1, "exactly one frontend artifact is required", errors);
   check(edgeCount > 0, "at least one Edge Function artifact is required", errors);
-  return { frontendCount, edgeCount };
+  check(new Set(edgeNames).size === edgeNames.length, "Edge Function artifact names must be unique", errors);
+  return { frontendCount, edgeCount, edgeNames, frontendArtifact };
 }
 
 function validatePrivacy(privacy, errors) {
@@ -113,6 +151,106 @@ function validatePrivacy(privacy, errors) {
   for (const [name, value] of Object.entries(privacy)) {
     check(value === false, `privacy.${name} must be false`, errors);
   }
+}
+
+function validateIntegrationWatch(watch, repository, errors) {
+  check(object(watch), "integrationWatch evidence is required", errors);
+  if (!object(watch)) return { requiredEdgeNames: [] };
+
+  check(["ACTIVE", "FINAL_RELEASE_ASSEMBLY", "FINAL_ACCEPTANCE_COMPLETE"].includes(watch.status), "integrationWatch.status is invalid", errors);
+  check(object(watch.controllerPullRequest), "controller pull request identity is required", errors);
+  if (object(watch.controllerPullRequest)) {
+    check(watch.controllerPullRequest.number === 301, "controller pull request number is invalid", errors);
+    check(COMMIT.test(watch.controllerPullRequest.head), "controller pull request head is invalid", errors);
+  }
+
+  const requiredEdgeNames = sortedUniqueStrings(
+    watch.requiredApplicationEdgeFunctions,
+    "integrationWatch.requiredApplicationEdgeFunctions",
+    errors,
+  );
+  check(
+    JSON.stringify(requiredEdgeNames) === JSON.stringify(REQUIRED_APPLICATION_EDGE_FUNCTIONS),
+    "required application Edge Function inventory does not match repository source",
+    errors,
+  );
+
+  const frontendRoots = sortedUniqueStrings(
+    watch.frontendArtifactRoots,
+    "integrationWatch.frontendArtifactRoots",
+    errors,
+  );
+  check(
+    REQUIRED_FRONTEND_ROOTS.every((root) => frontendRoots.includes(root)),
+    "frontend artifact roots are incomplete",
+    errors,
+  );
+
+  const runtimeContract = watch.frontendRuntimeConfigurationContract;
+  check(object(runtimeContract), "frontend runtime configuration contract is required", errors);
+  if (object(runtimeContract)) {
+    check(runtimeContract.template === "docs/operations/environments/runtime-config.env.template.js", "runtime configuration template is invalid", errors);
+    check(runtimeContract.materializedPath === "runtime-config.env.js", "runtime configuration materialized path is invalid", errors);
+    check(runtimeContract.committedMaterializedFileAllowed === false, "materialized runtime configuration must not be committed", errors);
+    check(runtimeContract.sourceFilesMutated === false, "runtime materialization must not mutate immutable source files", errors);
+    const requiredFields = sortedUniqueStrings(runtimeContract.requiredFields, "runtime configuration requiredFields", errors);
+    check(
+      JSON.stringify(requiredFields) === JSON.stringify(["environment", "projectRef", "supabasePublishableKey", "supabaseUrl"]),
+      "runtime configuration required fields are incomplete",
+      errors,
+    );
+    const derivedBindings = sortedUniqueStrings(runtimeContract.derivedBindings, "runtime configuration derivedBindings", errors);
+    check(
+      JSON.stringify(derivedBindings) === JSON.stringify(["adminApiUrl", "classroomApiUrl"]),
+      "runtime configuration derived API bindings are incomplete",
+      errors,
+    );
+  }
+
+  check(Array.isArray(watch.capabilityReviews), "capability review evidence is required", errors);
+  if (Array.isArray(watch.capabilityReviews)) {
+    const numbers = watch.capabilityReviews.map((review) => review?.number).sort((left, right) => left - right);
+    check(JSON.stringify(numbers) === JSON.stringify(ACTIVE_CAPABILITY_PULL_REQUESTS), "capability review pull request set is incomplete", errors);
+    for (const review of watch.capabilityReviews) {
+      check(object(review), "capability review must be an object", errors);
+      if (!object(review)) continue;
+      check(Number.isInteger(review.number), "capability review number is invalid", errors);
+      check(COMMIT.test(review.head), `capability PR #${review.number} head is invalid`, errors);
+      check(Number.isInteger(review.aheadBy) && review.aheadBy >= 0, `capability PR #${review.number} aheadBy is invalid`, errors);
+      check(Number.isInteger(review.behindBy) && review.behindBy >= 0, `capability PR #${review.number} behindBy is invalid`, errors);
+      const versions = sortedUniqueStrings(review.migrationVersions, `capability PR #${review.number} migrationVersions`, errors);
+      check(versions.every((version) => MIGRATION_VERSION.test(version)), `capability PR #${review.number} migration version is invalid`, errors);
+      check(typeof review.assemblyStatus === "string" && review.assemblyStatus.length > 0, `capability PR #${review.number} assemblyStatus is required`, errors);
+    }
+  }
+
+  check(Array.isArray(watch.migrationCollisions), "migration collision evidence is required", errors);
+  if (Array.isArray(watch.migrationCollisions)) {
+    for (const [index, collision] of watch.migrationCollisions.entries()) {
+      check(object(collision), `migration collision ${index} must be an object`, errors);
+      if (!object(collision)) continue;
+      check(Array.isArray(collision.pullRequests) && collision.pullRequests.length > 0, `migration collision ${index} pullRequests are required`, errors);
+      const versions = sortedUniqueStrings(collision.versions, `migration collision ${index} versions`, errors);
+      check(versions.every((version) => MIGRATION_VERSION.test(version)), `migration collision ${index} version is invalid`, errors);
+      check(typeof collision.resolution === "string" && collision.resolution.length > 0, `migration collision ${index} resolution is required`, errors);
+    }
+  }
+
+  const workflowSafety = watch.workflowSafety;
+  check(object(workflowSafety), "workflow safety evidence is required", errors);
+  if (object(workflowSafety)) {
+    check(workflowSafety.pullRequestDeploymentAllowed === false, "pull-request deployment must remain prohibited", errors);
+    check(workflowSafety.productionTargetAllowed === false, "production workflow targeting must remain prohibited", errors);
+    check(workflowSafety.branchMutationHelpersDetected === false, "branch mutation helper must not exist", errors);
+    check(Array.isArray(workflowSafety.unsafeConnectedJobs), "unsafe connected job list is required", errors);
+  }
+
+  if (watch.status === "ACTIVE") {
+    check(repository?.behindMain === 0, "active integration branch must remain synchronized with main", errors);
+    check(repository?.permanentChangedFileCount === 6, "integration branch must retain exactly six permanent files", errors);
+  }
+
+  return { requiredEdgeNames };
 }
 
 export function validateProductionIntegrationEvidence(evidence, { requireReady = false } = {}) {
@@ -124,6 +262,7 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
   check(evidence.schemaVersion === 1, "schemaVersion must be 1", errors);
   check(evidence.evidenceType === "production-integration-preflight", "evidenceType is invalid", errors);
   check(Number.isFinite(Date.parse(evidence.capturedAt)), "capturedAt must be an ISO-8601 timestamp", errors);
+  check(["ACTIVE_INTEGRATION_WATCH", "FINAL_RELEASE_ASSEMBLY", "CONNECTED_GATE_COMPLETE"].includes(evidence.executionState), "executionState is invalid", errors);
 
   const repository = evidence.repository;
   check(object(repository), "repository identity is required", errors);
@@ -132,7 +271,12 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(COMMIT.test(repository.mainCommitAtAudit), "mainCommitAtAudit must be a full commit SHA", errors);
     check(repository.integrationBranch === "agent/production-integration-gate-v1", "integration branch is invalid", errors);
     check(repository.branchBaseCommit === repository.mainCommitAtAudit, "integration branch must start from audited main", errors);
+    check(COMMIT.test(repository.reviewedIntegrationHeadBeforeEvidenceUpdate), "reviewed integration head is invalid", errors);
+    check(Number.isInteger(repository.behindMain) && repository.behindMain >= 0, "repository.behindMain is invalid", errors);
+    check(Number.isInteger(repository.permanentChangedFileCount) && repository.permanentChangedFileCount > 0, "permanent changed-file count is invalid", errors);
   }
+
+  const watchFacts = validateIntegrationWatch(evidence.integrationWatch, repository, errors);
 
   const staging = evidence.environment?.staging;
   const production = evidence.environment?.productionGuard;
@@ -155,6 +299,28 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
       "staging Edge Function inventory totals are inconsistent",
       errors,
     );
+    const deployedApplicationEdgeNames = sortedUniqueStrings(
+      staging.applicationEdgeFunctions,
+      "staging.applicationEdgeFunctions",
+      errors,
+    );
+    check(
+      deployedApplicationEdgeNames.length === staging.applicationEdgeFunctionCount,
+      "staging application Edge Function count does not match its inventory",
+      errors,
+    );
+    check(Array.isArray(staging.diagnosticEdgeFunctions), "staging diagnostic Edge Function evidence is required", errors);
+    check(
+      Array.isArray(staging.diagnosticEdgeFunctions) &&
+        staging.diagnosticEdgeFunctions.length === staging.diagnosticEdgeFunctionCount,
+      "staging diagnostic Edge Function count does not match its inventory",
+      errors,
+    );
+    check(object(staging.frontendDeployment), "staging frontend deployment evidence is required", errors);
+    if (object(staging.frontendDeployment)) {
+      check(["not-deployed", "deployed"].includes(staging.frontendDeployment.status), "frontend deployment status is invalid", errors);
+      check(staging.frontendDeployment.sourceFilesMutated === false, "frontend deployment must not mutate immutable source files", errors);
+    }
   }
   check(evidence.environment?.distinctness?.result === "pass", "environment distinctness must pass", errors);
 
@@ -174,6 +340,15 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     );
     const expectedDrift = ledger.count - canonical.count;
     check(ledger.aheadBy === expectedDrift, "staging migration aheadBy marker is inaccurate", errors);
+    check(Array.isArray(ledger.additionalVersions), "staging additional-version evidence is required", errors);
+    if (Array.isArray(ledger.additionalVersions)) {
+      check(ledger.additionalVersions.length === Math.max(expectedDrift, 0), "staging additional-version count is inaccurate", errors);
+      check(
+        ledger.additionalVersions.every((entry) => object(entry) && MIGRATION_VERSION.test(entry.version)),
+        "staging additional migration version is invalid",
+        errors,
+      );
+    }
   }
   check(evidence.migrations?.productionModified === false, "production must remain unmodified", errors);
 
@@ -181,7 +356,7 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
   check(object(release), "immutable release identity is required", errors);
   let releaseMatchesCanonical = false;
   let ledgerMatchesRelease = false;
-  let artifactCounts = { frontendCount: 0, edgeCount: 0 };
+  let artifactFacts = { frontendCount: 0, edgeCount: 0, edgeNames: [], frontendArtifact: null };
   if (object(release)) {
     check(COMMIT.test(release.sourceCommit), "release sourceCommit is invalid", errors);
     check(release.sourceMergedIntoMain === true, "release source must be merged into main", errors);
@@ -193,8 +368,12 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(release.checksumsVerified === true, "release checksums must be verified", errors);
     check(SHA256.test(release.configuration?.sha256), "release configuration digest is invalid", errors);
     check(release.environmentNeutrality?.status === "pass", "environment-neutrality must pass", errors);
-    const requiredRoots = ["admin", "auth", "frontend", "index.html", "player-terminal"];
-    check(requiredRoots.every((root) => release.environmentNeutrality?.scannedRoots?.includes(root)), "neutrality evidence must cover every browser root", errors);
+    const requiredNeutralityRoots = ["admin", "auth", "frontend", "index.html", "player-terminal"];
+    check(
+      requiredNeutralityRoots.every((root) => release.environmentNeutrality?.scannedRoots?.includes(root)),
+      "neutrality evidence must cover every browser root",
+      errors,
+    );
 
     validateMigrationIdentity(release.migrations, "immutable release migration identity", errors);
     if (object(release.migrations)) {
@@ -203,7 +382,12 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
       check(release.currentForCanonicalMain === releaseMatchesCanonical, "release current-main marker does not match migration identity", errors);
       check(ledger?.matchesImmutableRelease === ledgerMatchesRelease, "staging/release binding marker is inaccurate", errors);
     }
-    artifactCounts = validateArtifacts(release, errors);
+    artifactFacts = validateArtifacts(release, errors);
+    check(
+      JSON.stringify(artifactFacts.edgeNames) === JSON.stringify(watchFacts.requiredEdgeNames),
+      "immutable release Edge inventory does not match required source inventory",
+      errors,
+    );
   }
 
   validatePrivacy(evidence.privacy, errors);
@@ -228,14 +412,25 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(ledgerMatchesCanonical, "a deployed candidate requires staging to match canonical current main", errors);
     check(ledgerMatchesRelease, "a deployed candidate must match the staging migration ledger", errors);
     check(
-      staging?.applicationEdgeFunctionCount === artifactCounts.edgeCount,
-      "a deployed release requires the exact application Edge Function inventory",
+      JSON.stringify(staging?.applicationEdgeFunctions) === JSON.stringify(artifactFacts.edgeNames),
+      "a deployed release requires the exact named application Edge Function inventory",
       errors,
     );
     check(typeof staging?.frontendTarget === "string" && staging.frontendTarget.length > 0, "a deployed release requires a frontend target", errors);
+    check(staging?.frontendDeployment?.status === "deployed", "a deployed release requires frontend deployment status", errors);
+    check(staging?.frontendDeployment?.artifactSha256 === artifactFacts.frontendArtifact?.sha256, "deployed frontend artifact digest mismatch", errors);
+    check(staging?.frontendDeployment?.artifactSetSha256 === release.artifactSetSha256, "deployed frontend artifact-set digest mismatch", errors);
+    check(SHA256.test(staging?.frontendDeployment?.runtimeConfigurationSha256 ?? ""), "deployed runtime configuration digest is invalid", errors);
+    check(staging?.frontendDeployment?.runtimeBindingsValidated === true, "deployed runtime bindings must be validated", errors);
+    check(staging?.runtimeConfiguration?.status === "deployed", "runtime configuration must be deployed", errors);
+  } else if (object(staging?.frontendDeployment)) {
+    check(staging.frontendDeployment.status === "not-deployed", "undeployed release must not claim a frontend deployment", errors);
+    check(staging.applicationEdgeFunctionCount === 0, "undeployed release must not claim application Edge Functions", errors);
   }
 
   if (requireReady) {
+    check(evidence.executionState === "CONNECTED_GATE_COMPLETE", "ready gate requires CONNECTED_GATE_COMPLETE execution state", errors);
+    check(evidence.integrationWatch?.status === "FINAL_ACCEPTANCE_COMPLETE", "ready gate requires final acceptance watch state", errors);
     check(gate?.status === "READY_FOR_OWNER_GO_NO_GO", "connected execution is not ready for owner go/no-go", errors);
     check(gate?.productionDecision === "GO_PENDING_AUTHORIZATION", "ready gate must be GO_PENDING_AUTHORIZATION", errors);
     check(Array.isArray(gate?.blockers) && gate.blockers.length === 0, "ready gate must have no blockers", errors);
@@ -243,6 +438,7 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     check(releaseMatchesCanonical, "ready gate requires an immutable release built from the canonical current-main migration set", errors);
     check(ledgerMatchesCanonical, "ready gate requires staging to match the canonical repository migration identity", errors);
     check(ledgerMatchesRelease, "ready gate requires staging to match the immutable release migration identity", errors);
+    check(Array.isArray(evidence.integrationWatch?.migrationCollisions) && evidence.integrationWatch.migrationCollisions.length === 0, "ready gate requires zero migration collisions", errors);
     check(Array.isArray(dependencyState?.openCapabilityPullRequests) && dependencyState.openCapabilityPullRequests.length === 0, "ready gate requires all capability dependencies merged", errors);
     for (const key of [
       "stagingEnvironmentProtection",
@@ -289,6 +485,7 @@ async function main() {
   console.log(JSON.stringify({
     status: evidence.gate.status,
     productionDecision: evidence.gate.productionDecision,
+    executionState: evidence.executionState,
     releaseId: evidence.immutableRelease.releaseId,
     stagingProjectRef: evidence.environment.staging.projectRef,
     blockerCount: evidence.gate.blockers.length,
