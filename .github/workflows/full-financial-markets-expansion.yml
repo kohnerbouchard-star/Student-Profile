@@ -127,6 +127,9 @@ jobs:
         run: |
           deno fmt backend/src/domains/markets
           git diff -- backend/src/domains/markets > deno-format.patch
+          mkdir -p formatted-market-source/backend/src/domains
+          cp -R backend/src/domains/markets \
+            formatted-market-source/backend/src/domains/markets
           test ! -s deno-format.patch
           git diff --check
 
@@ -176,5 +179,6 @@ jobs:
             financial-market-domain-tests.log
             financial-market-domain-tests.status
             deno-format.patch
+            formatted-market-source
           if-no-files-found: warn
           retention-days: 30
