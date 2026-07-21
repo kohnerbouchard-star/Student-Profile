@@ -15,7 +15,12 @@ const NOW = "2026-07-21T01:00:00.000Z";
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
 Deno.test("Admin Messaging search remains public-ID only and bounded", async () => {
-  const service = new FakeService({ threads: [thread("Market coordination"), thread("Attendance notice")] });
+  const service = new FakeService({
+    threads: [
+      thread("Market coordination"),
+      thread("Attendance notice", "Attendance posted."),
+    ],
+  });
   const result = await operation(service, { method: "GET", query: "q=market&limit=10&offset=0&status=all" });
   assertEquals(result.status, 200);
   assertEquals(service.calls[0].args.p_limit, 51);
@@ -162,7 +167,7 @@ function operation(service: FakeService, options: { readonly method?: string; re
     suffix: options.suffix ?? "/messages",
   });
 }
-function thread(title: string) {
+function thread(title: string, body = "Market ready.") {
   return {
     id: THREAD,
     type: "player",
@@ -175,7 +180,7 @@ function thread(title: string) {
     createdAt: NOW,
     updatedAt: NOW,
     participants: [{ reference: "PLAYER-001", displayName: "Student", rosterLabel: null, lastReadAt: null }],
-    messages: [{ id: MESSAGE, senderType: "player", senderName: "Student", body: "Market ready.", hidden: false, hiddenReason: null, createdAt: NOW }],
+    messages: [{ id: MESSAGE, senderType: "player", senderName: "Student", body, hidden: false, hiddenReason: null, createdAt: NOW }],
   };
 }
 function assertNoUuid(value: string): void {
