@@ -1,94 +1,70 @@
-name: Seed PR 163 Reconcile Bootstrap
+name: Seed Executable Beta Pack
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - .github/workflows/seed-executable-beta-pack.yml
+      - ".github/workflows/seed-executable-beta-pack.yml"
+      - "docs/seed-content/executable/beta-pack-v1/**"
+      - "docs/seed-content/reviews/executable-beta-pack-readiness-v1.md"
+      - "scripts/seed-beta-*.mjs"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: seed-pr163-reconcile-bootstrap-${{ github.ref }}
-  cancel-in-progress: false
+  group: seed-executable-beta-pack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  reconcile:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.number == 163 &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.head.ref == 'agent/seed-content-foundation-v1')
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
-      - name: Check out permanent seed branch
-        uses: actions/checkout@v4
+      - name: Check out pull-request head
+        uses: actions/checkout@v7
         with:
-          ref: agent/seed-content-foundation-v1
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build synchronized two-parent merge
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Build bounded pack deterministically
+        run: npm run build:seed-beta-pack
+
+      - name: Reject generated pack drift
         shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
+        run: git diff --exit-code -- docs/seed-content/executable/beta-pack-v1
 
-          BOOTSTRAP_HEAD="$(git rev-parse HEAD)"
-          SEED_SOURCE_HEAD="$(git rev-parse HEAD^^)"
-          MAIN_HEAD="$(git rev-parse origin/main)"
-          MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" "$MAIN_HEAD")"
+      - name: Validate executable pack and calibration
+        run: npm run validate:seed-beta-pack
 
-          git diff --name-only "$MERGE_BASE" "$SEED_SOURCE_HEAD" > /tmp/seed-owned-paths.txt
-          git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
+      - name: Run executable pack tests
+        run: npm run test:seed-beta-pack
 
-          git read-tree --reset -u "$MAIN_HEAD"
+      - name: Validate importer contract
+        run: npm run seed:beta:validate
 
-          while IFS= read -r path; do
-            case "$path" in
-              package.json|.gitignore|.github/workflows/seed-pr163-reconcile.yml|.github/workflows/seed-executable-beta-pack.yml)
-                continue
-                ;;
-            esac
-            if git cat-file -e "$SEED_SOURCE_HEAD:$path" 2>/dev/null; then
-              git checkout "$SEED_SOURCE_HEAD" -- "$path"
-            else
-              git rm -f --ignore-unmatch -- "$path"
-            fi
-          done < /tmp/seed-owned-paths.txt
+      - name: Run credential-free staging dry run
+        run: npm run seed:beta:dry-run
 
-          git checkout "$SEED_SOURCE_HEAD" -- .github/workflows/seed-executable-beta-pack.yml
+      - name: Run complete seed-content audit
+        run: npm run audit:seed-content
 
-          node <<'NODE'
-          const fs = require('node:fs');
-          const current = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const seed = JSON.parse(fs.readFileSync('/tmp/seed-package.json', 'utf8'));
-          current.scripts ??= {};
-          for (const [name, command] of Object.entries(seed.scripts ?? {})) {
-            if (name.toLowerCase().includes('seed')) current.scripts[name] = command;
-          }
-          if (!current.scripts.audit.includes('audit:seed-content')) {
-            current.scripts.audit += ' && npm run audit:seed-content';
-          }
-          fs.writeFileSync('package.json', `${JSON.stringify(current, null, 2)}\n`);
-          NODE
+      - name: Run repository staging preflight
+        run: npm run preflight:staging
 
-          if ! grep -qxF '.seed-audit/' .gitignore; then
-            printf '\n.seed-audit/\n' >> .gitignore
-          fi
-
-          git add -A
-          git diff --cached --check
-          TREE="$(git write-tree)"
-          MERGE_COMMIT="$(printf '%s\n' 'merge(seed): synchronize executable pack with current main' | git commit-tree "$TREE" -p "$BOOTSTRAP_HEAD" -p "$MAIN_HEAD")"
-          git reset --hard "$MERGE_COMMIT"
-          test "$(git rev-list --count HEAD..origin/main)" -eq 0
-          test ! -e .github/workflows/seed-pr163-reconcile.yml
-          grep -q 'name: Seed Executable Beta Pack' .github/workflows/seed-executable-beta-pack.yml
-          git push origin HEAD:agent/seed-content-foundation-v1
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
