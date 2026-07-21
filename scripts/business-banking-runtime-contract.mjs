@@ -29,19 +29,10 @@ for (const migration of [source.core, source.operating, source.hardening, source
 }
 
 const loopSecuredTables = [
-  "business_entities",
-  "business_products",
-  "business_inventory",
-  "business_employees",
-  "business_production_runs",
-  "business_sales",
-  "banking_transfer_requests",
-  "savings_interest_runs",
-  "loan_products",
-  "credit_profiles",
-  "loan_applications",
-  "player_loans",
-  "loan_payments",
+  "business_entities", "business_products", "business_inventory",
+  "business_employees", "business_production_runs", "business_sales",
+  "banking_transfer_requests", "savings_interest_runs", "loan_products",
+  "credit_profiles", "loan_applications", "player_loans", "loan_payments",
 ];
 for (const table of loopSecuredTables) {
   assert.match(source.core, new RegExp(`['"]${table}['"]`, "iu"), `missing RLS loop membership ${table}`);
@@ -62,20 +53,10 @@ for (const statement of [
 }
 
 for (const operation of [
-  "player_transfer_sent",
-  "player_transfer_received",
-  "account_transfer_out",
-  "account_transfer_in",
-  "savings_interest",
-  "capitalization_out",
-  "capitalization_in",
-  "production_cost",
-  "sales_revenue",
-  "wage_expense",
-  "tax_expense",
-  "input_purchase",
-  "loan_disbursement",
-  "loan_payment",
+  "player_transfer_sent", "player_transfer_received", "account_transfer_out",
+  "account_transfer_in", "savings_interest", "capitalization_out",
+  "capitalization_in", "production_cost", "sales_revenue", "wage_expense",
+  "tax_expense", "input_purchase", "loan_disbursement", "loan_payment",
   "business_banking_correction",
 ]) {
   assert.match(sql, new RegExp(`['"]${operation}['"]`, "u"), `missing ledger operation ${operation}`);
@@ -92,87 +73,48 @@ assert.match(sql, /AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED/u);
 assert.match(sql, /economic-behavior-v1/u);
 
 for (const prohibited of [
-  "race",
-  "ethnicity",
-  "gender",
-  "religion",
-  "disability",
-  "national origin",
-  "sexual orientation",
+  "race", "ethnicity", "gender", "religion", "disability",
+  "national origin", "sexual orientation",
 ]) {
-  assert.doesNotMatch(
-    sql.toLowerCase(),
-    new RegExp(`\\b${escapeRegExp(prohibited)}\\b`, "u"),
-  );
+  assert.doesNotMatch(sql.toLowerCase(), new RegExp(`\\b${escapeRegExp(prohibited)}\\b`, "u"));
 }
 
 for (const forbiddenClientScope of [
-  "gameSessionId",
-  "playerUuid",
-  "senderPlayerId",
-  "recipientPlayerId",
-  "ownerPlayerId",
+  "gameSessionId", "playerUuid", "senderPlayerId", "recipientPlayerId", "ownerPlayerId",
 ]) {
   assert.match(source.handler, new RegExp(`['"]${forbiddenClientScope}['"]`, "u"));
 }
 assert.match(source.handler, /resolvePlayerRequestScope/u);
 assert.match(source.handler, /resolve_player_economic_context_v1/u);
 assert.doesNotMatch(source.handler, /p_currency_code:\s*body\./u);
+
 for (const routeKind of [
-  "businessCreate",
-  "businessProductCreate",
-  "businessInputPurchase",
-  "businessProduction",
-  "businessPrice",
-  "businessHire",
-  "businessTerminate",
-  "businessStatus",
-  "playerTransfer",
-  "savingsTransfer",
-  "loansRead",
-  "loanApply",
-  "loanRepay",
+  "businessCreate", "businessProductCreate", "businessInputPurchase",
+  "businessProduction", "businessPrice", "businessHire", "businessTerminate",
+  "businessStatus", "playerTransfer", "savingsTransfer", "loansRead",
+  "loanApply", "loanRepay",
 ]) {
-  assert.equal(
-    source.routes.includes(`kind: "${routeKind}"`),
-    true,
-    `missing route kind ${routeKind}`,
-  );
+  assert.equal(source.routes.includes(`kind: "${routeKind}"`), true, `missing route kind ${routeKind}`);
 }
 
-for (const capability of [
-  "business",
-  "loans",
-  "bankTransfer",
-  "savingsTransfer",
-  "businessCreate",
-  "businessEmployeeTerminate",
-  "businessHire",
-  "businessInputPurchase",
-  "businessPrice",
-  "businessProductCreate",
-  "businessProduction",
-  "businessStatus",
-  "loanApply",
-  "loanRepay",
+for (const routeCapability of ["business", "loans"]) {
+  assert.match(source.capabilities, new RegExp(`['"]${routeCapability}['"]`, "u"));
+}
+
+for (const actionCapability of [
+  "bankTransfer", "savingsTransfer", "businessCreate",
+  "businessEmployeeTerminate", "businessHire", "businessInputPurchase",
+  "businessPrice", "businessProductCreate", "businessProduction",
+  "businessStatus", "loanApply", "loanRepay",
 ]) {
-  assert.match(source.capabilities, new RegExp(`['"]${capability}['"]`, "u"));
-  assert.match(source.playerCapabilities, new RegExp(`['"]${capability}['"]`, "u"));
+  assert.match(source.capabilities, new RegExp(`['"]${actionCapability}['"]`, "u"));
+  assert.match(source.playerCapabilities, new RegExp(`['"]${actionCapability}['"]`, "u"));
 }
 
 for (const endpoint of [
-  "businessCreate",
-  "businessProductCreate",
-  "businessInputPurchase",
-  "businessProduction",
-  "businessPrice",
-  "businessHire",
-  "businessTerminate",
-  "businessStatus",
-  "bankTransfer",
-  "savingsTransfer",
-  "loanApply",
-  "loanRepay",
+  "businessCreate", "businessProductCreate", "businessInputPurchase",
+  "businessProduction", "businessPrice", "businessHire", "businessTerminate",
+  "businessStatus", "bankTransfer", "savingsTransfer", "loanApply", "loanRepay",
 ]) {
   assert.match(source.playerEndpoints, new RegExp(`\\b${endpoint}:`, "u"));
   assert.match(source.playerAdapter, new RegExp(`\\b${endpoint}:`, "u"));
@@ -184,10 +126,7 @@ assert.match(source.dispatcher, /dispatchRateLimitedReviewedPlayerRequest/u);
 assert.match(source.admin, /review_player_loan_application_v1/u);
 assert.match(source.admin, /admin_business_banking_correction_v1/u);
 assert.match(source.adminDispatcher, /handleBusinessBankingAdminOperation/u);
-assert.match(
-  source.adminDispatcher,
-  /const businessBankingOperation = await handleBusinessBankingAdminOperation/u,
-);
+assert.match(source.adminDispatcher, /const businessBankingOperation = await handleBusinessBankingAdminOperation/u);
 assert.match(source.playerCapabilities, /businessTerminate:\s*"businessEmployeeTerminate"/u);
 assert.match(source.playerAdapter, /recipientPlayerIdentifier/u);
 assert.doesNotMatch(source.playerAdapter, /recipientPlayerUuid/u);
