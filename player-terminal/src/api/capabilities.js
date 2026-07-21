@@ -42,6 +42,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
       .filter((key) => !["bankingExport", "chartRange", "marketSearch", "messageAttachment", "messageSearch"].includes(key))
       .map((key) => [key, key])
   ),
+  arrivalClass: "arrivalClassSubmit",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });
