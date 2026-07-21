@@ -18,6 +18,12 @@ import {
 } from "../contracts/playerCapabilityManifestContracts.ts";
 import { resolveActivePlayerSession } from "./playerSessionHttpHelpers.ts";
 import { resolvePlayerRequestScope } from "./playerRequestScope.ts";
+import {
+  handlePlayerProgressionRequest,
+} from "../../progression/api/playerProgressionHttpHandler.ts";
+import type {
+  PlayerProgressionRoute,
+} from "../../progression/contracts/progressionContracts.ts";
 
 export interface PlayerCapabilityManifestHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -32,9 +38,16 @@ export interface PlayerCapabilityManifestHttpHandlerDependencies {
 
 export async function handlePlayerCapabilityManifestRequest(
   request: Request,
-  route: PlayerCapabilityManifestRoute,
+  route: PlayerCapabilityManifestRoute | PlayerProgressionRoute,
   dependencies: PlayerCapabilityManifestHttpHandlerDependencies,
 ): Promise<Response> {
+  if (
+    route.kind === "read" || route.kind === "unlock" || route.kind === "claim" ||
+    (route.kind === "malformed" && new URL(request.url).pathname.includes("/progression"))
+  ) {
+    return handlePlayerProgressionRequest(request, route as PlayerProgressionRoute, dependencies);
+  }
+
   if (request.method !== "GET") {
     return jsonError(405, {
       code: "method_not_allowed",
@@ -45,7 +58,6 @@ export async function handlePlayerCapabilityManifestRequest(
 
   try {
     validateRequestShape(request, route);
-
     const envResult = (dependencies.readSupabaseEnv ?? readSupabaseEnv)();
     if (!envResult.ok) {
       return jsonError(500, {
@@ -54,7 +66,6 @@ export async function handlePlayerCapabilityManifestRequest(
         retryable: false,
       });
     }
-
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
     await resolvePlayerRequestScope(request, {
@@ -66,7 +77,6 @@ export async function handlePlayerCapabilityManifestRequest(
         ),
       now: () => now,
     });
-
     return playerCapabilityManifestJsonResponse({
       ok: true,
       ...buildPlayerCapabilityManifest(),
@@ -79,7 +89,6 @@ export async function handlePlayerCapabilityManifestRequest(
         retryable: error.retryable,
       });
     }
-
     return jsonError(500, {
       code: "player_capability_manifest_failed",
       message: "Player API capabilities could not be loaded.",
@@ -95,21 +104,15 @@ function validateRequestShape(
   if (route.kind !== "manifest") {
     throw invalidRequest("Player capability manifest path is malformed.");
   }
-
   const url = new URL(request.url);
   if (url.searchParams.size > 0) {
-    throw invalidRequest(
-      "Player capability manifest does not accept query parameters.",
-    );
+    throw invalidRequest("Player capability manifest does not accept query parameters.");
   }
-
-  for (
-    const headerName of [
-      "x-econovaria-game-id",
-      "x-econovaria-game-session-id",
-      "x-stock-market-runner-secret",
-    ]
-  ) {
+  for (const headerName of [
+    "x-econovaria-game-id",
+    "x-econovaria-game-session-id",
+    "x-stock-market-runner-secret",
+  ]) {
     if (request.headers.has(headerName)) {
       throw invalidRequest(
         "Player capability manifest scope derives only from the authenticated session.",
@@ -130,10 +133,7 @@ function invalidRequest(message: string): EdgeActivationError {
 function playerCapabilityManifestJsonResponse(
   body: PlayerCapabilityManifestResponseBody,
 ): Response {
-  const response = jsonResponse<PlayerCapabilityManifestResponseBody>(
-    200,
-    body,
-  );
+  const response = jsonResponse<PlayerCapabilityManifestResponseBody>(200, body);
   response.headers.set("cache-control", "private, no-store");
   response.headers.set("vary", "authorization, x-player-session-token");
   return response;
