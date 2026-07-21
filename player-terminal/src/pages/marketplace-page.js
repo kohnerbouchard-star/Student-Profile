@@ -13,9 +13,13 @@ function localDate(value) {
   return Number.isFinite(timestamp) ? new Date(timestamp).toLocaleString() : "Unavailable";
 }
 function listingCard(listing, selected) {
+  const rating = Number(listing.rating);
+  const sellerContext = Number.isFinite(rating)
+    ? `<span aria-label="Seller ${escapeHtml(listing.seller)}, rated ${escapeHtml(rating.toFixed(1))} out of 5">Seller ${escapeHtml(listing.seller)} · ${escapeHtml(rating.toFixed(1))} ${icon("star")}</span>`
+    : `<span>Seller ${escapeHtml(listing.seller)}${listing.sellerReference ? ` · ${escapeHtml(listing.sellerReference)}` : ""}</span>`;
   return `<button class="player-terminal-marketplace-card${selected ? " active" : ""}" type="button" data-player-marketplace-select="${escapeHtml(listing.id)}">
     <span class="player-terminal-marketplace-image"><img src="${escapeHtml(listing.image)}" alt="" /></span>
-    <div><small>${escapeHtml(listing.category)} · ${escapeHtml(listing.country)}</small><strong>${escapeHtml(listing.name)}</strong><p>${escapeHtml(listing.description)}</p><span>Seller ${escapeHtml(listing.seller)}${listing.sellerReference ? ` · ${escapeHtml(listing.sellerReference)}` : ""}</span></div>
+    <div><small>${escapeHtml(listing.category)} · ${escapeHtml(listing.country)}</small><strong>${escapeHtml(listing.name)}</strong><p>${escapeHtml(listing.description)}</p>${sellerContext}</div>
     <div><strong>${escapeHtml(formatCurrency(listing.unitPrice, listing.currencyCode))}</strong><small>${escapeHtml(formatNumber(listing.quantity))} available</small></div>
   </button>`;
 }
@@ -31,16 +35,32 @@ function disputePanel(market) {
 }
 
 export function renderMarketplacePage(data, ui) {
-  const market = data.marketplace;
+  const source = data.marketplace && typeof data.marketplace === "object" ? data.marketplace : {};
+  const market = {
+    ...source,
+    categories: Array.isArray(source.categories) ? source.categories : ["All"],
+    listings: Array.isArray(source.listings) ? source.listings : [],
+    myListings: Array.isArray(source.myListings) ? source.myListings : [],
+    reservations: Array.isArray(source.reservations) ? source.reservations : [],
+    orders: Array.isArray(source.orders) ? source.orders : [],
+    disputes: Array.isArray(source.disputes) ? source.disputes : [],
+    disputesEnabled: source.disputesEnabled !== false,
+    disputeWindowDays: Number.isFinite(Number(source.disputeWindowDays)) ? Number(source.disputeWindowDays) : 7,
+    listingDurationHours: Number.isFinite(Number(source.listingDurationHours)) ? Number(source.listingDurationHours) : 168,
+    volume: Number.isFinite(Number(source.volume)) ? Number(source.volume) : 0,
+    activeSellers: Number.isFinite(Number(source.activeSellers)) ? Number(source.activeSellers) : 0,
+  };
   const category = ui.marketplaceCategory || "All";
   const filtered = market.listings.filter((item) => category === "All" || item.category === category);
   const selected = market.listings.find((item) => item.id === ui.marketplaceListingId) || filtered[0] || market.listings[0];
   const currencyCode = data.session.currencyCode || "ECO";
-  const totalRate = Number(market.feeRate || 0);
+  const platformFeeRate = Number.isFinite(Number(market.platformFeeRate)) ? Number(market.platformFeeRate) : 0;
+  const taxRate = Number.isFinite(Number(market.taxRate)) ? Number(market.taxRate) : 0;
+  const totalRate = Number.isFinite(Number(market.feeRate)) ? Number(market.feeRate) : platformFeeRate + taxRate;
   const listableItems = data.inventory.items.filter((item) => Number(item.quantityAvailable ?? item.quantity) > 0 && item.itemKey);
   const enabled = market.enabled !== false;
   return `<section class="player-terminal-page player-terminal-marketplace-page"><div class="player-terminal-page-heading"><div><small>PLAYER COMMERCE</small><h2>Marketplace</h2><p>Buy from other players or publish a fixed-price listing. Inventory reservation, settlement, fees, moderation, expiry, disputes, and refunds are server-authoritative.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(enabled ? `${market.listings.length} LISTINGS` : "MARKETPLACE DISABLED", enabled ? "cyan" : "red")}</div></div>
-    <div class="player-terminal-marketplace-summary"><article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCurrency(market.volume, currencyCode))}</strong><span>Committed orders</span></article><article><small>ACTIVE SELLERS</small><strong>${escapeHtml(formatNumber(market.activeSellers))}</strong><span>Current game</span></article><article><small>FEES + TAX</small><strong>${escapeHtml(totalRate.toFixed(1))}%</strong><span>${escapeHtml(market.platformFeeRate.toFixed(1))}% fee · ${escapeHtml(market.taxRate.toFixed(1))}% tax</span></article><article><small>YOUR LISTINGS</small><strong>${escapeHtml(formatNumber(market.myListings.length))}</strong><span>${escapeHtml(formatNumber(market.myListings.reduce((sum, item) => sum + item.quantity, 0)))} unpurchased units</span></article></div>
+    <div class="player-terminal-marketplace-summary"><article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCurrency(market.volume, currencyCode))}</strong><span>Committed orders</span></article><article><small>ACTIVE SELLERS</small><strong>${escapeHtml(formatNumber(market.activeSellers))}</strong><span>Current game</span></article><article><small>FEES + TAX</small><strong>${escapeHtml(totalRate.toFixed(1))}%</strong><span>${escapeHtml(platformFeeRate.toFixed(1))}% fee · ${escapeHtml(taxRate.toFixed(1))}% tax</span></article><article><small>YOUR LISTINGS</small><strong>${escapeHtml(formatNumber(market.myListings.length))}</strong><span>${escapeHtml(formatNumber(market.myListings.reduce((sum, item) => sum + item.quantity, 0)))} unpurchased units</span></article></div>
     <div class="player-terminal-filter-row">${market.categories.map((item) => `<button class="${item === category ? "active" : ""}" type="button" data-player-marketplace-category="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}</div>
     <div class="player-terminal-marketplace-layout"><section class="player-terminal-panel player-terminal-marketplace-list"><header class="player-terminal-panel-header"><div><span>OPEN LISTINGS</span><strong>${escapeHtml(filtered.length)} results</strong></div>${renderStatusPill("FIXED PRICE", "purple")}</header><div>${filtered.length ? filtered.map((item) => listingCard(item, item.id === selected?.id)).join("") : renderEmptyState({ title: "No open listings", detail: enabled ? "Choose another category or return after players activate listings." : "Marketplace policy is currently disabled.", iconName: "marketplace" })}</div></section>
       <section class="player-terminal-panel player-terminal-marketplace-detail">${selected ? `<header class="player-terminal-panel-header"><div><span>LISTING REVIEW</span><strong>${escapeHtml(selected.name)}</strong></div>${renderStatusPill(selected.condition, selected.condition === "New" ? "green" : "amber")}</header><div class="player-terminal-marketplace-detail-hero"><span><img src="${escapeHtml(selected.image)}" alt="" /></span><div><small>${escapeHtml(selected.category)} · ${escapeHtml(selected.country)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p></div></div><dl class="player-terminal-marketplace-facts"><div><dt>UNIT PRICE</dt><dd>${escapeHtml(formatCurrency(selected.unitPrice, selected.currencyCode))}</dd></div><div><dt>AVAILABLE</dt><dd>${escapeHtml(selected.quantity)}</dd></div><div><dt>SELLER</dt><dd>${escapeHtml(selected.seller)}</dd></div><div><dt>EXPIRES</dt><dd>${escapeHtml(localDate(selected.expiresAt))}</dd></div></dl><form data-player-form="marketplace-purchase" data-endpoint="marketplacePurchase"><input name="listingId" type="hidden" value="${escapeHtml(selected.id)}" /><input name="expectedVersion" type="hidden" value="${escapeHtml(selected.version)}" /><label>QUANTITY<input name="quantity" type="number" min="1" max="${escapeHtml(selected.quantity)}" value="1" required /></label><div class="player-terminal-marketplace-total"><small>ESTIMATED TOTAL</small><strong data-player-marketplace-estimated-total>${escapeHtml(formatCurrency(selected.unitPrice * (1 + totalRate / 100), selected.currencyCode))}</strong><span>Includes the current fee and tax policy for one unit</span></div><button class="player-terminal-primary-button" type="submit" ${enabled ? "" : "disabled"}>${icon("cart")} Buy listing</button></form>` : renderEmptyState({ title: "No listing selected", detail: "No active Marketplace listing is available.", iconName: "marketplace" })}</section>

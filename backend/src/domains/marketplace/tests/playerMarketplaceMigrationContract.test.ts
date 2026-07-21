@@ -1,7 +1,7 @@
 export {};
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void; readTextFile(path: string): Promise<string> };
-const MIGRATION = "supabase/migrations/20260721011000_add_player_marketplace_lifecycle_v2.sql";
+const MIGRATION = "supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql";
 
 Deno.test("Marketplace migration defines the complete lifecycle and immutable evidence", async () => {
   const sql = await Deno.readTextFile(MIGRATION);

@@ -7,6 +7,7 @@ const key = "marketplace:test:00000001";
 const listingId = "lst_11111111111111111111111111111111";
 const reservationId = "mpr_22222222222222222222222222222222";
 const orderId = "ord_33333333333333333333333333333333";
+const eligibleOrderId = "ord_66666666666666666666666666666666";
 const disputeId = "dsp_44444444444444444444444444444444";
 
 assert.deepEqual(resolveMarketplaceBackendRequest({ endpointKey: "marketplace" }), {
@@ -32,7 +33,10 @@ const market = normalizePlayerMarketplace({ marketplace: {
   listings: [{ id: listingId, itemId: "data-chip", name: "Data Chip", description: "Encrypted market data.", category: "Equipment", image: null, country: "LUMENOR", condition: "Like New", seller: "Nova Trader", sellerReference: "PLAYER-42", unitPrice: 15, currencyCode: "LUM", quantity: 2, status: "active", version: 7, expiresAt: "2026-07-27T04:00:00.000Z", createdAt: "2026-07-20T04:00:00.000Z", updatedAt: "2026-07-20T04:00:00.000Z", mine: false }],
   myListings: [{ id: "lst_55555555555555555555555555555555", itemId: "data-chip", name: "Data Chip", description: "Encrypted market data.", category: "Equipment", country: "LUMENOR", condition: "Used", seller: "Me", unitPrice: 12, currencyCode: "LUM", quantity: 1, status: "draft", version: 1, expiresAt: "2026-07-27T04:00:00.000Z", createdAt: "2026-07-20T04:00:00.000Z", updatedAt: "2026-07-20T04:00:00.000Z", mine: true }],
   reservations: [{ id: reservationId, listingId, quantity: 1, total: 15.525, currencyCode: "LUM", status: "settled", version: 3, expiresAt: "2026-07-20T04:05:00.000Z" }],
-  orders: [{ id: orderId, reservationId, listingId, itemId: "data-chip", itemName: "Data Chip", quantity: 1, unitPrice: 15, subtotal: 15, feeAmount: 0.375, taxAmount: 0.15, total: 15.525, sellerProceeds: 15, currencyCode: "LUM", status: "completed", version: 2, role: "buyer", completedAt: "2026-07-20T04:01:00.000Z" }],
+  orders: [
+    { id: orderId, reservationId, listingId, itemId: "data-chip", itemName: "Data Chip", quantity: 1, unitPrice: 15, subtotal: 15, feeAmount: 0.375, taxAmount: 0.15, total: 15.525, sellerProceeds: 15, currencyCode: "LUM", status: "completed", version: 2, role: "buyer", completedAt: "2026-07-20T04:01:00.000Z" },
+    { id: eligibleOrderId, reservationId: "mpr_77777777777777777777777777777777", listingId, itemId: "data-chip", itemName: "Data Chip", quantity: 1, unitPrice: 15, subtotal: 15, feeAmount: 0.375, taxAmount: 0.15, total: 15.525, sellerProceeds: 15, currencyCode: "LUM", status: "completed", version: 1, role: "buyer", completedAt: "2026-07-20T04:03:00.000Z" }
+  ],
   disputes: [{ id: disputeId, orderId, reason: "The transferred item materially differed from the listing.", status: "open", version: 1, openedAt: "2026-07-20T04:02:00.000Z" }]
 } });
 assert.equal(market.platformFeeRate, 2.5);

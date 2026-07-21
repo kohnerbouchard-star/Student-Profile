@@ -66,41 +66,97 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     Readonly<Partial<Record<string, ReviewedPlayerRateLimitOperation>>>
   >
 > = Object.freeze({
-  bootstrap: byMethod({ GET: operation("player.session.read", "read") }),
-  capabilities: byMethod({ GET: operation("player.capabilities.read", "read") }),
-  banking: byMethod({ GET: operation("player.banking.read", "read") }),
-  contractAccept: byMethod({ POST: operation("player.contracts.accept", "write") }),
-  contractSubmit: byMethod({ POST: operation("player.contracts.submit", "write") }),
-  contracts: byMethod({ GET: operation("player.contracts.read", "read") }),
-  countries: byMethod({ GET: operation("player.countries.read", "read") }),
-  country: byMethod({ GET: operation("player.country.read", "read") }),
-  dashboard: byMethod({ GET: operation("player.dashboard.read", "read") }),
-  inventory: byMethod({ GET: operation("player.inventory.read", "read") }),
+  bootstrap: byMethod({
+    GET: operation("player.session.read", "read"),
+  }),
+  capabilities: byMethod({
+    GET: operation("player.capabilities.read", "read"),
+  }),
+  banking: byMethod({
+    GET: operation("player.banking.read", "read"),
+  }),
+  contractAccept: byMethod({
+    POST: operation("player.contracts.accept", "write"),
+  }),
+  contractSubmit: byMethod({
+    POST: operation("player.contracts.submit", "write"),
+  }),
+  contracts: byMethod({
+    GET: operation("player.contracts.read", "read"),
+  }),
+  countries: byMethod({
+    GET: operation("player.countries.read", "read"),
+  }),
+  country: byMethod({
+    GET: operation("player.country.read", "read"),
+  }),
+  dashboard: byMethod({
+    GET: operation("player.dashboard.read", "read"),
+  }),
+  inventory: byMethod({
+    GET: operation("player.inventory.read", "read"),
+  }),
   inventoryRedemption: redemptionOperations,
   inventoryRedemptions: redemptionOperations,
-  logout: byMethod({ POST: operation("player.session.logout", "sensitive") }),
-  market: byMethod({ GET: operation("player.market.read", "read") }),
-  marketAsset: byMethod({ GET: operation("player.asset.read", "read") }),
-  marketOrder: byMethod({ POST: operation("player.market.order", "sensitive") }),
+  logout: byMethod({
+    POST: operation("player.session.logout", "sensitive"),
+  }),
+  market: byMethod({
+    GET: operation("player.market.read", "read"),
+  }),
+  marketAsset: byMethod({
+    GET: operation("player.asset.read", "read"),
+  }),
+  marketOrder: byMethod({
+    POST: operation("player.market.order", "sensitive"),
+  }),
   marketWatchlist: byMethod({
     DELETE: operation("player.watchlist.write", "write"),
     GET: operation("player.watchlist.read", "read"),
     PUT: operation("player.watchlist.write", "write"),
   }),
-  marketplace: byMethod({ GET: operation("player.marketplace.read", "read") }),
-  marketplaceListing: byMethod({ POST: operation("player.marketplace.listing.create", "write") }),
-  marketplaceActivate: byMethod({ POST: operation("player.marketplace.listing.activate", "write") }),
-  marketplacePurchase: byMethod({ POST: operation("player.marketplace.purchase", "sensitive") }),
-  marketplaceCancel: byMethod({ POST: operation("player.marketplace.listing.cancel", "write") }),
-  marketplaceDispute: byMethod({ POST: operation("player.marketplace.dispute.open", "sensitive") }),
-  news: byMethod({ GET: operation("player.news.read", "read") }),
-  notifications: byMethod({ GET: operation("player.notifications.read", "read") }),
-  notificationsRead: byMethod({ POST: operation("player.notifications.write", "write") }),
-  storyDeliveries: byMethod({ GET: operation("player.story.deliveries.read", "read") }),
-  storyDeliveryState: byMethod({ POST: operation("player.story.deliveries.write", "write") }),
-  portfolio: byMethod({ GET: operation("player.portfolio.read", "read") }),
-  store: byMethod({ GET: operation("player.store.read", "read") }),
-  storeQuote: byMethod({ POST: operation("player.store.quote", "write") }),
+  marketplace: byMethod({
+    GET: operation("player.marketplace.read", "read"),
+  }),
+  marketplaceListing: byMethod({
+    POST: operation("player.marketplace.listing.create", "write"),
+  }),
+  marketplaceActivate: byMethod({
+    POST: operation("player.marketplace.listing.activate", "write"),
+  }),
+  marketplacePurchase: byMethod({
+    POST: operation("player.marketplace.purchase", "sensitive"),
+  }),
+  marketplaceCancel: byMethod({
+    POST: operation("player.marketplace.listing.cancel", "write"),
+  }),
+  marketplaceDispute: byMethod({
+    POST: operation("player.marketplace.dispute.open", "sensitive"),
+  }),
+  news: byMethod({
+    GET: operation("player.news.read", "read"),
+  }),
+  notifications: byMethod({
+    GET: operation("player.notifications.read", "read"),
+  }),
+  notificationsRead: byMethod({
+    POST: operation("player.notifications.write", "write"),
+  }),
+  storyDeliveries: byMethod({
+    GET: operation("player.story.deliveries.read", "read"),
+  }),
+  storyDeliveryState: byMethod({
+    POST: operation("player.story.deliveries.write", "write"),
+  }),
+  portfolio: byMethod({
+    GET: operation("player.portfolio.read", "read"),
+  }),
+  store: byMethod({
+    GET: operation("player.store.read", "read"),
+  }),
+  storeQuote: byMethod({
+    POST: operation("player.store.quote", "write"),
+  }),
   storePurchase: byMethod({
     GET: operation("player.store.purchases.read", "read"),
     POST: operation("player.store.purchase", "sensitive"),
@@ -111,7 +167,9 @@ export function readReviewedPlayerRateLimitOperation(
   endpointKey: ReviewedPlayerRateLimitEndpointKey,
   method: string,
 ): ReviewedPlayerRateLimitOperation | null {
-  return REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS[endpointKey][method.toUpperCase()] ?? null;
+  return REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS[endpointKey][
+    method.toUpperCase()
+  ] ?? null;
 }
 
 export async function dispatchRateLimitedReviewedPlayerRequest(
@@ -120,9 +178,17 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
   next: () => Promise<Response> | Response,
   dependencies: PlayerRateLimitDispatchDependencies,
 ): Promise<Response> {
-  const operation = readReviewedPlayerRateLimitOperation(endpointKey, request.method);
+  const operation = readReviewedPlayerRateLimitOperation(
+    endpointKey,
+    request.method,
+  );
   if (!operation) return next();
-  const limited = await guardReviewedPlayerRequest(request, operation, dependencies);
+
+  const limited = await guardReviewedPlayerRequest(
+    request,
+    operation,
+    dependencies,
+  );
   return limited ?? next();
 }
 
@@ -143,8 +209,13 @@ async function guardReviewedPlayerRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const scope = await (dependencies.resolveScope ?? resolveScope)(request, client);
-    const decision = await (dependencies.enforcePostAuth ?? enforcePlayerRateLimit)({
+    const scope = await (dependencies.resolveScope ?? resolveScope)(
+      request,
+      client,
+    );
+    const decision = await (
+      dependencies.enforcePostAuth ?? enforcePlayerRateLimit
+    )({
       action: operation.action,
       profile: operation.profile,
       request,
@@ -169,7 +240,9 @@ async function guardPlayerLoginRequest(
 ): Promise<Response | null> {
   try {
     const client = createConfiguredClient(dependencies);
-    const decision = await (dependencies.enforcePreAuth ?? enforcePreAuthRateLimit)({
+    const decision = await (
+      dependencies.enforcePreAuth ?? enforcePreAuthRateLimit
+    )({
       action: "player.login.attempt",
       profile: "login",
       request,
@@ -191,7 +264,8 @@ function createConfiguredClient(
 function resolveScope(request: Request, client: EdgeSupabaseClient) {
   return resolvePlayerRequestScope(request, {
     hashSessionToken: sha256Hex,
-    resolvePlayerSession: (sessionTokenHash) => resolveActivePlayerSession(client, sessionTokenHash),
+    resolvePlayerSession: (sessionTokenHash) =>
+      resolveActivePlayerSession(client, sessionTokenHash),
   });
 }
 
