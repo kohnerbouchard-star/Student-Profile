@@ -75,7 +75,7 @@ test("World onboarding and travel lifecycle is keyboard-operable", async ({ page
 
   await page.locator('form[data-world-form="travelQuote"] select[name="toLocationId"]').selectOption("loc_valerion_capital_v1");
   await page.getByRole("button", { name: "Calculate authoritative quote" }).click();
-  await expect(page.getByText("AUTHORITATIVE QUOTE")).toBeVisible();
+  await expect(page.getByText("AUTHORITATIVE QUOTE", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Confirm travel" }).click();
   await expect(page.getByText("ACTIVE JOURNEY")).toBeVisible();
   await page.getByRole("button", { name: "Complete eligible arrival" }).click();
