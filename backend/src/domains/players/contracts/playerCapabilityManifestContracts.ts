@@ -143,12 +143,18 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "contractAccept",
-    operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/accept" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/contracts/:contractKey/accept",
+    }],
     actionCapabilities: ["contractAccept"],
   },
   {
     key: "contractSubmit",
-    operations: [{ method: "POST", pathTemplate: "/players/me/contracts/:contractKey/submit" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/contracts/:contractKey/submit",
+    }],
     actionCapabilities: ["contractSubmit"],
   },
   {
@@ -158,15 +164,24 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "countries",
-    operations: [{ method: "GET", pathTemplate: "/players/me/world/countries" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/world/countries",
+    }],
   },
   {
     key: "country",
-    operations: [{ method: "GET", pathTemplate: "/players/me/world/countries/:countryCode" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/world/countries/:countryCode",
+    }],
   },
   {
     key: "dashboard",
-    operations: [{ method: "GET", pathTemplate: "/players/me/game/dashboard" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/game/dashboard",
+    }],
     routeCapabilities: ["dashboard"],
   },
   {
@@ -181,12 +196,18 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "marketAsset",
-    operations: [{ method: "GET", pathTemplate: "/players/me/stocks/assets/:ticker" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/stocks/assets/:ticker",
+    }],
     routeCapabilities: ["market"],
   },
   {
     key: "marketOrder",
-    operations: [{ method: "POST", pathTemplate: "/players/me/stocks/orders" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/stocks/orders",
+    }],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketOrder"],
   },
@@ -195,14 +216,20 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [
       { method: "GET", pathTemplate: "/players/me/stocks/watchlist" },
       { method: "PUT", pathTemplate: "/players/me/stocks/watchlist/:ticker" },
-      { method: "DELETE", pathTemplate: "/players/me/stocks/watchlist/:ticker" },
+      {
+        method: "DELETE",
+        pathTemplate: "/players/me/stocks/watchlist/:ticker",
+      },
     ],
     routeCapabilities: ["market"],
     actionCapabilities: ["marketWatchlist"],
   },
   {
     key: "portfolio",
-    operations: [{ method: "GET", pathTemplate: "/players/me/stocks/portfolio" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/stocks/portfolio",
+    }],
     routeCapabilities: ["portfolio"],
   },
   {
@@ -230,9 +257,18 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   {
     key: "inventoryRedemptions",
     operations: [
-      { method: "GET", pathTemplate: "/players/me/inventory/redemptions" },
-      { method: "POST", pathTemplate: "/players/me/inventory/:itemId/redemptions" },
-      { method: "GET", pathTemplate: "/players/me/inventory/redemptions/:requestId" },
+      {
+        method: "GET",
+        pathTemplate: "/players/me/inventory/redemptions",
+      },
+      {
+        method: "POST",
+        pathTemplate: "/players/me/inventory/:itemId/redemptions",
+      },
+      {
+        method: "GET",
+        pathTemplate: "/players/me/inventory/redemptions/:requestId",
+      },
     ],
     routeCapabilities: ["inventory"],
     actionCapabilities: ["inventoryUse"],
@@ -279,31 +315,47 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "notificationsRead",
-    operations: [{ method: "POST", pathTemplate: "/players/me/notifications/read" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/notifications/read",
+    }],
     actionCapabilities: ["notificationsRead"],
   },
   {
     key: "storyDeliveries",
-    operations: [{ method: "GET", pathTemplate: "/players/me/story-deliveries" }],
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/story-deliveries",
+    }],
   },
   {
     key: "storyDeliveryState",
-    operations: [{ method: "POST", pathTemplate: "/players/me/story-deliveries/:deliveryId/state" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/story-deliveries/:deliveryId/state",
+    }],
     actionCapabilities: ["storyDeliveryState"],
   },
   {
     key: "logout",
-    operations: [{ method: "POST", pathTemplate: "/players/me/session/logout" }],
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/session/logout",
+    }],
     actionCapabilities: ["logout"],
   },
 ] as const;
 
 export function buildPlayerCapabilityManifest(): PlayerCapabilityManifest {
   const routeCapabilities = new Set(
-    REVIEWED_ENDPOINTS.flatMap((descriptor) => descriptor.routeCapabilities ?? []),
+    REVIEWED_ENDPOINTS.flatMap((descriptor) =>
+      descriptor.routeCapabilities ?? []
+    ),
   );
   const actionCapabilities = new Set(
-    REVIEWED_ENDPOINTS.flatMap((descriptor) => descriptor.actionCapabilities ?? []),
+    REVIEWED_ENDPOINTS.flatMap((descriptor) =>
+      descriptor.actionCapabilities ?? []
+    ),
   );
 
   return Object.freeze({
@@ -312,13 +364,20 @@ export function buildPlayerCapabilityManifest(): PlayerCapabilityManifest {
     service: "classroom-api",
     capabilities: Object.freeze({
       routes: capabilityFlags(PLAYER_ROUTE_CAPABILITY_KEYS, routeCapabilities),
-      actions: capabilityFlags(PLAYER_ACTION_CAPABILITY_KEYS, actionCapabilities),
+      actions: capabilityFlags(
+        PLAYER_ACTION_CAPABILITY_KEYS,
+        actionCapabilities,
+      ),
     }),
     endpoints: Object.freeze(
-      REVIEWED_ENDPOINTS.map((descriptor) => Object.freeze({
-        key: descriptor.key,
-        operations: Object.freeze(descriptor.operations.map((operation) => Object.freeze({ ...operation }))),
-      })),
+      REVIEWED_ENDPOINTS.map((descriptor) =>
+        Object.freeze({
+          key: descriptor.key,
+          operations: Object.freeze(descriptor.operations.map((operation) =>
+            Object.freeze({ ...operation })
+          )),
+        })
+      ),
     ),
   });
 }

@@ -2,7 +2,10 @@ export const SHELL_REQUIRED_RESOURCES = Object.freeze(["session", "dashboard"]);
 export const SHELL_OPTIONAL_RESOURCES = Object.freeze(["notifications"]);
 
 export const ROUTE_RESOURCE_PLAN = Object.freeze({
-  dashboard: Object.freeze({ required: Object.freeze(["dashboard", "countries"]), optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory"]) }),
+  dashboard: Object.freeze({
+    required: Object.freeze(["dashboard", "countries"]),
+    optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory"])
+  }),
   news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
   market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking"]) }),
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
@@ -26,9 +29,9 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking"]),
   marketWatchlist: Object.freeze(["market"]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking"]),
+  marketplaceActivate: Object.freeze(["marketplace", "inventory"]),
   marketplacePurchase: Object.freeze(["dashboard", "marketplace", "inventory", "banking"]),
   marketplaceListing: Object.freeze(["marketplace", "inventory"]),
-  marketplaceActivate: Object.freeze(["marketplace"]),
   marketplaceCancel: Object.freeze(["marketplace", "inventory"]),
   marketplaceDispute: Object.freeze(["marketplace"]),
   contractAccept: Object.freeze(["dashboard", "contracts"]),
@@ -45,5 +48,9 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   notificationsRead: Object.freeze(["dashboard", "notifications"]),
   storyDeliveryState: Object.freeze(["storyDeliveries"])
 });
+
 export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set(Object.keys(WRITE_INVALIDATIONS)));
-export function resourcesForRoute(route) { return ROUTE_RESOURCE_PLAN[route] || ROUTE_RESOURCE_PLAN.dashboard; }
+
+export function resourcesForRoute(route) {
+  return ROUTE_RESOURCE_PLAN[route] || ROUTE_RESOURCE_PLAN.dashboard;
+}
