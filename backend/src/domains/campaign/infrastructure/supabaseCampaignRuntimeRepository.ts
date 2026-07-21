@@ -114,7 +114,7 @@ export function createSupabaseCampaignSchedulerRepository(
   client: CampaignRuntimeSupabaseClient,
   schedule: CampaignSchedulePolicy,
 ): CampaignSchedulerRepository {
-  return Object.freeze({
+  const repository: CampaignSchedulerRepository = {
     listDueCampaigns: async ({ dueAt, limit }) => {
       const result = await client.from<CampaignRow>("campaign_instances")
         .select("*")
@@ -166,13 +166,14 @@ export function createSupabaseCampaignSchedulerRepository(
       );
       return mapExecution(requireFirst(result, "campaign execution"));
     },
-  });
+  };
+  return Object.freeze(repository);
 }
 
 export function createSupabaseCampaignEffectWorkerRepository(
   client: CampaignRuntimeSupabaseClient,
 ): CampaignEffectWorkerRepository {
-  return Object.freeze({
+  const repository: CampaignEffectWorkerRepository = {
     claim: async ({ limit, claimedAt }) => {
       const result = await client.rpc<CampaignClaimRpcRow>(
         "claim_campaign_effect_commands_v1",
@@ -202,13 +203,14 @@ export function createSupabaseCampaignEffectWorkerRepository(
       );
       requireRows(result, "campaign effect failure");
     },
-  });
+  };
+  return Object.freeze(repository);
 }
 
 export function createSupabaseCampaignAdminRepository(
   client: CampaignRuntimeSupabaseClient,
 ): CampaignAdminRepository {
-  return Object.freeze({
+  const repository: CampaignAdminRepository = {
     initialize: async (input) => {
       const result = await client.rpc<CampaignInitializeRpcRow>(
         "initialize_campaign_instance_v1",
@@ -276,7 +278,8 @@ export function createSupabaseCampaignAdminRepository(
         .maybeSingle();
       return mapCampaign(requireRow(result, "campaign instance"));
     },
-  });
+  };
+  return Object.freeze(repository);
 }
 
 async function readStatusRequired(
