@@ -1,9 +1,9 @@
-# Econovaria Seed Alias Decision
+# Econovaria Seed Staging Decision
 
-Controller baseline: `458137c9193a7066294024098b4d938aa46f6aba`
+Main: `6ced5aa36e60dfbd82620463f4f4bf6f56a349dd`
 
-Selected strategy: preserve the existing staging history and use the canonical compatibility option described by the final serial merge controller instruction.
+PR #163 source is merged. The prior staging project remains historical evidence with 77 migration versions. Main contains 76 canonical versions.
 
-The current Seed pull request remains blocked until its branch contains current main, the repository and staging histories are reconciled without changing applied history, one final head passes every required check, connected evidence is bound to that head, and the pull request is mergeable, non-draft, and free of unresolved review threads.
+Final connected acceptance will use a new isolated staging target created exactly from final merged main. PR #295 must prove complete migration-set equality and rerun the bounded Seed lifecycle there.
 
-Production remains unchanged and unauthorized.
+World is next in the serial source queue. Seed connected acceptance remains `BLOCKED`. Production remains unauthorized.
