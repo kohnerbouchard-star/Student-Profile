@@ -33,9 +33,7 @@ create table public.campaign_instances (
     'open_conflict', 'adaptation', 'reconstruction', 'continued_conflict'
   )),
   constraint campaign_instances_revision_valid check (revision >= 0 and event_sequence >= 0),
-  constraint campaign_instances_outcome_valid check (
-    outcome is null or outcome in ('reconstruction', 'continued_conflict')
-  ),
+  constraint campaign_instances_outcome_valid check (outcome is null or outcome in ('reconstruction', 'continued_conflict')),
   constraint campaign_instances_completion_valid check (
     (status = 'completed' and completed_at is not null and outcome is not null)
     or (status <> 'completed' and completed_at is null and outcome is null)
@@ -118,9 +116,7 @@ create table public.campaign_effect_commands (
   constraint campaign_effect_commands_public_id_unique unique (public_id),
   constraint campaign_effect_commands_idempotency_unique unique (game_session_id, idempotency_key),
   constraint campaign_effect_commands_public_id_valid check (public_id ~ '^cec_[0-9a-f]{32}$'),
-  constraint campaign_effect_commands_idempotency_valid check (
-    idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
-  ),
+  constraint campaign_effect_commands_idempotency_valid check (idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'),
   constraint campaign_effect_commands_kind_valid check (effect_kind in (
     'publish_news', 'create_contract', 'notify_players', 'apply_market_shock',
     'set_store_scarcity', 'set_route_state'
@@ -194,6 +190,7 @@ create table public.arrival_class_assignments (
   assigned_at timestamptz not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  constraint arrival_class_assignments_game_id_unique unique (game_session_id, id),
   constraint arrival_class_assignments_player_fk
     foreign key (game_session_id, player_id)
     references public.players (game_session_id, id) on delete cascade,
@@ -210,16 +207,12 @@ create table public.arrival_class_assignments (
     questionnaire_id ~ '^[a-z0-9][a-z0-9._-]{0,127}$'
     and length(btrim(questionnaire_version)) between 1 and 64
   ),
-  constraint arrival_class_assignments_score_object check (
-    score_result is null or jsonb_typeof(score_result) = 'object'
-  ),
+  constraint arrival_class_assignments_score_object check (score_result is null or jsonb_typeof(score_result) = 'object'),
   constraint arrival_class_assignments_override_valid check (
     (source = 'questionnaire' and override_reason is null and score_result is not null)
     or (source = 'admin_override' and length(override_reason) between 12 and 1000)
   ),
-  constraint arrival_class_assignments_idempotency_valid check (
-    idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
-  ),
+  constraint arrival_class_assignments_idempotency_valid check (idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'),
   constraint arrival_class_assignments_revision_valid check (revision >= 0)
 );
 
@@ -259,9 +252,6 @@ create table public.arrival_grant_commands (
     or (status <> 'completed' and completed_at is null)
   )
 );
-
-alter table public.arrival_class_assignments
-  add constraint arrival_class_assignments_game_id_unique unique (game_session_id, id);
 
 create trigger set_arrival_grant_commands_updated_at
 before update on public.arrival_grant_commands
@@ -418,6 +408,7 @@ declare
   v_reason text := nullif(btrim(coalesce(p_reason, '')), '');
   v_command jsonb;
   v_command_count integer;
+  v_transition_allowed boolean;
 begin
   if p_game_session_id is null
     or p_campaign_public_id !~ '^cmp_[0-9a-f]{32}$'
@@ -476,7 +467,22 @@ begin
   if v_campaign.current_phase <> p_expected_phase then
     raise exception 'CAMPAIGN_PHASE_CONFLICT' using errcode = 'P0001';
   end if;
-  if p_complete_campaign and p_next_phase not in ('reconstruction', 'continued_conflict') then
+
+  v_transition_allowed :=
+    (p_expected_phase = 'arrival' and p_next_phase in ('arrival', 'opportunity'))
+    or (p_expected_phase = 'opportunity' and p_next_phase in ('opportunity', 'rivalry'))
+    or (p_expected_phase = 'rivalry' and p_next_phase in ('rivalry', 'shortage'))
+    or (p_expected_phase = 'shortage' and p_next_phase in ('shortage', 'meridian_disruption'))
+    or (p_expected_phase = 'meridian_disruption' and p_next_phase in ('meridian_disruption', 'open_conflict'))
+    or (p_expected_phase = 'open_conflict' and p_next_phase in ('open_conflict', 'adaptation'))
+    or (p_expected_phase = 'adaptation' and p_next_phase in ('adaptation', 'reconstruction', 'continued_conflict'))
+    or (p_expected_phase = 'reconstruction' and p_next_phase = 'reconstruction')
+    or (p_expected_phase = 'continued_conflict' and p_next_phase = 'continued_conflict');
+
+  if not v_transition_allowed then
+    raise exception 'CAMPAIGN_TRANSITION_INVALID' using errcode = 'P0001';
+  end if;
+  if p_complete_campaign <> (p_next_phase in ('reconstruction', 'continued_conflict')) then
     raise exception 'CAMPAIGN_TERMINAL_PHASE_INVALID' using errcode = 'P0001';
   end if;
 
@@ -572,6 +578,7 @@ as $function$
 declare
   v_assignment public.arrival_class_assignments%rowtype;
   v_grant public.arrival_grant_commands%rowtype;
+  v_assignment_created boolean := false;
 begin
   if p_game_session_id is null or p_player_id is null
     or p_country_id !~ '^[a-z0-9][a-z0-9_-]{0,63}$'
@@ -624,6 +631,7 @@ begin
       p_questionnaire_id, p_questionnaire_version, p_score_result,
       p_assignment_idempotency_key, p_assigned_at
     ) returning * into v_assignment;
+    v_assignment_created := true;
   end if;
 
   insert into public.arrival_grant_commands (
@@ -634,11 +642,16 @@ begin
     p_arrival_package_definition_id, p_grant_definition_id
   )
   on conflict (game_session_id, player_id, idempotency_key)
-  do update set idempotency_key = excluded.idempotency_key
-  returning * into v_grant;
+  do nothing;
+
+  select grant_row.* into v_grant
+  from public.arrival_grant_commands as grant_row
+  where grant_row.game_session_id = p_game_session_id
+    and grant_row.player_id = p_player_id
+    and grant_row.idempotency_key = p_grant_idempotency_key;
 
   return query select
-    case when v_assignment.created_at = v_assignment.updated_at then 'assigned' else 'replayed' end,
+    case when v_assignment_created then 'assigned' else 'replayed' end,
     v_assignment.public_id,
     v_assignment.class_id,
     v_assignment.country_id,
@@ -653,6 +666,7 @@ revoke all on function public.execute_campaign_event_atomic_v1(
 revoke all on function public.assign_arrival_class_atomic_v1(
   uuid, uuid, text, text, text, text, jsonb, text, text, text, text, timestamptz
 ) from public, anon, authenticated;
+
 grant execute on function public.execute_campaign_event_atomic_v1(
   uuid, text, bigint, text, text, text, text, boolean, uuid, text, timestamptz, jsonb
 ) to service_role;
