@@ -1,9 +1,17 @@
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
 import {
-  enforceStaffRateLimit,
-  type EnforceStaffRateLimitInput,
-} from "./playerRateLimitService.ts";
+  buildAuthenticatedRateLimitBuckets,
+  readTrustedClientIp,
+  TRUSTED_IP_HEADERS,
+  type TrustedIpHeader,
+  validateRateLimitHmacSecret,
+} from "./rateLimitKeying.ts";
 import type { PlayerRateLimitProfile, RateLimitDecision } from "./rateLimitContracts.ts";
+import { SupabaseRateLimitRepository } from "./supabaseRateLimitRepository.ts";
+
+declare const Deno: {
+  readonly env: { get(name: string): string | undefined };
+};
 
 export interface StaffMessagingRateLimitInput {
   readonly request: Request;
@@ -11,27 +19,31 @@ export interface StaffMessagingRateLimitInput {
   readonly staffUserId: string;
   readonly suffix: string;
 }
-
 export interface StaffMessagingRateLimitResult {
   readonly handled: true;
   readonly status: number;
   readonly body: unknown;
 }
-
 export interface StaffMessagingRateLimitDependencies {
   readonly enforce?: (
-    input: EnforceStaffRateLimitInput,
+    input: Readonly<{
+      action: string;
+      profile: PlayerRateLimitProfile;
+      request: Request;
+      staffUuid: string;
+      gameUuid: string;
+    }>,
     client: EdgeSupabaseClient,
   ) => Promise<RateLimitDecision>;
+  readonly readConfig?: () => Readonly<{
+    hmacSecret: string;
+    trustedIpHeader: TrustedIpHeader;
+  }>;
 }
-
-interface Operation {
-  readonly action: string;
-  readonly profile: PlayerRateLimitProfile;
-}
+interface Operation { readonly action: string; readonly profile: PlayerRateLimitProfile }
 
 export async function guardStaffMessagingRateLimit(
-  client: EdgeSupabaseClient,
+  client: unknown,
   input: StaffMessagingRateLimitInput,
   dependencies: StaffMessagingRateLimitDependencies = {},
 ): Promise<StaffMessagingRateLimitResult | null> {
@@ -39,13 +51,20 @@ export async function guardStaffMessagingRateLimit(
   if (!operation) return null;
 
   try {
-    const decision = await (dependencies.enforce ?? enforceStaffRateLimit)({
-      action: operation.action,
-      profile: operation.profile,
-      request: input.request,
-      staffUuid: input.staffUserId,
-      gameUuid: input.gameId,
-    }, client);
+    const edgeClient = client as EdgeSupabaseClient;
+    const decision = dependencies.enforce
+      ? await dependencies.enforce({
+        ...operation,
+        request: input.request,
+        staffUuid: input.staffUserId,
+        gameUuid: input.gameId,
+      }, edgeClient)
+      : await enforceStaffMessagingRateLimit({
+        ...operation,
+        request: input.request,
+        staffUuid: input.staffUserId,
+        gameUuid: input.gameId,
+      }, edgeClient, dependencies.readConfig);
     if (decision.allowed) return null;
     return {
       handled: true,
@@ -95,9 +114,42 @@ export function readStaffMessagingRateLimitOperation(
   return null;
 }
 
-function operation(
-  action: string,
-  profile: PlayerRateLimitProfile,
-): Operation {
+async function enforceStaffMessagingRateLimit(
+  input: Readonly<{
+    action: string;
+    profile: PlayerRateLimitProfile;
+    request: Request;
+    staffUuid: string;
+    gameUuid: string;
+  }>,
+  client: EdgeSupabaseClient,
+  readConfig?: StaffMessagingRateLimitDependencies["readConfig"],
+): Promise<RateLimitDecision> {
+  const config = (readConfig ?? readRuntimeConfig)();
+  const ipAddress = readTrustedClientIp(input.request, config.trustedIpHeader);
+  const buckets = await buildAuthenticatedRateLimitBuckets({
+    action: input.action,
+    gameUuid: input.gameUuid,
+    identityUuid: input.staffUuid,
+    ipAddress,
+    profile: input.profile,
+  }, config.hmacSecret);
+  return new SupabaseRateLimitRepository(client).consume(buckets);
+}
+
+function readRuntimeConfig() {
+  const hmacSecret = Deno.env.get("ECONOVARIA_RATE_LIMIT_HMAC_SECRET") ?? "";
+  const header = (Deno.env.get("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER") ?? "")
+    .trim().toLowerCase();
+  validateRateLimitHmacSecret(hmacSecret);
+  if (!TRUSTED_IP_HEADERS.includes(header as TrustedIpHeader)) {
+    throw new Error("invalid rate limit configuration");
+  }
+  return Object.freeze({
+    hmacSecret,
+    trustedIpHeader: header as TrustedIpHeader,
+  });
+}
+function operation(action: string, profile: PlayerRateLimitProfile): Operation {
   return Object.freeze({ action, profile });
 }
