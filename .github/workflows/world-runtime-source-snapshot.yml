@@ -1,0 +1,32 @@
+name: World Runtime Source Snapshot
+
+on:
+  push:
+    branches:
+      - agent/story-arrival-world-runtime-v1
+    paths:
+      - ".github/workflows/world-runtime-source-snapshot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build source archive
+        shell: bash
+        run: git archive --format=zip --output=/tmp/world-runtime-source.zip HEAD
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-runtime-source-${{ github.sha }}
+          path: /tmp/world-runtime-source.zip
+          if-no-files-found: error
+          retention-days: 1
