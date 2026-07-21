@@ -218,8 +218,7 @@ async function confirmModal(page, name, phrase = "") {
     await input.fill(phrase);
   }
   const confirm = modal.getByRole("button", { name, exact: true }).last();
-  await confirm.focus();
-  await page.keyboard.press("Enter");
+  await confirm.press("Enter");
   await modal.waitFor({ state: "detached", timeout: 8000 });
   await page.waitForTimeout(2500);
   await page.waitForFunction(() => {
