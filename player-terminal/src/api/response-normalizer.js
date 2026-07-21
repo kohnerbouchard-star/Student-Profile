@@ -81,6 +81,14 @@ function applySafeDefaults(endpointKey, value) {
   if (endpointKey === "news" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "store" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "market" && !Array.isArray(value.sectors)) value.sectors = ["All"];
+  if (
+    endpointKey === "progression" &&
+    !Number.isSafeInteger(value.currentLevelXp) &&
+    Number.isSafeInteger(value.xp) && value.xp >= 0 &&
+    Number.isSafeInteger(value.nextLevelXp) && value.nextLevelXp >= value.xp
+  ) {
+    value.currentLevelXp = value.xp;
+  }
   return value;
 }
 function validateEndpointShape(endpointKey, value, context) {
@@ -94,8 +102,8 @@ function validateEndpointShape(endpointKey, value, context) {
     if (
       !Number.isSafeInteger(value.level) || value.level < 1 || value.level > 20 ||
       !Number.isSafeInteger(value.xp) || value.xp < 0 ||
-      !Number.isSafeInteger(value.currentLevelXp) || value.currentLevelXp < 0 ||
-      !Number.isSafeInteger(value.nextLevelXp) || value.nextLevelXp < value.currentLevelXp ||
+      !Number.isSafeInteger(value.currentLevelXp) || value.currentLevelXp < 0 || value.currentLevelXp > value.xp ||
+      !Number.isSafeInteger(value.nextLevelXp) || value.nextLevelXp < value.xp || value.nextLevelXp < value.currentLevelXp ||
       !Number.isSafeInteger(value.skillPoints) || value.skillPoints < 0 || value.skillPoints > 200 ||
       typeof value.playerName !== "string" || typeof value.title !== "string" || typeof value.summary !== "string"
     ) throw invalidResponse(endpointKey, context.requestId, context.path);
