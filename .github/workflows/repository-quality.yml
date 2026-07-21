@@ -2,118 +2,81 @@ name: Repository Quality
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: seed-pr163-final-sync-${{ github.ref }}
-  cancel-in-progress: false
+  group: repository-quality-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  synchronize-seed-pr163:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.number == 163 &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.head.ref == 'agent/seed-content-foundation-v1')
+  quality:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      SEED_SOURCE_HEAD: 74bcac12127244f232c563b4b018703b53cab4ff
+
     steps:
-      - name: Check out permanent seed branch
+      - name: Check out repository
         uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
-          ref: agent/seed-content-foundation-v1
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: "22.23.1"
+          cache: npm
 
-      - name: Merge current main
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install pinned repository tooling
+        run: npm ci
+
+      - name: Verify repository package signatures
+        continue-on-error: true
+        run: npm audit signatures
+
+      - name: Enforce dependency vulnerability threshold
+        run: npm audit --audit-level=high
+
+      - name: Scan committed source for credentials
+        run: npm run security:secrets
+
+      - name: Test supply-chain controls
+        run: npm run test:supply-chain
+
+      - name: Generate supply-chain SBOM bundle
+        run: npm run security:sbom
+
+      - name: Run repository audit and source checks
+        id: repository-tests
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git merge --no-edit --no-ff origin/main
+          set +e
+          npm test 2>&1 | tee "$RUNNER_TEMP/repository-quality.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
 
-      - name: Restore canonical seed-owned files
-        shell: bash
-        run: |
-          set -euo pipefail
-          MERGE_BASE="$(git merge-base "$SEED_SOURCE_HEAD" origin/main)"
-          git diff --name-only -z "$MERGE_BASE" "$SEED_SOURCE_HEAD" > /tmp/seed-owned-paths.zlist
-          while IFS= read -r -d '' path; do
-            case "$path" in
-              package.json|.github/workflows/repository-quality.yml|.github/workflows/seed-pr163-reconcile.yml)
-                continue
-                ;;
-            esac
-            if git cat-file -e "$SEED_SOURCE_HEAD:$path" 2>/dev/null; then
-              git checkout "$SEED_SOURCE_HEAD" -- "$path"
-            else
-              git rm -f --ignore-unmatch -- "$path"
-            fi
-          done < /tmp/seed-owned-paths.zlist
-
-      - name: Restore canonical workflows
-        run: |
-          set -euo pipefail
-          git checkout origin/main -- .github/workflows/repository-quality.yml
-          git rm -f --ignore-unmatch .github/workflows/seed-pr163-reconcile.yml
-
-      - name: Synthesize additive seed package scripts
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show "$SEED_SOURCE_HEAD:package.json" > /tmp/seed-package.json
-          node <<'NODE'
-          const fs = require('node:fs');
-          const current = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const seed = JSON.parse(fs.readFileSync('/tmp/seed-package.json', 'utf8'));
-          current.scripts ??= {};
-          for (const [name, command] of Object.entries(seed.scripts ?? {})) {
-            if (name.toLowerCase().includes('seed')) current.scripts[name] = command;
-          }
-          if (!current.scripts.audit.includes('audit:seed-content')) {
-            current.scripts.audit += ' && npm run audit:seed-content';
-          }
-          fs.writeFileSync('package.json', `${JSON.stringify(current, null, 2)}\n`);
-          NODE
-
-      - name: Stage synchronized tree and capture whitespace diagnostics
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -A
-          git diff --cached --check > /tmp/seed-whitespace-diagnostics.txt 2>&1 || true
-
-      - name: Commit synchronized tree
-        run: |
-          set -euo pipefail
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(seed): finalize synchronized executable pack tree"
-          fi
-
-      - name: Verify synchronized tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-list --count HEAD..origin/main)" -eq 0
-          test ! -e .github/workflows/seed-pr163-reconcile.yml
-          cmp .github/workflows/repository-quality.yml <(git show origin/main:.github/workflows/repository-quality.yml)
-          grep -q 'name: Seed Executable Beta Pack' .github/workflows/seed-executable-beta-pack.yml
-          node -e "const p=require('./package.json'); if(!p.scripts['seed:beta:validate']) process.exit(1)"
-
-      - name: Upload whitespace diagnostics
+      - name: Upload repository quality failure log
+        if: failure() && steps.repository-tests.outputs.status != '0'
         uses: actions/upload-artifact@v4
         with:
-          name: seed-pr163-whitespace-diagnostics
-          path: /tmp/seed-whitespace-diagnostics.txt
+          name: repository-quality-log
+          path: ${{ runner.temp }}/repository-quality.log
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish synchronized permanent head
-        run: git push origin HEAD:agent/seed-content-foundation-v1
+      - name: Install backend tooling
+        run: npm --prefix backend ci
+
+      - name: Verify backend package signatures
+        continue-on-error: true
+        working-directory: backend
+        run: npm audit signatures
+
+      - name: Audit backend dependencies
+        run: npm --prefix backend audit --audit-level=high

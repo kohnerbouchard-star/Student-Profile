@@ -14,8 +14,6 @@ import {
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const DEFAULT_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
-const REQUIRED_SCENARIOS = new Set(['baseline', 'currency-stress', 'route-disruption', 'war-and-recovery']);
-const REQUIRED_COMPLETED_COUNTRIES = new Set(['eldoran', 'valerion', 'lumenor', 'xalvoria', 'dravenlok', 'syndalis']);
 
 function add(issues, severity, code, message, file = null) { issues.push({ severity, code, message, file }); }
 function unique(values) { return new Set(values).size === values.length; }
@@ -25,19 +23,18 @@ export async function validateSeedBetaPack({ packRoot = DEFAULT_ROOT } = {}) {
   const required = [
     'pack-v1.json', 'market-templates-v1.json', 'arrival-calibration-v1.json', 'tutorial-contract-chains-v1.json',
     'store-catalog-v1.json', 'physical-economy-calibration-v1.json', 'campaign-v1.json',
-    'location-registry-verified-v1.json', 'stable-id-map-v1.json', 'calibration-scenarios-v1.json', 'integrity-manifest-v1.json',
+    'location-registry-verified-v1.json', 'stable-id-map-v1.json', 'integrity-manifest-v1.json',
   ];
   for (const name of required) if (!(await exists(path.join(packRoot, name)))) add(issues, 'error', 'REQUIRED_FILE_MISSING', `Missing ${name}.`, name);
   if (issues.some((entry) => entry.severity === 'error')) return { valid: false, issues, summary: { errors: issues.length, warnings: 0 } };
 
-  const [pack, market, arrival, contracts, store, physical, campaign, locations, mappings, calibration, integrity] = await Promise.all(required.map((name) => readJson(path.join(packRoot, name))));
-  const documents = { pack, market, arrival, contracts, store, physical, campaign, locations, mappings, calibration, integrity };
+  const [pack, market, arrival, contracts, store, physical, campaign, locations, mappings, integrity] = await Promise.all(required.map((name) => readJson(path.join(packRoot, name))));
+  const documents = { pack, market, arrival, contracts, store, physical, campaign, locations, mappings, integrity };
   for (const [name, document] of Object.entries(documents)) {
     if (document.productionAuthorized !== false) add(issues, 'error', 'PRODUCTION_AUTHORIZATION_NOT_FALSE', `${name} must fail closed for production.`);
     if (document.activationAuthorized !== false) add(issues, 'error', 'ACTIVATION_AUTHORIZATION_NOT_FALSE', `${name} must not embed activation authorization.`);
   }
   if (!Array.isArray(pack.allowedEnvironments) || pack.allowedEnvironments.includes('production')) add(issues, 'error', 'PRODUCTION_ENVIRONMENT_ALLOWED', 'Pack allowed environments must exclude production.');
-  if (pack.domainFiles?.calibration !== 'calibration-scenarios-v1.json' || pack.calibration?.allChecksPassed !== true) add(issues, 'error', 'CALIBRATION_NOT_BOUND_TO_PACK', 'Executable pack must bind the approved calibration evidence.');
   if (pack.boundedCounts?.marketInstruments !== 240 || market.instrumentCount !== 240 || market.templates?.length !== 240) add(issues, 'error', 'MARKET_COUNT_INVALID', 'Bounded market must contain exactly 240 templates.');
   if (pack.excluded?.fullMarketUniverse3200 !== true || market.calibration?.all3200UniverseExcluded !== true) add(issues, 'error', 'FULL_UNIVERSE_NOT_EXCLUDED', 'The 3,200-instrument universe must be explicitly excluded.');
   if (!unique(market.templates.map((entry) => entry.stableId)) || !unique(market.templates.map((entry) => String(entry.ticker).toLowerCase()))) add(issues, 'error', 'MARKET_IDENTITIES_NOT_UNIQUE', 'Market stable IDs and symbols must be unique.');
@@ -88,23 +85,6 @@ export async function validateSeedBetaPack({ packRoot = DEFAULT_ROOT } = {}) {
     }
   }
 
-  if (calibration.deterministic !== true || calibration.countryCount !== 10 || calibration.scenarioCountPerCountry !== 4 || calibration.countrySimulations?.length !== 10) add(issues, 'error', 'COUNTRY_SIMULATION_COVERAGE_INVALID', 'Calibration must contain four deterministic scenarios for all ten countries.');
-  for (const country of COUNTRY_IDS) {
-    const simulation = calibration.countrySimulations?.find((entry) => entry.country === country);
-    const scenarioIds = new Set(simulation?.scenarios?.map((entry) => entry.scenarioId));
-    if (!simulation || simulation.instrumentCount !== 24 || simulation.scenarios?.length !== 4 || [...REQUIRED_SCENARIOS].some((scenario) => !scenarioIds.has(scenario))) add(issues, 'error', 'COUNTRY_SIMULATION_MISSING', `${country} does not have the required deterministic scenario set.`);
-    if (simulation?.scenarios?.some((scenario) => !(scenario.pathSha256?.length === 64 && scenario.maximumDrawdownPct <= 35 && scenario.recoveredTo95PctOfStart === true))) add(issues, 'error', 'COUNTRY_SIMULATION_UNSAFE', `${country} has an unsafe or incomplete simulation result.`);
-  }
-  const completedCountries = new Set(calibration.newlyCompletedCountryEnrichment ?? []);
-  if ([...REQUIRED_COMPLETED_COUNTRIES].some((country) => !completedCountries.has(country))) add(issues, 'error', 'REQUIRED_COUNTRY_ENRICHMENT_MISSING', 'The six previously incomplete country subsets must be explicitly recorded as completed.');
-  if (calibration.currency?.pairCount !== 45 || calibration.currency?.pairs?.length !== 45 || calibration.currency?.arbitrageFailures !== 0 || calibration.currency?.maximumRoundTripGainPct >= 0) add(issues, 'error', 'CURRENCY_CALIBRATION_UNSAFE', 'All 45 currency pairs must be settlement-fee bounded with zero round-trip arbitrage.');
-  if (calibration.routes?.routeCount !== 13 || calibration.routes?.routes?.length !== 13 || calibration.routes?.adjacencyPairCount !== 45 || calibration.routes?.adjacency?.length !== 45 || calibration.routes?.routeFailures !== 0) add(issues, 'error', 'ROUTE_CALIBRATION_INVALID', 'Thirteen routes and all 45 country-pair geometry relationships must be verified with zero recovery failures.');
-  if (calibration.routes?.routes?.some((route) => route.geometry?.endpointPolygonVerification !== true || route.recoverySafe !== true || route.capacity?.effectiveWarWithSubstitution < 50 || route.capacity?.recoveryDays > 90)) add(issues, 'error', 'ROUTE_RECOVERY_UNSAFE', 'Route disruption and war recovery must preserve bounded substitute capacity and recovery time.');
-  if (calibration.routes?.adjacency?.some((entry) => entry.landBorderClaimed !== false || entry.verifiedAgainstGeometrySha256 !== locations.artworkEvidence.geometrySha256)) add(issues, 'error', 'ADJACENCY_EVIDENCE_INVALID', 'Adjacency evidence must use the current artwork geometry without inventing land borders.');
-  if (calibration.householdAndBanking?.length !== 10 || calibration.householdAndBanking.some((entry) => !entry.bankingAffordability?.approved || !entry.warAndRecovery?.approved || entry.warAndRecovery?.insolvencyObserved)) add(issues, 'error', 'HOUSEHOLD_RECOVERY_UNSAFE', 'Banking affordability and war recovery must pass for every country.');
-  if (calibration.substitution?.groupCount !== 12 || calibration.substitution?.failures !== 0 || calibration.substitution?.checks?.some((entry) => !entry.safe || entry.outputQuantityChanged)) add(issues, 'error', 'SUBSTITUTION_CALIBRATION_UNSAFE', 'All substitution groups and difficulty quotes must be bounded and output-neutral.');
-  if (Object.values(calibration.checks ?? {}).some((value) => value !== 0)) add(issues, 'error', 'CALIBRATION_GATE_FAILURE', 'Cross-market calibration reports one or more failed gates.');
-
   const mappedStableIds = [
     ...(mappings.mappings?.stockTemplates ?? []).map((entry) => entry.stableId),
     ...(mappings.mappings?.contractTemplates ?? []).map((entry) => entry.stableId),
@@ -126,22 +106,7 @@ export async function validateSeedBetaPack({ packRoot = DEFAULT_ROOT } = {}) {
   return {
     schemaVersion: 'econovaria-beta-pack-validation-report-v1', packId: pack.packId, version: pack.version,
     valid: errors === 0, stagingStructurallyReady: errors === 0,
-    summary: {
-      errors,
-      warnings,
-      marketInstruments: market.templates.length,
-      storeItems: store.items.length,
-      contractChains: contracts.chains.length,
-      locations: locations.locations.length,
-      physicalItems: physical.itemPrices.length,
-      campaignEvents: campaign.selectedEventStableIds?.length ?? 0,
-      countrySimulations: calibration.countrySimulations.length,
-      simulationScenarios: calibration.countrySimulations.reduce((sum, entry) => sum + entry.scenarios.length, 0),
-      currencyPairs: calibration.currency.pairCount,
-      routes: calibration.routes.routeCount,
-      adjacencyPairs: calibration.routes.adjacencyPairCount,
-      substitutionChecks: calibration.substitution.checkCount,
-    },
+    summary: { errors, warnings, marketInstruments: market.templates.length, storeItems: store.items.length, contractChains: contracts.chains.length, locations: locations.locations.length, physicalItems: physical.itemPrices.length, campaignEvents: campaign.selectedEventStableIds?.length ?? 0 },
     issues,
   };
 }

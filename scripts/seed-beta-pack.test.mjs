@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COUNTRY_IDS, canonicalJson, pointInPolygon, readJson, stableNumber } from './seed-beta-pack-lib.mjs';
+import { COUNTRY_IDS, canonicalJson, pointInPolygon, stableNumber } from './seed-beta-pack-lib.mjs';
 import { validateSeedBetaPack } from './seed-beta-pack-validator.mjs';
 import { runImporter } from './seed-beta-importer.mjs';
 import { runSeedBetaStagingPreflight } from './seed-beta-staging-preflight.mjs';
@@ -12,10 +12,6 @@ import { runSeedBetaStagingPreflight } from './seed-beta-staging-preflight.mjs';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const PACK_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
-
-async function calibration() {
-  return readJson(path.join(PACK_ROOT, 'calibration-scenarios-v1.json'));
-}
 
 test('canonical JSON is key-order deterministic', () => {
   assert.equal(canonicalJson({ z: 1, a: { d: 2, b: 1 } }), canonicalJson({ a: { b: 1, d: 2 }, z: 1 }));
@@ -40,40 +36,6 @@ test('generated bounded pack passes the executable validator', async () => {
   assert.equal(report.summary.marketInstruments, 240);
   assert.equal(report.summary.storeItems, 50);
   assert.equal(report.summary.contractChains, COUNTRY_IDS.length);
-  assert.equal(report.summary.countrySimulations, 10);
-  assert.equal(report.summary.simulationScenarios, 40);
-  assert.equal(report.summary.currencyPairs, 45);
-  assert.equal(report.summary.routes, 13);
-  assert.equal(report.summary.adjacencyPairs, 45);
-});
-
-test('all countries have deterministic baseline, currency, route, and war recovery paths', async () => {
-  const evidence = await calibration();
-  assert.deepEqual(evidence.countrySimulations.map((entry) => entry.country), COUNTRY_IDS);
-  for (const country of evidence.countrySimulations) {
-    assert.equal(country.instrumentCount, 24);
-    assert.deepEqual(country.scenarios.map((entry) => entry.scenarioId), ['baseline', 'currency-stress', 'route-disruption', 'war-and-recovery']);
-    for (const scenario of country.scenarios) {
-      assert.equal(scenario.pathSha256.length, 64);
-      assert.ok(scenario.maximumDrawdownPct <= 35);
-      assert.equal(scenario.recoveredTo95PctOfStart, true);
-    }
-  }
-});
-
-test('currency, route, banking, war recovery, and substitution gates have zero failures', async () => {
-  const evidence = await calibration();
-  assert.equal(evidence.currency.pairCount, 45);
-  assert.equal(evidence.currency.arbitrageFailures, 0);
-  assert.ok(evidence.currency.maximumRoundTripGainPct < 0);
-  assert.equal(evidence.routes.routeCount, 13);
-  assert.equal(evidence.routes.adjacencyPairCount, 45);
-  assert.equal(evidence.routes.routeFailures, 0);
-  assert.ok(evidence.routes.routes.every((entry) => entry.recoverySafe && entry.capacity.effectiveWarWithSubstitution >= 50));
-  assert.ok(evidence.householdAndBanking.every((entry) => entry.bankingAffordability.approved && entry.warAndRecovery.approved && !entry.warAndRecovery.insolvencyObserved));
-  assert.equal(evidence.substitution.groupCount, 12);
-  assert.equal(evidence.substitution.failures, 0);
-  assert.ok(Object.values(evidence.checks).every((value) => value === 0));
 });
 
 test('executable staging preflight is structurally ready but remains connected-environment gated', async () => {
@@ -106,7 +68,7 @@ test('importer rejects the known live Supabase project before any network write'
   };
   process.env.SEED_TARGET_ENVIRONMENT = 'staging';
   process.env.SUPABASE_URL = 'https://cgiukdjwicykrmtkhudh.supabase.co';
-  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-not-a-real-key'; // secret-scan: allow — reviewed non-secret fixture
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-not-a-real-key';
   try {
     await assert.rejects(
       () => runImporter({

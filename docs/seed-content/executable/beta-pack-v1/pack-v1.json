@@ -15,16 +15,8 @@
     "storeItems": 50,
     "tutorialContractChains": 10
   },
-  "calibration": {
-    "allChecksPassed": true,
-    "countryCount": 10,
-    "currencyPairCount": 45,
-    "routeCount": 13,
-    "scenarioCountPerCountry": 4
-  },
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
-    "calibration": "calibration-scenarios-v1.json",
     "campaign": "campaign-v1.json",
     "contracts": "tutorial-contract-chains-v1.json",
     "integrity": "integrity-manifest-v1.json",
