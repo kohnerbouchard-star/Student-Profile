@@ -1,6 +1,8 @@
 export type PlayerBusinessBankingRoute =
   | { readonly kind: "businessRead" }
   | { readonly kind: "businessCreate" }
+  | { readonly kind: "businessProductCreate" }
+  | { readonly kind: "businessInputPurchase" }
   | { readonly kind: "businessProduction" }
   | { readonly kind: "businessPrice"; readonly productKey: string }
   | { readonly kind: "businessHire" }
@@ -11,6 +13,11 @@ export type PlayerBusinessBankingRoute =
   | { readonly kind: "loansRead" }
   | { readonly kind: "loanApply"; readonly offerKey: string }
   | { readonly kind: "loanRepay"; readonly loanKey: string };
+
+export interface PlayerEconomicContext {
+  readonly countryCode: string;
+  readonly currencyCode: string;
+}
 
 export interface BusinessCompanyDto {
   readonly id: string;
@@ -68,6 +75,12 @@ export interface BusinessSnapshotDto {
     readonly quantity: number;
     readonly unitCost: number;
   }[];
+  readonly compliance: readonly {
+    readonly requirement: string;
+    readonly status: string;
+    readonly fee: number;
+    readonly expiresAt: string | null;
+  }[];
 }
 
 export interface LoansSnapshotDto {
@@ -114,6 +127,10 @@ export interface LoansSnapshotDto {
 }
 
 export interface PlayerBusinessBankingRepository {
+  readEconomicContext(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<PlayerEconomicContext>;
   readBusiness(input: {
     readonly gameSessionId: string;
     readonly playerId: string;
