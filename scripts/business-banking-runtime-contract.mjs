@@ -11,6 +11,7 @@ const files = {
   capabilities: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   dispatcher: "backend/supabase/functions/classroom-api/index.ts",
   admin: "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+  adminDispatcher: "backend/supabase/functions/admin-api/index.ts",
   playerAdapter: "player-terminal/src/api/business-banking-backend-routes.js",
 };
 
@@ -144,6 +145,11 @@ assert.match(source.dispatcher, /handlePlayerBusinessBankingRequest/u);
 assert.match(source.dispatcher, /dispatchRateLimitedReviewedPlayerRequest/u);
 assert.match(source.admin, /review_player_loan_application_v1/u);
 assert.match(source.admin, /admin_business_banking_correction_v1/u);
+assert.match(source.adminDispatcher, /handleBusinessBankingAdminOperation/u);
+assert.match(
+  source.adminDispatcher,
+  /const businessBankingOperation = await handleBusinessBankingAdminOperation/u,
+);
 assert.match(source.playerAdapter, /recipientPlayerIdentifier/u);
 assert.doesNotMatch(source.playerAdapter, /recipientPlayerUuid/u);
 
