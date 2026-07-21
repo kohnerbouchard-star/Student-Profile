@@ -12,8 +12,7 @@ const CLIENT_OWNERSHIP_FIELDS = new Set([
 ]);
 
 const READ_MODEL_KEYS = new Set([
-  "countries", "news", "worldRuntime", "market", "marketAsset",
-  "portfolio", "store", "banking", "notifications"
+  "countries", "news", "market", "marketAsset", "portfolio", "store", "banking", "notifications"
 ]);
 
 function normalizedBaseUrl(value) {
@@ -34,9 +33,7 @@ function backendPayload(context) {
   const payload = context.payload && typeof context.payload === "object" && !Array.isArray(context.payload)
     ? { ...context.payload }
     : context.payload;
-  if (payload && typeof payload === "object" && context.idempotencyKey) {
-    payload.idempotencyKey = context.idempotencyKey;
-  }
+  if (payload && typeof payload === "object" && context.idempotencyKey) payload.idempotencyKey = context.idempotencyKey;
   return payload;
 }
 
@@ -102,10 +99,7 @@ function applyCapabilityManifest(snapshot, manifest) {
   };
 }
 
-export function createStudentProfileFetchRequest({
-  apiBaseUrl = "/functions/v1/classroom-api",
-  fetchImpl = globalThis.fetch
-} = {}) {
+export function createStudentProfileFetchRequest({ apiBaseUrl = "/functions/v1/classroom-api", fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("A fetch implementation is required.");
   const baseUrl = normalizedBaseUrl(apiBaseUrl);
   return async function studentProfileFetchRequest({ method, path, payload, headers, signal }) {
@@ -132,10 +126,7 @@ export function createStudentProfileApiCall({ request } = {}) {
   let sessionToken = "";
 
   async function loadCapabilityManifest(context) {
-    const route = resolvePlayerBackendRequest({
-      endpointKey: "capabilities", method: "GET", path: "/capabilities",
-      payload: undefined, params: {}, session: context.session
-    });
+    const route = resolvePlayerBackendRequest({ endpointKey: "capabilities", method: "GET", path: "/capabilities", payload: undefined, params: {}, session: context.session });
     if (!route) throw new ApiConnectionPendingError({ endpointKey: "capabilities", method: "GET", path: "/capabilities" });
     const raw = await request({
       endpointKey: "capabilities", method: route.method, path: route.path, payload: route.payload,
@@ -158,9 +149,7 @@ export function createStudentProfileApiCall({ request } = {}) {
     const payload = backendPayload(context);
     const backendRequest = resolvePlayerBackendRequest({ ...context, payload, session: context.session });
     if (!backendRequest) {
-      throw new ApiConnectionPendingError({
-        endpointKey: context.endpointKey, method: context.method, path: context.path, payload: context.payload
-      });
+      throw new ApiConnectionPendingError({ endpointKey: context.endpointKey, method: context.method, path: context.path, payload: context.payload });
     }
 
     const raw = await request({
@@ -190,6 +179,10 @@ export function createStudentProfileApiCall({ request } = {}) {
       return snapshot.dashboard;
     }
 
+    if (context.endpointKey === "worldRuntime") {
+      snapshot = { ...snapshot, worldRuntime: raw };
+      return snapshot.worldRuntime;
+    }
     if (context.endpointKey === "contracts") {
       snapshot = { ...snapshot, contracts: normalizePlayerContracts(raw) };
       return snapshot.contracts;
