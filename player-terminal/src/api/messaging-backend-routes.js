@@ -4,7 +4,7 @@ const THREAD_ID = /^thr_[0-9a-f]{32}$/;
 const PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const KEYS = new Set([
+export const MESSAGING_BACKEND_ROUTE_KEYS = Object.freeze([
   "messages",
   "messageThread",
   "messagePolicy",
@@ -13,6 +13,7 @@ const KEYS = new Set([
   "messageSend",
   "messageRead",
 ]);
+const KEYS = new Set(MESSAGING_BACKEND_ROUTE_KEYS);
 
 function required(value, field, endpointKey) {
   const result = typeof value === "string" ? value.trim() : "";
