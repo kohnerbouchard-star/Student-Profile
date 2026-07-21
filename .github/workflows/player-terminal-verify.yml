@@ -51,10 +51,13 @@ jobs:
             unexpected="$(awk '
               $0 ~ /^player-terminal\// { next }
               $0 == ".github/workflows/player-terminal-verify.yml" { next }
+              $0 == ".github/workflows/messaging-isolated-staging.yml" { next }
               $0 == ".github/workflows/environment-neutral-browser.yml" { next }
               $0 == ".github/workflows/admin-shell-smoke.yml" { next }
               $0 == ".github/workflows/admin-game-lifecycle-controls-v1.yml" { next }
               $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
+              $0 ~ /^admin\/messaging-(moderation|policy)-(client|loader|surface)[.]js$/ { next }
+              $0 == "admin/messaging-moderation.css" { next }
               $0 == "admin/index.html" { next }
               $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
               $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
@@ -65,11 +68,14 @@ jobs:
               $0 == "scripts/admin-session-manager-smoke.mjs" { next }
               $0 == "scripts/admin-shell-identity-smoke.mjs" { next }
               $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
+              $0 == "scripts/admin-messaging-moderation-contract.mjs" { next }
+              $0 == "scripts/staging/probe-messaging-lifecycle.mjs" { next }
               $0 == "scripts/environment-neutral-browser-integration.test.mjs" { next }
               $0 == "scripts/runtime-config-contract.test.mjs" { next }
               $0 ~ /^(\.github\/workflows\/(database-replay|player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
               $0 == "backend/package.json" { next }
               $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
+              $0 ~ /^backend\/src\/domains\/messaging\/(api|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/game-dashboard\/(api\/playerGameDashboardHttpHandler([.]test)?[.]ts|contracts\/playerGameDashboardContracts[.]ts)$/ { next }
               $0 ~ /^backend\/src\/domains\/economy\/api\/playerBankingPublic[A-Za-z0-9.-]*[.]ts$/ { next }
@@ -89,8 +95,15 @@ jobs:
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
+              $0 == "backend/src/security/playerMessagingRateLimitDispatch.test.ts" { next }
+              $0 == "backend/src/security/staffMessagingRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
+              $0 == "backend/supabase/functions/classroom-api/messagingDispatch.ts" { next }
+              $0 == "backend/supabase/functions/admin-api/index.ts" { next }
+              $0 ~ /^backend\/supabase\/functions\/admin-api\/messagingOperations(Core)?([.]test|Extended[.]test)?[.]ts$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072113[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
+              $0 == "docs/workstreams/messaging-communication-v1.md" { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
               $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
               $0 == "docs/roadmaps/active/player-market-reconciliation-v1.md" { next }

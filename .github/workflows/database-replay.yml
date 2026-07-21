@@ -106,6 +106,10 @@ jobs:
             /tmp/database-replay-startup.log
             /tmp/database-replay-status.log
             /tmp/database-replay-docker.log
+            backend/supabase/migrations/20260721130000_add_messaging_communication_v2.sql
+            backend/supabase/migrations/20260721131000_harden_messaging_retention_and_audit_v2.sql
+            backend/supabase/migrations/20260721132000_complete_messaging_lifecycle_v1.sql
+            backend/supabase/migrations/20260721133000_compat_messaging_player_status_v1.sql
           if-no-files-found: warn
           retention-days: 14
 

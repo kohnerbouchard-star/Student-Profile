@@ -10,6 +10,9 @@ const NUMBER_RULES = Object.freeze({
 });
 const MAX_TEXT = 4000;
 const IDENTIFIER_KEY = /(?:Id|Ids)$/;
+const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
+const PUBLIC_PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function invalidPayload(endpointKey, field) {
   return new ApiRequestError(`Enter a valid value for ${field}.`, {
@@ -33,6 +36,12 @@ function normalizeString(key, value, endpointKey) {
   return clean.slice(0, IDENTIFIER_KEY.test(key) ? 160 : MAX_TEXT);
 }
 
+function messageText(value, endpointKey) {
+  const text = normalizeString("body", value, endpointKey);
+  if (!text) throw invalidPayload(endpointKey, "body");
+  return text;
+}
+
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
   if (endpointKey === "storyDeliveryState") {
@@ -41,6 +50,23 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
       throw invalidPayload(endpointKey, "action");
     }
     return { action };
+  }
+  if (endpointKey === "messageSend") {
+    return { body: messageText(raw.body, endpointKey) };
+  }
+  if (endpointKey === "messageRead") {
+    const threadId = normalizeString("threadId", raw.threadId, endpointKey).toLowerCase();
+    if (!PUBLIC_THREAD_ID.test(threadId)) throw invalidPayload(endpointKey, "threadId");
+    return { threadId };
+  }
+  if (endpointKey === "messageThreadCreate") {
+    const recipientPlayerId = normalizeString("recipientPlayerId", raw.recipientPlayerId, endpointKey);
+    const title = normalizeString("title", raw.title, endpointKey);
+    if (!PUBLIC_PLAYER_ID.test(recipientPlayerId) || UUID.test(recipientPlayerId)) {
+      throw invalidPayload(endpointKey, "recipientPlayerId");
+    }
+    if (!title || title.length > 160) throw invalidPayload(endpointKey, "title");
+    return { recipientPlayerId, title, body: messageText(raw.body, endpointKey) };
   }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {

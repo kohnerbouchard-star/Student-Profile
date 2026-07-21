@@ -14,6 +14,8 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleMessagingOperation } from "./messagingOperations.ts";
+import { guardStaffMessagingRateLimit } from "../../../src/security/staffMessagingRateLimitDispatch.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -234,6 +236,38 @@ Deno.serve(async (request: Request) => {
     });
     if (mutationGuard.handled) {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
+    }
+
+    if (suffix.startsWith("/messages")) {
+      const rateLimit = await guardStaffMessagingRateLimit(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (rateLimit) {
+        return json(request, rateLimit.status, rateLimit.body);
+      }
+
+      const messagingOperation = await handleMessagingOperation(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (messagingOperation.handled) {
+        return json(
+          request,
+          messagingOperation.status || 500,
+          messagingOperation.body,
+        );
+      }
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(
