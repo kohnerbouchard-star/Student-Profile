@@ -13,6 +13,9 @@ const files = {
   admin: "backend/supabase/functions/admin-api/businessBankingOperations.ts",
   adminDispatcher: "backend/supabase/functions/admin-api/index.ts",
   playerAdapter: "player-terminal/src/api/business-banking-backend-routes.js",
+  playerEndpoints: "player-terminal/src/api/endpoints.js",
+  playerCapabilities: "player-terminal/src/api/capabilities.js",
+  playerResourcePlan: "player-terminal/src/api/resource-plan.js",
 };
 
 const source = Object.fromEntries(await Promise.all(
@@ -116,8 +119,16 @@ assert.match(source.handler, /resolvePlayerRequestScope/u);
 assert.match(source.handler, /resolve_player_economic_context_v1/u);
 assert.doesNotMatch(source.handler, /p_currency_code:\s*body\./u);
 for (const routeKind of [
-  "savingsTransfer",
+  "businessCreate",
+  "businessProductCreate",
+  "businessInputPurchase",
   "businessProduction",
+  "businessPrice",
+  "businessHire",
+  "businessTerminate",
+  "businessStatus",
+  "playerTransfer",
+  "savingsTransfer",
   "loansRead",
   "loanApply",
   "loanRepay",
@@ -135,12 +146,39 @@ for (const capability of [
   "bankTransfer",
   "savingsTransfer",
   "businessCreate",
+  "businessEmployeeTerminate",
+  "businessHire",
+  "businessInputPurchase",
+  "businessPrice",
+  "businessProductCreate",
   "businessProduction",
+  "businessStatus",
   "loanApply",
   "loanRepay",
 ]) {
   assert.match(source.capabilities, new RegExp(`['"]${capability}['"]`, "u"));
+  assert.match(source.playerCapabilities, new RegExp(`['"]${capability}['"]`, "u"));
 }
+
+for (const endpoint of [
+  "businessCreate",
+  "businessProductCreate",
+  "businessInputPurchase",
+  "businessProduction",
+  "businessPrice",
+  "businessHire",
+  "businessTerminate",
+  "businessStatus",
+  "bankTransfer",
+  "savingsTransfer",
+  "loanApply",
+  "loanRepay",
+]) {
+  assert.match(source.playerEndpoints, new RegExp(`\\b${endpoint}:`, "u"));
+  assert.match(source.playerAdapter, new RegExp(`\\b${endpoint}:`, "u"));
+  assert.match(source.playerResourcePlan, new RegExp(`\\b${endpoint}:`, "u"));
+}
+
 assert.match(source.dispatcher, /handlePlayerBusinessBankingRequest/u);
 assert.match(source.dispatcher, /dispatchRateLimitedReviewedPlayerRequest/u);
 assert.match(source.admin, /review_player_loan_application_v1/u);
@@ -150,6 +188,7 @@ assert.match(
   source.adminDispatcher,
   /const businessBankingOperation = await handleBusinessBankingAdminOperation/u,
 );
+assert.match(source.playerCapabilities, /businessTerminate:\s*"businessEmployeeTerminate"/u);
 assert.match(source.playerAdapter, /recipientPlayerIdentifier/u);
 assert.doesNotMatch(source.playerAdapter, /recipientPlayerUuid/u);
 
