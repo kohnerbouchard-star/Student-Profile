@@ -54,11 +54,61 @@ const itemFiles = catalogManifest.files.map((entry) => {
 });
 const recipeFileKeys = ["tier1", "tier2", "tier3", "regulated"];
 const recipeFiles = recipeFileKeys.map((key) =>
-  path.join(recipeRoot, text(recipeManifest.files?.[key]?.path)),
+  path.join(recipeRoot, text(recipeManifest.files?.[key]))
 );
-const substitutionFile = path.join(recipeRoot, text(recipeManifest.files?.substitutions?.path));
-const maintenanceFile = path.join(recipeRoot, text(recipeManifest.files?.maintenanceAndSalvage?.path));
+const substitutionsPath = path.join(recipeRoot, text(recipeManifest.files?.substitutions));
+const salvagePath = path.join(recipeRoot, text(recipeManifest.files?.maintenanceSalvage));
+const difficultyPolicyPath = path.join(recipeRoot, text(recipeManifest.files?.difficultyPolicy));
+const difficultyMatrixPath = path.join(recipeRoot, text(recipeManifest.files?.difficultyResolvedMatrix));
+const calibrationPath = path.join(seedRoot, "executable/beta-pack-v1/physical-economy-calibration-v1.json");
+const gateSummaryPath = path.join(
+  seedRoot,
+  "simulation/physical-economy/physical-economy-gate-summary-v1.json",
+);
 
+const items = [];
+for (const file of itemFiles) {
+  const document = JSON.parse(await readFile(file, "utf8"));
+  const records = requiredArray(document.records, `records in ${file}`);
+  if (Number(document.count) !== records.length) {
+    throw new Error(`${file} count mismatch: declared ${document.count}, read ${records.length}`);
+  }
+  for (const raw of records) items.push(normalizeItem(raw, file, sourceRoot));
+}
+
+assertUnique(items, "itemKey");
+if (items.length !== Number(catalogManifest.totalItemDefinitions)) {
+  throw new Error(`Catalog count mismatch: expected ${catalogManifest.totalItemDefinitions}, got ${items.length}`);
+}
+const itemByKey = new Map(items.map((item) => [item.itemKey, item]));
+
+const recipes = [];
+for (const file of recipeFiles) {
+  const document = JSON.parse(await readFile(file, "utf8"));
+  const records = requiredArray(document.records, `records in ${file}`);
+  if (Number(document.count) !== records.length) {
+    throw new Error(`${file} count mismatch: declared ${document.count}, read ${records.length}`);
+  }
+  for (const raw of records) recipes.push(normalizeRecipe(raw, file, itemByKey, sourceRoot));
+}
+assertUnique(recipes, "recipeKey");
+if (recipes.length !== Number(recipeManifest.totalRecipes)) {
+  throw new Error(`Recipe count mismatch: expected ${recipeManifest.totalRecipes}, got ${recipes.length}`);
+}
+for (const recipe of recipes) {
+  for (const line of [...recipe.inputs, ...recipe.outputs]) {
+    if (!itemByKey.has(line.itemKey)) {
+      throw new Error(`${recipe.recipeKey} references unknown item ${line.itemKey}`);
+    }
+  }
+}
+
+const substitutionDocument = JSON.parse(await readFile(substitutionsPath, "utf8"));
+const salvageDocument = JSON.parse(await readFile(salvagePath, "utf8"));
+const difficultyPolicy = JSON.parse(await readFile(difficultyPolicyPath, "utf8"));
+const difficultyResolvedMatrix = JSON.parse(await readFile(difficultyMatrixPath, "utf8"));
+const calibration = JSON.parse(await readFile(calibrationPath, "utf8"));
+const balanceGateSummary = JSON.parse(await readFile(gateSummaryPath, "utf8"));
 await validateSeedConsumerContract({
   contract: consumerContract,
   sourceCommit: options.sourceCommit,
@@ -67,97 +117,52 @@ await validateSeedConsumerContract({
   contentVersion: options.contentVersion,
   sourceRoot,
 });
-
-const itemDocs = await Promise.all(itemFiles.map(async (file) => ({
-  file,
-  value: JSON.parse(await readFile(file, "utf8")),
-})));
-const recipeDocs = await Promise.all(recipeFiles.map(async (file) => ({
-  file,
-  value: JSON.parse(await readFile(file, "utf8")),
-})));
-const substitutionDoc = JSON.parse(await readFile(substitutionFile, "utf8"));
-const maintenanceDoc = JSON.parse(await readFile(maintenanceFile, "utf8"));
-
-const items = [];
-for (const { file, value } of itemDocs) {
-  const definitions = requiredArray(value, "definitions", file);
-  for (const definition of definitions) {
-    items.push(normalizeItem(definition, file));
-  }
-}
-assertUnique(items, "itemKey", "items");
-if (items.length !== catalogManifest.totalItemDefinitions) {
-  throw new Error(
-    `Item count mismatch: manifest=${catalogManifest.totalItemDefinitions} runtime=${items.length}`,
-  );
-}
-
-const itemKeys = new Set(items.map((item) => item.itemKey));
-const itemEconomics = normalizeItemEconomics(
-  consumerContract,
-  itemKeys,
-);
-const economicsByKey = new Map(itemEconomics.map((entry) => [entry.itemKey, entry]));
-for (const item of items) {
-  const economics = economicsByKey.get(item.itemKey);
-  if (!economics) throw new Error(`Missing economics for ${item.itemKey}`);
-  item.economics = economics;
-}
-
-const recipes = [];
-for (const { file, value } of recipeDocs) {
-  const definitions = requiredArray(value, "recipes", file);
-  for (const definition of definitions) {
-    recipes.push(normalizeRecipe(definition, file, itemKeys));
-  }
-}
-assertUnique(recipes, "recipeKey", "recipes");
-if (recipes.length !== recipeManifest.totalRecipeDefinitions) {
-  throw new Error(
-    `Recipe count mismatch: manifest=${recipeManifest.totalRecipeDefinitions} runtime=${recipes.length}`,
-  );
-}
-
-const substitutions = normalizeSubstitutions(substitutionDoc, substitutionFile, itemKeys);
-const salvageRules = normalizeSalvageRules(maintenanceDoc, maintenanceFile, itemKeys);
-
-const sourceContracts = {
-  downstreamContract: relative(sourceRoot, consumerContractPath),
-  catalogManifest: relative(sourceRoot, catalogManifestPath),
-  recipeManifest: relative(sourceRoot, recipeManifestPath),
-  packDigest: consumerContract.packDigest,
-  acceptedImplementationSourceSha: consumerContract.acceptedImplementationSourceSha,
-};
-const activationAuthorization = {
-  catalogAuthorized: consumerContract.activationAuthorization?.catalogAuthorized === true,
-  recipeAuthorized: consumerContract.activationAuthorization?.recipeAuthorized === true,
-  calibrationAuthorized: consumerContract.activationAuthorization?.calibrationAuthorized === true,
-  downstreamContractValidated:
-    consumerContract.activationAuthorization?.downstreamContractValidated === true,
-  productionAuthorized: consumerContract.activationAuthorization?.productionAuthorized === true,
-  blockers: requiredArray(
-    consumerContract.activationAuthorization,
-    "blockers",
-    consumerContractPath,
-  ).map((value) => text(value)),
-};
+const substitutions = normalizeSubstitutions(substitutionDocument, itemByKey, substitutionsPath);
+const salvageRules = normalizeSalvageRules(salvageDocument, itemByKey, salvagePath);
+const itemEconomics = normalizeItemEconomics(calibration, itemByKey);
 
 const pack = {
   schemaVersion: "econovaria-physical-economy-runtime-pack-v1",
   packKey: options.packKey,
   contentVersion: options.contentVersion,
-  definitionAuthority: "PR #163",
   sourceCommit: options.sourceCommit,
-  sourceContracts,
-  activationAuthorization,
-  calibrationEvidence: consumerContract.calibrationEvidence,
-  policy: {
-    durabilityEnabled: false,
-    repairEnabled: false,
-    maintenanceMode: "definition-only-fail-closed",
-    reservationSourceOfTruth: "inventory_reservations",
+  definitionAuthority: "PR #163",
+  durabilityEnabled: false,
+  repairEnabled: false,
+  sourceContracts: {
+    downstreamConsumerContractSchemaVersion: consumerContract.schemaVersion,
+    downstreamConsumerContractPath: relative(consumerContractPath, sourceRoot),
+    acceptedImplementationSourceSha: consumerContract.acceptedImplementationSourceSha,
+    packDigest: consumerContract.packDigest,
+    consumerRules: consumerContract.consumerRules,
+    lifecycleSemantics: consumerContract.lifecycleSemantics,
+    maintenanceDefinitionStatus: salvageDocument.status ?? "definition-only",
+    catalogSchemaVersion: catalogManifest.schemaVersion,
+    catalogVersion: catalogManifest.catalogVersion,
+    recipeSchemaVersion: recipeManifest.schemaVersion,
+    substitutionSchemaVersion: substitutionDocument.schemaVersion,
+    salvageSchemaVersion: salvageDocument.schemaVersion,
+    difficultyPolicySchemaVersion: difficultyPolicy.schemaVersion,
+    difficultyMatrixSchemaVersion: difficultyResolvedMatrix.schemaVersion,
+    calibrationPath: relative(calibrationPath, sourceRoot),
+    balanceGateSummaryPath: relative(gateSummaryPath, sourceRoot),
   },
+  activationAuthorization: {
+    catalogAuthorized: catalogManifest.validation?.productionImportApproved === true,
+    recipeAuthorized: recipeManifest.rules?.backendActivationAuthorized === true,
+    calibrationAuthorized: calibration.activationAuthorized === true,
+    downstreamContractValidated: true,
+    productionAuthorized: consumerContract.productionAuthorized === true,
+    requiredBindings: consumerContract.activationApproval?.requiredBindings ?? {},
+  },
+  calibrationEvidence: {
+    exploitChecks: calibration.exploitChecks ?? {},
+    concurrencySimulation: calibration.concurrencySimulation ?? {},
+    balanceGateSummary,
+  },
+  difficultyPolicy,
+  difficultyResolvedMatrix,
+  itemEconomics,
   items: items.sort(by("itemKey")),
   recipes: recipes.sort(by("recipeKey")),
   substitutions,
