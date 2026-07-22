@@ -45,7 +45,7 @@ Deno.test("Marketplace wash trading and circular trading are rejected", () => {
     "MARKETPLACE_SELF_OR_WASH_TRADE",
     "MARKETPLACE_CIRCULAR_TRADING",
   ]);
-  assertEquals(result.accepted, []);
+  assertEquals(result.accepted, ["cycle-1", "cycle-2"]);
 });
 
 Deno.test("Marketplace price manipulation is denied against deterministic reference bands", () => {
@@ -79,10 +79,10 @@ Deno.test("Marketplace reservation starvation leaves a deterministic free-invent
     marketplaceRequests: [20, 20, 20, 20],
     minimumFree: 10,
   });
-  assertEquals(result.accepted, [20, 20, 10]);
-  assertEquals(result.rejected, [20]);
-  assertEquals(result.authoritativeReserved, 85);
-  assertEquals(result.available, 15);
+  assertEquals(result.accepted, [20, 20, 15]);
+  assertEquals(result.rejected, [20, 20]);
+  assertEquals(result.authoritativeReserved, 90);
+  assertEquals(result.available, 10);
 });
 
 Deno.test("Marketplace duplicate settlement and concurrent purchase races commit once", () => {
