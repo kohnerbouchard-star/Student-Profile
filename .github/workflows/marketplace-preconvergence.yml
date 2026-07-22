@@ -45,7 +45,28 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Build read-only convergence bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          git rev-parse refs/remotes/origin/main
+          git bundle create /tmp/marketplace-convergence.bundle HEAD refs/remotes/origin/main
+          git bundle verify /tmp/marketplace-convergence.bundle
+          sha256sum /tmp/marketplace-convergence.bundle > /tmp/marketplace-convergence.bundle.sha256
+
+      - name: Upload read-only convergence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-convergence-bundle
+          path: |
+            /tmp/marketplace-convergence.bundle
+            /tmp/marketplace-convergence.bundle.sha256
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Set up Node
         uses: actions/setup-node@v7
