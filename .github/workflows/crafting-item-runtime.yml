@@ -82,8 +82,7 @@ jobs:
       - name: Verify exact Business predecessor and final migration inventory
         run: |
           predecessor="2b073019ed36ca63cf9a9b3c7acd14569fe88116"
-          git merge-base --is-ancestor "$predecessor" HEAD
-          test "$(git merge-base "$predecessor" HEAD)" = "$predecessor"
+          git rev-list HEAD | grep -Fx "$predecessor"
           mapfile -t migrations < <(find backend/supabase/migrations -maxdepth 1 -type f -name '2026072113*.sql' -printf '%f\n' | sort)
           test "${#migrations[@]}" -eq 20
           expected=(
