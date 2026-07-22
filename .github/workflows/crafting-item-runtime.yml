@@ -191,16 +191,35 @@ jobs:
           test "$status" -eq 0
 
       - name: Test and typecheck Crafting integration
+        id: integration
+        shell: bash
         run: |
-          npm run test:player-crafting --prefix backend
-          deno test --config backend/supabase/functions/classroom-api/deno.json \
-            --lock=backend/supabase/functions/deno.lock --frozen \
-            backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts \
-            backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts \
-            backend/src/security/playerCraftingRateLimitDispatch.test.ts
-          npm run test:admin-api --prefix backend
-          npm run typecheck:all --prefix backend
-          npm run verify --prefix player-terminal
+          set +e
+          mkdir -p crafting-diagnostics
+          (
+            set -euo pipefail
+            echo "== focused Player Crafting backend tests =="
+            npm run test:player-crafting --prefix backend
+
+            echo "== Deno capability, bridge, and rate-limit tests =="
+            deno test --config backend/supabase/functions/classroom-api/deno.json \
+              --lock=backend/supabase/functions/deno.lock --frozen \
+              backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts \
+              backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts \
+              backend/src/security/playerCraftingRateLimitDispatch.test.ts
+
+            echo "== complete Admin API tests =="
+            npm run test:admin-api --prefix backend
+
+            echo "== complete Backend typecheck =="
+            npm run typecheck:all --prefix backend
+
+            echo "== complete Player Terminal verify =="
+            npm run verify --prefix player-terminal
+          ) 2>&1 | tee crafting-diagnostics/integration.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
 
       - name: Install Chromium
         working-directory: player-terminal
