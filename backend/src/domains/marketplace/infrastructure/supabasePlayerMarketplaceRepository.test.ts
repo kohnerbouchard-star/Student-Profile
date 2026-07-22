@@ -104,6 +104,35 @@ Deno.test("Marketplace maps scope, game-state, stale, policy, and wrong-game rac
   }
 });
 
+Deno.test("Marketplace maps generic reservation adapter failures to bounded conflicts", async () => {
+  for (const message of [
+    "MARKETPLACE_RESERVATION_PROJECTION_CONFLICT",
+    "MARKETPLACE_RESERVATION_SOURCE_CONFLICT",
+    "MARKETPLACE_RESERVATION_SCOPE_CONFLICT",
+    "MARKETPLACE_RESERVATION_TRANSITION_CONFLICT",
+  ]) {
+    const client = new RpcClient({
+      create_marketplace_listing_public_v2: [{ data: null, error: { code: "P0001", message } }],
+    });
+    const repository = new SupabasePlayerMarketplaceRepository(client as never);
+    await assertMarketplaceError(
+      () => repository.createListing({
+        gameSessionId: GAME,
+        playerId: PLAYER,
+        itemKey: "data-chip",
+        quantity: 1,
+        unitPrice: 10,
+        currencyCode: "LUM",
+        condition: "Used",
+        durationHours: 24,
+        idempotencyKey: `marketplace.create.${message.toLowerCase()}`,
+      }),
+      "player_marketplace_conflict",
+      409,
+    );
+  }
+});
+
 class RpcClient {
   readonly calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   constructor(private readonly responses: Record<string, Array<{ data: unknown; error: { code?: string; message: string } | null }>>) {}
