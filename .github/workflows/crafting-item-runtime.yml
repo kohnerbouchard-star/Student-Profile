@@ -169,20 +169,20 @@ jobs:
               --output /tmp/physical-economy-balance-report.json
 
             echo "== final runtime-failure assertion =="
-            node --input-type=module <<'NODE'
-            import { readFile } from "node:fs/promises";
-            const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
-            if (report.runtimeFailures.length !== 0) {
-              throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s): ${JSON.stringify(report.runtimeFailures)}`);
-            }
-            const authorityReady = report.authority.blockers.length === 0;
-            if (report.gates.authorityActivationReady !== authorityReady) {
-              throw new Error(`Seed activation gate and reported authority blockers disagree: ${JSON.stringify({ gates: report.gates, authority: report.authority })}`);
-            }
-            console.log(authorityReady
-              ? "Seed authority is activation-ready."
-              : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
-            NODE
+            node --input-type=module --eval '
+              import { readFile } from "node:fs/promises";
+              const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
+              if (report.runtimeFailures.length !== 0) {
+                throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s): ${JSON.stringify(report.runtimeFailures)}`);
+              }
+              const authorityReady = report.authority.blockers.length === 0;
+              if (report.gates.authorityActivationReady !== authorityReady) {
+                throw new Error(`Seed activation gate and reported authority blockers disagree: ${JSON.stringify({ gates: report.gates, authority: report.authority })}`);
+              }
+              console.log(authorityReady
+                ? "Seed authority is activation-ready."
+                : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
+            '
           ) 2>&1 | tee crafting-diagnostics/seed-interface.log
           status=${PIPESTATUS[0]}
           cp /tmp/physical-economy-runtime-pack.json crafting-diagnostics/ 2>/dev/null || true
