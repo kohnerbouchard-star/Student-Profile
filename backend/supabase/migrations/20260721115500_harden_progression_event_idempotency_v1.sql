@@ -1,5 +1,21 @@
 begin;
 
+alter table public.progression_events
+  drop constraint if exists progression_events_source_domain_valid;
+
+alter table public.progression_events
+  add constraint progression_events_source_domain_valid
+  check (source_domain in ('contracts','business','crafting','market','story','relationship','country','world','messaging','admin'));
+
+create unique index if not exists progression_events_source_identity_unique
+  on public.progression_events (
+    game_session_id,
+    player_id,
+    source_domain,
+    source_event_type,
+    source_public_id
+  );
+
 create or replace function public.record_progression_integration_event_v1(
   p_game_session_id uuid,
   p_player_id uuid,
@@ -23,6 +39,7 @@ set search_path = public, pg_temp
 as $function$
 declare
   v_existing public.progression_events%rowtype;
+  v_source_existing public.progression_events%rowtype;
   v_profile public.player_progression_profiles%rowtype;
   v_xp integer;
   v_country integer := 0;
@@ -39,7 +56,7 @@ declare
   v_rep record;
 begin
   if p_game_session_id is null or p_player_id is null
-    or p_source_domain not in ('contracts','business','crafting','market','story','relationship','country')
+    or p_source_domain not in ('contracts','business','crafting','market','story','relationship','country','world','messaging')
     or p_event_type is null or p_event_type !~ '^[a-z][a-z0-9_.-]{2,80}$'
     or p_source_public_id is null or p_source_public_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
     or p_idempotency_key is null or p_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
@@ -49,7 +66,30 @@ begin
     raise exception 'PROGRESSION_EVENT_INVALID' using errcode = 'P0001';
   end if;
 
+  if not (
+    (p_source_domain = 'contracts' and p_event_type = 'contract.completed')
+    or (p_source_domain = 'business' and p_event_type = 'business.operation.completed')
+    or (p_source_domain = 'crafting' and p_event_type = 'crafting.recipe.completed')
+    or (p_source_domain = 'market' and p_event_type = 'market.order.settled')
+    or (p_source_domain = 'story' and p_event_type = 'story.chapter.completed')
+    or (p_source_domain = 'relationship' and p_event_type in ('relationship.interaction.positive','relationship.interaction.negative'))
+    or (p_source_domain = 'country' and p_event_type = 'country.service.completed')
+    or (p_source_domain = 'world' and p_event_type in ('world.travel.completed','world.arrival.completed'))
+    or (p_source_domain = 'messaging' and p_event_type = 'messaging.contribution.approved')
+  ) then
+    raise exception 'PROGRESSION_EVENT_SOURCE_MISMATCH' using errcode = 'P0001';
+  end if;
+
   perform public.ensure_player_progression_profile_v1(p_game_session_id, p_player_id);
+
+  select * into v_profile
+  from public.player_progression_profiles
+  where game_session_id = p_game_session_id and player_id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'PROGRESSION_PLAYER_NOT_FOUND' using errcode = 'P0001';
+  end if;
 
   select * into v_existing
   from public.progression_events
@@ -64,11 +104,24 @@ begin
     then
       raise exception 'PROGRESSION_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
     end if;
-    select * into v_profile
-    from public.player_progression_profiles
-    where game_session_id = p_game_session_id and player_id = p_player_id;
     return query select 'replayed'::text, v_existing.public_event_id,
       v_existing.experience_delta, v_profile.experience, v_profile.level, 0;
+    return;
+  end if;
+
+  select * into v_source_existing
+  from public.progression_events
+  where game_session_id = p_game_session_id
+    and player_id = p_player_id
+    and source_domain = p_source_domain
+    and source_event_type = p_event_type
+    and source_public_id = p_source_public_id;
+  if found then
+    if v_source_existing.occurred_at <> p_occurred_at then
+      raise exception 'PROGRESSION_SOURCE_EVENT_CONFLICT' using errcode = 'P0001';
+    end if;
+    return query select 'replayed'::text, v_source_existing.public_event_id,
+      v_source_existing.experience_delta, v_profile.experience, v_profile.level, 0;
     return;
   end if;
 
@@ -82,6 +135,9 @@ begin
       when 'relationship.interaction.positive' then 20
       when 'relationship.interaction.negative' then 0
       when 'country.service.completed' then 70
+      when 'world.travel.completed' then 40
+      when 'world.arrival.completed' then 100
+      when 'messaging.contribution.approved' then 15
       else null end,
     case p_event_type
       when 'contract.completed' then 'contracts.completed'
@@ -92,6 +148,9 @@ begin
       when 'relationship.interaction.positive' then 'relationship.positive'
       when 'relationship.interaction.negative' then 'relationship.negative'
       when 'country.service.completed' then 'country.service'
+      when 'world.travel.completed' then 'world.travel'
+      when 'world.arrival.completed' then 'world.arrival'
+      when 'messaging.contribution.approved' then 'messaging.approved'
       else null end,
     case p_event_type
       when 'contract.completed' then 10
@@ -102,6 +161,9 @@ begin
       when 'relationship.interaction.positive' then 10
       when 'relationship.interaction.negative' then 10
       when 'country.service.completed' then 10
+      when 'world.travel.completed' then 8
+      when 'world.arrival.completed' then 1
+      when 'messaging.contribution.approved' then 5
       else null end
   into v_xp, v_counter, v_daily_cap;
 
@@ -117,6 +179,9 @@ begin
   elsif p_event_type = 'relationship.interaction.positive' then v_relationship := 3;
   elsif p_event_type = 'relationship.interaction.negative' then v_relationship := -5;
   elsif p_event_type = 'country.service.completed' then v_country := 4;
+  elsif p_event_type = 'world.travel.completed' then v_country := 2;
+  elsif p_event_type = 'world.arrival.completed' then v_country := 3;
+  elsif p_event_type = 'messaging.contribution.approved' then v_relationship := 2;
   end if;
 
   select count(*)::integer into v_daily_count
@@ -135,11 +200,6 @@ begin
     v_story := 0;
     v_relationship := 0;
   end if;
-
-  select * into v_profile
-  from public.player_progression_profiles
-  where game_session_id = p_game_session_id and player_id = p_player_id
-  for update;
 
   insert into public.progression_events (
     game_session_id, player_id, source_domain, source_event_type,
@@ -212,6 +272,6 @@ grant execute on function public.record_progression_integration_event_v1(uuid,uu
   to service_role;
 
 comment on function public.record_progression_integration_event_v1(uuid,uuid,text,text,text,text,timestamptz) is
-  'Canonical versioned Progression event ingress. Exact retries replay only when game, Player, event type, source identifier, and occurrence time match; conflicting reuse fails closed.';
+  'Canonical versioned Progression event ingress. Event types are bound to explicit source domains. Exact idempotency retries and stable source-event redeliveries replay once per Player; conflicting immutable source details fail closed.';
 
 commit;
