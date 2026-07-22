@@ -131,7 +131,14 @@ begin
       game_session_id,item_key,country_code,scarcity_band,available_quantity
     ) values (
       p_game_session_id,lower(v_item->>'itemKey'),'*',
-      coalesce(nullif(lower(v_item #>> '{scarcityPolicy,band}'),''),'available'),
+      case lower(btrim(coalesce(v_item #>> '{scarcityPolicy,band}','available')))
+        when 'low' then 'abundant'
+        when 'available' then 'available'
+        when 'moderate' then 'constrained'
+        when 'high' then 'scarce'
+        when 'strategic' then 'scarce'
+        else 'unavailable'
+      end,
       null
     )
     on conflict (game_session_id,item_key,country_code) do nothing;
