@@ -38,7 +38,8 @@ Reviewed rate-limit operations: `crafting`, `craftingJobCancel`, `craftingJobCla
 
 ## Runtime invariants
 
-- one authoritative inventory reservation per job/input holding;
+- one authoritative generic inventory reservation per job/input holding;
+- `inventory_holdings.quantity_reserved` remains the derived projection of active generic reservations;
 - atomic reserve, release, or consume transitions;
 - deterministic failure and quality resolution from immutable job snapshots;
 - exactly-once output grants and equipment instance creation;
@@ -49,6 +50,14 @@ Reviewed rate-limit operations: `crafting`, `craftingJobCancel`, `craftingJobCla
 - append-only job, effect, inventory, Admin, and audit history;
 - cross-game isolation and public runtime identifiers.
 
-## Migration status
+## Final migration and synchronization state
 
-The current permanent source retains a dependency-ordered provisional migration set solely so replay and contract checks can run. Chat 1 must assign the reserved post-Business migration range after PR #299 merges. The set must then be rekeyed once without changing SQL intent, synchronized with final Business `main`, replayed twice, linted, and exercised in isolated staging before merge.
+- Authorized predecessor and synchronization target: Business merge `2b073019ed36ca63cf9a9b3c7acd14569fe88116`.
+- Pre-synchronization Crafting head: `93b344fda089777fd90083b827ed70d5284db380`.
+- Controller-assigned Crafting range: `20260721130000–20260721139999`.
+- Final migration family: twenty ordered migrations from `20260721130000` through `20260721135700`.
+- Marketplace remains reserved at `20260721140000–20260721149999`.
+- The branch was synchronized once against the exact Business merge and permanent Crafting source was replayed additively onto that tree.
+- Production remains unchanged and unauthorized.
+
+Exact-head repository, browser, replay/lint, and isolated-staging evidence must be bound to the frozen final head before Chat 1 authorizes merge.
