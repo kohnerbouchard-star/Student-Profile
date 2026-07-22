@@ -11,10 +11,23 @@ on:
       - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
+  push:
+    branches:
+      - agent/player-marketplace-lifecycle-v1
+    paths:
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "backend/src/domains/marketplace/**"
+      - "backend/supabase/migrations/20260721140000_add_marketplace_reference_scopes_v1.sql"
+      - "backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql"
+      - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
+      - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
+      - ".github/workflows/marketplace-preconvergence.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: marketplace-preconvergence-${{ github.workflow }}-${{ github.ref }}
@@ -82,6 +95,28 @@ jobs:
             /tmp/marketplace-tests.status
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish exact-head Marketplace status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const readStatus = (path) => fs.existsSync(path) ? fs.readFileSync(path, 'utf8').trim() : '1';
+            const typecheck = readStatus('/tmp/marketplace-typecheck.status');
+            const tests = readStatus('/tmp/marketplace-tests.status');
+            const state = typecheck === '0' && tests === '0' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state,
+              context: 'marketplace/preconvergence-exact-head',
+              description: state === 'success'
+                ? 'Marketplace typecheck and focused suites passed'
+                : 'Marketplace preconvergence verification failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
 
       - name: Enforce exact-head Marketplace verification
         shell: bash
