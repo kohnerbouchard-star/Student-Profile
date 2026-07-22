@@ -97,7 +97,7 @@ jobs:
               $0 ~ /^admin\/(css\/marketplace-lifecycle[.]css|inventory-redemption-queue-loader[.]js|marketplace-lifecycle-(client|loader|surface)[.]js)$/ { next }
               $0 ~ /^backend\/src\/domains\/marketplace\/(api|contracts|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/(index|marketplaceOperations([.]test)?)[.]ts$/ { next }
-              $0 ~ /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1)[.]sql$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1|2600_fix_marketplace_listing_item_lookup_v1)[.]sql$/ { next }
               $0 == "docs/operations/evidence/pr-249-player-marketplace-lifecycle.md" { next }
               $0 == "docs/roadmaps/active/player-marketplace-lifecycle-v1.md" { next }
               $0 == "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md" { next }
