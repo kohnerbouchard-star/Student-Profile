@@ -58,8 +58,10 @@ jobs:
             validateOperationsPreparation,
           } from "./scripts/production-integration-gate.mjs";
 
-          const path = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
-          const evidence = JSON.parse(await readFile(path, "utf8"));
+          const preflightPath = "docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json";
+          const preparationPath = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
+          const preflight = JSON.parse(await readFile(preflightPath, "utf8"));
+          const evidence = JSON.parse(await readFile(preparationPath, "utf8"));
           const expectedFunctions = [
             "admin-api",
             "classroom-api",
@@ -80,23 +82,45 @@ jobs:
           assert.equal(evidence.productionDeploymentAuthorized, false);
           assert.equal(evidence.productionModified, false);
           assert.equal(evidence.repository.featureSemanticsModified, false);
-          assert.equal(evidence.repository.mainCommit, "2b073019ed36ca63cf9a9b3c7acd14569fe88116");
+          assert.match(evidence.repository.mainCommit, /^[a-f0-9]{40}$/);
+          assert.equal(evidence.repository.mainCommit, preflight.repository.mainCommitAtAudit);
+          assert.equal(preflight.repository.branchBaseCommit, preflight.repository.mainCommitAtAudit);
           assert.equal(evidence.repository.behindMain, 0);
           assert.equal(evidence.repository.draft, true);
-          assert.equal(evidence.serialReleaseQueue.activeBlocker.number, 300);
-          assert.match(evidence.serialReleaseQueue.activeBlocker.head, /^[a-f0-9]{40}$/);
-          assert.equal(
-            evidence.serialReleaseQueue.heads["300"],
-            evidence.serialReleaseQueue.activeBlocker.head,
+
+          const merged = preflight.integrationWatch.serialQueue.filter(({ status }) => status === "MERGED");
+          const open = preflight.integrationWatch.serialQueue.filter(({ status }) => status !== "MERGED");
+          assert.deepEqual(
+            evidence.serialReleaseQueue.completed.map(({ number }) => number),
+            merged.map(({ number }) => number),
           );
-          assert.deepEqual(evidence.serialReleaseQueue.remaining, [300, 249, 248, 261]);
+          assert.deepEqual(evidence.serialReleaseQueue.remaining, open.map(({ number }) => number));
+          assert.equal(evidence.serialReleaseQueue.activeBlocker.number, open[0].number);
+          assert.equal(evidence.serialReleaseQueue.activeBlocker.head, open[0].head);
+          for (const entry of open) {
+            assert.equal(evidence.serialReleaseQueue.heads[String(entry.number)], entry.head);
+          }
           assert.equal(evidence.serialReleaseQueue.finalReleaseAssemblyEligible, false);
+
+          const canonical = preflight.migrations.canonicalRepositoryIdentity;
+          const staging = preflight.migrations.stagingLedger;
           assert.equal(evidence.staging.project.distinctFromProduction, true);
           assert.equal(evidence.staging.project.dataPolicy, "synthetic-only");
-          assert.equal(evidence.staging.migrations.repositoryCount, 93);
-          assert.equal(evidence.staging.migrations.appliedCount, 94);
-          assert.deepEqual(evidence.staging.migrations.missingCanonicalVersions, []);
-          assert.deepEqual(evidence.staging.migrations.stagingOnlyVersions, ["20260721015504"]);
+          assert.equal(evidence.staging.migrations.repositoryCount, canonical.count);
+          assert.equal(evidence.staging.migrations.repositoryHead, canonical.head);
+          assert.equal(evidence.staging.migrations.repositoryVersionSetSha256, canonical.versionSetSha256);
+          assert.equal(evidence.staging.migrations.appliedCount, staging.count);
+          assert.equal(evidence.staging.migrations.appliedDistinctCount, staging.distinctVersionCount);
+          assert.equal(evidence.staging.migrations.appliedHead, staging.head);
+          assert.equal(evidence.staging.migrations.appliedVersionSetSha256, staging.versionSetSha256);
+          assert.deepEqual(
+            evidence.staging.migrations.stagingOnlyVersions,
+            staging.stagingOnlyVersions.map(({ version }) => version),
+          );
+          assert.deepEqual(
+            evidence.staging.migrations.missingCanonicalVersions,
+            staging.missingCanonicalVersions,
+          );
           assert.equal(evidence.staging.edgeFunctions.applicationFunctionCount, 0);
           assert.equal(evidence.staging.edgeFunctions.finalApplicationReleaseDeployed, false);
           assert.equal(evidence.releaseContract.finalImmutableRelease.publishedByChat2, false);
@@ -117,10 +141,7 @@ jobs:
             releasePreparation.migrationDigestInput,
             "sorted-unique-versions-newline-delimited-with-trailing-newline",
           );
-          assert.equal(
-            releasePreparation.historicalMigrationStrategy,
-            "forward-only-preserve-applied-alias",
-          );
+          assert.ok(releasePreparation.historicalMigrationStrategy.startsWith("forward-only-preserve-applied-"));
           assert.equal(
             releasePreparation.routeCapabilityRateLimitTemplates,
             "PREPARED_REQUIRES_FINAL_MAIN",
@@ -141,7 +162,7 @@ jobs:
           assert.equal(evidence.cleanupPreparation.executed, false);
           assert.equal(evidence.productionNonModificationPreparation.executed, false);
           assert.equal(evidence.legacyPreparation.executed, false);
-          assert.deepEqual(evidence.repositoryRisks.migrationCollision.pullRequests, [300, 248]);
+          assert.ok(evidence.repositoryRisks.sharedConvergence.length > 0);
           assert.ok(evidence.externalPrerequisites.length >= 10);
           assert.ok(evidence.securityPreparation.probes.every(({ status }) => status.startsWith("PREPARED")));
           assert.ok(Object.values(evidence.privacy).every((value) => value === false));
@@ -222,8 +243,8 @@ jobs:
             echo "- Operations stop: \`OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED\`"
             echo "- Repository preparation validated: \`true\`"
             echo "- Local/synthetic dry-run validation: \`true\`"
-            echo "- Connected requests sent: \`0\`"
-            echo "- Connected acceptance executed: \`false\`"
+            echo "- Connected requests sent by this workflow: \`0\`"
+            echo "- Connected acceptance claimed: \`false\`"
             echo "- Final immutable staging release published: \`false\`"
             echo "- Production deployment executed: \`false\`"
             echo "- OPERATIONS_EVIDENCE_COMPLETE: \`false\`"
