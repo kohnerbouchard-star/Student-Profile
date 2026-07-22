@@ -65,14 +65,29 @@ jobs:
           ];
 
           assert.equal(evidence.reportType, "connected-operations-stage1-preparation");
+          assert.equal(evidence.preparationCheckpoint, "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO");
           assert.equal(evidence.stage1Status, "PRE_RELEASE_PREPARED");
           assert.equal(evidence.stage2Status, "BLOCKED_FINAL_IMMUTABLE_STAGING_RELEASE_NOT_PUBLISHED");
           assert.equal(evidence.operationsEvidenceComplete, false);
           assert.equal(evidence.productionDeploymentAuthorized, false);
           assert.equal(evidence.productionModified, false);
           assert.equal(evidence.repository.featureSemanticsModified, false);
+          assert.equal(evidence.repository.mainCommit, "2b073019ed36ca63cf9a9b3c7acd14569fe88116");
+          assert.equal(evidence.repository.behindMain, 0);
+          assert.equal(evidence.repository.draft, true);
+          assert.equal(evidence.serialReleaseQueue.activeBlocker.number, 300);
+          assert.equal(
+            evidence.serialReleaseQueue.activeBlocker.head,
+            "2a5659cab81dfe7ce1ddb4773381d6a71e83c1ce",
+          );
+          assert.deepEqual(evidence.serialReleaseQueue.remaining, [300, 249, 248, 261]);
+          assert.equal(evidence.serialReleaseQueue.finalReleaseAssemblyEligible, false);
           assert.equal(evidence.staging.project.distinctFromProduction, true);
           assert.equal(evidence.staging.project.dataPolicy, "synthetic-only");
+          assert.equal(evidence.staging.migrations.repositoryCount, 93);
+          assert.equal(evidence.staging.migrations.appliedCount, 94);
+          assert.deepEqual(evidence.staging.migrations.missingCanonicalVersions, []);
+          assert.deepEqual(evidence.staging.migrations.stagingOnlyVersions, ["20260721015504"]);
           assert.equal(evidence.staging.edgeFunctions.applicationFunctionCount, 0);
           assert.equal(evidence.staging.edgeFunctions.finalApplicationReleaseDeployed, false);
           assert.equal(evidence.releaseContract.finalImmutableRelease.publishedByChat2, false);
@@ -81,6 +96,29 @@ jobs:
             evidence.releaseContract.requiredApplicationEdgeFunctions.map(({ name }) => name),
             expectedFunctions,
           );
+
+          const preparation = evidence.releaseContract.preparation;
+          assert.equal(preparation.status, "PREPARED_NOT_EXECUTED");
+          assert.equal(preparation.releaseManifestSchemaVersion, 1);
+          assert.equal(preparation.artifactSetManifestSchemaVersion, 1);
+          assert.equal(preparation.sourceCommitBinding, "EXACT_MERGED_MAIN_SHA_ONLY");
+          assert.equal(preparation.singleBuildPromotionRequired, true);
+          assert.equal(preparation.rebuildDuringPromotionAllowed, false);
+          assert.equal(
+            preparation.migrationDigestInput,
+            "sorted-unique-versions-newline-delimited-with-trailing-newline",
+          );
+          assert.equal(
+            preparation.historicalMigrationStrategy,
+            "forward-only-preserve-applied-alias",
+          );
+          assert.equal(
+            preparation.routeCapabilityRateLimitTemplates,
+            "PREPARED_REQUIRES_FINAL_MAIN",
+          );
+          assert.equal(preparation.rollbackEligibilityRules, "PREPARED");
+          assert.equal(preparation.evidenceRetentionRules, "PREPARED");
+
           assert.equal(evidence.githubControlPlane.valuesRecorded, false);
           assert.equal(evidence.backupAndRestore.rehearsalExecuted, false);
           assert.equal(evidence.loadPreparation.mode, "plan-only");
@@ -91,11 +129,13 @@ jobs:
           assert.equal(evidence.observabilityPreparation.alertCount, 12);
           assert.equal(evidence.observabilityPreparation.activationExecuted, false);
           assert.equal(evidence.legacyPreparation.executed, false);
+          assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[0], 300);
+          assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[1], 248);
           assert.ok(evidence.externalPrerequisites.length >= 10);
           assert.ok(evidence.securityPreparation.probes.every(({ status }) => status.startsWith("PREPARED")));
           assert.ok(Object.values(evidence.privacy).every((value) => value === false));
 
-          console.log("Stage 1 connected-operations preparation is complete and remains explicitly non-acceptance.");
+          console.log("Parallel connected-release preparation is current and remains explicitly non-acceptance.");
           EOF
       - name: Run integration gate tests
         run: node --test scripts/production-integration-gate.test.mjs
@@ -117,7 +157,8 @@ jobs:
       - name: Record preparation boundary
         run: |
           {
-            echo "## Connected operations Stage 1"
+            echo "## Connected release preparation"
+            echo "- Checkpoint: \`CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO\`"
             echo "- Repository preparation validated: \`true\`"
             echo "- Connected acceptance executed: \`false\`"
             echo "- Final immutable staging release published: \`false\`"
