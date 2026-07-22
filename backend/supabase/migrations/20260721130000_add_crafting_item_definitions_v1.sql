@@ -10,6 +10,7 @@ returns integer
 language sql
 immutable
 strict
+set search_path = public, pg_temp
 as $$
   select ((('x' || substr(md5(p_seed), 1, 8))::bit(32)::bigint % 10000 + 10000) % 10000)::integer
 $$;
