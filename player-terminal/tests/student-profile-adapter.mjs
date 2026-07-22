@@ -161,8 +161,8 @@ const responses = {
       rewardPayload: { cashAmount: 25, currencyCode: "ECO" },
       completionMode: "manual_review",
       publishedAt: "2026-07-18T00:00:00.000Z",
-      deadlineAt: "2026-07-21T00:00:00.000Z",
-      expiresAt: "2026-07-22T00:00:00.000Z",
+      deadlineAt: "2027-07-21T00:00:00.000Z",
+      expiresAt: "2027-07-22T00:00:00.000Z",
       metadata: { issuer: "Immigration Office" },
       createdAt: "2026-07-18T00:00:00.000Z",
       updatedAt: "2026-07-19T00:00:00.000Z"
