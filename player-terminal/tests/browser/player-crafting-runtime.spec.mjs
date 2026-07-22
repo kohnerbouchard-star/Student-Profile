@@ -61,8 +61,11 @@ async function render(page) {
   await page.goto("/#crafting");
   await page.evaluate(async (craftingData) => {
     const { renderCraftingPage } = await import("/src/pages/crafting-page.js");
-    const main = document.getElementById("player-main-content");
-    main.innerHTML = renderCraftingPage(
+    const mount = document.getElementById("playerTerminal");
+    if (!(mount instanceof HTMLElement)) {
+      throw new Error("Crafting browser fixture requires #playerTerminal.");
+    }
+    mount.innerHTML = renderCraftingPage(
       { crafting: craftingData },
       { craftingRecipeId: "recipe.field_filter" },
     );
