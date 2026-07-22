@@ -29,3 +29,35 @@ Deno.test("Messaging compatibility migration uses the stable active Player inter
     throw new Error("Compatibility migration must be transaction wrapped.");
   }
 });
+
+Deno.test("Messaging participant lifecycle is serialized, scoped, bounded, and immutably audited", async () => {
+  const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
+  for (const fragment of [
+    "add column participant_reference text null",
+    "'add_participant'",
+    "'remove_participant'",
+    "create or replace function public.change_admin_message_participant_atomic_v1",
+    "game_row.owner_staff_user_id = p_staff_user_id",
+    "player_row.game_session_id = p_game_session_id",
+    "player_row.player_identifier = v_participant_key",
+    "player_row.status = 'active'",
+    "from public.message_threads as thread_row",
+    "for update",
+    "v_thread.retention_until <= now()",
+    "v_count >= 500",
+    "admin_message_last_participant",
+    "on conflict (thread_id, player_id) do nothing",
+    "delete from public.message_thread_participants",
+    "insert into public.message_moderation_audit",
+    "participant_reference",
+    "grant execute on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) to service_role",
+  ]) {
+    if (!sql.includes(fragment)) throw new Error(`Missing participant fragment: ${fragment}`);
+  }
+  for (const forbidden of [
+    "grant execute on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) to anon",
+    "grant execute on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) to authenticated",
+  ]) {
+    if (sql.includes(forbidden)) throw new Error(`Forbidden participant grant: ${forbidden}`);
+  }
+});
