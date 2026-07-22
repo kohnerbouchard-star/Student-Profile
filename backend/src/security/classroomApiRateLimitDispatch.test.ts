@@ -12,13 +12,32 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
   const source = await Deno.readTextFile(CLASSROOM_API);
 
   assertEquals(
-    occurrences(source, "dispatchRateLimitedReviewedPlayerRequest("),
-    22,
+    occurrences(source, "return dispatchRateLimitedReviewedPlayerRequest("),
+    23,
+  );
+  assertEquals(
+    occurrences(source, "reviewed(request,"),
+    0,
   );
   assertEquals(
     occurrences(source, "dispatchRateLimitedPlayerLoginRequest("),
     1,
   );
+  assertEquals(
+    occurrences(source, '"marketplace"'),
+    1,
+  );
+  for (
+    const endpointKey of [
+      '"marketplaceListing"',
+      '"marketplaceActivate"',
+      '"marketplacePurchase"',
+      '"marketplaceCancel"',
+      '"marketplaceDispute"',
+    ]
+  ) {
+    assertEquals(source.includes(endpointKey), true);
+  }
   for (
     const directReturn of [
       "return handlePlayerCapabilityManifestRequest(",
@@ -35,6 +54,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
       "return handlePlayerStorePublicRequest(",
       "return handlePlayerNotificationRequest(",
       "return handlePlayerStoryDeliveryRequest(",
+      "return handlePlayerMarketplaceRequest(",
       "return handlePlayerSessionLogoutRequest(",
       "return handlePlayerStockAssetListRequest(",
       "return handlePlayerStockMarketReadRequest(",

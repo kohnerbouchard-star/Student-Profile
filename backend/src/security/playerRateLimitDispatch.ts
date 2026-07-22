@@ -172,6 +172,24 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     GET: operation("player.watchlist.read", "read"),
     PUT: operation("player.watchlist.write", "write"),
   }),
+  marketplace: byMethod({
+    GET: operation("player.marketplace.read", "read"),
+  }),
+  marketplaceListing: byMethod({
+    POST: operation("player.marketplace.listing.create", "write"),
+  }),
+  marketplaceActivate: byMethod({
+    POST: operation("player.marketplace.listing.activate", "write"),
+  }),
+  marketplacePurchase: byMethod({
+    POST: operation("player.marketplace.purchase", "sensitive"),
+  }),
+  marketplaceCancel: byMethod({
+    POST: operation("player.marketplace.listing.cancel", "write"),
+  }),
+  marketplaceDispute: byMethod({
+    POST: operation("player.marketplace.dispute.open", "sensitive"),
+  }),
   news: byMethod({
     GET: operation("player.news.read", "read"),
   }),

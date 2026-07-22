@@ -14,6 +14,7 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
 import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
 import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
@@ -254,6 +255,25 @@ Deno.serve(async (request: Request) => {
         request,
         worldOperation.status || 500,
         worldOperation.body,
+      );
+    }
+
+    // Cast through never to prevent Deno from recursively expanding the full
+    // generated Supabase client type at this bounded Marketplace adapter.
+    const marketplaceOperation = await handleMarketplaceAdminOperation(
+      context.service as never,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (marketplaceOperation.handled) {
+      return json(
+        request,
+        marketplaceOperation.status || 500,
+        marketplaceOperation.body,
       );
     }
 

@@ -35,7 +35,7 @@ const rawDashboard = {
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
-  manifestVersion: "2026-07-21.1",
+  manifestVersion: "2026-07-22.2",
   service: "classroom-api",
   capabilities: {
     routes: {
@@ -303,7 +303,7 @@ const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
 assert.equal(session.capabilitySchemaVersion, 1);
-assert.equal(session.capabilityManifestVersion, "2026-07-21.1");
+assert.equal(session.capabilityManifestVersion, "2026-07-22.2");
 assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");

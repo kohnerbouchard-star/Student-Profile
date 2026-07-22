@@ -188,6 +188,12 @@ import {
   readPlayerStoryDeliveryRoutePath,
 } from "../../../src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts";
 import {
+  handlePlayerMarketplaceRequest,
+} from "../../../src/domains/marketplace/api/playerMarketplaceHttpHandler.ts";
+import {
+  readPlayerMarketplaceRoutePath,
+} from "../../../src/domains/marketplace/api/playerMarketplaceRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -296,6 +302,31 @@ Deno.serve(async (request) => {
       "inventory",
       () =>
         handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerMarketplaceRoute = readPlayerMarketplaceRoutePath(url.pathname);
+
+  if (playerMarketplaceRoute) {
+    const endpointKey = playerMarketplaceRoute.kind === "collection"
+      ? request.method === "GET"
+        ? "marketplace"
+        : "marketplaceListing"
+      : playerMarketplaceRoute.kind === "activate"
+      ? "marketplaceActivate"
+      : playerMarketplaceRoute.kind === "purchase"
+      ? "marketplacePurchase"
+      : playerMarketplaceRoute.kind === "cancel"
+      ? "marketplaceCancel"
+      : "marketplaceDispute";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
           createServiceClient,
         }),
       { createServiceClient },

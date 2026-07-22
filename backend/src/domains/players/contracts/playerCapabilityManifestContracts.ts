@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -43,9 +43,11 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "marketOrder",
   "marketSearch",
   "marketWatchlist",
+  "marketplaceActivate",
   "marketplaceCancel",
   "marketplaceListing",
   "marketplacePurchase",
+  "marketplaceDispute",
   "messageAttachment",
   "messageSearch",
   "messageSend",
@@ -97,6 +99,12 @@ export type PlayerCapabilityEndpointKey =
   | "marketAsset"
   | "marketOrder"
   | "marketWatchlist"
+  | "marketplace"
+  | "marketplaceActivate"
+  | "marketplaceCancel"
+  | "marketplaceDispute"
+  | "marketplaceListing"
+  | "marketplacePurchase"
   | "news"
   | "notifications"
   | "notificationsRead"
@@ -436,6 +444,42 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["inventory"],
     actionCapabilities: ["inventoryUse"],
+  },
+  {
+    key: "marketplace",
+    operations: [{ method: "GET", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: [],
+  },
+  {
+    key: "marketplaceListing",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceListing"],
+  },
+  {
+    key: "marketplaceActivate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/activate" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceActivate"],
+  },
+  {
+    key: "marketplacePurchase",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/purchase" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplacePurchase"],
+  },
+  {
+    key: "marketplaceCancel",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/cancel" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceCancel"],
+  },
+  {
+    key: "marketplaceDispute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/orders/:orderId/disputes" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceDispute"],
   },
   {
     key: "notifications",

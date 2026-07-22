@@ -80,7 +80,7 @@ jobs:
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.7.0
+          deno-version: v2.9.3
 
       - name: Install backend dependencies
         working-directory: backend
