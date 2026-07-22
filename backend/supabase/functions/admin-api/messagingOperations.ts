@@ -2,6 +2,7 @@ import {
   handleMessagingOperation as handleCoreMessagingOperation,
   type MessagingOperationResult,
 } from "./messagingOperationsCore.ts";
+import { handleMessagingParticipantOperation } from "./messagingParticipantOperations.ts";
 
 interface RpcError {
   readonly code?: string;
@@ -41,6 +42,9 @@ export async function handleMessagingOperation(
     readonly suffix: string;
   },
 ): Promise<MessagingOperationResult> {
+  const participantResult = await handleMessagingParticipantOperation(service, input);
+  if (participantResult) return participantResult;
+
   if (input.suffix === "/messages/policy") {
     return handlePolicy(service, input);
   }
