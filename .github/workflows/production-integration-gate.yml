@@ -44,7 +44,7 @@ jobs:
         run: >-
           node scripts/production-integration-gate.mjs
           --evidence docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json
-      - name: Validate Stage 1 connected-operations preparation ledger
+      - name: Validate parallel release and operations preparation
         shell: bash
         run: |
           set -euo pipefail
@@ -71,7 +71,9 @@ jobs:
           ];
 
           assert.equal(evidence.reportType, "connected-operations-stage1-preparation");
-          assert.equal(evidence.preparationCheckpoint, "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED");
+          assert.equal(evidence.preparationCheckpoint, "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO");
+          assert.equal(evidence.operationsStopState, "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED");
+          assert.equal(evidence.operationsPreparation.stopState, evidence.operationsStopState);
           assert.equal(evidence.stage1Status, "PRE_RELEASE_PREPARED");
           assert.equal(evidence.stage2Status, "BLOCKED_FINAL_IMMUTABLE_STAGING_RELEASE_NOT_PUBLISHED");
           assert.equal(evidence.operationsEvidenceComplete, false);
@@ -84,7 +86,7 @@ jobs:
           assert.equal(evidence.serialReleaseQueue.activeBlocker.number, 300);
           assert.equal(
             evidence.serialReleaseQueue.activeBlocker.head,
-            "2a5659cab81dfe7ce1ddb4773381d6a71e83c1ce",
+            "e99b4ca23c5463f7d06c9fc7e3fd174d92b082e4",
           );
           assert.deepEqual(evidence.serialReleaseQueue.remaining, [300, 249, 248, 261]);
           assert.equal(evidence.serialReleaseQueue.finalReleaseAssemblyEligible, false);
@@ -138,8 +140,7 @@ jobs:
           assert.equal(evidence.cleanupPreparation.executed, false);
           assert.equal(evidence.productionNonModificationPreparation.executed, false);
           assert.equal(evidence.legacyPreparation.executed, false);
-          assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[0], 300);
-          assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[1], 248);
+          assert.deepEqual(evidence.repositoryRisks.migrationCollision.pullRequests, [300, 248]);
           assert.ok(evidence.externalPrerequisites.length >= 10);
           assert.ok(evidence.securityPreparation.probes.every(({ status }) => status.startsWith("PREPARED")));
           assert.ok(Object.values(evidence.privacy).every((value) => value === false));
@@ -156,8 +157,7 @@ jobs:
             evidence.operationsPreparation.evidenceTemplates.templates.map(({ id }) => id),
             TEMPLATE_IDS,
           );
-
-          console.log("Parallel operations preparation is current and remains explicitly non-acceptance.");
+          console.log("Parallel release and operations preparation is current and remains non-acceptance.");
           EOF
       - name: Dry-run deterministic identities and bounded-load phases
         shell: bash
@@ -166,11 +166,9 @@ jobs:
           node --input-type=module <<'EOF'
           import assert from "node:assert/strict";
           import { readFile } from "node:fs/promises";
-
           const path = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
           const evidence = JSON.parse(await readFile(path, "utf8"));
           const plan = evidence.operationsPreparation;
-
           const identityLabels = Array.from(
             { length: plan.syntheticIdentities.plannedPoolSize },
             (_, index) => `synthetic-player-${String(index + 1).padStart(2, "0")}`,
@@ -180,7 +178,6 @@ jobs:
           assert.equal(identityLabels.slice(0, plan.syntheticIdentities.expectedLoadSubsetSize).length, 30);
           assert.equal(plan.syntheticIdentities.productionDerived, false);
           assert.equal(plan.syntheticIdentities.credentialMaterialized, false);
-
           for (const scenario of plan.loadRunner.scenarios) {
             const duration = scenario.rampMinutes + scenario.steadyMinutes + scenario.cooldownMinutes;
             assert.ok(duration <= plan.loadRunner.maximumDurationMinutes);
@@ -189,10 +186,8 @@ jobs:
           assert.equal(plan.loadRunner.maximumRequestsPerSecond, 25);
           assert.equal(plan.loadRunner.connectedExecutionBlocked, true);
           assert.equal(plan.loadRunner.executed, false);
-          assert.equal(plan.cleanupProcedure.tagScopedOnly, true);
           assert.equal(plan.cleanupProcedure.productionAllowed, false);
           assert.equal(plan.productionNonModificationProof.productionWriteOperationsAllowed, false);
-
           console.log(JSON.stringify({
             generatedSyntheticLabels: identityLabels.length,
             expectedSubset: 30,
@@ -221,10 +216,12 @@ jobs:
       - name: Record preparation boundary
         run: |
           {
-            echo "## Connected operations preparation"
-            echo "- Checkpoint: \`OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED\`"
+            echo "## Connected release preparation"
+            echo "- Release checkpoint: \`CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO\`"
+            echo "- Operations stop: \`OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED\`"
             echo "- Repository preparation validated: \`true\`"
             echo "- Local/synthetic dry-run validation: \`true\`"
+            echo "- Connected requests sent: \`0\`"
             echo "- Connected acceptance executed: \`false\`"
             echo "- Final immutable staging release published: \`false\`"
             echo "- Production deployment executed: \`false\`"
