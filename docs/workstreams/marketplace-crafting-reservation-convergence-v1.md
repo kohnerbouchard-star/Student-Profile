@@ -1,106 +1,167 @@
 # Marketplace ↔ Crafting reservation convergence
 
-Status: parallel preparation only. Crafting PR #300 remains the predecessor and Marketplace PR #249 remains draft.
+Status: active pre-convergence implementation. Crafting PR #300 remains the predecessor; Marketplace PR #249 remains draft, provisional, unsynchronized, unstaged, and unmerged.
 
-## Authoritative contract observed read-only
+## Authoritative Crafting contract observed read-only
 
-Crafting defines `public.inventory_reservations` as the generic reservation source of truth with game, player, holding, item, reason, source, quantity, and `active | consumed | released` state. Its current `reason_type` set is `crafting_input | equipment_action`.
+Crafting defines `public.inventory_reservations` as the generic reservation source of truth with game, player, holding, item, reason, source, quantity, and `active | consumed | released` state. Its final migration family is `20260721130000–20260721135700` and its current `reason_type` set is `crafting_input | equipment_action`.
 
-Marketplace must extend that set additively with `marketplace_listing` in its final post-Crafting migration. Marketplace must not modify Crafting-owned functions, migrations, or runtime behavior.
+Marketplace extends that set additively with `marketplace_listing` in its third provisional migration. Marketplace does not modify Crafting-owned functions, migrations, tables, jobs, equipment, effects, salvage, pack activation, or runtime semantics.
 
 `inventory_holdings.quantity_reserved` is a projection only. The authoritative reserved quantity for a holding is the sum of every active generic reservation row across Marketplace, Crafting, equipment, and future classified sources.
 
-## Marketplace adapter contract
+## Permanent Marketplace implementation
 
-Permanent preparatory source:
+Application source:
 
 - `backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationAdapter.ts`
 - `backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationAdapter.test.ts`
+- `backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationPartialRelease.test.ts`
 
-Required database implementation after Crafting merges:
+Provisional database convergence layer:
 
-1. Reserve a listing with one active generic row:
-   - `reason_type = 'marketplace_listing'`
-   - `source_id = marketplace_listings.id`
-   - quantity equals the listing's currently reserved seller quantity.
-2. Reconcile before every Inventory mutation:
-   - lock the holding and relevant generic reservation rows;
-   - sum all active reservation sources;
-   - fail closed on game/player/holding mismatch;
-   - fail closed if active reservations exceed owned quantity;
+- `backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql`
+
+Focused verification:
+
+- `backend/src/domains/marketplace/tests/playerMarketplaceReservationConvergenceMigrationContract.test.ts`
+- `backend/src/domains/marketplace/tests/playerMarketplacePreconvergenceLifecycle.test.ts`
+- `backend/src/domains/marketplace/tests/playerMarketplaceAbuseSimulation.test.ts`
+- `.github/workflows/marketplace-preconvergence.yml`
+
+## Reservation lifecycle contract
+
+1. Listing creation inserts one active generic reservation row:
+   - `reason_type = 'marketplace_listing'`;
+   - `source_id = marketplace_listings.id`;
+   - quantity equals the seller quantity reserved for the listing.
+2. Every reservation-sensitive entrypoint locks and reconciles the holding before trusting its projection:
+   - sum every active generic reservation row;
+   - fail closed on game, player, or holding mismatch;
+   - deny authoritative reservations above owned quantity;
    - detect any difference between the active-row sum and `quantity_reserved`.
-3. Rebuild the projection after every reservation transition from the complete active-row sum. Marketplace must never increment or decrement the projection independently.
-4. Buyer reservation creation changes listing availability only. It does not create a second seller Inventory authority.
-5. Settlement consumes the Marketplace listing reservation atomically with seller decrement, buyer transfer, financial postings, order completion, and audit evidence.
+3. The projection is changed only in the same transaction as the authoritative generic reservation transition and is immediately reconciled.
+4. Listing activation requires an active Marketplace reservation with sufficient remaining quantity.
+5. Buyer reservation changes listing availability only. It does not create a second seller Inventory reservation authority.
+6. Settlement consumes the Marketplace listing reservation atomically with seller decrement, buyer transfer, financial postings, order completion, and immutable audit evidence:
    - partial settlement reduces the active listing-reservation quantity;
    - final settlement marks it consumed;
-   - order/reservation uniqueness and action receipts prevent duplicate consumption.
-6. Buyer-reservation expiry or insufficient funds restores listing availability while the listing remains active. The listing reservation remains authoritative and unchanged.
-7. Listing cancellation, expiration, or rejection releases the complete remaining listing reservation exactly once.
-   - active buyer reservations must first be expired/released and restored to listing availability;
-   - terminal listing release then transitions the full remaining generic reservation to released.
-8. Refund checks use owned quantity minus every active generic reservation source. A refund cannot transfer an item currently reserved by Crafting, equipment, Marketplace, or another future source.
-9. Refund transfer does not resurrect the consumed listing reservation. Returned items become ordinarily available Inventory and require a new listing to be reserved again.
+   - order uniqueness, postings uniqueness, and action receipts prevent duplicate consumption or seller credit.
+7. Buyer-reservation expiry or insufficient funds restores listing availability when the listing remains active. The listing reservation remains unchanged.
+8. Buyer-reservation expiry or insufficient funds against a terminal listing releases only that buyer-reserved portion from the remaining Marketplace listing reservation.
+9. Listing cancellation, expiration, or moderation rejection releases the complete remaining Marketplace listing reservation exactly once.
+10. Refund eligibility uses owned quantity minus every active generic reservation source. Items reserved by Crafting, equipment, Marketplace, or a future source cannot be refunded.
+11. Refund transfer does not resurrect a consumed listing reservation. Returned items require a new listing and a new reservation.
+12. Marketplace never transitions a `crafting_input`, `equipment_action`, or unknown reservation row.
 
-## Direct projection writes to replace after merge
+## Direct projection mutation replacement inventory
 
-The provisional Marketplace lifecycle migration currently writes `inventory_holdings.quantity_reserved` directly in these paths:
+The second provisional lifecycle migration contains historical projection-mutating primitives for:
 
 - listing creation;
-- purchase-reservation expiry when the listing is terminal;
+- purchase-reservation expiry against a terminal listing;
 - listing expiration;
 - settlement expiry;
-- insufficient-funds release when the listing is terminal;
+- insufficient-funds release against a terminal listing;
 - seller settlement consumption;
 - listing cancellation;
 - Admin listing rejection;
 - refund availability checks.
 
-The final synchronized migration must route these paths through the Marketplace adapter and full projection reconciliation.
+The third provisional migration now:
 
-## Provisional rekey map
+- renames reservation-sensitive public RPCs to private `*_projection_legacy_*` primitives;
+- revokes those primitives from `public`, `anon`, `authenticated`, and `service_role`;
+- recreates the original public RPC signatures as authoritative generic-reservation wrappers;
+- replaces both expiration functions with authoritative implementations;
+- reconciles and transitions generic reservation rows around every retained projection mutation;
+- keeps the external Classroom/Admin repository contracts unchanged.
 
-These identities remain non-authoritative until Chat 1 assigns the final post-Crafting range:
+At final convergence, reconstruct the same wrapper semantics from Crafting-merged `main`; do not expose or call the private legacy functions outside their security-definer wrappers.
 
-| Current provisional identity | Final identity |
-| --- | --- |
-| `20260721140000_add_marketplace_reference_scopes_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_01` |
-| `20260721141000_add_player_marketplace_lifecycle_v2.sql` | `CHAT_1_MARKETPLACE_RANGE_02` |
-| `20260721142000_harden_marketplace_resolution_replay_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_03` |
+## Exact three-file rekey map
 
-The rekey is performed once, after the exact Crafting merge SHA and range are supplied.
+These identities remain non-authoritative until Chat 1 assigns the final post-Crafting/pre-Messaging range:
 
-## Shared-file collision inventory
+| Current provisional identity | Final placeholder | Purpose |
+| --- | --- | --- |
+| `20260721140000_add_marketplace_reference_scopes_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_01` | Store and Inventory composite reference scopes |
+| `20260721141000_add_player_marketplace_lifecycle_v2.sql` | `CHAT_1_MARKETPLACE_RANGE_02` | Marketplace schema, lifecycle, financial postings, audit, and public RPCs |
+| `20260721142000_harden_marketplace_resolution_replay_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_03` | Generic reservation convergence, replay hardening, and authoritative wrappers |
 
-Reconstruct from final Crafting-merged `main`; do not choose either branch wholesale:
+The rekey is performed once after Chat 1 supplies the exact Crafting merge SHA, the final range, and collision rules. SQL intent and three-file ordering remain unchanged.
 
-- `.github/workflows/player-terminal-verify.yml`
-- `backend/package.json`
-- `backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts`
-- `backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts`
-- `backend/src/security/playerRateLimitDispatch.ts`
-- `backend/supabase/functions/admin-api/index.ts`
-- `backend/supabase/functions/classroom-api/index.ts`
-- `player-terminal/src/api/endpoints.js`
-- `player-terminal/src/api/resource-plan.js`
+## Full migration-reference inventory
 
-Marketplace additions must remain narrow and additive while preserving Crafting, World, Business, Store, Inventory, Story, security, and lifecycle registrations.
+Every reference below must be updated in the same rekey commit:
 
-## Final validation checklist
+- `backend/package.json` — `test:player-marketplace` `--allow-read` migration paths;
+- `backend/src/domains/marketplace/tests/playerMarketplaceMigrationContract.test.ts` — `REFERENCES`, `LIFECYCLE`, and `REPLAY` constants;
+- `backend/src/domains/marketplace/tests/playerMarketplaceReservationConvergenceMigrationContract.test.ts` — `LIFECYCLE` and `CONVERGENCE` constants;
+- `.github/workflows/player-terminal-verify.yml` — Marketplace migration path allowlist;
+- `.github/workflows/marketplace-preconvergence.yml` — trigger paths for all three migrations;
+- `docs/operations/evidence/pr-249-player-marketplace-lifecycle.md` — migration identity and evidence references;
+- `docs/roadmaps/active/player-marketplace-lifecycle-v1.md` — provisional identity references;
+- this document — rekey map and migration paths;
+- PR #249 body — migration identity list and final-range statement.
 
-- exact Crafting merge SHA recorded;
-- Chat 1 migration range and collision rules recorded;
-- three provisional migrations rekeyed once and every reference updated;
-- existing branch synchronized once;
-- shared files reconstructed from Crafting-merged `main`;
+Final rekey audit must search the complete branch for each old `20260721140000`, `20260721141000`, and `20260721142000` token and require zero stale references.
+
+## Crafting compatibility matrix
+
+| Crafting contract | Marketplace consumption | Required preservation |
+| --- | --- | --- |
+| `inventory_reservations` is authoritative | Add `marketplace_listing` rows keyed by listing UUID | Preserve Crafting rows and uniqueness; no table fork |
+| `quantity_reserved` is a projection | Reconcile sum of all active rows before/after Marketplace mutation | Never compute Marketplace availability from its rows alone |
+| `crafting_input` reservations | Included in availability and refund calculations | Marketplace cannot consume or release them |
+| `equipment_action` reservations | Included in availability and refund calculations | Marketplace cannot consume or release them |
+| active/consumed/released terminal model | Marketplace partial consumption stays active; final consumption/release becomes terminal | No resurrection of terminal rows |
+| game/player/holding/store-item composite scope | Every Marketplace helper filters the same composite scope | Wrong-game and wrong-owner operations fail closed |
+| Crafting final range `20260721130000–20260721135700` | Marketplace final range must be later | Preserve the entire Crafting family exactly once |
+| stable item keys and public identities | Marketplace stores stable item keys and exposes public listing/order IDs | Do not expose backend UUIDs or copy Seed catalogs |
+| pause/ended/session lifecycle gates | Marketplace wrappers retain existing lifecycle gates | No relaxation of Crafting or shared lifecycle behavior |
+| committed-success and idempotency | Marketplace wrappers preserve existing receipts and uniqueness | Duplicate requests must replay without duplicate transfer or settlement |
+
+## Shared-file additive reconstruction plan
+
+Reconstruct each file from final Crafting-merged `main`; never choose either branch wholesale:
+
+| Shared file | Marketplace addition to reapply | Predecessor behavior to preserve |
+| --- | --- | --- |
+| `.github/workflows/player-terminal-verify.yml` | Marketplace-owned paths and read-only evidence workflow allowlist | Crafting browser paths, isolation rules, and all earlier feature allowlists |
+| `backend/package.json` | Marketplace test command and final migration references | Crafting scripts plus all prior smoke/typecheck scripts |
+| `backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts` | Marketplace route/action capabilities | Crafting and predecessor capabilities |
+| `backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts` | Marketplace capability assertions | Crafting and predecessor assertions |
+| `backend/src/security/playerRateLimitDispatch.ts` | Marketplace action classifications | Crafting and central security dispatch |
+| `backend/src/security/classroomApiRateLimitDispatch.test.ts` | Marketplace dispatch coverage | Crafting, login, Story, and predecessor security cases |
+| `backend/supabase/functions/admin-api/index.ts` | Marketplace Admin dispatch/import | Crafting oversight and every prior Admin route |
+| `backend/supabase/functions/classroom-api/index.ts` | Marketplace Player dispatch/import | Crafting, World, Business, Store, Inventory, Story, and session routes |
+| `admin/index.html` | Marketplace loader registration | Crafting loader and deterministic accepted shell ordering |
+| `player-terminal/src/api/endpoints.js` | Marketplace endpoints | Crafting and predecessor endpoints |
+| `player-terminal/src/api/resource-plan.js` | Marketplace read resource | Crafting and predecessor resource plan |
+| `player-terminal/src/integrations/student-profile-api-call.js` | Marketplace mutation adapters | Crafting and committed-success handling |
+| `player-terminal/src/integrations/student-profile-capability-manifest.js` | Marketplace action mapping | Crafting and predecessor mappings |
+
+## Final convergence checklist
+
+- exact Crafting merge SHA recorded from Chat 1;
+- Chat 1 final Marketplace migration range and collision rules recorded;
+- Crafting migration family `20260721130000–20260721135700` preserved exactly once;
+- three Marketplace migrations rekeyed once and every inventory reference updated;
+- zero stale provisional timestamp tokens remain;
+- existing branch synchronized exactly once;
+- shared files reconstructed additively from Crafting-merged `main`;
 - generic reservation reason extended additively;
-- projection reconciliation and drift detection active;
-- concurrent buyer, stale version, duplicate request, committed-success replay, cancellation, expiry, settlement, dispute, and refund invariants pass;
+- authoritative classification, reconciliation, drift detection, over-reservation denial, and scope denial active;
+- concurrent buyer, stale version, duplicate request, committed-success replay, partial/final consumption, and full-release invariants pass;
+- listing creation, activation, search/read, taxes, fees, receipts, seller settlement, Inventory transfer, cancellation, expiry, moderation, dispute, and refund tests pass;
+- listing spam, wash trading, price manipulation, refund abuse, dispute farming, reservation starvation, duplicate settlement, concurrent races, circular trading, and fee/tax exploit simulations pass;
+- wrong-game, wrong-owner, pause, ended-game, and expired-session behavior fail closed;
 - seller settlement and Inventory transfer/release are exactly once;
-- wrong-game, pause, ended-game, and expired-session behavior fail closed;
-- zero-state replay succeeds twice;
-- database lint passes;
-- exact-head CI, desktop/mobile Player, Admin browser, and isolated-staging Marketplace acceptance pass;
+- zero-state replay succeeds twice after Crafting convergence;
+- database lint passes after Crafting convergence;
+- complete exact-head CI and desktop/mobile Player and Admin verification pass;
+- isolated-staging Marketplace acceptance passes;
 - review threads are clear;
 - immutable head returned to Chat 1;
-- production unchanged.
+- production remains unchanged.
