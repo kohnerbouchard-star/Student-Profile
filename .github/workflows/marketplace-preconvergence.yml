@@ -10,6 +10,12 @@ on:
       - "backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql"
       - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
       - "backend/supabase/migrations/20260721142500_add_marketplace_inventory_event_types_v1.sql"
+      - "backend/supabase/migrations/20260721142600_fix_marketplace_listing_item_lookup_v1.sql"
+      - "backend/supabase/migrations/20260721142700_fix_marketplace_listing_currency_lookup_v1.sql"
+      - "backend/supabase/migrations/20260721142800_restore_marketplace_listing_reservation_wrapper_v1.sql"
+      - "backend/supabase/migrations/20260721142900_fix_marketplace_listing_legacy_lookups_v1.sql"
+      - "backend/supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql"
+      - "backend/supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   push:
@@ -23,6 +29,12 @@ on:
       - "backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql"
       - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
       - "backend/supabase/migrations/20260721142500_add_marketplace_inventory_event_types_v1.sql"
+      - "backend/supabase/migrations/20260721142600_fix_marketplace_listing_item_lookup_v1.sql"
+      - "backend/supabase/migrations/20260721142700_fix_marketplace_listing_currency_lookup_v1.sql"
+      - "backend/supabase/migrations/20260721142800_restore_marketplace_listing_reservation_wrapper_v1.sql"
+      - "backend/supabase/migrations/20260721142900_fix_marketplace_listing_legacy_lookups_v1.sql"
+      - "backend/supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql"
+      - "backend/supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   workflow_dispatch:
@@ -125,6 +137,18 @@ jobs:
           echo $? > /tmp/marketplace-tests.status
           tail -n 240 /tmp/marketplace-tests.log
           exit 0
+
+      - name: Run connected forward migration contracts
+        shell: bash
+        run: |
+          deno test \
+            --allow-read=supabase/migrations/20260721142800_restore_marketplace_listing_reservation_wrapper_v1.sql,supabase/migrations/20260721143000_harden_marketplace_legacy_projection_conflicts_v1.sql,supabase/migrations/20260721143100_harden_marketplace_table_return_conflicts_v1.sql \
+            --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock \
+            --frozen \
+            src/domains/marketplace/tests/playerMarketplaceListingWrapperRestorationMigrationContract.test.ts \
+            src/domains/marketplace/tests/playerMarketplaceLegacyProjectionConflictMigrationContract.test.ts \
+            src/domains/marketplace/tests/playerMarketplaceTableReturnConflictMigrationContract.test.ts
 
       - name: Upload Marketplace diagnostics
         if: always()
