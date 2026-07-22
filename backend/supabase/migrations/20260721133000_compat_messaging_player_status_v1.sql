@@ -76,7 +76,7 @@ begin
     or length(v_title) not between 1 and 160
     or length(v_body) not between 1 and 1000
     or v_title ~ '[[:cntrl:]]'
-    or v_body ~ E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'
+    or v_body ~ E'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'
     or v_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
   then
     raise exception 'PLAYER_MESSAGE_THREAD_CREATE_INVALID' using errcode = 'P0001';
@@ -116,7 +116,7 @@ begin
     raise exception 'PLAYER_MESSAGE_RECIPIENT_NOT_FOUND' using errcode = 'P0001';
   end if;
 
-  v_fingerprint := md5(v_recipient.id::text || E'\\000' || v_title || E'\\000' || v_body);
+  v_fingerprint := md5(v_recipient.id::text || E'\000' || v_title || E'\000' || v_body);
 
   select * into v_existing
   from public.message_threads as thread_row
@@ -189,12 +189,237 @@ begin
 end;
 $function$;
 
+alter table public.message_moderation_audit
+  add column participant_reference text null;
+
+alter table public.message_moderation_audit
+  drop constraint message_moderation_audit_action_valid,
+  add constraint message_moderation_audit_action_valid check (
+    action in (
+      'create_thread',
+      'disable_thread',
+      'enable_thread',
+      'close_thread',
+      'hide_message',
+      'unhide_message',
+      'delete_thread',
+      'add_participant',
+      'remove_participant'
+    )
+  ),
+  add constraint message_moderation_audit_participant_reference_valid check (
+    (
+      action in ('add_participant', 'remove_participant')
+      and participant_reference is not null
+      and length(btrim(participant_reference)) between 1 and 160
+      and participant_reference = btrim(participant_reference)
+      and participant_reference ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
+      and participant_reference !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    )
+    or (
+      action not in ('add_participant', 'remove_participant')
+      and participant_reference is null
+    )
+  );
+
+create or replace function public.change_admin_message_participant_atomic_v1(
+  p_game_session_id uuid,
+  p_staff_user_id uuid,
+  p_thread_public_id text,
+  p_participant_reference text,
+  p_action text,
+  p_reason text,
+  p_idempotency_key text
+)
+returns table (
+  participant_outcome text,
+  action_id text,
+  thread_id text,
+  participant_reference text,
+  participant_action text,
+  participant_count integer,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_thread_key text := btrim(coalesce(p_thread_public_id, ''));
+  v_participant_key text := btrim(coalesce(p_participant_reference, ''));
+  v_action text := lower(btrim(coalesce(p_action, '')));
+  v_reason text := nullif(btrim(coalesce(p_reason, '')), '');
+  v_key text := btrim(coalesce(p_idempotency_key, ''));
+  v_thread public.message_threads%rowtype;
+  v_player public.players%rowtype;
+  v_existing public.message_moderation_audit%rowtype;
+  v_audit public.message_moderation_audit%rowtype;
+  v_count integer;
+  v_is_participant boolean;
+begin
+  if p_game_session_id is null
+    or p_staff_user_id is null
+    or v_thread_key !~ '^thr_[0-9a-f]{32}$'
+    or v_participant_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$'
+    or v_participant_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    or v_action not in ('add_participant', 'remove_participant')
+    or (v_action = 'remove_participant' and v_reason is null)
+    or length(coalesce(v_reason, '')) > 1000
+    or coalesce(v_reason, '') ~ '[[:cntrl:]]'
+    or v_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+  then
+    raise exception 'ADMIN_MESSAGE_PARTICIPANT_INVALID' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.game_sessions as game_row
+    where game_row.id = p_game_session_id
+      and game_row.owner_staff_user_id = p_staff_user_id
+  ) then
+    raise exception 'ADMIN_MESSAGES_SCOPE_FORBIDDEN' using errcode = 'P0001';
+  end if;
+
+  select audit_row.* into v_existing
+  from public.message_moderation_audit as audit_row
+  where audit_row.game_session_id = p_game_session_id
+    and audit_row.staff_user_id = p_staff_user_id
+    and audit_row.idempotency_key = v_key
+  for update;
+
+  if found then
+    if v_existing.action <> v_action
+      or v_existing.thread_public_id <> v_thread_key
+      or v_existing.participant_reference <> v_participant_key
+      or coalesce(v_existing.reason, '') <> coalesce(v_reason, '')
+    then
+      raise exception 'ADMIN_MESSAGE_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+
+    select count(*)::integer into v_count
+    from public.message_thread_participants as participant_row
+    where participant_row.game_session_id = p_game_session_id
+      and participant_row.thread_id = v_existing.thread_id;
+
+    return query select
+      'replayed'::text,
+      v_existing.public_action_id,
+      v_existing.thread_public_id,
+      v_existing.participant_reference,
+      v_existing.action,
+      v_count,
+      v_existing.created_at;
+    return;
+  end if;
+
+  select thread_row.* into v_thread
+  from public.message_threads as thread_row
+  where thread_row.game_session_id = p_game_session_id
+    and thread_row.public_thread_id = v_thread_key
+  for update;
+
+  if not found then
+    raise exception 'ADMIN_MESSAGE_THREAD_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_thread.status = 'closed' then
+    raise exception 'ADMIN_MESSAGE_THREAD_LOCKED' using errcode = 'P0001';
+  end if;
+  if v_thread.retention_until <= now() then
+    raise exception 'ADMIN_MESSAGE_RETENTION_EXPIRED' using errcode = 'P0001';
+  end if;
+
+  select player_row.* into v_player
+  from public.players as player_row
+  where player_row.game_session_id = p_game_session_id
+    and player_row.player_identifier = v_participant_key
+    and player_row.status = 'active'
+  for share;
+
+  if not found then
+    raise exception 'ADMIN_MESSAGE_PARTICIPANT_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  select exists (
+    select 1 from public.message_thread_participants as participant_row
+    where participant_row.game_session_id = p_game_session_id
+      and participant_row.thread_id = v_thread.id
+      and participant_row.player_id = v_player.id
+  ) into v_is_participant;
+
+  select count(*)::integer into v_count
+  from public.message_thread_participants as participant_row
+  where participant_row.game_session_id = p_game_session_id
+    and participant_row.thread_id = v_thread.id;
+
+  if v_action = 'add_participant' then
+    if not v_is_participant and v_count >= 500 then
+      raise exception 'ADMIN_MESSAGE_PARTICIPANT_LIMIT' using errcode = 'P0001';
+    end if;
+    insert into public.message_thread_participants (
+      thread_id, game_session_id, player_id, joined_at, last_read_at
+    ) values (
+      v_thread.id, p_game_session_id, v_player.id, now(), null
+    ) on conflict (thread_id, player_id) do nothing;
+  else
+    if not v_is_participant then
+      raise exception 'ADMIN_MESSAGE_PARTICIPANT_NOT_FOUND' using errcode = 'P0001';
+    end if;
+    if v_count <= 1 then
+      raise exception 'ADMIN_MESSAGE_LAST_PARTICIPANT' using errcode = 'P0001';
+    end if;
+    delete from public.message_thread_participants as participant_row
+    where participant_row.game_session_id = p_game_session_id
+      and participant_row.thread_id = v_thread.id
+      and participant_row.player_id = v_player.id;
+  end if;
+
+  update public.message_threads
+  set updated_at = now()
+  where game_session_id = p_game_session_id and id = v_thread.id;
+
+  select count(*)::integer into v_count
+  from public.message_thread_participants as participant_row
+  where participant_row.game_session_id = p_game_session_id
+    and participant_row.thread_id = v_thread.id;
+
+  insert into public.message_moderation_audit (
+    game_session_id,
+    thread_id,
+    staff_user_id,
+    action,
+    reason,
+    idempotency_key,
+    participant_reference
+  ) values (
+    p_game_session_id,
+    v_thread.id,
+    p_staff_user_id,
+    v_action,
+    v_reason,
+    v_key,
+    v_participant_key
+  ) returning * into v_audit;
+
+  return query select
+    'applied'::text,
+    v_audit.public_action_id,
+    v_thread.public_thread_id,
+    v_participant_key,
+    v_action,
+    v_count,
+    v_audit.created_at;
+end;
+$function$;
+
 revoke all on function public.read_player_message_policy_v1(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.create_player_message_thread_atomic_v1(uuid, uuid, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) from public, anon, authenticated;
 grant execute on function public.read_player_message_policy_v1(uuid, uuid) to service_role;
 grant execute on function public.create_player_message_thread_atomic_v1(uuid, uuid, text, text, text, text) to service_role;
+grant execute on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) to service_role;
 
 comment on function public.create_player_message_thread_atomic_v1(uuid, uuid, text, text, text, text) is
   'Creates a same-game two-player thread using the stable active Player status interface and public Player identifiers.';
+comment on function public.change_admin_message_participant_atomic_v1(uuid, uuid, text, text, text, text, text) is
+  'Owner-scoped, per-thread serialized, idempotent participant addition and removal with public-ID-only immutable audit evidence.';
 
 commit;
