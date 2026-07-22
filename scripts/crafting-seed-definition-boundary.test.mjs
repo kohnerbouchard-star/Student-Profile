@@ -11,12 +11,12 @@ const literal = (value) => new RegExp(
   "i",
 );
 
-const itemSchema = await readMigration("20260721140000_add_crafting_item_definitions_v1.sql");
-const recipeSchema = await readMigration("20260721140100_add_crafting_recipe_definitions_v1.sql");
-const importer = await readMigration("20260721141000_add_crafting_pack_import_v1.sql");
-const identity = await readMigration("20260721141200_harden_crafting_pack_import_identity_v1.sql");
-const activation = await readMigration("20260721141500_add_crafting_pack_activation_v1.sql");
-const start = await readMigration("20260721142500_add_player_crafting_job_start_v1.sql");
+const itemSchema = await readMigration("20260721130000_add_crafting_item_definitions_v1.sql");
+const recipeSchema = await readMigration("20260721130100_add_crafting_recipe_definitions_v1.sql");
+const importer = await readMigration("20260721131000_add_crafting_pack_import_v1.sql");
+const identity = await readMigration("20260721131200_harden_crafting_pack_import_identity_v1.sql");
+const activation = await readMigration("20260721131500_add_crafting_pack_activation_v1.sql");
+const start = await readMigration("20260721132500_add_player_crafting_job_start_v1.sql");
 
 test("Seed re-import preserves stable pack, item, and recipe identities", () => {
   assert.match(itemSchema, /unique \(pack_key, content_version, content_digest\)/i);
