@@ -36,7 +36,7 @@
     "test:admin-redemptions": "node scripts/admin-inventory-redemption-queue-contract.mjs",
     "test:admin-game-lifecycle": "node scripts/admin-game-lifecycle-contract.mjs",
     "test:admin-progression": "node scripts/admin-progression-contract.mjs",
-    "test:progression-simulation": "node scripts/progression-balance-simulation.mjs && node scripts/progression-event-delivery-simulation.mjs",
+    "test:progression-simulation": "node scripts/progression-balance-simulation.mjs && node scripts/progression-event-delivery-simulation.mjs && node scripts/progression-abuse-threshold-simulation.mjs",
     "test:beta-e2e": "node --test scripts/beta-e2e-pilot.test.mjs",
     "test:branch-hygiene": "node --test scripts/branch-hygiene-policy.test.mjs",
     "test:deployment-readiness": "node --test scripts/deployment-readiness-preflight.test.mjs",
