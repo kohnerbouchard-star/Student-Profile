@@ -69,6 +69,7 @@ Deno.test("retention, pause, ended-game, and session-expiry boundaries fail clos
   assertThrows(() => ended.send("PLAYER-A", "10.0.0.1", "ended:1", "denied"), "game_not_active");
 
   const expired = new Simulation();
+  expired.retentionUntil = expired.sessionExpiresAt + 100;
   expired.now = expired.sessionExpiresAt;
   assertThrows(() => expired.send("PLAYER-A", "10.0.0.1", "expired:1", "denied"), "session_expired");
 });
