@@ -3,26 +3,26 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const migrationFiles = [
-  "20260721140000_add_crafting_item_definitions_v1.sql",
-  "20260721140100_add_crafting_recipe_definitions_v1.sql",
-  "20260721140200_add_game_physical_economy_scope_v1.sql",
-  "20260721140300_add_crafting_job_reservations_v1.sql",
-  "20260721140400_add_equipment_and_item_effect_state_v1.sql",
-  "20260721140500_add_crafting_salvage_admin_security_v1.sql",
-  "20260721141000_add_crafting_pack_import_v1.sql",
-  "20260721141200_harden_crafting_pack_import_identity_v1.sql",
-  "20260721141300_harden_crafting_pack_version_identity_v1.sql",
-  "20260721141500_add_crafting_pack_activation_v1.sql",
-  "20260721142000_add_player_crafting_read_v1.sql",
-  "20260721142500_add_player_crafting_job_start_v1.sql",
-  "20260721143000_add_player_crafting_cancel_v1.sql",
-  "20260721143500_add_player_crafting_claim_v1.sql",
-  "20260721143700_add_player_equipment_slots_v1.sql",
-  "20260721144000_add_player_item_effects_v1.sql",
-  "20260721144500_add_player_equipment_salvage_v1.sql",
-  "20260721145000_add_admin_crafting_read_v1.sql",
-  "20260721145500_add_admin_crafting_recovery_v1.sql",
-  "20260721145700_add_admin_crafting_supply_and_grants_v1.sql",
+  "20260721130000_add_crafting_item_definitions_v1.sql",
+  "20260721130100_add_crafting_recipe_definitions_v1.sql",
+  "20260721130200_add_game_physical_economy_scope_v1.sql",
+  "20260721130300_add_crafting_job_reservations_v1.sql",
+  "20260721130400_add_equipment_and_item_effect_state_v1.sql",
+  "20260721130500_add_crafting_salvage_admin_security_v1.sql",
+  "20260721131000_add_crafting_pack_import_v1.sql",
+  "20260721131200_harden_crafting_pack_import_identity_v1.sql",
+  "20260721131300_harden_crafting_pack_version_identity_v1.sql",
+  "20260721131500_add_crafting_pack_activation_v1.sql",
+  "20260721132000_add_player_crafting_read_v1.sql",
+  "20260721132500_add_player_crafting_job_start_v1.sql",
+  "20260721133000_add_player_crafting_cancel_v1.sql",
+  "20260721133500_add_player_crafting_claim_v1.sql",
+  "20260721133700_add_player_equipment_slots_v1.sql",
+  "20260721134000_add_player_item_effects_v1.sql",
+  "20260721134500_add_player_equipment_salvage_v1.sql",
+  "20260721135000_add_admin_crafting_read_v1.sql",
+  "20260721135500_add_admin_crafting_recovery_v1.sql",
+  "20260721135700_add_admin_crafting_supply_and_grants_v1.sql",
 ];
 const migrationEntries = await Promise.all(migrationFiles.map(async (name) => [
   name,
@@ -38,6 +38,14 @@ const source = (name) => {
 };
 
 const mutationGuard = "perform public.assert_player_crafting_mutation_allowed_v1";
+
+test("controller-assigned Crafting migration family is exact and ordered", () => {
+  assert.equal(migrationFiles.length, 20);
+  const versions = migrationFiles.map((name) => Number(name.slice(0, 14)));
+  assert.deepEqual([...versions].sort((left, right) => left - right), versions);
+  assert.ok(versions.every((version) => version >= 20260721130000 && version <= 20260721139999));
+  assert.equal(new Set(versions).size, 20);
+});
 
 test("crafting migration provides atomic reservation and exactly-once output contracts", () => {
   for (const token of [
@@ -94,7 +102,7 @@ test("pack activation fails closed until PR 163 authorizes every quantitative ga
 });
 
 test("pack import binds exact merged Seed identity and digest", () => {
-  const value = source("20260721141200_harden_crafting_pack_import_identity_v1.sql");
+  const value = source("20260721131200_harden_crafting_pack_import_identity_v1.sql");
   for (const token of [
     "PHYSICAL_ECONOMY_PACK_IDENTITY_MISMATCH",
     "econovaria.beta-seed-pack.v1",
@@ -131,26 +139,26 @@ test("salvage enforces a player-scoped recraft cooldown and committed success", 
 });
 
 test("new Player mutations require an active game lifecycle", () => {
-  const guardSource = source("20260721140500_add_crafting_salvage_admin_security_v1.sql");
+  const guardSource = source("20260721130500_add_crafting_salvage_admin_security_v1.sql");
   assert.match(guardSource, /g\.status\s*=\s*'active'/i);
   assert.match(guardSource, /g\.lifecycle_state\s*=\s*'active'/i);
   for (const name of [
-    "20260721143000_add_player_crafting_cancel_v1.sql",
-    "20260721143500_add_player_crafting_claim_v1.sql",
-    "20260721143700_add_player_equipment_slots_v1.sql",
-    "20260721144000_add_player_item_effects_v1.sql",
-    "20260721144500_add_player_equipment_salvage_v1.sql",
+    "20260721133000_add_player_crafting_cancel_v1.sql",
+    "20260721133500_add_player_crafting_claim_v1.sql",
+    "20260721133700_add_player_equipment_slots_v1.sql",
+    "20260721134000_add_player_item_effects_v1.sql",
+    "20260721134500_add_player_equipment_salvage_v1.sql",
   ]) assert.match(source(name), new RegExp(mutationGuard.replaceAll(".", "\\."), "i"));
-  assert.match(source("20260721142500_add_player_crafting_job_start_v1.sql"), /g\.lifecycle_state='active'/i);
+  assert.match(source("20260721132500_add_player_crafting_job_start_v1.sql"), /g\.lifecycle_state='active'/i);
 });
 
 test("committed terminal retries are resolved before lifecycle rejection", () => {
   const pairs = [
-    ["20260721143000_add_player_crafting_cancel_v1.sql", "if v_job.status='cancelled'"],
-    ["20260721143500_add_player_crafting_claim_v1.sql", "if v_job.status='claimed'"],
-    ["20260721143700_add_player_equipment_slots_v1.sql", "v_idempotency.status='COMPLETED'"],
-    ["20260721144000_add_player_item_effects_v1.sql", "return v_existing.response_body"],
-    ["20260721144500_add_player_equipment_salvage_v1.sql", "return jsonb_build_object('outcome','replayed'"],
+    ["20260721133000_add_player_crafting_cancel_v1.sql", "if v_job.status='cancelled'"],
+    ["20260721133500_add_player_crafting_claim_v1.sql", "if v_job.status='claimed'"],
+    ["20260721133700_add_player_equipment_slots_v1.sql", "v_idempotency.status='COMPLETED'"],
+    ["20260721134000_add_player_item_effects_v1.sql", "return v_existing.response_body"],
+    ["20260721134500_add_player_equipment_salvage_v1.sql", "return jsonb_build_object('outcome','replayed'"],
   ];
   for (const [name, replayToken] of pairs) {
     const value = source(name);
@@ -160,7 +168,7 @@ test("committed terminal retries are resolved before lifecycle rejection", () =>
 });
 
 test("equipment slot changes use concurrency-safe idempotency", () => {
-  const value = source("20260721143700_add_player_equipment_slots_v1.sql");
+  const value = source("20260721133700_add_player_equipment_slots_v1.sql");
   for (const token of [
     "mutation_idempotency_keys",
     "players.me.equipment.slot",
@@ -177,7 +185,7 @@ test("Crafting workflow is read-only and temporary transport is absent", async (
   assert.doesNotMatch(workflow, /pull_request_target|contents:\s*write|git\s+(push|commit|merge)|update-ref/i);
   const githubFiles = await walk(new URL("../.github/", import.meta.url));
   const prohibited = githubFiles.filter((path) =>
-    /crafting.*(payload|transport|materializ|reconstruct|snapshot)|(payload|transport|materializ|reconstruct|snapshot).*crafting/i.test(path)
+    /crafting.*(payload|transport|materializ|generator|reconstruct|snapshot|finaliz)|(payload|transport|materializ|generator|reconstruct|snapshot|finaliz).*crafting/i.test(path)
   );
   assert.deepEqual(prohibited, []);
 });
