@@ -22,7 +22,7 @@ Deno.test("Inventory dispatch seam preserves Inventory and recognizes every Craf
       kind: "crafting",
       route: {
         kind: "cancelJob",
-        jobPublicId: "cft_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        jobKey: "cft_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       },
     },
   );
