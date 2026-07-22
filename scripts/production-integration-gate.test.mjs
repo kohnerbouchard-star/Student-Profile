@@ -13,35 +13,51 @@ async function fixture() {
   return JSON.parse(await readFile(EVIDENCE_PATH, "utf8"));
 }
 
-test("post-World serial watch validates as blocked and production-safe", async () => {
+test("post-Business serial watch validates as blocked and production-safe", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
+
   assert.equal(result.executionState, "ACTIVE_SERIAL_RELEASE_WATCH");
-  assert.equal(result.repository.mainCommitAtAudit, "13a6829b1f658b49910a882fd66bb0fd61c571ff");
+  assert.equal(
+    result.repository.mainCommitAtAudit,
+    "2b073019ed36ca63cf9a9b3c7acd14569fe88116",
+  );
   assert.equal(result.repository.behindMain, 0);
   assert.equal(result.repository.permanentChangedFileCount, 6);
   assert.equal(result.integrationWatch.serialQueue[0].status, "MERGED");
-  assert.deepEqual(result.dependencyState.openCapabilityPullRequests, [299, 300, 249, 248, 261]);
+  assert.equal(result.integrationWatch.serialQueue[1].status, "MERGED");
+  assert.equal(
+    result.integrationWatch.serialQueue[1].mergeCommit,
+    "2b073019ed36ca63cf9a9b3c7acd14569fe88116",
+  );
+  assert.deepEqual(
+    result.dependencyState.openCapabilityPullRequests,
+    [300, 249, 248, 261],
+  );
   assert.equal(result.gate.productionDecision, "NO_GO");
   assert.equal(result.gate.productionModified, false);
 });
 
-test("migration drift records one staging-only alias and nine missing World migrations", async () => {
+test("migration drift records one staging-only alias and zero missing canonical migrations", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
-  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 85);
-  assert.equal(result.migrations.canonicalRepositoryIdentity.head, "20260721108000");
-  assert.equal(result.migrations.stagingLedger.count, 77);
+
+  assert.equal(result.migrations.canonicalRepositoryIdentity.count, 93);
+  assert.equal(result.migrations.canonicalRepositoryIdentity.head, "20260721122500");
+  assert.equal(result.migrations.stagingLedger.count, 94);
+  assert.equal(result.migrations.stagingLedger.head, "20260721122500");
   assert.equal(result.migrations.stagingLedger.stagingOnlyCount, 1);
-  assert.equal(result.migrations.stagingLedger.canonicalOnlyCount, 9);
-  assert.equal(result.migrations.stagingLedger.netCountDelta, -8);
+  assert.equal(result.migrations.stagingLedger.canonicalOnlyCount, 0);
+  assert.equal(result.migrations.stagingLedger.netCountDelta, 1);
+  assert.deepEqual(result.migrations.stagingLedger.missingCanonicalVersions, []);
   assert.equal(result.migrations.stagingLedger.matchesCanonicalRepository, false);
 });
 
 test("serial merge ledger must be a contiguous prefix", async () => {
   const evidence = await fixture();
-  evidence.integrationWatch.serialQueue[2].status = "MERGED";
-  evidence.integrationWatch.serialQueue[2].mergeCommit = "a".repeat(40);
+  evidence.integrationWatch.serialQueue[3].status = "MERGED";
+  evidence.integrationWatch.serialQueue[3].mergeCommit = "a".repeat(40);
+
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /serial merge ledger is not a contiguous prefix/,
@@ -50,8 +66,9 @@ test("serial merge ledger must be a contiguous prefix", async () => {
 
 test("serial queue order is immutable", async () => {
   const evidence = await fixture();
-  [evidence.integrationWatch.serialQueue[1], evidence.integrationWatch.serialQueue[2]] =
-    [evidence.integrationWatch.serialQueue[2], evidence.integrationWatch.serialQueue[1]];
+  [evidence.integrationWatch.serialQueue[2], evidence.integrationWatch.serialQueue[3]] =
+    [evidence.integrationWatch.serialQueue[3], evidence.integrationWatch.serialQueue[2]];
+
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /serial release queue order is invalid/,
@@ -61,6 +78,7 @@ test("serial queue order is immutable", async () => {
 test("open dependency ledger must match serial queue", async () => {
   const evidence = await fixture();
   evidence.dependencyState.openCapabilityPullRequests.pop();
+
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /open capability dependency ledger does not match serial queue/,
@@ -68,24 +86,25 @@ test("open dependency ledger must match serial queue", async () => {
 });
 
 test("two-way migration delta markers must be exact", async () => {
-  const evidence = await fixture();
-  evidence.migrations.stagingLedger.canonicalOnlyCount = 8;
+  const canonicalOnly = await fixture();
+  canonicalOnly.migrations.stagingLedger.canonicalOnlyCount = 1;
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(canonicalOnly),
     /canonicalOnlyCount is inaccurate|set-delta counts are inconsistent/,
   );
 
   const net = await fixture();
-  net.migrations.stagingLedger.netCountDelta = -7;
+  net.migrations.stagingLedger.netCountDelta = 2;
   assert.throws(
     () => validateProductionIntegrationEvidence(net),
-    /netCountDelta is inaccurate/,
+    /netCountDelta is inaccurate|set-delta counts are inconsistent/,
   );
 });
 
 test("required application Edge inventory is exact", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
+
   assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, [
     "admin-api",
     "classroom-api",
@@ -101,6 +120,7 @@ test("required application Edge inventory is exact", async () => {
 test("substituted Edge inventory is rejected", async () => {
   const evidence = await fixture();
   evidence.integrationWatch.requiredApplicationEdgeFunctions[0] = "different-api";
+
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /required application Edge Function inventory does not match repository source/,
@@ -126,6 +146,7 @@ test("pull-request deployment and production targeting remain prohibited", async
 test("obsolete retained release remains rejected", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
+
   assert.equal(result.immutableRelease.currentForCanonicalMain, false);
   assert.equal(result.immutableRelease.rollbackCompatibility.decision, "REJECTED");
   assert.notEqual(
@@ -163,6 +184,7 @@ test("evidence rejects browser key values and raw internal identifiers", async (
 test("staging and production identities must remain distinct", async () => {
   const evidence = await fixture();
   evidence.environment.staging.projectRef = evidence.environment.productionGuard.projectRef;
+
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
     /must differ/,
