@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria-secure-connected-acceptance-v1",
+  "policy": {
+    "schemaVersion": 1,
+    "contractType": "secure-connected-acceptance",
+    "platformJwtVerificationRequired": true,
+    "serverSideGetUserRequired": true,
+    "authorizationMetadataSource": "app_metadata",
+    "userMetadataAuthorizationAllowed": false,
+    "requiredOperatorRole": "staging_acceptance_operator",
+    "allowedReplayProtectionModes": [
+      "one-time-authorization",
+      "signed-request"
+    ],
+    "exactProjectRefBindingRequired": true,
+    "exactSourceShaBindingRequired": true,
+    "exactArtifactDigestBindingRequired": true,
+    "allowedMethods": [
+      "POST"
+    ],
+    "maximumPayloadBytes": 4096,
+    "idempotencyRequired": true,
+    "replayDenialRequired": true,
+    "sanitizedResponsesRequired": true,
+    "guaranteedCleanupRequired": true,
+    "postCleanupZeroResidueRequired": true,
+    "productionProjectDenied": true,
+    "temporaryArtifactUrlsAllowed": false
+  },
+  "referenceMechanism": {
+    "id": "reference-secure-connected-acceptance",
+    "deployment": {
+      "verifyJwt": true,
+      "projectRef": "eecvbssdvarfcykcfrny",
+      "productionProjectRef": "cgiukdjwicykrmtkhudh",
+      "environment": "staging"
+    },
+    "identity": {
+      "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifactDigest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "request": {
+      "allowedMethods": [
+        "POST"
+      ],
+      "maximumPayloadBytes": 4096,
+      "allowedContentTypes": [
+        "application/json"
+      ],
+      "exactProjectRefBinding": true,
+      "exactSourceShaBinding": true,
+      "exactArtifactDigestBinding": true,
+      "expectedProjectRef": "eecvbssdvarfcykcfrny",
+      "expectedSourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expectedArtifactDigest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "authentication": {
+      "serverSideGetUser": true,
+      "metadataSource": "app_metadata",
+      "userMetadataUsed": false,
+      "requiredRole": "staging_acceptance_operator",
+      "stagingOnly": true
+    },
+    "authorization": {
+      "mode": "one-time-authorization",
+      "atomicClaim": true,
+      "expiryRequired": true,
+      "idempotencyRequired": true,
+      "replayDenied": true,
+      "shaOnlyAuthorization": false,
+      "factors": [
+        "app-metadata-role",
+        "authenticated-user",
+        "one-time-authorization"
+      ]
+    },
+    "privilegedAccess": {
+      "usesServiceRole": true,
+      "afterCallerAuthorization": true,
+      "scopeBound": true
+    },
+    "response": {
+      "sanitized": true,
+      "rawIdentifiersAllowed": false,
+      "secretsAllowed": false,
+      "fields": [
+        "artifactDigest",
+        "cleanupVerified",
+        "evidenceId",
+        "ok",
+        "projectRef",
+        "replayProtected",
+        "sourceSha",
+        "status"
+      ]
+    },
+    "cleanup": {
+      "guaranteed": true,
+      "strategy": "finally",
+      "zeroResidueVerified": true,
+      "verificationScopes": [
+        "auth-users",
+        "database-rows",
+        "edge-functions",
+        "sessions",
+        "storage-objects"
+      ]
+    },
+    "productionProjectDenied": true,
+    "temporaryArtifactUrlsAllowed": false,
+    "sourceText": "request.method !== \"POST\"; admin.auth.getUser(jwt); user.app_metadata.acceptance_role;"
+  },
+  "liveAssessment": {
+    "capturedAt": "2026-07-22T07:26:23.672Z",
+    "functionSlug": "crafting-staging-acceptance-v1",
+    "version": 8,
+    "verifyJwt": true,
+    "sourceSha256": "d94ad5aa28bec6525c8b25a119d6e155ad86b488fa0fd674b04e1146029290f3",
+    "boundFeatureSourceSha": "239849ae91cfa2b5807ac8398ac17b0e5cf11182",
+    "observedControls": {
+      "serverSideGetUser": true,
+      "appMetadataAuthorization": true,
+      "oneTimeAuthorizationClaim": true,
+      "strictPostAndPayloadBounds": true,
+      "sanitizedAuthorizationResponse": true,
+      "temporaryArtifactUrlEmbedded": false
+    },
+    "remainingContractGaps": {
+      "generalArtifactDigestBinding": "NOT_PROVEN_AS_REUSABLE_FEATURE_CONTRACT",
+      "privilegedAcceptanceExecution": "NOT_STARTED_BY_CURRENT_V8_GATE",
+      "guaranteedCleanup": "NOT_EXPRESSED",
+      "postCleanupZeroResidue": "NOT_EXPRESSED"
+    },
+    "controllerDecision": "BLOCKED_FEATURE_OWNER_COMPLETION_REQUIRED"
+  }
+}
