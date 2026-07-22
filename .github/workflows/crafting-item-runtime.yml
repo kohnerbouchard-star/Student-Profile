@@ -150,6 +150,7 @@ jobs:
         shell: bash
         run: |
           set +e
+          mkdir -p player-terminal/test-results
           {
             source_commit="$(git -C seed-authority rev-parse HEAD)"
             test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
@@ -175,7 +176,7 @@ jobs:
               ? "Seed authority is activation-ready."
               : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
             NODE
-          } 2>&1 | tee "$RUNNER_TEMP/crafting-seed-build.log"
+          } 2>&1 | tee player-terminal/test-results/crafting-seed-build.log
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
           test "$status" -eq 0
@@ -219,10 +220,9 @@ jobs:
         with:
           name: crafting-diagnostics-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/crafting-seed-build.log
+            player-terminal/test-results
             /tmp/physical-economy-runtime-pack.json
             /tmp/physical-economy-balance-report.json
-            player-terminal/test-results
             player-terminal/playwright-report
           if-no-files-found: ignore
           retention-days: 14
