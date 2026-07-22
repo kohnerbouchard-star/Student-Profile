@@ -3,11 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const recovery = await readFile(new URL(
-  "../backend/supabase/migrations/20260721145500_add_admin_crafting_recovery_v1.sql",
+  "../backend/supabase/migrations/20260721135500_add_admin_crafting_recovery_v1.sql",
   import.meta.url,
 ), "utf8");
 const supply = await readFile(new URL(
-  "../backend/supabase/migrations/20260721145700_add_admin_crafting_supply_and_grants_v1.sql",
+  "../backend/supabase/migrations/20260721135700_add_admin_crafting_supply_and_grants_v1.sql",
   import.meta.url,
 ), "utf8");
 
