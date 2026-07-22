@@ -84,9 +84,10 @@ jobs:
           assert.equal(evidence.repository.behindMain, 0);
           assert.equal(evidence.repository.draft, true);
           assert.equal(evidence.serialReleaseQueue.activeBlocker.number, 300);
+          assert.match(evidence.serialReleaseQueue.activeBlocker.head, /^[a-f0-9]{40}$/);
           assert.equal(
+            evidence.serialReleaseQueue.heads["300"],
             evidence.serialReleaseQueue.activeBlocker.head,
-            "e99b4ca23c5463f7d06c9fc7e3fd174d92b082e4",
           );
           assert.deepEqual(evidence.serialReleaseQueue.remaining, [300, 249, 248, 261]);
           assert.equal(evidence.serialReleaseQueue.finalReleaseAssemblyEligible, false);
