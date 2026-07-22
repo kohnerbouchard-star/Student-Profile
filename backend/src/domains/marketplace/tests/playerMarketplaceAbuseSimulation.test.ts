@@ -220,7 +220,7 @@ function simulateReservationStarvation(input: {
   return { accepted, rejected, authoritativeReserved: reserved, available: input.owned - reserved };
 }
 
-function simulateSettlementAttempts(attempts: readonly Array<{ key: string; expectedVersion: number }>) {
+function simulateSettlementAttempts(attempts: ReadonlyArray<{ key: string; expectedVersion: number }>) {
   let version = 7;
   const receipts = new Map<string, number>();
   const applied: string[] = [];
