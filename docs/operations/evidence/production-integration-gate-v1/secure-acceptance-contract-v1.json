@@ -112,26 +112,36 @@
     "sourceText": "request.method !== \"POST\"; admin.auth.getUser(jwt); user.app_metadata.acceptance_role;"
   },
   "liveAssessment": {
-    "capturedAt": "2026-07-22T07:26:23.672Z",
+    "capturedAt": "2026-07-22T07:45:09.552Z",
     "functionSlug": "crafting-staging-acceptance-v1",
-    "version": 8,
+    "version": 13,
     "verifyJwt": true,
-    "sourceSha256": "d94ad5aa28bec6525c8b25a119d6e155ad86b488fa0fd674b04e1146029290f3",
+    "sourceSha256": "e36e48125c83f18c8cc938327cddba2372520c19c11692488bdb598533af18c5",
     "boundFeatureSourceSha": "239849ae91cfa2b5807ac8398ac17b0e5cf11182",
+    "currentFeatureSourceSha": "0107c3ceb1eb788d6ea6fd513d27c0ea22d0e7d4",
+    "boundWorkflowRunId": 29897687253,
     "observedControls": {
+      "platformJwtVerification": true,
       "serverSideGetUser": true,
       "appMetadataAuthorization": true,
+      "featureSpecificStagingOperatorRole": true,
       "oneTimeAuthorizationClaim": true,
       "strictPostAndPayloadBounds": true,
-      "sanitizedAuthorizationResponse": true,
-      "temporaryArtifactUrlEmbedded": false
+      "idempotencyAndReplayDenial": true,
+      "sanitizedEvidenceResponse": true,
+      "productionProjectDenial": true,
+      "privilegedExecutionAfterAuthorization": true,
+      "guaranteedCleanupAttempt": true,
+      "postCleanupZeroResidueVerification": true,
+      "temporarySignedArtifactUrlEmbedded": false
     },
     "remainingContractGaps": {
-      "generalArtifactDigestBinding": "NOT_PROVEN_AS_REUSABLE_FEATURE_CONTRACT",
-      "privilegedAcceptanceExecution": "NOT_STARTED_BY_CURRENT_V8_GATE",
-      "guaranteedCleanup": "NOT_EXPRESSED",
-      "postCleanupZeroResidue": "NOT_EXPRESSED"
+      "exactSourceShaBinding": "STALE_BOUND_TO_239849AE_LIVE_HEAD_0107C3CE",
+      "immutableExactHeadArtifactDigestBinding": "MISSING",
+      "operatorRolePortability": "FEATURE_SPECIFIC_ROLE_REQUIRES_MAPPING_TO_REPOSITORY_CONTRACT",
+      "executionEligibility": "DENIED_UNTIL_SOURCE_AND_ARTIFACT_IDENTITIES_ARE_CURRENT"
     },
-    "controllerDecision": "BLOCKED_FEATURE_OWNER_COMPLETION_REQUIRED"
+    "privilegedExecutionAuthorized": false,
+    "controllerDecision": "BLOCKED_STALE_IDENTITY_NO_GO"
   }
 }
