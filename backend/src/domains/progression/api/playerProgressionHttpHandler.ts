@@ -21,6 +21,7 @@ import {
   ProgressionError,
   type PlayerProgressionRoute,
 } from "../contracts/progressionContracts.ts";
+import { normalizePlayerProgressionReadModelV1 } from "./playerProgressionReadModel.ts";
 
 interface ProgressionRpcRow {
   readonly unlock_outcome?: unknown;
@@ -98,11 +99,11 @@ export async function handlePlayerProgressionRequest(
         p_player_id: scope.playerUuid,
       });
       if (response.error) throw mapRpcError(response.error.message);
-      if (!isRecord(response.data)) throw failed();
+      const progression = normalizePlayerProgressionReadModelV1(response.data);
       return privateResponse(200, {
         ok: true,
         generatedAt: now.toISOString(),
-        progression: response.data,
+        progression,
       });
     }
 
@@ -210,15 +211,17 @@ function normalizeCommand(
   if (!row) throw failed();
   const outcome = text(route.kind === "unlock" ? row.unlock_outcome : row.claim_outcome);
   const commandId = text(row.command_id);
-  if (!['applied', 'replayed'].includes(outcome) || !PROGRESSION_COMMAND_ID_PATTERN.test(commandId)) {
-    throw failed();
-  }
+  if (
+    !["applied", "replayed"].includes(outcome) ||
+    !PROGRESSION_COMMAND_ID_PATTERN.test(commandId)
+  ) throw failed();
   if (route.kind === "unlock") {
     const skillId = text(row.skill_id);
     const unlockId = text(row.unlock_id);
     const remainingSkillPoints = integer(row.remaining_skill_points);
     if (
-      skillId !== route.skillId || !PROGRESSION_SKILL_ID_PATTERN.test(skillId) ||
+      skillId !== route.skillId ||
+      !PROGRESSION_SKILL_ID_PATTERN.test(skillId) ||
       !/^pun_[0-9a-f]{32}$/.test(unlockId) ||
       remainingSkillPoints < 0 || remainingSkillPoints > 200
     ) throw failed();
@@ -237,7 +240,8 @@ function normalizeCommand(
   const rewardKind = text(row.reward_kind);
   const amount = integer(row.amount);
   if (
-    rewardId !== route.rewardId || !PROGRESSION_REWARD_ID_PATTERN.test(rewardId) ||
+    rewardId !== route.rewardId ||
+    !PROGRESSION_REWARD_ID_PATTERN.test(rewardId) ||
     !["skill_points", "reputation", "badge"].includes(rewardKind) ||
     amount < 0 || amount > 20
   ) throw failed();
@@ -276,7 +280,9 @@ function mapRpcError(message: string): ProgressionError {
     ["PROGRESSION_IDEMPOTENCY_CONFLICT", 409, "progression_idempotency_conflict", "This idempotency key was used for another command."],
   ];
   for (const [token, status, code, safeMessage] of mappings) {
-    if (upper.includes(token)) return new ProgressionError(code, safeMessage, status);
+    if (upper.includes(token)) {
+      return new ProgressionError(code, safeMessage, status);
+    }
   }
   if (upper.includes("PROGRESSION_") && upper.includes("INVALID")) {
     return new ProgressionError(
