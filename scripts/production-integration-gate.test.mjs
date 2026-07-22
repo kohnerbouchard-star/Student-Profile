@@ -14,7 +14,6 @@ const PREFLIGHT_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json";
 const PREPARATION_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
-const CRAFTING_HEAD = "e99b4ca23c5463f7d06c9fc7e3fd174d92b082e4";
 const EXPECTED_EDGES = [
   "admin-api",
   "classroom-api",
@@ -106,7 +105,9 @@ function assertReleasePreparation(evidence) {
 }
 
 test("post-Business serial watch is current, blocked, and production-safe", async () => {
-  const result = validateProductionIntegrationEvidence(await preflightFixture());
+  const preflight = await preflightFixture();
+  const preparation = await preparationFixture();
+  const result = validateProductionIntegrationEvidence(preflight);
   assert.equal(result.executionState, "ACTIVE_SERIAL_RELEASE_WATCH");
   assert.equal(
     result.repository.mainCommitAtAudit,
@@ -120,7 +121,15 @@ test("post-Business serial watch is current, blocked, and production-safe", asyn
     result.integrationWatch.serialQueue[1].mergeCommit,
     "2b073019ed36ca63cf9a9b3c7acd14569fe88116",
   );
-  assert.equal(result.integrationWatch.serialQueue[2].head, CRAFTING_HEAD);
+  assert.match(result.integrationWatch.serialQueue[2].head, /^[a-f0-9]{40}$/);
+  assert.equal(
+    result.integrationWatch.serialQueue[2].head,
+    preparation.serialReleaseQueue.activeBlocker.head,
+  );
+  assert.equal(
+    preparation.serialReleaseQueue.heads["300"],
+    preparation.serialReleaseQueue.activeBlocker.head,
+  );
   assert.deepEqual(result.dependencyState.openCapabilityPullRequests, [300, 249, 248, 261]);
   assert.equal(result.gate.productionDecision, "NO_GO");
   assert.equal(result.gate.productionModified, false);
