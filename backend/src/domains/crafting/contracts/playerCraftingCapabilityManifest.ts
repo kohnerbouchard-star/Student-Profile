@@ -46,10 +46,12 @@ const CRAFTING_ENDPOINTS = Object.freeze([
 export function addPlayerCraftingCapabilities(
   manifest: PlayerCapabilityManifest,
 ): PlayerCapabilityManifest {
-  const endpointKeys = new Set(manifest.endpoints.map((endpoint) => endpoint.key));
+  const endpointKeys = new Set<string>(
+    manifest.endpoints.map((endpoint) => endpoint.key),
+  );
   const endpoints = [
     ...manifest.endpoints,
-    ...CRAFTING_ENDPOINTS.filter((endpoint) => !endpointKeys.has(endpoint.key as never)),
+    ...CRAFTING_ENDPOINTS.filter((endpoint) => !endpointKeys.has(endpoint.key)),
   ];
 
   return Object.freeze({
