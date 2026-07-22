@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +7,11 @@ const SHA = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
 const REF = /^[a-z0-9]{20}$/;
 const VER = /^\d{14}$/;
+const SAFE_ID = /^[a-z0-9][a-z0-9._:-]{2,95}$/;
+const TABLE_NAME = /^[a-z][a-z0-9_]{0,62}$/;
+const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const PRODUCTION_PROJECT_REF = "cgiukdjwicykrmtkhudh";
+const STAGING_PROJECT_REF = "eecvbssdvarfcykcfrny";
 const QUEUE = [294, 299, 300, 249, 248, 261];
 const EDGES = [
   "admin-api",
@@ -72,6 +78,59 @@ const PROOF_CHECKPOINTS = [
   "project-identity",
   "release-identity",
 ];
+export const EXECUTABLE_OPERATIONS = [
+  "backup-manifest",
+  "backup-verify",
+  "cleanup-verify",
+  "load-plan",
+  "observability-contract",
+  "production-proof",
+  "query-plan-analyze",
+  "restore-verify",
+  "security-probes",
+];
+export const SECURITY_TOOL_PROBE_IDS = [
+  "access-code-leakage",
+  "expired-token",
+  "internal-error-leakage",
+  "missing-rate-limit-enforcement",
+  "proxy-cors-behavior",
+  "raw-uuid-leakage",
+  "replay-duplicate-requests",
+  "staff-scope-violation",
+  "unauthenticated-access",
+  "wrong-game-access",
+  "wrong-player-access",
+];
+const DASHBOARD_PANEL_IDS = [
+  "auth-failures",
+  "cleanup-residuals",
+  "database-connections",
+  "database-cpu",
+  "database-lock-wait",
+  "error-rate",
+  "latency-p50",
+  "latency-p95",
+  "latency-p99",
+  "queue-depth",
+  "rate-limit-denials",
+  "replay-conflicts",
+  "request-rate",
+];
+const ALERT_IDS = [
+  "auth-failure-burst",
+  "backup-restore-verification-failure",
+  "cleanup-failure",
+  "database-connection-saturation",
+  "database-cpu-saturation",
+  "error-rate-high",
+  "function-5xx-rate-high",
+  "latency-p95-high",
+  "partial-outage-recovery-slow",
+  "queue-depth-high",
+  "rate-limit-denial-burst",
+  "replay-conflict-burst",
+];
 const BAD = [
   /sb_secret_[\w-]+/,
   /sb_publishable_[\w-]+/,
@@ -108,9 +167,19 @@ const sameIdentity = (a, b) =>
   a.count === b.count &&
   a.head === b.head &&
   a.versionSetSha256 === b.versionSetSha256;
+const executionClassification = () => ({
+  prepared: true,
+  locallyValidated: true,
+  connectedExecuted: false,
+  productionExecuted: false,
+});
 
 function check(value, message, errors) {
   if (!value) errors.push(message);
+}
+
+function failIfErrors(errors) {
+  if (errors.length) throw new ProductionIntegrationGateError(errors);
 }
 
 function scanSensitive(value, pointer, errors) {
@@ -154,6 +223,573 @@ function validateIdentity(value, label, errors) {
   check(Number.isInteger(value.count) && value.count > 0, `${label} count is invalid`, errors);
   check(VER.test(value.head), `${label} head is invalid`, errors);
   check(SHA.test(value.versionSetSha256), `${label} digest is invalid`, errors);
+}
+
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (!isObject(value)) return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalValue(value[key])]));
+}
+
+function canonicalJson(value) {
+  return JSON.stringify(canonicalValue(value));
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function validateProjectRef(projectRef, label, errors) {
+  check(REF.test(projectRef ?? ""), `${label} project ref is invalid`, errors);
+}
+
+function validateRowCounts(rowCounts, label, errors) {
+  check(isObject(rowCounts), `${label} row-count contract is required`, errors);
+  if (!isObject(rowCounts)) return {};
+  const entries = Object.entries(rowCounts).sort(([a], [b]) => a.localeCompare(b));
+  check(entries.length > 0, `${label} row-count contract must not be empty`, errors);
+  const normalized = {};
+  for (const [table, count] of entries) {
+    check(TABLE_NAME.test(table), `${label} table name is invalid: ${table}`, errors);
+    check(Number.isInteger(count) && count >= 0, `${label} row count is invalid for ${table}`, errors);
+    normalized[table] = count;
+  }
+  return normalized;
+}
+
+function productionBackupAuthorized(input) {
+  const authorization = input?.productionAuthorization;
+  return (
+    isObject(authorization) &&
+    authorization.approved === true &&
+    authorization.action === "BACKUP_MANIFEST_ONLY" &&
+    authorization.projectRef === PRODUCTION_PROJECT_REF &&
+    SAFE_ID.test(authorization.approvalId ?? "") &&
+    Number.isFinite(Date.parse(authorization.approvedAt))
+  );
+}
+
+export function createEncryptedBackupManifest(input) {
+  const errors = [];
+  check(isObject(input), "backup input is required", errors);
+  if (!isObject(input)) throw new ProductionIntegrationGateError(errors);
+  validateProjectRef(input.projectRef, "backup source", errors);
+  check(["staging", "isolated-restore", "production"].includes(input.environment), "backup environment is invalid", errors);
+  const productionTarget = input.projectRef === PRODUCTION_PROJECT_REF || input.environment === "production";
+  check(!productionTarget || productionBackupAuthorized(input), "production backup requires separate explicit authorization", errors);
+  check(isObject(input.artifact), "backup artifact metadata is required", errors);
+  check(SHA.test(input.artifact?.sha256 ?? ""), "backup artifact digest is invalid", errors);
+  check(Number.isInteger(input.artifact?.sizeBytes) && input.artifact.sizeBytes > 0, "backup artifact size is invalid", errors);
+  check(isObject(input.encryption), "backup encryption metadata is required", errors);
+  check(input.encryption?.encrypted === true, "backup artifact must be encrypted", errors);
+  check(input.encryption?.algorithm === "AES-256-GCM", "backup encryption algorithm must be AES-256-GCM", errors);
+  check(input.encryption?.nonceBytes === 12, "backup encryption nonce must be 12 bytes", errors);
+  check(input.encryption?.tagBytes === 16, "backup authentication tag must be 16 bytes", errors);
+  check(["external-kms", "envelope-encryption"].includes(input.encryption?.keyManagement), "backup key-management profile is invalid", errors);
+  validateIdentity(input.migrationIdentity, "backup migration identity", errors);
+  const rowCounts = validateRowCounts(input.rowCountContracts, "backup", errors);
+  check(isObject(input.custody), "backup custody metadata is required", errors);
+  check(input.custody?.immutable === true, "backup custody must be immutable", errors);
+  check(input.custody?.offPlatform === true, "backup custody must be off-platform", errors);
+  check(SAFE_ID.test(input.custody?.reference ?? ""), "backup custody reference is invalid", errors);
+  failIfErrors(errors);
+
+  const manifest = {
+    schemaVersion: 1,
+    evidenceType: "encrypted-backup-manifest",
+    status: "LOCALLY_VALIDATED",
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    project: { ref: input.projectRef, environment: input.environment },
+    artifact: { sha256: input.artifact.sha256, sizeBytes: input.artifact.sizeBytes },
+    encryption: {
+      encrypted: true,
+      algorithm: "AES-256-GCM",
+      nonceBytes: 12,
+      tagBytes: 16,
+      keyManagement: input.encryption.keyManagement,
+    },
+    migrationIdentity: canonicalValue(input.migrationIdentity),
+    rowCountContracts: rowCounts,
+    custody: {
+      immutable: true,
+      offPlatform: true,
+      reference: input.custody.reference,
+    },
+    execution: {
+      ...executionClassification(),
+      backupExecuted: false,
+      destructiveActionExecuted: false,
+    },
+  };
+  return { ...manifest, manifestSha256: sha256(canonicalJson(manifest)) };
+}
+
+export async function createEncryptedBackupManifestFromFile(input) {
+  const artifactBytes = await readFile(path.resolve(input.artifactPath));
+  const artifactStat = await stat(path.resolve(input.artifactPath));
+  return createEncryptedBackupManifest({
+    ...input,
+    artifact: { sha256: sha256(artifactBytes), sizeBytes: artifactStat.size },
+    artifactPath: undefined,
+  });
+}
+
+export function verifyEncryptedBackupManifest(manifest, expectations = {}) {
+  const errors = [];
+  check(isObject(manifest), "backup manifest is required", errors);
+  if (!isObject(manifest)) throw new ProductionIntegrationGateError(errors);
+  check(manifest.schemaVersion === 1, "backup manifest schemaVersion is invalid", errors);
+  check(manifest.evidenceType === "encrypted-backup-manifest", "backup manifest evidenceType is invalid", errors);
+  check(SHA.test(manifest.manifestSha256 ?? ""), "backup manifest digest is invalid", errors);
+  const { manifestSha256, ...unsigned } = manifest;
+  check(sha256(canonicalJson(unsigned)) === manifestSha256, "backup manifest digest verification failed", errors);
+  check(manifest.encryption?.encrypted === true, "backup manifest does not describe encrypted material", errors);
+  check(manifest.encryption?.algorithm === "AES-256-GCM", "backup encryption metadata is invalid", errors);
+  check(manifest.encryption?.nonceBytes === 12 && manifest.encryption?.tagBytes === 16, "backup AEAD metadata is invalid", errors);
+  validateProjectRef(manifest.project?.ref, "backup manifest", errors);
+  validateIdentity(manifest.migrationIdentity, "backup manifest migration identity", errors);
+  validateRowCounts(manifest.rowCountContracts, "backup manifest", errors);
+  if (expectations.expectedProjectRef) check(manifest.project?.ref === expectations.expectedProjectRef, "backup project identity mismatch", errors);
+  if (expectations.expectedArtifactSha256) check(manifest.artifact?.sha256 === expectations.expectedArtifactSha256, "backup artifact digest mismatch", errors);
+  if (manifest.project?.ref === PRODUCTION_PROJECT_REF) {
+    check(productionBackupAuthorized(expectations), "production backup verification requires separate explicit authorization", errors);
+  }
+  failIfErrors(errors);
+  return {
+    schemaVersion: 1,
+    evidenceType: "backup-verification",
+    status: "PASS",
+    manifestSha256,
+    projectRef: manifest.project.ref,
+    artifactSha256: manifest.artifact.sha256,
+    encryptionVerified: true,
+    artifactDigestVerified: true,
+    projectIdentityVerified: true,
+    execution: executionClassification(),
+  };
+}
+
+export async function verifyEncryptedBackupManifestAgainstFile(input) {
+  const artifactBytes = await readFile(path.resolve(input.artifactPath));
+  return verifyEncryptedBackupManifest(input.manifest, {
+    ...input,
+    expectedArtifactSha256: sha256(artifactBytes),
+  });
+}
+
+export function verifyIsolatedRestore(input) {
+  const errors = [];
+  check(isObject(input), "restore verification input is required", errors);
+  if (!isObject(input)) throw new ProductionIntegrationGateError(errors);
+  const productionRef = input.productionProjectRef ?? PRODUCTION_PROJECT_REF;
+  const stagingRef = input.sharedStagingProjectRef ?? STAGING_PROJECT_REF;
+  for (const [label, value] of Object.entries({
+    source: input.sourceProjectRef,
+    target: input.targetProjectRef,
+    production: productionRef,
+    staging: stagingRef,
+  })) validateProjectRef(value, `restore ${label}`, errors);
+  check(input.targetProjectRef !== input.sourceProjectRef, "restore target must differ from source", errors);
+  check(input.targetProjectRef !== stagingRef, "restore target must not be shared staging", errors);
+  check(input.targetProjectRef !== productionRef, "restore target must not be production", errors);
+  check(input.syntheticOnly === true, "restore verification must be synthetic-only", errors);
+  check(input.destructiveRestoreExecuted === false, "destructive restore execution is not authorized", errors);
+  verifyEncryptedBackupManifest(input.manifest, { expectedProjectRef: input.sourceProjectRef });
+  validateIdentity(input.expectedMigrationIdentity, "expected restore migration identity", errors);
+  validateIdentity(input.actualMigrationIdentity, "actual restore migration identity", errors);
+  check(sameIdentity(input.expectedMigrationIdentity, input.actualMigrationIdentity), "restored schema identity mismatch", errors);
+  const expectedRows = validateRowCounts(input.expectedRowCounts, "expected restore", errors);
+  const actualRows = validateRowCounts(input.actualRowCounts, "actual restore", errors);
+  check(JSON.stringify(expectedRows) === JSON.stringify(actualRows), "restored row-count contract mismatch", errors);
+  failIfErrors(errors);
+  return {
+    schemaVersion: 1,
+    evidenceType: "isolated-restore-verification",
+    status: "PASS",
+    sourceProjectRef: input.sourceProjectRef,
+    targetProjectRef: input.targetProjectRef,
+    distinctTargetVerified: true,
+    schemaIdentityVerified: true,
+    rowCountContractsVerified: true,
+    destructiveRestoreExecuted: false,
+    execution: executionClassification(),
+  };
+}
+
+function loadScenario(players) {
+  if (players === 30) return { id: "expected-30", rampSeconds: 180, steadySeconds: 720, cooldownSeconds: 300 };
+  if (players === 40) return { id: "maximum-40", rampSeconds: 300, steadySeconds: 600, cooldownSeconds: 300 };
+  throw new ProductionIntegrationGateError(["load plan supports only 30 or 40 players"]);
+}
+
+function deterministicIdentityLabel(seed, index) {
+  return `syn-${String(index + 1).padStart(2, "0")}-${sha256(`${seed}:identity:${index}`).slice(0, 10)}`;
+}
+
+function deterministicIdempotencyKey(seed, label, operation) {
+  return `idem-${sha256(`${seed}:${label}:${operation}`).slice(0, 32)}`;
+}
+
+export function createDeterministicLoadPlan({ players, seed = "econovaria-operations-v1", maximumRequestsPerSecond = 25 } = {}) {
+  const scenario = loadScenario(players);
+  const errors = [];
+  check(typeof seed === "string" && seed.length >= 8 && seed.length <= 120, "load seed is invalid", errors);
+  check(Number.isInteger(maximumRequestsPerSecond) && maximumRequestsPerSecond > 0 && maximumRequestsPerSecond <= 25, "load RPS bound is invalid", errors);
+  failIfErrors(errors);
+  const labels = Array.from({ length: players }, (_, index) => deterministicIdentityLabel(seed, index));
+  const operationDefinitions = [
+    ["authenticated-read", "ramp"],
+    ["idempotent-write", "ramp"],
+    ["paused-game-denial", "steady"],
+    ["ended-game-denial", "steady"],
+    ["session-expiry-denial", "steady"],
+    ["replay-primary", "steady"],
+    ["replay-duplicate", "steady"],
+    ["partial-outage-fail-closed", "steady"],
+    ["cleanup-verification", "cooldown"],
+  ];
+  const phaseStart = {
+    ramp: 0,
+    steady: scenario.rampSeconds,
+    cooldown: scenario.rampSeconds + scenario.steadySeconds,
+  };
+  const phaseLength = {
+    ramp: scenario.rampSeconds,
+    steady: scenario.steadySeconds,
+    cooldown: scenario.cooldownSeconds,
+  };
+  const events = [];
+  labels.forEach((label, playerIndex) => {
+    const replayKey = deterministicIdempotencyKey(seed, label, "replay-primary");
+    operationDefinitions.forEach(([operation, phase], operationIndex) => {
+      const secondOffset = phaseStart[phase] + ((playerIndex * 17 + operationIndex * 13) % phaseLength[phase]);
+      events.push({
+        sequence: events.length + 1,
+        secondOffset,
+        phase,
+        identityLabel: label,
+        operation,
+        idempotencyKey:
+          operation === "replay-primary" || operation === "replay-duplicate"
+            ? replayKey
+            : deterministicIdempotencyKey(seed, label, operation),
+        expectedBehavior:
+          operation.includes("denial") || operation.includes("fail-closed")
+            ? "DENY_OR_FAIL_CLOSED"
+            : operation === "replay-duplicate"
+              ? "NO_SECOND_MUTATION"
+              : "SUCCESS",
+      });
+    });
+  });
+  const plan = {
+    schemaVersion: 1,
+    evidenceType: "deterministic-load-plan",
+    status: "LOCALLY_VALIDATED",
+    scenario,
+    maximumRequestsPerSecond,
+    maximumDurationSeconds: 1200,
+    identities: labels,
+    events: events.sort((a, b) => a.secondOffset - b.secondOffset || a.sequence - b.sequence),
+    cleanupTag: `ops-${sha256(seed).slice(0, 12)}`,
+    execution: {
+      ...executionClassification(),
+      dryRunOnly: true,
+      requestsSent: 0,
+      cleanupAttempted: false,
+    },
+  };
+  validateDeterministicLoadPlan(plan);
+  return plan;
+}
+
+export function validateDeterministicLoadPlan(plan) {
+  const errors = [];
+  check(isObject(plan), "load plan is required", errors);
+  if (!isObject(plan)) throw new ProductionIntegrationGateError(errors);
+  const players = plan.scenario?.id === "expected-30" ? 30 : plan.scenario?.id === "maximum-40" ? 40 : 0;
+  check(players > 0, "load plan scenario is invalid", errors);
+  check(plan.identities?.length === players, "load plan identity count is invalid", errors);
+  check(new Set(plan.identities ?? []).size === players, "load plan identities must be unique", errors);
+  check(plan.maximumRequestsPerSecond <= 25, "load plan exceeds the 25 RPS bound", errors);
+  const duration = (plan.scenario?.rampSeconds ?? 0) + (plan.scenario?.steadySeconds ?? 0) + (plan.scenario?.cooldownSeconds ?? 0);
+  check(duration <= 1200, "load plan exceeds the 20-minute duration bound", errors);
+  check(Array.isArray(plan.events) && plan.events.length === players * 9, "load plan event count is invalid", errors);
+  const perSecond = new Map();
+  const idempotency = new Set();
+  const replayByIdentity = new Map();
+  for (const event of plan.events ?? []) {
+    check(plan.identities.includes(event.identityLabel), "load event references an unknown identity", errors);
+    check(Number.isInteger(event.secondOffset) && event.secondOffset >= 0 && event.secondOffset < duration, "load event schedule is invalid", errors);
+    perSecond.set(event.secondOffset, (perSecond.get(event.secondOffset) ?? 0) + 1);
+    if (event.operation === "replay-primary" || event.operation === "replay-duplicate") {
+      const entries = replayByIdentity.get(event.identityLabel) ?? [];
+      entries.push(event.idempotencyKey);
+      replayByIdentity.set(event.identityLabel, entries);
+    } else {
+      check(!idempotency.has(event.idempotencyKey), "non-replay idempotency key is duplicated", errors);
+      idempotency.add(event.idempotencyKey);
+    }
+  }
+  check([...perSecond.values()].every((count) => count <= plan.maximumRequestsPerSecond), "load plan exceeds its per-second request bound", errors);
+  check([...replayByIdentity.values()].every((keys) => keys.length === 2 && keys[0] === keys[1]), "replay pair idempotency keys are inconsistent", errors);
+  check(plan.execution?.dryRunOnly === true && plan.execution?.requestsSent === 0, "load plan must remain a zero-request dry run", errors);
+  failIfErrors(errors);
+  return plan;
+}
+
+export function runLoadPlanDryRun(plan) {
+  validateDeterministicLoadPlan(plan);
+  return {
+    schemaVersion: 1,
+    evidenceType: "load-plan-dry-run",
+    status: "PASS",
+    scenarioId: plan.scenario.id,
+    playerCount: plan.identities.length,
+    eventCount: plan.events.length,
+    planSha256: sha256(canonicalJson(plan)),
+    requestsSent: 0,
+    execution: executionClassification(),
+  };
+}
+
+function bodyText(value) {
+  if (Array.isArray(value)) return value.join("\n");
+  return typeof value === "string" ? value : "";
+}
+
+export function evaluateSecurityPrivacyProbes(input) {
+  const errors = [];
+  check(isObject(input), "security probe input is required", errors);
+  if (!isObject(input)) throw new ProductionIntegrationGateError(errors);
+  const statuses = input.statuses ?? {};
+  const bodies = bodyText(input.responseBodies);
+  const results = {
+    "unauthenticated-access": [401, 403].includes(statuses.unauthenticated),
+    "wrong-game-access": [403, 404].includes(statuses.wrongGame),
+    "wrong-player-access": [403, 404].includes(statuses.wrongPlayer),
+    "staff-scope-violation": [403, 404].includes(statuses.staffScopeViolation),
+    "expired-token": statuses.expiredToken === 401,
+    "missing-rate-limit-enforcement": Array.isArray(statuses.rateLimitSequence) && statuses.rateLimitSequence.includes(429),
+    "raw-uuid-leakage": !UUID.test(bodies),
+    "access-code-leakage": !/(access[-_ ]?code|player[-_ ]?pin)\s*[:=]/i.test(bodies),
+    "internal-error-leakage": !/(node_modules|stack trace|postgres(?:ql)? error|at\s+[\w$.]+\s*\(|file:\/\/)/i.test(bodies),
+    "proxy-cors-behavior":
+      input.proxyCors?.corsOrigin === input.proxyCors?.expectedCorsOrigin &&
+      input.proxyCors?.untrustedForwardedAccepted === false &&
+      input.proxyCors?.wildcardCredentialsAllowed === false,
+    "replay-duplicate-requests":
+      input.replay?.mutationCount === 1 &&
+      [200, 201, 409, 422].includes(input.replay?.duplicateStatus) &&
+      input.replay?.secondMutationObserved === false,
+  };
+  UUID.lastIndex = 0;
+  const probeResults = SECURITY_TOOL_PROBE_IDS.map((id) => ({ id, passed: results[id] === true }));
+  check(probeResults.every(({ passed }) => passed), `security/privacy probes failed: ${probeResults.filter(({ passed }) => !passed).map(({ id }) => id).join(", ")}`, errors);
+  failIfErrors(errors);
+  return {
+    schemaVersion: 1,
+    evidenceType: "security-privacy-probe-report",
+    status: "PASS",
+    probes: probeResults,
+    responseBodySha256: sha256(bodies),
+    rawBodiesRetained: false,
+    execution: executionClassification(),
+  };
+}
+
+export function createObservabilityContract() {
+  const panels = DASHBOARD_PANEL_IDS.map((id) => ({ id, required: true }));
+  const alerts = [
+    { id: "auth-failure-burst", metric: "auth_failures_5m", warning: 20, critical: 100 },
+    { id: "backup-restore-verification-failure", metric: "backup_restore_verification_failures", warning: 1, critical: 1 },
+    { id: "cleanup-failure", metric: "cleanup_residual_rows", warning: 1, critical: 1 },
+    { id: "database-connection-saturation", metric: "database_connection_utilization_ratio", warning: 0.7, critical: 0.9 },
+    { id: "database-cpu-saturation", metric: "database_cpu_ratio", warning: 0.7, critical: 0.85 },
+    { id: "error-rate-high", metric: "request_error_ratio_5m", warning: 0.02, critical: 0.05 },
+    { id: "function-5xx-rate-high", metric: "function_5xx_ratio_5m", warning: 0.01, critical: 0.03 },
+    { id: "latency-p95-high", metric: "request_latency_p95_ms", warning: 750, critical: 1500 },
+    { id: "partial-outage-recovery-slow", metric: "partial_outage_recovery_seconds", warning: 120, critical: 300 },
+    { id: "queue-depth-high", metric: "queue_depth", warning: 100, critical: 500 },
+    { id: "rate-limit-denial-burst", metric: "rate_limit_denials_5m", warning: 50, critical: 200 },
+    { id: "replay-conflict-burst", metric: "replay_conflicts_5m", warning: 10, critical: 50 },
+  ];
+  const contract = {
+    schemaVersion: 1,
+    evidenceType: "observability-contract",
+    status: "LOCALLY_VALIDATED",
+    panels,
+    alerts,
+    destinationsConfigured: false,
+    activated: false,
+    execution: executionClassification(),
+  };
+  validateObservabilityContract(contract);
+  return contract;
+}
+
+export function validateObservabilityContract(contract) {
+  const errors = [];
+  check(isObject(contract), "observability contract is required", errors);
+  if (!isObject(contract)) throw new ProductionIntegrationGateError(errors);
+  exactStrings((contract.panels ?? []).map(({ id }) => id).sort(), DASHBOARD_PANEL_IDS, "observability panel ids", errors);
+  exactStrings((contract.alerts ?? []).map(({ id }) => id).sort(), ALERT_IDS, "observability alert ids", errors);
+  for (const alert of contract.alerts ?? []) {
+    check(typeof alert.metric === "string" && alert.metric.length > 0, `alert metric is missing for ${alert.id}`, errors);
+    check(Number.isFinite(alert.warning) && Number.isFinite(alert.critical), `alert threshold is invalid for ${alert.id}`, errors);
+    check(alert.warning <= alert.critical, `alert warning threshold exceeds critical for ${alert.id}`, errors);
+  }
+  check(contract.destinationsConfigured === false, "observability destinations must remain unconfigured during local validation", errors);
+  check(contract.activated === false, "observability must not be activated during local validation", errors);
+  failIfErrors(errors);
+  return contract;
+}
+
+function redactPlanString(value) {
+  return value
+    .replace(UUID, "<uuid-redacted>")
+    .replace(/'([^']|'')*'/g, "'<literal-redacted>'")
+    .replace(/\b\d+(?:\.\d+)?\b/g, "<number-redacted>");
+}
+
+function redactPlan(value) {
+  if (Array.isArray(value)) return value.map(redactPlan);
+  if (!isObject(value)) return typeof value === "string" ? redactPlanString(value) : value;
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, redactPlan(entry)]));
+}
+
+function planRoot(value) {
+  if (Array.isArray(value)) return value[0]?.Plan ?? value[0]?.plan ?? value[0] ?? null;
+  return value?.Plan ?? value?.plan ?? value ?? null;
+}
+
+function flattenPlan(root) {
+  const nodes = [];
+  const visit = (node) => {
+    if (!isObject(node)) return;
+    nodes.push(node);
+    for (const child of node.Plans ?? node.plans ?? []) visit(child);
+  };
+  visit(root);
+  return nodes;
+}
+
+function queryMetrics(plan) {
+  const root = planRoot(plan);
+  const nodes = flattenPlan(root);
+  return {
+    actualTotalTimeMs: Number(root?.["Actual Total Time"] ?? root?.actualTotalTime ?? 0),
+    totalCost: Number(root?.["Total Cost"] ?? root?.totalCost ?? 0),
+    sharedReadBlocks: nodes.reduce((sum, node) => sum + Number(node["Shared Read Blocks"] ?? node.sharedReadBlocks ?? 0), 0),
+    sequentialScans: nodes
+      .filter((node) => (node["Node Type"] ?? node.nodeType) === "Seq Scan")
+      .map((node) => ({ relation: node["Relation Name"] ?? node.relationName ?? "unknown", planRows: Number(node["Plan Rows"] ?? node.planRows ?? 0) })),
+    indexScanCount: nodes.filter((node) => /Index.*Scan/.test(node["Node Type"] ?? node.nodeType ?? "")).length,
+  };
+}
+
+export function analyzeQueryPlans(input) {
+  const errors = [];
+  check(isObject(input), "query-plan input is required", errors);
+  if (!isObject(input)) throw new ProductionIntegrationGateError(errors);
+  check(Array.isArray(input.queries) && input.queries.length > 0, "critical query inventory is required", errors);
+  const thresholds = {
+    maximumActualTotalTimeMs: input.thresholds?.maximumActualTotalTimeMs ?? 500,
+    maximumTotalCost: input.thresholds?.maximumTotalCost ?? 100000,
+    maximumSharedReadBlocks: input.thresholds?.maximumSharedReadBlocks ?? 50000,
+    sequentialScanRowThreshold: input.thresholds?.sequentialScanRowThreshold ?? 1000,
+    regressionRatio: input.thresholds?.regressionRatio ?? 1.5,
+  };
+  check(thresholds.regressionRatio >= 1, "query-plan regression ratio is invalid", errors);
+  failIfErrors(errors);
+  const reports = [];
+  for (const query of input.queries) {
+    const queryErrors = [];
+    check(SAFE_ID.test(query.id ?? ""), "critical query id is invalid", queryErrors);
+    check(query.critical === true, `query ${query.id} must be marked critical`, queryErrors);
+    const current = queryMetrics(query.plan);
+    const baseline = query.baselinePlan ? queryMetrics(query.baselinePlan) : null;
+    const findings = [];
+    if (current.actualTotalTimeMs > thresholds.maximumActualTotalTimeMs) findings.push("ACTUAL_TIME_THRESHOLD_EXCEEDED");
+    if (current.totalCost > thresholds.maximumTotalCost) findings.push("TOTAL_COST_THRESHOLD_EXCEEDED");
+    if (current.sharedReadBlocks > thresholds.maximumSharedReadBlocks) findings.push("SHARED_READ_BLOCK_THRESHOLD_EXCEEDED");
+    if (current.sequentialScans.some(({ planRows }) => planRows > thresholds.sequentialScanRowThreshold)) findings.push("SEQUENTIAL_SCAN_REGRESSION");
+    if (baseline) {
+      if (baseline.actualTotalTimeMs > 0 && current.actualTotalTimeMs / baseline.actualTotalTimeMs > thresholds.regressionRatio) findings.push("LATENCY_REGRESSION");
+      if (baseline.totalCost > 0 && current.totalCost / baseline.totalCost > thresholds.regressionRatio) findings.push("COST_REGRESSION");
+      if (baseline.sequentialScans.length === 0 && current.sequentialScans.length > 0) findings.push("NEW_SEQUENTIAL_SCAN");
+      if (baseline.indexScanCount > 0 && current.indexScanCount === 0) findings.push("INDEX_SCAN_REMOVED");
+    }
+    failIfErrors(queryErrors);
+    reports.push({
+      id: query.id,
+      status: findings.length === 0 ? "PASS" : "FAIL",
+      findings: [...new Set(findings)].sort(),
+      metrics: current,
+      redactedPlan: redactPlan(query.plan),
+      rawPlanRetained: false,
+    });
+  }
+  return {
+    schemaVersion: 1,
+    evidenceType: "query-plan-analysis",
+    status: reports.every(({ status }) => status === "PASS") ? "PASS" : "FAIL",
+    thresholds,
+    queries: reports,
+    execution: executionClassification(),
+  };
+}
+
+export function verifyTagScopedCleanup(input) {
+  const errors = [];
+  check(isObject(input), "cleanup verification input is required", errors);
+  if (!isObject(input)) throw new ProductionIntegrationGateError(errors);
+  check(SAFE_ID.test(input.tag ?? ""), "cleanup tag is invalid", errors);
+  const attempted = validateRowCounts(input.attemptedDeletionCounts, "attempted cleanup", errors);
+  const residual = validateRowCounts(input.residualCounts, "residual cleanup", errors);
+  check(Object.values(residual).every((count) => count === 0), "cleanup residual rows remain", errors);
+  check(input.activeSyntheticSessions === 0, "active synthetic sessions remain after cleanup", errors);
+  check(Array.isArray(input.temporaryFunctions) && input.temporaryFunctions.length === 0, "temporary functions remain after cleanup", errors);
+  check(input.productionTarget === false, "cleanup must not target production", errors);
+  failIfErrors(errors);
+  return {
+    schemaVersion: 1,
+    evidenceType: "cleanup-verification",
+    status: "PASS",
+    tag: input.tag,
+    attemptedDeletionCounts: attempted,
+    residualCounts: residual,
+    activeSyntheticSessions: 0,
+    temporaryFunctions: [],
+    zeroCountVerified: true,
+    execution: executionClassification(),
+  };
+}
+
+export function verifyProductionNonModification(input) {
+  const errors = [];
+  check(isObject(input?.before) && isObject(input?.after), "production pre/post snapshots are required", errors);
+  const checkpoints = ["projectRef", "migrationHead", "frontendIdentity", "releaseIdentity"];
+  for (const checkpoint of checkpoints) {
+    check(input?.before?.[checkpoint] === input?.after?.[checkpoint], `production ${checkpoint} changed`, errors);
+  }
+  check(
+    JSON.stringify([...(input?.before?.functionInventory ?? [])].sort()) === JSON.stringify([...(input?.after?.functionInventory ?? [])].sort()),
+    "production function inventory changed",
+    errors,
+  );
+  check(input?.auditWindow?.writeOperationCount === 0, "production audit window contains write operations", errors);
+  check(Number.isFinite(Date.parse(input?.auditWindow?.startedAt)) && Number.isFinite(Date.parse(input?.auditWindow?.endedAt)), "production audit window is invalid", errors);
+  failIfErrors(errors);
+  return {
+    schemaVersion: 1,
+    evidenceType: "production-non-modification-proof",
+    status: "PASS",
+    requiredCheckpoints: PROOF_CHECKPOINTS,
+    prePostIdentityEqual: true,
+    writeOperationCount: 0,
+    execution: executionClassification(),
+  };
 }
 
 function validateQueue(watch, errors) {
@@ -383,7 +1019,7 @@ export function validateOperationsPreparation(preparation, { operationsEvidenceC
     check(proof.executed === !blocked, "production proof execution marker is inconsistent", errors);
   }
 
-  if (errors.length) throw new ProductionIntegrationGateError(errors);
+  failIfErrors(errors);
   return preparation;
 }
 
@@ -601,8 +1237,35 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     }
   }
 
-  if (errors.length) throw new ProductionIntegrationGateError(errors);
+  failIfErrors(errors);
   return evidence;
+}
+
+async function runExecutableOperation(operation, input) {
+  switch (operation) {
+    case "backup-manifest":
+      return input.artifactPath ? createEncryptedBackupManifestFromFile(input) : createEncryptedBackupManifest(input);
+    case "backup-verify":
+      return input.artifactPath ? verifyEncryptedBackupManifestAgainstFile(input) : verifyEncryptedBackupManifest(input.manifest, input);
+    case "restore-verify":
+      return verifyIsolatedRestore(input);
+    case "load-plan": {
+      const plan = createDeterministicLoadPlan(input);
+      return { plan, dryRun: runLoadPlanDryRun(plan) };
+    }
+    case "security-probes":
+      return evaluateSecurityPrivacyProbes(input);
+    case "observability-contract":
+      return createObservabilityContract();
+    case "query-plan-analyze":
+      return analyzeQueryPlans(input);
+    case "cleanup-verify":
+      return verifyTagScopedCleanup(input);
+    case "production-proof":
+      return verifyProductionNonModification(input);
+    default:
+      throw new Error(`Unknown executable operation: ${operation}`);
+  }
 }
 
 function parseArgs(args) {
@@ -610,14 +1273,32 @@ function parseArgs(args) {
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--evidence") options.evidencePath = args[++index];
     else if (args[index] === "--require-ready") options.requireReady = true;
+    else if (args[index] === "--operation") options.operation = args[++index];
+    else if (args[index] === "--input") options.inputPath = args[++index];
+    else if (args[index] === "--output") options.outputPath = args[++index];
     else throw new Error(`Unknown argument: ${args[index]}`);
   }
-  if (!options.evidencePath) throw new Error("--evidence is required");
+  if (options.operation) {
+    if (!EXECUTABLE_OPERATIONS.includes(options.operation)) throw new Error(`Unsupported operation: ${options.operation}`);
+    if (!options.inputPath) throw new Error("--input is required for executable operations");
+    if (options.evidencePath || options.requireReady) throw new Error("executable operations cannot be combined with evidence gate arguments");
+  } else if (!options.evidencePath) {
+    throw new Error("--evidence is required when --operation is not supplied");
+  }
   return options;
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.operation) {
+    const input = JSON.parse(await readFile(path.resolve(options.inputPath), "utf8"));
+    const result = await runExecutableOperation(options.operation, input);
+    const output = `${JSON.stringify(result, null, 2)}\n`;
+    if (options.outputPath) await writeFile(path.resolve(options.outputPath), output, "utf8");
+    else process.stdout.write(output);
+    return;
+  }
+
   const evidence = JSON.parse(await readFile(path.resolve(options.evidencePath), "utf8"));
   validateProductionIntegrationEvidence(evidence, { requireReady: options.requireReady });
   console.log(
@@ -637,6 +1318,7 @@ async function main() {
         preparationCategoryCount: evidence.operationsPreparation?.validatedCategories?.length ?? 0,
         probeCount: evidence.operationsPreparation?.probes?.items?.length ?? 0,
         templateCount: evidence.operationsPreparation?.evidenceTemplates?.templates?.length ?? 0,
+        executableOperationCount: EXECUTABLE_OPERATIONS.length,
         gateStatus: evidence.gate.status,
         productionDecision: evidence.gate.productionDecision,
       },
