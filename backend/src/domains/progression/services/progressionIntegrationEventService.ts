@@ -6,10 +6,14 @@ import {
   PROGRESSION_IDEMPOTENCY_PATTERN,
   PROGRESSION_SOURCE_DOMAINS,
   PROGRESSION_SOURCE_PUBLIC_ID_PATTERN,
+  PROGRESSION_UUID_PATTERN,
   ProgressionError,
   type ProgressionEventResultV1,
   type TrustedProgressionEventV1,
 } from "../contracts/progressionContracts.ts";
+
+const MAX_EVENT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 interface ProgressionEventRpcRow {
   readonly event_outcome?: unknown;
@@ -20,11 +24,16 @@ interface ProgressionEventRpcRow {
   readonly achievements_completed?: unknown;
 }
 
+export interface ProgressionEventValidationOptions {
+  readonly now?: Date;
+}
+
 export async function recordTrustedProgressionEventV1(
   client: EdgeSupabaseClient,
   event: TrustedProgressionEventV1,
+  options: ProgressionEventValidationOptions = {},
 ): Promise<ProgressionEventResultV1> {
-  validateEvent(event);
+  validateEvent(event, options.now ?? new Date());
   const response = await client.rpc<readonly ProgressionEventRpcRow[]>(
     "record_progression_integration_event_v1",
     {
@@ -64,15 +73,21 @@ export async function recordTrustedProgressionEventV1(
   };
 }
 
-function validateEvent(event: TrustedProgressionEventV1): void {
+function validateEvent(event: TrustedProgressionEventV1, now: Date): void {
+  const occurredAt = Date.parse(event.occurredAt);
+  const nowMs = now.getTime();
   if (
-    !event.gameId || !event.playerUuid ||
+    !PROGRESSION_UUID_PATTERN.test(event.gameId) ||
+    !PROGRESSION_UUID_PATTERN.test(event.playerUuid) ||
     !PROGRESSION_SOURCE_DOMAINS.includes(event.sourceDomain) ||
     !PROGRESSION_EVENT_TYPES.includes(event.eventType) ||
     PROGRESSION_EVENT_SOURCE_DOMAIN[event.eventType] !== event.sourceDomain ||
     !PROGRESSION_SOURCE_PUBLIC_ID_PATTERN.test(event.sourcePublicId) ||
     !PROGRESSION_IDEMPOTENCY_PATTERN.test(event.idempotencyKey) ||
-    !Number.isFinite(Date.parse(event.occurredAt))
+    !Number.isFinite(occurredAt) ||
+    !Number.isFinite(nowMs) ||
+    occurredAt < nowMs - MAX_EVENT_AGE_MS ||
+    occurredAt > nowMs + FUTURE_TOLERANCE_MS
   ) {
     throw new ProgressionError(
       "progression_event_invalid",
@@ -93,40 +108,21 @@ function mapRpcError(message: string): ProgressionError {
       true,
     );
   }
-  if (upper.includes("PROGRESSION_IDEMPOTENCY_CONFLICT")) {
-    return new ProgressionError(
-      "progression_idempotency_conflict",
-      "This idempotency key was used for another Progression event.",
-      409,
-    );
-  }
-  if (upper.includes("PROGRESSION_SOURCE_EVENT_CONFLICT")) {
-    return new ProgressionError(
-      "progression_source_event_conflict",
-      "This source event was previously recorded with different immutable details.",
-      409,
-    );
-  }
-  if (upper.includes("PROGRESSION_EVENT_SOURCE_MISMATCH")) {
-    return new ProgressionError(
-      "progression_event_invalid",
-      "Progression event source and type do not match.",
-      400,
-    );
-  }
-  if (upper.includes("PROGRESSION_EVENT_TYPE_UNSUPPORTED")) {
-    return new ProgressionError(
-      "progression_event_type_unsupported",
-      "Progression event type is not registered.",
-      400,
-    );
-  }
-  if (upper.includes("PROGRESSION_PLAYER_NOT_FOUND")) {
-    return new ProgressionError(
-      "progression_player_not_found",
-      "Progression Player was not found.",
-      404,
-    );
+  const mappings: readonly [string, string, string, number, boolean][] = [
+    ["PROGRESSION_IDEMPOTENCY_CONFLICT", "progression_idempotency_conflict", "This idempotency key was used for another Progression event.", 409, false],
+    ["PROGRESSION_SOURCE_EVENT_CONFLICT", "progression_source_event_conflict", "This source event was previously recorded with different immutable details.", 409, false],
+    ["PROGRESSION_EVENT_SOURCE_MISMATCH", "progression_event_invalid", "Progression event source and type do not match.", 400, false],
+    ["PROGRESSION_EVENT_TYPE_UNSUPPORTED", "progression_event_type_unsupported", "Progression event type is not registered.", 400, false],
+    ["PROGRESSION_PLAYER_NOT_FOUND", "progression_player_not_found", "Progression Player was not found.", 404, false],
+    ["GAME_SESSION_DISABLED", "progression_game_paused", "Progression awards are paused for this game.", 409, true],
+    ["GAME_SESSION_ARCHIVED", "progression_game_ended", "Progression awards are closed because this game has ended.", 409, false],
+    ["GAME_SESSION_NOT_ACTIVE", "progression_game_unavailable", "Progression awards are unavailable for this game.", 409, false],
+    ["GAME_SESSION_NOT_FOUND", "progression_game_unavailable", "Progression awards are unavailable for this game.", 409, false],
+  ];
+  for (const [token, code, safeMessage, status, retryable] of mappings) {
+    if (upper.includes(token)) {
+      return new ProgressionError(code, safeMessage, status, retryable);
+    }
   }
   if (upper.includes("PROGRESSION_EVENT_INVALID")) {
     return new ProgressionError(
