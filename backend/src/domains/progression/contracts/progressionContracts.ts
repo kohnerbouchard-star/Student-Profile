@@ -35,6 +35,59 @@ export const PROGRESSION_EVENT_TYPES = [
 export type ProgressionSourceDomain = typeof PROGRESSION_SOURCE_DOMAINS[number];
 export type ProgressionEventType = typeof PROGRESSION_EVENT_TYPES[number];
 
+export const PROGRESSION_EVENT_SOURCE_DOMAIN = Object.freeze({
+  "contract.completed": "contracts",
+  "business.operation.completed": "business",
+  "crafting.recipe.completed": "crafting",
+  "market.order.settled": "market",
+  "story.chapter.completed": "story",
+  "relationship.interaction.positive": "relationship",
+  "relationship.interaction.negative": "relationship",
+  "country.service.completed": "country",
+  "world.travel.completed": "world",
+  "world.arrival.completed": "world",
+  "messaging.contribution.approved": "messaging",
+} as const satisfies Readonly<Record<ProgressionEventType, ProgressionSourceDomain>>);
+
+export interface ProgressionIntegrationCompatibilityFixtureV1 {
+  readonly sourceDomain: ProgressionSourceDomain;
+  readonly eventType: ProgressionEventType;
+  readonly sourcePublicId: string;
+  readonly idempotencyKey: string;
+  readonly occurredAt: string;
+}
+
+export const PROGRESSION_PREDECESSOR_EVENT_FIXTURES_V1 = Object.freeze([
+  {
+    sourceDomain: "business",
+    eventType: "business.operation.completed",
+    sourcePublicId: "business_operation_completion_fixture_001",
+    idempotencyKey: "business.operation.completed:fixture:001",
+    occurredAt: "2026-07-21T01:00:00.000Z",
+  },
+  {
+    sourceDomain: "crafting",
+    eventType: "crafting.recipe.completed",
+    sourcePublicId: "crafting_recipe_completion_fixture_001",
+    idempotencyKey: "crafting.recipe.completed:fixture:001",
+    occurredAt: "2026-07-21T02:00:00.000Z",
+  },
+  {
+    sourceDomain: "market",
+    eventType: "market.order.settled",
+    sourcePublicId: "market_order_settlement_fixture_001",
+    idempotencyKey: "market.order.settled:fixture:001",
+    occurredAt: "2026-07-21T03:00:00.000Z",
+  },
+  {
+    sourceDomain: "story",
+    eventType: "story.chapter.completed",
+    sourcePublicId: "story_chapter_completion_fixture_001",
+    idempotencyKey: "story.chapter.completed:fixture:001",
+    occurredAt: "2026-07-21T04:00:00.000Z",
+  },
+] as const satisfies readonly ProgressionIntegrationCompatibilityFixtureV1[]);
+
 export type PlayerProgressionRoute =
   | { readonly kind: "read" }
   | { readonly kind: "unlock"; readonly skillId: string }
