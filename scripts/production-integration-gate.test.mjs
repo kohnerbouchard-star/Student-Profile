@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  PREPARATION_CATEGORIES,
+  PROBE_IDS,
   ProductionIntegrationGateError,
+  TEMPLATE_IDS,
+  validateOperationsPreparation,
   validateProductionIntegrationEvidence,
 } from "./production-integration-gate.mjs";
 
-const EVIDENCE_PATH =
+const PREFLIGHT_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json";
+const PREPARATION_PATH =
+  "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
 
 const EXPECTED_EDGES = [
   "admin-api",
@@ -19,11 +25,15 @@ const EXPECTED_EDGES = [
   "stock-market-trading",
 ];
 
-async function fixture() {
-  return JSON.parse(await readFile(EVIDENCE_PATH, "utf8"));
+async function preflightFixture() {
+  return JSON.parse(await readFile(PREFLIGHT_PATH, "utf8"));
 }
 
-function assertPreparationContract(evidence) {
+async function preparationFixture() {
+  return JSON.parse(await readFile(PREPARATION_PATH, "utf8"));
+}
+
+function assertReleasePreparation(evidence) {
   assert.equal(
     evidence.preparationCheckpoint,
     "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO",
@@ -111,7 +121,7 @@ function assertPreparationContract(evidence) {
 }
 
 test("post-Business serial watch validates as blocked and production-safe", async () => {
-  const evidence = await fixture();
+  const evidence = await preflightFixture();
   const result = validateProductionIntegrationEvidence(evidence);
 
   assert.equal(result.executionState, "ACTIVE_SERIAL_RELEASE_WATCH");
@@ -139,9 +149,8 @@ test("post-Business serial watch validates as blocked and production-safe", asyn
   assert.equal(result.gate.productionModified, false);
 });
 
-test("migration drift records one staging-only alias and zero missing canonical migrations", async () => {
-  const evidence = await fixture();
-  const result = validateProductionIntegrationEvidence(evidence);
+test("migration drift records one historical alias and complete canonical coverage", async () => {
+  const result = validateProductionIntegrationEvidence(await preflightFixture());
 
   assert.equal(result.migrations.canonicalRepositoryIdentity.count, 93);
   assert.equal(result.migrations.canonicalRepositoryIdentity.head, "20260721122500");
@@ -154,47 +163,40 @@ test("migration drift records one staging-only alias and zero missing canonical 
   assert.equal(result.migrations.stagingLedger.matchesCanonicalRepository, false);
 });
 
-test("serial merge ledger must be a contiguous prefix", async () => {
-  const evidence = await fixture();
-  evidence.integrationWatch.serialQueue[3].status = "MERGED";
-  evidence.integrationWatch.serialQueue[3].mergeCommit = "a".repeat(40);
-
+test("serial ledger order and dependency ledger remain exact", async () => {
+  const nonContiguous = await preflightFixture();
+  nonContiguous.integrationWatch.serialQueue[3].status = "MERGED";
+  nonContiguous.integrationWatch.serialQueue[3].mergeCommit = "a".repeat(40);
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(nonContiguous),
     /serial merge ledger is not a contiguous prefix/,
   );
-});
 
-test("serial queue order is immutable", async () => {
-  const evidence = await fixture();
-  [evidence.integrationWatch.serialQueue[2], evidence.integrationWatch.serialQueue[3]] =
-    [evidence.integrationWatch.serialQueue[3], evidence.integrationWatch.serialQueue[2]];
-
+  const reordered = await preflightFixture();
+  [reordered.integrationWatch.serialQueue[2], reordered.integrationWatch.serialQueue[3]] =
+    [reordered.integrationWatch.serialQueue[3], reordered.integrationWatch.serialQueue[2]];
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(reordered),
     /serial release queue order is invalid/,
   );
-});
 
-test("open dependency ledger must match serial queue", async () => {
-  const evidence = await fixture();
-  evidence.dependencyState.openCapabilityPullRequests.pop();
-
+  const dependencies = await preflightFixture();
+  dependencies.dependencyState.openCapabilityPullRequests.pop();
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(dependencies),
     /open capability dependency ledger does not match serial queue/,
   );
 });
 
 test("two-way migration delta markers must be exact", async () => {
-  const canonicalOnly = await fixture();
+  const canonicalOnly = await preflightFixture();
   canonicalOnly.migrations.stagingLedger.canonicalOnlyCount = 1;
   assert.throws(
     () => validateProductionIntegrationEvidence(canonicalOnly),
     /canonicalOnlyCount is inaccurate|set-delta counts are inconsistent/,
   );
 
-  const net = await fixture();
+  const net = await preflightFixture();
   net.migrations.stagingLedger.netCountDelta = 2;
   assert.throws(
     () => validateProductionIntegrationEvidence(net),
@@ -202,57 +204,45 @@ test("two-way migration delta markers must be exact", async () => {
   );
 });
 
-test("required application Edge inventory is exact", async () => {
-  const evidence = await fixture();
-  const result = validateProductionIntegrationEvidence(evidence);
-
+test("required Edge inventory and production prohibitions are exact", async () => {
+  const result = validateProductionIntegrationEvidence(await preflightFixture());
   assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, EXPECTED_EDGES);
   assert.deepEqual(result.environment.staging.applicationEdgeFunctions, []);
-});
 
-test("substituted Edge inventory is rejected", async () => {
-  const evidence = await fixture();
-  evidence.integrationWatch.requiredApplicationEdgeFunctions[0] = "different-api";
-
+  const substituted = await preflightFixture();
+  substituted.integrationWatch.requiredApplicationEdgeFunctions[0] = "different-api";
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(substituted),
     /required application Edge Function inventory|does not match the required contract/,
   );
-});
 
-test("pull-request deployment and production targeting remain prohibited", async () => {
-  const evidence = await fixture();
-  evidence.integrationWatch.workflowSafety.pullRequestDeploymentAllowed = true;
+  const pullRequestDeployment = await preflightFixture();
+  pullRequestDeployment.integrationWatch.workflowSafety.pullRequestDeploymentAllowed = true;
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(pullRequestDeployment),
     /pull-request deployment must remain prohibited/,
   );
 
-  const production = await fixture();
-  production.integrationWatch.workflowSafety.productionTargetAllowed = true;
+  const productionTarget = await preflightFixture();
+  productionTarget.integrationWatch.workflowSafety.productionTargetAllowed = true;
   assert.throws(
-    () => validateProductionIntegrationEvidence(production),
+    () => validateProductionIntegrationEvidence(productionTarget),
     /production workflow targeting must remain prohibited/,
   );
 });
 
-test("parallel immutable release preparation is complete and explicitly non-executed", async () => {
-  const evidence = await fixture();
-  assertPreparationContract(evidence);
+test("parallel immutable release preparation is complete and non-executed", async () => {
+  assertReleasePreparation(await preflightFixture());
 });
 
-test("preparation contract rejects rebuild during promotion", async () => {
-  const evidence = await fixture();
+test("release preparation rejects rebuild during promotion", async () => {
+  const evidence = await preflightFixture();
   evidence.releasePreparation.manifestContracts.rebuildDuringPromotionAllowed = true;
-
-  assert.throws(
-    () => assertPreparationContract(evidence),
-    /Expected values to be strictly equal/,
-  );
+  assert.throws(() => assertReleasePreparation(evidence), /Expected values to be strictly equal/);
 });
 
-test("migration reservation ledger records downstream rekey requirements", async () => {
-  const evidence = await fixture();
+test("migration reservations record Messaging and Progression rekey requirements", async () => {
+  const evidence = await preflightFixture();
   const ledger = evidence.integrationWatch.migrationReservationLedger;
 
   assert.equal(ledger.mergedRangesImmutable, true);
@@ -261,73 +251,145 @@ test("migration reservation ledger records downstream rekey requirements", async
     ledger.reservations.map(({ pullRequest }) => pullRequest),
     [294, 299, 300, 249, 248, 261],
   );
-
-  const conflict = ledger.exactVersionConflicts[0];
-  assert.deepEqual(conflict.pullRequests, [300, 248]);
+  assert.deepEqual(ledger.exactVersionConflicts[0].pullRequests, [300, 248]);
   assert.deepEqual(
-    conflict.versions,
+    ledger.exactVersionConflicts[0].versions,
     ["20260721130000", "20260721131000", "20260721132000", "20260721133000"],
   );
-  assert.equal(conflict.status, "MESSAGING_REKEY_REQUIRED_AFTER_MARKETPLACE");
+  assert.equal(
+    ledger.exactVersionConflicts[0].status,
+    "MESSAGING_REKEY_REQUIRED_AFTER_MARKETPLACE",
+  );
   assert.equal(ledger.orderingRisks[0].pullRequest, 261);
 });
 
-test("shared convergence inventory templates remain final-main gated", async () => {
-  const evidence = await fixture();
-  const templates = evidence.integrationWatch.sharedConvergenceTemplates;
+test("operations preparation matrix validates without executing connected work", async () => {
+  const evidence = await preparationFixture();
+  const preparation = validateOperationsPreparation(evidence.operationsPreparation, {
+    operationsEvidenceComplete: false,
+  });
 
-  assert.equal(templates.status, "PREPARED_REQUIRES_FINAL_MAIN");
-  assert.equal(templates.finalInventoryRequired, true);
-  assert.ok(templates.routerSurfaces.includes("backend/supabase/functions/admin-api/index.ts"));
-  assert.ok(templates.routerSurfaces.includes("backend/supabase/functions/classroom-api/index.ts"));
-  assert.ok(templates.packageSurfaces.includes("package.json"));
-  assert.ok(templates.releaseSurfaces.length >= 2);
+  assert.equal(evidence.preparationCheckpoint, "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED");
+  assert.deepEqual(preparation.validatedCategories, PREPARATION_CATEGORIES);
+  assert.deepEqual(preparation.probes.items.map(({ id }) => id), PROBE_IDS);
+  assert.deepEqual(
+    preparation.evidenceTemplates.templates.map(({ id }) => id),
+    TEMPLATE_IDS,
+  );
+  assert.equal(preparation.syntheticIdentities.plannedPoolSize, 40);
+  assert.equal(preparation.syntheticIdentities.expectedLoadSubsetSize, 30);
+  assert.equal(preparation.loadRunner.scenarios[0].players, 30);
+  assert.equal(preparation.loadRunner.scenarios[1].players, 40);
+  assert.equal(preparation.queryPlanCapture.executed, false);
+  assert.equal(preparation.cleanupProcedure.executed, false);
+  assert.equal(preparation.productionNonModificationProof.executed, false);
 });
 
-test("obsolete retained release remains rejected", async () => {
-  const evidence = await fixture();
-  const result = validateProductionIntegrationEvidence(evidence);
+test("operations preparation rejects missing categories, probes, and templates", async () => {
+  const missingCategory = await preparationFixture();
+  missingCategory.operationsPreparation.validatedCategories.pop();
+  assert.throws(
+    () => validateOperationsPreparation(missingCategory.operationsPreparation),
+    /validatedCategories does not match the required contract/,
+  );
 
+  const missingProbe = await preparationFixture();
+  missingProbe.operationsPreparation.probes.items.pop();
+  assert.throws(
+    () => validateOperationsPreparation(missingProbe.operationsPreparation),
+    /probes\.items ids does not match the required contract/,
+  );
+
+  const missingTemplate = await preparationFixture();
+  missingTemplate.operationsPreparation.evidenceTemplates.templates.pop();
+  assert.throws(
+    () => validateOperationsPreparation(missingTemplate.operationsPreparation),
+    /evidenceTemplates ids does not match the required contract/,
+  );
+});
+
+test("blocked preparation rejects premature execution claims", async () => {
+  for (const mutate of [
+    (plan) => { plan.backupProcedure.executed = true; },
+    (plan) => { plan.restoreProcedure.executed = true; },
+    (plan) => { plan.rollbackRecovery.executed = true; },
+    (plan) => { plan.loadRunner.executed = true; },
+    (plan) => { plan.loadRunner.scenarios[0].executed = true; },
+    (plan) => { plan.probes.executed = true; },
+    (plan) => { plan.observability.activated = true; },
+    (plan) => { plan.queryPlanCapture.executed = true; },
+    (plan) => { plan.cleanupProcedure.executed = true; },
+    (plan) => { plan.productionNonModificationProof.executed = true; },
+  ]) {
+    const evidence = await preparationFixture();
+    mutate(evidence.operationsPreparation);
+    assert.throws(
+      () => validateOperationsPreparation(evidence.operationsPreparation),
+      /execution marker is inconsistent|activation marker is inconsistent/,
+    );
+  }
+});
+
+test("bounded-load and synthetic identity limits are enforced", async () => {
+  const wrongMaximum = await preparationFixture();
+  wrongMaximum.operationsPreparation.loadRunner.scenarios[1].players = 41;
+  assert.throws(
+    () => validateOperationsPreparation(wrongMaximum.operationsPreparation),
+    /maximum-40 player count is invalid/,
+  );
+
+  const excessiveDuration = await preparationFixture();
+  excessiveDuration.operationsPreparation.loadRunner.scenarios[0].steadyMinutes = 13;
+  assert.throws(
+    () => validateOperationsPreparation(excessiveDuration.operationsPreparation),
+    /expected-30 exceeds the duration bound/,
+  );
+
+  const derivedFromProduction = await preparationFixture();
+  derivedFromProduction.operationsPreparation.syntheticIdentities.productionDerived = true;
+  assert.throws(
+    () => validateOperationsPreparation(derivedFromProduction.operationsPreparation),
+    /must not be derived from production/,
+  );
+});
+
+test("ready mode requires the complete serial queue and executed operations matrix", async () => {
+  const evidence = await preflightFixture();
+  assert.throws(
+    () => validateProductionIntegrationEvidence(evidence, { requireReady: true }),
+    /CONNECTED_GATE_COMPLETE_AND_HANDED_OFF|every serial capability PR merged|OPERATIONS_EVIDENCE_COMPLETE|operationsPreparation evidence/,
+  );
+});
+
+test("obsolete release, sensitive material, and environment aliasing remain rejected", async () => {
+  const result = validateProductionIntegrationEvidence(await preflightFixture());
   assert.equal(result.immutableRelease.currentForCanonicalMain, false);
   assert.equal(result.immutableRelease.rollbackCompatibility.decision, "REJECTED");
   assert.notEqual(
     result.immutableRelease.migrations.versionSetSha256,
     result.migrations.canonicalRepositoryIdentity.versionSetSha256,
   );
-});
 
-test("ready mode rejects incomplete queue and connected gates", async () => {
-  const evidence = await fixture();
-  assert.throws(
-    () => validateProductionIntegrationEvidence(evidence, { requireReady: true }),
-    /CONNECTED_GATE_COMPLETE_AND_HANDED_OFF|every serial capability PR merged|OPERATIONS_EVIDENCE_COMPLETE/,
-  );
-});
-
-test("evidence rejects browser key values and raw internal identifiers", async () => {
-  const evidence = await fixture();
-  evidence.environment.staging.runtimeConfiguration.materializedValue =
+  const browserKey = await preflightFixture();
+  browserKey.environment.staging.runtimeConfiguration.materializedValue =
     ["sb", "publishable", "not-retainable"].join("_");
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(browserKey),
     /prohibited sensitive material/,
   );
 
-  const rawIdentifier = await fixture();
+  const rawIdentifier = await preflightFixture();
   rawIdentifier.debugReference =
     ["123e4567", "e89b", "42d3", "a456", "426614174000"].join("-");
   assert.throws(
     () => validateProductionIntegrationEvidence(rawIdentifier),
     /prohibited sensitive material/,
   );
-});
 
-test("staging and production identities must remain distinct", async () => {
-  const evidence = await fixture();
-  evidence.environment.staging.projectRef = evidence.environment.productionGuard.projectRef;
-
+  const sameProject = await preflightFixture();
+  sameProject.environment.staging.projectRef = sameProject.environment.productionGuard.projectRef;
   assert.throws(
-    () => validateProductionIntegrationEvidence(evidence),
+    () => validateProductionIntegrationEvidence(sameProject),
     /must differ/,
   );
 });
