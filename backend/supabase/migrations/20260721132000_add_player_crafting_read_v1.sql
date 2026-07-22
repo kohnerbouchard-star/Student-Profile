@@ -25,7 +25,10 @@ begin
   if not exists (
     select 1 from public.players p join public.game_sessions g on g.id=p.game_session_id
     where p.game_session_id=p_game_session_id and p.id=p_player_id and p.status='active'
-      and g.status='active' and g.lifecycle_state in ('active','paused')
+      and (
+        (g.status='active' and g.lifecycle_state='active')
+        or (g.status='disabled' and g.lifecycle_state='paused')
+      )
   ) then raise exception 'CRAFTING_PLAYER_SCOPE_INACTIVE' using errcode='P0001'; end if;
 
   select gp.pack_id into v_pack_id
