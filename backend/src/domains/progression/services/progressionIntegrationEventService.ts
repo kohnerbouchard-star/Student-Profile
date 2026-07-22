@@ -1,6 +1,7 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   PROGRESSION_EVENT_ID_PATTERN,
+  PROGRESSION_EVENT_SOURCE_DOMAIN,
   PROGRESSION_EVENT_TYPES,
   PROGRESSION_IDEMPOTENCY_PATTERN,
   PROGRESSION_SOURCE_DOMAINS,
@@ -68,6 +69,7 @@ function validateEvent(event: TrustedProgressionEventV1): void {
     !event.gameId || !event.playerUuid ||
     !PROGRESSION_SOURCE_DOMAINS.includes(event.sourceDomain) ||
     !PROGRESSION_EVENT_TYPES.includes(event.eventType) ||
+    PROGRESSION_EVENT_SOURCE_DOMAIN[event.eventType] !== event.sourceDomain ||
     !PROGRESSION_SOURCE_PUBLIC_ID_PATTERN.test(event.sourcePublicId) ||
     !PROGRESSION_IDEMPOTENCY_PATTERN.test(event.idempotencyKey) ||
     !Number.isFinite(Date.parse(event.occurredAt))
@@ -96,6 +98,20 @@ function mapRpcError(message: string): ProgressionError {
       "progression_idempotency_conflict",
       "This idempotency key was used for another Progression event.",
       409,
+    );
+  }
+  if (upper.includes("PROGRESSION_SOURCE_EVENT_CONFLICT")) {
+    return new ProgressionError(
+      "progression_source_event_conflict",
+      "This source event was previously recorded with different immutable details.",
+      409,
+    );
+  }
+  if (upper.includes("PROGRESSION_EVENT_SOURCE_MISMATCH")) {
+    return new ProgressionError(
+      "progression_event_invalid",
+      "Progression event source and type do not match.",
+      400,
     );
   }
   if (upper.includes("PROGRESSION_EVENT_TYPE_UNSUPPORTED")) {
