@@ -6,7 +6,9 @@ const GAME = "00000000-0000-4000-8000-000000000001";
 const SESSION = "00000000-0000-4000-8000-000000000011";
 const PLAYER = "00000000-0000-4000-8000-000000000021";
 const THREAD = `thr_${"a".repeat(32)}`;
+const THREAD_TWO = `thr_${"c".repeat(32)}`;
 const MESSAGE = `msg_${"b".repeat(32)}`;
+const MESSAGE_TWO = `msg_${"d".repeat(32)}`;
 const NOW = new Date("2026-07-20T04:00:00.000Z");
 
 Deno.test("player messaging handler returns UUID-private inbox data", async () => {
@@ -50,6 +52,86 @@ Deno.test("player messaging handler returns UUID-private inbox data", async () =
   assertEquals(body.data.threads[0].id, THREAD);
   assertEquals(body.data.threads[0].messages[0].id, MESSAGE);
   assertNoUuid(JSON.stringify(body));
+});
+
+Deno.test("player messaging search filters private results and rejects unsafe or repeated queries", async () => {
+  const response = await handlePlayerMessagingRequest(
+    request("/players/me/messages/search?q=attendance&threadLimit=10&messageLimit=20"),
+    { kind: "search" },
+    dependencies({
+      read_player_messages_v1: {
+        unreadCount: 3,
+        threads: [
+          {
+            id: THREAD,
+            type: "player",
+            title: "Trade coordination",
+            contractKey: null,
+            status: "active",
+            allowPlayerReplies: true,
+            participantCount: 2,
+            unreadCount: 1,
+            updatedAt: NOW.toISOString(),
+            retentionUntil: "2027-07-20T04:00:00.000Z",
+            messages: [{
+              id: MESSAGE,
+              senderType: "player",
+              senderName: "Player Two",
+              senderReference: "PLAYER-002",
+              body: "Ready for the market.",
+              moderated: false,
+              self: false,
+              createdAt: NOW.toISOString(),
+            }],
+          },
+          {
+            id: THREAD_TWO,
+            type: "announcement",
+            title: "Attendance notice",
+            contractKey: null,
+            status: "active",
+            allowPlayerReplies: false,
+            participantCount: 1,
+            unreadCount: 2,
+            updatedAt: NOW.toISOString(),
+            retentionUntil: "2027-07-20T04:00:00.000Z",
+            messages: [{
+              id: MESSAGE_TWO,
+              senderType: "staff_user",
+              senderName: "Administrator",
+              senderReference: null,
+              body: "Attendance has been posted.",
+              moderated: false,
+              self: false,
+              createdAt: NOW.toISOString(),
+            }],
+          },
+        ],
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(response.headers.get("cache-control"), "private, no-store");
+  const body = await response.json();
+  assertEquals(body.data.query, "attendance");
+  assertEquals(body.data.unread, 2);
+  assertEquals(body.data.threads.length, 1);
+  assertEquals(body.data.threads[0].id, THREAD_TWO);
+  assertNoUuid(JSON.stringify(body));
+
+  for (const path of [
+    "/players/me/messages/search?q=javascript%3Aalert(1)",
+    "/players/me/messages/search?q=attendance&q=market",
+  ]) {
+    const invalid = await handlePlayerMessagingRequest(
+      request(path),
+      { kind: "search" },
+      dependencies({}),
+    );
+    assertEquals(invalid.status, 400);
+    assertEquals((await invalid.json()).error.code, "invalid_player_message_request");
+  }
 });
 
 Deno.test("player messaging handler preserves applied and replayed send outcomes", async () => {
@@ -113,7 +195,7 @@ Deno.test("player messaging handler marks a public thread read", async () => {
   assertNoUuid(JSON.stringify(body));
 });
 
-Deno.test("player messaging handler rejects missing sessions, identity injection, and invalid bodies", async () => {
+Deno.test("player messaging handler rejects missing sessions, identity injection, attachments, and invalid bodies", async () => {
   const missing = await handlePlayerMessagingRequest(
     request("/players/me/messages", { token: null }),
     { kind: "list" },
@@ -130,16 +212,25 @@ Deno.test("player messaging handler rejects missing sessions, identity injection
   assertEquals(injected.status, 400);
   assertEquals((await injected.json()).error.code, "invalid_player_request");
 
-  const invalid = await handlePlayerMessagingRequest(
-    request(`/players/me/messages/threads/${THREAD}/messages`, {
-      method: "POST",
-      body: { body: "", idempotencyKey: "message-send:2" },
-    }),
-    { kind: "send", threadId: THREAD },
-    dependencies({}),
-  );
-  assertEquals(invalid.status, 400);
-  assertEquals((await invalid.json()).error.code, "invalid_player_message_request");
+  for (const body of [
+    { body: "", idempotencyKey: "message-send:2" },
+    {
+      body: "Attachments stay disabled.",
+      idempotencyKey: "message-send:3",
+      attachment: { name: "blocked.txt" },
+    },
+  ]) {
+    const invalid = await handlePlayerMessagingRequest(
+      request(`/players/me/messages/threads/${THREAD}/messages`, {
+        method: "POST",
+        body,
+      }),
+      { kind: "send", threadId: THREAD },
+      dependencies({}),
+    );
+    assertEquals(invalid.status, 400);
+    assertEquals((await invalid.json()).error.code, "invalid_player_message_request");
+  }
 });
 
 function dependencies(responses: Record<string, unknown>) {
