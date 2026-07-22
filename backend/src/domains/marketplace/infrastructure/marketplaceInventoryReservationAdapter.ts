@@ -64,7 +64,11 @@ export interface MarketplaceReservationMutation {
   readonly quantity: number;
   readonly expectedVersion: number;
   readonly operationKey: string;
-  readonly releaseReason?: "listing_cancelled" | "listing_expired" | "listing_rejected" | "purchase_released";
+  readonly releaseReason?:
+    | "listing_cancelled"
+    | "listing_expired"
+    | "listing_rejected"
+    | "purchase_released";
 }
 
 export interface MarketplaceReservationMutationResult {
@@ -110,10 +114,14 @@ export interface MarketplaceInventoryReservationAdapter {
       readonly releaseReason: NonNullable<MarketplaceReservationMutation["releaseReason"]>;
     },
   ): Promise<MarketplaceReservationMutationResult>;
-  reconcile(input: InventoryReservationProjectionInput): Promise<InventoryReservationProjectionReconciliation>;
+  reconcile(
+    input: InventoryReservationProjectionInput,
+  ): Promise<InventoryReservationProjectionReconciliation>;
 }
 
-export function classifyInventoryReservationSource(reasonType: string): InventoryReservationSourceClass {
+export function classifyInventoryReservationSource(
+  reasonType: string,
+): InventoryReservationSourceClass {
   switch (reasonType) {
     case MARKETPLACE_RESERVATION_REASON:
     case "crafting_input":
@@ -129,7 +137,11 @@ export function reconcileInventoryReservationProjection(
 ): InventoryReservationProjectionReconciliation {
   assertScope(input);
   assertWholeNumber(input.quantityOwned, "quantityOwned", true);
-  assertWholeNumber(input.quantityReservedProjection, "quantityReservedProjection", true);
+  assertWholeNumber(
+    input.quantityReservedProjection,
+    "quantityReservedProjection",
+    true,
+  );
 
   let marketplaceReserved = 0;
   let craftingReserved = 0;
@@ -159,7 +171,8 @@ export function reconcileInventoryReservationProjection(
     }
   }
 
-  const authoritativeReserved = marketplaceReserved + craftingReserved + equipmentReserved + unknownReserved;
+  const authoritativeReserved = marketplaceReserved + craftingReserved +
+    equipmentReserved + unknownReserved;
   if (authoritativeReserved > input.quantityOwned) {
     throw new MarketplaceInventoryReservationError(
       "MARKETPLACE_RESERVATION_PROJECTION_INVALID",
@@ -221,7 +234,9 @@ export function applyMarketplaceReservationMutation(
   }
 
   const fingerprint = mutationFingerprint(command);
-  const prior = state.receipts.find((receipt) => receipt.operationKey === command.operationKey);
+  const prior = state.receipts.find((receipt) =>
+    receipt.operationKey === command.operationKey
+  );
   if (prior) {
     if (prior.fingerprint !== fingerprint) {
       throw new MarketplaceInventoryReservationError(
@@ -250,22 +265,24 @@ export function applyMarketplaceReservationMutation(
       "Reservation mutation exceeds the remaining authoritative quantity.",
     );
   }
-  if (command.action === "release" && command.quantity !== state.quantity) {
+  if (
+    command.action === "release" &&
+    command.releaseReason !== "purchase_released" &&
+    command.quantity !== state.quantity
+  ) {
     throw new MarketplaceInventoryReservationError(
       "MARKETPLACE_RESERVATION_TRANSITION_INVALID",
-      "Cancellation, expiration, rejection, and purchase release must release the full remaining quantity.",
+      "Cancellation, listing expiration, and rejection must release the full remaining quantity.",
     );
   }
 
   const resultingVersion = state.version + 1;
-  const resultingStatus: InventoryReservationStatus = command.action === "release"
-    ? "released"
-    : command.quantity === state.quantity
+  const resultingQuantity = state.quantity - command.quantity;
+  const resultingStatus: InventoryReservationStatus = resultingQuantity > 0
+    ? "active"
+    : command.action === "consume"
     ? "consumed"
-    : "active";
-  const resultingQuantity = resultingStatus === "active"
-    ? state.quantity - command.quantity
-    : state.quantity;
+    : "released";
   const receipt: MarketplaceReservationReceipt = {
     operationKey: command.operationKey,
     fingerprint,
@@ -277,7 +294,7 @@ export function applyMarketplaceReservationMutation(
   };
   const next: MarketplaceListingReservationState = {
     ...state,
-    quantity: resultingQuantity,
+    quantity: resultingQuantity > 0 ? resultingQuantity : state.quantity,
     status: resultingStatus,
     version: resultingVersion,
     receipts: [...state.receipts, receipt],
@@ -285,7 +302,9 @@ export function applyMarketplaceReservationMutation(
   return { outcome: "applied", state: next, receipt };
 }
 
-function assertMarketplaceState(state: MarketplaceListingReservationState): void {
+function assertMarketplaceState(
+  state: MarketplaceListingReservationState,
+): void {
   assertReservation(state);
   if (state.reasonType !== MARKETPLACE_RESERVATION_REASON) {
     throw new MarketplaceInventoryReservationError(
@@ -300,7 +319,9 @@ function assertMarketplaceState(state: MarketplaceListingReservationState): void
   }
 }
 
-function assertReservation(reservation: GenericInventoryReservationSnapshot): void {
+function assertReservation(
+  reservation: GenericInventoryReservationSnapshot,
+): void {
   assertScope(reservation);
   assertToken(reservation.storeItemId, "storeItemId");
   assertToken(reservation.itemKey, "itemKey");
@@ -337,7 +358,11 @@ function assertSameScope(
   }
 }
 
-function assertWholeNumber(value: number, field: string, allowZero = false): void {
+function assertWholeNumber(
+  value: number,
+  field: string,
+  allowZero = false,
+): void {
   const minimum = allowZero ? 0 : 1;
   if (!Number.isSafeInteger(value) || value < minimum) {
     throw new MarketplaceInventoryReservationError(
@@ -348,7 +373,10 @@ function assertWholeNumber(value: number, field: string, allowZero = false): voi
 }
 
 function assertToken(value: string, field: string): void {
-  if (typeof value !== "string" || value.length === 0 || value.length > 200 || value !== value.trim()) {
+  if (
+    typeof value !== "string" || value.length === 0 || value.length > 200 ||
+    value !== value.trim()
+  ) {
     throw new MarketplaceInventoryReservationError(
       "MARKETPLACE_RESERVATION_INVALID",
       `${field} is invalid.`,
@@ -356,6 +384,10 @@ function assertToken(value: string, field: string): void {
   }
 }
 
-function mutationFingerprint(command: MarketplaceReservationMutation): string {
-  return [command.action, command.quantity, command.releaseReason ?? ""].join(":");
+function mutationFingerprint(
+  command: MarketplaceReservationMutation,
+): string {
+  return [command.action, command.quantity, command.releaseReason ?? ""].join(
+    ":",
+  );
 }
