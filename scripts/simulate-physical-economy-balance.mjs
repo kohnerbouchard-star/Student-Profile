@@ -148,6 +148,21 @@ for (const option of pack.substitutions) {
 for (const rule of pack.salvageRules) {
   const equipment = itemByKey.get(rule.equipmentItemKey);
   const equipmentEconomics = economicsByKey.get(rule.equipmentItemKey);
+  const outputEconomics = rule.outputs.map((output) =>
+    economicsByKey.get(output.itemKey)
+  );
+  const outputEconomicsComplete = outputEconomics.every((economics) =>
+    economics && Number.isFinite(Number(economics.salvageValue)) &&
+      Number(economics.salvageValue) >= 0 &&
+      Number.isFinite(Number(economics.referencePrice)) &&
+      Number(economics.referencePrice) > 0
+  );
+  const recoveredSalvageValue = rule.outputs.reduce(
+    (sum, output) => sum +
+      Number(economicsByKey.get(output.itemKey)?.salvageValue ?? 0) *
+        Number(output.quantity || 0),
+    0,
+  );
   const recoveredReferenceValue = rule.outputs.reduce(
     (sum, output) => sum +
       Number(economicsByKey.get(output.itemKey)?.referencePrice ?? 0) *
@@ -167,12 +182,13 @@ for (const rule of pack.salvageRules) {
   checks.push(check(
     `salvage:${rule.equipmentItemKey}`,
     equipment?.itemClass === "equipment" &&
+      outputEconomicsComplete &&
       rule.recoveryCapBasisPoints > 0 &&
       rule.recoveryCapBasisPoints <= 4000 &&
-      recoveredReferenceValue > 0 &&
-      recoveredReferenceValue <= capValue + 0.01 &&
+      recoveredSalvageValue > 0 &&
+      recoveredSalvageValue <= capValue + 0.01 &&
       rule.recraftCooldownSeconds >= 0,
-    "salvage recovery is capped at the authoritative worst-case ceiling",
+    "authoritative calibrated salvage value is capped at the worst-case ceiling",
   ));
   checks.push(check(
     `recraft-loop:${rule.equipmentItemKey}`,
