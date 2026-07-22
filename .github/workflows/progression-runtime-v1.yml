@@ -20,6 +20,27 @@ on:
       - "scripts/admin-progression-contract.mjs"
       - "scripts/progression-balance-simulation.mjs"
       - "scripts/progression-event-delivery-simulation.mjs"
+      - "scripts/progression-abuse-threshold-simulation.mjs"
+      - "docs/workstreams/progression-preconvergence-v1.md"
+      - "backend/package.json"
+      - "package.json"
+  push:
+    branches:
+      - "agent/progression-reputation-achievements-v1"
+    paths:
+      - ".github/workflows/progression-runtime-v1.yml"
+      - "backend/src/domains/progression/**"
+      - "backend/src/security/progressionRateLimitDispatch.test.ts"
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/supabase/migrations/*progression*.sql"
+      - "admin/progression-review-*"
+      - "player-terminal/src/pages/progression-page.js"
+      - "player-terminal/tests/browser/player-progression.spec.mjs"
+      - "scripts/admin-progression-contract.mjs"
+      - "scripts/progression-balance-simulation.mjs"
+      - "scripts/progression-event-delivery-simulation.mjs"
+      - "scripts/progression-abuse-threshold-simulation.mjs"
+      - "docs/workstreams/progression-preconvergence-v1.md"
       - "backend/package.json"
       - "package.json"
   workflow_dispatch:
