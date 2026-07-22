@@ -146,31 +146,39 @@ jobs:
           node --check scripts/simulate-physical-economy-balance.mjs
 
       - name: Build immutable Seed physical-economy interface
+        id: seed-build
+        shell: bash
         run: |
-          source_commit="$(git -C seed-authority rev-parse HEAD)"
-          test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
-          node scripts/build-physical-economy-runtime-pack.mjs \
-            --source-root seed-authority \
-            --source-commit "$source_commit" \
-            --approved-source-commit "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd" \
-            --output /tmp/physical-economy-runtime-pack.json
-          node scripts/simulate-physical-economy-balance.mjs \
-            --pack /tmp/physical-economy-runtime-pack.json \
-            --output /tmp/physical-economy-balance-report.json
-          node --input-type=module <<'NODE'
-          import { readFile } from "node:fs/promises";
-          const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
-          if (report.runtimeFailures.length !== 0) {
-            throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s).`);
-          }
-          const authorityReady = report.authority.blockers.length === 0;
-          if (report.gates.authorityActivationReady !== authorityReady) {
-            throw new Error("Seed activation gate and reported authority blockers disagree.");
-          }
-          console.log(authorityReady
-            ? "Seed authority is activation-ready."
-            : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
-          NODE
+          set +e
+          {
+            source_commit="$(git -C seed-authority rev-parse HEAD)"
+            test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
+            node scripts/build-physical-economy-runtime-pack.mjs \
+              --source-root seed-authority \
+              --source-commit "$source_commit" \
+              --approved-source-commit "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd" \
+              --output /tmp/physical-economy-runtime-pack.json
+            node scripts/simulate-physical-economy-balance.mjs \
+              --pack /tmp/physical-economy-runtime-pack.json \
+              --output /tmp/physical-economy-balance-report.json
+            node --input-type=module <<'NODE'
+            import { readFile } from "node:fs/promises";
+            const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
+            if (report.runtimeFailures.length !== 0) {
+              throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s).`);
+            }
+            const authorityReady = report.authority.blockers.length === 0;
+            if (report.gates.authorityActivationReady !== authorityReady) {
+              throw new Error("Seed activation gate and reported authority blockers disagree.");
+            }
+            console.log(authorityReady
+              ? "Seed authority is activation-ready."
+              : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
+            NODE
+          } 2>&1 | tee "$RUNNER_TEMP/crafting-seed-build.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
 
       - name: Test and typecheck Crafting integration
         run: |
@@ -205,12 +213,15 @@ jobs:
           \) -print -quit)"
           ! git diff --name-only "2b073019ed36ca63cf9a9b3c7acd14569fe88116...HEAD" | grep -Ei 'crafting.*(payload|transport|materializ|generator|reconstruct|snapshot|finaliz)|(payload|transport|materializ|generator|reconstruct|snapshot|finaliz).*crafting'
 
-      - name: Upload Crafting browser diagnostics
+      - name: Upload Crafting diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: crafting-browser-${{ github.sha }}
+          name: crafting-diagnostics-${{ github.sha }}
           path: |
+            ${{ runner.temp }}/crafting-seed-build.log
+            /tmp/physical-economy-runtime-pack.json
+            /tmp/physical-economy-balance-report.json
             player-terminal/test-results
             player-terminal/playwright-report
           if-no-files-found: ignore
