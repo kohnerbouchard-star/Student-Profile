@@ -54,18 +54,18 @@ jobs:
       - name: Validate migration source
         run: npm run audit:migrations
 
-      - name: Start disposable Supabase stack
+      - name: Start disposable Postgres service
         shell: bash
         run: |
           LOG="/tmp/database-replay-startup.log"
           : > "$LOG"
           STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
 
           for ATTEMPT in 1 2 3; do
-            printf '\n## Supabase startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
             set +e
-            npx supabase start --workdir backend \
-              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
+            npx supabase start --workdir backend --exclude "$EXCLUDED" \
               2>&1 | tee -a "$LOG"
             STATUS=${PIPESTATUS[0]}
             set -e

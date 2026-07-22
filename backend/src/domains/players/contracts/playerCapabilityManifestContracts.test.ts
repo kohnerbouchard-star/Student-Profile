@@ -4,6 +4,7 @@ import {
   PLAYER_CAPABILITY_MANIFEST_VERSION,
   PLAYER_CAPABILITY_SCHEMA_VERSION,
   PLAYER_ROUTE_CAPABILITY_KEYS,
+  type PlayerCapabilityEndpointKey,
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
@@ -20,10 +21,28 @@ import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/player
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
+import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
+
+const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
+  "business",
+  "businessCreate",
+  "businessProductCreate",
+  "businessInputPurchase",
+  "businessProduction",
+  "businessPrice",
+  "businessHire",
+  "businessTerminate",
+  "businessStatus",
+  "bankTransfer",
+  "savingsTransfer",
+  "loans",
+  "loanApply",
+  "loanRepay",
+]);
 
 Deno.test("player capability manifest is generated from the reviewed endpoint allowlist", () => {
   const manifest = buildPlayerCapabilityManifest();
@@ -35,24 +54,31 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   for (const key of [
     "dashboard", "profile", "news", "market", "portfolio", "contracts",
-    "inventory", "store", "banking", "world",
+    "inventory", "store", "banking", "business", "loans", "world",
   ] as const) assertEquals(manifest.capabilities.routes[key], true);
+
   for (const key of [
     "marketWatchlist", "notificationsRead", "logout", "contractAccept",
     "contractSubmit", "inventoryUse", "marketOrder", "storePurchase",
     "storyDeliveryState", "arrivalClassSubmit", "travelQuote", "travelExecute",
-    "travelComplete", "residencyRequest",
+    "travelComplete", "residencyRequest", "bankTransfer", "savingsTransfer",
+    "businessCreate", "businessProductCreate", "businessInputPurchase",
+    "businessProduction", "businessPrice", "businessHire",
+    "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
-  for (const key of [
+  const expectedEndpointKeys: readonly PlayerCapabilityEndpointKey[] = [
     "bootstrap", "capabilities", "banking", "contractAccept", "contractSubmit",
     "contracts", "dashboard", "inventoryRedemptions", "marketOrder", "portfolio",
     "store", "storeQuote", "storePurchase", "storyDeliveries", "storyDeliveryState",
     "worldRuntime", "arrivalClass", "travelQuote", "travelExecute",
-    "travelComplete", "residencyRequest",
-  ]) assertEquals(endpointKeys.includes(key as never), true);
+    "travelComplete", "residencyRequest", ...BUSINESS_BANKING_ENDPOINTS,
+  ];
+  for (const endpoint of expectedEndpointKeys) {
+    assertEquals(endpointKeys.includes(endpoint), true);
+  }
 });
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
@@ -73,7 +99,11 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
-        .replace(":journeyId", `trj_${"a".repeat(32)}`),
+        .replace(":journeyId", `trj_${"a".repeat(32)}`)
+        .replace(":productKey", `bpr_${"a".repeat(32)}`)
+        .replace(":employeeKey", `emp_${"a".repeat(32)}`)
+        .replace(":offerKey", `lop_${"a".repeat(32)}`)
+        .replace(":loanKey", `lon_${"a".repeat(32)}`),
     }))
   );
 
@@ -86,6 +116,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
       ? readPlayerCapabilityManifestRoutePath(operation.path)
       : ["worldRuntime", "arrivalClass", "travelQuote", "travelExecute", "travelComplete", "residencyRequest"].includes(operation.key)
       ? parsePlayerWorldRuntimeRoute(operation.path)
+      : BUSINESS_BANKING_ENDPOINTS.has(operation.key)
+      ? readPlayerBusinessBankingRoutePath(operation.path)
       : operation.key === "banking"
       ? readPlayerBankingPublicRoutePath(operation.path)
       : operation.key === "contractAccept"

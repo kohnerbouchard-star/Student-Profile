@@ -36,6 +36,12 @@ import {
   readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
+  handlePlayerBusinessBankingRequest,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
+import {
+  readPlayerBusinessBankingRoutePath,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
+import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
 import {
@@ -515,6 +521,40 @@ Deno.serve(async (request) => {
         handlePlayerStockMarketReadRequest(request, "read_trades", {
           createServiceClient,
         }),
+      { createServiceClient },
+    );
+  }
+
+  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
+    url.pathname,
+  );
+
+  if (playerBusinessBankingRoute) {
+    const endpointKey = ({
+      businessRead: "business",
+      businessCreate: "businessCreate",
+      businessProductCreate: "businessProductCreate",
+      businessInputPurchase: "businessInputPurchase",
+      businessProduction: "businessProduction",
+      businessPrice: "businessPrice",
+      businessHire: "businessHire",
+      businessTerminate: "businessTerminate",
+      businessStatus: "businessStatus",
+      playerTransfer: "bankTransfer",
+      savingsTransfer: "savingsTransfer",
+      loansRead: "loans",
+      loanApply: "loanApply",
+      loanRepay: "loanRepay",
+    } as const)[playerBusinessBankingRoute.kind];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerBusinessBankingRequest(
+          request,
+          playerBusinessBankingRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }

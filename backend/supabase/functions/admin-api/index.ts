@@ -14,6 +14,7 @@ import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
 import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
@@ -270,6 +271,23 @@ Deno.serve(async (request: Request) => {
         request,
         redemptionOperation.status || 500,
         redemptionOperation.body,
+      );
+    }
+
+    const businessBankingOperation = await handleBusinessBankingAdminOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (businessBankingOperation.handled) {
+      return json(
+        request,
+        businessBankingOperation.status || 500,
+        businessBankingOperation.body,
       );
     }
 

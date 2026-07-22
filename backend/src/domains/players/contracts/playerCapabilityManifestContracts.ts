@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -24,9 +24,14 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
+  "businessCreate",
+  "businessEmployeeTerminate",
   "businessHire",
+  "businessInputPurchase",
   "businessPrice",
+  "businessProductCreate",
   "businessProduction",
+  "businessStatus",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -66,6 +71,16 @@ export type PlayerCapabilityEndpointKey =
   | "capabilities"
   | "arrivalClass"
   | "banking"
+  | "bankTransfer"
+  | "business"
+  | "businessCreate"
+  | "businessHire"
+  | "businessInputPurchase"
+  | "businessPrice"
+  | "businessProductCreate"
+  | "businessProduction"
+  | "businessStatus"
+  | "businessTerminate"
   | "contractAccept"
   | "contractSubmit"
   | "contracts"
@@ -74,6 +89,9 @@ export type PlayerCapabilityEndpointKey =
   | "dashboard"
   | "inventory"
   | "inventoryRedemptions"
+  | "loanApply"
+  | "loanRepay"
+  | "loans"
   | "logout"
   | "market"
   | "marketAsset"
@@ -84,6 +102,7 @@ export type PlayerCapabilityEndpointKey =
   | "notificationsRead"
   | "portfolio"
   | "residencyRequest"
+  | "savingsTransfer"
   | "store"
   | "storeQuote"
   | "storePurchase"
@@ -182,6 +201,109 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "banking",
     operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }],
     routeCapabilities: ["banking"],
+  },
+  {
+    key: "bankTransfer",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/transfers",
+    }],
+    actionCapabilities: ["bankTransfer"],
+  },
+  {
+    key: "savingsTransfer",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/savings/transfers",
+    }],
+    actionCapabilities: ["savingsTransfer"],
+  },
+  {
+    key: "business",
+    operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
+    routeCapabilities: ["business"],
+  },
+  {
+    key: "businessCreate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }],
+    actionCapabilities: ["businessCreate"],
+  },
+  {
+    key: "businessProductCreate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/products",
+    }],
+    actionCapabilities: ["businessProductCreate"],
+  },
+  {
+    key: "businessInputPurchase",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/inputs/purchases",
+    }],
+    actionCapabilities: ["businessInputPurchase"],
+  },
+  {
+    key: "businessProduction",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/production-runs",
+    }],
+    actionCapabilities: ["businessProduction"],
+  },
+  {
+    key: "businessPrice",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/products/:productKey/pricing",
+    }],
+    actionCapabilities: ["businessPrice"],
+  },
+  {
+    key: "businessHire",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/employees/hire",
+    }],
+    actionCapabilities: ["businessHire"],
+  },
+  {
+    key: "businessTerminate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/employees/:employeeKey/terminate",
+    }],
+    actionCapabilities: ["businessEmployeeTerminate"],
+  },
+  {
+    key: "businessStatus",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/status",
+    }],
+    actionCapabilities: ["businessStatus"],
+  },
+  {
+    key: "loans",
+    operations: [{ method: "GET", pathTemplate: "/players/me/banking/loans" }],
+    routeCapabilities: ["loans"],
+  },
+  {
+    key: "loanApply",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/loans/applications/:offerKey",
+    }],
+    actionCapabilities: ["loanApply"],
+  },
+  {
+    key: "loanRepay",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/loans/:loanKey/payments",
+    }],
+    actionCapabilities: ["loanRepay"],
   },
   {
     key: "contractAccept",

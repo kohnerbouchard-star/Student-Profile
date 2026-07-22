@@ -4,9 +4,14 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
+  "businessCreate",
+  "businessEmployeeTerminate",
   "businessHire",
+  "businessInputPurchase",
   "businessPrice",
+  "businessProductCreate",
   "businessProduction",
+  "businessStatus",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -43,6 +48,7 @@ const ENDPOINT_ACTIONS = Object.freeze({
       .map((key) => [key, key])
   ),
   arrivalClass: "arrivalClassSubmit",
+  businessTerminate: "businessEmployeeTerminate",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });

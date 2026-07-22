@@ -35,7 +35,7 @@ const rawDashboard = {
 const capabilityManifest = {
   ok: true,
   schemaVersion: 1,
-  manifestVersion: "2026-07-20.1",
+  manifestVersion: "2026-07-21.1",
   service: "classroom-api",
   capabilities: {
     routes: {
@@ -48,6 +48,7 @@ const capabilityManifest = {
       banking: true
     },
     actions: {
+      bankTransfer: true,
       contractAccept: true,
       inventoryUse: true,
       logout: true,
@@ -65,6 +66,10 @@ const capabilityManifest = {
     {
       key: "banking",
       operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }]
+    },
+    {
+      key: "bankTransfer",
+      operations: [{ method: "POST", pathTemplate: "/players/me/banking/transfers" }]
     },
     {
       key: "contractAccept",
@@ -156,8 +161,8 @@ const responses = {
       rewardPayload: { cashAmount: 25, currencyCode: "ECO" },
       completionMode: "manual_review",
       publishedAt: "2026-07-18T00:00:00.000Z",
-      deadlineAt: "2026-07-21T00:00:00.000Z",
-      expiresAt: "2026-07-22T00:00:00.000Z",
+      deadlineAt: "2027-07-21T00:00:00.000Z",
+      expiresAt: "2027-07-22T00:00:00.000Z",
       metadata: { issuer: "Immigration Office" },
       createdAt: "2026-07-18T00:00:00.000Z",
       updatedAt: "2026-07-19T00:00:00.000Z"
@@ -207,6 +212,17 @@ const responses = {
       sourceAction: "contract_reward",
       createdAt: "2026-07-17T12:00:00.000Z"
     }]
+  },
+  bankTransfer: {
+    ok: true,
+    result: {
+      transfer_key: "trf_33333333333333333333333333333333",
+      amount: 10,
+      currency_code: "ECO",
+      recipient_player_identifier: "CARD-201",
+      already_completed: false
+    },
+    refreshRequired: true
   },
   storeQuote: {
     ok: true,
@@ -287,7 +303,7 @@ const session = await apiCall(context("session", "GET", "/session"));
 assert.equal(session.displayName, "Alex Rivera");
 assert.equal(session.playerId, "CARD-200", "The terminal may display the mutable Player ID.");
 assert.equal(session.capabilitySchemaVersion, 1);
-assert.equal(session.capabilityManifestVersion, "2026-07-20.1");
+assert.equal(session.capabilityManifestVersion, "2026-07-21.1");
 assert.equal(session.capabilityService, "classroom-api");
 assert.equal(calls[sessionStart].path, "/players/me");
 assert.equal(calls[sessionStart].headers["x-player-session-token"], "token-1");
@@ -371,13 +387,22 @@ await assert.rejects(
   (error) => error.code === "INVALID_REQUEST"
 );
 
-await assert.rejects(
-  apiCall(context("bankTransfer", "POST", "/banking/transfers", {
-    recipientPlayerIdentifier: "CARD-201",
-    amount: 10
-  }, { idempotencyKey: "idem-transfer-1" })),
-  (error) => error.name === "ApiConnectionPendingError",
-  "Player transfer remains visible but pending until the UUID-authoritative backend route exists."
-);
+const transfer = await apiCall(context("bankTransfer", "POST", "/banking/transfers", {
+  recipientPlayerIdentifier: "CARD-201",
+  amount: 10
+}, { idempotencyKey: "idem-transfer-1" }));
+assert.equal(transfer.result.transfer_key, "trf_33333333333333333333333333333333");
+assert.equal(calls.at(-1).method, "POST");
+assert.equal(calls.at(-1).path, "/players/me/banking/transfers");
+assert.deepEqual(calls.at(-1).payload, {
+  recipientPlayerIdentifier: "CARD-201",
+  amount: 10,
+  memo: null,
+  idempotencyKey: "idem-transfer-1"
+});
+assert.equal(calls.at(-1).headers["idempotency-key"], "idem-transfer-1");
+assert.equal("recipientPlayerUuid" in calls.at(-1).payload, false);
+assert.equal("senderPlayerId" in calls.at(-1).payload, false);
+assert.equal("gameSessionId" in calls.at(-1).payload, false);
 
-console.log("Student-Profile adapter passed: canonical routes, capability preflight, UUID-private Contracts and market orders, UI read models, session headers, and idempotent writes are valid.");
+console.log("Student-Profile adapter passed: canonical routes, capability preflight, UUID-private Contracts, market orders, and player transfers, UI read models, session headers, and idempotent writes are valid.");
