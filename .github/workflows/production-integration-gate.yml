@@ -51,6 +51,12 @@ jobs:
           node --input-type=module <<'EOF'
           import assert from "node:assert/strict";
           import { readFile } from "node:fs/promises";
+          import {
+            PREPARATION_CATEGORIES,
+            PROBE_IDS,
+            TEMPLATE_IDS,
+            validateOperationsPreparation,
+          } from "./scripts/production-integration-gate.mjs";
 
           const path = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
           const evidence = JSON.parse(await readFile(path, "utf8"));
@@ -65,7 +71,7 @@ jobs:
           ];
 
           assert.equal(evidence.reportType, "connected-operations-stage1-preparation");
-          assert.equal(evidence.preparationCheckpoint, "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO");
+          assert.equal(evidence.preparationCheckpoint, "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED");
           assert.equal(evidence.stage1Status, "PRE_RELEASE_PREPARED");
           assert.equal(evidence.stage2Status, "BLOCKED_FINAL_IMMUTABLE_STAGING_RELEASE_NOT_PUBLISHED");
           assert.equal(evidence.operationsEvidenceComplete, false);
@@ -97,37 +103,40 @@ jobs:
             expectedFunctions,
           );
 
-          const preparation = evidence.releaseContract.preparation;
-          assert.equal(preparation.status, "PREPARED_NOT_EXECUTED");
-          assert.equal(preparation.releaseManifestSchemaVersion, 1);
-          assert.equal(preparation.artifactSetManifestSchemaVersion, 1);
-          assert.equal(preparation.sourceCommitBinding, "EXACT_MERGED_MAIN_SHA_ONLY");
-          assert.equal(preparation.singleBuildPromotionRequired, true);
-          assert.equal(preparation.rebuildDuringPromotionAllowed, false);
+          const releasePreparation = evidence.releaseContract.preparation;
+          assert.equal(releasePreparation.status, "PREPARED_NOT_EXECUTED");
+          assert.equal(releasePreparation.releaseManifestSchemaVersion, 1);
+          assert.equal(releasePreparation.artifactSetManifestSchemaVersion, 1);
+          assert.equal(releasePreparation.sourceCommitBinding, "EXACT_MERGED_MAIN_SHA_ONLY");
+          assert.equal(releasePreparation.singleBuildPromotionRequired, true);
+          assert.equal(releasePreparation.rebuildDuringPromotionAllowed, false);
           assert.equal(
-            preparation.migrationDigestInput,
+            releasePreparation.migrationDigestInput,
             "sorted-unique-versions-newline-delimited-with-trailing-newline",
           );
           assert.equal(
-            preparation.historicalMigrationStrategy,
+            releasePreparation.historicalMigrationStrategy,
             "forward-only-preserve-applied-alias",
           );
           assert.equal(
-            preparation.routeCapabilityRateLimitTemplates,
+            releasePreparation.routeCapabilityRateLimitTemplates,
             "PREPARED_REQUIRES_FINAL_MAIN",
           );
-          assert.equal(preparation.rollbackEligibilityRules, "PREPARED");
-          assert.equal(preparation.evidenceRetentionRules, "PREPARED");
+          assert.equal(releasePreparation.rollbackEligibilityRules, "PREPARED");
+          assert.equal(releasePreparation.evidenceRetentionRules, "PREPARED");
 
           assert.equal(evidence.githubControlPlane.valuesRecorded, false);
           assert.equal(evidence.backupAndRestore.rehearsalExecuted, false);
-          assert.equal(evidence.loadPreparation.mode, "plan-only");
+          assert.equal(evidence.loadPreparation.mode, "synthetic-dry-run-validated");
           assert.equal(evidence.loadPreparation.expectedPlayers, 30);
           assert.equal(evidence.loadPreparation.maximumPlayers, 40);
           assert.equal(evidence.loadPreparation.executed, false);
           assert.equal(evidence.observabilityPreparation.dashboardPanelCount, 13);
           assert.equal(evidence.observabilityPreparation.alertCount, 12);
           assert.equal(evidence.observabilityPreparation.activationExecuted, false);
+          assert.equal(evidence.queryPlanPreparation.executed, false);
+          assert.equal(evidence.cleanupPreparation.executed, false);
+          assert.equal(evidence.productionNonModificationPreparation.executed, false);
           assert.equal(evidence.legacyPreparation.executed, false);
           assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[0], 300);
           assert.equal(evidence.repositoryRisks.migrationCollision.pullRequests[1], 248);
@@ -135,7 +144,62 @@ jobs:
           assert.ok(evidence.securityPreparation.probes.every(({ status }) => status.startsWith("PREPARED")));
           assert.ok(Object.values(evidence.privacy).every((value) => value === false));
 
-          console.log("Parallel connected-release preparation is current and remains explicitly non-acceptance.");
+          validateOperationsPreparation(evidence.operationsPreparation, {
+            operationsEvidenceComplete: false,
+          });
+          assert.deepEqual(evidence.operationsPreparation.validatedCategories, PREPARATION_CATEGORIES);
+          assert.deepEqual(
+            evidence.operationsPreparation.probes.items.map(({ id }) => id),
+            PROBE_IDS,
+          );
+          assert.deepEqual(
+            evidence.operationsPreparation.evidenceTemplates.templates.map(({ id }) => id),
+            TEMPLATE_IDS,
+          );
+
+          console.log("Parallel operations preparation is current and remains explicitly non-acceptance.");
+          EOF
+      - name: Dry-run deterministic identities and bounded-load phases
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'EOF'
+          import assert from "node:assert/strict";
+          import { readFile } from "node:fs/promises";
+
+          const path = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
+          const evidence = JSON.parse(await readFile(path, "utf8"));
+          const plan = evidence.operationsPreparation;
+
+          const identityLabels = Array.from(
+            { length: plan.syntheticIdentities.plannedPoolSize },
+            (_, index) => `synthetic-player-${String(index + 1).padStart(2, "0")}`,
+          );
+          assert.equal(identityLabels.length, 40);
+          assert.equal(new Set(identityLabels).size, 40);
+          assert.equal(identityLabels.slice(0, plan.syntheticIdentities.expectedLoadSubsetSize).length, 30);
+          assert.equal(plan.syntheticIdentities.productionDerived, false);
+          assert.equal(plan.syntheticIdentities.credentialMaterialized, false);
+
+          for (const scenario of plan.loadRunner.scenarios) {
+            const duration = scenario.rampMinutes + scenario.steadyMinutes + scenario.cooldownMinutes;
+            assert.ok(duration <= plan.loadRunner.maximumDurationMinutes);
+            assert.equal(scenario.executed, false);
+          }
+          assert.equal(plan.loadRunner.maximumRequestsPerSecond, 25);
+          assert.equal(plan.loadRunner.connectedExecutionBlocked, true);
+          assert.equal(plan.loadRunner.executed, false);
+          assert.equal(plan.cleanupProcedure.tagScopedOnly, true);
+          assert.equal(plan.cleanupProcedure.productionAllowed, false);
+          assert.equal(plan.productionNonModificationProof.productionWriteOperationsAllowed, false);
+
+          console.log(JSON.stringify({
+            generatedSyntheticLabels: identityLabels.length,
+            expectedSubset: 30,
+            maximumSubset: 40,
+            connectedRequestsSent: 0,
+            productionWrites: 0,
+          }));
           EOF
       - name: Run integration gate tests
         run: node --test scripts/production-integration-gate.test.mjs
@@ -157,9 +221,10 @@ jobs:
       - name: Record preparation boundary
         run: |
           {
-            echo "## Connected release preparation"
-            echo "- Checkpoint: \`CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO\`"
+            echo "## Connected operations preparation"
+            echo "- Checkpoint: \`OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED\`"
             echo "- Repository preparation validated: \`true\`"
+            echo "- Local/synthetic dry-run validation: \`true\`"
             echo "- Connected acceptance executed: \`false\`"
             echo "- Final immutable staging release published: \`false\`"
             echo "- Production deployment executed: \`false\`"
