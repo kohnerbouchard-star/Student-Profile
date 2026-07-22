@@ -83,6 +83,7 @@ jobs:
               $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
               $0 == "scripts/admin-world-runtime-console-contract.mjs" { next }
               $0 == "scripts/admin-crafting-oversight-contract.mjs" { next }
+              $0 == "scripts/admin-mounted-modal-focus-reconciled-smoke.mjs" { next }
               $0 == "scripts/build-physical-economy-runtime-pack.mjs" { next }
               $0 ~ /^scripts\/crafting-[A-Za-z0-9.-]+[.]mjs$/ { next }
               $0 ~ /^scripts\/lib\/physical-economy-pack-[A-Za-z0-9.-]+[.]mjs$/ { next }
