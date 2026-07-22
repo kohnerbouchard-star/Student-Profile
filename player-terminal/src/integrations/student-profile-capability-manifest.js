@@ -8,7 +8,23 @@ const SUPPORTED_SERVICE = "classroom-api";
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
   capabilities: Object.freeze(["capabilities"]),
+  worldRuntime: Object.freeze(["worldRuntime"]),
+  arrivalClass: Object.freeze(["arrivalClass"]),
+  travelQuote: Object.freeze(["travelQuote"]),
+  travelExecute: Object.freeze(["travelExecute"]),
+  travelComplete: Object.freeze(["travelComplete"]),
+  residencyRequest: Object.freeze(["residencyRequest"]),
   banking: Object.freeze(["banking"]),
+  bankTransfer: Object.freeze(["bankTransfer"]),
+  business: Object.freeze(["business"]),
+  businessCreate: Object.freeze(["businessCreate"]),
+  businessHire: Object.freeze(["businessHire"]),
+  businessInputPurchase: Object.freeze(["businessInputPurchase"]),
+  businessPrice: Object.freeze(["businessPrice"]),
+  businessProductCreate: Object.freeze(["businessProductCreate"]),
+  businessProduction: Object.freeze(["businessProduction"]),
+  businessStatus: Object.freeze(["businessStatus"]),
+  businessTerminate: Object.freeze(["businessTerminate"]),
   contractAccept: Object.freeze(["contractAccept"]),
   contractSubmit: Object.freeze(["contractSubmit"]),
   contracts: Object.freeze(["contracts"]),
@@ -17,6 +33,9 @@ const ENDPOINT_COVERAGE = Object.freeze({
   dashboard: Object.freeze(["dashboard"]),
   inventory: Object.freeze(["inventory"]),
   inventoryRedemptions: Object.freeze(["inventoryUse"]),
+  loanApply: Object.freeze(["loanApply"]),
+  loanRepay: Object.freeze(["loanRepay"]),
+  loans: Object.freeze(["loans"]),
   logout: Object.freeze(["logout"]),
   market: Object.freeze(["market"]),
   marketAsset: Object.freeze(["marketAsset"]),
@@ -32,6 +51,7 @@ const ENDPOINT_COVERAGE = Object.freeze({
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
   portfolio: Object.freeze(["portfolio"]),
+  savingsTransfer: Object.freeze(["savingsTransfer"]),
   store: Object.freeze(["store"]),
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"]),
@@ -41,8 +61,11 @@ const ENDPOINT_COVERAGE = Object.freeze({
 
 const ROUTE_REQUIREMENTS = Object.freeze({
   dashboard: "dashboard",
+  world: "worldRuntime",
   news: "news",
   banking: "banking",
+  business: "business",
+  loans: "loans",
   market: "market",
   portfolio: "portfolio",
   contracts: "contracts",
@@ -53,9 +76,21 @@ const ROUTE_REQUIREMENTS = Object.freeze({
 });
 
 const ACTION_REQUIREMENTS = Object.freeze({
+  arrivalClassSubmit: "arrivalClass",
+  bankTransfer: "bankTransfer",
+  businessCreate: "businessCreate",
+  businessEmployeeTerminate: "businessTerminate",
+  businessHire: "businessHire",
+  businessInputPurchase: "businessInputPurchase",
+  businessPrice: "businessPrice",
+  businessProductCreate: "businessProductCreate",
+  businessProduction: "businessProduction",
+  businessStatus: "businessStatus",
   contractAccept: "contractAccept",
   contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
+  loanApply: "loanApply",
+  loanRepay: "loanRepay",
   logout: "logout",
   marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
@@ -65,8 +100,13 @@ const ACTION_REQUIREMENTS = Object.freeze({
   marketplaceCancel: "marketplaceCancel",
   marketplaceDispute: "marketplaceDispute",
   notificationsRead: "notificationsRead",
+  residencyRequest: "residencyRequest",
+  savingsTransfer: "savingsTransfer",
   storePurchase: "storePurchase",
-  storyDeliveryState: "storyDeliveryState"
+  storyDeliveryState: "storyDeliveryState",
+  travelComplete: "travelComplete",
+  travelExecute: "travelExecute",
+  travelQuote: "travelQuote"
 });
 
 function reviewedFrontendRoute(key) {
@@ -88,7 +128,6 @@ function object(value) {
 function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
   const group = object(values);
   if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
-
   for (const [key, enabled] of Object.entries(group)) {
     if (typeof enabled !== "boolean") {
       throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });

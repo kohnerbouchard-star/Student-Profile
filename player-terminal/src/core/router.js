@@ -1,4 +1,4 @@
-export const ROUTES = Object.freeze(["dashboard", "news", "market", "portfolio", "business", "contracts", "store", "marketplace", "inventory", "crafting", "banking", "loans", "messages", "progression", "profile"]);
+export const ROUTES = Object.freeze(["dashboard", "world", "news", "market", "portfolio", "business", "contracts", "store", "marketplace", "inventory", "crafting", "banking", "loans", "messages", "progression", "profile"]);
 
 export function readRoute() {
   const route = (location.hash || "#dashboard").slice(1).split("?")[0].toLowerCase();

@@ -1,6 +1,6 @@
 # Player Marketplace Lifecycle — Active Ownership
 
-**Status:** `IN_PROGRESS`
+**Status:** `FINAL_CONVERGENCE_VALIDATION`
 **Authoritative roadmap:** `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`
 **Owned roadmap section:** Section 24 — Player Marketplace
 **Owned items:** `EXP-MP-001` through `EXP-MP-009`
@@ -17,3 +17,7 @@
 ## Collision boundary
 
 This workstream does not modify seed definitions, Business internals, Crafting internals, Messaging internals, Progression internals, campaign implementation, or the authoritative roadmap/controller matrix.
+
+## Convergence checkpoint
+
+Crafting-merged `main` was synchronized exactly once. Final migrations are `20260721140000`, `20260721141000`, and `20260721142000`. The PR remains draft until exact-head CI, database replay/lint, isolated-staging acceptance, cleanup, and production non-modification gates pass.

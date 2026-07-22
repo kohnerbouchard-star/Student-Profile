@@ -1,12 +1,12 @@
 # Marketplace ↔ Crafting reservation convergence
 
-Status: active pre-convergence implementation. Crafting PR #300 remains the predecessor; Marketplace PR #249 remains draft, provisional, unsynchronized, unstaged, and unmerged.
+Status: final convergence validation. Crafting PR #300 is merged; Marketplace PR #249 has completed its single authorized synchronization, remains draft and unmerged, and is pending exact-head CI and isolated-staging acceptance.
 
-## Authoritative Crafting contract observed read-only
+## Authoritative Crafting contract preserved
 
 Crafting defines `public.inventory_reservations` as the generic reservation source of truth with game, player, holding, item, reason, source, quantity, and `active | consumed | released` state. Its final migration family is `20260721130000–20260721135700` and its current `reason_type` set is `crafting_input | equipment_action`.
 
-Marketplace extends that set additively with `marketplace_listing` in its third provisional migration. Marketplace does not modify Crafting-owned functions, migrations, tables, jobs, equipment, effects, salvage, pack activation, or runtime semantics.
+Marketplace extends that set additively with `marketplace_listing` in its third final Marketplace migration. Marketplace does not modify Crafting-owned functions, migrations, tables, jobs, equipment, effects, salvage, pack activation, or runtime semantics.
 
 `inventory_holdings.quantity_reserved` is a projection only. The authoritative reserved quantity for a holding is the sum of every active generic reservation row across Marketplace, Crafting, equipment, and future classified sources.
 
@@ -18,7 +18,7 @@ Application source:
 - `backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationAdapter.test.ts`
 - `backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationPartialRelease.test.ts`
 
-Provisional database convergence layer:
+Final database convergence layer:
 
 - `backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql`
 
@@ -56,7 +56,7 @@ Focused verification:
 
 ## Direct projection mutation replacement inventory
 
-The second provisional lifecycle migration contains historical projection-mutating primitives for:
+The second final Marketplace lifecycle migration contains historical projection-mutating primitives for:
 
 - listing creation;
 - purchase-reservation expiry against a terminal listing;
@@ -68,7 +68,7 @@ The second provisional lifecycle migration contains historical projection-mutati
 - Admin listing rejection;
 - refund availability checks.
 
-The third provisional migration now:
+The third final Marketplace migration now:
 
 - renames reservation-sensitive public RPCs to private `*_projection_legacy_*` primitives;
 - revokes those primitives from `public`, `anon`, `authenticated`, and `service_role`;
@@ -79,21 +79,21 @@ The third provisional migration now:
 
 At final convergence, reconstruct the same wrapper semantics from Crafting-merged `main`; do not expose or call the private legacy functions outside their security-definer wrappers.
 
-## Exact three-file rekey map
+## Final Marketplace migration identities
 
-These identities remain non-authoritative until Chat 1 assigns the final post-Crafting/pre-Messaging range:
+The controller-assigned post-Crafting range is final and collision-free:
 
-| Current provisional identity | Final placeholder | Purpose |
-| --- | --- | --- |
-| `20260721140000_add_marketplace_reference_scopes_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_01` | Store and Inventory composite reference scopes |
-| `20260721141000_add_player_marketplace_lifecycle_v2.sql` | `CHAT_1_MARKETPLACE_RANGE_02` | Marketplace schema, lifecycle, financial postings, audit, and public RPCs |
-| `20260721142000_harden_marketplace_resolution_replay_v1.sql` | `CHAT_1_MARKETPLACE_RANGE_03` | Generic reservation convergence, replay hardening, and authoritative wrappers |
+| Final identity | Purpose |
+| --- | --- |
+| `20260721140000_add_marketplace_reference_scopes_v1.sql` | Store and Inventory composite reference scopes |
+| `20260721141000_add_player_marketplace_lifecycle_v2.sql` | Marketplace schema, lifecycle, financial postings, audit, and public RPCs |
+| `20260721142000_harden_marketplace_resolution_replay_v1.sql` | Generic reservation convergence, replay hardening, and authoritative wrappers |
 
-The rekey is performed once after Chat 1 supplies the exact Crafting merge SHA, the final range, and collision rules. SQL intent and three-file ordering remain unchanged.
+The three-file order and SQL intent are fixed. The Crafting family `20260721130000–20260721135700` remains unchanged and appears exactly once.
 
 ## Full migration-reference inventory
 
-Every reference below must be updated in the same rekey commit:
+The final identities are referenced consistently in:
 
 - `backend/package.json` — `test:player-marketplace` `--allow-read` migration paths;
 - `backend/src/domains/marketplace/tests/playerMarketplaceMigrationContract.test.ts` — `REFERENCES`, `LIFECYCLE`, and `REPLAY` constants;
@@ -101,11 +101,11 @@ Every reference below must be updated in the same rekey commit:
 - `.github/workflows/player-terminal-verify.yml` — Marketplace migration path allowlist;
 - `.github/workflows/marketplace-preconvergence.yml` — trigger paths for all three migrations;
 - `docs/operations/evidence/pr-249-player-marketplace-lifecycle.md` — migration identity and evidence references;
-- `docs/roadmaps/active/player-marketplace-lifecycle-v1.md` — provisional identity references;
+- `docs/roadmaps/active/player-marketplace-lifecycle-v1.md` — final identity references;
 - this document — rekey map and migration paths;
 - PR #249 body — migration identity list and final-range statement.
 
-Final rekey audit must search the complete branch for each old `20260721140000`, `20260721141000`, and `20260721142000` token and require zero stale references.
+The final audit must require these identities to resolve to the three authoritative files and must reject duplicate migration versions or placeholder identities.
 
 ## Crafting compatibility matrix
 
@@ -122,9 +122,9 @@ Final rekey audit must search the complete branch for each old `20260721140000`,
 | pause/ended/session lifecycle gates | Marketplace wrappers retain existing lifecycle gates | No relaxation of Crafting or shared lifecycle behavior |
 | committed-success and idempotency | Marketplace wrappers preserve existing receipts and uniqueness | Duplicate requests must replay without duplicate transfer or settlement |
 
-## Shared-file additive reconstruction plan
+## Shared-file additive reconstruction record
 
-Reconstruct each file from final Crafting-merged `main`; never choose either branch wholesale:
+Each shared file was reconstructed from Crafting-merged `main` with narrow Marketplace additions:
 
 | Shared file | Marketplace addition to reapply | Predecessor behavior to preserve |
 | --- | --- | --- |
@@ -144,24 +144,18 @@ Reconstruct each file from final Crafting-merged `main`; never choose either bra
 
 ## Final convergence checklist
 
-- exact Crafting merge SHA recorded from Chat 1;
-- Chat 1 final Marketplace migration range and collision rules recorded;
-- Crafting migration family `20260721130000–20260721135700` preserved exactly once;
-- three Marketplace migrations rekeyed once and every inventory reference updated;
-- zero stale provisional timestamp tokens remain;
-- existing branch synchronized exactly once;
-- shared files reconstructed additively from Crafting-merged `main`;
-- generic reservation reason extended additively;
-- authoritative classification, reconciliation, drift detection, over-reservation denial, and scope denial active;
-- concurrent buyer, stale version, duplicate request, committed-success replay, partial/final consumption, and full-release invariants pass;
-- listing creation, activation, search/read, taxes, fees, receipts, seller settlement, Inventory transfer, cancellation, expiry, moderation, dispute, and refund tests pass;
-- listing spam, wash trading, price manipulation, refund abuse, dispute farming, reservation starvation, duplicate settlement, concurrent races, circular trading, and fee/tax exploit simulations pass;
-- wrong-game, wrong-owner, pause, ended-game, and expired-session behavior fail closed;
-- seller settlement and Inventory transfer/release are exactly once;
-- zero-state replay succeeds twice after Crafting convergence;
-- database lint passes after Crafting convergence;
-- complete exact-head CI and desktop/mobile Player and Admin verification pass;
-- isolated-staging Marketplace acceptance passes;
-- review threads are clear;
-- immutable head returned to Chat 1;
-- production remains unchanged.
+- [x] exact Crafting merge SHA recorded;
+- [x] final Marketplace migration range recorded;
+- [x] Crafting migration family `20260721130000–20260721135700` preserved exactly once;
+- [x] three Marketplace migrations use their final identities;
+- [x] existing branch synchronized exactly once;
+- [x] shared files reconstructed additively from Crafting-merged `main`;
+- [x] generic reservation reason extended additively;
+- [x] local Player, Admin source, adapter, and TypeScript validation passed;
+- [ ] complete exact-head GitHub CI and desktop/mobile Player/Admin verification pass;
+- [ ] zero-state replay succeeds twice and database lint passes;
+- [ ] isolated-staging Marketplace acceptance passes;
+- [ ] synthetic cleanup verifies zero residue;
+- [ ] production non-modification is independently verified;
+- [ ] immutable head is returned to Chat 1;
+- [ ] final merge authorization is issued.

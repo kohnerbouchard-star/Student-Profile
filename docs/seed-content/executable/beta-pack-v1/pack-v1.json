@@ -1,0 +1,66 @@
+{
+  "activationAuthorized": false,
+  "activationPolicy": "Activation requires an unexpired external authorization document matching the integrity packSha256. Production is always prohibited.",
+  "allowedEnvironments": [
+    "local",
+    "test",
+    "staging"
+  ],
+  "boundedCounts": {
+    "arrivalPackages": 10,
+    "contractTemplates": 30,
+    "itemDefinitionsCalibrated": 144,
+    "locationsVerified": 50,
+    "marketInstruments": 240,
+    "storeItems": 50,
+    "tutorialContractChains": 10
+  },
+  "calibration": {
+    "allChecksPassed": true,
+    "countryCount": 10,
+    "currencyPairCount": 45,
+    "routeCount": 13,
+    "scenarioCountPerCountry": 4
+  },
+  "domainFiles": {
+    "arrival": "arrival-calibration-v1.json",
+    "calibration": "calibration-scenarios-v1.json",
+    "campaign": "campaign-v1.json",
+    "contracts": "tutorial-contract-chains-v1.json",
+    "integrity": "integrity-manifest-v1.json",
+    "locations": "location-registry-verified-v1.json",
+    "market": "market-templates-v1.json",
+    "physicalEconomy": "physical-economy-calibration-v1.json",
+    "stableIdMap": "stable-id-map-v1.json",
+    "store": "store-catalog-v1.json"
+  },
+  "excluded": {
+    "fullMarketUniverse3200": true,
+    "marketplaceMutation": true,
+    "messagingMutation": true,
+    "playerStoryDeliveryMutation": true,
+    "progressionMutation": true
+  },
+  "importer": {
+    "idempotentReplay": true,
+    "rollbackCapable": true,
+    "script": "scripts/seed-beta-importer.mjs",
+    "supportedModes": [
+      "validate",
+      "dry-run",
+      "import",
+      "deactivate",
+      "rollback"
+    ]
+  },
+  "maturity": "executable-bounded-beta-pack",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-seed-pack-v1",
+  "sourceAuthority": {
+    "branch": "agent/seed-content-foundation-v1",
+    "pullRequest": 163
+  },
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}

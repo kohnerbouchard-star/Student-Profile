@@ -15,6 +15,8 @@ import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
+import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
+import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -79,14 +81,16 @@ async function handleGlobalRoute(
           auditLogFlags: true,
           auditLogExport: true,
           overallScore: false,
-          marketplaceAdminTrading: true,
+          marketplaceAdminTrading: false,
         },
       },
     });
   }
 
   if (path === "/games" && request.method === "GET") {
-    return json(request, 200, { data: { games: context.games.map(gameDto) } });
+    return json(request, 200, {
+      data: { games: context.games.map(gameDto) },
+    });
   }
 
   if (path === "/account/profile" && request.method === "GET") {
@@ -235,8 +239,27 @@ Deno.serve(async (request: Request) => {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
     }
 
+    const worldOperation = await handleWorldRuntimeAdminOperation(
+      context.service as unknown as Parameters<
+        typeof handleWorldRuntimeAdminOperation
+      >[0],
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (worldOperation.handled) {
+      return json(
+        request,
+        worldOperation.status || 500,
+        worldOperation.body,
+      );
+    }
+
     // Cast through never to prevent Deno from recursively expanding the full
-    // generated Supabase client type at this bounded marketplace adapter.
+    // generated Supabase client type at this bounded Marketplace adapter.
     const marketplaceOperation = await handleMarketplaceAdminOperation(
       context.service as never,
       {
@@ -268,6 +291,23 @@ Deno.serve(async (request: Request) => {
         request,
         redemptionOperation.status || 500,
         redemptionOperation.body,
+      );
+    }
+
+    const businessBankingOperation = await handleBusinessBankingAdminOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (businessBankingOperation.handled) {
+      return json(
+        request,
+        businessBankingOperation.status || 500,
+        businessBankingOperation.body,
       );
     }
 

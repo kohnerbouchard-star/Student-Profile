@@ -1,18 +1,14 @@
 # PR #249 — Player Marketplace Lifecycle Evidence
 
-## Scope and dependency gate
+## Scope and convergence authority
 
 This evidence applies only to branch `agent/player-marketplace-lifecycle-v1`, PR #249, and capabilities `EXP-MP-001` through `EXP-MP-009`.
 
-Marketplace integrates only after Crafting PR #300. While Crafting remains unmerged:
+Crafting PR #300 merged into `main` as `4f332e4799162ddce31d760c98ce7467d63657e6` from immutable Crafting head `0107c3ceb1eb788d6ea6fd513d27c0ea22d0e7d4`. The existing Marketplace branch performed its single authorized convergence from pre-convergence head `18d3dd7b9b3215528ab03872f5f17d19e5e361e2`.
 
-- PR #249 remains open and draft;
-- no Marketplace migration identity is final;
-- the branch is not repeatedly synchronized with changing `main`;
-- no staging or production database migration is authorized;
-- no Marketplace merge is authorized.
+The converged tree preserves World, Business/Banking, Crafting, Store, Inventory, Story, session, privacy, capability, rate-limit, Admin, Classroom API, and Player Terminal behavior while adding Marketplace-owned registrations only.
 
-The workstream does not own Seed definitions, World, Business/Banking, Crafting internals, Messaging, Progression, story delivery, the authoritative roadmap, or the controller coordination matrix.
+The workstream does not own Seed definitions, World, Business/Banking, Crafting internals, Messaging, Progression, story delivery, the authoritative roadmap, or the controller coordination matrix. Production remains unauthorized.
 
 ## Implemented lifecycle
 
@@ -102,41 +98,31 @@ Purification was completed in place without creating a replacement branch or PR.
 - All one-use purification and fixture workflows removed themselves and are not part of the permanent diff.
 - No operational, backup, observability, pilot, incident, release, or environment-neutrality implementation was added.
 
-## Provisional migration state
+## Final migration state
 
-The current migration filenames are provisional and must be rekeyed once after Crafting merges and the controller assigns a range later than Crafting and earlier than Messaging:
+The controller-assigned collision-free Marketplace migration family is final and appears exactly once after Crafting:
 
 - `20260721140000_add_marketplace_reference_scopes_v1.sql`;
 - `20260721141000_add_player_marketplace_lifecycle_v2.sql`;
 - `20260721142000_harden_marketplace_resolution_replay_v1.sql`.
 
-The lifecycle migration explicitly installs `pgcrypto` in the standard `extensions` schema and calls `extensions.digest(...)`; this repairs zero-state replay without introducing a public digest shim.
+The lifecycle migration installs `pgcrypto` in the standard `extensions` schema and calls `extensions.digest(...)`; no public digest shim is introduced. The Crafting migration family `20260721130000–20260721135700` is preserved unchanged.
 
-## Current verification posture
+## Convergence verification posture
 
-At the pre-purification exact head `4d7b9d1b3f8ee540bc1b6e85cfd145857cd8bad7`, these checks passed:
+The converged working tree passed the following repository-owned local validation before publication:
 
-- Backend Typecheck;
-- Admin API Check;
-- Repository Quality;
-- Beta Security Contract;
-- Admin Game Lifecycle Controls;
-- Required Game Market Timezone;
-- Exchange Calendar Runtime;
-- Supply Chain Security;
-- Environment Neutral Browser;
-- Staging Readiness Preflight;
-- Admin Bundle Contract Audit.
+- `git diff --check` and zero unresolved merge markers;
+- complete Player Terminal `npm run verify`;
+- Marketplace connected lifecycle;
+- Student-Profile adapter and capability preflight;
+- World runtime Player publication;
+- backend TypeScript compilation with ES2022, DOM, and DOM iterable libraries;
+- Admin shell identity and source contracts;
+- Admin loading-scope, v606 drift, Inventory redemption, modal accessibility, Crafting oversight, World console, bundle, and game-lifecycle contracts;
+- repository-owned asset reference audit.
 
-That head failed:
-
-- Database Replay because the Marketplace fingerprint function used an unqualified `digest(...)` call;
-- Player Terminal Chromium coverage;
-- Admin Shell Smoke after unrelated attendance-settings feedback validation.
-
-The purified branch subsequently demonstrated green backend typecheck and Marketplace smoke, two zero-state database resets and lint, Seed compatibility, security, repository quality, Admin API, Admin shell, game lifecycle, timezone, exchange, supply-chain, environment-neutrality, release-promotion, and staging-preflight gates.
-
-The connected Marketplace browser fixture now uses explicit connected API mode, the host runtime’s authoritative `econovaria.player.auth.v1` session-storage contract, a non-expired synthetic session, the accepted top-level public Player bootstrap envelope, and the existing terminal configuration contract for the synthetic dashboard game scope. The Marketplace write assertion continues to reject `gameSessionId`, Player UUID, or ownership fields in the purchase payload. A normal pull-request workflow run must verify that final fixture on desktop and mobile before this pre-Crafting tranche is considered fully green.
+The complete GitHub exact-head workflow matrix, two clean database replays, database lint, desktop/mobile browser execution, isolated-staging acceptance, zero-residue cleanup, and production non-modification proof remain required after the converged commit is published. No local result is represented as connected-staging evidence.
 
 ## Completed pre-Crafting test expansion
 
@@ -157,29 +143,29 @@ Branch-local tests explicitly cover:
 
 ## Connected staging and production
 
-- Isolated-staging Marketplace acceptance: **not executed on this provisional migration range**.
+- Isolated-staging Marketplace acceptance: **not yet executed on the converged final migration range**.
 - Production project touched: **no**.
 - Production deployment authorized: **no**.
 
-## Post-Crafting completion gate
+## Remaining exact-head completion gate
 
-After Crafting merges, Chat 8 must:
+Before PR #249 can be marked ready or merged, the published immutable head must satisfy:
 
-1. record the exact Crafting merge SHA;
-2. synchronize the existing branch once with final `main`;
-3. obtain the controller-assigned migration range;
-4. rekey the unmerged Marketplace migrations once;
-5. reconcile World, Business, Crafting, Store, Inventory, security, capability, route, Admin, package, and test registrations additively;
-6. replay from zero twice and lint;
-7. run complete exact-head CI and desktop/mobile browser coverage;
-8. execute isolated-staging Marketplace acceptance;
-9. clear review threads;
-10. merge PR #249 and publish the exact merge SHA and Messaging handoff.
+1. complete exact-head repository and browser workflow matrix;
+2. two zero-state database replays and database lint;
+3. focused reservation, lifecycle, replay, concurrency, privacy, pause, ended-game, and expiry validation;
+4. isolated-staging Marketplace acceptance;
+5. synthetic cleanup with zero residue;
+6. production non-modification verification;
+7. zero unresolved review threads;
+8. final controller return and explicit merge authorization.
 
 ## Current merge posture
 
 - existing PR #249 and branch retained;
-- PR open, draft, and unmerged;
-- no unresolved inline review threads;
+- single authorized convergence with Crafting-merged `main` completed;
+- final Marketplace migration identities preserved;
+- shared files reconstructed additively;
+- PR remains open, draft, unmerged, and unauthorized for production;
 - no replacement branch or PR created;
-- Crafting dependency remains the controlling external gate.
+- exact-head CI and connected-staging acceptance remain the controlling gates.

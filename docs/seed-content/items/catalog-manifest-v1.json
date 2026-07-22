@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "econovaria-base-item-manifest-v1",
+  "catalogVersion": "1.0.0-draft",
+  "status": "definition-only-not-executable",
+  "totalItemDefinitions": 144,
+  "counts": {
+    "materials": 42,
+    "components": 30,
+    "equipment": 30,
+    "consumables": 24,
+    "blueprintsAndAuthorizations": 18
+  },
+  "sourceDistribution": {
+    "dravenlok": 14,
+    "eldoran": 13,
+    "global": 8,
+    "lumenor": 14,
+    "northreach": 13,
+    "solvend": 13,
+    "syndalis": 13,
+    "thaloris": 13,
+    "valerion": 14,
+    "xalvoria": 15,
+    "yrethia": 14
+  },
+  "files": [
+    {
+      "path": "items/catalog/materials-v1.json",
+      "count": 42
+    },
+    {
+      "path": "items/catalog/components-v1.json",
+      "count": 30
+    },
+    {
+      "path": "items/catalog/equipment-v1.json",
+      "count": 30
+    },
+    {
+      "path": "items/catalog/consumables-v1.json",
+      "count": 24
+    },
+    {
+      "path": "items/catalog/blueprints-authorizations-v1.json",
+      "count": 18
+    }
+  ],
+  "globalRules": {
+    "currency": "Ten official country currencies only; no ECO item pricing or crafting settlement.",
+    "difficulty": "Session difficulty scales supply, restock, elastic common inputs, craft time, energy/maintenance burden, salvage ceiling, and shortage duration. Effect power and identity-defining components do not scale.",
+    "scarcity": "All player-facing scarcity uses named bands and every core Tier I path requires a recovery or substitute route.",
+    "ownership": "Stackable goods use holdings; equipment requires unique instances before runtime activation.",
+    "runtime": "No record in this manifest is executable until the relevant backend capability is merged, tested, advertised, and staged."
+  },
+  "validation": {
+    "uniqueStableIds": 144,
+    "uniqueItemKeys": 144,
+    "duplicateStableIds": 0,
+    "duplicateItemKeys": 0,
+    "allItemsHaveTangibleUses": true,
+    "allItemsDeclareDifficultyPolicy": true,
+    "allItemsDeclareScarcityPolicy": true,
+    "numericPricesApproved": false,
+    "recipesApproved": false,
+    "productionImportApproved": false
+  }
+}

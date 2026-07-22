@@ -36,6 +36,12 @@ import {
   readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
+  handlePlayerBusinessBankingRequest,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
+import {
+  readPlayerBusinessBankingRoutePath,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
+import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
 import {
@@ -152,6 +158,12 @@ import {
   readPlayerWorldRoutePath,
 } from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
 import {
+  handlePlayerWorldRuntimeEdgeRequest,
+} from "../../../src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts";
+import {
+  parsePlayerWorldRuntimeRoute,
+} from "../../../src/domains/world/api/playerWorldRuntimeRoutePaths.ts";
+import {
   handlePlayerInventoryReadRequest,
 } from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
 import {
@@ -227,6 +239,25 @@ Deno.serve(async (request) => {
           playerCapabilityManifestRoute,
           { createServiceClient },
         ),
+      { createServiceClient },
+    );
+  }
+
+  const playerWorldRuntimeRoute = parsePlayerWorldRuntimeRoute(url.pathname);
+
+  if (playerWorldRuntimeRoute) {
+    const endpointKey = ({
+      context: "worldRuntime",
+      arrivalClass: "arrivalClass",
+      travelQuote: "travelQuote",
+      travelExecute: "travelExecute",
+      travelComplete: "travelComplete",
+      residencyRequest: "residencyRequest",
+    } as const)[playerWorldRuntimeRoute.operation];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
@@ -521,6 +552,40 @@ Deno.serve(async (request) => {
         handlePlayerStockMarketReadRequest(request, "read_trades", {
           createServiceClient,
         }),
+      { createServiceClient },
+    );
+  }
+
+  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
+    url.pathname,
+  );
+
+  if (playerBusinessBankingRoute) {
+    const endpointKey = ({
+      businessRead: "business",
+      businessCreate: "businessCreate",
+      businessProductCreate: "businessProductCreate",
+      businessInputPurchase: "businessInputPurchase",
+      businessProduction: "businessProduction",
+      businessPrice: "businessPrice",
+      businessHire: "businessHire",
+      businessTerminate: "businessTerminate",
+      businessStatus: "businessStatus",
+      playerTransfer: "bankTransfer",
+      savingsTransfer: "savingsTransfer",
+      loansRead: "loans",
+      loanApply: "loanApply",
+      loanRepay: "loanRepay",
+    } as const)[playerBusinessBankingRoute.kind];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerBusinessBankingRequest(
+          request,
+          playerBusinessBankingRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }

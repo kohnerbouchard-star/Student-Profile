@@ -222,6 +222,7 @@
           lastCreateOpener = null;
         },
       });
+      copy.focus({ preventScroll: true });
     } else {
       copy.focus();
       activeConfirmation = {

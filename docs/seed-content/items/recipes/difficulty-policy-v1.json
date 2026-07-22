@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "econovaria-crafting-difficulty-policy-v1",
+  "status": "definition-only",
+  "canonicalPresets": [
+    "easy",
+    "moderate",
+    "hard",
+    "insane"
+  ],
+  "legacyAlias": {
+    "standard": "moderate"
+  },
+  "principles": [
+    "Difficulty is game-session scoped and versioned.",
+    "Resolved recipes are snapshotted when a crafting quote is accepted.",
+    "Active jobs are never rewritten by a later difficulty change.",
+    "Output quantity and equipment effect power never scale with difficulty.",
+    "Identity-defining and strategic ingredients never scale.",
+    "Only recipe roles explicitly marked elastic_common or elastic_energy scale.",
+    "Crafting remains deterministic and has no hidden failure roll."
+  ],
+  "ingredientScaling": {
+    "fixed_identity": {
+      "easy": 1.0,
+      "moderate": 1.0,
+      "hard": 1.0,
+      "insane": 1.0,
+      "rounding": "none"
+    },
+    "fixed_strategic": {
+      "easy": 1.0,
+      "moderate": 1.0,
+      "hard": 1.0,
+      "insane": 1.0,
+      "rounding": "none"
+    },
+    "elastic_common": {
+      "easy": 0.85,
+      "moderate": 1.0,
+      "hard": 1.15,
+      "insane": 1.3,
+      "rounding": {
+        "easy": "floor_min_1",
+        "moderate": "exact",
+        "hard": "ceil",
+        "insane": "ceil"
+      },
+      "authoringRule": "baseQuantity must be at least 2"
+    },
+    "elastic_energy": {
+      "easy": 0.75,
+      "moderate": 1.0,
+      "hard": 1.25,
+      "insane": 1.5,
+      "rounding": {
+        "easy": "floor_min_1",
+        "moderate": "exact",
+        "hard": "ceil",
+        "insane": "ceil"
+      }
+    }
+  },
+  "durationProfiles": {
+    "standard": {
+      "easy": 0.85,
+      "moderate": 1.0,
+      "hard": 1.15,
+      "insane": 1.35
+    },
+    "precision": {
+      "easy": 0.9,
+      "moderate": 1.0,
+      "hard": 1.1,
+      "insane": 1.25
+    },
+    "energy": {
+      "easy": 0.85,
+      "moderate": 1.0,
+      "hard": 1.2,
+      "insane": 1.4
+    },
+    "heavy": {
+      "easy": 0.9,
+      "moderate": 1.0,
+      "hard": 1.2,
+      "insane": 1.5
+    }
+  },
+  "durationRounding": "ceil_to_5_minutes",
+  "scarcityLink": {
+    "easy": {
+      "supplyMultiplier": 1.2,
+      "restockIntervalMultiplier": 0.85,
+      "scarcityPriceSensitivity": 0.8,
+      "safetyStockMultiplier": 1.25
+    },
+    "moderate": {
+      "supplyMultiplier": 1.0,
+      "restockIntervalMultiplier": 1.0,
+      "scarcityPriceSensitivity": 1.0,
+      "safetyStockMultiplier": 1.0
+    },
+    "hard": {
+      "supplyMultiplier": 0.85,
+      "restockIntervalMultiplier": 1.15,
+      "scarcityPriceSensitivity": 1.15,
+      "safetyStockMultiplier": 0.9
+    },
+    "insane": {
+      "supplyMultiplier": 0.7,
+      "restockIntervalMultiplier": 1.35,
+      "scarcityPriceSensitivity": 1.35,
+      "safetyStockMultiplier": 0.8
+    }
+  },
+  "salvageRecoveryCeiling": {
+    "easy": 0.7,
+    "moderate": 0.6,
+    "hard": 0.5,
+    "insane": 0.4
+  }
+}

@@ -172,11 +172,7 @@
   }
 
   function reconcileAfterCurrentEvent() {
-    if (typeof window.queueMicrotask === "function") {
-      window.queueMicrotask(reconcile);
-      return;
-    }
-    Promise.resolve().then(reconcile);
+    schedule();
   }
 
   function schedule() {

@@ -1,0 +1,114 @@
+{
+  "activationAuthorized": false,
+  "calibrationIteration": 5,
+  "decision": "recalibrate_do_not_activate",
+  "difficultySummary": {
+    "easy": {
+      "baselineAffordabilityFailureMaximumObserved": 0.219512847,
+      "baselineCraftSuccessMinimumObserved": 0.780487153,
+      "baselineFirstTier1MedianCycleMaximumObserved": 1.0,
+      "baselineImportSpendShareMean": 0.656068409,
+      "baselineTier3GlobalMeanObserved": 0.789416667,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.258172116,
+      "countryFirstTier1RangeObserved": 0.0,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.833675733,
+      "tier1ByCycle5MinimumObserved": 0.979166667
+    },
+    "hard": {
+      "baselineAffordabilityFailureMaximumObserved": 0.549659415,
+      "baselineCraftSuccessMinimumObserved": 0.425589292,
+      "baselineFirstTier1MedianCycleMaximumObserved": 3.0,
+      "baselineImportSpendShareMean": 0.692914179,
+      "baselineTier3GlobalMeanObserved": 0.075916667,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.15663047,
+      "countryFirstTier1RangeObserved": 1.0,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.878244613,
+      "tier1ByCycle5MinimumObserved": 0.925833333
+    },
+    "insane": {
+      "baselineAffordabilityFailureMaximumObserved": 0.632821772,
+      "baselineCraftSuccessMinimumObserved": 0.353569998,
+      "baselineFirstTier1MedianCycleMaximumObserved": 4.0,
+      "baselineImportSpendShareMean": 0.696374194,
+      "baselineTier3GlobalMeanObserved": 0.03225,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.103502939,
+      "countryFirstTier1RangeObserved": 1.0,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.882368033,
+      "tier1ByCycle5MinimumObserved": 0.846666667
+    },
+    "moderate": {
+      "baselineAffordabilityFailureMaximumObserved": 0.364365071,
+      "baselineCraftSuccessMinimumObserved": 0.618561873,
+      "baselineFirstTier1MedianCycleMaximumObserved": 2.0,
+      "baselineImportSpendShareMean": 0.676236604,
+      "baselineTier3GlobalMeanObserved": 0.309083333,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.186992684,
+      "countryFirstTier1RangeObserved": 1.0,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.836368301,
+      "tier1ByCycle5MinimumObserved": 0.975833333
+    }
+  },
+  "failures": [
+    {
+      "country": "northreach",
+      "difficulty": "easy",
+      "gate": "border_disruption_supply_failure_maximum",
+      "observed": 0.258172116,
+      "threshold": 0.08
+    },
+    {
+      "country": "northreach",
+      "difficulty": "moderate",
+      "gate": "border_disruption_supply_failure_maximum",
+      "observed": 0.186992684,
+      "threshold": 0.12
+    },
+    {
+      "country": "northreach",
+      "difficulty": "hard",
+      "gate": "baseline_craft_success_minimum",
+      "observed": 0.425589292,
+      "threshold": 0.45
+    }
+  ],
+  "gateCounts": {
+    "failed": 3,
+    "implemented": 28,
+    "passed": 25,
+    "unresolved": 2
+  },
+  "runConfiguration": {
+    "countries": 10,
+    "cycles": 30,
+    "difficulties": 4,
+    "playersPerCountry": 12,
+    "runCount": 16000,
+    "scenarios": 4,
+    "seeds": 100
+  },
+  "schemaVersion": "econovaria-physical-economy-gate-summary-v1",
+  "sha256": {
+    "aggregateResults": "f421f95095499e037e421a2fe92b17bea65cee8ff19b275385585fa9105f6de3",
+    "input": "7f3b136b9b914df039d431701bd5fff2b8e9e45fcd7dc711ff2d905322e5a199",
+    "rawResults": "f6d500c9d9e3f3db22e16080c090c74c033a53f407163f9014ccc583c85919d2",
+    "rawResultsArchive": "e9e3e09073580f02b0b7a16264b9327fcd6ef13b153fbaa096e4371fd5038f76",
+    "script": "04cebef418b4064449b48b98366032e651d36e38918e4240e8be4cbcb86adaf0"
+  },
+  "status": "executed-candidate-calibration",
+  "unresolvedGates": [
+    "guaranteed_system_buyback_arbitrage_maximum",
+    "positive_salvage_recraft_loops_maximum"
+  ],
+  "warnings": [
+    {
+      "gate": "import_spend_share",
+      "message": "At least one country/scenario exceeds the warning threshold on every difficulty.",
+      "threshold": 0.8
+    },
+    {
+      "gate": "substitution_rate",
+      "message": "The substitution branch was not exercised.",
+      "observed": 0.0
+    }
+  ]
+}

@@ -8,12 +8,12 @@ const CLASSROOM_API = new URL(
   import.meta.url,
 );
 
-Deno.test("Classroom API dispatch applies the central guard to every integrated reviewed route", async () => {
+Deno.test("Classroom API dispatch applies one central guard to each integrated reviewed route", async () => {
   const source = await Deno.readTextFile(CLASSROOM_API);
 
   assertEquals(
     occurrences(source, "return dispatchRateLimitedReviewedPlayerRequest("),
-    21,
+    23,
   );
   assertEquals(
     occurrences(source, "reviewed(request,"),
@@ -42,8 +42,10 @@ Deno.test("Classroom API dispatch applies the central guard to every integrated 
     const directReturn of [
       "return handlePlayerCapabilityManifestRequest(",
       "return handlePlayerBankingPublicRequest(",
+      "return handlePlayerBusinessBankingRequest(",
       "return handlePlayerGameDashboardRequest(",
       "return handlePlayerWorldReadRequest(",
+      "return handlePlayerWorldRuntimeEdgeRequest(",
       "return handlePlayerInventoryReadRequest(",
       "return handlePlayerInventoryRedemptionRequest(",
       "return handlePlayerContractAcceptanceRequest(",

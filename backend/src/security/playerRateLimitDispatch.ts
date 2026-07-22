@@ -72,8 +72,56 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   capabilities: byMethod({
     GET: operation("player.capabilities.read", "read"),
   }),
+  worldRuntime: byMethod({
+    GET: operation("player.world.context.read", "read"),
+  }),
+  arrivalClass: byMethod({
+    POST: operation("player.world.arrival.assign", "sensitive"),
+  }),
+  travelQuote: byMethod({
+    POST: operation("player.world.travel.quote", "write"),
+  }),
+  travelExecute: byMethod({
+    POST: operation("player.world.travel.execute", "sensitive"),
+  }),
+  travelComplete: byMethod({
+    POST: operation("player.world.travel.complete", "write"),
+  }),
+  residencyRequest: byMethod({
+    POST: operation("player.world.residency.request", "sensitive"),
+  }),
   banking: byMethod({
     GET: operation("player.banking.read", "read"),
+  }),
+  bankTransfer: byMethod({
+    POST: operation("player.banking.transfers.create", "sensitive"),
+  }),
+  business: byMethod({
+    GET: operation("player.business.read", "read"),
+  }),
+  businessCreate: byMethod({
+    POST: operation("player.business.create", "sensitive"),
+  }),
+  businessHire: byMethod({
+    POST: operation("player.business.employees.hire", "sensitive"),
+  }),
+  businessInputPurchase: byMethod({
+    POST: operation("player.business.inputs.purchase", "sensitive"),
+  }),
+  businessPrice: byMethod({
+    POST: operation("player.business.pricing.write", "write"),
+  }),
+  businessProductCreate: byMethod({
+    POST: operation("player.business.products.write", "write"),
+  }),
+  businessProduction: byMethod({
+    POST: operation("player.business.production.run", "sensitive"),
+  }),
+  businessStatus: byMethod({
+    POST: operation("player.business.status.write", "sensitive"),
+  }),
+  businessTerminate: byMethod({
+    POST: operation("player.business.employees.terminate", "write"),
   }),
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
@@ -98,6 +146,15 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   inventoryRedemption: redemptionOperations,
   inventoryRedemptions: redemptionOperations,
+  loanApply: byMethod({
+    POST: operation("player.loans.apply", "sensitive"),
+  }),
+  loanRepay: byMethod({
+    POST: operation("player.loans.repay", "sensitive"),
+  }),
+  loans: byMethod({
+    GET: operation("player.loans.read", "read"),
+  }),
   logout: byMethod({
     POST: operation("player.session.logout", "sensitive"),
   }),
@@ -150,6 +207,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   portfolio: byMethod({
     GET: operation("player.portfolio.read", "read"),
+  }),
+  savingsTransfer: byMethod({
+    POST: operation("player.banking.savings.transfer", "sensitive"),
   }),
   store: byMethod({
     GET: operation("player.store.read", "read"),

@@ -1,0 +1,29 @@
+{
+  "simulationId": "thaloris-market-simulation-v1",
+  "country": "thaloris",
+  "seeds": 250,
+  "cycles": 60,
+  "factors": ["growth","inflation","interestRates","currencyStrength","energyPrices","shippingCosts","laborCosts","regulation","publicConfidence","countryStability","warEscalation","meridianDisruption"],
+  "scenarios": {
+    "baseline": {"growth":0.25,"inflation":0.08,"interestRates":0.05,"currencyStrength":0.0,"energyPrices":0.0,"shippingCosts":0.15,"laborCosts":0.0,"regulation":0.0,"publicConfidence":0.1,"countryStability":0.05,"warEscalation":0.0,"meridianDisruption":0.0},
+    "informal_trade_boom": {"growth":0.85,"inflation":0.25,"interestRates":0.15,"currencyStrength":-0.1,"energyPrices":0.1,"shippingCosts":0.75,"laborCosts":0.15,"regulation":-0.25,"publicConfidence":0.45,"countryStability":0.15,"warEscalation":0.0,"meridianDisruption":-0.1},
+    "legitimacy_crackdown": {"growth":-0.35,"inflation":0.15,"interestRates":0.35,"currencyStrength":0.1,"energyPrices":0.0,"shippingCosts":-0.1,"laborCosts":0.0,"regulation":1.1,"publicConfidence":-0.45,"countryStability":-0.2,"warEscalation":0.1,"meridianDisruption":0.25},
+    "meridian_disruption": {"growth":-0.55,"inflation":0.35,"interestRates":0.3,"currencyStrength":-0.4,"energyPrices":0.35,"shippingCosts":0.9,"laborCosts":0.1,"regulation":0.4,"publicConfidence":-0.7,"countryStability":-0.55,"warEscalation":0.45,"meridianDisruption":1.2},
+    "war_repair_demand": {"growth":-0.35,"inflation":0.7,"interestRates":0.55,"currencyStrength":-0.55,"energyPrices":0.6,"shippingCosts":0.85,"laborCosts":0.25,"regulation":0.5,"publicConfidence":-0.65,"countryStability":-0.7,"warEscalation":1.2,"meridianDisruption":0.7},
+    "market_confidence_crisis": {"growth":-0.65,"inflation":0.45,"interestRates":0.8,"currencyStrength":-0.65,"energyPrices":0.2,"shippingCosts":0.25,"laborCosts":0.1,"regulation":0.8,"publicConfidence":-1.2,"countryStability":-0.9,"warEscalation":0.4,"meridianDisruption":0.4},
+    "recovery": {"growth":0.5,"inflation":-0.05,"interestRates":0.05,"currencyStrength":0.15,"energyPrices":-0.1,"shippingCosts":0.2,"laborCosts":0.05,"regulation":0.1,"publicConfidence":0.55,"countryStability":0.45,"warEscalation":-0.4,"meridianDisruption":-0.55}
+  },
+  "strategies": {
+    "equal_equities": {
+      "instrument.thaloris.common_equity.0001.v1":0.08333333333333333,"instrument.thaloris.common_equity.0002.v1":0.08333333333333333,"instrument.thaloris.common_equity.0003.v1":0.08333333333333333,"instrument.thaloris.common_equity.0004.v1":0.08333333333333333,"instrument.thaloris.common_equity.0005.v1":0.08333333333333333,"instrument.thaloris.common_equity.0006.v1":0.08333333333333333,"instrument.thaloris.common_equity.0007.v1":0.08333333333333333,"instrument.thaloris.common_equity.0008.v1":0.08333333333333333,"instrument.thaloris.common_equity.0009.v1":0.08333333333333333,"instrument.thaloris.common_equity.0010.v1":0.08333333333333333,"instrument.thaloris.common_equity.0011.v1":0.08333333333333333,"instrument.thaloris.common_equity.0012.v1":0.08333333333333333
+    },
+    "repair_trade_core": {"instrument.thaloris.common_equity.0001.v1":0.2,"instrument.thaloris.common_equity.0002.v1":0.15,"instrument.thaloris.common_equity.0003.v1":0.14,"instrument.thaloris.common_equity.0004.v1":0.14,"instrument.thaloris.common_equity.0005.v1":0.12,"instrument.thaloris.common_equity.0011.v1":0.1,"instrument.thaloris.etf_fund.0001.v1":0.15},
+    "legitimacy_mix": {"instrument.thaloris.common_equity.0002.v1":0.13,"instrument.thaloris.common_equity.0009.v1":0.12,"instrument.thaloris.common_equity.0010.v1":0.12,"instrument.thaloris.common_equity.0012.v1":0.13,"instrument.thaloris.sovereign_public_bond.0001.v1":0.18,"instrument.thaloris.sovereign_public_bond.0002.v1":0.12,"instrument.thaloris.etf_fund.0001.v1":0.12,"instrument.thaloris.listed_trust.0001.v1":0.08},
+    "diversified": {"instrument.thaloris.etf_fund.0001.v1":0.3,"instrument.thaloris.etf_fund.0002.v1":0.18,"instrument.thaloris.sovereign_public_bond.0001.v1":0.16,"instrument.thaloris.sovereign_public_bond.0002.v1":0.12,"instrument.thaloris.common_equity.0009.v1":0.06,"instrument.thaloris.common_equity.0010.v1":0.06,"instrument.thaloris.common_equity.0012.v1":0.06,"instrument.thaloris.listed_trust.0001.v1":0.06}
+  },
+  "instrumentSources": [
+    "../../markets/active-subsets/thaloris-active-equity-enrichment-v1.json",
+    "../../markets/active-subsets/thaloris-active-fixed-income-enrichment-v1.json",
+    "../../markets/active-subsets/thaloris-active-collective-reference-enrichment-v1.json"
+  ]
+}
