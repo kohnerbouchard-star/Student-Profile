@@ -88,29 +88,111 @@ const renderedPages = {
 for (const [name, html] of Object.entries(renderedPages)) {
   assert.ok(html.includes("player-terminal-page"), `${name} should render a player page root.`);
   if (name === "dashboard") {
-    assert.ok(html.includes('data-dashboard-action="open-business"'), "Dashboard should expose business navigation.");
-    assert.ok(html.includes('data-dashboard-action="open-banking"'), "Dashboard should expose banking navigation.");
+    assert.ok(html.includes("player-terminal-country-overlay"), "Dashboard should render the country-border overlay.");
+    assert.ok(html.includes("player-terminal-map-instruction"), "Dashboard should render a compact non-blocking map instruction.");
+    assert.ok(!html.includes("player-terminal-country-summary"), "Dashboard must not render the obsolete bottom map summary overlay.");
+    assert.equal((html.match(/data-player-country=/g) || []).length, 11, "Dashboard should expose ten map regions plus the country-intelligence control.");
   }
+  assert.ok(html.length > 900, `${name} rendered output is unexpectedly short.`);
+  assert.ok(!/\bundefined\b/.test(html), `${name} rendered output contains an undefined value.`);
 }
 
-const previewTransport = new PreviewTransport({ data: clone(previewData), simulateWrites: false });
-await assert.rejects(
-  previewTransport.request({ endpointKey: "storePurchase", payload: { itemId: "store-item-1" } }),
-  ApiConnectionPendingError,
-  "Preview transport should fail closed for unconfigured writes."
-);
+for (const progressionTab of ["Skills", "Achievements", "Licenses"]) {
+  const html = renderProgressionPage(previewData, { ...ui, progressionTab });
+  assert.ok(html.length > 1000 && !/\bundefined\b/.test(html), `Progression ${progressionTab} view should render cleanly.`);
+}
 
-const adapterTransport = new AdapterTransport({ adapter: null });
-await assert.rejects(
-  adapterTransport.request({ endpointKey: "dashboard" }),
-  ApiConnectionPendingError,
-  "Adapter transport should fail closed before the live adapter is installed."
-);
+const emptyCases = [];
+{
+  const data = clone(previewData);
+  data.news.items = [];
+  emptyCases.push(["news", renderNewsPage(data, ui), "No active intelligence"]);
+}
+{
+  const data = clone(previewData);
+  data.market.assets = [];
+  emptyCases.push(["market", renderMarketPage(data, ui), "No assets are listed"]);
+}
+{
+  const data = clone(previewData);
+  data.portfolio.history = [];
+  data.portfolio.allocation = [];
+  data.portfolio.countryExposure = [];
+  data.market.assets = data.market.assets.map((asset) => ({ ...asset, owned: 0 }));
+  emptyCases.push(["portfolio", renderPortfolioPage(data), "No active positions"]);
+}
+{
+  const data = clone(previewData);
+  data.store.items = [];
+  emptyCases.push(["store", renderStorePage(data, ui), "No store items available"]);
+}
+{
+  const data = clone(previewData);
+  data.inventory.items = [];
+  emptyCases.push(["inventory", renderInventoryPage(data, ui), "No items in this category"]);
+}
+{
+  const data = clone(previewData);
+  data.banking.transactions = [];
+  emptyCases.push(["banking", renderBankingPage(data), "No transactions yet"]);
+}
+{
+  const data = clone(previewData);
+  data.messages.threads = [];
+  emptyCases.push(["messages", renderMessagesPage(data, ui), "No conversations yet"]);
+}
+{
+  const data = clone(previewData);
+  data.crafting.recipes = [];
+  emptyCases.push(["crafting", renderCraftingPage(data, ui), "No recipes available"]);
+}
 
-assert.deepEqual(
-  normalizePlayerSessionHandoff({ gameCode: "eco-1", playerIdentifier: "player-1", accessCode: "secret" }),
-  { gameCode: "ECO-1", playerIdentifier: "PLAYER-1", accessCode: "secret" },
-  "Session handoff should normalize game and player identifiers without altering access codes."
-);
+for (const [name, html, expected] of emptyCases) {
+  assert.ok(html.includes(expected), `${name} should render its empty-state copy.`);
+  assert.ok(!/\bundefined\b/.test(html), `${name} empty state contains an undefined value.`);
+}
 
-console.log("Player Terminal smoke checks passed.");
+const transport = new PreviewTransport();
+for (const key of [
+  "session", "dashboard", "countries", "news", "market", "portfolio", "business", "store",
+  "marketplace", "contracts", "inventory", "crafting", "banking", "loans", "messages",
+  "progression", "notifications"
+]) {
+  const value = await transport.request({ endpointKey: key, method: "GET", path: PLAYER_ENDPOINTS[key].path });
+  assert.deepEqual(value, previewData[key]);
+}
+
+for (const request of [
+  { endpointKey: "marketOrder", method: "POST", path: "/market/orders", payload: { assetId: "asset-1", quantity: 1 } },
+  { endpointKey: "bankTransfer", method: "POST", path: "/banking/transfers", payload: { amount: 100 } },
+  { endpointKey: "businessProduction", method: "POST", path: "/business/production-runs", payload: { quantity: 10 } },
+  { endpointKey: "marketplacePurchase", method: "POST", path: "/marketplace/listings/listing-1/purchase", payload: { quantity: 1 } },
+  { endpointKey: "craftItem", method: "POST", path: "/crafting/jobs", payload: { recipeKey: "recipe-1", quantity: 1 } },
+  { endpointKey: "loanApply", method: "POST", path: "/banking/loans/applications/loan-offer-1", payload: { amount: 5000 } },
+  { endpointKey: "messageSend", method: "POST", path: "/messages/threads/thread-1/messages", payload: { body: "Test" } },
+  { endpointKey: "progressionUnlock", method: "POST", path: "/progression/skills/skill-1/unlock", payload: {} }
+]) {
+  await assert.rejects(transport.request(request), ApiConnectionPendingError);
+}
+
+
+const handoff = normalizePlayerSessionHandoff({ session: { token: "ps_test", gameSessionId: "game-1" } });
+assert.equal(handoff.playerSessionToken, "ps_test");
+assert.equal(handoff.gameSessionId, "game-1");
+
+let adapterContext = null;
+const adapter = new AdapterTransport(async (context) => {
+  adapterContext = context;
+  return { ok: true };
+}, {
+  playerSessionToken: "ps_test",
+  gameSessionId: "game-1",
+  playerSessionId: "session-1",
+  accessToken: ""
+});
+await adapter.request({ endpointKey: "dashboard", method: "GET", path: "/dashboard" });
+assert.equal(adapterContext.session.playerSessionToken, "ps_test");
+assert.equal(adapterContext.session.gameSessionId, "game-1");
+assert.equal(adapterContext.endpointKey, "dashboard");
+
+console.log("Smoke test passed: v7.4 routes, read models, write boundaries, session handoff, generic API adapter, and interactive map contract are valid.");
