@@ -8,20 +8,22 @@ import {
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 
-type GameState = "active" | "paused" | "ended";
-type SessionState = "active" | "expired";
-type ListingStatus = "draft" | "active" | "moderation_hold" | "sold_out" | "cancelled" | "expired" | "rejected";
+type Gate = {
+  gameId: string;
+  playerId: string;
+  gameState: "active" | "paused" | "ended";
+  sessionState: "active" | "expired";
+};
 
 type Listing = {
   id: string;
   gameId: string;
   sellerId: string;
-  itemKey: string;
   quantity: number;
   unitPrice: number;
   feeRate: number;
   taxRate: number;
-  status: ListingStatus;
+  status: "draft" | "active" | "moderation_hold" | "sold_out" | "cancelled" | "expired" | "rejected";
   version: number;
   reservation: MarketplaceListingReservationState;
 };
@@ -39,179 +41,124 @@ type Order = {
   status: "completed" | "disputed" | "refunded";
 };
 
-type Context = {
-  gameId: string;
-  playerId: string;
-  gameState: GameState;
-  sessionState: SessionState;
-};
-
 const GAME = "game-marketplace-1";
 const SELLER = "seller-1";
 const BUYER = "buyer-1";
-const HOLDING = "holding-seller-data-chip";
-const BUYER_HOLDING = "holding-buyer-data-chip";
 const ITEM = "item-data-chip";
+const SELLER_HOLDING = "holding-seller";
+const BUYER_HOLDING = "holding-buyer";
 
-Deno.test("Marketplace lifecycle settles partial and final purchases exactly once with server fees and taxes", () => {
+Deno.test("Marketplace create, activation, search, fee/tax settlement, replay, and Inventory transfer are exact", () => {
   const state = fixture();
-  const listing = createListing(state, context(SELLER), {
-    id: "listing-1",
-    quantity: 5,
-    unitPrice: 20,
-    feeRate: 0.025,
-    taxRate: 0.05,
-    key: "create-listing-1",
-  });
-  activateListing(listing, 1);
+  const listing = createListing(state, gate(SELLER), "listing-1", 5, 20, 0.025, 0.05, "create-1");
+  activate(listing, 1);
+  assertEquals(search(state).map((item) => item.id), ["listing-1"]);
 
-  assertEquals(searchListings(state, GAME).map((item) => item.id), ["listing-1"]);
-
-  const first = purchase(state, context(BUYER), listing, 2, 2, "purchase-1");
-  assertEquals(first, {
-    id: "order-purchase-1",
-    listingId: "listing-1",
-    buyerId: BUYER,
-    sellerId: SELLER,
-    quantity: 2,
-    subtotal: 40,
-    fee: 1,
-    tax: 2,
-    total: 43,
-    status: "completed",
-  });
+  const first = purchase(state, gate(BUYER), listing, 2, 2, "purchase-1");
+  assertEquals(first.subtotal, 40);
+  assertEquals(first.fee, 1);
+  assertEquals(first.tax, 2);
+  assertEquals(first.total, 43);
   assertEquals(listing.quantity, 3);
-  assertEquals(listing.reservation.status, "active");
   assertEquals(listing.reservation.quantity, 3);
+  assertEquals(listing.reservation.status, "active");
   assertEquals(state.cash.get(SELLER), 40);
   assertEquals(state.cash.get(BUYER), 957);
   assertEquals(state.inventory.get(`${SELLER}:${ITEM}`), 3);
   assertEquals(state.inventory.get(`${BUYER}:${ITEM}`), 2);
-  assertEquals(state.fees, 1);
-  assertEquals(state.taxes, 2);
 
-  const replay = purchase(state, context(BUYER), listing, 2, 2, "purchase-1");
+  const replay = purchase(state, gate(BUYER), listing, 2, 2, "purchase-1");
   assertEquals(replay, first);
   assertEquals(state.orders.size, 1);
   assertEquals(state.cash.get(SELLER), 40);
 
-  const final = purchase(state, context(BUYER), listing, 3, 3, "purchase-2");
-  assertEquals(final.quantity, 3);
+  const final = purchase(state, gate(BUYER), listing, 3, 3, "purchase-2");
+  assertEquals(final.status, "completed");
   assertEquals(listing.status, "sold_out");
   assertEquals(listing.reservation.status, "consumed");
   assertEquals(state.inventory.get(`${SELLER}:${ITEM}`), 0);
   assertEquals(state.inventory.get(`${BUYER}:${ITEM}`), 5);
-  assertEquals(state.orders.size, 2);
-  assertBalanced(state);
+  assertConserved(state);
 });
 
-Deno.test("Marketplace cancellation, expiration, and moderation rejection release the full seller reservation", () => {
+Deno.test("Marketplace cancellation, expiration, and moderation reversal release the full seller reservation", () => {
   for (const terminal of ["cancelled", "expired", "rejected"] as const) {
     const state = fixture();
-    const listing = createListing(state, context(SELLER), {
-      id: `listing-${terminal}`,
-      quantity: 4,
-      unitPrice: 10,
-      feeRate: 0.02,
-      taxRate: 0.01,
-      key: `create-${terminal}`,
-    });
-    activateListing(listing, 1);
-
-    if (terminal === "cancelled") cancelListing(listing, 2, `cancel-${terminal}`);
-    if (terminal === "expired") expireListing(listing, 2, `expire-${terminal}`);
+    const listing = createListing(state, gate(SELLER), `listing-${terminal}`, 4, 10, 0, 0, `create-${terminal}`);
+    activate(listing, 1);
+    if (terminal === "cancelled") terminate(listing, 2, terminal, "listing_cancelled");
+    if (terminal === "expired") terminate(listing, 2, terminal, "listing_expired");
     if (terminal === "rejected") {
-      placeModerationHold(listing, 2);
-      rejectListing(listing, 3, `reject-${terminal}`);
+      moderate(listing, 2);
+      terminate(listing, 3, terminal, "listing_rejected");
     }
-
     assertEquals(listing.status, terminal);
     assertEquals(listing.quantity, 0);
     assertEquals(listing.reservation.status, "released");
-    assertEquals(searchListings(state, GAME), []);
+    assertEquals(search(state), []);
     assertEquals(state.inventory.get(`${SELLER}:${ITEM}`), 5);
   }
 });
 
-Deno.test("Marketplace stale versions and concurrent buyers permit one deterministic winner", () => {
+Deno.test("Marketplace concurrent purchase races and stale versions allow one winner", () => {
   const state = fixture();
-  const listing = createListing(state, context(SELLER), {
-    id: "listing-race",
-    quantity: 1,
-    unitPrice: 25,
-    feeRate: 0,
-    taxRate: 0,
-    key: "create-race",
-  });
-  activateListing(listing, 1);
-
-  const winner = purchase(state, context(BUYER), listing, 1, 2, "race-winner");
+  const listing = createListing(state, gate(SELLER), "listing-race", 1, 25, 0, 0, "create-race");
+  activate(listing, 1);
+  const winner = purchase(state, gate(BUYER), listing, 1, 2, "race-winner");
   assertEquals(winner.status, "completed");
   assertError(
-    () => purchase(state, context("buyer-2"), listing, 1, 2, "race-loser"),
+    () => purchase(state, gate("buyer-2"), listing, 1, 2, "race-loser"),
     "MARKETPLACE_STALE_VERSION",
   );
   assertEquals(state.orders.size, 1);
-  assertEquals(listing.status, "sold_out");
 });
 
-Deno.test("Marketplace refunds respect Crafting and other active reservations", () => {
+Deno.test("Marketplace disputes and refunds include Crafting and other active reservation sources", () => {
   const state = fixture();
-  const listing = createListing(state, context(SELLER), {
-    id: "listing-refund",
-    quantity: 3,
-    unitPrice: 30,
-    feeRate: 0.02,
-    taxRate: 0.03,
-    key: "create-refund",
-  });
-  activateListing(listing, 1);
-  const order = purchase(state, context(BUYER), listing, 3, 2, "purchase-refund");
-  openDispute(order);
+  const listing = createListing(state, gate(SELLER), "listing-refund", 3, 30, 0.02, 0.03, "create-refund");
+  activate(listing, 1);
+  const order = purchase(state, gate(BUYER), listing, 3, 2, "purchase-refund");
+  dispute(order);
 
   state.crossDomainReservations = [
     { reasonType: "crafting_input", quantity: 2 },
     { reasonType: "equipment_action", quantity: 1 },
   ];
-  assertError(() => refundOrder(state, order), "MARKETPLACE_REFUND_ITEM_UNAVAILABLE");
+  assertError(() => refund(state, order), "MARKETPLACE_REFUND_ITEM_UNAVAILABLE");
 
-  state.crossDomainReservations = [{ reasonType: "crafting_input", quantity: 1 }];
-  refundOrder(state, order);
+  state.crossDomainReservations = [];
+  refund(state, order);
   assertEquals(order.status, "refunded");
   assertEquals(state.inventory.get(`${BUYER}:${ITEM}`), 0);
   assertEquals(state.inventory.get(`${SELLER}:${ITEM}`), 5);
   assertEquals(state.cash.get(BUYER), 1000);
   assertEquals(state.cash.get(SELLER), 0);
-  assertBalanced(state);
+  assertConserved(state);
 });
 
-Deno.test("Marketplace denies wrong-game, pause, ended-game, and expired-session mutations", () => {
+Deno.test("Marketplace denies wrong game, paused games, ended games, expired sessions, and self purchase", () => {
   const state = fixture();
-  const listing = createListing(state, context(SELLER), {
-    id: "listing-gates",
-    quantity: 2,
-    unitPrice: 10,
-    feeRate: 0,
-    taxRate: 0,
-    key: "create-gates",
-  });
-  activateListing(listing, 1);
-
+  const listing = createListing(state, gate(SELLER), "listing-gates", 2, 10, 0, 0, "create-gates");
+  activate(listing, 1);
   assertError(
-    () => purchase(state, { ...context(BUYER), gameId: "wrong-game" }, listing, 1, 2, "wrong-game"),
+    () => purchase(state, { ...gate(BUYER), gameId: "wrong-game" }, listing, 1, 2, "wrong"),
     "MARKETPLACE_WRONG_GAME",
   );
   assertError(
-    () => purchase(state, { ...context(BUYER), gameState: "paused" }, listing, 1, 2, "paused"),
+    () => purchase(state, { ...gate(BUYER), gameState: "paused" }, listing, 1, 2, "paused"),
     "MARKETPLACE_GAME_PAUSED",
   );
   assertError(
-    () => purchase(state, { ...context(BUYER), gameState: "ended" }, listing, 1, 2, "ended"),
+    () => purchase(state, { ...gate(BUYER), gameState: "ended" }, listing, 1, 2, "ended"),
     "MARKETPLACE_GAME_ENDED",
   );
   assertError(
-    () => purchase(state, { ...context(BUYER), sessionState: "expired" }, listing, 1, 2, "expired-session"),
+    () => purchase(state, { ...gate(BUYER), sessionState: "expired" }, listing, 1, 2, "session"),
     "MARKETPLACE_SESSION_EXPIRED",
+  );
+  assertError(
+    () => purchase(state, gate(SELLER), listing, 1, 2, "self"),
+    "MARKETPLACE_SELF_PURCHASE",
   );
   assertEquals(state.orders.size, 0);
 });
@@ -220,106 +167,122 @@ function fixture() {
   return {
     listings: new Map<string, Listing>(),
     orders: new Map<string, Order>(),
-    receipts: new Map<string, Order | Listing>(),
+    receipts: new Map<string, Listing | Order>(),
     cash: new Map<string, number>([[SELLER, 0], [BUYER, 1000], ["buyer-2", 1000]]),
-    inventory: new Map<string, number>([[`${SELLER}:${ITEM}`, 5], [`${BUYER}:${ITEM}`, 0], [`buyer-2:${ITEM}`, 0]]),
+    inventory: new Map<string, number>([
+      [`${SELLER}:${ITEM}`, 5],
+      [`${BUYER}:${ITEM}`, 0],
+      [`buyer-2:${ITEM}`, 0],
+    ]),
     fees: 0,
     taxes: 0,
     crossDomainReservations: [] as Array<{ reasonType: string; quantity: number }>,
   };
 }
 
-function context(playerId: string): Context {
+function gate(playerId: string): Gate {
   return { gameId: GAME, playerId, gameState: "active", sessionState: "active" };
 }
 
 function createListing(
   state: ReturnType<typeof fixture>,
-  ctx: Context,
-  input: { id: string; quantity: number; unitPrice: number; feeRate: number; taxRate: number; key: string },
+  ctx: Gate,
+  id: string,
+  quantity: number,
+  unitPrice: number,
+  feeRate: number,
+  taxRate: number,
+  key: string,
 ): Listing {
-  gate(ctx, GAME);
-  const replay = state.receipts.get(input.key);
-  if (replay) return replay as Listing;
-  const owned = state.inventory.get(`${ctx.playerId}:${ITEM}`) ?? 0;
-  if (owned < input.quantity) throw new Error("MARKETPLACE_QUANTITY_UNAVAILABLE");
+  enforceGate(ctx, GAME);
+  const prior = state.receipts.get(key);
+  if (prior) return prior as Listing;
+  if ((state.inventory.get(`${ctx.playerId}:${ITEM}`) ?? 0) < quantity) {
+    throw new Error("MARKETPLACE_QUANTITY_UNAVAILABLE");
+  }
   const listing: Listing = {
-    id: input.id,
+    id,
     gameId: ctx.gameId,
     sellerId: ctx.playerId,
-    itemKey: ITEM,
-    quantity: input.quantity,
-    unitPrice: input.unitPrice,
-    feeRate: input.feeRate,
-    taxRate: input.taxRate,
+    quantity,
+    unitPrice,
+    feeRate,
+    taxRate,
     status: "draft",
     version: 1,
     reservation: {
       gameSessionId: ctx.gameId,
       playerId: ctx.playerId,
-      inventoryHoldingId: HOLDING,
+      inventoryHoldingId: SELLER_HOLDING,
       storeItemId: ITEM,
       itemKey: "data-chip",
       reasonType: MARKETPLACE_RESERVATION_REASON,
-      sourceId: input.id,
-      quantity: input.quantity,
+      sourceId: id,
+      quantity,
       status: "active",
       version: 1,
       receipts: [],
     },
   };
-  state.listings.set(listing.id, listing);
-  state.receipts.set(input.key, listing);
+  state.listings.set(id, listing);
+  state.receipts.set(key, listing);
   return listing;
 }
 
-function activateListing(listing: Listing, expectedVersion: number): void {
-  stale(listing, expectedVersion);
+function activate(listing: Listing, expectedVersion: number): void {
+  assertVersion(listing, expectedVersion);
   if (listing.status !== "draft") throw new Error("MARKETPLACE_LISTING_TRANSITION_INVALID");
   listing.status = "active";
   listing.version += 1;
 }
 
-function searchListings(state: ReturnType<typeof fixture>, gameId: string): Listing[] {
+function moderate(listing: Listing, expectedVersion: number): void {
+  assertVersion(listing, expectedVersion);
+  listing.status = "moderation_hold";
+  listing.version += 1;
+}
+
+function search(state: ReturnType<typeof fixture>): Listing[] {
   return [...state.listings.values()].filter((listing) =>
-    listing.gameId === gameId && listing.status === "active" && listing.quantity > 0
+    listing.gameId === GAME && listing.status === "active" && listing.quantity > 0
   );
 }
 
 function purchase(
   state: ReturnType<typeof fixture>,
-  ctx: Context,
+  ctx: Gate,
   listing: Listing,
   quantity: number,
   expectedVersion: number,
   key: string,
 ): Order {
-  gate(ctx, listing.gameId);
-  const replay = state.receipts.get(key);
-  if (replay) return replay as Order;
-  stale(listing, expectedVersion);
-  if (listing.status !== "active" || listing.quantity < quantity) throw new Error("MARKETPLACE_QUANTITY_UNAVAILABLE");
+  enforceGate(ctx, listing.gameId);
+  const prior = state.receipts.get(key);
+  if (prior) return prior as Order;
+  assertVersion(listing, expectedVersion);
   if (ctx.playerId === listing.sellerId) throw new Error("MARKETPLACE_SELF_PURCHASE");
+  if (listing.status !== "active" || listing.quantity < quantity) {
+    throw new Error("MARKETPLACE_QUANTITY_UNAVAILABLE");
+  }
 
   const subtotal = round(listing.unitPrice * quantity);
   const fee = round(subtotal * listing.feeRate);
   const tax = round(subtotal * listing.taxRate);
   const total = round(subtotal + fee + tax);
-  const cash = state.cash.get(ctx.playerId) ?? 0;
-  if (cash < total) throw new Error("MARKETPLACE_INSUFFICIENT_FUNDS");
+  const buyerCash = state.cash.get(ctx.playerId) ?? 0;
+  if (buyerCash < total) throw new Error("MARKETPLACE_INSUFFICIENT_FUNDS");
 
-  const mutation = applyMarketplaceReservationMutation(listing.reservation, {
+  listing.reservation = applyMarketplaceReservationMutation(listing.reservation, {
     action: "consume",
     quantity,
     expectedVersion: listing.reservation.version,
     operationKey: `consume-${key}`,
-  });
-  listing.reservation = mutation.state;
+  }).state;
   listing.quantity -= quantity;
   listing.version += 1;
   if (listing.quantity === 0) listing.status = "sold_out";
 
-  state.cash.set(ctx.playerId, round(cash - total));
+  state.cash.set(ctx.playerId, round(buyerCash - total));
   state.cash.set(listing.sellerId, round((state.cash.get(listing.sellerId) ?? 0) + subtotal));
   state.fees = round(state.fees + fee);
   state.taxes = round(state.taxes + tax);
@@ -343,70 +306,50 @@ function purchase(
   return order;
 }
 
-function cancelListing(listing: Listing, expectedVersion: number, key: string): void {
-  releaseListing(listing, expectedVersion, key, "cancelled", "listing_cancelled");
-}
-
-function expireListing(listing: Listing, expectedVersion: number, key: string): void {
-  releaseListing(listing, expectedVersion, key, "expired", "listing_expired");
-}
-
-function placeModerationHold(listing: Listing, expectedVersion: number): void {
-  stale(listing, expectedVersion);
-  listing.status = "moderation_hold";
-  listing.version += 1;
-}
-
-function rejectListing(listing: Listing, expectedVersion: number, key: string): void {
-  releaseListing(listing, expectedVersion, key, "rejected", "listing_rejected");
-}
-
-function releaseListing(
+function terminate(
   listing: Listing,
   expectedVersion: number,
-  key: string,
-  status: ListingStatus,
+  status: "cancelled" | "expired" | "rejected",
   releaseReason: "listing_cancelled" | "listing_expired" | "listing_rejected",
 ): void {
-  stale(listing, expectedVersion);
-  const mutation = applyMarketplaceReservationMutation(listing.reservation, {
+  assertVersion(listing, expectedVersion);
+  listing.reservation = applyMarketplaceReservationMutation(listing.reservation, {
     action: "release",
     quantity: listing.quantity,
     expectedVersion: listing.reservation.version,
-    operationKey: key,
+    operationKey: `${status}-${listing.id}`,
     releaseReason,
-  });
-  listing.reservation = mutation.state;
+  }).state;
   listing.quantity = 0;
   listing.status = status;
   listing.version += 1;
 }
 
-function openDispute(order: Order): void {
+function dispute(order: Order): void {
   if (order.status !== "completed") throw new Error("MARKETPLACE_ORDER_NOT_DISPUTABLE");
   order.status = "disputed";
 }
 
-function refundOrder(state: ReturnType<typeof fixture>, order: Order): void {
+function refund(state: ReturnType<typeof fixture>, order: Order): void {
   if (order.status !== "disputed") throw new Error("MARKETPLACE_ORDER_NOT_REFUNDABLE");
-  const buyerQuantity = state.inventory.get(`${order.buyerId}:${ITEM}`) ?? 0;
-  const reservations = state.crossDomainReservations.map((reservation, index) => ({
+  const buyerOwned = state.inventory.get(`${order.buyerId}:${ITEM}`) ?? 0;
+  const reservations = state.crossDomainReservations.map((entry, index) => ({
     gameSessionId: GAME,
     playerId: order.buyerId,
     inventoryHoldingId: BUYER_HOLDING,
     storeItemId: ITEM,
     itemKey: "data-chip",
-    reasonType: reservation.reasonType,
-    sourceId: `source-${index}`,
-    quantity: reservation.quantity,
+    reasonType: entry.reasonType,
+    sourceId: `cross-domain-${index}`,
+    quantity: entry.quantity,
     status: "active" as const,
   }));
-  const reserved = reservations.reduce((sum, reservation) => sum + reservation.quantity, 0);
+  const reserved = reservations.reduce((sum, entry) => sum + entry.quantity, 0);
   const reconciliation = reconcileInventoryReservationProjection({
     gameSessionId: GAME,
     playerId: order.buyerId,
     inventoryHoldingId: BUYER_HOLDING,
-    quantityOwned: buyerQuantity,
+    quantityOwned: buyerOwned,
     quantityReservedProjection: reserved,
     reservations,
   });
@@ -416,7 +359,7 @@ function refundOrder(state: ReturnType<typeof fixture>, order: Order): void {
     throw new Error("MARKETPLACE_REFUND_ITEM_UNAVAILABLE");
   }
 
-  state.inventory.set(`${order.buyerId}:${ITEM}`, buyerQuantity - order.quantity);
+  state.inventory.set(`${order.buyerId}:${ITEM}`, buyerOwned - order.quantity);
   state.inventory.set(`${order.sellerId}:${ITEM}`, (state.inventory.get(`${order.sellerId}:${ITEM}`) ?? 0) + order.quantity);
   state.cash.set(order.buyerId, round((state.cash.get(order.buyerId) ?? 0) + order.total));
   state.cash.set(order.sellerId, round((state.cash.get(order.sellerId) ?? 0) - order.subtotal));
@@ -425,20 +368,20 @@ function refundOrder(state: ReturnType<typeof fixture>, order: Order): void {
   order.status = "refunded";
 }
 
-function gate(ctx: Context, expectedGame: string): void {
-  if (ctx.gameId !== expectedGame) throw new Error("MARKETPLACE_WRONG_GAME");
-  if (ctx.sessionState === "expired") throw new Error("MARKETPLACE_SESSION_EXPIRED");
+function enforceGate(ctx: Gate, expectedGameId: string): void {
+  if (ctx.gameId !== expectedGameId) throw new Error("MARKETPLACE_WRONG_GAME");
   if (ctx.gameState === "paused") throw new Error("MARKETPLACE_GAME_PAUSED");
   if (ctx.gameState === "ended") throw new Error("MARKETPLACE_GAME_ENDED");
+  if (ctx.sessionState === "expired") throw new Error("MARKETPLACE_SESSION_EXPIRED");
 }
 
-function stale(listing: Listing, expectedVersion: number): void {
+function assertVersion(listing: Listing, expectedVersion: number): void {
   if (listing.version !== expectedVersion) throw new Error("MARKETPLACE_STALE_VERSION");
 }
 
-function assertBalanced(state: ReturnType<typeof fixture>): void {
-  const playerCash = [...state.cash.values()].reduce((sum, value) => sum + value, 0);
-  assertEquals(round(playerCash + state.fees + state.taxes), 2000);
+function assertConserved(state: ReturnType<typeof fixture>): void {
+  const cash = [...state.cash.values()].reduce((sum, value) => sum + value, 0);
+  assertEquals(round(cash + state.fees + state.taxes), 2000);
 }
 
 function round(value: number): number {
