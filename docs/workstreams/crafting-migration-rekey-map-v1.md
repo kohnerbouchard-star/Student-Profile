@@ -6,30 +6,28 @@ PR #300 was synchronized once with Business-merged `main` at `2b073019ed36ca63cf
 
 The controller assigned the exclusive Crafting range `20260721130000–20260721139999`. The unused remainder stays reserved for forward-only Crafting corrective migrations discovered during replay or connected acceptance.
 
-## Final ordered map
+## Final ordered family
 
-| Order | Former provisional identity | Final migration |
-|---:|---|---|
-| 1 | `20260721140000` | `20260721130000_add_crafting_item_definitions_v1.sql` |
-| 2 | `20260721140100` | `20260721130100_add_crafting_recipe_definitions_v1.sql` |
-| 3 | `20260721140200` | `20260721130200_add_game_physical_economy_scope_v1.sql` |
-| 4 | `20260721140300` | `20260721130300_add_crafting_job_reservations_v1.sql` |
-| 5 | `20260721140400` | `20260721130400_add_equipment_and_item_effect_state_v1.sql` |
-| 6 | `20260721140500` | `20260721130500_add_crafting_salvage_admin_security_v1.sql` |
-| 7 | `20260721141000` | `20260721131000_add_crafting_pack_import_v1.sql` |
-| 8 | `20260721141200` | `20260721131200_harden_crafting_pack_import_identity_v1.sql` |
-| 9 | `20260721141300` | `20260721131300_harden_crafting_pack_version_identity_v1.sql` |
-| 10 | `20260721141500` | `20260721131500_add_crafting_pack_activation_v1.sql` |
-| 11 | `20260721142000` | `20260721132000_add_player_crafting_read_v1.sql` |
-| 12 | `20260721142500` | `20260721132500_add_player_crafting_job_start_v1.sql` |
-| 13 | `20260721143000` | `20260721133000_add_player_crafting_cancel_v1.sql` |
-| 14 | `20260721143500` | `20260721133500_add_player_crafting_claim_v1.sql` |
-| 15 | `20260721143700` | `20260721133700_add_player_equipment_slots_v1.sql` |
-| 16 | `20260721144000` | `20260721134000_add_player_item_effects_v1.sql` |
-| 17 | `20260721144500` | `20260721134500_add_player_equipment_salvage_v1.sql` |
-| 18 | `20260721145000` | `20260721135000_add_admin_crafting_read_v1.sql` |
-| 19 | `20260721145500` | `20260721135500_add_admin_crafting_recovery_v1.sql` |
-| 20 | `20260721145700` | `20260721135700_add_admin_crafting_supply_and_grants_v1.sql` |
+1. `20260721130000_add_crafting_item_definitions_v1.sql`
+2. `20260721130100_add_crafting_recipe_definitions_v1.sql`
+3. `20260721130200_add_game_physical_economy_scope_v1.sql`
+4. `20260721130300_add_crafting_job_reservations_v1.sql`
+5. `20260721130400_add_equipment_and_item_effect_state_v1.sql`
+6. `20260721130500_add_crafting_salvage_admin_security_v1.sql`
+7. `20260721131000_add_crafting_pack_import_v1.sql`
+8. `20260721131200_harden_crafting_pack_import_identity_v1.sql`
+9. `20260721131300_harden_crafting_pack_version_identity_v1.sql`
+10. `20260721131500_add_crafting_pack_activation_v1.sql`
+11. `20260721132000_add_player_crafting_read_v1.sql`
+12. `20260721132500_add_player_crafting_job_start_v1.sql`
+13. `20260721133000_add_player_crafting_cancel_v1.sql`
+14. `20260721133500_add_player_crafting_claim_v1.sql`
+15. `20260721133700_add_player_equipment_slots_v1.sql`
+16. `20260721134000_add_player_item_effects_v1.sql`
+17. `20260721134500_add_player_equipment_salvage_v1.sql`
+18. `20260721135000_add_admin_crafting_read_v1.sql`
+19. `20260721135500_add_admin_crafting_recovery_v1.sql`
+20. `20260721135700_add_admin_crafting_supply_and_grants_v1.sql`
 
 ## Reservation ledger
 
@@ -45,7 +43,7 @@ The controller assigned the exclusive Crafting range `20260721130000–202607211
 
 - SQL intent and dependency order are preserved.
 - No World or Business migration is renamed, rewritten, duplicated, or reordered.
-- No former Crafting migration filename remains in the effective branch.
+- No provisional Crafting migration filename or identity remains in the effective branch.
 - Shared files are reconstructed additively from Business-merged `main`.
 - Production and applied staging histories are not renamed or concealed.
 - PR #163 remains the sole definition and calibration authority.
