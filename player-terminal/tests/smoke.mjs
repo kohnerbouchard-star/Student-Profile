@@ -46,7 +46,7 @@ assert.ok(previewData.inventory.items.length > 0, "Inventory preview cannot be e
 
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.businessPrice, { productId: "prod-scanner" }), "/business/products/prod-scanner/pricing");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.marketplacePurchase, { listingId: "listing-1" }), "/marketplace/listings/listing-1/purchase");
-assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.craftItem, { recipeId: "recipe-1" }), "/crafting/recipes/recipe-1/craft");
+assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.craftItem, { recipeId: "recipe-1" }), "/crafting/jobs");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.loanRepay, { loanId: "LN-8804" }), "/banking/loans/LN-8804/payments");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.messageSend, { threadId: "thread-1" }), "/messages/threads/thread-1/messages");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.progressionUnlock, { skillId: "skill-1" }), "/progression/skills/skill-1/unlock");
@@ -167,7 +167,7 @@ for (const request of [
   { endpointKey: "bankTransfer", method: "POST", path: "/banking/transfers", payload: { amount: 100 } },
   { endpointKey: "businessProduction", method: "POST", path: "/business/production-runs", payload: { quantity: 10 } },
   { endpointKey: "marketplacePurchase", method: "POST", path: "/marketplace/listings/listing-1/purchase", payload: { quantity: 1 } },
-  { endpointKey: "craftItem", method: "POST", path: "/crafting/recipes/recipe-1/craft", payload: { quantity: 1 } },
+  { endpointKey: "craftItem", method: "POST", path: "/crafting/jobs", payload: { recipeKey: "recipe-1", quantity: 1 } },
   { endpointKey: "loanApply", method: "POST", path: "/banking/loans/applications/loan-offer-1", payload: { amount: 5000 } },
   { endpointKey: "messageSend", method: "POST", path: "/messages/threads/thread-1/messages", payload: { body: "Test" } },
   { endpointKey: "progressionUnlock", method: "POST", path: "/progression/skills/skill-1/unlock", payload: {} }

@@ -1,8 +1,12 @@
+import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
 import type { PlayerInventoryRoute } from "../contracts/playerInventoryReadContracts.ts";
 
 export function readPlayerInventoryRoutePath(
   pathname: string,
 ): PlayerInventoryRoute | null {
+  const craftingRoute = readPlayerCraftingRoutePath(pathname);
+  if (craftingRoute) return { kind: "crafting", route: craftingRoute };
+
   const segments = pathname.split("/").filter(Boolean);
   const routeSegments = readRouteSegments(segments);
 

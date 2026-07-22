@@ -20,3 +20,4 @@ function loadStylesheet() {
 
 await loadStylesheet();
 await import("./inventory-redemption-queue-surface.js");
+await import("./crafting-oversight-loader.js");
