@@ -60,7 +60,7 @@ export async function handleCraftingOperation(
     const jobKey = decodeURIComponent(recovery[1]);
     if (!JOB_KEY.test(jobKey)) return invalid("Crafting job identifier is invalid.");
     const body = await readObject(input.request);
-    if (!body.ok) return body.result;
+    if (body.ok === false) return body.result;
     if (!onlyKeys(body.value, ["outcome", "reason", "idempotencyKey"])) {
       return invalid("Only outcome, reason, and idempotencyKey are accepted.");
     }
@@ -86,7 +86,7 @@ export async function handleCraftingOperation(
     const itemKey = decodeURIComponent(supply[1]).toLowerCase();
     if (!ITEM_KEY.test(itemKey)) return invalid("Supply item key is invalid.");
     const body = await readObject(input.request);
-    if (!body.ok) return body.result;
+    if (body.ok === false) return body.result;
     const accepted = [
       "countryCode", "scarcityBand", "availableQuantity", "eventMultiplier",
       "routeMultiplier", "sourceEventKey", "expiresAt", "idempotencyKey",
