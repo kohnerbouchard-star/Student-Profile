@@ -48,8 +48,15 @@ Deno.test("allowed Crafting requests dispatch only after authenticated rate-limi
       resolveScope: async () => ({
         gameId: "00000000-0000-4000-8000-000000000001",
         playerUuid: "00000000-0000-4000-8000-000000000002",
-        playerSessionId: "00000000-0000-4000-8000-000000000003",
-        sessionTokenHash: "a".repeat(64),
+        activeSessionId: "00000000-0000-4000-8000-000000000003",
+        sessionValid: true,
+        sessionExpiresAt: "2027-01-01T00:00:00.000Z",
+        authorizationContext: {
+          actorType: "player",
+          source: "player_session",
+          gameScope: "session",
+          resourceScope: "own_player",
+        },
       }),
       enforce: async (input) => {
         enforcedAction = input.action;
