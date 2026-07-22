@@ -9,12 +9,15 @@ on:
       - "admin/css/crafting-oversight.css"
       - "admin/inventory-redemption-queue-loader.js"
       - "backend/src/domains/crafting/**"
-      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
-      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts"
+      - "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts"
+      - "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts"
+      - "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts"
+      - "backend/src/security/playerCraftingRateLimitDispatch*.ts"
       - "backend/supabase/functions/admin-api/craftingOperations*.ts"
-      - "backend/supabase/functions/admin-api/index.ts"
-      - "backend/supabase/functions/classroom-api/index.ts"
-      - "backend/supabase/migrations/*crafting*"
+      - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
+      - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
+      - "backend/supabase/migrations/2026072113*.sql"
       - "docs/workstreams/crafting-*.md"
       - "player-terminal/src/**"
       - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
@@ -36,12 +39,15 @@ on:
       - "admin/css/crafting-oversight.css"
       - "admin/inventory-redemption-queue-loader.js"
       - "backend/src/domains/crafting/**"
-      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
-      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts"
+      - "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts"
+      - "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts"
+      - "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts"
+      - "backend/src/security/playerCraftingRateLimitDispatch*.ts"
       - "backend/supabase/functions/admin-api/craftingOperations*.ts"
-      - "backend/supabase/functions/admin-api/index.ts"
-      - "backend/supabase/functions/classroom-api/index.ts"
-      - "backend/supabase/migrations/*crafting*"
+      - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
+      - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
+      - "backend/supabase/migrations/2026072113*.sql"
       - "docs/workstreams/crafting-*.md"
       - "player-terminal/src/**"
       - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
@@ -65,12 +71,44 @@ concurrency:
 jobs:
   permanent-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - name: Check out Crafting candidate
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact Business predecessor and final migration inventory
+        run: |
+          predecessor="2b073019ed36ca63cf9a9b3c7acd14569fe88116"
+          git merge-base --is-ancestor "$predecessor" HEAD
+          test "$(git merge-base "$predecessor" HEAD)" = "$predecessor"
+          mapfile -t migrations < <(find backend/supabase/migrations -maxdepth 1 -type f -name '2026072113*.sql' -printf '%f\n' | sort)
+          test "${#migrations[@]}" -eq 20
+          expected=(
+            20260721130000_add_crafting_item_definitions_v1.sql
+            20260721130100_add_crafting_recipe_definitions_v1.sql
+            20260721130200_add_game_physical_economy_scope_v1.sql
+            20260721130300_add_crafting_job_reservations_v1.sql
+            20260721130400_add_equipment_and_item_effect_state_v1.sql
+            20260721130500_add_crafting_salvage_admin_security_v1.sql
+            20260721131000_add_crafting_pack_import_v1.sql
+            20260721131200_harden_crafting_pack_import_identity_v1.sql
+            20260721131300_harden_crafting_pack_version_identity_v1.sql
+            20260721131500_add_crafting_pack_activation_v1.sql
+            20260721132000_add_player_crafting_read_v1.sql
+            20260721132500_add_player_crafting_job_start_v1.sql
+            20260721133000_add_player_crafting_cancel_v1.sql
+            20260721133500_add_player_crafting_claim_v1.sql
+            20260721133700_add_player_equipment_slots_v1.sql
+            20260721134000_add_player_item_effects_v1.sql
+            20260721134500_add_player_equipment_salvage_v1.sql
+            20260721135000_add_admin_crafting_read_v1.sql
+            20260721135500_add_admin_crafting_recovery_v1.sql
+            20260721135700_add_admin_crafting_supply_and_grants_v1.sql
+          )
+          diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${migrations[@]}")
 
       - name: Check out immutable merged Seed authority
         uses: actions/checkout@v7
@@ -138,6 +176,12 @@ jobs:
       - name: Test and typecheck Crafting integration
         run: |
           npm run test:player-crafting --prefix backend
+          deno test --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts \
+            backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts \
+            backend/src/security/playerCraftingRateLimitDispatch.test.ts
+          npm run test:admin-api --prefix backend
           npm run typecheck:all --prefix backend
           npm run verify --prefix player-terminal
 
@@ -160,6 +204,7 @@ jobs:
             -iname '*crafting*snapshot*' -o \
             -iname '*crafting*finaliz*' \
           \) -print -quit)"
+          ! git diff --name-only "2b073019ed36ca63cf9a9b3c7acd14569fe88116...HEAD" | grep -Ei 'crafting.*(payload|transport|materializ|generator|reconstruct|snapshot|finaliz)|(payload|transport|materializ|generator|reconstruct|snapshot|finaliz).*crafting'
 
       - name: Upload Crafting browser diagnostics
         if: failure()
