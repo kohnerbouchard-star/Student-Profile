@@ -41,6 +41,8 @@ declare
   v_existing public.progression_events%rowtype;
   v_source_existing public.progression_events%rowtype;
   v_profile public.player_progression_profiles%rowtype;
+  v_lifecycle_state text;
+  v_operational_status text;
   v_xp integer;
   v_country integer := 0;
   v_career integer := 0;
@@ -123,6 +125,25 @@ begin
     return query select 'replayed'::text, v_source_existing.public_event_id,
       v_source_existing.experience_delta, v_profile.experience, v_profile.level, 0;
     return;
+  end if;
+
+  select lifecycle_state, status
+  into v_lifecycle_state, v_operational_status
+  from public.game_sessions
+  where id = p_game_session_id
+  for share;
+
+  if not found then
+    raise exception 'GAME_SESSION_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state = 'paused' then
+    raise exception 'GAME_SESSION_DISABLED' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state in ('ended', 'archived') or v_operational_status = 'archived' then
+    raise exception 'GAME_SESSION_ARCHIVED' using errcode = 'P0001';
+  end if;
+  if v_lifecycle_state <> 'active' or v_operational_status <> 'active' then
+    raise exception 'GAME_SESSION_NOT_ACTIVE' using errcode = 'P0001';
   end if;
 
   select
@@ -272,6 +293,6 @@ grant execute on function public.record_progression_integration_event_v1(uuid,uu
   to service_role;
 
 comment on function public.record_progression_integration_event_v1(uuid,uuid,text,text,text,text,timestamptz) is
-  'Canonical versioned Progression event ingress. Event types are bound to explicit source domains. Exact idempotency retries and stable source-event redeliveries replay once per Player; conflicting immutable source details fail closed.';
+  'Canonical versioned Progression event ingress. Event types are bound to explicit source domains. Exact idempotency retries and stable source-event redeliveries replay before lifecycle enforcement; new awards require an active game and conflicting immutable source details fail closed.';
 
 commit;
