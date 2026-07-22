@@ -17,7 +17,7 @@ const EDGES = [
   "stock-market-trading",
 ];
 const ROOTS = ["admin", "assets", "auth", "frontend", "index.html", "player-terminal"];
-const PREPARATION_CATEGORIES = [
+export const PREPARATION_CATEGORIES = [
   "backup",
   "cleanup",
   "concurrency",
@@ -36,7 +36,7 @@ const PREPARATION_CATEGORIES = [
   "session-expiry",
   "synthetic-identities",
 ];
-const PROBE_IDS = [
+export const PROBE_IDS = [
   "concurrency",
   "hmac-trusted-ingress",
   "partial-outage-fail-closed",
@@ -50,7 +50,7 @@ const PROBE_IDS = [
   "synthetic-cleanup",
   "wrong-game-cross-tenant",
 ];
-const TEMPLATE_IDS = [
+export const TEMPLATE_IDS = [
   "alert-delivery",
   "backup-manifest",
   "cleanup-report",
@@ -216,9 +216,11 @@ function validateArtifacts(release, requiredEdges, errors) {
   return { edge, frontend };
 }
 
-function validateOperationsPreparation(preparation, operationsEvidenceComplete, errors) {
-  check(isObject(preparation), "operationsPreparation evidence is required", errors);
-  if (!isObject(preparation)) return;
+export function validateOperationsPreparation(preparation, { operationsEvidenceComplete = false } = {}) {
+  const errors = [];
+  check(isObject(preparation), "operations preparation evidence is required", errors);
+  if (!isObject(preparation)) throw new ProductionIntegrationGateError(errors);
+  scanSensitive(preparation, "operationsPreparation", errors);
 
   exactStrings(preparation.validatedCategories, PREPARATION_CATEGORIES, "operationsPreparation.validatedCategories", errors);
   check(preparation.productionDataUsed === false, "operations preparation must not use production data", errors);
@@ -380,6 +382,9 @@ function validateOperationsPreparation(preparation, operationsEvidenceComplete, 
     check(proof.productionWriteOperationsAllowed === false, "production proof must prohibit production writes", errors);
     check(proof.executed === !blocked, "production proof execution marker is inconsistent", errors);
   }
+
+  if (errors.length) throw new ProductionIntegrationGateError(errors);
+  return preparation;
 }
 
 export function validateProductionIntegrationEvidence(evidence, { requireReady = false } = {}) {
@@ -509,7 +514,18 @@ export function validateProductionIntegrationEvidence(evidence, { requireReady =
     artifactInventory = validateArtifacts(release, requiredEdges, errors);
   }
 
-  validateOperationsPreparation(evidence.operationsPreparation, evidence.operationsEvidenceComplete, errors);
+  if (evidence.operationsPreparation !== undefined) {
+    try {
+      validateOperationsPreparation(evidence.operationsPreparation, {
+        operationsEvidenceComplete: evidence.operationsEvidenceComplete,
+      });
+    } catch (error) {
+      if (error instanceof ProductionIntegrationGateError) errors.push(...error.errors);
+      else throw error;
+    }
+  } else if (requireReady) {
+    errors.push("ready gate requires operationsPreparation evidence");
+  }
 
   if (isObject(evidence.privacy)) {
     for (const [key, value] of Object.entries(evidence.privacy)) check(value === false, `privacy.${key} must be false`, errors);
@@ -608,16 +624,19 @@ async function main() {
     JSON.stringify(
       {
         executionState: evidence.executionState,
-        preparationStopState: evidence.operationsPreparation.stopState,
+        preparationStopState:
+          evidence.operationsPreparation?.stopState ??
+          evidence.preparationCheckpoint ??
+          "STAGE1_LEDGER_VALIDATED_SEPARATELY",
         serialMerged: evidence.integrationWatch.serialQueue.filter(({ status }) => status === "MERGED").length,
         serialRemaining: evidence.dependencyState.openCapabilityPullRequests.length,
         canonicalMigrationCount: evidence.migrations.canonicalRepositoryIdentity.count,
         stagingMigrationCount: evidence.migrations.stagingLedger.count,
         stagingOnlyCount: evidence.migrations.stagingLedger.stagingOnlyCount,
         canonicalOnlyCount: evidence.migrations.stagingLedger.canonicalOnlyCount,
-        preparationCategoryCount: evidence.operationsPreparation.validatedCategories.length,
-        probeCount: evidence.operationsPreparation.probes.items.length,
-        templateCount: evidence.operationsPreparation.evidenceTemplates.templates.length,
+        preparationCategoryCount: evidence.operationsPreparation?.validatedCategories?.length ?? 0,
+        probeCount: evidence.operationsPreparation?.probes?.items?.length ?? 0,
+        templateCount: evidence.operationsPreparation?.evidenceTemplates?.templates?.length ?? 0,
         gateStatus: evidence.gate.status,
         productionDecision: evidence.gate.productionDecision,
       },
