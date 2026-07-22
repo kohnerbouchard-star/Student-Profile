@@ -1,3 +1,4 @@
+export const PROGRESSION_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const PROGRESSION_SKILL_ID_PATTERN = /^skl_[a-z0-9_]{3,64}_v1$/;
 export const PROGRESSION_REWARD_ID_PATTERN = /^rwd_[0-9a-f]{32}$/;
 export const PROGRESSION_EVENT_ID_PATTERN = /^pev_[0-9a-f]{32}$/;
