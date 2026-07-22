@@ -42,6 +42,9 @@ Deno.test("Progression migration is transactional, private, bounded, and replay 
   includes(sql, "claim_player_progression_reward_atomic_v1");
   includes(sql, "apply_admin_progression_correction_atomic_v1");
   includes(sql, "refuse_progression_audit_mutation_v1");
+  includes(sql, "before update or delete on public.progression_command_audit");
+  includes(sql, "before update or delete on public.progression_admin_corrections");
+  includes(sql, "progression_audit_immutable");
   includes(sql, "between -100 and 100");
   includes(sql, "progression_events_idempotency_unique");
   includes(sql, "player_progression_reward_source_unique");
@@ -70,7 +73,26 @@ Deno.test("Progression definitions use equal specialization ceilings and bounded
   assert(!sql.toLowerCase().includes("exponential"));
 });
 
-Deno.test("Progression ingress binds source contracts and prevents source-event farming", async () => {
+Deno.test("Public Progression profile excludes private achievement and hidden reputation state", async () => {
+  const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
+  const publicStart = sql.indexOf("create or replace function public.read_public_player_progression_profile_v1");
+  const adminStart = sql.indexOf("create or replace function public.read_admin_progression_players_v1");
+  assert(publicStart >= 0 && adminStart > publicStart);
+  const publicRead = sql.slice(publicStart, adminStart);
+  includes(publicRead, "progress.completed_at is not null");
+  includes(publicRead, "is_public = true");
+  for (const privateField of [
+    "currentvalue",
+    "claimable",
+    "rewardid",
+    "rewardkind",
+    "rewardamount",
+    "idempotency_key",
+    "staff_user_id",
+  ]) assert(!publicRead.includes(privateField));
+});
+
+Deno.test("Progression ingress binds source contracts, blocks farming, and gates new awards after committed replay", async () => {
   const sql = (await Deno.readTextFile(IDEMPOTENCY_MIGRATION)).toLowerCase();
   assert(sql.startsWith("begin;"));
   assert(sql.trimEnd().endsWith("commit;"));
@@ -81,6 +103,16 @@ Deno.test("Progression ingress binds source contracts and prevents source-event 
   includes(sql, "select * into v_source_existing");
   includes(sql, "return query select 'replayed'::text, v_source_existing.public_event_id");
   includes(sql, "for update");
+  includes(sql, "select lifecycle_state, status");
+  includes(sql, "for share");
+  includes(sql, "game_session_disabled");
+  includes(sql, "game_session_archived");
+  includes(sql, "game_session_not_active");
+  includes(sql, "game_session_not_found");
+  const idempotencyReplay = sql.indexOf("return query select 'replayed'::text, v_existing.public_event_id");
+  const sourceReplay = sql.indexOf("return query select 'replayed'::text, v_source_existing.public_event_id");
+  const lifecycleRead = sql.indexOf("select lifecycle_state, status");
+  assert(idempotencyReplay >= 0 && sourceReplay > idempotencyReplay && lifecycleRead > sourceReplay);
   for (const contract of [
     "business.operation.completed",
     "crafting.recipe.completed",
@@ -93,7 +125,7 @@ Deno.test("Progression ingress binds source contracts and prevents source-event 
   includes(sql, "source_domain in ('contracts','business','crafting','market','story','relationship','country','world','messaging','admin')");
 });
 
-Deno.test("Admin corrections serialize with lifecycle transitions and preserve committed replay", async () => {
+Deno.test("Admin corrections serialize with lifecycle transitions and expose only bounded immutable history", async () => {
   const sql = (await Deno.readTextFile(CURVE_AND_LIFECYCLE_MIGRATION)).toLowerCase();
   assert(sql.startsWith("begin;"));
   assert(sql.trimEnd().endsWith("commit;"));
@@ -106,6 +138,17 @@ Deno.test("Admin corrections serialize with lifecycle transitions and preserve c
   includes(sql, "game_session_not_found");
   includes(sql, "committed idempotent replays remain available because they do not insert new audit rows");
   assert(!sql.includes("before update on public.progression_admin_corrections"));
+  includes(sql, "read_admin_progression_corrections_v1");
+  includes(sql, "owner_staff_user_id = p_staff_user_id");
+  includes(sql, "limit p_limit offset p_offset");
+  includes(sql, "grant execute on function public.read_admin_progression_corrections_v1");
+  const historyStart = sql.indexOf("create or replace function public.read_admin_progression_corrections_v1");
+  const historyEnd = sql.indexOf("revoke all on function public.read_admin_progression_corrections_v1");
+  assert(historyStart >= 0 && historyEnd > historyStart);
+  const historyRead = sql.slice(historyStart, historyEnd);
+  for (const forbidden of ["idempotency_key", "staff_user_id'"]) {
+    assert(!historyRead.includes(forbidden));
+  }
 });
 
 function includes(value: string, expected: string): void {
