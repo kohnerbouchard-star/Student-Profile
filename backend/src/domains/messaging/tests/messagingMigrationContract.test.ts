@@ -57,6 +57,48 @@ Deno.test("messaging browser contracts use public identifiers and never return o
   ]) assert(!playerRead.includes(forbidden));
 });
 
+Deno.test("player reads, sends, and receipts remain participant-only and same-game", async () => {
+  const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
+  const read = between(
+    sql,
+    "create or replace function public.read_player_messages_v1",
+    "create or replace function public.send_player_message_atomic_v1",
+  );
+  const send = between(
+    sql,
+    "create or replace function public.send_player_message_atomic_v1",
+    "create or replace function public.mark_player_message_thread_read_v1",
+  );
+  const receipt = between(
+    sql,
+    "create or replace function public.mark_player_message_thread_read_v1",
+    "create or replace function public.create_admin_message_thread_atomic_v1",
+  );
+  for (const section of [read, send, receipt]) {
+    assertIncludes(section, "public.message_thread_participants");
+    assertIncludes(section, "participant_row.game_session_id");
+    assertIncludes(section, "participant_row.player_id = p_player_id");
+  }
+  assertIncludes(read, "message removed by an administrator.");
+  assertIncludes(send, "participant_row.player_id <> p_player_id");
+  assertIncludes(receipt, "player_message_thread_not_found");
+});
+
+Deno.test("Notifications integration is delivery metadata only", async () => {
+  const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
+  for (const fragment of [
+    "'message_received'",
+    "'threadid', v_thread.public_thread_id",
+    "'messageid', v_message.public_message_id",
+    "insert into public.notification_deliveries",
+  ]) assertIncludes(sql, fragment);
+  for (const forbidden of [
+    "jsonb_build_object('body'",
+    "jsonb_build_object('messagebody'",
+    "'body', v_message.body",
+  ]) assert(!sql.includes(forbidden));
+});
+
 Deno.test("messaging sends and staff moderation serialize and replay idempotently", async () => {
   const sql = (await Deno.readTextFile(MIGRATION)).toLowerCase();
   const send = between(
