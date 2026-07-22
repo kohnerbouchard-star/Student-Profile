@@ -52,6 +52,19 @@ export async function handleProgressionOperation(
     );
     return limited ?? await readPlayers(service, input);
   }
+  if (input.suffix === "/progression/corrections") {
+    if (input.request.method !== "GET") {
+      return methodNotAllowed("Use GET to review Progression correction history.");
+    }
+    const limited = await rateLimit(
+      service,
+      input,
+      "staff.progression.read",
+      "read",
+      consumeRateLimit,
+    );
+    return limited ?? await readCorrections(service, input);
+  }
   const correction = input.suffix.match(
     /^\/progression\/players\/([A-Za-z0-9][A-Za-z0-9._:-]{0,159})\/corrections$/,
   );
@@ -115,26 +128,49 @@ async function readPlayers(
   input: ProgressionInput,
 ): Promise<ProgressionOperationResult> {
   try {
-    const url = new URL(input.request.url);
-    for (const key of url.searchParams.keys()) {
-      if (!["limit", "offset"].includes(key) || url.searchParams.getAll(key).length !== 1) {
-        return invalid(`Unsupported or repeated query parameter: ${key}.`);
-      }
-    }
-    const limit = boundedInteger(url.searchParams.get("limit"), 50, 1, 100);
-    const offset = boundedInteger(url.searchParams.get("offset"), 0, 0, 10000);
-    if (limit === null || offset === null) return invalid("Progression pagination is invalid.");
+    const pagination = parsePagination(input.request, ["limit", "offset"]);
+    if (!pagination.ok) return invalid(pagination.message);
     const response = await service.rpc<Record<string, unknown>>(
       "read_admin_progression_players_v1",
       {
         p_game_session_id: input.gameId,
         p_staff_user_id: input.staffUserId,
-        p_limit: limit,
-        p_offset: offset,
+        p_limit: pagination.limit,
+        p_offset: pagination.offset,
       },
     );
     if (response.error) return rpcError(response.error);
     if (!isRecord(response.data) || !Array.isArray(response.data.players)) return failed();
+    return { handled: true, status: 200, body: { data: response.data } };
+  } catch {
+    return failed();
+  }
+}
+
+async function readCorrections(
+  service: AdminService,
+  input: ProgressionInput,
+): Promise<ProgressionOperationResult> {
+  try {
+    const pagination = parsePagination(input.request, ["limit", "offset", "playerId"]);
+    if (!pagination.ok) return invalid(pagination.message);
+    const url = new URL(input.request.url);
+    const playerId = url.searchParams.get("playerId")?.trim() ?? "";
+    if (playerId && !PLAYER_ID_PATTERN.test(playerId)) {
+      return invalid("Progression correction-history Player filter is invalid.");
+    }
+    const response = await service.rpc<Record<string, unknown>>(
+      "read_admin_progression_corrections_v1",
+      {
+        p_game_session_id: input.gameId,
+        p_staff_user_id: input.staffUserId,
+        p_player_identifier: playerId || null,
+        p_limit: pagination.limit,
+        p_offset: pagination.offset,
+      },
+    );
+    if (response.error) return rpcError(response.error);
+    if (!isRecord(response.data) || !Array.isArray(response.data.corrections)) return failed();
     return { handled: true, status: 200, body: { data: response.data } };
   } catch {
     return failed();
@@ -232,6 +268,24 @@ async function correct(
   } catch {
     return failed();
   }
+}
+
+function parsePagination(
+  request: Request,
+  allowedKeys: readonly string[],
+): { readonly ok: true; readonly limit: number; readonly offset: number } |
+  { readonly ok: false; readonly message: string } {
+  const url = new URL(request.url);
+  for (const key of url.searchParams.keys()) {
+    if (!allowedKeys.includes(key) || url.searchParams.getAll(key).length !== 1) {
+      return { ok: false, message: `Unsupported or repeated query parameter: ${key}.` };
+    }
+  }
+  const limit = boundedInteger(url.searchParams.get("limit"), 50, 1, 100);
+  const offset = boundedInteger(url.searchParams.get("offset"), 0, 0, 10000);
+  return limit === null || offset === null
+    ? { ok: false, message: "Progression pagination is invalid." }
+    : { ok: true, limit, offset };
 }
 
 function rpcError(error: RpcError): ProgressionOperationResult {
