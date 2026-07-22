@@ -1,0 +1,171 @@
+name: Production Integration Gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/production-integration-gate.yml"
+      - "docs/operations/evidence/production-integration-gate-v1/**"
+      - "scripts/production-integration-gate*"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      evidence_path:
+        description: Sanitized connected-execution evidence on current main
+        required: true
+        default: docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-integration-gate-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  contract-tests:
+    name: Integration gate contract tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Install repository tooling
+        run: npm ci
+      - name: Validate blocked connected preflight
+        run: >-
+          node scripts/production-integration-gate.mjs
+          --evidence docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json
+      - name: Validate Stage 1 connected-operations preparation ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'EOF'
+          import assert from "node:assert/strict";
+          import { readFile } from "node:fs/promises";
+
+          const path = "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
+          const evidence = JSON.parse(await readFile(path, "utf8"));
+          const expectedFunctions = [
+            "admin-api",
+            "classroom-api",
+            "stock-market-player-read",
+            "stock-market-read",
+            "stock-market-runner",
+            "stock-market-seed-copy",
+            "stock-market-trading",
+          ];
+
+          assert.equal(evidence.reportType, "connected-operations-stage1-preparation");
+          assert.equal(evidence.stage1Status, "PRE_RELEASE_PREPARED");
+          assert.equal(evidence.stage2Status, "BLOCKED_FINAL_IMMUTABLE_STAGING_RELEASE_NOT_PUBLISHED");
+          assert.equal(evidence.operationsEvidenceComplete, false);
+          assert.equal(evidence.productionDeploymentAuthorized, false);
+          assert.equal(evidence.productionModified, false);
+          assert.equal(evidence.repository.featureSemanticsModified, false);
+          assert.equal(evidence.staging.project.distinctFromProduction, true);
+          assert.equal(evidence.staging.project.dataPolicy, "synthetic-only");
+          assert.equal(evidence.staging.edgeFunctions.applicationFunctionCount, 0);
+          assert.equal(evidence.staging.edgeFunctions.finalApplicationReleaseDeployed, false);
+          assert.equal(evidence.releaseContract.finalImmutableRelease.publishedByChat2, false);
+          assert.equal(evidence.releaseContract.finalImmutableRelease.stage2Eligible, false);
+          assert.deepEqual(
+            evidence.releaseContract.requiredApplicationEdgeFunctions.map(({ name }) => name),
+            expectedFunctions,
+          );
+          assert.equal(evidence.githubControlPlane.valuesRecorded, false);
+          assert.equal(evidence.backupAndRestore.rehearsalExecuted, false);
+          assert.equal(evidence.loadPreparation.mode, "plan-only");
+          assert.equal(evidence.loadPreparation.expectedPlayers, 30);
+          assert.equal(evidence.loadPreparation.maximumPlayers, 40);
+          assert.equal(evidence.loadPreparation.executed, false);
+          assert.equal(evidence.observabilityPreparation.dashboardPanelCount, 13);
+          assert.equal(evidence.observabilityPreparation.alertCount, 12);
+          assert.equal(evidence.observabilityPreparation.activationExecuted, false);
+          assert.equal(evidence.legacyPreparation.executed, false);
+          assert.ok(evidence.externalPrerequisites.length >= 10);
+          assert.ok(evidence.securityPreparation.probes.every(({ status }) => status.startsWith("PREPARED")));
+          assert.ok(Object.values(evidence.privacy).every((value) => value === false));
+
+          console.log("Stage 1 connected-operations preparation is complete and remains explicitly non-acceptance.");
+          EOF
+      - name: Run integration gate tests
+        run: node --test scripts/production-integration-gate.test.mjs
+      - name: Validate merged recovery preparation
+        run: npm run audit:recovery && npm run test:recovery-contract
+      - name: Validate merged observability and bounded load preparation
+        run: npm run audit:observability && npm run test:observability
+      - name: Validate merged legacy-retirement preparation
+        run: npm run audit:legacy-runtime && npm run test:legacy-runtime
+      - name: Validate security probe contracts without connected execution
+        run: npm run test:security-probes
+      - name: Validate staging-readiness preparation contract
+        run: npm run test:deployment-readiness
+      - name: Scan integration evidence for credentials
+        run: |
+          npm run security:secrets
+          node scripts/staging/scan-beta-security-evidence.mjs \
+            docs/operations/evidence/production-integration-gate-v1
+      - name: Record preparation boundary
+        run: |
+          {
+            echo "## Connected operations Stage 1"
+            echo "- Repository preparation validated: \`true\`"
+            echo "- Connected acceptance executed: \`false\`"
+            echo "- Final immutable staging release published: \`false\`"
+            echo "- Production deployment executed: \`false\`"
+            echo "- OPERATIONS_EVIDENCE_COMPLETE: \`false\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  connected-readiness-gate:
+    name: Connected readiness — no production action
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - name: Check out current main evidence
+        uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Validate evidence path
+        shell: bash
+        env:
+          EVIDENCE_PATH: ${{ inputs.evidence_path }}
+        run: |
+          set -euo pipefail
+          [[ "$EVIDENCE_PATH" =~ ^docs/operations/evidence/production-integration-gate-v1/[a-zA-Z0-9._/-]+\.json$ ]]
+          [[ "$EVIDENCE_PATH" != *".."* ]]
+          test -f "$EVIDENCE_PATH"
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+      - name: Install repository tooling
+        run: npm ci
+      - name: Require complete connected acceptance
+        env:
+          EVIDENCE_PATH: ${{ inputs.evidence_path }}
+        run: >-
+          node scripts/production-integration-gate.mjs
+          --evidence "$EVIDENCE_PATH"
+          --require-ready
+      - name: Record authorization boundary
+        run: |
+          {
+            echo "## Connected staging readiness validated"
+            echo "- Production deployment executed: \`false\`"
+            echo "- Production modification authorized: \`false\`"
+            echo "- Final promotion requires explicit product-owner authorization."
+          } >> "$GITHUB_STEP_SUMMARY"
