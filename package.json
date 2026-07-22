@@ -76,7 +76,7 @@
     "seed:beta:dry-run": "node scripts/seed-beta-importer.mjs --mode dry-run --environment staging",
     "build:physical-economy-pack": "node scripts/build-physical-economy-runtime-pack.mjs",
     "simulate:physical-economy": "node scripts/simulate-physical-economy-balance.mjs",
-    "test:crafting-runtime": "node --test scripts/crafting-runtime-contract.test.mjs scripts/crafting-admin-replay-contract.test.mjs scripts/crafting-branch-hygiene.test.mjs scripts/crafting-pack-version-identity-contract.test.mjs scripts/crafting-seed-definition-boundary.test.mjs scripts/crafting-salvage-calibration-contract.test.mjs scripts/lib/physical-economy-pack-contract.test.mjs && node scripts/admin-crafting-oversight-contract.mjs"
+    "test:crafting-runtime": "node --test scripts/crafting-runtime-contract.test.mjs scripts/crafting-admin-replay-contract.test.mjs scripts/crafting-branch-hygiene.test.mjs scripts/crafting-pack-version-identity-contract.test.mjs scripts/crafting-seed-definition-boundary.test.mjs scripts/crafting-salvage-calibration-contract.test.mjs scripts/crafting-scarcity-projection-contract.test.mjs scripts/lib/physical-economy-pack-contract.test.mjs && node scripts/admin-crafting-oversight-contract.mjs"
   },
   "devDependencies": {
     "playwright": "1.61.1",
