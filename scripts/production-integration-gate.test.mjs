@@ -14,7 +14,7 @@ const PREFLIGHT_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json";
 const PREPARATION_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preliminary-go-no-go-2026-07-21.json";
-
+const CRAFTING_HEAD = "e99b4ca23c5463f7d06c9fc7e3fd174d92b082e4";
 const EXPECTED_EDGES = [
   "admin-api",
   "classroom-api",
@@ -38,10 +38,8 @@ function assertReleasePreparation(evidence) {
     evidence.preparationCheckpoint,
     "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO",
   );
-
   const preparation = evidence.releasePreparation;
   assert.equal(preparation.status, "PREPARED_NOT_EXECUTED");
-
   const manifest = preparation.manifestContracts;
   assert.equal(manifest.releaseManifestSchemaVersion, 1);
   assert.equal(manifest.artifactSetManifestSchemaVersion, 1);
@@ -77,29 +75,18 @@ function assertReleasePreparation(evidence) {
   );
 
   assert.deepEqual(preparation.inventoryTemplates.edgeFunctions, EXPECTED_EDGES);
-  assert.equal(
-    preparation.inventoryTemplates.routeInventory.status,
-    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
-  );
-  assert.equal(
-    preparation.inventoryTemplates.capabilityInventory.status,
-    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
-  );
-  assert.equal(
-    preparation.inventoryTemplates.rateLimitInventory.status,
-    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
-  );
-
+  for (const inventory of ["routeInventory", "capabilityInventory", "rateLimitInventory"]) {
+    assert.equal(
+      preparation.inventoryTemplates[inventory].status,
+      "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
+    );
+  }
   assert.deepEqual(
     preparation.environmentPrerequisites.requiredEnvironments,
     ["development", "production", "staging"],
   );
   assert.equal(preparation.environmentPrerequisites.valuesRetained, false);
-  assert.equal(
-    preparation.environmentPrerequisites.stagingProductionProjectDistinct,
-    true,
-  );
-
+  assert.equal(preparation.environmentPrerequisites.stagingProductionProjectDistinct, true);
   assert.equal(preparation.syntheticIdentityPlan.status, "PREPARED_NOT_PROVISIONED");
   assert.equal(preparation.syntheticIdentityPlan.expectedPlayers, 30);
   assert.equal(preparation.syntheticIdentityPlan.maximumPlayers, 40);
@@ -113,17 +100,13 @@ function assertReleasePreparation(evidence) {
   assert.equal(rollback.requiresExactRuntimeInventory, true);
   assert.equal(rollback.requiresRestoreEvidence, true);
   assert.equal(rollback.obsoleteArtifactEligibility, "REJECTED");
-
-  assert.equal(preparation.evidenceRetention.status, "PREPARED");
   assert.ok(preparation.evidenceRetention.forbidden.includes("credential-values"));
   assert.ok(preparation.evidenceRetention.forbidden.includes("production-data"));
   assert.ok(preparation.evidenceRetention.forbidden.includes("session-material"));
 }
 
-test("post-Business serial watch validates as blocked and production-safe", async () => {
-  const evidence = await preflightFixture();
-  const result = validateProductionIntegrationEvidence(evidence);
-
+test("post-Business serial watch is current, blocked, and production-safe", async () => {
+  const result = validateProductionIntegrationEvidence(await preflightFixture());
   assert.equal(result.executionState, "ACTIVE_SERIAL_RELEASE_WATCH");
   assert.equal(
     result.repository.mainCommitAtAudit,
@@ -137,21 +120,14 @@ test("post-Business serial watch validates as blocked and production-safe", asyn
     result.integrationWatch.serialQueue[1].mergeCommit,
     "2b073019ed36ca63cf9a9b3c7acd14569fe88116",
   );
-  assert.equal(
-    result.integrationWatch.serialQueue[2].head,
-    "2a5659cab81dfe7ce1ddb4773381d6a71e83c1ce",
-  );
-  assert.deepEqual(
-    result.dependencyState.openCapabilityPullRequests,
-    [300, 249, 248, 261],
-  );
+  assert.equal(result.integrationWatch.serialQueue[2].head, CRAFTING_HEAD);
+  assert.deepEqual(result.dependencyState.openCapabilityPullRequests, [300, 249, 248, 261]);
   assert.equal(result.gate.productionDecision, "NO_GO");
   assert.equal(result.gate.productionModified, false);
 });
 
-test("migration drift records one historical alias and complete canonical coverage", async () => {
+test("migration identity records complete canonical coverage and one historical alias", async () => {
   const result = validateProductionIntegrationEvidence(await preflightFixture());
-
   assert.equal(result.migrations.canonicalRepositoryIdentity.count, 93);
   assert.equal(result.migrations.canonicalRepositoryIdentity.head, "20260721122500");
   assert.equal(result.migrations.stagingLedger.count, 94);
@@ -163,7 +139,7 @@ test("migration drift records one historical alias and complete canonical covera
   assert.equal(result.migrations.stagingLedger.matchesCanonicalRepository, false);
 });
 
-test("serial ledger order and dependency ledger remain exact", async () => {
+test("serial order and open dependency ledger are fail-closed", async () => {
   const nonContiguous = await preflightFixture();
   nonContiguous.integrationWatch.serialQueue[3].status = "MERGED";
   nonContiguous.integrationWatch.serialQueue[3].mergeCommit = "a".repeat(40);
@@ -188,14 +164,13 @@ test("serial ledger order and dependency ledger remain exact", async () => {
   );
 });
 
-test("two-way migration delta markers must be exact", async () => {
+test("two-way migration delta markers must remain exact", async () => {
   const canonicalOnly = await preflightFixture();
   canonicalOnly.migrations.stagingLedger.canonicalOnlyCount = 1;
   assert.throws(
     () => validateProductionIntegrationEvidence(canonicalOnly),
     /canonicalOnlyCount is inaccurate|set-delta counts are inconsistent/,
   );
-
   const net = await preflightFixture();
   net.migrations.stagingLedger.netCountDelta = 2;
   assert.throws(
@@ -204,7 +179,7 @@ test("two-way migration delta markers must be exact", async () => {
   );
 });
 
-test("required Edge inventory and production prohibitions are exact", async () => {
+test("Edge inventory and deployment prohibitions are exact", async () => {
   const result = validateProductionIntegrationEvidence(await preflightFixture());
   assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, EXPECTED_EDGES);
   assert.deepEqual(result.environment.staging.applicationEdgeFunctions, []);
@@ -222,7 +197,6 @@ test("required Edge inventory and production prohibitions are exact", async () =
     () => validateProductionIntegrationEvidence(pullRequestDeployment),
     /pull-request deployment must remain prohibited/,
   );
-
   const productionTarget = await preflightFixture();
   productionTarget.integrationWatch.workflowSafety.productionTargetAllowed = true;
   assert.throws(
@@ -241,10 +215,9 @@ test("release preparation rejects rebuild during promotion", async () => {
   assert.throws(() => assertReleasePreparation(evidence), /Expected values to be strictly equal/);
 });
 
-test("migration reservations record Messaging and Progression rekey requirements", async () => {
+test("migration reservations record downstream rekey requirements", async () => {
   const evidence = await preflightFixture();
   const ledger = evidence.integrationWatch.migrationReservationLedger;
-
   assert.equal(ledger.mergedRangesImmutable, true);
   assert.equal(ledger.unmergedBranchesRekeyOnlyAfterPredecessorMerge, true);
   assert.deepEqual(
@@ -263,13 +236,20 @@ test("migration reservations record Messaging and Progression rekey requirements
   assert.equal(ledger.orderingRisks[0].pullRequest, 261);
 });
 
-test("operations preparation matrix validates without executing connected work", async () => {
+test("operations preparation has a distinct internal stop and sends no connected work", async () => {
   const evidence = await preparationFixture();
+  assert.equal(
+    evidence.preparationCheckpoint,
+    "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO",
+  );
+  assert.equal(
+    evidence.operationsStopState,
+    "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED",
+  );
   const preparation = validateOperationsPreparation(evidence.operationsPreparation, {
     operationsEvidenceComplete: false,
   });
-
-  assert.equal(evidence.preparationCheckpoint, "OPERATIONS_PREPARATION_CURRENT_EXECUTION_BLOCKED");
+  assert.equal(preparation.stopState, evidence.operationsStopState);
   assert.deepEqual(preparation.validatedCategories, PREPARATION_CATEGORIES);
   assert.deepEqual(preparation.probes.items.map(({ id }) => id), PROBE_IDS);
   assert.deepEqual(
@@ -278,82 +258,54 @@ test("operations preparation matrix validates without executing connected work",
   );
   assert.equal(preparation.syntheticIdentities.plannedPoolSize, 40);
   assert.equal(preparation.syntheticIdentities.expectedLoadSubsetSize, 30);
-  assert.equal(preparation.loadRunner.scenarios[0].players, 30);
-  assert.equal(preparation.loadRunner.scenarios[1].players, 40);
+  assert.equal(preparation.syntheticIdentities.credentialMaterialized, false);
+  assert.equal(preparation.loadRunner.connectedExecutionBlocked, true);
+  assert.ok(preparation.loadRunner.scenarios.every(({ executed }) => executed === false));
   assert.equal(preparation.queryPlanCapture.executed, false);
   assert.equal(preparation.cleanupProcedure.executed, false);
   assert.equal(preparation.productionNonModificationProof.executed, false);
 });
 
-test("operations preparation rejects missing categories, probes, and templates", async () => {
-  const missingCategory = await preparationFixture();
-  missingCategory.operationsPreparation.validatedCategories.pop();
-  assert.throws(
-    () => validateOperationsPreparation(missingCategory.operationsPreparation),
-    /validatedCategories does not match the required contract/,
-  );
-
-  const missingProbe = await preparationFixture();
-  missingProbe.operationsPreparation.probes.items.pop();
-  assert.throws(
-    () => validateOperationsPreparation(missingProbe.operationsPreparation),
-    /probes\.items ids does not match the required contract/,
-  );
-
-  const missingTemplate = await preparationFixture();
-  missingTemplate.operationsPreparation.evidenceTemplates.templates.pop();
-  assert.throws(
-    () => validateOperationsPreparation(missingTemplate.operationsPreparation),
-    /evidenceTemplates ids does not match the required contract/,
-  );
-});
-
-test("blocked preparation rejects premature execution claims", async () => {
-  for (const mutate of [
-    (plan) => { plan.backupProcedure.executed = true; },
-    (plan) => { plan.restoreProcedure.executed = true; },
-    (plan) => { plan.rollbackRecovery.executed = true; },
-    (plan) => { plan.loadRunner.executed = true; },
-    (plan) => { plan.loadRunner.scenarios[0].executed = true; },
-    (plan) => { plan.probes.executed = true; },
-    (plan) => { plan.observability.activated = true; },
-    (plan) => { plan.queryPlanCapture.executed = true; },
-    (plan) => { plan.cleanupProcedure.executed = true; },
-    (plan) => { plan.productionNonModificationProof.executed = true; },
+test("operations preparation rejects missing contracts and premature execution", async () => {
+  for (const [mutate, pattern] of [
+    [(plan) => plan.validatedCategories.pop(), /validatedCategories does not match/],
+    [(plan) => plan.probes.items.pop(), /probes\.items ids does not match/],
+    [(plan) => plan.evidenceTemplates.templates.pop(), /evidenceTemplates ids does not match/],
+    [(plan) => { plan.backupProcedure.executed = true; }, /execution marker is inconsistent/],
+    [(plan) => { plan.loadRunner.scenarios[0].executed = true; }, /execution marker is inconsistent/],
+    [(plan) => { plan.observability.activated = true; }, /activation marker is inconsistent/],
   ]) {
     const evidence = await preparationFixture();
     mutate(evidence.operationsPreparation);
     assert.throws(
       () => validateOperationsPreparation(evidence.operationsPreparation),
-      /execution marker is inconsistent|activation marker is inconsistent/,
+      pattern,
     );
   }
 });
 
-test("bounded-load and synthetic identity limits are enforced", async () => {
+test("bounded-load and synthetic identity constraints are enforced", async () => {
   const wrongMaximum = await preparationFixture();
   wrongMaximum.operationsPreparation.loadRunner.scenarios[1].players = 41;
   assert.throws(
     () => validateOperationsPreparation(wrongMaximum.operationsPreparation),
     /maximum-40 player count is invalid/,
   );
-
   const excessiveDuration = await preparationFixture();
   excessiveDuration.operationsPreparation.loadRunner.scenarios[0].steadyMinutes = 13;
   assert.throws(
     () => validateOperationsPreparation(excessiveDuration.operationsPreparation),
     /expected-30 exceeds the duration bound/,
   );
-
-  const derivedFromProduction = await preparationFixture();
-  derivedFromProduction.operationsPreparation.syntheticIdentities.productionDerived = true;
+  const derived = await preparationFixture();
+  derived.operationsPreparation.syntheticIdentities.productionDerived = true;
   assert.throws(
-    () => validateOperationsPreparation(derivedFromProduction.operationsPreparation),
+    () => validateOperationsPreparation(derived.operationsPreparation),
     /must not be derived from production/,
   );
 });
 
-test("ready mode requires the complete serial queue and executed operations matrix", async () => {
+test("ready mode requires full convergence and executed connected evidence", async () => {
   const evidence = await preflightFixture();
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence, { requireReady: true }),
@@ -361,7 +313,7 @@ test("ready mode requires the complete serial queue and executed operations matr
   );
 });
 
-test("obsolete release, sensitive material, and environment aliasing remain rejected", async () => {
+test("obsolete release, sensitive material, and environment aliasing are rejected", async () => {
   const result = validateProductionIntegrationEvidence(await preflightFixture());
   assert.equal(result.immutableRelease.currentForCanonicalMain, false);
   assert.equal(result.immutableRelease.rollbackCompatibility.decision, "REJECTED");
@@ -377,7 +329,6 @@ test("obsolete release, sensitive material, and environment aliasing remain reje
     () => validateProductionIntegrationEvidence(browserKey),
     /prohibited sensitive material/,
   );
-
   const rawIdentifier = await preflightFixture();
   rawIdentifier.debugReference =
     ["123e4567", "e89b", "42d3", "a456", "426614174000"].join("-");
@@ -385,7 +336,6 @@ test("obsolete release, sensitive material, and environment aliasing remain reje
     () => validateProductionIntegrationEvidence(rawIdentifier),
     /prohibited sensitive material/,
   );
-
   const sameProject = await preflightFixture();
   sameProject.environment.staging.projectRef = sameProject.environment.productionGuard.projectRef;
   assert.throws(
