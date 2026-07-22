@@ -57,8 +57,31 @@ const crafting = {
   effectHistory: [],
 };
 
+const fixtureDocument = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/css/player-terminal-base.css" />
+  <link rel="stylesheet" href="/css/player-terminal.css" />
+  <link rel="stylesheet" href="/css/player-terminal-ux.css" />
+  <link rel="stylesheet" href="/css/player-terminal-polish.css" />
+  <link rel="stylesheet" href="/css/player-terminal-normalization.css" />
+</head>
+<body>
+  <main id="playerTerminal" aria-label="Econovaria player terminal"></main>
+</body>
+</html>`;
+
 async function render(page) {
-  await page.goto("/#crafting");
+  await page.route("**/__crafting-component-fixture", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: fixtureDocument,
+    });
+  });
+  await page.goto("/__crafting-component-fixture");
   await page.evaluate(async (craftingData) => {
     const { renderCraftingPage } = await import("/src/pages/crafting-page.js");
     const mount = document.getElementById("playerTerminal");
