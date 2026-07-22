@@ -9,8 +9,105 @@ import {
 const EVIDENCE_PATH =
   "docs/operations/evidence/production-integration-gate-v1/preflight-2026-07-21.json";
 
+const EXPECTED_EDGES = [
+  "admin-api",
+  "classroom-api",
+  "stock-market-player-read",
+  "stock-market-read",
+  "stock-market-runner",
+  "stock-market-seed-copy",
+  "stock-market-trading",
+];
+
 async function fixture() {
   return JSON.parse(await readFile(EVIDENCE_PATH, "utf8"));
+}
+
+function assertPreparationContract(evidence) {
+  assert.equal(
+    evidence.preparationCheckpoint,
+    "CONNECTED_RELEASE_PREPARATION_CURRENT_NO_GO",
+  );
+
+  const preparation = evidence.releasePreparation;
+  assert.equal(preparation.status, "PREPARED_NOT_EXECUTED");
+
+  const manifest = preparation.manifestContracts;
+  assert.equal(manifest.releaseManifestSchemaVersion, 1);
+  assert.equal(manifest.artifactSetManifestSchemaVersion, 1);
+  assert.equal(manifest.sourceCommitBinding, "EXACT_MERGED_MAIN_SHA_ONLY");
+  assert.equal(manifest.sourceCommitReachabilityRequired, true);
+  assert.equal(manifest.singleBuildPromotionRequired, true);
+  assert.equal(manifest.rebuildDuringPromotionAllowed, false);
+  assert.equal(manifest.configurationIdentityRequired, true);
+  assert.equal(manifest.migrationIdentityRequired, true);
+  assert.equal(manifest.artifactChecksumsRequired, true);
+
+  const migration = preparation.migrationInventoryContract;
+  assert.equal(migration.versionPattern, "^[0-9]{14}$");
+  assert.equal(migration.ordering, "lexicographic-ascending");
+  assert.equal(migration.digestAlgorithm, "sha256");
+  assert.equal(
+    migration.digestInput,
+    "sorted-unique-versions-newline-delimited-with-trailing-newline",
+  );
+  assert.equal(migration.duplicatesAllowed, false);
+  assert.equal(migration.historyRewriteAllowed, false);
+  assert.equal(
+    migration.historicalCompatibility.strategy,
+    "forward-only-preserve-applied-alias",
+  );
+  assert.deepEqual(
+    migration.historicalCompatibility.stagingOnlyVersions,
+    ["20260721015504"],
+  );
+  assert.equal(
+    migration.historicalCompatibility.exactIdentityRequiredBeforeFinalDeployment,
+    true,
+  );
+
+  assert.deepEqual(preparation.inventoryTemplates.edgeFunctions, EXPECTED_EDGES);
+  assert.equal(
+    preparation.inventoryTemplates.routeInventory.status,
+    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
+  );
+  assert.equal(
+    preparation.inventoryTemplates.capabilityInventory.status,
+    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
+  );
+  assert.equal(
+    preparation.inventoryTemplates.rateLimitInventory.status,
+    "TEMPLATE_PREPARED_REQUIRES_FINAL_MAIN",
+  );
+
+  assert.deepEqual(
+    preparation.environmentPrerequisites.requiredEnvironments,
+    ["development", "production", "staging"],
+  );
+  assert.equal(preparation.environmentPrerequisites.valuesRetained, false);
+  assert.equal(
+    preparation.environmentPrerequisites.stagingProductionProjectDistinct,
+    true,
+  );
+
+  assert.equal(preparation.syntheticIdentityPlan.status, "PREPARED_NOT_PROVISIONED");
+  assert.equal(preparation.syntheticIdentityPlan.expectedPlayers, 30);
+  assert.equal(preparation.syntheticIdentityPlan.maximumPlayers, 40);
+  assert.equal(preparation.syntheticIdentityPlan.productionDataAllowed, false);
+
+  const rollback = preparation.rollbackEligibilityRules;
+  assert.equal(rollback.status, "PREPARED");
+  assert.equal(rollback.requiresKnownGoodConnectedStaging, true);
+  assert.equal(rollback.requiresExactArtifactSet, true);
+  assert.equal(rollback.requiresForwardDatabaseCompatibility, true);
+  assert.equal(rollback.requiresExactRuntimeInventory, true);
+  assert.equal(rollback.requiresRestoreEvidence, true);
+  assert.equal(rollback.obsoleteArtifactEligibility, "REJECTED");
+
+  assert.equal(preparation.evidenceRetention.status, "PREPARED");
+  assert.ok(preparation.evidenceRetention.forbidden.includes("credential-values"));
+  assert.ok(preparation.evidenceRetention.forbidden.includes("production-data"));
+  assert.ok(preparation.evidenceRetention.forbidden.includes("session-material"));
 }
 
 test("post-Business serial watch validates as blocked and production-safe", async () => {
@@ -29,6 +126,10 @@ test("post-Business serial watch validates as blocked and production-safe", asyn
   assert.equal(
     result.integrationWatch.serialQueue[1].mergeCommit,
     "2b073019ed36ca63cf9a9b3c7acd14569fe88116",
+  );
+  assert.equal(
+    result.integrationWatch.serialQueue[2].head,
+    "2a5659cab81dfe7ce1ddb4773381d6a71e83c1ce",
   );
   assert.deepEqual(
     result.dependencyState.openCapabilityPullRequests,
@@ -105,15 +206,7 @@ test("required application Edge inventory is exact", async () => {
   const evidence = await fixture();
   const result = validateProductionIntegrationEvidence(evidence);
 
-  assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, [
-    "admin-api",
-    "classroom-api",
-    "stock-market-player-read",
-    "stock-market-read",
-    "stock-market-runner",
-    "stock-market-seed-copy",
-    "stock-market-trading",
-  ]);
+  assert.deepEqual(result.integrationWatch.requiredApplicationEdgeFunctions, EXPECTED_EDGES);
   assert.deepEqual(result.environment.staging.applicationEdgeFunctions, []);
 });
 
@@ -123,7 +216,7 @@ test("substituted Edge inventory is rejected", async () => {
 
   assert.throws(
     () => validateProductionIntegrationEvidence(evidence),
-    /required application Edge Function inventory does not match repository source/,
+    /required application Edge Function inventory|does not match the required contract/,
   );
 });
 
@@ -141,6 +234,54 @@ test("pull-request deployment and production targeting remain prohibited", async
     () => validateProductionIntegrationEvidence(production),
     /production workflow targeting must remain prohibited/,
   );
+});
+
+test("parallel immutable release preparation is complete and explicitly non-executed", async () => {
+  const evidence = await fixture();
+  assertPreparationContract(evidence);
+});
+
+test("preparation contract rejects rebuild during promotion", async () => {
+  const evidence = await fixture();
+  evidence.releasePreparation.manifestContracts.rebuildDuringPromotionAllowed = true;
+
+  assert.throws(
+    () => assertPreparationContract(evidence),
+    /Expected values to be strictly equal/,
+  );
+});
+
+test("migration reservation ledger records downstream rekey requirements", async () => {
+  const evidence = await fixture();
+  const ledger = evidence.integrationWatch.migrationReservationLedger;
+
+  assert.equal(ledger.mergedRangesImmutable, true);
+  assert.equal(ledger.unmergedBranchesRekeyOnlyAfterPredecessorMerge, true);
+  assert.deepEqual(
+    ledger.reservations.map(({ pullRequest }) => pullRequest),
+    [294, 299, 300, 249, 248, 261],
+  );
+
+  const conflict = ledger.exactVersionConflicts[0];
+  assert.deepEqual(conflict.pullRequests, [300, 248]);
+  assert.deepEqual(
+    conflict.versions,
+    ["20260721130000", "20260721131000", "20260721132000", "20260721133000"],
+  );
+  assert.equal(conflict.status, "MESSAGING_REKEY_REQUIRED_AFTER_MARKETPLACE");
+  assert.equal(ledger.orderingRisks[0].pullRequest, 261);
+});
+
+test("shared convergence inventory templates remain final-main gated", async () => {
+  const evidence = await fixture();
+  const templates = evidence.integrationWatch.sharedConvergenceTemplates;
+
+  assert.equal(templates.status, "PREPARED_REQUIRES_FINAL_MAIN");
+  assert.equal(templates.finalInventoryRequired, true);
+  assert.ok(templates.routerSurfaces.includes("backend/supabase/functions/admin-api/index.ts"));
+  assert.ok(templates.routerSurfaces.includes("backend/supabase/functions/classroom-api/index.ts"));
+  assert.ok(templates.packageSurfaces.includes("package.json"));
+  assert.ok(templates.releaseSurfaces.length >= 2);
 });
 
 test("obsolete retained release remains rejected", async () => {
