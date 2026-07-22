@@ -83,8 +83,16 @@ if (reconciledSource === source) {
   throw new Error("Mounted modal focus reconciliation contract changed.");
 }
 
+const deterministicRestoreSource = reconciledSource.replace(
+  `  await page.waitForTimeout(100);\n  assert(await opener.evaluate((node) => document.activeElement === node), \`${"${label}"} did not restore focus to its opener.\`);`,
+  `  const openerHandle = await opener.elementHandle();\n  assert(openerHandle, \`${"${label}"} opener detached before focus restoration.\`);\n  await page.waitForFunction((node) => document.activeElement === node, openerHandle, { timeout: 5000 });\n  assert(await opener.evaluate((node) => document.activeElement === node), \`${"${label}"} did not restore focus to its opener.\`);`,
+);
+if (deterministicRestoreSource === reconciledSource) {
+  throw new Error("Mounted modal focus restoration fixture contract changed.");
+}
+
 try {
-  writeFileSync(runtimePath, reconciledSource);
+  writeFileSync(runtimePath, deterministicRestoreSource);
   const result = spawnSync(process.execPath, [runtimePath], {
     cwd: process.cwd(),
     env: process.env,
