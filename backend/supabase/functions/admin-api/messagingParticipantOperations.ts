@@ -106,7 +106,7 @@ export async function handleMessagingParticipantOperation(
   ]);
   const returnedThread = identifier(row.thread_id, THREAD);
   const returnedPlayer = identifier(row.participant_reference, PLAYER);
-  const count = integer(row.participant_count, 1, 500);
+  const count = integer(row.participant_count, 0, 500);
   if (
     returnedAction !== action ||
     returnedThread !== threadId ||
