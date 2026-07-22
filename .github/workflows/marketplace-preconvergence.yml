@@ -9,6 +9,7 @@ on:
       - "backend/supabase/migrations/20260721140000_add_marketplace_reference_scopes_v1.sql"
       - "backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql"
       - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
+      - "backend/supabase/migrations/20260721142500_add_marketplace_inventory_event_types_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   push:
@@ -21,6 +22,7 @@ on:
       - "backend/supabase/migrations/20260721140000_add_marketplace_reference_scopes_v1.sql"
       - "backend/supabase/migrations/20260721141000_add_player_marketplace_lifecycle_v2.sql"
       - "backend/supabase/migrations/20260721142000_harden_marketplace_resolution_replay_v1.sql"
+      - "backend/supabase/migrations/20260721142500_add_marketplace_inventory_event_types_v1.sql"
       - "docs/workstreams/marketplace-crafting-reservation-convergence-v1.md"
       - ".github/workflows/marketplace-preconvergence.yml"
   workflow_dispatch:
@@ -50,6 +52,7 @@ jobs:
 
       - name: Build read-only convergence bundle
         shell: bash
+        working-directory: .
         run: |
           set -euo pipefail
           git rev-parse HEAD
@@ -85,6 +88,25 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Verify Marketplace inventory event compatibility migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration="supabase/migrations/20260721142500_add_marketplace_inventory_event_types_v1.sql"
+          test -f "$migration"
+          grep -Fq "drop constraint if exists inventory_events_event_type_check" "$migration"
+          grep -Fq "add constraint inventory_events_event_type_check" "$migration"
+          for event_type in \
+            PURCHASED USED RESERVED RELEASED ADJUSTED REVERSED \
+            MARKETPLACE_SOLD MARKETPLACE_PURCHASED MARKETPLACE_REFUNDED MARKETPLACE_RETURNED
+          do
+            grep -Fq "'$event_type'" "$migration"
+          done
+          first_nonblank="$(awk 'NF { print tolower($0); exit }' "$migration")"
+          last_nonblank="$(awk 'NF { line=tolower($0) } END { print line }' "$migration")"
+          test "$first_nonblank" = "begin;"
+          test "$last_nonblank" = "commit;"
 
       - name: Run Marketplace TypeScript typecheck
         shell: bash
