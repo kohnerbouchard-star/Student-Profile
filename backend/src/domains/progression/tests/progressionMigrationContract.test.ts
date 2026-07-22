@@ -6,6 +6,10 @@ const MIGRATION = new URL(
   "../../../../supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql",
   import.meta.url,
 );
+const IDEMPOTENCY_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260721115500_harden_progression_event_idempotency_v1.sql",
+  import.meta.url,
+);
 const CURVE_AND_LIFECYCLE_MIGRATION = new URL(
   "../../../../supabase/migrations/20260721120500_rebalance_progression_curve_v1.sql",
   import.meta.url,
@@ -64,6 +68,29 @@ Deno.test("Progression definitions use equal specialization ceilings and bounded
   includes(sql.toLowerCase(), "reward_kind in ('skill_points','reputation','badge')");
   assert(!sql.toLowerCase().includes("reward_kind in ('currency"));
   assert(!sql.toLowerCase().includes("exponential"));
+});
+
+Deno.test("Progression ingress binds source contracts and prevents source-event farming", async () => {
+  const sql = (await Deno.readTextFile(IDEMPOTENCY_MIGRATION)).toLowerCase();
+  assert(sql.startsWith("begin;"));
+  assert(sql.trimEnd().endsWith("commit;"));
+  includes(sql, "progression_events_source_identity_unique");
+  includes(sql, "game_session_id,\n    player_id,\n    source_domain,\n    source_event_type,\n    source_public_id");
+  includes(sql, "progression_event_source_mismatch");
+  includes(sql, "progression_source_event_conflict");
+  includes(sql, "select * into v_source_existing");
+  includes(sql, "return query select 'replayed'::text, v_source_existing.public_event_id");
+  includes(sql, "for update");
+  for (const contract of [
+    "business.operation.completed",
+    "crafting.recipe.completed",
+    "market.order.settled",
+    "story.chapter.completed",
+    "world.travel.completed",
+    "world.arrival.completed",
+    "messaging.contribution.approved",
+  ]) includes(sql, contract);
+  includes(sql, "source_domain in ('contracts','business','crafting','market','story','relationship','country','world','messaging','admin')");
 });
 
 Deno.test("Admin corrections serialize with lifecycle transitions and preserve committed replay", async () => {
