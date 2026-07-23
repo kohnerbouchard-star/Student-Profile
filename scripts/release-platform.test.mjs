@@ -117,6 +117,7 @@ async function fixture() {
       workflowRunAttempt: "1",
       repository: "kohnerbouchard-star/Student-Profile",
       sourceCommit: "a".repeat(40),
+      toolingCommit: "a".repeat(40),
       deterministicArchive: "gnu-tar+gzip-n",
     },
     environmentNeutrality: {
