@@ -20,6 +20,8 @@ jobs:
     if: github.head_ref == 'ops/progression-convergence-trigger-20260723'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      CONVERGENCE_OVERLAY_REVISION: "2"
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
