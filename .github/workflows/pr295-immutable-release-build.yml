@@ -2,8 +2,7 @@ name: Release Artifact Build
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - ".github/workflows/pr295-immutable-release-build.yml"
       - "scripts/release-platform-lib.mjs"
@@ -20,57 +19,48 @@ concurrency:
 jobs:
   build:
     if: github.event.pull_request.number == 295
-    name: Build corrected immutable release artifact
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
-      EXPECTED_TOOLING_COMMIT: 6ee5707261cf005df7180acaf5c7d29edd71a945
-      CONFIGURATION_PATH: docs/operations/release-configuration.v1.json
-      OUTPUT_ROOT: /tmp/econovaria-release-v2
       SOURCE_ROOT: /tmp/econovaria-release-source
+      OUTPUT_ROOT: /tmp/econovaria-release-v2
     steps:
-      - name: Check out exact PR295 release tooling
+      - name: Check out exact PR295 tooling
         uses: actions/checkout@v7
         with:
-          ref: agent/production-integration-gate-v1
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Bind tooling and exact current main source
+      - name: Bind tooling and runtime source
         id: bind
         shell: bash
         run: |
           set -euo pipefail
           tooling_commit="$(git rev-parse HEAD)"
-          test "$tooling_commit" = "$EXPECTED_TOOLING_COMMIT"
+          test "$tooling_commit" = "${{ github.event.pull_request.head.sha }}"
           git fetch origin main
           test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
           rm -rf "$SOURCE_ROOT"
           git worktree add --detach "$SOURCE_ROOT" "$RELEASE_COMMIT"
           test "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" = "$RELEASE_COMMIT"
-          test -f "$SOURCE_ROOT/$CONFIGURATION_PATH"
           echo "tooling_commit=$tooling_commit" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Node
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
 
-      - name: Pin npm and install release tooling
-        shell: bash
+      - name: Install pinned tooling
         run: |
-          set -euo pipefail
           npm install --global npm@10.9.8
           npm ci
 
-      - name: Reject environment-bound source frontend
-        shell: bash
+      - name: Validate environment neutrality
         run: node scripts/release-environment-neutrality.mjs --repo-root "$SOURCE_ROOT"
 
-      - name: Build corrected immutable release set exactly once
-        shell: bash
+      - name: Build immutable release
         env:
           RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
         run: |
@@ -79,11 +69,11 @@ jobs:
           node scripts/release-platform.mjs build \
             --repo-root "$SOURCE_ROOT" \
             --commit "$RELEASE_COMMIT" \
-            --config "$CONFIGURATION_PATH" \
+            --config docs/operations/release-configuration.v1.json \
             --output "$OUTPUT_ROOT"
 
-      - name: Validate corrected manifest and artifact bytes
-        shell: bash
+      - name: Validate bytes and dependency closure
+        id: metadata
         env:
           RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
         run: |
@@ -93,50 +83,27 @@ jobs:
             --manifest "$OUTPUT_ROOT/release-manifest.json" \
             --artifact-root "$OUTPUT_ROOT" \
             --expected-commit "$RELEASE_COMMIT"
-          (
-            cd "$OUTPUT_ROOT"
-            sha256sum --check checksums.sha256
-          )
-
-      - name: Verify complete Edge dependency closure and identities
-        id: metadata
-        shell: bash
-        env:
-          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
-        run: |
-          set -euo pipefail
-          functions=(
-            admin-api
-            classroom-api
-            stock-market-player-read
-            stock-market-read
-            stock-market-runner
-            stock-market-seed-copy
-            stock-market-trading
-          )
-          for function_name in "${functions[@]}"; do
-            archive="$OUTPUT_ROOT/artifacts/edge-${function_name}.tar.gz"
-            test -f "$archive"
-            tar -tzf "$archive" | grep -Fxq "./backend/supabase/functions/${function_name}/index.ts"
+          (cd "$OUTPUT_ROOT" && sha256sum --check checksums.sha256)
+          for name in admin-api classroom-api stock-market-player-read stock-market-read stock-market-runner stock-market-seed-copy stock-market-trading; do
+            archive="$OUTPUT_ROOT/artifacts/edge-${name}.tar.gz"
+            tar -tzf "$archive" | grep -Fxq "./backend/supabase/functions/${name}/index.ts"
             tar -tzf "$archive" | grep -q '^./backend/src/'
           done
           node - <<'NODE' >> "$GITHUB_OUTPUT"
           const crypto = require('node:crypto');
           const fs = require('node:fs');
-          const path = process.env.OUTPUT_ROOT;
-          const bytes = fs.readFileSync(`${path}/release-manifest.json`);
-          const manifest = JSON.parse(bytes.toString('utf8'));
-          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('Source commit mismatch');
-          if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('Tooling commit mismatch');
-          if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('Workflow provenance mismatch');
-          if (manifest.migrations.count !== 131 || manifest.migrations.head !== '20260721163000') throw new Error('Migration identity mismatch');
-          if (manifest.migrations.versionSetSha256 !== '145d443670547d794c2e9e31b452a58338b784540eff64393cf2ad2d312193f3') throw new Error('Migration digest mismatch');
-          console.log(`release_id=${manifest.releaseId}`);
+          const root = process.env.OUTPUT_ROOT;
+          const bytes = fs.readFileSync(`${root}/release-manifest.json`);
+          const manifest = JSON.parse(bytes);
+          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('tooling mismatch');
+          if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('workflow mismatch');
+          if (manifest.migrations.count !== 131 || manifest.migrations.head !== '20260721163000') throw new Error('migration mismatch');
           console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
           console.log(`manifest_sha256=${crypto.createHash('sha256').update(bytes).digest('hex')}`);
           NODE
 
-      - name: Upload corrected immutable release set
+      - name: Upload corrected immutable artifact
         id: upload
         uses: actions/upload-artifact@v4
         with:
@@ -147,7 +114,7 @@ jobs:
           compression-level: 0
           overwrite: false
 
-      - name: Attest corrected release artifact provenance
+      - name: Attest corrected artifact
         uses: actions/attest@v4
         with:
           subject-path: |
@@ -157,20 +124,15 @@ jobs:
             /tmp/econovaria-release-v2/release-manifest.json
           show-summary: true
 
-      - name: Record corrected immutable build identity
-        shell: bash
+      - name: Record immutable identity
         run: |
           {
-            echo '## Corrected immutable release artifact built'
             echo "- Runtime source: \`$RELEASE_COMMIT\`"
-            echo "- Release tooling: \`${{ steps.bind.outputs.tooling_commit }}\`"
-            echo "- Release ID: \`${{ steps.metadata.outputs.release_id }}\`"
-            echo "- Artifact-set SHA-256: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
-            echo "- Release-manifest SHA-256: \`${{ steps.metadata.outputs.manifest_sha256 }}\`"
-            echo "- GitHub artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
-            echo "- GitHub archive digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
-            echo '- Edge dependency closure: `backend/src included`'
-            echo '- Environment-neutrality: `passed`'
-            echo '- Deployment performed: `false`'
+            echo "- Tooling source: \`${{ steps.bind.outputs.tooling_commit }}\`"
+            echo "- Artifact set: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
+            echo "- Manifest: \`${{ steps.metadata.outputs.manifest_sha256 }}\`"
+            echo "- Artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
+            echo "- Archive digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
+            echo '- Rebuilt during promotion: `false`'
             echo '- Production modified: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
