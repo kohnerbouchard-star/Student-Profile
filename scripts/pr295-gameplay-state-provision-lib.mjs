@@ -44,7 +44,7 @@ export function selectGameplayTargetGame(rows, bindings) {
   return game;
 }
 
-export function validatePhysicalEconomyPack(pack, releaseCommit) {
+export function inspectPhysicalEconomyPack(pack, releaseCommit) {
   requireCondition(pack?.schemaVersion === "econovaria-physical-economy-runtime-pack-v1", "Physical economy schema mismatch");
   requireCondition(pack?.packKey === "econovaria.beta-seed-pack.v1", "Physical economy pack identity mismatch");
   requireCondition(pack?.contentVersion === "1.0.0-beta", "Physical economy version mismatch");
@@ -54,12 +54,22 @@ export function validatePhysicalEconomyPack(pack, releaseCommit) {
   requireCondition(Array.isArray(pack?.recipes) && pack.recipes.length > 0, "Physical economy recipes are missing");
   requireCondition(Number(pack?.counts?.items) === pack.items.length, "Physical economy item count mismatch");
   requireCondition(Number(pack?.counts?.recipes) === pack.recipes.length, "Physical economy recipe count mismatch");
-  requireCondition(pack?.activationAuthorization?.catalogAuthorized === true, "Physical economy catalog is not authorized");
-  requireCondition(pack?.activationAuthorization?.recipeAuthorized === true, "Physical economy recipes are not authorized");
-  requireCondition(pack?.activationAuthorization?.calibrationAuthorized === true, "Physical economy calibration is not authorized");
-  requireCondition(pack?.activationAuthorization?.downstreamContractValidated === true, "Physical economy downstream contract is not validated");
   requireCondition(pack?.activationAuthorization?.productionAuthorized === false, "Physical economy pack must prohibit production");
+
+  const authorizationChecks = Object.freeze({
+    catalogAuthorized: pack?.activationAuthorization?.catalogAuthorized === true,
+    recipeAuthorized: pack?.activationAuthorization?.recipeAuthorized === true,
+    calibrationAuthorized: pack?.activationAuthorization?.calibrationAuthorized === true,
+    downstreamContractValidated: pack?.activationAuthorization?.downstreamContractValidated === true,
+    balanceGateAuthorized: pack?.calibrationEvidence?.balanceGateSummary?.activationAuthorized === true,
+    zeroBalanceGateFailures: Array.isArray(pack?.calibrationEvidence?.balanceGateSummary?.failures) &&
+      pack.calibrationEvidence.balanceGateSummary.failures.length === 0,
+  });
+  const blockers = Object.entries(authorizationChecks)
+    .filter(([, passed]) => !passed)
+    .map(([key]) => key);
   const expectedEnabledRecipes = pack.recipes.filter((recipe) => recipe?.regulated !== true).length;
+
   return Object.freeze({
     packKey: pack.packKey,
     contentVersion: pack.contentVersion,
@@ -68,7 +78,37 @@ export function validatePhysicalEconomyPack(pack, releaseCommit) {
     recipeCount: pack.recipes.length,
     expectedEnabledRecipes,
     regulatedRecipeCount: pack.recipes.length - expectedEnabledRecipes,
+    activationAuthorized: blockers.length === 0,
+    authorizationChecks,
+    blockers: Object.freeze(blockers),
   });
+}
+
+export const validatePhysicalEconomyPack = inspectPhysicalEconomyPack;
+
+export function validateProgressionBaseline({
+  activePlayerCount,
+  progressionProfiles,
+  reputationRows,
+  experienceTotal,
+  earnedSkillPointsTotal,
+  spentSkillPointsTotal,
+  bonusSkillPointsTotal,
+  nonzeroReputationRows,
+  completedAchievements,
+  claimedRewards,
+}) {
+  requireCondition(Number(activePlayerCount) >= 1, "No active Players exist for Progression initialization");
+  requireCondition(Number(progressionProfiles) === Number(activePlayerCount), "Progression profile count mismatch");
+  requireCondition(Number(reputationRows) === Number(activePlayerCount) * 4, "Progression reputation baseline count mismatch");
+  requireCondition(Number(experienceTotal) === 0, "Progression baseline must not award experience");
+  requireCondition(Number(earnedSkillPointsTotal) === 0, "Progression baseline must not award earned skill points");
+  requireCondition(Number(spentSkillPointsTotal) === 0, "Progression baseline must not spend skill points");
+  requireCondition(Number(bonusSkillPointsTotal) === 0, "Progression baseline must not award bonus skill points");
+  requireCondition(Number(nonzeroReputationRows) === 0, "Progression baseline must not award reputation");
+  requireCondition(Number(completedAchievements) === 0, "Progression baseline must not complete achievements");
+  requireCondition(Number(claimedRewards) === 0, "Progression baseline must not claim rewards");
+  return true;
 }
 
 export function validateGameplayProvisionedState({
@@ -79,11 +119,9 @@ export function validateGameplayProvisionedState({
   recipeCount,
   enabledRecipeCount,
   supplyCount,
-  activePlayerCount,
-  progressionProfileCount,
-  reputationCount,
   packIdentity,
 }) {
+  requireCondition(packIdentity?.activationAuthorized === true, "Crafting activation is not authorized");
   requireCondition(packLink?.status === "active", "Game physical economy pack is not active");
   requireCondition(contentPack?.status === "active", "Physical economy content pack is not active");
   requireCondition(contentPack?.pack_key === packIdentity.packKey, "Physical economy pack key mismatch");
@@ -94,9 +132,6 @@ export function validateGameplayProvisionedState({
   requireCondition(Number(recipeCount) === packIdentity.recipeCount, "Physical economy recipe availability count mismatch");
   requireCondition(Number(enabledRecipeCount) === packIdentity.expectedEnabledRecipes, "Enabled recipe count mismatch");
   requireCondition(Number(supplyCount) === packIdentity.itemCount, "Physical economy supply projection count mismatch");
-  requireCondition(Number(activePlayerCount) >= 1, "No active Players exist for Progression initialization");
-  requireCondition(Number(progressionProfileCount) === Number(activePlayerCount), "Progression profile count mismatch");
-  requireCondition(Number(reputationCount) === Number(activePlayerCount) * 4, "Progression reputation baseline count mismatch");
   return true;
 }
 
@@ -110,10 +145,11 @@ export function buildGameplayEvidence({
   packIdentity,
   importOutcome,
   activationOutcome,
+  craftingActive,
   verification,
 }) {
   const evidence = {
-    schemaVersion: "econovaria-gameplay-state-provision-v1",
+    schemaVersion: "econovaria-gameplay-state-provision-v2",
     generatedAt,
     sourceCommit,
     workflowCommit,
@@ -121,9 +157,15 @@ export function buildGameplayEvidence({
     targetGame: { name: targetGameName, idSha256: targetGameIdSha256, rawIdRecorded: false },
     crafting: {
       pack: packIdentity,
+      activationAuthorized: packIdentity.activationAuthorized,
+      activationBlocked: !packIdentity.activationAuthorized,
+      blockers: packIdentity.blockers,
+      importAttempted: packIdentity.activationAuthorized,
+      activationAttempted: packIdentity.activationAuthorized,
       importReplayed: importOutcome?.replayed === true,
       activationReplayed: activationOutcome?.replayed === true,
-      active: true,
+      active: craftingActive === true,
+      authorizationBypassed: false,
       inventoryFabricated: false,
     },
     progression: {
