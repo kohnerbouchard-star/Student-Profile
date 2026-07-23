@@ -104,8 +104,8 @@ export async function handlePlayerGameDashboardRequest(
     const actionRequest = request.method === "POST"
       ? await readCutsceneActionRequestBody(request)
       : null;
-    const gameSessionId = actionRequest?.gameSessionId ??
-      readDashboardGameSessionId(url.searchParams);
+    const requestedGameSessionId = actionRequest?.gameSessionId ??
+      readOptionalDashboardGameSessionId(url.searchParams);
     const serviceClient = dependencies.createServiceClient(envResult.value);
     const sessionTokenHash = await (dependencies.hashSessionToken ?? sha256Hex)(
       sessionToken,
@@ -117,7 +117,12 @@ export async function handlePlayerGameDashboardRequest(
       return jsonError(sessionResult.status, sessionResult.error);
     }
 
-    if (sessionResult.session.game_session_id !== gameSessionId) {
+    const gameSessionId = sessionResult.session.game_session_id;
+
+    if (
+      requestedGameSessionId !== null &&
+      requestedGameSessionId !== gameSessionId
+    ) {
       throw new EdgeActivationError(
         "invalid_player_session_scope",
         "Requested game session does not match the authenticated player session.",
@@ -244,19 +249,23 @@ async function readCutsceneActionRequestBody(
   };
 }
 
-function readDashboardGameSessionId(searchParams: URLSearchParams): string {
+function readOptionalDashboardGameSessionId(
+  searchParams: URLSearchParams,
+): string | null {
   const values = searchParams.getAll("gameSessionId");
 
-  if (values.length !== 1) {
+  if (values.length > 1) {
     throw invalidRequest(
-      "Exactly one gameSessionId query parameter is required.",
+      "At most one gameSessionId query parameter may be supplied.",
     );
   }
+
+  if (values.length === 0) return null;
 
   const value = values[0]?.trim() ?? "";
 
   if (!value) {
-    throw invalidRequest("gameSessionId is required.");
+    throw invalidRequest("gameSessionId must not be empty when supplied.");
   }
 
   return value;
