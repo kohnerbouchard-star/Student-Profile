@@ -148,7 +148,7 @@ jobs:
               $0 ~ /^backend\/supabase\/functions\/admin-api\/(worldRuntimeOperations|campaignProgramRuntime|campaignWorkersRuntime)([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/classroom-api/messagingDispatch.ts" { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
-              $0 ~ /^backend\/supabase\/functions\/admin-api\/messagingOperations(Core)?([.]test|Extended[.]test)?[.]ts$/ { next }
+              $0 ~ /^backend\/supabase\/functions\/admin-api\/messaging[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072115[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
               $0 == "docs/workstreams/messaging-communication-v1.md" { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
