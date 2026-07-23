@@ -36,12 +36,29 @@ HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
         "upgrade",
     }
 )
+STATIC_NO_CACHE_HEADERS: Final[tuple[tuple[str, str], ...]] = (
+    ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
+    ("Pragma", "no-cache"),
+    ("Expires", "0"),
+    ("X-Econovaria-Local-Gateway", "connected-no-cache-v1"),
+)
+STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
+    "If-Modified-Since",
+    "If-None-Match",
+)
 
 
 def is_proxy_path(path: str) -> bool:
     """Return whether a request path belongs to a proxied Supabase Edge API."""
     clean_path = urlsplit(path).path
     return any(clean_path.startswith(prefix) for prefix in PROXY_PREFIXES)
+
+
+def remove_static_conditionals(headers) -> None:
+    """Remove browser validators so connected local assets are always read from disk."""
+    for name in STATIC_CONDITIONAL_HEADERS:
+        if headers.get(name) is not None:
+            del headers[name]
 
 
 def filtered_request_headers(headers, upstream_host: str) -> dict[str, str]:
@@ -75,7 +92,21 @@ def filtered_response_headers(headers) -> list[tuple[str, str]]:
 
 
 class LocalStagingHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaLocalGateway/1.0"
+    server_version = "EconovariaLocalGateway/1.1"
+
+    def _is_static_request(self) -> bool:
+        return not is_proxy_path(self.path)
+
+    def send_head(self):
+        if self._is_static_request():
+            remove_static_conditionals(self.headers)
+        return super().send_head()
+
+    def end_headers(self) -> None:
+        if self._is_static_request():
+            for name, value in STATIC_NO_CACHE_HEADERS:
+                self.send_header(name, value)
+        super().end_headers()
 
     def _proxy_or_serve(self) -> None:
         if is_proxy_path(self.path):
@@ -237,7 +268,7 @@ def main() -> int:
     print(f"Econovaria local staging gateway is running at {address}")
     print(f"Admin: {address}admin/")
     print(f"Player: {address}player-terminal/")
-    print("Supabase Auth: direct to staging; Edge APIs: proxied through loopback.")
+    print("Static assets: no-store; Supabase Auth: direct; Edge APIs: loopback proxy.")
     print("Press Ctrl+C to stop.")
 
     if args.open_browser:
