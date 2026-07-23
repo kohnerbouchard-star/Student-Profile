@@ -69,7 +69,7 @@ assert.equal(
     payload: undefined,
     session
   }).path,
-  "/players/me/game/dashboard?gameSessionId=game-1"
+  "/players/me/game/dashboard"
 );
 
 assert.throws(

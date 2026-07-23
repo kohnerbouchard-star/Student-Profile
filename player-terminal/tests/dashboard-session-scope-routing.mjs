@@ -19,7 +19,7 @@ assert.equal(
   "Dashboard routing must work when the secure player bootstrap omits the game UUID.",
 );
 
-const legacySessionContext = resolvePlayerBackendRequest({
+const staleBrowserGameIdentity = resolvePlayerBackendRequest({
   endpointKey: "dashboard",
   method: "GET",
   path: "/dashboard",
@@ -27,14 +27,14 @@ const legacySessionContext = resolvePlayerBackendRequest({
   payload: undefined,
   session: {
     playerSessionToken: "ps_player_session",
-    gameSessionId: "legacy-game-context",
+    gameSessionId: "stale-browser-game-context",
   },
 });
 
 assert.equal(
-  legacySessionContext.path,
-  "/players/me/game/dashboard?gameSessionId=legacy-game-context",
-  "Legacy clients may continue sending a scoped game ID during convergence.",
+  staleBrowserGameIdentity.path,
+  "/players/me/game/dashboard",
+  "Dashboard routing must never transmit browser-held game identity; the backend derives scope from the authenticated player session.",
 );
 
-console.log("Dashboard session-scope routing passed: authenticated sessions no longer require a browser-visible game UUID.");
+console.log("Dashboard session-scope routing passed: authenticated sessions never require or transmit a browser-visible game UUID.");
