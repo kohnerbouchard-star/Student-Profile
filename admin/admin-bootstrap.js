@@ -52,6 +52,12 @@ function reportBootstrapFailure(phase, modulePath, error) {
   }));
 }
 
+if (document.readyState === "loading") {
+  await new Promise((resolve) => {
+    document.addEventListener("DOMContentLoaded", resolve, { once: true });
+  });
+}
+
 for (const phase of BOOTSTRAP_PHASES) {
   for (const modulePath of phase.modules) {
     try {
