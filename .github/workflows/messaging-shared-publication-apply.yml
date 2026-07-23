@@ -1,0 +1,100 @@
+name: Messaging Shared Publication Apply
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-shared-publication-apply.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: messaging-shared-publication-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply additive Messaging publication patches
+        shell: bash
+        env:
+          SOURCE_HEAD: c485c2369d9a0e73a2fdbd04d5f87a4439f154aa
+          MERGE_BASE: 7f89e8f7bd390a0d27877cc970b4deff993f9c9a
+          EXPECTED_MAIN: fcef04f9327efc24955ff17406aaa2d368da2e55
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --no-tags
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "$EXPECTED_MAIN"
+
+          shared=(
+            .github/workflows/database-replay.yml
+            .github/workflows/player-terminal-verify.yml
+            admin/index.html
+            backend/package.json
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+            backend/src/security/playerRateLimitDispatch.ts
+            backend/supabase/functions/admin-api/index.ts
+            backend/supabase/functions/classroom-api/index.ts
+            package.json
+            player-terminal/package.json
+            player-terminal/src/api/backend-routes.js
+            player-terminal/src/api/endpoints.js
+            player-terminal/src/api/payload-normalizer.js
+            player-terminal/src/api/resource-plan.js
+            player-terminal/src/integrations/student-profile-capability-manifest.js
+            player-terminal/src/pages/messages-page.js
+          )
+
+          workdir="$(mktemp -d)"
+          trap 'rm -rf "$workdir"' EXIT
+          for path in "${shared[@]}"; do
+            patch="$workdir/$(printf '%s' "$path" | tr '/' '_').patch"
+            git diff --binary "$MERGE_BASE" "$SOURCE_HEAD" -- "$path" > "$patch"
+            if [ -s "$patch" ]; then
+              git apply --3way --index "$patch"
+            fi
+          done
+
+          rm -f .github/workflows/messaging-final-bundle.yml
+          rm -f .github/workflows/messaging-shared-publication-apply.yml
+          git add -A
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git grep -Fq 'messagingDispatch' backend/supabase/functions/classroom-api/index.ts
+          git grep -Fq 'messageSend' backend/src/security/playerRateLimitDispatch.ts
+          git grep -Fq 'messaging' backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+          git grep -Fq 'messaging' player-terminal/src/api/endpoints.js
+          git grep -Fq 'messaging' backend/supabase/functions/admin-api/index.ts
+          git commit -m "feat(messaging): publish shared routes and capabilities additively"
+          git push origin HEAD:agent/messaging-communication-v1
+
+      - name: Publish shared-publication status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/shared-publication',
+              description: '${{ job.status }}' === 'success'
+                ? 'Messaging shared registrations applied additively'
+                : 'Messaging shared publication failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
