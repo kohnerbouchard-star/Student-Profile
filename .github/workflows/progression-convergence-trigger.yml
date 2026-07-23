@@ -1,9 +1,9 @@
-name: Progression Convergence Trigger
+name: Progression Exact-Head Fix Carrier
 
 on:
   pull_request:
     types:
-      - opened
+      - reopened
       - synchronize
     branches:
       - main
@@ -12,16 +12,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: progression-final-convergence
+  group: progression-exact-head-fix
   cancel-in-progress: false
 
 jobs:
-  trigger:
+  fix:
     if: github.head_ref == 'ops/progression-convergence-trigger-20260723'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      CONVERGENCE_OVERLAY_REVISION: "8"
+    timeout-minutes: 20
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
@@ -29,45 +27,72 @@ jobs:
           ref: agent/progression-reputation-achievements-v1
           fetch-depth: 0
           persist-credentials: true
-      - name: Prepare current-main convergence overlay
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Apply bounded integration fixes
+        shell: bash
+        env:
+          EXPECTED_HEAD: 63cce01ea7f15641b389de997e4a0f2256a01ded
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git fetch --no-tags origin main
+          test "$(git rev-list --count HEAD..origin/main)" = "0"
+
+          sed -i 's/if (!pagination.ok) return invalid(pagination.message);/if (pagination.ok === false) return invalid(pagination.message);/g' \
+            backend/supabase/functions/admin-api/progressionOperations.ts
+
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("player-terminal/tools/verify-pr-scope.mjs")
+          text = path.read_text()
+          exact_anchor = '  ".github/workflows/messaging-final-connected-acceptance.yml",\n'
+          if '".github/workflows/progression-runtime-v1.yml"' not in text:
+              if exact_anchor not in text:
+                  raise SystemExit("Progression workflow allowlist anchor missing")
+              text = text.replace(
+                  exact_anchor,
+                  exact_anchor + '  ".github/workflows/progression-runtime-v1.yml",\n',
+                  1,
+              )
+          pattern_anchor = '  /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+\\.sql$/,\n'
+          progression_patterns = '''  /^admin\\/progression-review-(client|loader|surface)\\.js$/,
+  /^admin\\/progression-review\\.css$/,
+  /^backend\\/src\\/domains\\/progression\\//,
+  /^backend\\/src\\/security\\/progressionRateLimitDispatch(\\.test)?\\.ts$/,
+  /^backend\\/supabase\\/functions\\/admin-api\\/progression[A-Za-z0-9.-]*\\.ts$/,
+  /^backend\\/supabase\\/migrations\\/2026072116(0000|1000|2000|3000)_[A-Za-z0-9_]+\\.sql$/,
+  /^docs\\/workstreams\\/progression-preconvergence-v1\\.md$/,
+  /^scripts\\/(admin-progression-contract|progression-(abuse-threshold-simulation|balance-simulation|event-delivery-simulation))\\.mjs$/,
+'''
+          if 'backend\\/src\\/domains\\/progression' not in text:
+              if pattern_anchor not in text:
+                  raise SystemExit("Progression scope-pattern anchor missing")
+              text = text.replace(pattern_anchor, pattern_anchor + progression_patterns, 1)
+          path.write_text(text)
+          PY
+
+          test "$(grep -Fc 'pagination.ok === false' backend/supabase/functions/admin-api/progressionOperations.ts)" = "2"
+          git diff --check
+
+      - name: Verify fixed contracts
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
+          git diff --name-only origin/main...HEAD > "$RUNNER_TEMP/progression-changed-files.txt"
+          node player-terminal/tools/verify-pr-scope.mjs "$RUNNER_TEMP/progression-changed-files.txt"
+          deno check --config backend/supabase/functions/classroom-api/deno.json \
+            backend/supabase/functions/admin-api/progressionOperations.ts
+
+      - name: Commit exact-head fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add backend/supabase/functions/admin-api/progressionOperations.ts \
+            player-terminal/tools/verify-pr-scope.mjs
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          sed -i "0,/block = '''save(manifest_path, manifest)/s//block = \"\"\"save(manifest_path, manifest)/" scripts/progression-final-convergence-overlay.py
-          sed -i "0,/classroom_path ='''/s//classroom_path =\"\"\"/" scripts/progression-final-convergence-overlay.py
-          python3 -m py_compile scripts/progression-final-convergence-overlay.py 2>&1 | tee "$RUNNER_TEMP/progression-overlay.log"
-          compile_status=${PIPESTATUS[0]}
-          if [ "$compile_status" -eq 0 ]; then
-            python3 scripts/progression-final-convergence-overlay.py 2>&1 | tee -a "$RUNNER_TEMP/progression-overlay.log"
-            status=${PIPESTATUS[0]}
-          else
-            status=$compile_status
-          fi
-          if [ "$status" -eq 0 ]; then
-            sed -i 's|git diff --cached --check$|git diff --cached --check -- . ":(exclude)docs/workstreams/messaging-communication-v1.md"|' scripts/progression-final-convergence.sh
-            sed -i '/Messaging main not incorporated/c\test "$(cat .git/MERGE_HEAD)" = "$EXPECTED_MAIN_HEAD" || fail "Messaging main merge parent missing"' scripts/progression-final-convergence.sh
-            sed -i '/rm -f .github\/workflows\/progression-final-convergence-carrier.yml/d' scripts/progression-final-convergence.sh
-            sed -i '/git checkout .*progression-runtime-v1.yml/c\git checkout "origin/$BRANCH_NAME" -- .github/workflows/progression-runtime-v1.yml .github/workflows/progression-final-convergence-carrier.yml' scripts/progression-final-convergence.sh
-            grep -Fq 'Messaging main merge parent missing' scripts/progression-final-convergence.sh || status=1
-            grep -Fq 'origin/$BRANCH_NAME' scripts/progression-final-convergence.sh || status=1
-          fi
-          exit "$status"
-      - name: Execute guarded Progression convergence
-        shell: bash
-        run: |
-          set +e
-          bash scripts/progression-final-convergence.sh 2>&1 | tee "$RUNNER_TEMP/progression-convergence.log"
-          status=${PIPESTATUS[0]}
-          exit "$status"
-      - name: Upload sanitized convergence diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: progression-convergence-diagnostics-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/progression-overlay.log
-            ${{ runner.temp }}/progression-convergence.log
-          if-no-files-found: warn
-          retention-days: 7
+          git commit -m "fix(progression): complete post-messaging integration guards"
+          git push origin HEAD:agent/progression-reputation-achievements-v1
