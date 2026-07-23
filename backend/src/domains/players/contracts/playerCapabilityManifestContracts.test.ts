@@ -47,6 +47,16 @@ const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "loanRepay",
 ]);
 
+const MESSAGING_ENDPOINTS: readonly PlayerCapabilityEndpointKey[] = [
+  "messages",
+  "messageThread",
+  "messagePolicy",
+  "messageSearch",
+  "messageThreadCreate",
+  "messageSend",
+  "messageRead",
+];
+
 Deno.test("player capability manifest is generated from the reviewed endpoint allowlist", () => {
   const manifest = buildPlayerCapabilityManifest();
   assertEquals(manifest.schemaVersion, PLAYER_CAPABILITY_SCHEMA_VERSION);
@@ -58,6 +68,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   for (const key of [
     "dashboard", "profile", "news", "market", "portfolio", "contracts",
     "inventory", "store", "banking", "business", "loans", "world", "marketplace",
+    "messages",
   ] as const) assertEquals(manifest.capabilities.routes[key], true);
 
   for (const key of [
@@ -69,8 +80,9 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessProduction", "businessPrice", "businessHire",
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute",
+    "marketplaceCancel", "marketplaceDispute", "messageSearch", "messageSend",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
+  assertEquals(manifest.capabilities.actions.messageAttachment, false);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
@@ -82,60 +94,11 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "travelComplete", "residencyRequest", "marketplace",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute", ...BUSINESS_BANKING_ENDPOINTS,
+    ...MESSAGING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
   }
-  assertEquals(manifest.capabilities.routes.dashboard, true);
-  assertEquals(manifest.capabilities.routes.profile, true);
-  assertEquals(manifest.capabilities.routes.news, true);
-  assertEquals(manifest.capabilities.routes.market, true);
-  assertEquals(manifest.capabilities.routes.portfolio, true);
-  assertEquals(manifest.capabilities.routes.contracts, true);
-  assertEquals(manifest.capabilities.routes.inventory, true);
-  assertEquals(manifest.capabilities.routes.store, true);
-  assertEquals(manifest.capabilities.routes.banking, true);
-  assertEquals(manifest.capabilities.routes.messages, true);
-
-  assertEquals(manifest.capabilities.actions.marketWatchlist, true);
-  assertEquals(manifest.capabilities.actions.notificationsRead, true);
-  assertEquals(manifest.capabilities.actions.logout, true);
-  assertEquals(manifest.capabilities.actions.contractAccept, true);
-  assertEquals(manifest.capabilities.actions.contractSubmit, true);
-  assertEquals(manifest.capabilities.actions.inventoryUse, true);
-  assertEquals(manifest.capabilities.actions.marketOrder, true);
-  assertEquals(manifest.capabilities.actions.storePurchase, true);
-  assertEquals(manifest.capabilities.actions.storyDeliveryState, true);
-  assertEquals(manifest.capabilities.actions.messageSearch, true);
-  assertEquals(manifest.capabilities.actions.messageSend, true);
-  assertEquals(manifest.capabilities.actions.messageAttachment, false);
-
-  const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
-  assertEquals(new Set(endpointKeys).size, endpointKeys.length);
-  assertEquals(endpointKeys.includes("bootstrap"), true);
-  assertEquals(endpointKeys.includes("capabilities"), true);
-  assertEquals(endpointKeys.includes("banking"), true);
-  assertEquals(endpointKeys.includes("contractAccept"), true);
-  assertEquals(endpointKeys.includes("contractSubmit"), true);
-  assertEquals(endpointKeys.includes("contracts"), true);
-  assertEquals(endpointKeys.includes("dashboard"), true);
-  assertEquals(endpointKeys.includes("inventoryRedemptions"), true);
-  assertEquals(endpointKeys.includes("marketOrder"), true);
-  assertEquals(endpointKeys.includes("portfolio"), true);
-  assertEquals(endpointKeys.includes("store"), true);
-  assertEquals(endpointKeys.includes("storeQuote"), true);
-  assertEquals(endpointKeys.includes("storePurchase"), true);
-  assertEquals(endpointKeys.includes("storyDeliveries"), true);
-  assertEquals(endpointKeys.includes("storyDeliveryState"), true);
-  for (const key of [
-    "messages",
-    "messageThread",
-    "messagePolicy",
-    "messageSearch",
-    "messageThreadCreate",
-    "messageSend",
-    "messageRead",
-  ]) assertEquals(endpointKeys.includes(key as never), true);
 });
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
@@ -162,9 +125,8 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
         .replace(":offerKey", `lop_${"a".repeat(32)}`)
-        .replace(":loanKey", `lon_${"a".repeat(32)}`),
-        .replace(":threadId", `thr_${"a".repeat(32)}`)
-        .replace(":deliveryId", `ndl_${"a".repeat(32)}`),
+        .replace(":loanKey", `lon_${"a".repeat(32)}`)
+        .replace(":threadId", `thr_${"a".repeat(32)}`),
     }))
   );
 
@@ -206,16 +168,13 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
           operation.key === "marketplaceCancel" ||
           operation.key === "marketplaceDispute"
       ? readPlayerMarketplaceRoutePath(operation.path)
-      : operation.key === "notifications" || operation.key === "notificationsRead"
-      : operation.key === "messagePolicy" ||
-          operation.key === "messageThreadCreate"
+      : operation.key === "messagePolicy" || operation.key === "messageThreadCreate"
       ? readPlayerMessageThreadLifecycleRoutePath(operation.path)
       : operation.key === "messages" || operation.key === "messageThread" ||
           operation.key === "messageSearch" || operation.key === "messageSend" ||
           operation.key === "messageRead"
       ? readPlayerMessagingRoutePath(operation.path)
-      : operation.key === "notifications" ||
-          operation.key === "notificationsRead"
+      : operation.key === "notifications" || operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
       : operation.key === "storyDeliveries" || operation.key === "storyDeliveryState"
       ? readPlayerStoryDeliveryRoutePath(operation.path)
