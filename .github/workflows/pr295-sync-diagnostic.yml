@@ -1,0 +1,38 @@
+name: PR295 Sync Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-sync-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Capture merge result
+        shell: bash
+        run: |
+          set +e
+          git config user.name diagnostic
+          git config user.email diagnostic@example.invalid
+          git fetch origin main
+          git merge --no-edit origin/main > /tmp/merge.log 2>&1
+          status=$?
+          echo "merge_status=$status"
+          cat /tmp/merge.log
+          echo '--- porcelain ---'
+          git status --porcelain=v1
+          echo '--- unmerged ---'
+          git diff --name-only --diff-filter=U
+          git merge --abort >/dev/null 2>&1 || true
+          exit 0
