@@ -189,6 +189,7 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   marketplaceDispute: byMethod({
     POST: operation("player.marketplace.dispute.open", "sensitive"),
+  }),
   messages: byMethod({
     GET: operation("player.messages.read", "read"),
   }),
