@@ -363,7 +363,7 @@ begin
       thread_id, game_session_id, player_id, joined_at, last_read_at
     ) values (
       v_thread.id, p_game_session_id, v_player.id, now(), null
-    ) on conflict (thread_id, player_id) do nothing;
+    ) on conflict on constraint message_thread_participants_pkey do nothing;
   else
     if not v_is_participant then
       raise exception 'ADMIN_MESSAGE_PARTICIPANT_NOT_FOUND' using errcode = 'P0001';
@@ -778,5 +778,681 @@ comment on function public.read_player_messages_v2(uuid, uuid, integer, integer,
   'Returns participant-scoped Messaging threads with database-side search, deterministic cursor pagination and a full-inbox unread total.';
 comment on function public.read_player_message_thread_v1(uuid, uuid, text, integer) is
   'Returns one exact participant-scoped public Messaging thread without bounded-inbox false negatives.';
+
+-- Folded stable Player-status compatibility for legacy Messaging entry points.
+-- These replacements keep the assigned four-slot migration family authoritative.
+
+create or replace function public.read_player_messages_v1(
+  p_game_session_id uuid,
+  p_player_id uuid,
+  p_thread_limit integer default 25,
+  p_message_limit integer default 50
+)
+returns jsonb
+language plpgsql
+security definer
+stable
+set search_path = public, pg_temp
+as $function$
+declare
+  v_result jsonb;
+begin
+  if p_game_session_id is null
+    or p_player_id is null
+    or p_thread_limit is null or p_thread_limit not between 1 and 50
+    or p_message_limit is null or p_message_limit not between 1 and 100
+  then
+    raise exception 'PLAYER_MESSAGES_READ_INVALID' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1
+    from public.players as player_row
+    where player_row.id = p_player_id
+      and player_row.game_session_id = p_game_session_id
+      and player_row.status = 'active'
+  ) then
+    raise exception 'PLAYER_MESSAGES_SCOPE_FORBIDDEN' using errcode = 'P0001';
+  end if;
+
+  with visible_threads as (
+    select
+      thread_row.id,
+      thread_row.public_thread_id,
+      thread_row.thread_type,
+      thread_row.title,
+      thread_row.contract_key,
+      thread_row.allow_player_replies,
+      thread_row.status,
+      thread_row.retention_until,
+      thread_row.updated_at,
+      participant_row.joined_at,
+      participant_row.last_read_at
+    from public.message_thread_participants as participant_row
+    join public.message_threads as thread_row
+      on thread_row.game_session_id = participant_row.game_session_id
+      and thread_row.id = participant_row.thread_id
+    where participant_row.game_session_id = p_game_session_id
+      and participant_row.player_id = p_player_id
+      and thread_row.retention_until > now()
+    order by thread_row.updated_at desc, thread_row.public_thread_id desc
+    limit p_thread_limit
+  ),
+  rendered_threads as (
+    select
+      thread_row.updated_at,
+      thread_row.public_thread_id,
+      unread_values.unread_count,
+      jsonb_build_object(
+        'id', thread_row.public_thread_id,
+        'type', thread_row.thread_type,
+        'title', thread_row.title,
+        'contractKey', thread_row.contract_key,
+        'status', thread_row.status,
+        'allowPlayerReplies', thread_row.allow_player_replies,
+        'participantCount', participant_values.participant_count,
+        'unreadCount', unread_values.unread_count,
+        'updatedAt', thread_row.updated_at,
+        'retentionUntil', thread_row.retention_until,
+        'messages', message_values.messages
+      ) as payload
+    from visible_threads as thread_row
+    cross join lateral (
+      select count(*)::integer as participant_count
+      from public.message_thread_participants as participant_count_row
+      where participant_count_row.game_session_id = p_game_session_id
+        and participant_count_row.thread_id = thread_row.id
+    ) as participant_values
+    cross join lateral (
+      select count(*)::integer as unread_count
+      from public.messages as unread_message
+      where unread_message.game_session_id = p_game_session_id
+        and unread_message.thread_id = thread_row.id
+        and unread_message.hidden_at is null
+        and unread_message.sender_player_id is distinct from p_player_id
+        and unread_message.created_at > coalesce(thread_row.last_read_at, thread_row.joined_at)
+    ) as unread_values
+    cross join lateral (
+      select coalesce(
+        jsonb_agg(message_payload.payload order by message_payload.created_at asc, message_payload.public_message_id asc),
+        '[]'::jsonb
+      ) as messages
+      from (
+        select
+          message_row.created_at,
+          message_row.public_message_id,
+          jsonb_build_object(
+            'id', message_row.public_message_id,
+            'senderType', message_row.sender_type,
+            'senderName', case
+              when message_row.sender_type = 'player' then coalesce(player_sender.display_name, 'Player')
+              when message_row.sender_type = 'staff_user' then coalesce(staff_sender.display_name, 'Administrator')
+              else 'System'
+            end,
+            'senderReference', case
+              when message_row.sender_type = 'player'
+                and player_sender.player_identifier is not null
+                and player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+                then player_sender.player_identifier
+              else null
+            end,
+            'body', case
+              when message_row.hidden_at is null then message_row.body
+              else 'Message removed by an administrator.'
+            end,
+            'moderated', message_row.hidden_at is not null,
+            'self', message_row.sender_type = 'player'
+              and message_row.sender_player_id = p_player_id,
+            'createdAt', message_row.created_at
+          ) as payload
+        from public.messages as message_row
+        left join public.players as player_sender
+          on player_sender.game_session_id = message_row.game_session_id
+          and player_sender.id = message_row.sender_player_id
+        left join public.staff_users as staff_sender
+          on staff_sender.id = message_row.sender_staff_user_id
+        where message_row.game_session_id = p_game_session_id
+          and message_row.thread_id = thread_row.id
+        order by message_row.created_at desc, message_row.public_message_id desc
+        limit p_message_limit
+      ) as message_payload
+    ) as message_values
+  )
+  select jsonb_build_object(
+    'unreadCount', coalesce(sum(rendered_threads.unread_count), 0),
+    'threads', coalesce(
+      jsonb_agg(
+        rendered_threads.payload
+        order by rendered_threads.updated_at desc, rendered_threads.public_thread_id desc
+      ),
+      '[]'::jsonb
+    )
+  )
+  into v_result
+  from rendered_threads;
+
+  return coalesce(
+    v_result,
+    jsonb_build_object('unreadCount', 0, 'threads', '[]'::jsonb)
+  );
+end;
+$function$;
+
+create or replace function public.send_player_message_atomic_v1(
+  p_game_session_id uuid,
+  p_player_id uuid,
+  p_thread_public_id text,
+  p_body text,
+  p_idempotency_key text
+)
+returns table (
+  send_outcome text,
+  thread_id text,
+  message_id text,
+  sender_name text,
+  message_body text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_thread_public_id text := btrim(coalesce(p_thread_public_id, ''));
+  v_body text := btrim(coalesce(p_body, ''));
+  v_idempotency_key text := btrim(coalesce(p_idempotency_key, ''));
+  v_thread public.message_threads%rowtype;
+  v_player public.players%rowtype;
+  v_existing public.messages%rowtype;
+  v_message public.messages%rowtype;
+  v_notification_id uuid;
+begin
+  if p_game_session_id is null
+    or p_player_id is null
+    or v_thread_public_id !~ '^thr_[0-9a-f]{32}$'
+    or length(v_body) not between 1 and 1000
+    or v_body ~ E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'
+    or v_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+  then
+    raise exception 'PLAYER_MESSAGE_SEND_INVALID' using errcode = 'P0001';
+  end if;
+
+  select player_row.*
+  into v_player
+  from public.players as player_row
+  where player_row.id = p_player_id
+    and player_row.game_session_id = p_game_session_id
+    and player_row.status = 'active'
+  for update;
+  if not found then
+    raise exception 'PLAYER_MESSAGES_SCOPE_FORBIDDEN' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1
+    from public.game_sessions as game_row
+    where game_row.id = p_game_session_id
+      and game_row.status = 'active'
+  ) then
+    raise exception 'PLAYER_MESSAGE_GAME_NOT_ACTIVE' using errcode = 'P0001';
+  end if;
+
+  select thread_row.*
+  into v_thread
+  from public.message_threads as thread_row
+  join public.message_thread_participants as participant_row
+    on participant_row.game_session_id = thread_row.game_session_id
+    and participant_row.thread_id = thread_row.id
+  where thread_row.game_session_id = p_game_session_id
+    and thread_row.public_thread_id = v_thread_public_id
+    and participant_row.player_id = p_player_id
+  for update of thread_row;
+  if not found then
+    raise exception 'PLAYER_MESSAGE_THREAD_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_thread.status <> 'active' or v_thread.retention_until <= now() then
+    raise exception 'PLAYER_MESSAGE_THREAD_DISABLED' using errcode = 'P0001';
+  end if;
+  if not v_thread.allow_player_replies then
+    raise exception 'PLAYER_MESSAGE_REPLIES_DISABLED' using errcode = 'P0001';
+  end if;
+
+  select message_row.*
+  into v_existing
+  from public.messages as message_row
+  where message_row.game_session_id = p_game_session_id
+    and message_row.sender_type = 'player'
+    and message_row.sender_player_id = p_player_id
+    and message_row.idempotency_key = v_idempotency_key
+  for update;
+  if found then
+    if v_existing.thread_id <> v_thread.id or v_existing.body <> v_body then
+      raise exception 'PLAYER_MESSAGE_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+    return query
+    select
+      'replayed'::text,
+      v_thread.public_thread_id,
+      v_existing.public_message_id,
+      v_player.display_name,
+      v_existing.body,
+      v_existing.created_at;
+    return;
+  end if;
+
+  insert into public.messages (
+    thread_id,
+    game_session_id,
+    sender_type,
+    sender_player_id,
+    body,
+    idempotency_key
+  )
+  values (
+    v_thread.id,
+    p_game_session_id,
+    'player',
+    p_player_id,
+    v_body,
+    v_idempotency_key
+  )
+  returning *
+  into v_message;
+
+  update public.message_threads
+  set updated_at = v_message.created_at
+  where id = v_thread.id
+    and game_session_id = p_game_session_id;
+
+  insert into public.notifications (
+    game_session_id,
+    source_type,
+    source_id,
+    notification_type,
+    title,
+    summary,
+    priority,
+    display_mode,
+    payload,
+    published_at
+  )
+  values (
+    p_game_session_id,
+    'message',
+    v_message.public_message_id,
+    'message_received',
+    v_thread.title,
+    'New message from ' || coalesce(v_player.display_name, 'Player') || '.',
+    'normal',
+    'inbox',
+    jsonb_build_object(
+      'threadId', v_thread.public_thread_id,
+      'messageId', v_message.public_message_id
+    ),
+    v_message.created_at
+  )
+  returning id
+  into v_notification_id;
+
+  insert into public.notification_deliveries (
+    notification_id,
+    game_session_id,
+    player_id,
+    delivered_at
+  )
+  select
+    v_notification_id,
+    p_game_session_id,
+    participant_row.player_id,
+    v_message.created_at
+  from public.message_thread_participants as participant_row
+  where participant_row.game_session_id = p_game_session_id
+    and participant_row.thread_id = v_thread.id
+    and participant_row.player_id <> p_player_id
+  on conflict (notification_id, player_id) do nothing;
+
+  return query
+  select
+    'applied'::text,
+    v_thread.public_thread_id,
+    v_message.public_message_id,
+    v_player.display_name,
+    v_message.body,
+    v_message.created_at;
+end;
+$function$;
+
+create or replace function public.mark_player_message_thread_read_v1(
+  p_game_session_id uuid,
+  p_player_id uuid,
+  p_thread_public_id text,
+  p_read_at timestamptz default now()
+)
+returns table (
+  thread_id text,
+  read_at timestamptz,
+  unread_count integer
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_thread_id uuid;
+  v_public_thread_id text := btrim(coalesce(p_thread_public_id, ''));
+  v_read_at timestamptz := coalesce(p_read_at, now());
+begin
+  if p_game_session_id is null
+    or p_player_id is null
+    or v_public_thread_id !~ '^thr_[0-9a-f]{32}$'
+  then
+    raise exception 'PLAYER_MESSAGE_READ_INVALID' using errcode = 'P0001';
+  end if;
+
+  select thread_row.id
+  into v_thread_id
+  from public.message_threads as thread_row
+  join public.message_thread_participants as participant_row
+    on participant_row.game_session_id = thread_row.game_session_id
+    and participant_row.thread_id = thread_row.id
+  where thread_row.game_session_id = p_game_session_id
+    and thread_row.public_thread_id = v_public_thread_id
+    and participant_row.player_id = p_player_id;
+
+  if v_thread_id is null then
+    raise exception 'PLAYER_MESSAGE_THREAD_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  update public.message_thread_participants as participant_row
+  set last_read_at = greatest(
+    coalesce(participant_row.last_read_at, participant_row.joined_at),
+    v_read_at
+  )
+  where participant_row.game_session_id = p_game_session_id
+    and participant_row.thread_id = v_thread_id
+    and participant_row.player_id = p_player_id;
+
+  return query
+  select v_public_thread_id, v_read_at, 0;
+end;
+$function$;
+
+create or replace function public.create_admin_message_thread_atomic_v1(
+  p_game_session_id uuid,
+  p_staff_user_id uuid,
+  p_thread_type text,
+  p_title text,
+  p_contract_key text,
+  p_allow_player_replies boolean,
+  p_player_identifiers text[],
+  p_target_all_players boolean,
+  p_initial_body text,
+  p_retention_until timestamptz,
+  p_idempotency_key text
+)
+returns table (
+  create_outcome text,
+  thread_id text,
+  created_thread_type text,
+  thread_title text,
+  thread_status text,
+  participant_count integer,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $function$
+declare
+  v_type text := lower(btrim(coalesce(p_thread_type, '')));
+  v_title text := btrim(coalesce(p_title, ''));
+  v_contract_key text := nullif(btrim(coalesce(p_contract_key, '')), '');
+  v_body text := nullif(btrim(coalesce(p_initial_body, '')), '');
+  v_key text := btrim(coalesce(p_idempotency_key, ''));
+  v_thread public.message_threads%rowtype;
+  v_existing_audit public.message_moderation_audit%rowtype;
+  v_initial_message public.messages%rowtype;
+  v_notification_id uuid;
+  v_count integer;
+begin
+  if p_game_session_id is null
+    or p_staff_user_id is null
+    or v_type not in ('announcement', 'system', 'player', 'contract')
+    or length(v_title) not between 1 and 160
+    or (
+      v_type = 'contract'
+      and (v_contract_key is null or length(v_contract_key) > 160)
+    )
+    or (v_type <> 'contract' and v_contract_key is not null)
+    or (v_type in ('announcement', 'system') and coalesce(p_allow_player_replies, false))
+    or (
+      v_body is not null
+      and (
+        length(v_body) > 1000
+        or v_body ~ E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'
+      )
+    )
+    or v_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+    or coalesce(p_retention_until, now() + interval '365 days') <= now()
+    or coalesce(p_retention_until, now() + interval '365 days') > now() + interval '730 days'
+  then
+    raise exception 'ADMIN_MESSAGE_THREAD_CREATE_INVALID' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1
+    from public.game_sessions as game_row
+    where game_row.id = p_game_session_id
+      and game_row.owner_staff_user_id = p_staff_user_id
+  ) then
+    raise exception 'ADMIN_MESSAGES_SCOPE_FORBIDDEN' using errcode = 'P0001';
+  end if;
+
+  select audit_row.*
+  into v_existing_audit
+  from public.message_moderation_audit as audit_row
+  where audit_row.game_session_id = p_game_session_id
+    and audit_row.staff_user_id = p_staff_user_id
+    and audit_row.idempotency_key = v_key
+  for update;
+
+  if found then
+    if v_existing_audit.action <> 'create_thread' then
+      raise exception 'ADMIN_MESSAGE_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+
+    select thread_row.*
+    into v_thread
+    from public.message_threads as thread_row
+    where thread_row.id = v_existing_audit.thread_id;
+
+    if not found
+      or v_thread.thread_type <> v_type
+      or v_thread.title <> v_title
+      or v_thread.contract_key is distinct from v_contract_key
+    then
+      raise exception 'ADMIN_MESSAGE_IDEMPOTENCY_CONFLICT' using errcode = 'P0001';
+    end if;
+
+    select count(*)::integer
+    into v_count
+    from public.message_thread_participants as participant_row
+    where participant_row.thread_id = v_thread.id;
+
+    return query
+    select
+      'replayed'::text,
+      v_thread.public_thread_id,
+      v_thread.thread_type,
+      v_thread.title,
+      v_thread.status,
+      v_count,
+      v_thread.created_at;
+    return;
+  end if;
+
+  insert into public.message_threads (
+    game_session_id,
+    thread_type,
+    title,
+    contract_key,
+    allow_player_replies,
+    retention_until,
+    created_by_type,
+    created_by_staff_user_id
+  )
+  values (
+    p_game_session_id,
+    v_type,
+    v_title,
+    v_contract_key,
+    case
+      when v_type in ('announcement', 'system') then false
+      else coalesce(p_allow_player_replies, true)
+    end,
+    coalesce(p_retention_until, now() + interval '365 days'),
+    case when v_type = 'system' then 'system' else 'staff_user' end,
+    case when v_type = 'system' then null else p_staff_user_id end
+  )
+  returning *
+  into v_thread;
+
+  if coalesce(p_target_all_players, false) then
+    insert into public.message_thread_participants (
+      thread_id,
+      game_session_id,
+      player_id
+    )
+    select
+      v_thread.id,
+      p_game_session_id,
+      player_row.id
+    from public.players as player_row
+    where player_row.game_session_id = p_game_session_id
+      and player_row.status = 'active';
+  else
+    insert into public.message_thread_participants (
+      thread_id,
+      game_session_id,
+      player_id
+    )
+    select
+      v_thread.id,
+      p_game_session_id,
+      player_row.id
+    from public.players as player_row
+    where player_row.game_session_id = p_game_session_id
+      and player_row.status = 'active'
+      and player_row.player_identifier = any(
+        coalesce(p_player_identifiers, array[]::text[])
+      );
+  end if;
+
+  select count(*)::integer
+  into v_count
+  from public.message_thread_participants as participant_row
+  where participant_row.thread_id = v_thread.id;
+
+  if v_count < 1 then
+    raise exception 'ADMIN_MESSAGE_PARTICIPANTS_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  if v_body is not null then
+    insert into public.messages (
+      thread_id,
+      game_session_id,
+      sender_type,
+      sender_staff_user_id,
+      body,
+      idempotency_key
+    )
+    values (
+      v_thread.id,
+      p_game_session_id,
+      case when v_type = 'system' then 'system' else 'staff_user' end,
+      case when v_type = 'system' then null else p_staff_user_id end,
+      v_body,
+      v_key || ':initial'
+    )
+    returning *
+    into v_initial_message;
+
+    insert into public.notifications (
+      game_session_id,
+      source_type,
+      source_id,
+      notification_type,
+      title,
+      summary,
+      priority,
+      display_mode,
+      payload,
+      published_at
+    )
+    values (
+      p_game_session_id,
+      'message',
+      v_initial_message.public_message_id,
+      'message_received',
+      v_thread.title,
+      case
+        when v_type = 'announcement' then 'New administrator announcement.'
+        when v_type = 'system' then 'New system message.'
+        else 'New message from an administrator.'
+      end,
+      case when v_type in ('announcement', 'system') then 'high' else 'normal' end,
+      'inbox',
+      jsonb_build_object(
+        'threadId', v_thread.public_thread_id,
+        'messageId', v_initial_message.public_message_id
+      ),
+      v_initial_message.created_at
+    )
+    returning id
+    into v_notification_id;
+
+    insert into public.notification_deliveries (
+      notification_id,
+      game_session_id,
+      player_id,
+      delivered_at
+    )
+    select
+      v_notification_id,
+      p_game_session_id,
+      participant_row.player_id,
+      v_initial_message.created_at
+    from public.message_thread_participants as participant_row
+    where participant_row.thread_id = v_thread.id;
+  end if;
+
+  insert into public.message_moderation_audit (
+    game_session_id,
+    thread_id,
+    staff_user_id,
+    action,
+    reason,
+    idempotency_key
+  )
+  values (
+    p_game_session_id,
+    v_thread.id,
+    p_staff_user_id,
+    'create_thread',
+    null,
+    v_key
+  );
+
+  return query
+  select
+    'applied'::text,
+    v_thread.public_thread_id,
+    v_thread.thread_type,
+    v_thread.title,
+    v_thread.status,
+    v_count,
+    v_thread.created_at;
+end;
+$function$;
 
 commit;
