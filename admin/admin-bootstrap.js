@@ -52,20 +52,16 @@ function reportBootstrapFailure(phase, modulePath, error) {
   }));
 }
 
-if (document.readyState === "loading") {
-  await new Promise((resolve) => {
-    document.addEventListener("DOMContentLoaded", resolve, { once: true });
-  });
-}
-
-for (const phase of BOOTSTRAP_PHASES) {
-  for (const modulePath of phase.modules) {
-    try {
-      await import(modulePath);
-    } catch (error) {
-      reportBootstrapFailure(phase.name, modulePath, error);
+void (async function bootstrapAdminCompatibilityModules() {
+  for (const phase of BOOTSTRAP_PHASES) {
+    for (const modulePath of phase.modules) {
+      try {
+        await import(modulePath);
+      } catch (error) {
+        reportBootstrapFailure(phase.name, modulePath, error);
+      }
     }
   }
-}
 
-window.dispatchEvent(new CustomEvent("econovaria:admin-bootstrap-complete"));
+  window.dispatchEvent(new CustomEvent("econovaria:admin-bootstrap-complete"));
+})();
