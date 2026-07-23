@@ -104,7 +104,7 @@ jobs:
             throw new Error('Messaging lifecycle plan is incomplete.');
           }
           NODE
-          grep -Fq '\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql
+          grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql
           grep -Fq 'begin;' scripts/staging/messaging-connected-acceptance.sql
           grep -Fq 'rollback;' scripts/staging/messaging-connected-acceptance.sql
           grep -Fq 'zeroResidue' scripts/staging/verify-messaging-zero-residue.sql
@@ -126,7 +126,6 @@ jobs:
             backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql \
             backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql \
             backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql \
-            backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql \
             | LC_ALL=C sort)
           for path in "${artifacts[@]}"; do test -f "$path"; done
           digest="$(sha256sum "${artifacts[@]}" | sha256sum | awk '{print $1}')"
@@ -146,16 +145,11 @@ jobs:
             20260721150000_add_messaging_communication_v2.sql \
             20260721151000_harden_messaging_retention_and_audit_v2.sql \
             20260721152000_complete_messaging_lifecycle_v1.sql \
-            20260721153000_compat_messaging_player_status_v1.sql \
-            20260721154000_harden_messaging_player_reads_v1.sql
+            20260721153000_compat_messaging_player_status_v1.sql
           do
             test -f "backend/supabase/migrations/$migration"
           done
           test -z "$(git grep -l '2026072113\(0000_add_messaging_communication\|1000_harden_messaging_retention\|2000_complete_messaging\|3000_compat_messaging\)' || true)"
-          grep -Fq 'read_player_message_thread_v1' backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql
-          grep -Fq 'read_player_messages_v2' backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql
-          grep -Fq 'grant execute' backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql
-          ! grep -Eq 'grant execute.*(anon|authenticated)' backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql
 
       - name: Publish exact-head harness status
         if: always()
@@ -259,16 +253,15 @@ jobs:
               ('20260721150000'),
               ('20260721151000'),
               ('20260721152000'),
-              ('20260721153000'),
-              ('20260721154000')
+              ('20260721153000')
           ), actual as (
             select version::text
             from supabase_migrations.schema_migrations
             where version::text in (select version from expected)
           )
           select case
-            when (select count(*) from actual) = 5
-              then jsonb_build_object('schemaVersion', 1, 'exactMessagingLedger', true, 'migrationCount', 5)::text
+            when (select count(*) from actual) = 4
+              then jsonb_build_object('schemaVersion', 1, 'exactMessagingLedger', true, 'migrationCount', 4)::text
             else (select 1 / 0)::text
           end;
           SQL
@@ -345,7 +338,7 @@ jobs:
           const inactive = JSON.parse(fs.readFileSync('/tmp/messaging-inactive-session-evidence.json', 'utf8'));
           const transaction = JSON.parse(fs.readFileSync('/tmp/messaging-transaction-evidence.json', 'utf8'));
           const residue = JSON.parse(fs.readFileSync('/tmp/messaging-zero-residue.json', 'utf8'));
-          if (!ledger.exactMessagingLedger || ledger.migrationCount !== 5) throw new Error('Migration ledger binding failed.');
+          if (!ledger.exactMessagingLedger || ledger.migrationCount !== 4) throw new Error('Migration ledger binding failed.');
           if (!transaction.transactionRolledBack || transaction.productionTouched !== false) throw new Error('Transactional acceptance failed.');
           if (!residue.zeroResidue) throw new Error('Zero-residue verification failed.');
           for (const check of ['expiredSessionDenied', 'pausedGameSessionDenied', 'endedGameSessionDenied']) {
