@@ -4,6 +4,7 @@ import { ApiRequestError } from "../api/errors.js";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const SUPPORTED_SERVICE = "classroom-api";
+const CORE_ENDPOINT_KEYS = new Set(["bootstrap", "capabilities", "dashboard", "countries"]);
 
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
@@ -146,7 +147,7 @@ function mismatch(message, detail = {}) {
   return new ApiRequestError(message, {
     code: "CAPABILITY_CONTRACT_MISMATCH",
     endpointKey: "capabilities",
-    body: { code: "capability_contract_mismatch", ...detail }
+    detail
   });
 }
 
@@ -154,24 +155,38 @@ function object(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
+function coreEndpointFailure(endpointKey, message, detail = {}) {
+  if (CORE_ENDPOINT_KEYS.has(endpointKey)) throw mismatch(message, { endpointKey, ...detail });
+  return null;
+}
+
 function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
   const group = object(values);
-  if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
+  if (!group) throw mismatch(`The ${groupName} capability group is missing.`, { groupName });
 
   const reviewed = {};
   for (const [key, enabled] of Object.entries(group)) {
-    if (typeof enabled !== "boolean") {
-      throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });
-    }
-
     const endpointKey = requirements[key];
     if (!endpointKey) continue;
+
+    if (typeof enabled !== "boolean") {
+      if (CORE_ENDPOINT_KEYS.has(endpointKey)) {
+        throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key, endpointKey });
+      }
+      reviewed[key] = false;
+      continue;
+    }
+
     if (enabled && !endpointKeys.has(endpointKey)) {
-      throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, {
-        groupName,
-        key,
-        endpointKey
-      });
+      if (CORE_ENDPOINT_KEYS.has(endpointKey)) {
+        throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, {
+          groupName,
+          key,
+          endpointKey
+        });
+      }
+      reviewed[key] = false;
+      continue;
     }
     reviewed[key] = enabled;
   }
@@ -215,35 +230,43 @@ export function validateStudentProfileCapabilityManifest(raw) {
     seenEndpointKeys.add(key);
 
     const frontendKeys = ENDPOINT_COVERAGE[key];
-    if (!frontendKeys?.length) {
-      // A newer backend may advertise endpoints this terminal does not yet use.
-      // Exclude them from the client capability surface instead of blocking
-      // every already-reviewed section.
+    if (!frontendKeys?.length) continue;
+    if (!frontendKeys.every(reviewedFrontendRoute)) {
+      coreEndpointFailure(key, `Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
       continue;
     }
-    if (!frontendKeys.every(reviewedFrontendRoute)) {
-      throw mismatch(`Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
-    }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {
-      throw mismatch(`Backend endpoint ${key} has no operations.`, { key });
+      coreEndpointFailure(key, `Backend endpoint ${key} has no operations.`, { key });
+      continue;
     }
 
-    const operations = item.operations.map((operation) => {
+    const operations = [];
+    let valid = true;
+    for (const operation of item.operations) {
       const method = typeof operation?.method === "string" ? operation.method.trim().toUpperCase() : "";
       const pathTemplate = typeof operation?.pathTemplate === "string" ? operation.pathTemplate.trim() : "";
       const isPlayerPath = pathTemplate === "/players/me" || pathTemplate.startsWith("/players/me/");
       if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !isPlayerPath) {
-        throw mismatch(`Backend endpoint ${key} contains an invalid operation.`, {
+        coreEndpointFailure(key, `Backend endpoint ${key} contains an invalid operation.`, {
           key,
           method,
           pathTemplate
         });
+        valid = false;
+        break;
       }
-      return Object.freeze({ method, pathTemplate });
-    });
+      operations.push(Object.freeze({ method, pathTemplate }));
+    }
+    if (!valid) continue;
 
     reviewedEndpointKeys.add(key);
     reviewedEndpoints.push(Object.freeze({ key, operations: Object.freeze(operations) }));
+  }
+
+  for (const key of CORE_ENDPOINT_KEYS) {
+    if (!reviewedEndpointKeys.has(key)) {
+      throw mismatch(`The core endpoint ${key} is missing or invalid.`, { endpointKey: key, key });
+    }
   }
 
   const capabilities = object(manifest.capabilities);
