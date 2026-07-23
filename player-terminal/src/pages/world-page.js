@@ -68,10 +68,30 @@ function renderResidency(residency, capabilities) {
   return `<section class="player-world-panel" aria-labelledby="world-residency-title"><header><div><small>RESIDENCY</small><h2 id="world-residency-title">${escapeHtml(title(residency.currentCountryId))}</h2></div>${statusPill(residency.pendingCountryId ? "Request pending" : "Current", residency.pendingCountryId ? "warn" : "good")}</header><dl class="player-world-facts"><div><dt>Country</dt><dd>${escapeHtml(residency.currentCountryId)}</dd></div><div><dt>Settlement currency</dt><dd>${escapeHtml(residency.currencyCode)}</dd></div><div><dt>Revision</dt><dd>${escapeHtml(residency.revision)}</dd></div></dl><form data-world-form="residencyRequest"><label>Eligible destination<select name="countryId" required ${enabled ? "" : "disabled"}><option value="">Select country</option>${eligible.map((countryId) => `<option value="${escapeHtml(countryId)}">${escapeHtml(title(countryId))}</option>`).join("")}</select></label><input type="hidden" name="expectedRevision" value="${escapeHtml(residency.revision)}"><button class="player-terminal-primary-button" type="submit" ${enabled && eligible.length && !residency.pendingCountryId ? "" : "disabled"}>Request residency review</button><p class="player-world-form-status" data-world-form-status aria-live="polite">${residency.pendingCountryId ? `Pending: ${escapeHtml(title(residency.pendingCountryId))}` : ""}</p></form></section>`;
 }
 
+function renderCountryDirectory(countries) {
+  const items = Array.isArray(countries) ? countries : [];
+  return `<section class="player-world-panel" aria-labelledby="world-country-directory-title"><header><div><small>COUNTRY DIRECTORY</small><h2 id="world-country-directory-title">Available world data</h2></div>${statusPill(`${items.length} countries`, items.length ? "good" : "warn")}</header><div class="player-world-history" aria-label="Country directory">${items.length ? items.map((country) => `<article><small>${escapeHtml(country.currencyCode || "Currency unavailable")}</small><strong>${escapeHtml(country.name || title(country.id, "Unknown country"))}</strong><p>${escapeHtml(country.capital || "Capital unavailable")} · ${escapeHtml(country.condition || "No live economic snapshot")}</p></article>`).join("") : emptyState("No countries", "Country data has not been published for this game.")}</div></section>`;
+}
+
+function renderTravelUnavailable() {
+  return `<section class="player-world-panel player-world-map-panel" aria-labelledby="world-travel-title"><header><div><small>GEOGRAPHY & TRAVEL</small><h2 id="world-travel-title">Travel runtime unavailable</h2></div>${statusPill("Not deployed", "warn")}</header>${emptyState("Travel is temporarily unavailable", "The staging game service has not deployed the World travel runtime. Country data remains available and no travel action can be submitted.")}</section>`;
+}
+
 export function renderWorldPage(model, view = {}) {
   const state = view.state || "ready";
   if (state === "loading") return `<section class="player-terminal-page player-world-page" aria-busy="true"><div class="player-world-loading" role="status" aria-live="polite"><strong>Loading World runtime</strong><span></span><span></span><span></span></div></section>`;
   if (state === "unavailable") return `<section class="player-terminal-page player-world-page"><div class="player-world-error" role="alert"><small>WORLD UNAVAILABLE</small><h1>World and travel could not be loaded</h1><p>${escapeHtml(view.message || "The World service did not return a usable response.")}</p><button class="player-terminal-primary-button" type="button" data-world-action="retry">Retry World</button></div></section>`;
-  const runtime = model || { campaign: null, arrival: {}, travel: {}, residency: null, world: null };
-  return `<section class="player-terminal-page player-world-page" aria-labelledby="world-page-title"><header class="player-world-hero"><div><small>ECONOVARIA WORLD</small><h1 id="world-page-title">Campaign, geography, and travel</h1><p>Review current conditions before making a committed movement or residency request.</p></div><div>${view.offline ? statusPill("Offline · cached view", "bad") : view.stale ? statusPill("Stale · refresh advised", "warn") : statusPill("Live runtime", "good")}<button type="button" class="player-world-refresh" data-world-action="refresh">Refresh</button></div></header><div class="player-world-layout">${renderCampaign(runtime.campaign)}${renderArrival(runtime.arrival, view.capabilities)}${renderLocationAndRoutes(runtime, view.quote, view.capabilities)}${renderResidency(runtime.residency, view.capabilities)}</div><p class="player-world-page-status" role="status" aria-live="polite">${escapeHtml(view.message || "")}</p></section>`;
+  const runtime = model || { runtimeAvailable: false, countries: [], campaign: null, arrival: {}, travel: {}, residency: null, world: null };
+  const runtimeAvailable = runtime.runtimeAvailable !== false;
+  const pageTitle = runtimeAvailable ? "Campaign, geography, and travel" : "Countries and world conditions";
+  const pageDescription = runtimeAvailable
+    ? "Review current conditions before making a committed movement or residency request."
+    : "Country data is available. Travel and residency actions remain disabled until the staging runtime is deployed.";
+  const status = runtimeAvailable
+    ? view.offline ? statusPill("Offline · cached view", "bad") : view.stale ? statusPill("Stale · refresh advised", "warn") : statusPill("Live runtime", "good")
+    : statusPill("Country data only", "warn");
+  const body = runtimeAvailable
+    ? `${renderCampaign(runtime.campaign)}${renderArrival(runtime.arrival, view.capabilities)}${renderLocationAndRoutes(runtime, view.quote, view.capabilities)}${renderResidency(runtime.residency, view.capabilities)}`
+    : `${renderCountryDirectory(runtime.countries)}${renderTravelUnavailable()}`;
+  return `<section class="player-terminal-page player-world-page" aria-labelledby="world-page-title"><header class="player-world-hero"><div><small>ECONOVARIA WORLD</small><h1 id="world-page-title">${escapeHtml(pageTitle)}</h1><p>${escapeHtml(pageDescription)}</p></div><div>${status}<button type="button" class="player-world-refresh" data-world-action="refresh">Refresh</button></div></header><div class="player-world-layout">${body}</div><p class="player-world-page-status" role="status" aria-live="polite">${escapeHtml(view.message || "")}</p></section>`;
 }
