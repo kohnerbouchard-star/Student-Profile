@@ -52,7 +52,6 @@ jobs:
             package.json
             player-terminal/package.json
             player-terminal/src/api/endpoints.js
-            player-terminal/src/api/payload-normalizer.js
             player-terminal/src/api/resource-plan.js
             player-terminal/src/integrations/student-profile-capability-manifest.js
             player-terminal/src/pages/messages-page.js
