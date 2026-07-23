@@ -1,35 +1,54 @@
-name: Progression Exact-Head Fix Carrier
+name: Progression CI Diagnostics
 
 on:
   pull_request:
     types:
+      - reopened
       - synchronize
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: progression-exact-head-fix
+  group: progression-ci-diagnostics
   cancel-in-progress: false
 
 jobs:
-  fix:
+  diagnose:
     if: github.head_ref == 'ops/progression-convergence-trigger-20260723'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - name: Check out sole Progression authority
+      - name: Check out exact Progression head
         uses: actions/checkout@v7
         with:
           ref: agent/progression-reputation-achievements-v1
-          fetch-depth: 0
-          persist-credentials: true
+          fetch-depth: 1
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.3
-      - name: Apply and verify exact-head fixes
+      - name: Reproduce failing contracts
         shell: bash
-        run: bash <(git show origin/ops/progression-convergence-trigger-20260723:scripts/progression-exact-head-fix.sh)
+        run: bash <(git show origin/ops/progression-convergence-trigger-20260723:scripts/progression-ci-diagnostics.sh)
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: progression-ci-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/admin-progression.log
+            ${{ runner.temp }}/player-security.log
+            ${{ runner.temp }}/progression-ci-status.txt
+          if-no-files-found: warn
+          retention-days: 7
