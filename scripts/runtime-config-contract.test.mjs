@@ -48,6 +48,7 @@ test("accepts an isolated staging publishable configuration", () => {
   const { runtime, meta } = execute(stagingConfig);
   assert.equal(runtime.environment, "staging");
   assert.equal(runtime.projectRef, "eecvbssdvarfcykcfrny");
+  assert.equal(runtime.apiProxyUrl, "");
   assert.equal(
     runtime.classroomApiUrl,
     "https://eecvbssdvarfcykcfrny.supabase.co/functions/v1/classroom-api",
@@ -58,6 +59,29 @@ test("accepts an isolated staging publishable configuration", () => {
   );
   assert.equal(meta.content, runtime.adminApiUrl);
   assert.equal(Object.isFrozen(runtime), true);
+});
+
+test("routes only Edge Function APIs through an approved loopback proxy", () => {
+  const { runtime, meta } = execute({
+    ...stagingConfig,
+    apiProxyUrl: "http://127.0.0.1:4173/",
+  });
+
+  assert.equal(
+    runtime.supabaseUrl,
+    "https://eecvbssdvarfcykcfrny.supabase.co",
+    "Supabase Auth and Realtime must retain the real staging project URL.",
+  );
+  assert.equal(runtime.apiProxyUrl, "http://127.0.0.1:4173");
+  assert.equal(
+    runtime.classroomApiUrl,
+    "http://127.0.0.1:4173/functions/v1/classroom-api",
+  );
+  assert.equal(
+    runtime.adminApiUrl,
+    "http://127.0.0.1:4173/functions/v1/admin-api",
+  );
+  assert.equal(meta.content, runtime.adminApiUrl);
 });
 
 test("fails closed when deployment configuration is absent", () => {
@@ -94,5 +118,26 @@ test("rejects non-HTTPS remote Supabase URLs", () => {
       supabaseUrl: "http://eecvbssdvarfcykcfrny.supabase.co",
     }),
     /ECONOVARIA_RUNTIME_CONFIG_REQUIRES_HTTPS/,
+  );
+});
+
+test("rejects a non-loopback API proxy", () => {
+  assert.throws(
+    () => execute({
+      ...stagingConfig,
+      apiProxyUrl: "https://proxy.example.com",
+    }),
+    /ECONOVARIA_RUNTIME_CONFIG_API_PROXY_MUST_BE_LOOPBACK/,
+  );
+});
+
+test("rejects an API proxy in production", () => {
+  assert.throws(
+    () => execute({
+      ...stagingConfig,
+      environment: "production",
+      apiProxyUrl: "http://127.0.0.1:4173",
+    }),
+    /ECONOVARIA_RUNTIME_CONFIG_API_PROXY_PROHIBITED_IN_PRODUCTION/,
   );
 });
