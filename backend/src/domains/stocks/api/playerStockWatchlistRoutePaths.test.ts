@@ -7,18 +7,24 @@ declare const Deno: {
 };
 
 Deno.test("player stock watchlist route accepts collection and public tickers", () => {
-  assertEquals(
-    readPlayerStockWatchlistRoutePath(
-      "/functions/v1/classroom-api/players/me/stocks/watchlist",
-    ),
-    { kind: "watchlist" },
-  );
+  for (const pathname of [
+    "/players/me/stocks/watchlist",
+    "/classroom-api/players/me/stocks/watchlist",
+    "/functions/v1/classroom-api/players/me/stocks/watchlist",
+  ]) {
+    assertEquals(
+      readPlayerStockWatchlistRoutePath(pathname),
+      { kind: "watchlist" },
+    );
+  }
   assertEquals(
     readPlayerStockWatchlistRoutePath("/players/me/stocks/watchlist/aura"),
     { kind: "watchlist_asset", assetId: "AURA" },
   );
   assertEquals(
-    readPlayerStockWatchlistRoutePath("/players/me/stocks/watchlist/BRK.B"),
+    readPlayerStockWatchlistRoutePath(
+      "/classroom-api/players/me/stocks/watchlist/BRK.B",
+    ),
     { kind: "watchlist_asset", assetId: "BRK.B" },
   );
 });
@@ -38,7 +44,7 @@ Deno.test("player stock watchlist route rejects UUIDs, encoded separators, and e
   );
   assertEquals(
     readPlayerStockWatchlistRoutePath(
-      "/players/me/stocks/watchlist/AURA/extra",
+      "/classroom-api/players/me/stocks/watchlist/AURA/extra",
     ),
     { kind: "malformed" },
   );
