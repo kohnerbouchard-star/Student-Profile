@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   contract:
-    name: Crafting and Progression provisioning contract
+    name: Crafting gate and Progression baseline contract
     if: github.event.pull_request.number == 295
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -45,7 +45,7 @@ jobs:
           node scripts/supply-chain-secret-scan.mjs
 
   provision:
-    name: Activate Crafting and initialize Progression
+    name: Evaluate Crafting gate and initialize Progression
     if: github.event.pull_request.number == 295
     needs: [contract]
     runs-on: ubuntu-latest
@@ -131,10 +131,10 @@ jobs:
           printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
           rm -f /tmp/project-api-keys.json /tmp/service-role-key
 
-      - name: Re-run contract immediately before connected write
+      - name: Re-run contract immediately before connected operation
         run: node --test scripts/pr295-gameplay-state-provision.test.mjs
 
-      - name: Activate Crafting and initialize Progression baselines
+      - name: Preserve Crafting gate and initialize Progression baseline
         run: node scripts/pr295-gameplay-state-provision.mjs
 
       - name: Upload sanitized gameplay-state evidence
@@ -149,13 +149,15 @@ jobs:
       - name: Record staging gameplay baseline
         if: success()
         run: |
-          {
-            echo "## Staging gameplay baseline"
-            echo '- Canonical physical-economy pack active: `true`'
-            echo '- Recipes projected and enabled by regulation status: `true`'
-            echo '- Item supply projections created: `true`'
-            echo '- Progression profile per active Player: `true`'
-            echo '- Four baseline reputation dimensions per active Player: `true`'
-            echo '- XP, achievements, cash, and inventory fabricated: `false`'
-            echo '- Production touched: `false`'
-          } >> "$GITHUB_STEP_SUMMARY"
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('node:fs');
+          const evidence = JSON.parse(fs.readFileSync(process.env.EVIDENCE_PATH, 'utf8'));
+          console.log('## Staging gameplay baseline');
+          console.log(`- Crafting activation authorized: \`${evidence.crafting.activationAuthorized}\``);
+          console.log(`- Crafting activation blocked: \`${evidence.crafting.activationBlocked}\``);
+          console.log(`- Crafting authorization bypassed: \`${evidence.crafting.authorizationBypassed}\``);
+          console.log(`- Progression profiles initialized: \`${evidence.verification.progressionProfiles}\``);
+          console.log(`- Reputation baseline rows: \`${evidence.verification.reputationRows}\``);
+          console.log('- XP, achievements, cash, and inventory fabricated: `false`');
+          console.log('- Production touched: `false`');
+          NODE
