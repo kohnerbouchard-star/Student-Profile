@@ -23,6 +23,16 @@
     return String(value ?? "").replace(/\s+/g, " ").trim();
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character]);
+  }
+
   function selectedGameId() {
     return text(
       window.EconovariaAdminAuth?.getSelectedGameId?.() ||
@@ -278,7 +288,11 @@
   function visibleShareModal() {
     return [...document.querySelectorAll('[data-modal-id="share-game-access"]')]
       .reverse()
-      .find((node) => !node.hidden && node.getAttribute("aria-hidden") !== "true") || null;
+      .find((node) => {
+        if (node.hidden || node.getAttribute("aria-hidden") === "true") return false;
+        const style = window.getComputedStyle(node);
+        return style.display !== "none" && style.visibility !== "hidden";
+      }) || null;
   }
 
   async function copyText(value, button) {
@@ -311,6 +325,9 @@
   function createFallbackShareSurface(context, opener) {
     fallbackShareSurface?.remove();
     const backdrop = document.createElement("div");
+    const safeGameName = escapeHtml(context.gameName);
+    const safeGameCode = escapeHtml(context.gameCode || "Code hidden");
+    const safePlayerLink = escapeHtml(playerAppUrl(context.gameCode));
     backdrop.className =
       "admin-terminal-modal-backdrop econovaria-admin-share-fallback";
     backdrop.dataset.modalId = "share-game-access";
@@ -321,18 +338,18 @@
         <header>
           <div>
             <small>Multiplayer access</small>
-            <h2 id="econovariaShareTitle">Share ${context.gameName}</h2>
+            <h2 id="econovariaShareTitle">Share ${safeGameName}</h2>
           </div>
           <button type="button" data-econovaria-close-share aria-label="Close share panel">×</button>
         </header>
         <p data-econovaria-share-game-context></p>
         <div class="admin-terminal-share-modal-code">
-          <div><small>Game Code</small><strong>${context.gameCode || "Code hidden"}</strong></div>
+          <div><small>Game Code</small><strong>${safeGameCode}</strong></div>
           <button type="button" data-econovaria-copy-code ${context.gameCode ? "" : "disabled"}>Copy code</button>
         </div>
         <label>
           <span>Player link</span>
-          <input readonly value="${playerAppUrl(context.gameCode)}" data-econovaria-player-link />
+          <input readonly value="${safePlayerLink}" data-econovaria-player-link />
         </label>
         <label>
           <span>Invite message</span>
@@ -386,7 +403,7 @@
           const delayed = visibleShareModal();
           if (delayed) setShareContext(delayed, selectedGameContext());
           else createFallbackShareSurface(selectedGameContext(), opener);
-        }, 120);
+        }, 180);
       });
     });
   }
@@ -499,7 +516,7 @@
   }, true);
 
   document.addEventListener("keydown", (event) => {
-    if (!['Enter', ' '].includes(event.key)) return;
+    if (!["Enter", " "].includes(event.key)) return;
     const target = event.target;
     if (!isLogoutControl(target) || target instanceof HTMLButtonElement) return;
     event.preventDefault();
