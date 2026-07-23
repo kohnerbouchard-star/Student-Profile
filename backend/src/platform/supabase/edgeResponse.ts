@@ -31,9 +31,16 @@ export class EdgeActivationError extends Error {
 const PRODUCTION_BROWSER_ORIGIN = "https://kohnerbouchard-star.github.io";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 
+type DenoEnvironmentRuntime = {
+  readonly env?: {
+    get(name: string): string | undefined;
+  };
+};
+
 function environmentValue(name: string): string {
   try {
-    return Deno.env.get(name)?.trim() || "";
+    const runtime = Deno as unknown as DenoEnvironmentRuntime;
+    return runtime.env?.get(name)?.trim() || "";
   } catch {
     return "";
   }
