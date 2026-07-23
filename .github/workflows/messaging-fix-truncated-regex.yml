@@ -1,0 +1,81 @@
+name: Messaging Fix Truncated Regex
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/messaging-fix-truncated-regex.yml
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-fix-truncated-regex.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-fix-truncated-regex
+  cancel-in-progress: true
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Messaging branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Restore complete regex literals
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql')
+          lines = path.read_text().splitlines()
+          replacements = {
+              "              and player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}":
+                  "              and player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'",
+              "    or (p_before_thread_public_id is not null and p_before_thread_public_id !~ '^thr_[0-9a-f]{32})":
+                  "    or (p_before_thread_public_id is not null and p_before_thread_public_id !~ '^thr_[0-9a-f]{32}$')",
+              "    or p_thread_public_id !~ '^thr_[0-9a-f]{32}":
+                  "    or p_thread_public_id !~ '^thr_[0-9a-f]{32}$'",
+          }
+          counts = {old: 0 for old in replacements}
+          for index, line in enumerate(lines):
+              if line in replacements:
+                  counts[line] += 1
+                  lines[index] = replacements[line]
+          missing = [old for old, count in counts.items() if count != 1]
+          if missing:
+              raise SystemExit(f'Expected each truncated regex once; mismatches: {missing}')
+
+          odd_quote_lines = []
+          for number, line in enumerate(lines, 1):
+              if line.replace("''", "").count("'") % 2:
+                  odd_quote_lines.append((number, line))
+          if odd_quote_lines:
+              raise SystemExit(f'Unbalanced single-quoted SQL lines remain: {odd_quote_lines}')
+
+          path.write_text('\n'.join(lines) + '\n')
+          PY
+
+          grep -Fq "player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'" \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          grep -Fq "p_before_thread_public_id !~ '^thr_[0-9a-f]{32}$'" \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          grep -Fq "p_thread_public_id !~ '^thr_[0-9a-f]{32}$'" \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          git add backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          git diff --cached --check
+          git commit -m "fix(messaging): restore complete validation regexes"
+          git push origin HEAD:agent/messaging-communication-v1
