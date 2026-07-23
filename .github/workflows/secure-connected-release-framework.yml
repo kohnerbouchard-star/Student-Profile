@@ -55,3 +55,5 @@ jobs:
             echo "- Production modified: \`false\`"
             echo "- Stop: \`SECURE_ACCEPTANCE_FRAMEWORK_AND_DRIFT_LEDGER_GREEN_NO_GO\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+# roadmap-complete exact-head validation pulse: 2026-07-23
