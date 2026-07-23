@@ -81,13 +81,13 @@
     accessToken: SUPABASE_PUBLISHABLE_KEY,
     playerSessionToken: session?.playerSessionToken || "",
     sessionProvider: () => readStoredSession(),
-    sessionExitUrl: loginUrl("logged-out"),
+    sessionExitUrl: loginUrl("session-invalid"),
+    logoutExitUrl: loginUrl("logged-out"),
     onSessionRequired: () => {
       if (!development) redirectToLogin("session-invalid");
     },
     onSessionInvalid: () => {
       clearStoredSession();
-      redirectToLogin("session-invalid");
     }
   };
 
