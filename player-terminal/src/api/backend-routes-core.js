@@ -81,13 +81,9 @@ function notificationDeliveryIds(payload, endpointKey) {
 const ROUTE_BUILDERS = Object.freeze({
   session: () => ({ method: "GET", path: "/players/me" }),
   capabilities: () => ({ method: "GET", path: "/players/me/capabilities" }),
-  dashboard: ({ session }) => ({
+  dashboard: () => ({
     method: "GET",
-    path: session?.gameSessionId
-      ? queryPath("/players/me/game/dashboard", {
-        gameSessionId: session.gameSessionId,
-      })
-      : "/players/me/game/dashboard",
+    path: "/players/me/game/dashboard",
   }),
   countries: () => ({ method: "GET", path: "/players/me/world/countries" }),
   country: ({ params = {}, payload = {} }) => ({
@@ -177,7 +173,7 @@ const ROUTE_BUILDERS = Object.freeze({
     payload: {
       quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
-      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
+      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt.trim() : null,
     },
   }),
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
