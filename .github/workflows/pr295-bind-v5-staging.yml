@@ -1,0 +1,87 @@
+name: PR295 Bind V5 Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-bind-v5-staging.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr295-bind-v5-staging
+  cancel-in-progress: true
+
+jobs:
+  bind:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bind exact v5 artifact and serialize staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main agent/production-integration-gate-v1
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/agent/production-integration-gate-v1)"
+          test "$(git rev-parse origin/main)" = "1c3ae6004db442eeed1a4999a733445ca6fcecbd"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          release = '1c3ae6004db442eeed1a4999a733445ca6fcecbd'
+          tooling = 'd86e3a52766855a44e3a4c970c0bac567a4d2f3d'
+          run_id = '30003930949'
+          artifact_id = '8562164246'
+          archive = '59dc293a67fdf7df0bbd50d948383cd63de5a00aae8e58526fc88c388c11309d'
+          manifest = '648154b04eab8a98e187042131b996ae7eb7e515dd225f17c3723cf093f263f2'
+          artifact_set = 'bc5053043cb7c77dd02a7f4260ae5f347770308cfc5ebfbe8f7eed9eff037a84'
+
+          def replace_exact(text, old, new, count):
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f'Expected {count} occurrences of {old!r}, found {actual}')
+              return text.replace(old, new)
+
+          deploy = Path('.github/workflows/pr295-staging-artifact-deploy-v2.yml')
+          text = deploy.read_text()
+          text = replace_exact(text, 'group: pr295-staging-artifact-deploy-v4', 'group: pr295-staging-artifact-deploy-v5', 1)
+          text = replace_exact(text, 'cancel-in-progress: false', 'cancel-in-progress: true', 1)
+          text = replace_exact(text, 'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', f'RELEASE_COMMIT: {release}', 1)
+          text = replace_exact(text, 'TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749', f'TOOLING_COMMIT: {tooling}', 1)
+          text = replace_exact(text, 'SOURCE_RUN_ID: "30001209235"', f'SOURCE_RUN_ID: "{run_id}"', 1)
+          text = replace_exact(text, 'SOURCE_ARTIFACT_ID: "8561056024"', f'SOURCE_ARTIFACT_ID: "{artifact_id}"', 1)
+          text = replace_exact(text, 'EXPECTED_ARCHIVE_SHA256: f17d1622a2ef22873eda3371bbdbbce73dde8c9f610fe522e48c7e7db977e944', f'EXPECTED_ARCHIVE_SHA256: {archive}', 1)
+          text = replace_exact(text, 'EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12', f'EXPECTED_MANIFEST_SHA256: {manifest}', 1)
+          text = replace_exact(text, 'EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7', f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}', 1)
+          text = replace_exact(text, 'ref: 6e3745430354839ae8da65944f4f53a3b3586749', f'ref: {tooling}', 1)
+          text = replace_exact(text, 'artifact-ids: 8561056024', f'artifact-ids: {artifact_id}', 1)
+          text = replace_exact(text, 'run-id: 30001209235', f'run-id: {run_id}', 1)
+          deploy.write_text(text)
+
+          acceptance = Path('.github/workflows/pr295-connected-staging-acceptance.yml')
+          text = acceptance.read_text()
+          text = replace_exact(text, 'group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}', 'group: pr295-connected-staging-v1', 1)
+          text = replace_exact(text, 'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', f'RELEASE_COMMIT: {release}', 1)
+          text = replace_exact(text, 'TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749', f'TOOLING_COMMIT: {tooling}', 1)
+          text = replace_exact(text, 'SOURCE_RUN_ID: "30001209235"', f'SOURCE_RUN_ID: "{run_id}"', 1)
+          text = replace_exact(text, 'SOURCE_ARTIFACT_ID: "8561056024"', f'SOURCE_ARTIFACT_ID: "{artifact_id}"', 1)
+          text = replace_exact(text, 'EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12', f'EXPECTED_MANIFEST_SHA256: {manifest}', 1)
+          text = replace_exact(text, 'EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7', f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}', 1)
+          text = replace_exact(text, 'artifact-ids: 8561056024', f'artifact-ids: {artifact_id}', 1)
+          text = replace_exact(text, 'run-id: 30001209235', f'run-id: {run_id}', 1)
+          acceptance.write_text(text)
+          PY
+
+          rm -f .github/workflows/pr295-bind-v5-staging.yml
+          git add -A
+          git commit -m "ops(pr295): bind exact v5 staging artifact"
+          git push origin HEAD:agent/production-integration-gate-v1
