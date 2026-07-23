@@ -11,12 +11,24 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
   );
   assertEquals(
     readPlayerCapabilityManifestRoutePath(
+      "/classroom-api/players/me/capabilities",
+    ),
+    { kind: "manifest" },
+  );
+  assertEquals(
+    readPlayerCapabilityManifestRoutePath(
       "/functions/v1/classroom-api/players/me/capabilities",
     ),
     { kind: "manifest" },
   );
   assertEquals(
     readPlayerCapabilityManifestRoutePath("/players/me/capabilities/extra"),
+    { kind: "malformed" },
+  );
+  assertEquals(
+    readPlayerCapabilityManifestRoutePath(
+      "/classroom-api/players/me/capabilities/extra",
+    ),
     { kind: "malformed" },
   );
   assertEquals(
