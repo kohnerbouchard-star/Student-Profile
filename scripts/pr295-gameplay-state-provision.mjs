@@ -22,7 +22,8 @@ function safeError(error) {
   return String(error?.message ?? error ?? "Unknown gameplay provisioning error")
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "[uuid-redacted]")
     .replace(/sb_(?:secret|publishable)_[A-Za-z0-9_-]+/g, "[key-redacted]")
-    .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [redacted]");
+    .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [redacted]")
+    .slice(0, 2000);
 }
 
 function exact(value) {
@@ -48,8 +49,19 @@ async function requestJson(baseUrl, serviceRoleKey, resource, options = {}) {
     body = text;
   }
   if (!response.ok) {
-    const code = body && typeof body === "object" ? body.code ?? "unknown" : "non_json";
-    throw new Error(`Gameplay staging request failed (${response.status}:${code})`);
+    const code = body && typeof body === "object" ? String(body.code ?? "unknown") : "non_json";
+    const message = body && typeof body === "object" ? String(body.message ?? "") : "";
+    const details = body && typeof body === "object" ? String(body.details ?? "") : "";
+    const hint = body && typeof body === "object" ? String(body.hint ?? "") : "";
+    const error = new Error(
+      `Gameplay staging request failed (${response.status}:${code})` +
+      `${message ? ` message=${message}` : ""}` +
+      `${details ? ` details=${details}` : ""}` +
+      `${hint ? ` hint=${hint}` : ""}`,
+    );
+    error.status = response.status;
+    error.code = code;
+    throw error;
   }
   if (!options.count) return body;
   const match = String(response.headers.get("content-range") ?? "").match(/\/(\d+)$/);
@@ -189,13 +201,20 @@ export async function runGameplayStateProvisioning() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  runGameplayStateProvisioning().catch((error) => {
-    console.error(JSON.stringify({
+  runGameplayStateProvisioning().catch(async (error) => {
+    const failure = {
+      schemaVersion: "econovaria-gameplay-state-provision-failure-v1",
+      generatedAt: new Date().toISOString(),
       error: safeError(error),
+      status: Number.isInteger(error?.status) ? error.status : null,
+      code: typeof error?.code === "string" ? error.code.slice(0, 120) : null,
       productionTouched: false,
       credentialsRecorded: false,
       rawInternalIdentifiersRecorded: false,
-    }));
+    };
+    const evidencePath = process.env.EVIDENCE_PATH || "/tmp/pr295-gameplay-state-provision.json";
+    await writeFile(evidencePath, `${JSON.stringify(failure, null, 2)}\n`, "utf8").catch(() => {});
+    console.error(JSON.stringify(failure));
     process.exitCode = 1;
   });
 }
