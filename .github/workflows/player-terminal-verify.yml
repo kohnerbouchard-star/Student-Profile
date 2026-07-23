@@ -64,6 +64,7 @@ jobs:
               $0 ~ /^admin\/crafting-oversight-[A-Za-z0-9.-]+[.]js$/ { next }
               $0 ~ /^admin\/messaging-(moderation|policy)-(client|loader|surface)[.]js$/ { next }
               $0 == "admin/messaging-moderation.css" { next }
+              $0 == "admin/admin-bootstrap.js" { next }
               $0 == "admin/index.html" { next }
               $0 == "admin/inventory-redemption-queue-loader.js" { next }
               $0 == "admin/modal-accessibility.js" { next }
@@ -104,6 +105,7 @@ jobs:
               $0 == "backend/package.json" { next }
               $0 ~ /^admin\/(css\/marketplace-lifecycle[.]css|inventory-redemption-queue-loader[.]js|marketplace-lifecycle-(client|loader|surface)[.]js)$/ { next }
               $0 ~ /^backend\/src\/domains\/marketplace\/(api|contracts|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
+              $0 ~ /^backend\/src\/domains\/messaging\// { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/(index|marketplaceOperations([.]test)?)[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1|2600_fix_marketplace_listing_item_lookup_v1|2700_fix_marketplace_listing_currency_lookup_v1|2800_restore_marketplace_listing_reservation_wrapper_v1|2900_fix_marketplace_listing_legacy_lookups_v1|3000_harden_marketplace_legacy_projection_conflicts_v1|3100_harden_marketplace_table_return_conflicts_v1)[.]sql$/ { next }
               $0 == "docs/operations/evidence/pr-249-player-marketplace-lifecycle.md" { next }
@@ -131,6 +133,7 @@ jobs:
               $0 == "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts" { next }
               $0 ~ /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/security\/playerCraftingRateLimitDispatch([.]test)?[.]ts$/ { next }
+              $0 ~ /^backend\/src\/security\/(playerMessagingRateLimitDispatch([.]test)?|staffMessagingRateLimitDispatch)[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/businessBankingOperations([.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/craftingOperations([.]test)?[.]ts$/ { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/inventory(CraftingDispatch[.]test|RedemptionOperations(Core)?)[.]ts$/ { next }
@@ -143,11 +146,10 @@ jobs:
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
-              $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/(worldRuntimeOperations|campaignProgramRuntime|campaignWorkersRuntime)([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/classroom-api/messagingDispatch.ts" { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/messaging[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/supabase\/migrations\/2026072115(0000|1000|2000|3000|4000)_[A-Za-z0-9_]+[.]sql$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+[.]sql$/ { next }
               $0 == "docs/workstreams/messaging-communication-v1.md" { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
               $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
