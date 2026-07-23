@@ -1,17 +1,31 @@
+function replaceButtonContents(button, label, includeSpinner = false) {
+  button.replaceChildren();
+  if (includeSpinner) {
+    const spinner = document.createElement("span");
+    spinner.className = "player-terminal-button-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    button.append(spinner);
+  }
+  const text = document.createElement("span");
+  text.textContent = String(label || "");
+  button.append(text);
+}
+
 export function setButtonProcessing(button, label = "Processing") {
   if (!(button instanceof HTMLButtonElement)) return () => {};
-  const previousHtml = button.innerHTML;
+  const previousNodes = [...button.childNodes];
   const previousDisabled = button.disabled;
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
   button.classList.add("is-processing");
-  button.innerHTML = `<span class="player-terminal-button-spinner" aria-hidden="true"></span><span>${label}</span>`;
+  replaceButtonContents(button, label, true);
 
   return (finalLabel = "") => {
     button.classList.remove("is-processing");
     button.removeAttribute("aria-busy");
     button.disabled = previousDisabled;
-    button.innerHTML = finalLabel || previousHtml;
+    if (finalLabel) replaceButtonContents(button, finalLabel);
+    else button.replaceChildren(...previousNodes);
   };
 }
 
