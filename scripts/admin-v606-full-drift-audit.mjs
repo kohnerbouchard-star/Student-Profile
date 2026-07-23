@@ -32,7 +32,7 @@ const expectedScripts = [
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
   "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
-  "./player-create-ux.js", "./game-code-wiring.js", "./admin-stabilization.js",
+  "./player-create-ux.js", "./game-code-wiring.js", "./game-session-controls.js", "./admin-stabilization.js",
   "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js", "./admin-bootstrap.js",
 ];
@@ -46,7 +46,7 @@ const expectedStyles = [
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
   "./css/overview-quick-actions.css", "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
   "./css/loading-scope-overrides.css", "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
-  "./css/game-lifecycle-controls.css",
+  "./css/game-lifecycle-controls.css", "./css/game-session-controls.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
 const adminBootstrap = readText("admin/admin-bootstrap.js");
@@ -61,6 +61,7 @@ const scopedRuntimeFiles = {
   "admin/modal-accessibility.js": ["focusableElements", 'event.key === "Tab"', 'event.key === "Escape"', "restoreFocus"],
   "admin/keyboard-navigation.js": ["[data-admin-section]", '[role="tab"]', "[data-admin-terminal-action]", "ArrowDown", "ArrowUp", "Home", "End", "data-admin-input-modality"],
   "admin/asset-wiring.js": ["ORIGINAL_CURRENCY_ICONS", "ORIGINAL_PLAYER_ACTION_ICONS", "ORIGINAL_MODAL_VIDEOS"],
+  "admin/game-session-controls.js": ["econovaria.admin.selected-game.v1", "share-current-game", "data-econovaria-admin-logout", "/api/admin/auth/sign-out", "createFallbackShareSurface"],
   "admin/admin-stabilization.js": ["reconcileKnownButtons", "reconcileNumericFormatting", "admin-terminal-ui-icon", "admin-terminal-export-history-button-v601", "admin-terminal-logs-export-icon"],
   "admin/overview-quick-actions.js": ["OVERVIEW_ACTIONS", "scan-attendance", "add-contract", "add-player", "add-store-item", "admin-overview-quick-actions-card", "MAX_BOOT_FRAMES"],
   "admin/interaction-quality.js": ["validateForm", "setScannerProcessing", "setScannerCompleted", "setScannerError", "admin-qol-page-skeleton", "econovaria:admin-request-lifecycle", "requestContexts"],
@@ -121,6 +122,13 @@ assert(!overviewQuickActions.includes('createElement("style")'), "Overview quick
 assert(overviewQuickActions.includes('storeButton.hidden = true'), "Add Store Item is not removed from Overview.");
 assert(overviewQuickActions.includes('section !== "Store"'), "Add Store Item is not restricted to Store.");
 
+const gameSessionControls = readText("admin/game-session-controls.js");
+assert(!gameSessionControls.includes("window.fetch ="), "Selected-game controls replace the global fetch transport.");
+assert(!gameSessionControls.includes('createElement("style")'), "Selected-game controls inject runtime CSS.");
+assert(!gameSessionControls.includes("document.body.innerHTML"), "Selected-game controls replace the document body.");
+assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Selected-game Player link omits the Game Code.");
+assert(gameSessionControls.includes("event.stopImmediatePropagation()"), "Selected-game logout does not isolate the broken delegated action.");
+
 const skeletonRuntime = readText("admin/shape-accurate-skeletons.js");
 assert(!skeletonRuntime.includes("window.fetch ="), "Shape skeleton controller adds a network wrapper.");
 assert(!skeletonRuntime.includes("MutationObserver"), "Shape skeleton controller adds a broad DOM observer.");
@@ -152,6 +160,7 @@ for (const path of [
   "admin/css/session-gate.css", "admin/css/player-runtime-integration.css", "admin/css/player-create-confirmation.css",
   "admin/css/admin-stabilization.css", "admin/css/admin-stabilization-visual-finish.css", "admin/css/overview-quick-actions.css",
   "admin/css/interaction-quality.css", "admin/css/shape-accurate-skeletons.css", "admin/css/loading-scope-overrides.css", "admin/css/data-state-contracts.css", "admin/css/keyboard-navigation.css",
+  "admin/css/game-session-controls.css",
 ]) {
   const source = readText(path);
   for (const forbidden of [/(^|[},\s])body\s*\{/m, /(^|[},\s])html\s*\{/m, /\.admin-terminal-shell\s*\{/m, /\[data-admin-section\]\s*\{/m]) {
@@ -171,6 +180,11 @@ assert(/\.admin-terminal-modal-backdrop\s*,\s*\.admin-terminal-modal-backdrop\s+
 const visualFinishCss = readText("admin/css/admin-stabilization-visual-finish.css");
 assert(visualFinishCss.includes("#adminPreview .admin-terminal-clickable-row::after"), "Clickable-row SVG affordance correction is missing.");
 assert(!visualFinishCss.includes("#adminPreview *"), "Final visual corrections contain a blanket page-shell selector.");
+const gameSessionControlsCss = readText("admin/css/game-session-controls.css");
+assert(gameSessionControlsCss.includes(".econovaria-admin-game-session-card"), "Selected-game card CSS is missing.");
+assert(gameSessionControlsCss.includes('pointer-events: auto !important'), "Selected-game controls do not restore pointer interaction.");
+assert(gameSessionControlsCss.includes('[data-modal-id="share-game-access"]'), "Share modal CSS is not scoped to its surface.");
+assert(!gameSessionControlsCss.includes("#adminPreview *"), "Selected-game CSS applies a blanket page-shell selector.");
 
 const requestOwner = readText("admin/classroom-write-fallback.js");
 assert(requestOwner.includes("econovaria:admin-request-lifecycle"), "Authenticated request owner does not publish explicit lifecycle events.");
@@ -213,4 +227,4 @@ assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a b
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, selected multiplayer game controls, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
