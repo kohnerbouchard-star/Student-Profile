@@ -1,0 +1,201 @@
+name: Messaging Isolated Staging
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/messaging-isolated-staging.yml"
+      - "scripts/staging/probe-messaging-lifecycle.mjs"
+      - "scripts/staging/probe-messaging-inactive-sessions.mjs"
+      - "backend/src/domains/messaging/**"
+      - "backend/src/security/playerMessagingRateLimitDispatch.test.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/security/staffMessagingRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/messagingDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/messagingOperations*.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/*messaging*.sql"
+  workflow_dispatch:
+    inputs:
+      run_connected_staging:
+        description: Run the protected connected Messaging lifecycle from exact merged main
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: messaging-isolated-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-harness:
+    name: Validate fail-closed Messaging staging harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Messaging head
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate probe syntax
+        run: |
+          node --check scripts/staging/probe-messaging-lifecycle.mjs
+          node --check scripts/staging/probe-messaging-inactive-sessions.mjs
+
+      - name: Materialize credential-free acceptance plans
+        run: |
+          node scripts/staging/probe-messaging-lifecycle.mjs --plan | tee /tmp/messaging-staging-plan.json
+          node scripts/staging/probe-messaging-inactive-sessions.mjs --plan | tee /tmp/messaging-inactive-session-plan.json
+
+      - name: Verify production, privacy, and inactive-session guards are declared
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const plan = JSON.parse(fs.readFileSync('/tmp/messaging-staging-plan.json', 'utf8'));
+          const inactive = JSON.parse(fs.readFileSync('/tmp/messaging-inactive-session-plan.json', 'utf8'));
+          const guards = new Set(plan.guards || []);
+          if (plan.connectedExecution !== false || inactive.connectedExecution !== false) {
+            throw new Error('Plan mode unexpectedly enabled connected execution.');
+          }
+          for (const guard of [
+            'manual dispatch from exact main only',
+            'protected staging environment',
+            'known production project refs rejected',
+            'original Messaging policy restored',
+          ]) {
+            if (!guards.has(guard)) throw new Error(`Missing staging guard: ${guard}`);
+          }
+          if (!Array.isArray(plan.lifecycle) || plan.lifecycle.length < 8) {
+            throw new Error('Messaging lifecycle plan is incomplete.');
+          }
+          const states = new Set(inactive.states || []);
+          for (const state of [
+            'expired Player session denied',
+            'paused-game Player session denied',
+            'ended-game Player session denied',
+          ]) {
+            if (!states.has(state)) throw new Error(`Missing inactive-session acceptance state: ${state}`);
+          }
+          NODE
+
+      - name: Upload credential-free staging plans
+        uses: actions/upload-artifact@v4
+        with:
+          name: messaging-staging-plan-${{ github.sha }}
+          path: |
+            /tmp/messaging-staging-plan.json
+            /tmp/messaging-inactive-session-plan.json
+          if-no-files-found: error
+          retention-days: 30
+
+  connected-isolated-staging:
+    name: Execute connected isolated-staging Messaging lifecycle
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.run_connected_staging == true
+    needs:
+      - validate-harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      MESSAGING_STAGING_PLAYER_A_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_PLAYER_A_SESSION_TOKEN }}
+      MESSAGING_STAGING_PLAYER_B_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_PLAYER_B_SESSION_TOKEN }}
+      MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_STAFF_ACCESS_TOKEN: ${{ secrets.MESSAGING_STAGING_STAFF_ACCESS_TOKEN }}
+      MESSAGING_STAGING_GAME_SESSION_ID: ${{ secrets.MESSAGING_STAGING_GAME_SESSION_ID }}
+      MESSAGING_STAGING_RECIPIENT_PLAYER_ID: ${{ vars.MESSAGING_STAGING_RECIPIENT_PLAYER_ID }}
+      MESSAGING_STAGING_CROSS_GAME_PLAYER_ID: ${{ vars.MESSAGING_STAGING_CROSS_GAME_PLAYER_ID }}
+      MESSAGING_PRODUCTION_PROJECT_REFS: ${{ vars.MESSAGING_PRODUCTION_PROJECT_REFS }}
+      MESSAGING_STAGING_EVIDENCE_PATH: /tmp/messaging-connected-staging-evidence.json
+      MESSAGING_INACTIVE_SESSION_EVIDENCE_PATH: /tmp/messaging-inactive-session-evidence.json
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Execute connected inactive-session acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/staging/probe-messaging-inactive-sessions.mjs 2>&1 | tee /tmp/messaging-inactive-session.log
+
+      - name: Execute connected Messaging lifecycle
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/staging/probe-messaging-lifecycle.mjs 2>&1 | tee /tmp/messaging-connected-staging.log
+
+      - name: Verify sanitized evidence and restored final state
+        if: success()
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const lifecycleText = fs.readFileSync(process.env.MESSAGING_STAGING_EVIDENCE_PATH, 'utf8');
+          const inactiveText = fs.readFileSync(process.env.MESSAGING_INACTIVE_SESSION_EVIDENCE_PATH, 'utf8');
+          const evidence = JSON.parse(lifecycleText);
+          const inactive = JSON.parse(inactiveText);
+          for (const item of [evidence, inactive]) {
+            if (item.project?.production !== false || item.productionTouched !== false) {
+              throw new Error('Messaging staging production boundary failed.');
+            }
+            if (item.credentialsRecorded !== false || item.rawInternalIdentifiersRecorded !== false) {
+              throw new Error('Messaging staging privacy flags failed.');
+            }
+          }
+          if (
+            evidence.finalState?.policyRestored !== true ||
+            evidence.finalState?.syntheticPlayerThreadClosed !== true ||
+            evidence.finalState?.expiredSyntheticThreadDeleted !== true
+          ) {
+            throw new Error('Messaging staging final-state cleanup failed.');
+          }
+          if (Object.keys(evidence.checks || {}).length < 12) {
+            throw new Error('Messaging staging lifecycle evidence is incomplete.');
+          }
+          for (const check of [
+            'expiredSessionDenied',
+            'pausedGameSessionDenied',
+            'endedGameSessionDenied',
+          ]) {
+            if (inactive.checks?.[check] !== true) {
+              throw new Error(`Messaging inactive-session evidence is incomplete: ${check}.`);
+            }
+          }
+          if (inactive.lifecycleMutationPerformed !== false) {
+            throw new Error('Inactive-session probe unexpectedly mutated game lifecycle state.');
+          }
+          const forbidden = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role|x-player-session-token|authorization)/i;
+          if (forbidden.test(lifecycleText) || forbidden.test(inactiveText)) {
+            throw new Error('Messaging staging evidence contains forbidden data.');
+          }
+          NODE
+
+      - name: Upload connected staging evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: messaging-connected-staging-${{ github.sha }}
+          path: |
+            /tmp/messaging-connected-staging.log
+            /tmp/messaging-connected-staging-evidence.json
+            /tmp/messaging-inactive-session.log
+            /tmp/messaging-inactive-session-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
