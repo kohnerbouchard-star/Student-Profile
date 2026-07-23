@@ -1,0 +1,95 @@
+name: Admin Game Session Controls
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin-game-session-controls.yml"
+      - "admin/index.html"
+      - "admin/game-code-wiring.js"
+      - "admin/game-session-controls.js"
+      - "admin/css/game-session-controls.css"
+      - "admin/admin-auth.js"
+      - "admin/auth-session-manager.js"
+      - "backend/src/domains/players/api/playerLoginHttpHandler.ts"
+      - "scripts/admin-game-session-controls-smoke.mjs"
+      - "scripts/admin-game-session-controls-browser-smoke.mjs"
+      - "scripts/admin-shell-identity-smoke.mjs"
+      - "scripts/admin-v606-full-drift-audit.mjs"
+      - "package.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-game-session-controls-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event.pull_request.number == 327
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Verify selected-game and logout source contracts
+        run: |
+          node scripts/admin-game-session-controls-smoke.mjs
+          node scripts/admin-shell-identity-smoke.mjs
+          node scripts/admin-v606-full-drift-audit.mjs
+          node scripts/supply-chain-secret-scan.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Materialize browser runtime fixture
+        run: |
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+
+      - name: Start static Admin preview
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/admin-game-session-controls.log 2>&1 &
+          echo $! > /tmp/admin-game-session-controls.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/admin/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/admin-game-session-controls.log
+          exit 1
+
+      - name: Click Share and Log out in Chromium
+        run: node scripts/admin-game-session-controls-browser-smoke.mjs
+
+      - name: Upload Admin control diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-game-session-controls-${{ github.event.pull_request.head.sha }}
+          path: admin-browser-smoke-artifacts/game-session-controls/
+          if-no-files-found: warn
+          retention-days: 30
