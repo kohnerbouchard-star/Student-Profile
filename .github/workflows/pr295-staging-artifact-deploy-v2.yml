@@ -1,0 +1,201 @@
+name: PR295 Deploy Corrected Artifact To Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-staging-artifact-deploy-v2.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pr295-staging-artifact-deploy-v2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    env:
+      RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
+      TOOLING_COMMIT: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
+      SOURCE_RUN_ID: "29996788487"
+      SOURCE_ARTIFACT_ID: "8559284849"
+      EXPECTED_ARCHIVE_SHA256: 87c5102ce4a774bbe428bbd7ec7284e3609ecbacb2b6a2a5a68fb7375c26fbfe
+      EXPECTED_MANIFEST_SHA256: d39eb20743082aa93e601bd8d7cfcdda8140a665a197e2cc42da7a046975f474
+      EXPECTED_ARTIFACT_SET_SHA256: 6eb97d5bf98451bad4232be99530c7449376f96168522ea0701e8e6567dc2148
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      EXPECTED_LEDGER_COUNT: "140"
+      EXPECTED_LEDGER_HEAD: "20260723061659"
+      EXPECTED_LEDGER_SHA256: 1a318610e798f9c8a8d200282c42d65696c507ab51141398636dacf8b7cc80eb
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: Check out exact artifact tooling
+        uses: actions/checkout@v7
+        with:
+          ref: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and project boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TOOLING_COMMIT"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+
+      - name: Download exact corrected artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 8559284849
+          run-id: 29996788487
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/release
+          merge-multiple: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned release tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate exact artifact identities and bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum dist/release/release-manifest.json | awk '{print $1}')" = "$EXPECTED_MANIFEST_SHA256"
+          (cd dist/release && sha256sum --check checksums.sha256)
+          node scripts/release-platform.mjs validate \
+            --repo-root . \
+            --manifest dist/release/release-manifest.json \
+            --artifact-root dist/release \
+            --expected-commit "$RELEASE_COMMIT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.TOOLING_COMMIT) throw new Error('tooling mismatch');
+          if (manifest.provenance.workflowRunId !== process.env.SOURCE_RUN_ID) throw new Error('run mismatch');
+          if (manifest.artifactSetSha256 !== process.env.EXPECTED_ARTIFACT_SET_SHA256) throw new Error('artifact-set mismatch');
+          NODE
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Link isolated staging and verify exact ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          read -r count head digest < <(
+            psql "$pooler_url" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
+              select count(*)::int,
+                     max(version),
+                     encode(extensions.digest(string_agg(version, E'\\n' order by version) || E'\\n', 'sha256'), 'hex')
+              from supabase_migrations.schema_migrations
+            "
+          )
+          test "$count" = "$EXPECTED_LEDGER_COUNT"
+          test "$head" = "$EXPECTED_LEDGER_HEAD"
+          test "$digest" = "$EXPECTED_LEDGER_SHA256"
+
+      - name: Extract and deploy exact function artifacts
+        id: deploy
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/pr295-function-logs
+          functions=(admin-api classroom-api stock-market-player-read stock-market-read stock-market-runner stock-market-seed-copy stock-market-trading)
+          status=0
+          for name in "${functions[@]}"; do
+            root="/tmp/pr295-${name}"
+            rm -rf "$root"
+            mkdir -p "$root"
+            tar -xzf "dist/release/artifacts/edge-${name}.tar.gz" -C "$root"
+            test -f "$root/backend/supabase/functions/${name}/index.ts" || { status=1; break; }
+            test -d "$root/backend/src" || { status=1; break; }
+            cp backend/supabase/config.next.toml "$root/backend/supabase/config.toml"
+            printf '\n[functions.%s]\nverify_jwt = true\n' "$name" >> "$root/backend/supabase/config.toml"
+            (
+              cd "$root/backend"
+              supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_REF" --use-api
+            ) > "/tmp/pr295-function-logs/${name}.log" 2>&1 || { status=$?; break; }
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload function deployment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-staging-function-deploy-logs-${{ github.run_id }}
+          path: /tmp/pr295-function-logs
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail closed on deployment error
+        if: steps.deploy.outputs.status != '0'
+        run: |
+          find /tmp/pr295-function-logs -type f -maxdepth 1 -print -exec cat {} \;
+          exit 1
+
+      - name: Verify deployed function inventory and JWT policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/functions.json', 'utf8'));
+          const required = new Set(['admin-api','classroom-api','stock-market-player-read','stock-market-read','stock-market-runner','stock-market-seed-copy','stock-market-trading']);
+          for (const row of rows) {
+            const name = row.slug ?? row.name;
+            if (required.has(name)) {
+              if (row.verify_jwt !== true) throw new Error(`${name} does not require JWT`);
+              required.delete(name);
+            }
+          }
+          if (required.size) throw new Error(`Missing functions: ${[...required].join(',')}`);
+          NODE
+
+      - name: Record isolated staging deployment
+        run: |
+          {
+            echo "- Runtime source: \`$RELEASE_COMMIT\`"
+            echo "- Tooling source: \`$TOOLING_COMMIT\`"
+            echo "- Source artifact: \`$SOURCE_ARTIFACT_ID\`"
+            echo "- Artifact set: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
+            echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
+            echo '- Exact functions deployed: `7`'
+            echo '- JWT verification: `required`'
+            echo '- Production selected: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
