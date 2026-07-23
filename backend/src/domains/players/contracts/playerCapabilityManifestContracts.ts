@@ -1,6 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.2" as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.3" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.1" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -488,6 +487,8 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/orders/:orderId/disputes" }],
     routeCapabilities: ["marketplace"],
     actionCapabilities: ["marketplaceDispute"],
+  },
+  {
     key: "messages",
     operations: [{ method: "GET", pathTemplate: "/players/me/messages" }],
     routeCapabilities: ["messages"],
