@@ -23,16 +23,17 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/messaging-communication-v1'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     environment: staging
     env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN }}
-      MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN }}
-      MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN: ps_messagingexpiredsession00000001
+      MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN: ps_messagingpausedsession000000002
+      MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN: ps_messagingendedsession0000000003
       MESSAGING_INACTIVE_SESSION_EVIDENCE_PATH: /tmp/messaging-inactive-session-evidence.json
       EXPECTED_ARTIFACT_DIGEST: a40714bf4eb208813423838bf671801c0d9b233cea34a178ed30f998b571ccd4
     steps:
@@ -47,6 +48,11 @@ jobs:
         with:
           node-version: "22.23.1"
 
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
       - name: Bind exact source, artifact, and staging project
         id: identity
         shell: bash
@@ -54,19 +60,17 @@ jobs:
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
           test "$source_sha" = "${{ github.event.pull_request.head.sha }}"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
           test "$SUPABASE_PROJECT_REF" = "eecvbssdvarfcykcfrny"
           test "$SUPABASE_PROJECT_REF" != "cgiukdjwicykrmtkhudh"
 
           node - <<'NODE'
           const ref = String(process.env.SUPABASE_PROJECT_REF || '').trim();
-          if (ref !== 'eecvbssdvarfcykcfrny') throw new Error('Unexpected staging project ref.');
           const api = new URL(process.env.SUPABASE_URL);
+          if (ref !== 'eecvbssdvarfcykcfrny') throw new Error('Unexpected staging project ref.');
           if (api.protocol !== 'https:' || api.hostname !== `${ref}.supabase.co`) {
             throw new Error('Supabase API URL is not bound to staging.');
-          }
-          const db = new URL(process.env.SUPABASE_DB_URL);
-          if (!['postgres:', 'postgresql:'].includes(db.protocol) || !db.hostname.includes(ref)) {
-            throw new Error('Supabase database URL is not bound to staging.');
           }
           NODE
 
@@ -88,10 +92,26 @@ jobs:
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "artifact_digest=$digest" >> "$GITHUB_OUTPUT"
 
+      - name: Link isolated staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          cd backend
+          supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          test -s supabase/.temp/pooler-url
+
       - name: Deploy exact four-slot Messaging migration family
         shell: bash
         run: |
           set -euo pipefail
+          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          test "${POOLER_URL#postgresql://postgres.${SUPABASE_PROJECT_REF}@}" != "$POOLER_URL"
+          test "${POOLER_URL%:5432/postgres}" != "$POOLER_URL"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGSSLMODE=require
+          source_sha="${{ steps.identity.outputs.source_sha }}"
+
           migrations=(
             20260721150000_add_messaging_communication_v2.sql
             20260721151000_harden_messaging_retention_and_audit_v2.sql
@@ -100,28 +120,59 @@ jobs:
           )
 
           for migration in "${migrations[@]}"; do
+            file="backend/supabase/migrations/$migration"
             version="${migration%%_*}"
             name="${migration#${version}_}"
             name="${name%.sql}"
-            present="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
-              -v version="$version" \
-              -c "select count(*) from supabase_migrations.schema_migrations where version = :'version';")"
+            present="$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version = '$version'")"
+
             if [ "$present" = "0" ]; then
-              psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
-                -f "backend/supabase/migrations/$migration"
-              psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
-                -v version="$version" \
-                -v name="$name" \
-                -v source_sha="${{ steps.identity.outputs.source_sha }}" \
-                -c "insert into supabase_migrations.schema_migrations(version, statements, name, created_by, idempotency_key, rollback) values (:'version', array['exact repository migration applied by Messaging connected acceptance'], :'name', 'messaging-connected-staging-' || :'source_sha', 'messaging:staging-deploy:' || :'version' || ':' || :'source_sha', array[]::text[]) on conflict (version) do nothing;"
+              psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+              python3 - "$version" "$name" "$file" "$source_sha" /tmp/messaging-ledger-record.sql <<'PY'
+          from pathlib import Path
+          import sys
+
+          version, name, migration_path, source_sha, output_path = sys.argv[1:]
+          text = Path(migration_path).read_text(encoding='utf-8')
+          tag = 'messaging_exact_migration'
+          while f'${tag}$' in text:
+              tag += '_x'
+          payload = f'${tag}${text}${tag}$'
+          def lit(value: str) -> str:
+              return "'" + value.replace("'", "''") + "'"
+          sql = f"""
+          insert into supabase_migrations.schema_migrations(
+            version, name, statements, created_by, idempotency_key, rollback
+          ) values (
+            {lit(version)},
+            {lit(name)},
+            array[{payload}],
+            {lit('messaging-connected-staging-' + source_sha)},
+            {lit('messaging:staging-deploy:' + version + ':' + source_sha)},
+            array[]::text[]
+          )
+          on conflict (version) do update
+          set name = excluded.name,
+              statements = excluded.statements,
+              created_by = excluded.created_by,
+              idempotency_key = excluded.idempotency_key;
+          """
+          Path(output_path).write_text(sql, encoding='utf-8')
+          PY
+              psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 -f /tmp/messaging-ledger-record.sql
             fi
           done
+
+          unset PGPASSWORD
 
       - name: Verify exact Messaging ledger and schema
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/messaging-ledger.json
+          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGSSLMODE=require
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/messaging-ledger.json
           with expected(version) as (
             values
               ('20260721150000'),
@@ -143,6 +194,7 @@ jobs:
             else (select 1 / 0)::text
           end;
           SQL
+          unset PGPASSWORD
 
       - name: Execute inactive-session acceptance
         shell: bash
@@ -166,8 +218,12 @@ jobs:
       - name: Execute transactional Messaging lifecycle
         shell: bash
         run: |
+          set -euo pipefail
+          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGSSLMODE=require
           set +e
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
             -f scripts/staging/messaging-connected-acceptance.sql \
             > /tmp/messaging-transaction.raw.log 2>&1
           status=$?
@@ -184,14 +240,19 @@ jobs:
           rm -f /tmp/messaging-transaction.raw.log
           test "$status" -eq 0
           tail -n 1 /tmp/messaging-transaction.log > /tmp/messaging-transaction-evidence.json
+          unset PGPASSWORD
 
       - name: Independently prove zero residue
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGSSLMODE=require
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
             -f scripts/staging/verify-messaging-zero-residue.sql \
             > /tmp/messaging-zero-residue.json
+          unset PGPASSWORD
 
       - name: Verify connected evidence
         shell: bash
