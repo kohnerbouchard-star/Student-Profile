@@ -11,7 +11,7 @@ import { validateStudentProfileCapabilityManifest } from "../src/integrations/st
 
 const manifest = validateStudentProfileCapabilityManifest({
   schemaVersion: 1,
-  manifestVersion: "2026-07-21.1",
+  manifestVersion: "2026-07-22.2",
   service: "classroom-api",
   capabilities: {
     routes: { world: true },

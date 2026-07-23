@@ -142,6 +142,7 @@ const surface = readFileSync("admin/inventory-redemption-queue-surface.js", "utf
 const loader = readFileSync("admin/inventory-redemption-queue-loader.js", "utf8");
 const stylesheet = readFileSync("admin/css/inventory-redemption-queue.css", "utf8");
 const adminIndex = readFileSync("admin/index.html", "utf8");
+const adminBootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 for (const path of [
   "admin/inventory-redemption-queue-client.js",
   "admin/inventory-redemption-queue-loader.js",
@@ -165,6 +166,7 @@ assert.doesNotMatch(loader, /createElement\("style"\)|style\.cssText|MutationObs
 assert.match(stylesheet, /@media \(max-width: 620px\)/);
 assert.match(stylesheet, /@media \(forced-colors: active\)/);
 assert.doesNotMatch(adminIndex, /<link[^>]+inventory-redemption-queue\.css/);
-assert.match(adminIndex, /inventory-redemption-queue-loader\.js/);
+assert.match(adminIndex, /admin-bootstrap\.js/);
+assert.match(adminBootstrap, /inventory-redemption-queue-loader\.js/);
 
 console.log("Admin inventory redemption queue contract and source boundaries passed.");

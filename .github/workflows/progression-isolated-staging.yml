@@ -1,0 +1,720 @@
+name: Progression Isolated Staging
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/progression-isolated-staging.yml"
+      - "backend/src/domains/progression/**"
+      - "backend/src/security/progressionRateLimitDispatch.test.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/progressionOperations*.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/*progression*.sql"
+  workflow_dispatch:
+    inputs:
+      run_connected_staging:
+        description: Run protected connected acceptance
+        required: true
+        default: false
+        type: boolean
+      expected_head_sha:
+        description: Immutable candidate commit SHA
+        required: true
+        type: string
+      expected_artifact_digest:
+        description: SHA-256 digest published by validation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: progression-isolated-staging-${{ github.event.pull_request.number || inputs.expected_head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-harness:
+    name: Validate exact-head fail-closed Progression harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      artifact_digest: ${{ steps.artifact.outputs.digest }}
+    steps:
+      - name: Check out exact Progression candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_head_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Bind immutable source SHA
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "sha=$actual" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "$actual" = "${{ github.event.pull_request.head.sha }}"
+          else
+            test "$actual" = "${{ inputs.expected_head_sha }}"
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate harness and migration guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            20260721160000_add_progression_reputation_runtime_v1.sql \
+            20260721161000_fix_progression_read_volatility_v1.sql \
+            20260721162000_harden_progression_event_idempotency_v1.sql \
+            20260721163000_rebalance_progression_curve_v1.sql
+          do
+            path="backend/supabase/migrations/$migration"
+            test -f "$path"
+            head -n 1 "$path" | grep -Fxq 'begin;'
+            tail -n 1 "$path" | grep -Fxq 'commit;'
+            ! grep -Eiq 'create[[:space:]]+index[[:space:]]+concurrently' "$path"
+          done
+          test "$(find backend/supabase/migrations -maxdepth 1 -type f -name '*progression*.sql' | wc -l | tr -d ' ')" -eq 4
+          test -z "$(git grep -l -E '202607211(13000|14500|15500|20500)_(add|fix|harden|rebalance)_progression' || true)"
+          grep -Fq 'record_progression_integration_event_v1' backend/supabase/migrations/20260721162000_harden_progression_event_idempotency_v1.sql
+          grep -Fq 'read_admin_progression_corrections_v1' backend/supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql
+          grep -Fq 'PROGRESSION_CONNECTED_STAGING_AUTHORIZED_20260723' .github/workflows/progression-isolated-staging.yml
+          cat > /tmp/progression-staging-plan.json <<JSON
+          {"schemaVersion":1,"connectedExecution":false,"guards":["exact pull-request head binding","exact artifact digest binding","protected staging environment","known production project refs rejected","exact linked staging project","zero-or-exact-four migration ledger only","transactional migration application and rollback","independent zero-residue verification","sanitized evidence only"],"acceptance":["private Player read","public profile filtering","event apply and replay","reward claim and replay","skill unlock and replay","owner Admin read","wrong-owner denial","Admin correction and replay","immutable audit denial","paused and ended lifecycle denial","committed replay after pause","zero residue"]}
+          JSON
+
+      - name: Compute exact Progression artifact digest
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t artifacts < <(printf '%s\n' \
+            .github/workflows/progression-isolated-staging.yml \
+            backend/supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql \
+            backend/supabase/migrations/20260721161000_fix_progression_read_volatility_v1.sql \
+            backend/supabase/migrations/20260721162000_harden_progression_event_idempotency_v1.sql \
+            backend/supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql \
+            backend/src/domains/progression/api/playerProgressionHttpHandler.ts \
+            backend/src/domains/progression/api/playerProgressionReadModel.ts \
+            backend/src/domains/progression/services/progressionIntegrationEventService.ts \
+            backend/supabase/functions/admin-api/progressionOperations.ts \
+            | LC_ALL=C sort)
+          for path in "${artifacts[@]}"; do test -f "$path"; done
+          digest="$(sha256sum "${artifacts[@]}" | sha256sum | awk '{print $1}')"
+          test "${#digest}" -eq 64
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          printf '{"schemaVersion":1,"sourceSha":"%s","artifactDigest":"%s"}\n' \
+            "$(git rev-parse HEAD)" "$digest" > /tmp/progression-artifact-identity.json
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            test "$digest" = "${{ inputs.expected_artifact_digest }}"
+          fi
+
+      - name: Publish exact-head harness status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ steps.source.outputs.sha || github.sha }}',
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'progression/isolated-staging-harness',
+              description: '${{ job.status }}' === 'success'
+                ? 'Exact-head Progression staging harness is valid'
+                : 'Progression staging harness validation failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+      - name: Upload credential-free plan and identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: progression-staging-plan-${{ steps.source.outputs.sha || github.sha }}
+          path: |
+            /tmp/progression-staging-plan.json
+            /tmp/progression-artifact-identity.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  connected-isolated-staging:
+    # Controller-authorized for PR #261 on 2026-07-23: PROGRESSION_CONNECTED_STAGING_AUTHORIZED_20260723
+    name: Execute exact-head transactional Progression acceptance
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.number == 261 &&
+       github.event.pull_request.head.ref == 'agent/progression-reputation-achievements-v1') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_connected_staging == true)
+    needs:
+      - validate-harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      PROGRESSION_PRODUCTION_PROJECT_REFS: ${{ vars.PROGRESSION_PRODUCTION_PROJECT_REFS }}
+      EXPECTED_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.expected_head_sha }}
+      VALIDATED_SOURCE_SHA: ${{ needs.validate-harness.outputs.source_sha }}
+      VALIDATED_ARTIFACT_DIGEST: ${{ needs.validate-harness.outputs.artifact_digest }}
+      EXPECTED_ARTIFACT_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_artifact_digest || needs.validate-harness.outputs.artifact_digest }}
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+    steps:
+      - name: Check out immutable candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Link exact isolated staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          )
+          test -s backend/supabase/.temp/pooler-url
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
+            *) echo 'Linked pooler identity is invalid.' >&2; exit 1 ;;
+          esac
+          echo "POOLER_URL=$pooler_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+
+      - name: Enforce source, artifact, and staging project bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$EXPECTED_SOURCE_SHA" = "$VALIDATED_SOURCE_SHA"
+          test "$EXPECTED_ARTIFACT_DIGEST" = "$VALIDATED_ARTIFACT_DIGEST"
+          node - <<'NODE'
+          const projectRef = String(process.env.SUPABASE_PROJECT_REF || '').trim();
+          const expectedStaging = String(process.env.EXPECTED_STAGING_PROJECT_REF || '').trim();
+          const production = new Set([
+            'cgiukdjwicykrmtkhudh',
+            ...String(process.env.PROGRESSION_PRODUCTION_PROJECT_REFS || '')
+              .split(',').map((value) => value.trim()).filter(Boolean),
+          ]);
+          if (!/^[a-z0-9]{20}$/.test(projectRef) || projectRef !== expectedStaging || production.has(projectRef)) {
+            throw new Error('Connected Progression acceptance rejected the project ref.');
+          }
+          const api = new URL(process.env.SUPABASE_URL);
+          if (api.protocol !== 'https:' || api.hostname !== `${projectRef}.supabase.co`) {
+            throw new Error('Supabase API URL does not match the isolated staging project ref.');
+          }
+          const db = new URL(process.env.POOLER_URL);
+          if (db.protocol !== 'postgresql:' || db.username !== `postgres.${projectRef}` || db.port !== '5432' || db.pathname !== '/postgres') {
+            throw new Error('Linked database pooler is not bound to isolated staging.');
+          }
+          NODE
+          printf '{"schemaVersion":1,"sourceSha":"%s","artifactDigest":"%s","projectRef":"%s","projectBinding":"isolated-staging"}\n' \
+            "$EXPECTED_SOURCE_SHA" "$EXPECTED_ARTIFACT_DIGEST" "$SUPABASE_PROJECT_REF" > /tmp/progression-artifact-identity.json
+
+      - name: Determine exact staging ledger mode
+        id: ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/progression-ledger-count.txt
+          with expected(version) as (
+            values ('20260721160000'),('20260721161000'),('20260721162000'),('20260721163000')
+          ), actual as (
+            select version::text
+            from supabase_migrations.schema_migrations
+            where version::text in (select version from expected)
+          )
+          select count(*) from actual;
+          SQL
+          count="$(tr -d '[:space:]' < /tmp/progression-ledger-count.txt)"
+          case "$count" in
+            0) mode="transactional-schema" ;;
+            4) mode="preinstalled-schema" ;;
+            *) echo "Partial Progression migration ledger detected: $count" >&2; exit 1 ;;
+          esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          printf '{"schemaVersion":1,"migrationMode":"%s","exactLedgerCount":%s}\n' "$mode" "$count" > /tmp/progression-ledger.json
+
+      - name: Prepare transaction-safe migration copies
+        if: steps.ledger.outputs.mode == 'transactional-schema'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          names = [
+              "20260721160000_add_progression_reputation_runtime_v1.sql",
+              "20260721161000_fix_progression_read_volatility_v1.sql",
+              "20260721162000_harden_progression_event_idempotency_v1.sql",
+              "20260721163000_rebalance_progression_curve_v1.sql",
+          ]
+          for index, name in enumerate(names, 1):
+              source = Path("backend/supabase/migrations") / name
+              lines = source.read_text(encoding="utf-8").splitlines()
+              while lines and not lines[0].strip():
+                  lines.pop(0)
+              while lines and not lines[-1].strip():
+                  lines.pop()
+              if lines[0].strip().lower() != "begin;" or lines[-1].strip().lower() != "commit;":
+                  raise SystemExit(f"Unexpected transaction wrapper in {name}")
+              Path(f"/tmp/progression-migration-{index}.sql").write_text(
+                  "\n".join(lines[1:-1]) + "\n", encoding="utf-8"
+              )
+          PY
+
+      - name: Execute connected transaction and rollback
+        shell: bash
+        env:
+          MIGRATION_MODE: ${{ steps.ledger.outputs.mode }}
+          ACCEPTANCE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          {
+            echo '\set ON_ERROR_STOP on'
+            echo 'begin;'
+            echo "set local app.progression_acceptance_run_id = :'run_id';"
+            if [ "$MIGRATION_MODE" = "transactional-schema" ]; then
+              for index in 1 2 3 4; do
+                printf '\\i /tmp/progression-migration-%s.sql\n' "$index"
+              done
+            fi
+            cat <<'SQL'
+          create temp table progression_acceptance_context (
+            staff_id uuid not null,
+            other_staff_id uuid not null,
+            game_id uuid not null,
+            player_id uuid not null,
+            player_identifier text not null,
+            reward_id text null
+          ) on commit drop;
+
+          with owner_staff as (
+            insert into public.staff_users (supabase_auth_user_id,email,display_name)
+            values (
+              gen_random_uuid(),
+              'progression-acceptance-owner-' || :'run_id' || '@invalid.example',
+              'Progression Acceptance Owner'
+            )
+            returning id
+          ), other_staff as (
+            insert into public.staff_users (supabase_auth_user_id,email,display_name)
+            values (
+              gen_random_uuid(),
+              'progression-acceptance-other-' || :'run_id' || '@invalid.example',
+              'Progression Acceptance Other'
+            )
+            returning id
+          ), game_row as (
+            insert into public.game_sessions (
+              owner_staff_user_id,name,status,lifecycle_state,started_at
+            )
+            select id,'Progression Acceptance ' || :'run_id','active','active',now()
+            from owner_staff
+            returning id,owner_staff_user_id
+          ), player_row as (
+            insert into public.players (
+              game_session_id,display_name,roster_label,status,
+              player_identifier,player_identifier_normalized
+            )
+            select id,'Progression Acceptance Player','PROG-' || :'run_id','active',
+              'prog-' || :'run_id',lower('prog-' || :'run_id')
+            from game_row
+            returning id,game_session_id,player_identifier
+          )
+          insert into progression_acceptance_context (
+            staff_id,other_staff_id,game_id,player_id,player_identifier
+          )
+          select owner_staff.id,other_staff.id,game_row.id,player_row.id,player_row.player_identifier
+          from owner_staff,other_staff,game_row,player_row;
+
+          do $acceptance$
+          declare
+            c progression_acceptance_context%rowtype;
+            self_model jsonb;
+            public_model jsonb;
+            admin_model jsonb;
+            history_model jsonb;
+            event_first record;
+            event_replay record;
+            event_second record;
+            claim_first record;
+            claim_replay record;
+            unlock_first record;
+            unlock_replay record;
+            correction_first record;
+            correction_replay record;
+            reward_public_id text;
+            caught boolean;
+            run_token text := current_setting('app.progression_acceptance_run_id');
+          begin
+            select * into c from progression_acceptance_context;
+            perform public.ensure_player_progression_profile_v1(c.game_id,c.player_id);
+
+            self_model := public.read_player_progression_v1(c.game_id,c.player_id);
+            if self_model->>'playerName' <> 'Progression Acceptance Player'
+              or jsonb_array_length(self_model->'skills') <> 12
+              or jsonb_array_length(self_model->'achievements') <> 12
+              or self_model::text ~* '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_PRIVATE_READ_FAILED';
+            end if;
+
+            select * into event_first
+            from public.record_progression_integration_event_v1(
+              c.game_id,c.player_id,'business','business.operation.completed',
+              'biz.' || run_token,'evt.business.' || run_token,now()
+            );
+            if event_first.event_outcome <> 'applied' then
+              raise exception 'PROGRESSION_ACCEPTANCE_EVENT_APPLY_FAILED';
+            end if;
+
+            select * into event_replay
+            from public.record_progression_integration_event_v1(
+              c.game_id,c.player_id,'business','business.operation.completed',
+              'biz.' || run_token,'evt.business.' || run_token,now()
+            );
+            if event_replay.event_outcome <> 'replayed'
+              or event_replay.event_id <> event_first.event_id
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_EVENT_REPLAY_FAILED';
+            end if;
+
+            select * into event_second
+            from public.record_progression_integration_event_v1(
+              c.game_id,c.player_id,'crafting','crafting.recipe.completed',
+              'craft.' || run_token,'evt.crafting.' || run_token,now()
+            );
+            if event_second.event_outcome <> 'applied' or event_second.resulting_level < 2 then
+              raise exception 'PROGRESSION_ACCEPTANCE_LEVEL_FAILED';
+            end if;
+
+            select public_reward_id into reward_public_id
+            from public.player_progression_reward_grants
+            where game_session_id = c.game_id and player_id = c.player_id
+              and source_type = 'achievement'
+              and source_public_id = 'ach_first_step_v1'
+              and status = 'pending';
+            if reward_public_id is null then
+              raise exception 'PROGRESSION_ACCEPTANCE_REWARD_MISSING';
+            end if;
+            update progression_acceptance_context set reward_id = reward_public_id;
+
+            select * into claim_first
+            from public.claim_player_progression_reward_atomic_v1(
+              c.game_id,c.player_id,reward_public_id,'claim.' || run_token
+            );
+            select * into claim_replay
+            from public.claim_player_progression_reward_atomic_v1(
+              c.game_id,c.player_id,reward_public_id,'claim.' || run_token
+            );
+            if claim_first.claim_outcome <> 'applied'
+              or claim_replay.claim_outcome <> 'replayed'
+              or claim_first.command_id <> claim_replay.command_id
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_CLAIM_REPLAY_FAILED';
+            end if;
+
+            select * into unlock_first
+            from public.unlock_player_progression_skill_atomic_v1(
+              c.game_id,c.player_id,'skl_market_literacy_v1','unlock.' || run_token
+            );
+            select * into unlock_replay
+            from public.unlock_player_progression_skill_atomic_v1(
+              c.game_id,c.player_id,'skl_market_literacy_v1','unlock.' || run_token
+            );
+            if unlock_first.unlock_outcome <> 'applied'
+              or unlock_replay.unlock_outcome <> 'replayed'
+              or unlock_first.unlock_id <> unlock_replay.unlock_id
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_UNLOCK_REPLAY_FAILED';
+            end if;
+
+            public_model := public.read_public_player_progression_profile_v1(
+              c.game_id,c.player_identifier
+            );
+            if public_model::text ~* 'claimable|rewardId|currentValue|rewardKind|rewardAmount'
+              or jsonb_array_length(public_model->'reputation') <> 2
+              or public_model::text ~* '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_PUBLIC_SCOPE_FAILED';
+            end if;
+
+            admin_model := public.read_admin_progression_players_v1(
+              c.game_id,c.staff_id,10,0
+            );
+            if jsonb_array_length(admin_model->'players') <> 1
+              or admin_model::text ~* '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_ADMIN_READ_FAILED';
+            end if;
+
+            caught := false;
+            begin
+              perform public.read_admin_progression_players_v1(
+                c.game_id,c.other_staff_id,10,0
+              );
+            exception when others then
+              caught := sqlerrm = 'PROGRESSION_ADMIN_SCOPE_FORBIDDEN';
+            end;
+            if not caught then
+              raise exception 'PROGRESSION_ACCEPTANCE_WRONG_OWNER_FAILED';
+            end if;
+
+            select * into correction_first
+            from public.apply_admin_progression_correction_atomic_v1(
+              c.game_id,c.staff_id,c.player_identifier,'experience',25,
+              null,null,'Connected staging acceptance','admin.' || run_token
+            );
+            select * into correction_replay
+            from public.apply_admin_progression_correction_atomic_v1(
+              c.game_id,c.staff_id,c.player_identifier,'experience',25,
+              null,null,'Connected staging acceptance','admin.' || run_token
+            );
+            if correction_first.correction_outcome <> 'applied'
+              or correction_replay.correction_outcome <> 'replayed'
+              or correction_first.correction_id <> correction_replay.correction_id
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_ADMIN_REPLAY_FAILED';
+            end if;
+
+            history_model := public.read_admin_progression_corrections_v1(
+              c.game_id,c.staff_id,c.player_identifier,10,0
+            );
+            if jsonb_array_length(history_model->'corrections') <> 1
+              or history_model::text ~* '"staff'
+              or history_model::text ~* 'idempotency'
+            then
+              raise exception 'PROGRESSION_ACCEPTANCE_HISTORY_SCOPE_FAILED';
+            end if;
+
+            caught := false;
+            begin
+              update public.progression_admin_corrections
+              set reason = 'Mutation must fail'
+              where public_correction_id = correction_first.correction_id;
+            exception when others then
+              caught := sqlerrm = 'PROGRESSION_AUDIT_IMMUTABLE';
+            end;
+            if not caught then
+              raise exception 'PROGRESSION_ACCEPTANCE_AUDIT_MUTATION_FAILED';
+            end if;
+
+            update public.game_sessions
+            set lifecycle_state='paused',status='disabled',paused_at=now(),
+                lifecycle_version=lifecycle_version+1
+            where id=c.game_id;
+
+            caught := false;
+            begin
+              perform public.record_progression_integration_event_v1(
+                c.game_id,c.player_id,'market','market.order.settled',
+                'market.' || run_token,'evt.paused.' || run_token,now()
+              );
+            exception when others then
+              caught := sqlerrm = 'GAME_SESSION_DISABLED';
+            end;
+            if not caught then
+              raise exception 'PROGRESSION_ACCEPTANCE_PAUSED_EVENT_FAILED';
+            end if;
+
+            select * into event_replay
+            from public.record_progression_integration_event_v1(
+              c.game_id,c.player_id,'business','business.operation.completed',
+              'biz.' || run_token,'evt.business.' || run_token,now()
+            );
+            if event_replay.event_outcome <> 'replayed' then
+              raise exception 'PROGRESSION_ACCEPTANCE_PAUSED_REPLAY_FAILED';
+            end if;
+
+            caught := false;
+            begin
+              perform public.apply_admin_progression_correction_atomic_v1(
+                c.game_id,c.staff_id,c.player_identifier,'experience',5,
+                null,null,'Paused denial','admin.paused.' || run_token
+              );
+            exception when others then
+              caught := sqlerrm = 'GAME_SESSION_DISABLED';
+            end;
+            if not caught then
+              raise exception 'PROGRESSION_ACCEPTANCE_PAUSED_ADMIN_FAILED';
+            end if;
+
+            select * into correction_replay
+            from public.apply_admin_progression_correction_atomic_v1(
+              c.game_id,c.staff_id,c.player_identifier,'experience',25,
+              null,null,'Connected staging acceptance','admin.' || run_token
+            );
+            if correction_replay.correction_outcome <> 'replayed' then
+              raise exception 'PROGRESSION_ACCEPTANCE_PAUSED_ADMIN_REPLAY_FAILED';
+            end if;
+
+            update public.game_sessions
+            set lifecycle_state='ended',status='archived',ended_at=now(),
+                lifecycle_version=lifecycle_version+1
+            where id=c.game_id;
+
+            caught := false;
+            begin
+              perform public.record_progression_integration_event_v1(
+                c.game_id,c.player_id,'story','story.chapter.completed',
+                'story.' || run_token,'evt.ended.' || run_token,now()
+              );
+            exception when others then
+              caught := sqlerrm = 'GAME_SESSION_ARCHIVED';
+            end;
+            if not caught then
+              raise exception 'PROGRESSION_ACCEPTANCE_ENDED_EVENT_FAILED';
+            end if;
+          end;
+          $acceptance$;
+
+          select jsonb_build_object(
+            'schemaVersion',1,
+            'connectedAcceptance',true,
+            'privatePlayerRead',true,
+            'publicProfileFiltering',true,
+            'eventApplyReplay',true,
+            'rewardClaimReplay',true,
+            'skillUnlockReplay',true,
+            'ownerAdminRead',true,
+            'wrongOwnerDenied',true,
+            'adminCorrectionReplay',true,
+            'immutableAudit',true,
+            'pausedAndEndedDenied',true,
+            'committedReplayAfterPause',true,
+            'transactionRolledBack',true
+          )::text;
+          rollback;
+          SQL
+          } > /tmp/progression-connected.sql
+
+          set +e
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -v run_id="$ACCEPTANCE_RUN_ID" \
+            -f /tmp/progression-connected.sql \
+            > /tmp/progression-acceptance.raw.log 2>&1
+          status=$?
+          set -e
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('/tmp/progression-acceptance.raw.log', 'utf8');
+          const sanitized = source
+            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
+            .replace(/postgres(?:ql)?:\/\/\S+/gi, '[redacted-db-url]')
+            .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]');
+          fs.writeFileSync('/tmp/progression-acceptance.log', sanitized, { mode: 0o600 });
+          const lines = sanitized.trim().split(/\r?\n/);
+          const evidence = [...lines].reverse().find((line) => line.startsWith('{"schemaVersion":'));
+          if (evidence) fs.writeFileSync('/tmp/progression-acceptance.json', evidence + '\n', { mode: 0o600 });
+          NODE
+          rm -f /tmp/progression-acceptance.raw.log /tmp/progression-connected.sql
+          test "$status" -eq 0
+          test -s /tmp/progression-acceptance.json
+
+      - name: Independently verify zero synthetic residue
+        shell: bash
+        env:
+          MIGRATION_MODE: ${{ steps.ledger.outputs.mode }}
+          ACCEPTANCE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -v run_id="$ACCEPTANCE_RUN_ID" \
+            -v migration_mode="$MIGRATION_MODE" <<'SQL' > /tmp/progression-zero-residue.json
+          set app.progression_acceptance_run_id = :'run_id';
+          set app.progression_acceptance_migration_mode = :'migration_mode';
+          do $verify$
+          declare
+            residue bigint;
+            run_token text := current_setting('app.progression_acceptance_run_id');
+            migration_mode text := current_setting('app.progression_acceptance_migration_mode');
+          begin
+            select
+              (select count(*) from public.staff_users where email like 'progression-acceptance-%@invalid.example')
+              + (select count(*) from public.players where player_identifier = 'prog-' || run_token)
+            into residue;
+            if residue <> 0 then
+              raise exception 'PROGRESSION_ZERO_RESIDUE_FAILED';
+            end if;
+
+            if migration_mode = 'transactional-schema' then
+              if to_regclass('public.player_progression_profiles') is not null
+                or to_regclass('public.progression_events') is not null
+                or to_regprocedure('public.read_player_progression_v1(uuid,uuid)') is not null
+              then
+                raise exception 'PROGRESSION_SCHEMA_ROLLBACK_FAILED';
+              end if;
+            end if;
+          end;
+          $verify$;
+          select jsonb_build_object(
+            'schemaVersion',1,
+            'zeroSyntheticRows',true,
+            'schemaRollbackVerified',(:'migration_mode' = 'transactional-schema'),
+            'preinstalledSchemaPreserved',(:'migration_mode' = 'preinstalled-schema')
+          )::text;
+          SQL
+          test -s /tmp/progression-zero-residue.json
+
+      - name: Publish connected acceptance status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.EXPECTED_SOURCE_SHA,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'progression/connected-isolated-staging',
+              description: '${{ job.status }}' === 'success'
+                ? 'Transactional Progression staging acceptance passed with zero residue'
+                : 'Progression connected staging acceptance failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+      - name: Upload sanitized connected evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: progression-connected-staging-${{ env.EXPECTED_SOURCE_SHA }}
+          path: |
+            /tmp/progression-artifact-identity.json
+            /tmp/progression-ledger.json
+            /tmp/progression-acceptance.json
+            /tmp/progression-acceptance.log
+            /tmp/progression-zero-residue.json
+          if-no-files-found: warn
+          retention-days: 30

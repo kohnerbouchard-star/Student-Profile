@@ -188,6 +188,12 @@ import {
   readPlayerStoryDeliveryRoutePath,
 } from "../../../src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts";
 import {
+  handlePlayerMarketplaceRequest,
+} from "../../../src/domains/marketplace/api/playerMarketplaceHttpHandler.ts";
+import {
+  readPlayerMarketplaceRoutePath,
+} from "../../../src/domains/marketplace/api/playerMarketplaceRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -197,6 +203,9 @@ import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
 } from "../../../src/security/playerRateLimitDispatch.ts";
+import { handlePlayerProgressionRequest } from "../../../src/domains/progression/api/playerProgressionHttpHandler.ts";
+import { readPlayerProgressionRoutePath } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";
+import { dispatchClassroomMessagingRequest } from "./messagingDispatch.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -296,6 +305,56 @@ Deno.serve(async (request) => {
       "inventory",
       () =>
         handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerMarketplaceRoute = readPlayerMarketplaceRoutePath(url.pathname);
+
+  if (playerMarketplaceRoute) {
+    const endpointKey = playerMarketplaceRoute.kind === "collection"
+      ? request.method === "GET"
+        ? "marketplace"
+        : "marketplaceListing"
+      : playerMarketplaceRoute.kind === "activate"
+      ? "marketplaceActivate"
+      : playerMarketplaceRoute.kind === "purchase"
+      ? "marketplacePurchase"
+      : playerMarketplaceRoute.kind === "cancel"
+      ? "marketplaceCancel"
+      : "marketplaceDispute";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerMessagingResponse = await dispatchClassroomMessagingRequest(
+    request,
+    { createServiceClient },
+  );
+  if (playerMessagingResponse) return playerMessagingResponse;
+
+  const playerProgressionRoute = readPlayerProgressionRoutePath(url.pathname);
+
+  if (playerProgressionRoute) {
+    const endpointKey = playerProgressionRoute.kind === "unlock"
+      ? "progressionUnlock"
+      : playerProgressionRoute.kind === "claim"
+      ? "progressionClaim"
+      : "progression";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerProgressionRequest(request, playerProgressionRoute, {
           createServiceClient,
         }),
       { createServiceClient },

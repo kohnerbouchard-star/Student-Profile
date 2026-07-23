@@ -1,9 +1,11 @@
 import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
+import { hasMarketplaceBackendRoute, resolveMarketplaceBackendRequest } from "../api/marketplace-backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
+import { normalizePlayerMarketplace } from "../features/marketplace/marketplace-read-model.js";
 import { validateStudentProfileCapabilityManifest } from "./student-profile-capability-manifest.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
@@ -84,6 +86,13 @@ async function readBody(response) {
   return text ? { message: text.slice(0, 5000) } : {};
 }
 
+function resolvedBackendRequest(context, payload) {
+  if (hasMarketplaceBackendRoute(context.endpointKey)) {
+    return resolveMarketplaceBackendRequest({ ...context, payload, session: context.session });
+  }
+  return resolvePlayerBackendRequest({ ...context, payload, session: context.session });
+}
+
 function applyCapabilityManifest(snapshot, manifest) {
   if (!manifest) return snapshot;
   return {
@@ -147,7 +156,7 @@ export function createStudentProfileApiCall({ request } = {}) {
     }
 
     const payload = backendPayload(context);
-    const backendRequest = resolvePlayerBackendRequest({ ...context, payload, session: context.session });
+    const backendRequest = resolvedBackendRequest(context, payload);
     if (!backendRequest) {
       throw new ApiConnectionPendingError({ endpointKey: context.endpointKey, method: context.method, path: context.path, payload: context.payload });
     }
@@ -190,6 +199,10 @@ export function createStudentProfileApiCall({ request } = {}) {
     if (context.endpointKey === "inventory") {
       snapshot = { ...snapshot, inventory: normalizePlayerInventory(raw) };
       return snapshot.inventory;
+    }
+    if (context.endpointKey === "marketplace") {
+      snapshot = { ...snapshot, marketplace: normalizePlayerMarketplace(raw) };
+      return snapshot.marketplace;
     }
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
       snapshot = mergeTerminalRead(snapshot, context.endpointKey, raw);

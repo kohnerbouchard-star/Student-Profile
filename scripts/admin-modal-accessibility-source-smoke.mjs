@@ -5,6 +5,7 @@ const source = await readFile(new URL("../admin/modal-accessibility.js", import.
 const bridge = await readFile(new URL("../admin/modal-lifecycle-bridge.js", import.meta.url), "utf8");
 const drawer = await readFile(new URL("../admin/player-drawer-accessibility.js", import.meta.url), "utf8");
 const index = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
+const bootstrap = await readFile(new URL("../admin/admin-bootstrap.js", import.meta.url), "utf8");
 
 for (const required of [
   "controllerStack",
@@ -71,8 +72,12 @@ for (const required of [
 assert.match(drawer, /semanticOpener\(opener\)/, "Player drawer close must restore the exact or semantic player-row opener.");
 assert.match(drawer, /initialFocus: drawer\.querySelector\('\[role="tab"\]\[aria-selected="true"\]'\)/, "Player drawer must initially focus the selected authoritative tab.");
 
-assert.ok(index.includes("import('./modal-lifecycle-bridge.js').then(() =&gt; import('./keyboard-navigation.js'))"), "Admin index must load the modal lifecycle bridge before keyboard navigation.");
-assert.ok(index.includes("import('./player-drawer-accessibility.js')"), "Admin index must load Player drawer accessibility after authoritative drawer wiring.");
+assert.ok(index.includes("./admin-bootstrap.js"), "Admin index must load the external bootstrap.");
+const modalBridgeIndex = bootstrap.indexOf("./modal-lifecycle-bridge.js");
+const keyboardIndex = bootstrap.indexOf("./keyboard-navigation.js");
+const drawerIndex = bootstrap.indexOf("./player-drawer-accessibility.js");
+assert.ok(modalBridgeIndex >= 0 && keyboardIndex > modalBridgeIndex, "Admin bootstrap must load the modal lifecycle bridge before keyboard navigation.");
+assert.ok(drawerIndex > keyboardIndex, "Admin bootstrap must load Player drawer accessibility after modal keyboard support.");
 
 for (const [label, content] of [["controller", source], ["bridge", bridge], ["drawer", drawer]]) {
   assert.doesNotMatch(content, /MutationObserver/, `The modal ${label} must not add DOM observation.`);

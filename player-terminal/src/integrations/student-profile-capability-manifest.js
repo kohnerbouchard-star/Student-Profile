@@ -1,4 +1,5 @@
 import { hasPlayerBackendRoute } from "../api/backend-routes.js";
+import { hasMarketplaceBackendRoute } from "../api/marketplace-backend-routes.js";
 import { ApiRequestError } from "../api/errors.js";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
@@ -40,6 +41,19 @@ const ENDPOINT_COVERAGE = Object.freeze({
   marketAsset: Object.freeze(["marketAsset"]),
   marketOrder: Object.freeze(["marketOrder"]),
   marketWatchlist: Object.freeze(["marketWatchlist"]),
+  marketplace: Object.freeze(["marketplace"]),
+  marketplaceListing: Object.freeze(["marketplaceListing"]),
+  marketplaceActivate: Object.freeze(["marketplaceActivate"]),
+  marketplacePurchase: Object.freeze(["marketplacePurchase"]),
+  marketplaceCancel: Object.freeze(["marketplaceCancel"]),
+  marketplaceDispute: Object.freeze(["marketplaceDispute"]),
+  messages: Object.freeze(["messages"]),
+  messageThread: Object.freeze(["messageThread"]),
+  messagePolicy: Object.freeze(["messagePolicy"]),
+  messageSearch: Object.freeze(["messageSearch"]),
+  messageThreadCreate: Object.freeze(["messageThreadCreate"]),
+  messageSend: Object.freeze(["messageSend"]),
+  messageRead: Object.freeze(["messageRead"]),
   news: Object.freeze(["news"]),
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
@@ -64,6 +78,8 @@ const ROUTE_REQUIREMENTS = Object.freeze({
   contracts: "contracts",
   inventory: "inventory",
   store: "store",
+  marketplace: "marketplace",
+  messages: "messages",
   profile: "bootstrap"
 });
 
@@ -86,6 +102,13 @@ const ACTION_REQUIREMENTS = Object.freeze({
   logout: "logout",
   marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
+  marketplaceListing: "marketplaceListing",
+  marketplaceActivate: "marketplaceActivate",
+  marketplacePurchase: "marketplacePurchase",
+  marketplaceCancel: "marketplaceCancel",
+  marketplaceDispute: "marketplaceDispute",
+  messageSearch: "messageSearch",
+  messageSend: "messageSend",
   notificationsRead: "notificationsRead",
   residencyRequest: "residencyRequest",
   savingsTransfer: "savingsTransfer",
@@ -95,6 +118,10 @@ const ACTION_REQUIREMENTS = Object.freeze({
   travelExecute: "travelExecute",
   travelQuote: "travelQuote"
 });
+
+function reviewedFrontendRoute(key) {
+  return hasPlayerBackendRoute(key) || hasMarketplaceBackendRoute(key);
+}
 
 function mismatch(message, detail = {}) {
   return new ApiRequestError(message, {
@@ -152,7 +179,7 @@ export function validateStudentProfileCapabilityManifest(raw) {
     const key = typeof item?.key === "string" ? item.key.trim() : "";
     if (!key || endpointKeys.has(key)) throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
     const frontendKeys = ENDPOINT_COVERAGE[key];
-    if (!frontendKeys?.length || !frontendKeys.every(hasPlayerBackendRoute)) {
+    if (!frontendKeys?.length || !frontendKeys.every(reviewedFrontendRoute)) {
       throw mismatch(`Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
     }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {

@@ -1,5 +1,8 @@
+import type { PlayerCraftingRoute } from "../../crafting/contracts/playerCraftingContracts.ts";
+
 export type PlayerInventoryRoute =
   | { readonly kind: "inventory" }
+  | { readonly kind: "crafting"; readonly route: PlayerCraftingRoute }
   | { readonly kind: "malformed" };
 
 export interface PlayerInventoryReadScope {

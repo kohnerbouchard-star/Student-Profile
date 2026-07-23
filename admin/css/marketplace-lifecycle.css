@@ -1,0 +1,44 @@
+html[data-admin-marketplace-drawer-open] { overflow: hidden; }
+.admin-marketplace-lifecycle-launch { margin-left: auto; min-height: 38px; padding: 0 16px; border: 1px solid rgba(113, 221, 255, .35); border-radius: 8px; background: rgba(10, 25, 41, .92); color: #e8f8ff; font: inherit; font-weight: 700; cursor: pointer; }
+.admin-marketplace-lifecycle-launch:hover,.admin-marketplace-lifecycle-launch:focus-visible { border-color: #71ddff; outline: none; box-shadow: 0 0 0 3px rgba(113, 221, 255, .14); }
+.admin-marketplace-drawer[hidden] { display: none; }
+.admin-marketplace-drawer { position: fixed; inset: 0; z-index: 1200; display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 720px); }
+.admin-marketplace-drawer__backdrop { grid-column: 1 / -1; grid-row: 1; background: rgba(0, 7, 14, .68); backdrop-filter: blur(4px); }
+.admin-marketplace-drawer__panel { grid-column: 2; grid-row: 1; position: relative; height: 100%; overflow: auto; border-left: 1px solid rgba(113, 221, 255, .22); background: linear-gradient(180deg, #07131f, #0b1825 62%, #07131f); color: #eaf7ff; box-shadow: -24px 0 80px rgba(0, 0, 0, .48); }
+.admin-marketplace-drawer__panel > header { position: sticky; top: 0; z-index: 4; display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; padding: 24px; border-bottom: 1px solid rgba(255,255,255,.09); background: rgba(7, 19, 31, .97); }
+.admin-marketplace-drawer__panel > header small,.admin-marketplace-drawer__panel > header p { color: #8ca7b9; }
+.admin-marketplace-drawer__panel > header h2 { margin: 4px 0; font-size: 26px; }
+.admin-marketplace-drawer__panel > header p { margin: 0; max-width: 520px; }
+.admin-marketplace-drawer__panel > header button { width: 38px; height: 38px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #fff; font-size: 24px; cursor: pointer; }
+.admin-marketplace-drawer__panel > nav { position: sticky; top: 122px; z-index: 3; display: flex; gap: 8px; padding: 12px 24px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(7, 19, 31, .96); overflow-x: auto; }
+.admin-marketplace-drawer__panel > nav button { min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.03); color: #a9bdcb; cursor: pointer; }
+.admin-marketplace-drawer__panel > nav button.is-active { border-color: rgba(113,221,255,.5); background: rgba(113,221,255,.12); color: #eaffff; }
+.admin-marketplace-statusline { min-height: 42px; padding: 12px 24px; color: #9db5c5; border-bottom: 1px solid rgba(255,255,255,.06); }
+.admin-marketplace-drawer__panel main { padding: 20px 24px 40px; }
+.admin-marketplace-grid { display: grid; gap: 14px; }
+.admin-marketplace-card,.admin-marketplace-policy,.admin-marketplace-audit,.admin-marketplace-empty { border: 1px solid rgba(255,255,255,.10); border-radius: 12px; background: rgba(255,255,255,.035); padding: 16px; }
+.admin-marketplace-card > header,.admin-marketplace-audit > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+.admin-marketplace-card > header div,.admin-marketplace-audit > header { display: grid; gap: 4px; }
+.admin-marketplace-card small,.admin-marketplace-audit small { color: #8ea7b7; }
+.admin-marketplace-status { display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid rgba(113,221,255,.25); background: rgba(113,221,255,.08); color: #bceeff; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.admin-marketplace-status.is-active,.admin-marketplace-status.is-completed,.admin-marketplace-status.is-resolved-buyer,.admin-marketplace-status.is-resolved-seller { border-color: rgba(86,229,159,.36); background: rgba(86,229,159,.10); color: #9df5c8; }
+.admin-marketplace-status.is-rejected,.admin-marketplace-status.is-refunded,.admin-marketplace-status.is-cancelled,.admin-marketplace-status.is-expired { border-color: rgba(255,104,115,.36); background: rgba(255,104,115,.10); color: #ffb2b8; }
+.admin-marketplace-status.is-draft,.admin-marketplace-status.is-moderation-hold,.admin-marketplace-status.is-open,.admin-marketplace-status.is-disputed { border-color: rgba(255,190,92,.36); background: rgba(255,190,92,.10); color: #ffda9e; }
+.admin-marketplace-details { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 16px; margin: 0; }
+.admin-marketplace-details div { min-width: 0; }
+.admin-marketplace-details dt { color: #7892a3; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.admin-marketplace-details dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.admin-marketplace-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.admin-marketplace-action { min-height: 34px; padding: 0 12px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #e9f5fb; cursor: pointer; }
+.admin-marketplace-action.is-approve { border-color: rgba(86,229,159,.35); color: #a4f7cc; }
+.admin-marketplace-action.is-danger { border-color: rgba(255,104,115,.36); color: #ffb6bc; }
+.admin-marketplace-action:disabled { opacity: .55; cursor: progress; }
+.admin-marketplace-policy { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.admin-marketplace-policy label { display: grid; gap: 6px; color: #a8bdca; font-size: 12px; }
+.admin-marketplace-policy label.is-wide,.admin-marketplace-policy button { grid-column: 1 / -1; }
+.admin-marketplace-policy input { min-height: 40px; padding: 0 11px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.20); color: #fff; }
+.admin-marketplace-policy input[type="checkbox"] { width: 22px; min-height: 22px; padding: 0; }
+.admin-marketplace-audit article { display: grid; grid-template-columns: 1.1fr 1.4fr auto; gap: 12px; align-items: center; padding: 11px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.admin-marketplace-empty { text-align: center; color: #9db2bf; }
+.admin-marketplace-empty p { margin-bottom: 0; }
+@media (max-width: 760px) { .admin-marketplace-drawer { grid-template-columns: 1fr; } .admin-marketplace-drawer__panel { grid-column: 1; border-left: 0; } .admin-marketplace-details,.admin-marketplace-policy { grid-template-columns: 1fr; } .admin-marketplace-policy label.is-wide,.admin-marketplace-policy button { grid-column: auto; } .admin-marketplace-audit article { grid-template-columns: 1fr; } }

@@ -1,0 +1,379 @@
+name: Messaging Isolated Staging
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/messaging-isolated-staging.yml"
+      - "scripts/staging/probe-messaging-lifecycle.mjs"
+      - "scripts/staging/probe-messaging-inactive-sessions.mjs"
+      - "scripts/staging/messaging-connected-acceptance.sql"
+      - "scripts/staging/verify-messaging-zero-residue.sql"
+      - "backend/src/domains/messaging/**"
+      - "backend/src/security/playerMessagingRateLimitDispatch.test.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/src/security/staffMessagingRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/messagingDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/messagingOperations*.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/*messaging*.sql"
+  workflow_dispatch:
+    inputs:
+      run_connected_staging:
+        description: Run protected connected acceptance on the exact candidate head
+        required: true
+        default: false
+        type: boolean
+      expected_head_sha:
+        description: Immutable candidate commit SHA
+        required: true
+        type: string
+      expected_artifact_digest:
+        description: SHA-256 digest published by the validation job
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: messaging-isolated-staging-${{ github.event.pull_request.number || inputs.expected_head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-harness:
+    name: Validate exact-head fail-closed Messaging harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      artifact_digest: ${{ steps.artifact.outputs.digest }}
+      source_sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: Check out exact Messaging candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_head_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Bind immutable source SHA
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "sha=$actual" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            test "${{ inputs.expected_head_sha }}" = "$actual"
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Validate acceptance syntax and declared guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/staging/probe-messaging-lifecycle.mjs
+          node --check scripts/staging/probe-messaging-inactive-sessions.mjs
+          node scripts/staging/probe-messaging-lifecycle.mjs --plan > /tmp/messaging-staging-plan.json
+          node scripts/staging/probe-messaging-inactive-sessions.mjs --plan > /tmp/messaging-inactive-session-plan.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const plan = JSON.parse(fs.readFileSync('/tmp/messaging-staging-plan.json', 'utf8'));
+          const inactive = JSON.parse(fs.readFileSync('/tmp/messaging-inactive-session-plan.json', 'utf8'));
+          const guards = new Set([...(plan.guards || []), ...(inactive.guards || [])]);
+          for (const guard of [
+            'manual dispatch from exact candidate head only',
+            'protected staging environment',
+            'known production project refs rejected',
+            'exact source SHA and artifact digest binding',
+            'transactional rollback and independent zero-residue verification',
+            'all uploaded evidence and diagnostics are sanitized',
+          ]) {
+            if (!guards.has(guard)) throw new Error(`Missing staging guard: ${guard}`);
+          }
+          if (plan.connectedExecution !== false || inactive.connectedExecution !== false) {
+            throw new Error('Plan mode unexpectedly enabled connected execution.');
+          }
+          if (!Array.isArray(plan.lifecycle) || plan.lifecycle.length < 10) {
+            throw new Error('Messaging lifecycle plan is incomplete.');
+          }
+          NODE
+          grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql
+          grep -Fq 'begin;' scripts/staging/messaging-connected-acceptance.sql
+          grep -Fq 'rollback;' scripts/staging/messaging-connected-acceptance.sql
+          grep -Fq 'zeroResidue' scripts/staging/verify-messaging-zero-residue.sql
+
+      - name: Compute exact Messaging artifact digest
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t artifacts < <(printf '%s\n' \
+            .github/workflows/messaging-isolated-staging.yml \
+            scripts/staging/probe-messaging-lifecycle.mjs \
+            scripts/staging/probe-messaging-inactive-sessions.mjs \
+            scripts/staging/messaging-connected-acceptance.sql \
+            scripts/staging/verify-messaging-zero-residue.sql \
+            backend/src/domains/messaging/api/playerMessagingHttpHandler.ts \
+            backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts \
+            backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql \
+            backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql \
+            backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql \
+            | LC_ALL=C sort)
+          for path in "${artifacts[@]}"; do test -f "$path"; done
+          digest="$(sha256sum "${artifacts[@]}" | sha256sum | awk '{print $1}')"
+          test "${#digest}" -eq 64
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          printf '{"schemaVersion":1,"sourceSha":"%s","artifactDigest":"%s"}\n' \
+            "$(git rev-parse HEAD)" "$digest" > /tmp/messaging-artifact-identity.json
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            test "${{ inputs.expected_artifact_digest }}" = "$digest"
+          fi
+
+      - name: Verify final migration namespace and security boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            20260721150000_add_messaging_communication_v2.sql \
+            20260721151000_harden_messaging_retention_and_audit_v2.sql \
+            20260721152000_complete_messaging_lifecycle_v1.sql \
+            20260721153000_compat_messaging_player_status_v1.sql
+          do
+            test -f "backend/supabase/migrations/$migration"
+          done
+          test -z "$(git grep -l '2026072113\(0000_add_messaging_communication\|1000_harden_messaging_retention\|2000_complete_messaging\|3000_compat_messaging\)' || true)"
+
+      - name: Publish exact-head harness status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ steps.source.outputs.sha || github.sha }}',
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/isolated-staging-harness',
+              description: '${{ job.status }}' === 'success'
+                ? 'Exact-head Messaging staging harness is valid'
+                : 'Messaging staging harness validation failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+      - name: Upload credential-free identity and plans
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: messaging-staging-plan-${{ steps.source.outputs.sha || github.sha }}
+          path: |
+            /tmp/messaging-staging-plan.json
+            /tmp/messaging-inactive-session-plan.json
+            /tmp/messaging-artifact-identity.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  connected-isolated-staging:
+    name: Execute exact-head transactional Messaging acceptance
+    if: github.event_name == 'workflow_dispatch' && inputs.run_connected_staging == true
+    needs:
+      - validate-harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN: ${{ secrets.MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN }}
+      MESSAGING_PRODUCTION_PROJECT_REFS: ${{ vars.MESSAGING_PRODUCTION_PROJECT_REFS }}
+      MESSAGING_INACTIVE_SESSION_EVIDENCE_PATH: /tmp/messaging-inactive-session-evidence.json
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_head_sha }}
+      EXPECTED_ARTIFACT_DIGEST: ${{ inputs.expected_artifact_digest }}
+      VALIDATED_SOURCE_SHA: ${{ needs.validate-harness.outputs.source_sha }}
+      VALIDATED_ARTIFACT_DIGEST: ${{ needs.validate-harness.outputs.artifact_digest }}
+    steps:
+      - name: Check out immutable candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.expected_head_sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Enforce source, artifact, and project bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$EXPECTED_SOURCE_SHA" = "$VALIDATED_SOURCE_SHA"
+          test "$EXPECTED_ARTIFACT_DIGEST" = "$VALIDATED_ARTIFACT_DIGEST"
+          node - <<'NODE'
+          const projectRef = String(process.env.SUPABASE_PROJECT_REF || '').trim();
+          const production = new Set([
+            'cgiukdjwicykrmtkhudh',
+            ...String(process.env.MESSAGING_PRODUCTION_PROJECT_REFS || '').split(',').map((v) => v.trim()).filter(Boolean),
+          ]);
+          if (!/^[a-z0-9]{20}$/.test(projectRef) || production.has(projectRef)) {
+            throw new Error('Connected Messaging acceptance rejected the project ref.');
+          }
+          const api = new URL(process.env.SUPABASE_URL);
+          if (api.protocol !== 'https:' || api.hostname !== `${projectRef}.supabase.co`) {
+            throw new Error('Supabase API URL does not match the staging project ref.');
+          }
+          const db = new URL(process.env.SUPABASE_DB_URL);
+          if (db.protocol !== 'postgres:' && db.protocol !== 'postgresql:') {
+            throw new Error('Supabase database URL is invalid.');
+          }
+          if (!db.hostname.includes(projectRef)) {
+            throw new Error('Supabase database URL is not bound to the declared staging project ref.');
+          }
+          NODE
+
+      - name: Verify exact Messaging migration ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/messaging-ledger.json
+          with expected(version) as (
+            values
+              ('20260721150000'),
+              ('20260721151000'),
+              ('20260721152000'),
+              ('20260721153000')
+          ), actual as (
+            select version::text
+            from supabase_migrations.schema_migrations
+            where version::text in (select version from expected)
+          )
+          select case
+            when (select count(*) from actual) = 4
+              then jsonb_build_object('schemaVersion', 1, 'exactMessagingLedger', true, 'migrationCount', 4)::text
+            else (select 1 / 0)::text
+          end;
+          SQL
+
+      - name: Execute read-only inactive-session acceptance
+        shell: bash
+        run: |
+          set +e
+          node scripts/staging/probe-messaging-inactive-sessions.mjs > /tmp/messaging-inactive-session.raw.log 2>&1
+          status=$?
+          set -e
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('/tmp/messaging-inactive-session.raw.log', 'utf8');
+          const sanitized = source
+            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
+            .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]')
+            .replace(/(authorization|x-player-session-token)\s*[:=]\s*\S+/gi, '$1=[redacted]');
+          fs.writeFileSync('/tmp/messaging-inactive-session.log', sanitized, { mode: 0o600 });
+          NODE
+          rm -f /tmp/messaging-inactive-session.raw.log
+          test "$status" -eq 0
+
+      - name: Execute transactional connected lifecycle
+        shell: bash
+        run: |
+          set +e
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -f scripts/staging/messaging-connected-acceptance.sql \
+            > /tmp/messaging-transaction.raw.log 2>&1
+          status=$?
+          set -e
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('/tmp/messaging-transaction.raw.log', 'utf8');
+          const sanitized = source
+            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
+            .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]')
+            .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, '[redacted-db-url]');
+          fs.writeFileSync('/tmp/messaging-transaction.log', sanitized, { mode: 0o600 });
+          NODE
+          rm -f /tmp/messaging-transaction.raw.log
+          test "$status" -eq 0
+          tail -n 1 /tmp/messaging-transaction.log > /tmp/messaging-transaction-evidence.json
+
+      - name: Independently prove zero residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -f scripts/staging/verify-messaging-zero-residue.sql \
+            > /tmp/messaging-zero-residue.json
+
+      - name: Verify sanitized connected evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const paths = [
+            '/tmp/messaging-ledger.json',
+            '/tmp/messaging-inactive-session-evidence.json',
+            '/tmp/messaging-inactive-session.log',
+            '/tmp/messaging-transaction.log',
+            '/tmp/messaging-transaction-evidence.json',
+            '/tmp/messaging-zero-residue.json',
+          ];
+          const forbidden = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role|postgres(?:ql)?:\/\/|x-player-session-token\s*[:=]|authorization\s*[:=])/i;
+          for (const path of paths) {
+            const text = fs.readFileSync(path, 'utf8');
+            if (forbidden.test(text)) throw new Error(`Forbidden data in ${path}.`);
+          }
+          const ledger = JSON.parse(fs.readFileSync('/tmp/messaging-ledger.json', 'utf8'));
+          const inactive = JSON.parse(fs.readFileSync('/tmp/messaging-inactive-session-evidence.json', 'utf8'));
+          const transaction = JSON.parse(fs.readFileSync('/tmp/messaging-transaction-evidence.json', 'utf8'));
+          const residue = JSON.parse(fs.readFileSync('/tmp/messaging-zero-residue.json', 'utf8'));
+          if (!ledger.exactMessagingLedger || ledger.migrationCount !== 4) throw new Error('Migration ledger binding failed.');
+          if (!transaction.transactionRolledBack || transaction.productionTouched !== false) throw new Error('Transactional acceptance failed.');
+          if (!residue.zeroResidue) throw new Error('Zero-residue verification failed.');
+          for (const check of ['expiredSessionDenied', 'pausedGameSessionDenied', 'endedGameSessionDenied']) {
+            if (inactive.checks?.[check] !== true) throw new Error(`Missing inactive-session check: ${check}.`);
+          }
+          NODE
+
+      - name: Publish exact-head connected status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ inputs.expected_head_sha }}',
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/connected-isolated-staging',
+              description: '${{ job.status }}' === 'success'
+                ? 'Transactional staging acceptance passed with zero residue'
+                : 'Connected Messaging staging acceptance failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+      - name: Upload sanitized connected evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: messaging-connected-staging-${{ inputs.expected_head_sha }}
+          path: |
+            /tmp/messaging-ledger.json
+            /tmp/messaging-inactive-session.log
+            /tmp/messaging-inactive-session-evidence.json
+            /tmp/messaging-transaction.log
+            /tmp/messaging-transaction-evidence.json
+            /tmp/messaging-zero-residue.json
+          if-no-files-found: warn
+          retention-days: 90

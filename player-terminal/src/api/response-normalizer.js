@@ -98,8 +98,14 @@ function sanitizeValue(value, config, depth = 0, key = "") {
   return output;
 }
 
-function unwrap(raw) {
+function unwrap(endpointKey, raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  if (
+    endpointKey === "progression" &&
+    raw.progression &&
+    typeof raw.progression === "object" &&
+    !Array.isArray(raw.progression)
+  ) return raw.progression;
   if (Object.prototype.hasOwnProperty.call(raw, "data") && (raw.ok === true || Object.keys(raw).length <= 3)) return raw.data;
   return raw;
 }
@@ -108,6 +114,13 @@ function applySafeDefaults(endpointKey, value) {
   if (endpointKey === "news" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "store" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "market" && !Array.isArray(value.sectors)) value.sectors = ["All"];
+  if (
+    endpointKey === "progression" &&
+    !Number.isSafeInteger(value.currentLevelXp) &&
+    Number.isSafeInteger(value.xp) && value.xp >= 0
+  ) {
+    value.currentLevelXp = 0;
+  }
   return value;
 }
 
@@ -139,6 +152,21 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
   if (endpointKey === "worldRuntime") validateWorldRuntime(value, context);
+  if (endpointKey === "progression") {
+    if (
+      !Number.isSafeInteger(value.level) || value.level < 1 || value.level > 20 ||
+      !Number.isSafeInteger(value.xp) || value.xp < 0 ||
+      !Number.isSafeInteger(value.currentLevelXp) || value.currentLevelXp < 0 ||
+      value.currentLevelXp > value.xp ||
+      !Number.isSafeInteger(value.nextLevelXp) || value.nextLevelXp < value.xp ||
+      !Number.isSafeInteger(value.skillPoints) || value.skillPoints < 0 || value.skillPoints > 200 ||
+      typeof value.playerName !== "string" ||
+      typeof value.title !== "string" ||
+      typeof value.summary !== "string"
+    ) {
+      throw invalidResponse(endpointKey, context.requestId, context.path);
+    }
+  }
   if (endpointKey === "notificationsPage") {
     const unreadCount = value.summary.unreadCount;
     const returned = value.page.returned;
@@ -151,7 +179,7 @@ function validateEndpointShape(endpointKey, value, context) {
 }
 
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
-  let value = sanitizeValue(unwrap(raw), context.config || {});
+  let value = sanitizeValue(unwrap(endpointKey, raw), context.config || {});
   if (!READ_ENDPOINTS.has(endpointKey)) return value;
   if (ARRAY_READS.has(endpointKey)) {
     if (!Array.isArray(value)) throw invalidResponse(endpointKey, context.requestId, context.path);

@@ -1,16 +1,41 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const sourcePath = join(scriptDirectory, "admin-mounted-modal-focus-smoke.mjs");
+const modalSourcePath = join(
+  scriptDirectory,
+  "admin-modal-drawer-accessibility-smoke.mjs",
+);
 const runtimePath = join(
   scriptDirectory,
   `.admin-mounted-modal-focus-reconciled-${process.pid}.mjs`,
 );
+const modalRuntimePath = join(
+  scriptDirectory,
+  `.admin-modal-drawer-accessibility-reconciled-${process.pid}.mjs`,
+);
 
 const source = readFileSync(sourcePath, "utf8");
+const modalSource = readFileSync(modalSourcePath, "utf8");
+const deterministicModalSource = modalSource.replace(
+  `  await page.waitForTimeout(100);\n  assert(await opener.evaluate((node) => document.activeElement === node), \`${"${label}"} did not restore focus to its opener.\`);`,
+  `  const openerHandle = await opener.elementHandle();\n  assert(openerHandle, \`${"${label}"} opener detached before focus restoration.\`);\n  await page.waitForFunction((node) => document.activeElement === node, openerHandle, { timeout: 5000 });\n  assert(await opener.evaluate((node) => document.activeElement === node), \`${"${label}"} did not restore focus to its opener.\`);`,
+);
+if (deterministicModalSource === modalSource) {
+  throw new Error("Mounted modal focus restoration fixture contract changed.");
+}
+
+const redirectedSource = source.replace(
+  "./admin-modal-drawer-accessibility-smoke.mjs",
+  `./${basename(modalRuntimePath)}`,
+);
+if (redirectedSource === source) {
+  throw new Error("Mounted modal inherited fixture path changed.");
+}
+
 const reconciledFocusTrap = `const stabilizedFocusTrap = String.raw\`async function assertFocusTrap(page, container, label) {
   await container.evaluate(async (root, currentLabel) => {
     for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -75,15 +100,16 @@ const reconciledFocusTrap = `const stabilizedFocusTrap = String.raw\`async funct
   return boundary.count;
 }\`;`;
 
-const reconciledSource = source.replace(
+const reconciledSource = redirectedSource.replace(
   /const stabilizedFocusTrap = String[.]raw`async function assertFocusTrap\(page, container, label\) \{[\s\S]*?return boundary[.]count;\n\}`;/,
   reconciledFocusTrap,
 );
-if (reconciledSource === source) {
+if (reconciledSource === redirectedSource) {
   throw new Error("Mounted modal focus reconciliation contract changed.");
 }
 
 try {
+  writeFileSync(modalRuntimePath, deterministicModalSource);
   writeFileSync(runtimePath, reconciledSource);
   const result = spawnSync(process.execPath, [runtimePath], {
     cwd: process.cwd(),
@@ -94,4 +120,5 @@ try {
   if (result.status !== 0) process.exitCode = result.status || 1;
 } finally {
   rmSync(runtimePath, { force: true });
+  rmSync(modalRuntimePath, { force: true });
 }

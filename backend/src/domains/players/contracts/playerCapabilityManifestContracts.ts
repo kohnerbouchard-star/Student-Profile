@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -43,9 +43,11 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "marketOrder",
   "marketSearch",
   "marketWatchlist",
+  "marketplaceActivate",
   "marketplaceCancel",
   "marketplaceListing",
   "marketplacePurchase",
+  "marketplaceDispute",
   "messageAttachment",
   "messageSearch",
   "messageSend",
@@ -97,10 +99,26 @@ export type PlayerCapabilityEndpointKey =
   | "marketAsset"
   | "marketOrder"
   | "marketWatchlist"
+  | "marketplace"
+  | "marketplaceActivate"
+  | "marketplaceCancel"
+  | "marketplaceDispute"
+  | "marketplaceListing"
+  | "marketplacePurchase"
+  | "messages"
+  | "messageThread"
+  | "messagePolicy"
+  | "messageSearch"
+  | "messageThreadCreate"
+  | "messageSend"
+  | "messageRead"
   | "news"
   | "notifications"
   | "notificationsRead"
   | "portfolio"
+  | "progression"
+  | "progressionUnlock"
+  | "progressionClaim"
   | "residencyRequest"
   | "savingsTransfer"
   | "store"
@@ -397,6 +415,29 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     routeCapabilities: ["portfolio"],
   },
   {
+    key: "progression",
+    operations: [{ method: "GET", pathTemplate: "/players/me/progression" }],
+    routeCapabilities: ["progression"],
+  },
+  {
+    key: "progressionUnlock",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/progression/skills/:skillId/unlock",
+    }],
+    routeCapabilities: ["progression"],
+    actionCapabilities: ["progressionUnlock"],
+  },
+  {
+    key: "progressionClaim",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/progression/rewards/:rewardId/claim",
+    }],
+    routeCapabilities: ["progression"],
+    actionCapabilities: ["progressionClaim"],
+  },
+  {
     key: "store",
     operations: [{ method: "GET", pathTemplate: "/players/me/store/items" }],
     routeCapabilities: ["store"],
@@ -436,6 +477,101 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["inventory"],
     actionCapabilities: ["inventoryUse"],
+  },
+  {
+    key: "marketplace",
+    operations: [{ method: "GET", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: [],
+  },
+  {
+    key: "marketplaceListing",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceListing"],
+  },
+  {
+    key: "marketplaceActivate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/activate" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceActivate"],
+  },
+  {
+    key: "marketplacePurchase",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/purchase" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplacePurchase"],
+  },
+  {
+    key: "marketplaceCancel",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/cancel" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceCancel"],
+  },
+  {
+    key: "marketplaceDispute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/orders/:orderId/disputes" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceDispute"],
+  },
+  {
+    key: "messages",
+    operations: [{ method: "GET", pathTemplate: "/players/me/messages" }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageThread",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/threads/:threadId",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messagePolicy",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/policy",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageSearch",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/search",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSearch"],
+  },
+  {
+    key: "messageThreadCreate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageSend",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads/:threadId/messages",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageRead",
+    operations: [
+      { method: "POST", pathTemplate: "/players/me/messages/read" },
+      {
+        method: "POST",
+        pathTemplate: "/players/me/messages/threads/:threadId/read",
+      },
+    ],
+    routeCapabilities: ["messages"],
   },
   {
     key: "notifications",

@@ -33,12 +33,12 @@ Deno.test("allows production and loopback development origins", () => {
   }
 });
 
-Deno.test("does not reflect arbitrary external origins", () => {
+Deno.test("omits CORS authorization for arbitrary external origins", () => {
   assertEqual(
     corsHeaders(requestFrom("https://malicious.example"))[
       "Access-Control-Allow-Origin"
     ],
-    "https://kohnerbouchard-star.github.io",
-    "untrusted origin should not be reflected",
+    undefined,
+    "untrusted origin should not receive an allow-origin header",
   );
 });

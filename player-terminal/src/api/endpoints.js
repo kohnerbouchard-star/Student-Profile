@@ -32,6 +32,10 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   storeQuote: { method: "POST", path: "/store/quotes" },
   storePurchase: { method: "POST", path: "/store/purchases" },
   marketplace: { method: "GET", path: "/marketplace/listings" },
+  marketplaceActivate: {
+    method: "POST",
+    path: "/marketplace/listings/:listingId/activate",
+  },
   marketplacePurchase: {
     method: "POST",
     path: "/marketplace/listings/:listingId/purchase",
@@ -40,6 +44,10 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   marketplaceCancel: {
     method: "POST",
     path: "/marketplace/listings/:listingId/cancel",
+  },
+  marketplaceDispute: {
+    method: "POST",
+    path: "/marketplace/orders/:orderId/disputes",
   },
   contracts: { method: "GET", path: "/contracts" },
   contractAccept: { method: "POST", path: "/contracts/:contractId/accept" },
@@ -53,7 +61,12 @@ export const PLAYER_ENDPOINTS = Object.freeze({
     path: "/inventory/:inventoryItemId/redemptions",
   },
   crafting: { method: "GET", path: "/crafting" },
-  craftItem: { method: "POST", path: "/crafting/recipes/:recipeId/craft" },
+  craftItem: { method: "POST", path: "/crafting/jobs" },
+  craftCancel: { method: "POST", path: "/crafting/jobs/:jobKey/cancel" },
+  craftClaim: { method: "POST", path: "/crafting/jobs/:jobKey/claim" },
+  itemEffectUse: { method: "POST", path: "/items/:itemKey/use" },
+  equipmentEquip: { method: "POST", path: "/equipment/:equipmentKey/equip" },
+  itemSalvage: { method: "POST", path: "/equipment/:equipmentKey/salvage" },
   banking: { method: "GET", path: "/banking/summary" },
   bankTransfer: { method: "POST", path: "/banking/transfers" },
   savingsTransfer: { method: "POST", path: "/banking/savings/transfers" },
@@ -61,7 +74,12 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   loanApply: { method: "POST", path: "/banking/loans/applications/:offerId" },
   loanRepay: { method: "POST", path: "/banking/loans/:loanId/payments" },
   messages: { method: "GET", path: "/messages" },
+  messageThread: { method: "GET", path: "/messages/threads/:threadId" },
+  messagePolicy: { method: "GET", path: "/messages/policy" },
+  messageSearch: { method: "GET", path: "/messages/search" },
+  messageThreadCreate: { method: "POST", path: "/messages/threads" },
   messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
+  messageRead: { method: "POST", path: "/messages/threads/:threadId/read" },
   progression: { method: "GET", path: "/progression" },
   progressionUnlock: {
     method: "POST",
