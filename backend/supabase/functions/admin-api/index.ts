@@ -13,6 +13,7 @@ import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
+import { handleProgressionOperation } from "./progressionOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
 import { handleMessagingOperation } from "./messagingOperations.ts";
@@ -84,6 +85,8 @@ async function handleGlobalRoute(
           auditLogExport: true,
           overallScore: false,
           marketplaceAdminTrading: false,
+          progressionReview: true,
+          progressionCorrection: true,
         },
       },
     });
@@ -310,6 +313,23 @@ Deno.serve(async (request: Request) => {
           messagingOperation.body,
         );
       }
+    }
+
+    const progressionOperation = await handleProgressionOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (progressionOperation.handled) {
+      return json(
+        request,
+        progressionOperation.status || 500,
+        progressionOperation.body,
+      );
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(

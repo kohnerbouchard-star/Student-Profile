@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -116,6 +116,9 @@ export type PlayerCapabilityEndpointKey =
   | "notifications"
   | "notificationsRead"
   | "portfolio"
+  | "progression"
+  | "progressionUnlock"
+  | "progressionClaim"
   | "residencyRequest"
   | "savingsTransfer"
   | "store"
@@ -410,6 +413,29 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       pathTemplate: "/players/me/stocks/portfolio",
     }],
     routeCapabilities: ["portfolio"],
+  },
+  {
+    key: "progression",
+    operations: [{ method: "GET", pathTemplate: "/players/me/progression" }],
+    routeCapabilities: ["progression"],
+  },
+  {
+    key: "progressionUnlock",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/progression/skills/:skillId/unlock",
+    }],
+    routeCapabilities: ["progression"],
+    actionCapabilities: ["progressionUnlock"],
+  },
+  {
+    key: "progressionClaim",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/progression/rewards/:rewardId/claim",
+    }],
+    routeCapabilities: ["progression"],
+    actionCapabilities: ["progressionClaim"],
   },
   {
     key: "store",

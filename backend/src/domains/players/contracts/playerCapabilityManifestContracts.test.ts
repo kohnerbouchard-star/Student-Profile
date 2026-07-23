@@ -25,6 +25,7 @@ import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockA
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
+import { readPlayerProgressionRoutePath } from "../../progression/api/playerProgressionRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -57,7 +58,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   for (const key of [
     "dashboard", "profile", "news", "market", "portfolio", "contracts",
-    "inventory", "store", "banking", "business", "loans", "world", "marketplace", "messages",
+    "inventory", "store", "banking", "business", "loans", "world", "marketplace", "messages", "progression",
   ] as const) assertEquals(manifest.capabilities.routes[key], true);
 
   for (const key of [
@@ -70,7 +71,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute",
-    "messageSearch", "messageSend",
+    "messageSearch", "messageSend", "progressionUnlock", "progressionClaim",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
 
   assertEquals(manifest.capabilities.actions.messageAttachment, false);
@@ -86,7 +87,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
     "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
-    "messageRead", ...BUSINESS_BANKING_ENDPOINTS,
+    "messageRead", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -118,7 +119,9 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
         .replace(":offerKey", `lop_${"a".repeat(32)}`)
-        .replace(":loanKey", `lon_${"a".repeat(32)}`),
+        .replace(":loanKey", `lon_${"a".repeat(32)}`)
+        .replace(":skillId", "skl_market_literacy_v1")
+        .replace(":rewardId", `rwd_${"b".repeat(32)}`),
     }))
   );
 
@@ -166,6 +169,10 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
           operation.key === "messageSearch" || operation.key === "messageSend" ||
           operation.key === "messageRead"
       ? readPlayerMessagingRoutePath(operation.path)
+      : operation.key === "progression" ||
+          operation.key === "progressionUnlock" ||
+          operation.key === "progressionClaim"
+      ? readPlayerProgressionRoutePath(operation.path)
       : operation.key === "notifications" || operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
       : operation.key === "storyDeliveries" || operation.key === "storyDeliveryState"

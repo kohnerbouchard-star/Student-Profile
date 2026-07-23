@@ -203,6 +203,8 @@ import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
 } from "../../../src/security/playerRateLimitDispatch.ts";
+import { handlePlayerProgressionRequest } from "../../../src/domains/progression/api/playerProgressionHttpHandler.ts";
+import { readPlayerProgressionRoutePath } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";
 import { dispatchClassroomMessagingRequest } from "./messagingDispatch.ts";
 
 interface EdgeHealthBody {
@@ -339,6 +341,25 @@ Deno.serve(async (request) => {
     { createServiceClient },
   );
   if (playerMessagingResponse) return playerMessagingResponse;
+
+  const playerProgressionRoute = readPlayerProgressionRoutePath(url.pathname);
+
+  if (playerProgressionRoute) {
+    const endpointKey = playerProgressionRoute.kind === "unlock"
+      ? "progressionUnlock"
+      : playerProgressionRoute.kind === "claim"
+      ? "progressionClaim"
+      : "progression";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerProgressionRequest(request, playerProgressionRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
 
   const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
 

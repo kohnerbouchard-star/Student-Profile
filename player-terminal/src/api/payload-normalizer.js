@@ -73,6 +73,9 @@ function normalizeArrivalAnswers(raw, endpointKey) {
 
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
+  if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") {
+    return {};
+  }
   if (endpointKey === "arrivalClass") {
     return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   }

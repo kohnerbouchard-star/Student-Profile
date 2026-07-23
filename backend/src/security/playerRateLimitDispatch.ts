@@ -229,6 +229,15 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   portfolio: byMethod({
     GET: operation("player.portfolio.read", "read"),
   }),
+  progression: byMethod({
+    GET: operation("player.progression.read", "read"),
+  }),
+  progressionUnlock: byMethod({
+    POST: operation("player.progression.skill.unlock", "sensitive"),
+  }),
+  progressionClaim: byMethod({
+    POST: operation("player.progression.reward.claim", "sensitive"),
+  }),
   savingsTransfer: byMethod({
     POST: operation("player.banking.savings.transfer", "sensitive"),
   }),

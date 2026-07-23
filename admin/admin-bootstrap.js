@@ -38,6 +38,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
       "./world-runtime-console-loader.js",
       "./marketplace-lifecycle-loader.js",
       "./messaging-moderation-loader.js",
+      "./progression-review-loader.js",
     ],
   },
 ]);
