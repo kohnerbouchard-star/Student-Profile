@@ -19,6 +19,7 @@ const exactAllowed = new Set([
   ".github/workflows/messaging-isolated-staging.yml",
   ".github/workflows/messaging-final-connected-acceptance.yml",
   ".github/workflows/progression-runtime-v1.yml",
+  ".github/workflows/progression-isolated-staging.yml",
   ".github/workflows/environment-neutral-browser.yml",
   ".github/workflows/admin-shell-smoke.yml",
   ".github/workflows/admin-game-lifecycle-controls-v1.yml",
