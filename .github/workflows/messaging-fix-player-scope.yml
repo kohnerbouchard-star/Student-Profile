@@ -40,29 +40,22 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          scope = Path('player-terminal/tools/verify-pr-scope.mjs').read_text()
-          required_scope_guards = [
-              '"admin/admin-bootstrap.js"',
-              '/^backend\\/src\\/domains\\/messaging\\//',
-              'playerMessagingRateLimitDispatch',
-              'staffMessagingRateLimitDispatch',
-              '2026072115(0000|1000|2000|3000)',
+          path = Path('.github/workflows/messaging-isolated-staging.yml')
+          lines = path.read_text().splitlines()
+          matches = [
+              index
+              for index, line in enumerate(lines)
+              if 'grep -Fq' in line
+              and 'ON_ERROR_STOP on' in line
+              and 'messaging-connected-acceptance.sql' in line
           ]
-          missing = [guard for guard in required_scope_guards if guard not in scope]
-          if missing:
-              raise SystemExit(f'Messaging scope verifier is missing: {missing}')
-
-          staging_path = Path('.github/workflows/messaging-isolated-staging.yml')
-          staging = staging_path.read_text()
-          old_guard = "          grep -Fq '\\\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql\n"
-          new_guard = "          grep -Fq '\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql\n"
-          if new_guard not in staging:
-              if old_guard not in staging:
-                  raise SystemExit('Expected doubled-backslash staging guard is missing.')
-              staging = staging.replace(old_guard, new_guard, 1)
-          staging_path.write_text(staging)
+          if len(matches) != 1:
+              raise SystemExit(f'Expected exactly one psql guard, found {len(matches)}.')
+          lines[matches[0]] = r"          grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql"
+          path.write_text('\n'.join(lines) + '\n')
           PY
 
+          grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql
           rm .github/workflows/messaging-fix-player-scope.yml
           git add -A
           git diff --cached --check
