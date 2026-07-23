@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Repair exact Messaging verification guards
+      - name: Correct exact staging guard and remove helper
         shell: bash
         run: |
           set -euo pipefail
@@ -40,39 +40,17 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          scope_path = Path('.github/workflows/player-terminal-verify.yml')
-          text = scope_path.read_text()
-
-          replacements = [
-              (
-                  '              $0 == "admin/index.html" { next }\n',
-                  '              $0 == "admin/admin-bootstrap.js" { next }\n'
-                  '              $0 == "admin/index.html" { next }\n',
-              ),
-              (
-                  '              $0 ~ /^backend\\/src\\/domains\\/marketplace\\/(api|contracts|infrastructure|tests)\\/[A-Za-z0-9.-]*[.]ts$/ { next }\n',
-                  '              $0 ~ /^backend\\/src\\/domains\\/marketplace\\/(api|contracts|infrastructure|tests)\\/[A-Za-z0-9.-]*[.]ts$/ { next }\n'
-                  '              $0 ~ /^backend\\/src\\/domains\\/messaging\\// { next }\n',
-              ),
-              (
-                  '              $0 ~ /^backend\\/src\\/security\\/playerCraftingRateLimitDispatch([.]test)?[.]ts$/ { next }\n',
-                  '              $0 ~ /^backend\\/src\\/security\\/playerCraftingRateLimitDispatch([.]test)?[.]ts$/ { next }\n'
-                  '              $0 ~ /^backend\\/src\\/security\\/(playerMessagingRateLimitDispatch([.]test)?|staffMessagingRateLimitDispatch)[.]ts$/ { next }\n',
-              ),
-              (
-                  '              $0 ~ /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000|4000)_[A-Za-z0-9_]+[.]sql$/ { next }\n',
-                  '              $0 ~ /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+[.]sql$/ { next }\n',
-              ),
+          scope = Path('player-terminal/tools/verify-pr-scope.mjs').read_text()
+          required_scope_guards = [
+              '"admin/admin-bootstrap.js"',
+              '/^backend\\/src\\/domains\\/messaging\\//',
+              'playerMessagingRateLimitDispatch',
+              'staffMessagingRateLimitDispatch',
+              '2026072115(0000|1000|2000|3000)',
           ]
-
-          for old, new in replacements:
-              if new in text:
-                  continue
-              if old not in text:
-                  raise SystemExit(f'Expected scope anchor is missing: {old.strip()}')
-              text = text.replace(old, new, 1)
-
-          scope_path.write_text(text)
+          missing = [guard for guard in required_scope_guards if guard not in scope]
+          if missing:
+              raise SystemExit(f'Messaging scope verifier is missing: {missing}')
 
           staging_path = Path('.github/workflows/messaging-isolated-staging.yml')
           staging = staging_path.read_text()
@@ -88,5 +66,5 @@ jobs:
           rm .github/workflows/messaging-fix-player-scope.yml
           git add -A
           git diff --cached --check
-          git commit -m "fix(messaging): repair exact verification guards"
+          git commit -m "fix(messaging): correct exact staging validation guard"
           git push origin HEAD:agent/messaging-communication-v1
