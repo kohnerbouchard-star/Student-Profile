@@ -1,0 +1,42 @@
+name: PR295 Patch Connected Contract Route
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-patch-contract-route.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Correct exact contracts list request and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/pr295-connected-staging-acceptance.mjs')
+          text = path.read_text()
+          old = '    "/functions/v1/classroom-api/players/me/contracts",\n'
+          new = '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n'
+          if text.count(old) != 1:
+              raise SystemExit('Expected contracts route was not found exactly once')
+          path.write_text(text.replace(old, new))
+          PY
+          rm -f .github/workflows/pr295-patch-contract-route.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(pr295): scope connected contracts request"
+          git push origin HEAD:agent/production-integration-gate-v1
