@@ -274,15 +274,6 @@ export function validateStudentProfileCapabilityManifest(raw) {
     invalidEndpointDetails
   );
 
-  if (routes.dashboard && !reviewedEndpointKeys.has("countries")) {
-    throw mismatch("The Dashboard capability is missing the Countries endpoint descriptor.", {
-      groupName: "routes",
-      key: "dashboard",
-      endpointKey: "countries",
-      ...(invalidEndpointDetails.get("countries") || {})
-    });
-  }
-
   return Object.freeze({
     schemaVersion: manifest.schemaVersion,
     manifestVersion: manifest.manifestVersion.trim(),
