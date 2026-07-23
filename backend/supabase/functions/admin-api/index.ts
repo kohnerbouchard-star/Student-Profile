@@ -15,6 +15,8 @@ import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
+import { handleMessagingOperation } from "./messagingOperations.ts";
+import { guardStaffMessagingRateLimit } from "../../../src/security/staffMessagingRateLimitDispatch.ts";
 import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
 import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
@@ -275,6 +277,39 @@ Deno.serve(async (request: Request) => {
         marketplaceOperation.status || 500,
         marketplaceOperation.body,
       );
+    }
+
+
+    if (suffix.startsWith("/messages")) {
+      const rateLimit = await guardStaffMessagingRateLimit(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (rateLimit) {
+        return json(request, rateLimit.status, rateLimit.body);
+      }
+
+      const messagingOperation = await handleMessagingOperation(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (messagingOperation.handled) {
+        return json(
+          request,
+          messagingOperation.status || 500,
+          messagingOperation.body,
+        );
+      }
     }
 
     const redemptionOperation = await handleInventoryRedemptionOperation(

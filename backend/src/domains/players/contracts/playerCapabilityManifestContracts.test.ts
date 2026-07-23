@@ -17,6 +17,8 @@ import { readPlayerContractPublicSubmitRoutePath } from "../../contracts/api/pla
 import { readPlayerInventoryRoutePath } from "../../inventory/api/playerInventoryRoutePaths.ts";
 import { readPlayerInventoryRedemptionRoutePath } from "../../inventory/api/playerInventoryRedemptionRoutePaths.ts";
 import { readPlayerMarketplaceRoutePath } from "../../marketplace/api/playerMarketplaceRoutePaths.ts";
+import { readPlayerMessageThreadLifecycleRoutePath } from "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts";
+import { readPlayerMessagingRoutePath } from "../../messaging/api/playerMessagingRoutePaths.ts";
 import { readPlayerNotificationRoutePath } from "../../notifications/api/playerNotificationRoutePaths.ts";
 import { readPlayerStoryDeliveryRoutePath } from "../../notifications/api/playerStoryDeliveryRoutePaths.ts";
 import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockAssetListRoutePaths.ts";
@@ -55,7 +57,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   for (const key of [
     "dashboard", "profile", "news", "market", "portfolio", "contracts",
-    "inventory", "store", "banking", "business", "loans", "world", "marketplace",
+    "inventory", "store", "banking", "business", "loans", "world", "marketplace", "messages",
   ] as const) assertEquals(manifest.capabilities.routes[key], true);
 
   for (const key of [
@@ -68,7 +70,10 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
     "marketplaceCancel", "marketplaceDispute",
+    "messageSearch", "messageSend",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
+
+  assertEquals(manifest.capabilities.actions.messageAttachment, false);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
@@ -79,7 +84,9 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "worldRuntime", "arrivalClass", "travelQuote", "travelExecute",
     "travelComplete", "residencyRequest", "marketplace",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute", ...BUSINESS_BANKING_ENDPOINTS,
+    "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
+    "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
+    "messageRead", ...BUSINESS_BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -105,6 +112,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":listingId", `lst_${"b".repeat(32)}`)
         .replace(":orderId", `ord_${"c".repeat(32)}`)
+        .replace(":threadId", `thr_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
@@ -152,6 +160,12 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
           operation.key === "marketplaceCancel" ||
           operation.key === "marketplaceDispute"
       ? readPlayerMarketplaceRoutePath(operation.path)
+      : operation.key === "messagePolicy" || operation.key === "messageThreadCreate"
+      ? readPlayerMessageThreadLifecycleRoutePath(operation.path)
+      : operation.key === "messages" || operation.key === "messageThread" ||
+          operation.key === "messageSearch" || operation.key === "messageSend" ||
+          operation.key === "messageRead"
+      ? readPlayerMessagingRoutePath(operation.path)
       : operation.key === "notifications" || operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
       : operation.key === "storyDeliveries" || operation.key === "storyDeliveryState"

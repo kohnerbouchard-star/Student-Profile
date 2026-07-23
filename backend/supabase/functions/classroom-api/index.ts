@@ -203,6 +203,7 @@ import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
 } from "../../../src/security/playerRateLimitDispatch.ts";
+import { dispatchClassroomMessagingRequest } from "./messagingDispatch.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -332,6 +333,12 @@ Deno.serve(async (request) => {
       { createServiceClient },
     );
   }
+
+  const playerMessagingResponse = await dispatchClassroomMessagingRequest(
+    request,
+    { createServiceClient },
+  );
+  if (playerMessagingResponse) return playerMessagingResponse;
 
   const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);
 
