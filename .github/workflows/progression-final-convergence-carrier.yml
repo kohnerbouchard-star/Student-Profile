@@ -1,0 +1,347 @@
+name: Progression Final Convergence Carrier
+
+on:
+  push:
+    branches:
+      - agent/progression-reputation-achievements-v1
+    paths:
+      - .github/workflows/progression-final-convergence-carrier.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: progression-final-convergence
+  cancel-in-progress: false
+
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_PRE_CARRIER_HEAD: dbd65e277cce83f4b026a9f4f6f35a75aaf8b79b
+      EXPECTED_MAIN_HEAD: 955c97a9a2c8e734cfd89e5202a052afc74edacd
+      MERGE_BASE: 7f89e8f7bd390a0d27877cc970b4deff993f9c9a
+      BRANCH_NAME: agent/progression-reputation-achievements-v1
+    steps:
+      - name: Check out exact Progression branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/progression-reputation-achievements-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PRE_CARRIER_HEAD"
+          git fetch --no-tags origin main "$BRANCH_NAME"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_HEAD"
+          test "$(git merge-base "$EXPECTED_PRE_CARRIER_HEAD" "$EXPECTED_MAIN_HEAD")" = "$MERGE_BASE"
+
+      - name: Merge Messaging main and reconstruct shared files
+        shell: bash
+        run: |
+          set -euo pipefail
+          progression_head="$EXPECTED_PRE_CARRIER_HEAD"
+          shared_patch_paths=(
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
+            backend/src/security/playerRateLimitDispatch.ts
+            backend/supabase/functions/admin-api/index.ts
+            player-terminal/src/api/backend-routes.js
+            player-terminal/src/api/payload-normalizer.js
+            player-terminal/src/api/response-normalizer.js
+            player-terminal/src/data/empty-read-models.js
+            player-terminal/src/pages/progression-page.js
+          )
+          known_conflicts=(
+            .github/workflows/player-terminal-verify.yml
+            admin/index.html
+            backend/package.json
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
+            backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+            backend/src/security/playerRateLimitDispatch.ts
+            backend/supabase/functions/admin-api/index.ts
+            package.json
+            player-terminal/src/api/backend-routes.js
+            player-terminal/src/api/payload-normalizer.js
+            player-terminal/src/api/response-normalizer.js
+            player-terminal/src/data/empty-read-models.js
+            player-terminal/src/pages/progression-page.js
+          )
+
+          git diff --binary "$MERGE_BASE" "$progression_head" -- "${shared_patch_paths[@]}" > /tmp/progression-shared.patch
+
+          set +e
+          git merge --no-commit --no-ff -X theirs "$EXPECTED_MAIN_HEAD"
+          merge_status=$?
+          set -e
+
+          mapfile -t unmerged < <(git diff --name-only --diff-filter=U)
+          for path in "${unmerged[@]}"; do
+            allowed=false
+            for candidate in "${known_conflicts[@]}"; do
+              if [ "$path" = "$candidate" ]; then allowed=true; break; fi
+            done
+            if [ "$allowed" != true ]; then
+              echo "Unexpected merge conflict: $path" >&2
+              exit 1
+            fi
+            git checkout --theirs -- "$path"
+            git add "$path"
+          done
+          if [ "$merge_status" -ne 0 ] && [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Unresolved merge conflicts remain." >&2
+            exit 1
+          fi
+
+          git checkout "$EXPECTED_MAIN_HEAD" -- "${shared_patch_paths[@]}"
+          git add "${shared_patch_paths[@]}"
+          git apply --3way --index --whitespace=nowarn /tmp/progression-shared.patch
+          test -z "$(git diff --name-only --diff-filter=U)"
+
+      - name: Publish final Progression integration surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          def read(path):
+              return Path(path).read_text()
+
+          def write(path, text):
+              Path(path).write_text(text)
+
+          def insert_before(path, anchor, block, guard):
+              text = read(path)
+              if guard in text:
+                  return
+              if anchor not in text:
+                  raise SystemExit(f"Missing anchor in {path}: {anchor}")
+              write(path, text.replace(anchor, block + anchor, 1))
+
+          def insert_after(path, anchor, block, guard):
+              text = read(path)
+              if guard in text:
+                  return
+              if anchor not in text:
+                  raise SystemExit(f"Missing anchor in {path}: {anchor}")
+              write(path, text.replace(anchor, anchor + block, 1))
+
+          manifest = Path("backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts")
+          text = manifest.read_text()
+          text = re.sub(
+              r'PLAYER_CAPABILITY_MANIFEST_VERSION = "[^"]+"',
+              'PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2"',
+              text,
+              count=1,
+          )
+          if '| "progression"' not in text[text.index('export type PlayerCapabilityEndpointKey'):text.index('export type PlayerCapabilityHttpMethod')]:
+              text = text.replace(
+                  '  | "portfolio"\n',
+                  '  | "portfolio"\n  | "progression"\n  | "progressionUnlock"\n  | "progressionClaim"\n',
+                  1,
+              )
+          descriptor = '''  {
+            key: "progression",
+            operations: [{ method: "GET", pathTemplate: "/players/me/progression" }],
+            routeCapabilities: ["progression"],
+          },
+          {
+            key: "progressionUnlock",
+            operations: [{
+              method: "POST",
+              pathTemplate: "/players/me/progression/skills/:skillId/unlock",
+            }],
+            routeCapabilities: ["progression"],
+            actionCapabilities: ["progressionUnlock"],
+          },
+          {
+            key: "progressionClaim",
+            operations: [{
+              method: "POST",
+              pathTemplate: "/players/me/progression/rewards/:rewardId/claim",
+            }],
+            routeCapabilities: ["progression"],
+            actionCapabilities: ["progressionClaim"],
+          },
+          '''
+          reviewed = text[text.index('const REVIEWED_ENDPOINTS'):]
+          if 'key: "progression"' not in reviewed:
+              anchor = '  {\n    key: "store",\n'
+              if anchor not in text:
+                  raise SystemExit("Manifest store descriptor anchor missing")
+              text = text.replace(anchor, descriptor + anchor, 1)
+          manifest.write_text(text)
+
+          classroom = "backend/supabase/functions/classroom-api/index.ts"
+          insert_before(
+              classroom,
+              'import { dispatchClassroomMessagingRequest } from "./messagingDispatch.ts";\n',
+              'import { handlePlayerProgressionRequest } from "../../../src/domains/progression/api/playerProgressionHttpHandler.ts";\n'
+              'import { readPlayerProgressionRoutePath } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";\n',
+              'readPlayerProgressionRoutePath',
+          )
+          progression_dispatch = '''
+          const playerProgressionRoute = readPlayerProgressionRoutePath(url.pathname);
+
+          if (playerProgressionRoute) {
+            const endpointKey = playerProgressionRoute.kind === "unlock"
+              ? "progressionUnlock"
+              : playerProgressionRoute.kind === "claim"
+              ? "progressionClaim"
+              : "progression";
+            return dispatchRateLimitedReviewedPlayerRequest(
+              request,
+              endpointKey,
+              () =>
+                handlePlayerProgressionRequest(request, playerProgressionRoute, {
+                  createServiceClient,
+                }),
+              { createServiceClient },
+            );
+          }
+
+          '''
+          insert_before(
+              classroom,
+              '  const playerStoryDeliveryRoute = readPlayerStoryDeliveryRoutePath(url.pathname);\n',
+              progression_dispatch,
+              'const playerProgressionRoute = readPlayerProgressionRoutePath',
+          )
+
+          bootstrap = "admin/admin-bootstrap.js"
+          text = read(bootstrap)
+          if '"./progression-review-loader.js"' not in text:
+              anchor = '      "./messaging-moderation-loader.js",\n'
+              if anchor not in text:
+                  raise SystemExit("Admin bootstrap Messaging anchor missing")
+              text = text.replace(anchor, anchor + '      "./progression-review-loader.js",\n', 1)
+              write(bootstrap, text)
+
+          root_package = Path("package.json")
+          data = json.loads(root_package.read_text())
+          scripts = data["scripts"]
+          scripts["test:admin-progression"] = "node scripts/admin-progression-contract.mjs"
+          scripts["test:progression-simulation"] = "node scripts/progression-balance-simulation.mjs && node scripts/progression-event-delivery-simulation.mjs && node scripts/progression-abuse-threshold-simulation.mjs"
+          for command in ["npm run test:admin-progression", "npm run test:progression-simulation"]:
+              if command not in scripts["test"]:
+                  anchor = "npm run test:admin-game-lifecycle"
+                  scripts["test"] = scripts["test"].replace(anchor, anchor + " && " + command, 1)
+          root_package.write_text(json.dumps(data, indent=2) + "\n")
+
+          backend_package = Path("backend/package.json")
+          data = json.loads(backend_package.read_text())
+          scripts = data["scripts"]
+          scripts["test:player-progression"] = (
+              "deno test --allow-read=supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql,"
+              "supabase/migrations/20260721162000_harden_progression_event_idempotency_v1.sql,"
+              "supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql "
+              "--config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen "
+              "src/domains/progression/api/playerProgressionRoutePaths.test.ts "
+              "src/domains/progression/api/playerProgressionReadModel.test.ts "
+              "src/domains/progression/api/playerProgressionHttpHandler.test.ts "
+              "src/domains/progression/services/progressionIntegrationEventService.test.ts "
+              "src/domains/progression/services/progressionIntegrationEventBoundary.test.ts "
+              "src/domains/progression/tests/progressionMigrationContract.test.ts"
+          )
+          if "npm run test:player-progression" not in scripts["test:smoke"]:
+              anchor = "npm run test:player-notifications"
+              scripts["test:smoke"] = scripts["test:smoke"].replace(anchor, anchor + " && npm run test:player-progression", 1)
+          backend_package.write_text(json.dumps(data, indent=2) + "\n")
+          PY
+
+      - name: Rekey the four Progression migrations once
+        shell: bash
+        run: |
+          set -euo pipefail
+          git mv backend/supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql backend/supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql
+          git mv backend/supabase/migrations/20260721114500_fix_progression_read_volatility_v1.sql backend/supabase/migrations/20260721161000_fix_progression_read_volatility_v1.sql
+          git mv backend/supabase/migrations/20260721115500_harden_progression_event_idempotency_v1.sql backend/supabase/migrations/20260721162000_harden_progression_event_idempotency_v1.sql
+          git mv backend/supabase/migrations/20260721120500_rebalance_progression_curve_v1.sql backend/supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql
+
+          declare -A replacements=(
+            [20260721113000]=20260721160000
+            [20260721114500]=20260721161000
+            [20260721115500]=20260721162000
+            [20260721120500]=20260721163000
+          )
+          for old in "${!replacements[@]}"; do
+            new="${replacements[$old]}"
+            while IFS= read -r path; do
+              sed -i "s/$old/$new/g" "$path"
+            done < <(git grep -l "$old" || true)
+          done
+
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("docs/workstreams/progression-preconvergence-v1.md")
+          text = path.read_text()
+          text = text.replace('Status: `PROVISIONAL_UNSYNCHRONIZED_DRAFT`', 'Status: `CONVERGED_AFTER_MESSAGING_PENDING_EXACT_HEAD_ACCEPTANCE`')
+          text = text.replace(
+              'Final predecessor: Messaging PR #248. This ledger is preparation evidence only. It does not authorize synchronization, authoritative migration identities, canonical staging, production changes, ready-for-review, or merge.',
+              'Final predecessor: Messaging PR #248, merge SHA `955c97a9a2c8e734cfd89e5202a052afc74edacd`. The branch has completed its one authorized synchronization and authoritative migration rekey. Canonical staging, production, ready-for-review, and merge remain unauthorized pending exact-head acceptance.',
+          )
+          for item in [
+              'exact Messaging merge SHA recorded',
+              'final controller-assigned Progression migration range recorded',
+              'one authoritative migration rekey completed',
+              'zero provisional migration references remain',
+              'one synchronization with final predecessor `main` completed',
+              'shared files reconstructed additively from final `main`',
+              'migration uniqueness and monotonic ordering verified',
+              'Capability Manifest complete and descriptive only',
+              'central Player and Admin rate limits complete',
+              'Classroom API Progression read/unlock/claim reachable',
+              'Admin API review/history/correction reachable',
+              'Player endpoint, resource, invalidation, adapter and page publication complete',
+              'Admin loader publication complete',
+          ]:
+              text = text.replace(f'- [ ] {item};', f'- [x] {item};')
+          path.write_text(text)
+          PY
+
+      - name: Run convergence guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git diff --name-only --diff-filter=U)"
+          test -z "$(git grep -l '20260721113000\|20260721114500\|20260721115500\|20260721120500' || true)"
+          for migration in \
+            20260721160000_add_progression_reputation_runtime_v1.sql \
+            20260721161000_fix_progression_read_volatility_v1.sql \
+            20260721162000_harden_progression_event_idempotency_v1.sql \
+            20260721163000_rebalance_progression_curve_v1.sql
+          do
+            test -f "backend/supabase/migrations/$migration"
+          done
+          grep -Fq 'readPlayerProgressionRoutePath' backend/supabase/functions/classroom-api/index.ts
+          grep -Fq 'handlePlayerProgressionRequest' backend/supabase/functions/classroom-api/index.ts
+          grep -Fq '"./progression-review-loader.js"' admin/admin-bootstrap.js
+          grep -Fq 'key: "progression"' backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+          grep -Fq 'progressionUnlock' backend/src/security/playerRateLimitDispatch.ts
+          grep -Fq 'handleProgressionOperation' backend/supabase/functions/admin-api/index.ts
+          grep -Fq 'progressionClaim' player-terminal/src/api/backend-routes.js
+          node --check scripts/admin-progression-contract.mjs
+          node --check scripts/progression-balance-simulation.mjs
+          node --check scripts/progression-event-delivery-simulation.mjs
+          node --check scripts/progression-abuse-threshold-simulation.mjs
+          node scripts/progression-balance-simulation.mjs
+          node scripts/progression-event-delivery-simulation.mjs
+          node scripts/progression-abuse-threshold-simulation.mjs
+          git merge-base --is-ancestor "$EXPECTED_MAIN_HEAD" HEAD
+
+      - name: Commit permanent convergence and remove carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/progression-final-convergence-carrier.yml
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(progression): converge after messaging"
+          git push origin "HEAD:$BRANCH_NAME"
