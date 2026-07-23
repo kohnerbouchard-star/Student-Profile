@@ -1,12 +1,12 @@
 # Progression convergence and acceptance ledger v1
 
-Status: `CONVERGED_EXACT_HEAD_VERIFICATION_IN_PROGRESS`
+Status: `CONNECTED_STAGING_COMPATIBILITY_REPAIRED_PENDING_EXACT_HEAD_ACCEPTANCE`
 
 Authority: PR #261, branch `agent/progression-reputation-achievements-v1`.
 
 Final predecessor: Messaging PR #248, merge SHA `955c97a9a2c8e734cfd89e5202a052afc74edacd`.
 
-Production and canonical staging remain unchanged. PR #261 remains draft and unmerged.
+Production remains unchanged. PR #261 remains draft and unmerged.
 
 ## Convergence checkpoint
 
@@ -93,12 +93,31 @@ Current deterministic results include level 10 on day 18, level 20 on day 71, HH
 
 ## Exact-head defect corrections
 
-The first post-convergence matrix exposed and corrected two integration-only defects:
+Post-convergence repository and connected-staging verification identified and corrected:
 
 - Deno did not narrow the pagination result union through `!pagination.ok`; both call sites now use `pagination.ok === false`;
-- the post-Messaging Player scope verifier lacked permanent Progression paths; it now permits only the Progression workflow, Admin surfaces, domain files, rate-limit test, final migration family, workstream ledger and deterministic scripts.
+- the post-Messaging Player scope verifier lacked permanent Progression paths and the permanent isolated-staging workflow path;
+- the Admin publication test used an obsolete direct-script assertion after the bootstrap architecture transition;
+- the central Classroom rate-limit audit retained the pre-Progression guarded-dispatch count;
+- the first Progression migration used a nonexistent `players.archived_at` field; all six predicates now use the canonical active Player `status` contract.
 
-The bounded carrier used for these corrections was closed without merge and contains no feature authority.
+The staging transaction that exposed the schema mismatch rolled back before acceptance data could persist. The bounded operational carrier used for the in-place migration correction was closed without merge and contains no feature authority.
+
+## Protected isolated-staging contract
+
+The permanent `Progression Isolated Staging` workflow is bound to:
+
+- the exact pull-request head SHA and computed artifact digest;
+- protected environment `staging`;
+- isolated project ref `eecvbssdvarfcykcfrny`;
+- explicit production-project denial for `cgiukdjwicykrmtkhudh`;
+- the repository's canonical linked session-pooler credentials;
+- either a clean Progression ledger or the exact four-entry final family, with partial state rejected;
+- rollback-only schema and synthetic acceptance data;
+- an independent second-connection zero-residue check;
+- sanitized evidence artifacts.
+
+Acceptance exercises private Player read, public-profile filtering, event apply/replay, reward claim/replay, skill unlock/replay, owner-scoped Admin reads, wrong-owner denial, Admin correction/replay, immutable audit enforcement, paused/ended denial and committed-success replay after pause.
 
 ## Acceptance checklist
 
@@ -125,7 +144,7 @@ The bounded carrier used for these corrections was closed without merge and cont
 - [ ] isolated-staging Progression acceptance green with zero residue;
 - [ ] zero unresolved review threads confirmed on the final head;
 - [ ] immutable head returned to the controller;
-- [ ] explicit controller authorization obtained before leaving draft;
+- [x] explicit controller authorization obtained before leaving draft;
 - [x] production unchanged.
 
 After the authorized Progression merge, rerun the merged-main migration, route, capability, rate-limit, Classroom API, Admin API, Player publication, lifecycle, security, replay and repository convergence audit before PR #295 immutable release assembly.
