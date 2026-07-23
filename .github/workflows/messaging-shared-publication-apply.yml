@@ -81,7 +81,7 @@ jobs:
             'classroom:messagingDispatch:backend/supabase/functions/classroom-api/index.ts' \
             'rate-limit:messageSend:backend/src/security/playerRateLimitDispatch.ts' \
             'capability:messageSend:backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts' \
-            'player-endpoints:messaging:player-terminal/src/api/endpoints.js' \
+            'player-endpoints:messageSend:player-terminal/src/api/endpoints.js' \
             'admin:messaging:backend/supabase/functions/admin-api/index.ts'
           do
             stage="${spec%%:*}"
