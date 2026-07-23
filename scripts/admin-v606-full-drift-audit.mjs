@@ -34,7 +34,7 @@ const expectedScripts = [
   "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
   "./player-create-ux.js", "./game-code-wiring.js", "./admin-stabilization.js",
   "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
-  "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js",
+  "./dist/admin-overview-boot.js", "./shape-accurate-skeletons.js", "./admin-bootstrap.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);
 assert(html.includes('meta name="econovaria-admin-api-base" content=""'), "Admin API metadata is not reserved for validated runtime configuration.");
@@ -46,10 +46,13 @@ const expectedStyles = [
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
   "./css/overview-quick-actions.css", "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
   "./css/loading-scope-overrides.css", "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
+  "./css/game-lifecycle-controls.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
-assert(html.includes("import('./keyboard-navigation.js')"), "Keyboard navigation is not loaded through the accepted script order.");
-assert(html.includes("import('./overview-quick-actions.js')"), "Overview quick actions are not loaded through the accepted stabilization slot.");
+const adminBootstrap = readText("admin/admin-bootstrap.js");
+assert(html.includes("./admin-bootstrap.js"), "External Admin bootstrap is not loaded through the accepted script order.");
+assert(adminBootstrap.includes("./keyboard-navigation.js"), "Keyboard navigation is not loaded through the accepted script order.");
+assert(adminBootstrap.includes("./overview-quick-actions.js"), "Overview quick actions are not loaded through the accepted stabilization slot.");
 
 const scopedRuntimeFiles = {
   "admin/player-drawer-wiring.js": ["admin-terminal-player-real-data-v604", "data-admin-terminal-player-drawer", "data-admin-player-drawer-authoritative"],

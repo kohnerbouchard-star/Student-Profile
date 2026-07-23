@@ -6,6 +6,7 @@ const root = path.resolve(import.meta.dirname, "..");
 const source = fs.readFileSync(path.join(root, "admin/world-runtime-console.js"), "utf8");
 const loader = fs.readFileSync(path.join(root, "admin/world-runtime-console-loader.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "admin/index.html"), "utf8");
+const bootstrap = fs.readFileSync(path.join(root, "admin/admin-bootstrap.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
 const operations = fs.readFileSync(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
 
@@ -53,7 +54,8 @@ for (const operation of [
   );
 }
 
-assert.match(index, /world-runtime-console-loader\.js/);
+assert.match(index, /admin-bootstrap\.js/);
+assert.match(bootstrap, /world-runtime-console-loader\.js/);
 assert.doesNotMatch(index, /<link[^>]+world-runtime-console\.css/);
 assert.match(loader, /const WORLD_STYLESHEET = "\.\/css\/world-runtime-console\.css"/);
 assert.match(loader, /data-admin-world-stylesheet/);
