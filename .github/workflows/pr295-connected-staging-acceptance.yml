@@ -36,17 +36,19 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
-      TOOLING_COMMIT: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
-      SOURCE_RUN_ID: "29996788487"
-      SOURCE_ARTIFACT_ID: "8559284849"
-      EXPECTED_MANIFEST_SHA256: d39eb20743082aa93e601bd8d7cfcdda8140a665a197e2cc42da7a046975f474
-      EXPECTED_ARTIFACT_SET_SHA256: 6eb97d5bf98451bad4232be99530c7449376f96168522ea0701e8e6567dc2148
+      RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22
+      TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749
+      SOURCE_RUN_ID: "30001209235"
+      SOURCE_ARTIFACT_ID: "8561056024"
+      EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12
+      EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
       EXPECTED_LEDGER_COUNT: "140"
       EXPECTED_LEDGER_HEAD: "20260723061659"
       EXPECTED_LEDGER_SHA256: 1a318610e798f9c8a8d200282c42d65696c507ab51141398636dacf8b7cc80eb
+      EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -67,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
           git fetch origin main
           test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
           test -n "$SUPABASE_ACCESS_TOKEN"
@@ -77,6 +79,40 @@ jobs:
           test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
           echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - name: Require exact staging deployment success
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/pr295-staging-artifact-deploy-v2.yml/runs?event=pull_request&per_page=30"
+          for attempt in $(seq 1 90); do
+            response="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$api")"
+            read -r run_id status conclusion < <(
+              printf '%s' "$response" | node - "$EXPECTED_PR_HEAD" <<'NODE'
+          const fs = require('node:fs');
+          const expected = process.argv[2];
+          const payload = JSON.parse(fs.readFileSync(0, 'utf8'));
+          const runs = (payload.workflow_runs || [])
+            .filter((run) => run.head_sha === expected)
+            .sort((a, b) => b.run_number - a.run_number);
+          const run = runs[0];
+          if (!run) process.exit(0);
+          process.stdout.write(`${run.id} ${run.status} ${run.conclusion || 'pending'}\n`);
+          NODE
+            )
+            if [ -n "${run_id:-}" ] && [ "$status" = "completed" ]; then
+              test "$conclusion" = "success"
+              echo "Exact staging deployment run $run_id succeeded for $EXPECTED_PR_HEAD."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for exact staging deployment success for $EXPECTED_PR_HEAD." >&2
+          exit 1
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -94,8 +130,8 @@ jobs:
       - name: Download exact immutable artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8559284849
-          run-id: 29996788487
+          artifact-ids: 8561056024
+          run-id: 30001209235
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
@@ -137,12 +173,12 @@ jobs:
               "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
               > /tmp/project-api-keys.json
             node - <<'NODE'
-            const fs = require('node:fs');
-            const rows = JSON.parse(fs.readFileSync('/tmp/project-api-keys.json', 'utf8'));
-            const key = (name) => rows.find((row) => row.name === name && row.api_key)?.api_key || '';
-            fs.writeFileSync('/tmp/anon-key', key('anon'));
-            fs.writeFileSync('/tmp/service-role-key', key('service_role'));
-            NODE
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/project-api-keys.json', 'utf8'));
+          const key = (name) => rows.find((row) => row.name === name && row.api_key)?.api_key || '';
+          fs.writeFileSync('/tmp/anon-key', key('anon'));
+          fs.writeFileSync('/tmp/service-role-key', key('service_role'));
+          NODE
             [ -n "$anon" ] || anon="$(cat /tmp/anon-key)"
             [ -n "$service" ] || service="$(cat /tmp/service-role-key)"
           fi
@@ -219,6 +255,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -f /tmp/functions-before.json
           supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions-raw.json
           node - <<'NODE'
           const fs = require('node:fs');
