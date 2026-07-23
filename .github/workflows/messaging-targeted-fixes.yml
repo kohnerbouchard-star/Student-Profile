@@ -1,0 +1,57 @@
+name: Messaging Targeted Fixes
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-targeted-fixes.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = 'agent/messaging-communication-v1';
+            const file = 'backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts';
+            const current = await github.rest.repos.getContent({
+              owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch,
+            });
+            if (Array.isArray(current.data) || !current.data.sha || !current.data.content) throw new Error('Invalid manifest file');
+            let text = Buffer.from(current.data.content, 'base64').toString('utf8');
+            const duplicate = 'export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-22.2" as const;\nexport const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.3" as const;';
+            if (!text.includes(duplicate)) throw new Error('Expected duplicate version splice not found');
+            text = text.replace(duplicate, 'export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.1" as const;');
+            const boundary = '    actionCapabilities: ["marketplaceDispute"],\n    key: "messages",';
+            if (!text.includes(boundary)) throw new Error('Expected Marketplace/Messaging boundary not found');
+            text = text.replace(boundary, '    actionCapabilities: ["marketplaceDispute"],\n  },\n  {\n    key: "messages",');
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: file,
+              branch,
+              sha: current.data.sha,
+              message: 'fix(messaging): repair capability manifest splice',
+              content: Buffer.from(text).toString('base64'),
+            });
+
+      - name: Publish targeted-fix status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/targeted-fixes',
+              description: 'Capability manifest splice correction',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
