@@ -80,7 +80,7 @@ jobs:
           for spec in \
             'classroom:messagingDispatch:backend/supabase/functions/classroom-api/index.ts' \
             'rate-limit:messageSend:backend/src/security/playerRateLimitDispatch.ts' \
-            'capability:messaging:backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts' \
+            'capability:messageSend:backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts' \
             'player-endpoints:messaging:player-terminal/src/api/endpoints.js' \
             'admin:messaging:backend/supabase/functions/admin-api/index.ts'
           do
