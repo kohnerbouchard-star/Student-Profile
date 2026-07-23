@@ -74,7 +74,12 @@ export const PLAYER_ENDPOINTS = Object.freeze({
   loanApply: { method: "POST", path: "/banking/loans/applications/:offerId" },
   loanRepay: { method: "POST", path: "/banking/loans/:loanId/payments" },
   messages: { method: "GET", path: "/messages" },
+  messageThread: { method: "GET", path: "/messages/threads/:threadId" },
+  messagePolicy: { method: "GET", path: "/messages/policy" },
+  messageSearch: { method: "GET", path: "/messages/search" },
+  messageThreadCreate: { method: "POST", path: "/messages/threads" },
   messageSend: { method: "POST", path: "/messages/threads/:threadId/messages" },
+  messageRead: { method: "POST", path: "/messages/threads/:threadId/read" },
   progression: { method: "GET", path: "/progression" },
   progressionUnlock: {
     method: "POST",
