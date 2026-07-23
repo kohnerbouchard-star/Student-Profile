@@ -1,6 +1,6 @@
 # Progression convergence and acceptance ledger v1
 
-Status: `CONNECTED_STAGING_COMPATIBILITY_REPAIRED_PENDING_EXACT_HEAD_ACCEPTANCE`
+Status: `CONNECTED_STAGING_SQL_REPAIRS_PENDING_FINAL_EXACT_HEAD_ACCEPTANCE`
 
 Authority: PR #261, branch `agent/progression-reputation-achievements-v1`.
 
@@ -99,9 +99,10 @@ Post-convergence repository and connected-staging verification identified and co
 - the post-Messaging Player scope verifier lacked permanent Progression paths and the permanent isolated-staging workflow path;
 - the Admin publication test used an obsolete direct-script assertion after the bootstrap architecture transition;
 - the central Classroom rate-limit audit retained the pre-Progression guarded-dispatch count;
-- the first Progression migration used a nonexistent `players.archived_at` field; all six predicates now use the canonical active Player `status` contract.
+- the first Progression migration used a nonexistent `players.archived_at` field; all six predicates now use the canonical active Player `status` contract;
+- the Admin correction RPC used unqualified `player_id` predicates that conflicted with its table-return output variable; profile lock, profile update and level-counter update now use explicit aliases.
 
-The staging transaction that exposed the schema mismatch rolled back before acceptance data could persist. The bounded operational carrier used for the in-place migration correction was closed without merge and contains no feature authority.
+Both staging transactions that exposed these SQL defects rolled back before schema or acceptance data could persist. The bounded operational carriers used for the in-place migration corrections were closed without merge and contain no feature authority.
 
 ## Protected isolated-staging contract
 
