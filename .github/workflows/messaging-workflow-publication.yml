@@ -1,4 +1,4 @@
-name: Messaging Workflow Publication
+name: Messaging Workflow Candidate
 
 on:
   push:
@@ -8,11 +8,11 @@ on:
       - .github/workflows/messaging-workflow-publication.yml
 
 permissions:
-  contents: write
+  contents: read
   statuses: write
 
 jobs:
-  publish:
+  candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,49 +29,35 @@ jobs:
           MERGE_BASE: 7f89e8f7bd390a0d27877cc970b4deff993f9c9a
         run: |
           set -euo pipefail
-          mkdir -p /tmp/messaging-workflow-candidate/.github/workflows
           path=.github/workflows/player-terminal-verify.yml
-          cp "$path" /tmp/current
+          cp "$path" /tmp/player-terminal-verify.yml
           git show "$MERGE_BASE:$path" > /tmp/base
           git show "$SOURCE_HEAD:$path" > /tmp/source
-          git merge-file --union /tmp/current /tmp/base /tmp/source || true
-          test -z "$(grep -nE '^(<<<<<<<|=======|>>>>>>>)' /tmp/current || true)"
+          git merge-file --union /tmp/player-terminal-verify.yml /tmp/base /tmp/source || true
+          test -z "$(grep -nE '^(<<<<<<<|=======|>>>>>>>)' /tmp/player-terminal-verify.yml || true)"
           sed -i \
             -e 's/20260721130000_add_messaging_communication_v2.sql/20260721150000_add_messaging_communication_v2.sql/g' \
             -e 's/20260721131000_harden_messaging_retention_and_audit_v2.sql/20260721151000_harden_messaging_retention_and_audit_v2.sql/g' \
             -e 's/20260721132000_complete_messaging_lifecycle_v1.sql/20260721152000_complete_messaging_lifecycle_v1.sql/g' \
             -e 's/20260721133000_compat_messaging_player_status_v1.sql/20260721153000_compat_messaging_player_status_v1.sql/g' \
             -e 's/2026072113\[0-9\]{4}/2026072115[0-9]{4}/g' \
-            /tmp/current
-          cp /tmp/current "/tmp/messaging-workflow-candidate/$path"
-          grep -Fq 'messaging-isolated-staging.yml' /tmp/current
-          grep -Fq 'domains\/messaging' /tmp/current
-          grep -Fq 'staffMessagingRateLimitDispatch.ts' /tmp/current
-          grep -Fq 'messagingDispatch.ts' /tmp/current
-          grep -Eq '2026072115\[0-9\]\{4\}|2026072115\[0-9\]\{4\}' /tmp/current || grep -Fq '2026072115' /tmp/current
+            /tmp/player-terminal-verify.yml
+          grep -Fq 'messaging-isolated-staging.yml' /tmp/player-terminal-verify.yml
+          grep -Fq 'domains\/messaging' /tmp/player-terminal-verify.yml
+          grep -Fq 'staffMessagingRateLimitDispatch.ts' /tmp/player-terminal-verify.yml
+          grep -Fq 'messagingDispatch.ts' /tmp/player-terminal-verify.yml
+          sha256sum /tmp/player-terminal-verify.yml > /tmp/player-terminal-verify.yml.sha256
 
-      - name: Publish Player verification workflow
-        uses: actions/github-script@v8
+      - uses: actions/upload-artifact@v4
         with:
-          script: |
-            const fs = require('fs');
-            const branch = 'agent/messaging-communication-v1';
-            const file = '.github/workflows/player-terminal-verify.yml';
-            const current = await github.rest.repos.getContent({
-              owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch,
-            });
-            if (Array.isArray(current.data) || !current.data.sha) throw new Error(`Invalid file: ${file}`);
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: file,
-              branch,
-              sha: current.data.sha,
-              message: 'ci(messaging): publish final Player verification scope',
-              content: fs.readFileSync(`/tmp/messaging-workflow-candidate/${file}`).toString('base64'),
-            });
+          name: messaging-player-workflow-${{ github.sha }}
+          path: |
+            /tmp/player-terminal-verify.yml
+            /tmp/player-terminal-verify.yml.sha256
+          if-no-files-found: error
+          retention-days: 2
 
-      - name: Publish workflow-publication status
+      - name: Publish candidate status
         if: always()
         uses: actions/github-script@v8
         with:
@@ -81,9 +67,9 @@ jobs:
               repo: context.repo.repo,
               sha: context.sha,
               state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/workflow-publication',
+              context: 'messaging/workflow-candidate',
               description: '${{ job.status }}' === 'success'
-                ? 'Messaging Player verification scope published'
-                : 'Messaging Player verification publication failed',
+                ? 'Validated Player verification workflow exported'
+                : 'Player verification workflow candidate failed',
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
