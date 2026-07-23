@@ -357,6 +357,7 @@ export async function buildImmutableRelease({ repoRoot, outputRoot, commit, conf
       workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "local",
       repository: process.env.GITHUB_REPOSITORY ?? "kohnerbouchard-star/Student-Profile",
       sourceCommit: commit,
+      toolingCommit: process.env.RELEASE_TOOLING_COMMIT ?? commit,
       deterministicArchive: "gnu-tar+gzip-n",
     },
     promotionPolicy: {
