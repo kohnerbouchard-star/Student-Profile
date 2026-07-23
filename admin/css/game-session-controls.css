@@ -1,0 +1,310 @@
+/* Selected-game access and logout repair layer.
+   Loaded after the accepted Admin v7 styles and scoped to the Admin shell. */
+
+.econovaria-admin-game-session-controls-host {
+  position: relative;
+  z-index: 6;
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0;
+  pointer-events: auto !important;
+}
+
+.econovaria-admin-game-session-controls-host > .econovaria-admin-legacy-game-code-control {
+  display: none !important;
+}
+
+.econovaria-admin-game-session-card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(78, 207, 255, 0.28);
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(6, 22, 36, 0.96), rgba(3, 12, 24, 0.94)),
+    radial-gradient(circle at 90% 0%, rgba(255, 103, 0, 0.12), transparent 45%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 30px rgba(0, 0, 0, 0.24);
+  color: #e9fbff;
+  pointer-events: auto !important;
+}
+
+.econovaria-admin-game-session-card__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(178, 229, 244, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.econovaria-admin-game-session-card__heading i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #62e6a7;
+  box-shadow: 0 0 12px rgba(98, 230, 167, 0.8);
+}
+
+.econovaria-admin-game-session-card > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.econovaria-admin-game-session-card__code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 9px;
+}
+
+.econovaria-admin-game-session-card__code-row > div {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid rgba(79, 212, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(1, 9, 18, 0.64);
+}
+
+.econovaria-admin-game-session-card__code-row small {
+  color: rgba(182, 229, 241, 0.6);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.econovaria-admin-game-session-card__code-row b {
+  overflow: hidden;
+  color: #ffbf69;
+  font-size: clamp(14px, 1.3vw, 18px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.econovaria-admin-game-session-card button,
+[data-econovaria-admin-logout="true"] {
+  position: relative !important;
+  z-index: 8 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.econovaria-admin-game-session-card [data-econovaria-share-game] {
+  min-width: 74px;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid rgba(0, 212, 255, 0.48);
+  border-radius: 9px;
+  background: rgba(0, 177, 214, 0.09);
+  color: #74e2ff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.econovaria-admin-game-session-card [data-econovaria-share-game]:hover,
+.econovaria-admin-game-session-card [data-econovaria-share-game]:focus-visible {
+  border-color: #74e2ff;
+  background: rgba(0, 212, 255, 0.16);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.11);
+}
+
+.econovaria-admin-game-session-card > p {
+  margin: 0;
+  color: rgba(206, 238, 247, 0.6);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.econovaria-admin-logout-button {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 105, 118, 0.35);
+  border-radius: 9px;
+  background: rgba(255, 68, 84, 0.065);
+  color: #ff8792;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.econovaria-admin-logout-button:hover,
+.econovaria-admin-logout-button:focus-visible,
+[data-econovaria-admin-logout="true"]:hover,
+[data-econovaria-admin-logout="true"]:focus-visible {
+  border-color: rgba(255, 105, 118, 0.8) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 105, 118, 0.1) !important;
+}
+
+[data-econovaria-admin-logout="true"][aria-busy="true"] {
+  cursor: wait !important;
+  opacity: 0.65;
+}
+
+/* Share panel normalization. */
+[data-modal-id="share-game-access"].econovaria-admin-share-game-access {
+  padding: clamp(12px, 2.4vw, 28px) !important;
+}
+
+[data-modal-id="share-game-access"].econovaria-admin-share-game-access [role="dialog"],
+[data-modal-id="share-game-access"].econovaria-admin-share-game-access .admin-terminal-modal {
+  width: min(620px, calc(100vw - 32px)) !important;
+  max-width: 620px !important;
+  max-height: calc(100vh - 32px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.econovaria-admin-share-game-context {
+  margin: 4px 0 14px;
+  padding: 10px 12px;
+  border-left: 2px solid #ff6700;
+  background: rgba(255, 103, 0, 0.07);
+  color: rgba(231, 247, 252, 0.78);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+[data-modal-id="share-game-access"] .admin-terminal-share-modal-code {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  padding: 12px !important;
+  border-radius: 10px !important;
+}
+
+[data-modal-id="share-game-access"] .admin-terminal-share-modal-code > div {
+  min-width: 0;
+}
+
+[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #ffbf69;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.11em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-modal-id="share-game-access"] input,
+[data-modal-id="share-game-access"] textarea,
+.econovaria-admin-share-fallback input,
+.econovaria-admin-share-fallback textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+[data-modal-id="share-game-access"] textarea,
+.econovaria-admin-share-fallback textarea {
+  min-height: 112px !important;
+  resize: vertical;
+}
+
+[data-modal-id="share-game-access"] button,
+.econovaria-admin-share-fallback button {
+  min-height: 40px;
+  max-width: 100%;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.econovaria-admin-share-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2.4vw, 28px);
+  background: rgba(0, 5, 12, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.econovaria-admin-share-fallback__dialog {
+  display: grid;
+  gap: 14px;
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 22px;
+  overflow: auto;
+  border: 1px solid rgba(83, 217, 255, 0.34);
+  border-radius: 14px;
+  background: #071522;
+  color: #e9fbff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
+}
+
+.econovaria-admin-share-fallback__dialog > header,
+.econovaria-admin-share-fallback__dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.econovaria-admin-share-fallback__dialog h2,
+.econovaria-admin-share-fallback__dialog p {
+  margin: 0;
+}
+
+.econovaria-admin-share-fallback__dialog label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.econovaria-admin-share-fallback__dialog input,
+.econovaria-admin-share-fallback__dialog textarea {
+  padding: 10px 12px;
+  border: 1px solid rgba(94, 211, 244, 0.25);
+  border-radius: 8px;
+  background: rgba(0, 5, 12, 0.68);
+  color: #e9fbff;
+}
+
+@media (max-width: 700px) {
+  [data-modal-id="share-game-access"] .admin-terminal-share-modal-code,
+  .econovaria-admin-game-session-card__code-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .econovaria-admin-game-session-card [data-econovaria-share-game] {
+    min-height: 42px;
+  }
+}
