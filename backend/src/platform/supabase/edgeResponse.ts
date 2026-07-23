@@ -70,7 +70,7 @@ const JSON_HEADERS = {
   "access-control-allow-origin": EDGE_BROWSER_ORIGIN,
   "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "access-control-allow-headers":
-    "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token, x-econovaria-game-id, x-idempotency-key",
+    "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token, x-econovaria-player-session-token, x-econovaria-game-id, x-econovaria-game-session-id, x-idempotency-key, idempotency-key",
   "access-control-max-age": "86400",
   "vary": "Origin",
 };
