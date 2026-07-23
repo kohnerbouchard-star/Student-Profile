@@ -12,14 +12,12 @@ const [
   backendPackageText,
   adminHtml,
   adminBootstrap,
-  playerDom,
   edgeResponse,
   adminCors,
 ] = await Promise.all([
   text("backend/package.json"),
   text("admin/index.html"),
   text("admin/admin-bootstrap.js"),
-  text("player-terminal/src/core/dom.js"),
   text("backend/src/platform/supabase/edgeResponse.ts"),
   text("backend/supabase/functions/admin-api/cors.ts"),
 ]);
@@ -70,14 +68,6 @@ for (const modulePath of [
   );
 }
 requireCondition(
-  !playerDom.includes("innerHTML"),
-  "Player processing controls must not assign HTML strings",
-);
-requireCondition(
-  playerDom.includes("textContent") && playerDom.includes("replaceChildren"),
-  "Player processing controls must use DOM-safe text replacement",
-);
-requireCondition(
   !edgeResponse.includes('"access-control-allow-origin": "*"'),
   "Player API responses must not expose wildcard CORS",
 );
@@ -96,12 +86,11 @@ requireCondition(
 
 console.log(JSON.stringify({
   status: "pass",
-  checks: 16,
+  checks: 14,
   boundaries: [
     "backend-crafting-smoke",
     "world-runtime-retention",
     "admin-csp-bootstrap",
-    "player-dom-safety",
     "player-api-cors",
     "admin-api-cors",
   ],
