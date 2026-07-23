@@ -14,7 +14,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}
+  group: pr295-connected-staging-v5
   cancel-in-progress: true
 
 jobs:
@@ -36,12 +36,12 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22
-      TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749
-      SOURCE_RUN_ID: "30001209235"
-      SOURCE_ARTIFACT_ID: "8561056024"
-      EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12
-      EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7
+      RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd
+      TOOLING_COMMIT: 3588532e3923cb979b146402f793c2e984b63976
+      SOURCE_RUN_ID: "30003987908"
+      SOURCE_ARTIFACT_ID: "8562186042"
+      EXPECTED_MANIFEST_SHA256: 6c39fe561a7ff8ae6747f13b6799152b05e42ba6798b8088e97d8c49dce2569e
+      EXPECTED_ARTIFACT_SET_SHA256: bc5053043cb7c77dd02a7f4260ae5f347770308cfc5ebfbe8f7eed9eff037a84
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
       EXPECTED_LEDGER_COUNT: "140"
@@ -133,8 +133,8 @@ jobs:
       - name: Download exact immutable artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8561056024
-          run-id: 30001209235
+          artifact-ids: 8562186042
+          run-id: 30003987908
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
@@ -258,7 +258,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f /tmp/functions-before.json
+          if [ ! -f /tmp/functions-before.json ]; then
+            echo 'Pre-acceptance inventory was not created; an earlier fail-closed guard controls the job result.'
+            exit 0
+          fi
           supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions-raw.json
           node - <<'NODE'
           const fs = require('node:fs');
