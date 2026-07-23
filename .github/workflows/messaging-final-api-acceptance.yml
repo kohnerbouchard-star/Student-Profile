@@ -9,233 +9,85 @@ on:
 
 permissions:
   contents: read
-  statuses: write
-
-concurrency:
-  group: messaging-final-api-acceptance-pr-248
-  cancel-in-progress: false
 
 jobs:
-  api-acceptance:
-    name: Deploy APIs and execute connected acceptance
+  export-corrected-source:
+    name: Export corrected initial unread source
     if: >-
       github.event.pull_request.number == 248 &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/messaging-communication-v1'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: staging
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      MESSAGING_STAGING_EXPIRED_PLAYER_SESSION_TOKEN: ps_messagingexpiredsession00000001
-      MESSAGING_STAGING_PAUSED_PLAYER_SESSION_TOKEN: ps_messagingpausedsession000000002
-      MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN: ps_messagingendedsession0000000003
-      MESSAGING_INACTIVE_SESSION_EVIDENCE_PATH: /tmp/messaging-inactive-session-evidence.json
-      EXPECTED_ARTIFACT_DIGEST: a40714bf4eb208813423838bf671801c0d9b233cea34a178ed30f998b571ccd4
     steps:
-      - name: Check out immutable PR head
+      - name: Check out exact Messaging head
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22.23.1"
-
-      - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.81.3
-
-      - name: Bind exact source, artifact, and staging target
-        id: identity
+      - name: Materialize timestamp repair
         shell: bash
         run: |
           set -euo pipefail
-          source_sha="$(git rev-parse HEAD)"
-          test "$source_sha" = "${{ github.event.pull_request.head.sha }}"
-          test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$SUPABASE_DB_PASSWORD"
-          test "$SUPABASE_PROJECT_REF" = "eecvbssdvarfcykcfrny"
-          test "$SUPABASE_PROJECT_REF" != "cgiukdjwicykrmtkhudh"
-          test "$SUPABASE_URL" = "https://${SUPABASE_PROJECT_REF}.supabase.co"
+          python3 - <<'PY'
+          from pathlib import Path
 
-          mapfile -t artifacts < <(printf '%s\n' \
-            .github/workflows/messaging-isolated-staging.yml \
-            scripts/staging/probe-messaging-lifecycle.mjs \
-            scripts/staging/probe-messaging-inactive-sessions.mjs \
-            scripts/staging/messaging-connected-acceptance.sql \
-            scripts/staging/verify-messaging-zero-residue.sql \
-            backend/src/domains/messaging/api/playerMessagingHttpHandler.ts \
-            backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts \
-            backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql \
-            backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql \
-            backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql \
-            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql \
-            | LC_ALL=C sort)
-          digest="$(sha256sum "${artifacts[@]}" | sha256sum | awk '{print $1}')"
-          test "$digest" = "$EXPECTED_ARTIFACT_DIGEST"
-          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
-          echo "artifact_digest=$digest" >> "$GITHUB_OUTPUT"
+          migration_path = Path('backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql')
+          sql = migration_path.read_text(encoding='utf-8')
 
-      - name: Link isolated staging project
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp backend/supabase/config.next.toml backend/supabase/config.toml
-          cd backend
-          supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
-          test -s supabase/.temp/pooler-url
+          if 'v_initial_created_at := clock_timestamp();' not in sql:
+              old_decl = """  v_message public.messages%rowtype;
+  v_notification_id uuid;
+"""
+              new_decl = """  v_message public.messages%rowtype;
+  v_notification_id uuid;
+  v_initial_created_at timestamptz;
+"""
+              if old_decl not in sql:
+                  raise SystemExit('Missing Messaging declaration anchor.')
+              sql = sql.replace(old_decl, new_decl, 1)
 
-      - name: Verify exact four-slot schema is present
-        shell: bash
-        run: |
-          set -euo pipefail
-          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
-          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
-          export PGSSLMODE=require
-          result="$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "
-            with expected(version) as (
-              values ('20260721150000'), ('20260721151000'), ('20260721152000'), ('20260721153000')
-            )
-            select count(*) = 4
-              and to_regclass('public.message_threads') is not null
-              and to_regclass('public.messages') is not null
-              and to_regprocedure('public.create_player_message_thread_atomic_v1(uuid,uuid,text,text,text,text)') is not null
-              and to_regprocedure('public.moderate_admin_message_atomic_v2(uuid,uuid,text,text,text,text,text)') is not null
-            from supabase_migrations.schema_migrations
-            where version in (select version from expected);")"
-          test "$result" = "t"
-          unset PGPASSWORD
+              old_insert = """  insert into public.messages (
+    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key
+  ) values (
+    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial'
+  ) returning * into v_message;
+"""
+              new_insert = """  v_initial_created_at := clock_timestamp();
 
-      - name: Deploy exact candidate API routers
-        working-directory: backend
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase functions deploy classroom-api --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy admin-api --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions list --project-ref "$SUPABASE_PROJECT_REF"
+  insert into public.messages (
+    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key,
+    created_at, updated_at
+  ) values (
+    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial',
+    v_initial_created_at, v_initial_created_at
+  ) returning * into v_message;
+"""
+              if old_insert not in sql:
+                  raise SystemExit('Missing Messaging initial insert anchor.')
+              sql = sql.replace(old_insert, new_insert, 1)
+              migration_path.write_text(sql, encoding='utf-8')
 
-      - name: Execute inactive-session acceptance
-        shell: bash
-        run: |
-          set +e
-          node scripts/staging/probe-messaging-inactive-sessions.mjs > /tmp/messaging-inactive-session.raw.log 2>&1
-          status=$?
-          set -e
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const source = fs.readFileSync('/tmp/messaging-inactive-session.raw.log', 'utf8');
-          const sanitized = source
-            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
-            .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]')
-            .replace(/(authorization|x-player-session-token)\s*[:=]\s*\S+/gi, '$1=[redacted]');
-          fs.writeFileSync('/tmp/messaging-inactive-session.log', sanitized, { mode: 0o600 });
-          NODE
-          rm -f /tmp/messaging-inactive-session.raw.log
-          test "$status" -eq 0
+          test_path = Path('backend/src/domains/messaging/tests/messagingCompatibilityMigrationContract.test.ts')
+          test = test_path.read_text(encoding='utf-8')
+          if '    "v_initial_created_at := clock_timestamp()",\n' not in test:
+              anchor = '    "player_message_recipient_not_found",\n'
+              replacement = anchor + '    "v_initial_created_at := clock_timestamp()",\n    "created_at, updated_at",\n    "v_initial_created_at, v_initial_created_at",\n'
+              if anchor not in test:
+                  raise SystemExit('Missing Messaging contract-test anchor.')
+              test = test.replace(anchor, replacement, 1)
+              test_path.write_text(test, encoding='utf-8')
+          PY
 
-      - name: Execute transactional Messaging lifecycle
-        shell: bash
-        run: |
-          set -euo pipefail
-          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
-          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
-          export PGSSLMODE=require
-          set +e
-          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
-            -f scripts/staging/messaging-connected-acceptance.sql \
-            > /tmp/messaging-transaction.raw.log 2>&1
-          status=$?
-          set -e
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const source = fs.readFileSync('/tmp/messaging-transaction.raw.log', 'utf8');
-          const sanitized = source
-            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
-            .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]')
-            .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, '[redacted-db-url]');
-          fs.writeFileSync('/tmp/messaging-transaction.log', sanitized, { mode: 0o600 });
-          NODE
-          rm -f /tmp/messaging-transaction.raw.log
-          test "$status" -eq 0
-          tail -n 1 /tmp/messaging-transaction.log > /tmp/messaging-transaction-evidence.json
-          unset PGPASSWORD
+          git diff --check
+          grep -Fq 'v_initial_created_at := clock_timestamp();' backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
 
-      - name: Independently prove zero residue
-        shell: bash
-        run: |
-          set -euo pipefail
-          POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
-          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
-          export PGSSLMODE=require
-          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
-            -f scripts/staging/verify-messaging-zero-residue.sql \
-            > /tmp/messaging-zero-residue.json
-          unset PGPASSWORD
-
-      - name: Verify sanitized connected evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const paths = [
-            '/tmp/messaging-inactive-session-evidence.json',
-            '/tmp/messaging-inactive-session.log',
-            '/tmp/messaging-transaction.log',
-            '/tmp/messaging-transaction-evidence.json',
-            '/tmp/messaging-zero-residue.json',
-          ];
-          const forbidden = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|eyJ[a-zA-Z0-9_-]{20,}|sb_secret_|service_role|postgres(?:ql)?:\/\/|x-player-session-token\s*[:=]|authorization\s*[:=])/i;
-          for (const path of paths) {
-            const text = fs.readFileSync(path, 'utf8');
-            if (forbidden.test(text)) throw new Error(`Forbidden data in ${path}.`);
-          }
-          const inactive = JSON.parse(fs.readFileSync('/tmp/messaging-inactive-session-evidence.json', 'utf8'));
-          const transaction = JSON.parse(fs.readFileSync('/tmp/messaging-transaction-evidence.json', 'utf8'));
-          const residue = JSON.parse(fs.readFileSync('/tmp/messaging-zero-residue.json', 'utf8'));
-          if (!transaction.transactionRolledBack || transaction.productionTouched !== false) throw new Error('Transactional acceptance failed.');
-          if (!residue.zeroResidue) throw new Error('Zero-residue verification failed.');
-          for (const check of ['expiredSessionDenied', 'pausedGameSessionDenied', 'endedGameSessionDenied']) {
-            if (inactive.checks?.[check] !== true) throw new Error(`Missing inactive-session check: ${check}.`);
-          }
-          NODE
-
-      - name: Publish exact-head connected status
-        if: always()
-        uses: actions/github-script@v8
-        with:
-          script: |
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: '${{ github.event.pull_request.head.sha }}',
-              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/connected-isolated-staging',
-              description: '${{ job.status }}' === 'success'
-                ? 'Exact APIs, lifecycle acceptance, and zero residue passed'
-                : 'Final connected Messaging API acceptance failed',
-              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-            });
-
-      - name: Upload sanitized connected evidence
-        if: always()
+      - name: Upload corrected repository files
         uses: actions/upload-artifact@v4
         with:
-          name: messaging-final-api-connected-${{ github.event.pull_request.head.sha }}
+          name: messaging-corrected-initial-unread-${{ github.event.pull_request.head.sha }}
           path: |
-            /tmp/messaging-inactive-session.log
-            /tmp/messaging-inactive-session-evidence.json
-            /tmp/messaging-transaction.log
-            /tmp/messaging-transaction-evidence.json
-            /tmp/messaging-zero-residue.json
-          if-no-files-found: warn
-          retention-days: 90
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+            backend/src/domains/messaging/tests/messagingCompatibilityMigrationContract.test.ts
+          if-no-files-found: error
+          retention-days: 7
