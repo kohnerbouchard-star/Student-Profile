@@ -27,6 +27,8 @@ jobs:
           persist-credentials: true
 
       - name: Apply additive Messaging publication patches
+        id: publish
+        continue-on-error: true
         shell: bash
         env:
           SOURCE_HEAD: c485c2369d9a0e73a2fdbd04d5f87a4439f154aa
@@ -62,11 +64,15 @@ jobs:
 
           workdir="$(mktemp -d)"
           trap 'rm -rf "$workdir"' EXIT
+          : > /tmp/messaging-shared-failure
           for path in "${shared[@]}"; do
             patch="$workdir/$(printf '%s' "$path" | tr '/' '_').patch"
             git diff --binary "$MERGE_BASE" "$SOURCE_HEAD" -- "$path" > "$patch"
             if [ -s "$patch" ]; then
-              git apply --3way --index "$patch"
+              if ! git apply --3way --index "$patch"; then
+                printf '%s' "$path" > /tmp/messaging-shared-failure
+                exit 1
+              fi
             fi
           done
 
@@ -87,14 +93,22 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const fs = require('fs');
+            const success = '${{ steps.publish.outcome }}' === 'success';
+            const failedPath = fs.existsSync('/tmp/messaging-shared-failure')
+              ? fs.readFileSync('/tmp/messaging-shared-failure', 'utf8').trim()
+              : '';
+            const slug = failedPath.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70) || 'unknown';
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.sha,
-              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/shared-publication',
-              description: '${{ job.status }}' === 'success'
-                ? 'Messaging shared registrations applied additively'
-                : 'Messaging shared publication failed',
+              state: success ? 'success' : 'failure',
+              context: success ? 'messaging/shared-publication' : `messaging/shared-failure/${slug}`,
+              description: success ? 'Messaging shared registrations applied additively' : `Collision: ${failedPath || 'unknown'}`,
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
+
+      - name: Enforce shared-publication success
+        if: steps.publish.outcome != 'success'
+        run: false
