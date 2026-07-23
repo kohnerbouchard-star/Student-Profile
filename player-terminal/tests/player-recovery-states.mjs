@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { PlayerApi } from "../src/api/player-api.js";
-import { ApiRequestError } from "../src/api/errors.js";
+import { ApiRequestError, collectSafeApiDiagnostic } from "../src/api/errors.js";
 import {
   buildPlayerRecoveryPresentation,
   classifyPlayerRecovery,
@@ -44,7 +44,7 @@ assert.equal(
 
 const ambiguous = buildPlayerRecoveryPresentation(
   { code: "NETWORK_ERROR" },
-  { idempotentWrite: true, operationLabel: "the Store purchase", scope: "write" }
+  { diagnostics: false, idempotentWrite: true, operationLabel: "the Store purchase", scope: "write" }
 );
 assert.equal(ambiguous.kind, "ambiguous_write");
 assert.equal(ambiguous.action, "retry_same");
@@ -53,7 +53,7 @@ assert.match(ambiguous.detail, /idempotency key/i);
 
 const limited = buildPlayerRecoveryPresentation(
   { status: 429, code: "RATE_LIMITED", retryAfterMs: 2500 },
-  { idempotentWrite: true, scope: "write" }
+  { diagnostics: false, idempotentWrite: true, scope: "write" }
 );
 assert.equal(limited.kind, "rate_limited");
 assert.equal(limited.retryAfterMs, 2500);
@@ -61,6 +61,7 @@ assert.equal(limited.actionLabel, "Retry the same action");
 
 const committed = buildPlayerRecoveryPresentation({}, {
   committed: true,
+  diagnostics: false,
   operationLabel: "The market order",
   scope: "write"
 });
@@ -68,6 +69,46 @@ assert.equal(committed.kind, "confirmed_stale");
 assert.equal(committed.action, "refresh");
 assert.match(committed.detail, /completed successfully/i);
 assert.match(committed.detail, /stale/i);
+
+const contractCause = new ApiRequestError("Capability contract rejected.", {
+  code: "CAPABILITY_CONTRACT_MISMATCH",
+  endpointKey: "capabilities",
+  requestId: "ptr_contract_safe",
+  detail: {
+    groupName: "routes",
+    key: "dashboard",
+    endpointKey: "dashboard",
+    method: "PATCH",
+    pathTemplate: "/players/me/game/dashboard",
+    accessToken: "must-not-render"
+  }
+});
+const routeWrapper = new ApiRequestError("This section could not be loaded.", {
+  code: "ROUTE_DATA_UNAVAILABLE",
+  endpointKey: "dashboard",
+  cause: contractCause
+});
+const diagnostic = collectSafeApiDiagnostic(routeWrapper);
+assert.equal(diagnostic.code, "CAPABILITY_CONTRACT_MISMATCH");
+assert.equal(diagnostic.endpointKey, "capabilities");
+assert.equal(diagnostic.detail.key, "dashboard");
+assert.equal(diagnostic.detail.accessToken, undefined);
+
+const localDiagnostic = buildPlayerRecoveryPresentation(routeWrapper, {
+  diagnostics: true,
+  scope: "read"
+});
+assert.match(localDiagnostic.detail, /CAPABILITY_CONTRACT_MISMATCH/);
+assert.match(localDiagnostic.detail, /Endpoint capabilities/);
+assert.match(localDiagnostic.detail, /Key dashboard/);
+assert.match(localDiagnostic.detail, /Method PATCH/);
+assert.doesNotMatch(localDiagnostic.detail, /must-not-render|accessToken/i);
+
+const productionRedacted = buildPlayerRecoveryPresentation(routeWrapper, {
+  diagnostics: false,
+  scope: "read"
+});
+assert.doesNotMatch(productionRedacted.detail, /CAPABILITY_CONTRACT_MISMATCH|ptr_contract_safe|PATCH/);
 
 class FakeCustomEvent {
   constructor(type, options = {}) {
@@ -176,4 +217,4 @@ assert.match(cssSource, /player-terminal-recovery-notice/);
 assert.match(cssSource, /@media \(max-width: 640px\)/);
 assert.doesNotMatch(controllerSource, /playerSessionToken|accessCode|ownershipUuid/i, "Recovery UI code must not expose credentials or ownership UUIDs.");
 
-console.log("Player recovery states passed: bounded classification, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, isolated runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");
+console.log("Player recovery states passed: bounded classification, safe nested loopback diagnostics, production redaction, ambiguous idempotent retry semantics, rate-limit timing, committed-success preservation, isolated runtime instrumentation, offline gating, accessibility, and privacy contracts are valid.");
