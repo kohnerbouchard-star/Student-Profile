@@ -1,0 +1,59 @@
+name: Messaging Fix Control Regex
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/messaging-fix-control-regex.yml
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-fix-control-regex.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-fix-control-regex
+  cancel-in-progress: true
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Messaging branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Remove invalid null-byte regex construction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql')
+          lines = path.read_text().splitlines()
+          unsafe = r"E'[\x00-"
+          matches = [index for index, line in enumerate(lines) if unsafe in line]
+          if len(matches) != 1:
+              raise SystemExit(f'Expected one unsafe null-byte regex, found {len(matches)}.')
+          lines[matches[0]] = r"    or v_body ~ E'[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]'"
+          path.write_text('\n'.join(lines) + '\n')
+          PY
+
+          ! grep -Fq "E'[\x00-" backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          grep -Fq "E'[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]'" \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          git add backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          git diff --cached --check
+          git commit -m "fix(messaging): avoid null-byte control regex"
+          git push origin HEAD:agent/messaging-communication-v1
