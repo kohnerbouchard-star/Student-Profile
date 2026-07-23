@@ -157,19 +157,29 @@ function object(value) {
 function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
   const group = object(values);
   if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
+
+  const reviewed = {};
   for (const [key, enabled] of Object.entries(group)) {
     if (typeof enabled !== "boolean") {
       throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });
     }
-    if (!enabled) continue;
+
     const endpointKey = requirements[key];
-    if (!endpointKey) {
-      throw mismatch(`Capability ${groupName}.${key} is advertised without reviewed frontend coverage.`, { groupName, key });
+    if (!endpointKey) continue;
+    if (enabled && !endpointKeys.has(endpointKey)) {
+      throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, {
+        groupName,
+        key,
+        endpointKey
+      });
     }
-    if (!endpointKeys.has(endpointKey)) {
-      throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, { groupName, key, endpointKey });
-    }
+    reviewed[key] = enabled;
   }
+
+  for (const key of Object.keys(requirements)) {
+    if (!Object.hasOwn(reviewed, key)) reviewed[key] = false;
+  }
+  return Object.freeze(reviewed);
 }
 
 export function validateStudentProfileCapabilityManifest(raw) {
@@ -192,48 +202,70 @@ export function validateStudentProfileCapabilityManifest(raw) {
   }
   if (!Array.isArray(manifest.endpoints)) throw mismatch("The capability endpoint registry is missing.");
 
-  const endpointKeys = new Set();
+  const seenEndpointKeys = new Set();
+  const reviewedEndpointKeys = new Set();
+  const reviewedEndpoints = [];
+
   for (const descriptor of manifest.endpoints) {
     const item = object(descriptor);
     const key = typeof item?.key === "string" ? item.key.trim() : "";
-    if (!key || endpointKeys.has(key)) throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
+    if (!key || seenEndpointKeys.has(key)) {
+      throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
+    }
+    seenEndpointKeys.add(key);
+
     const frontendKeys = ENDPOINT_COVERAGE[key];
-    if (!frontendKeys?.length || !frontendKeys.every(reviewedFrontendRoute)) {
+    if (!frontendKeys?.length) {
+      // A newer backend may advertise endpoints this terminal does not yet use.
+      // Exclude them from the client capability surface instead of blocking
+      // every already-reviewed section.
+      continue;
+    }
+    if (!frontendKeys.every(reviewedFrontendRoute)) {
       throw mismatch(`Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
     }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {
       throw mismatch(`Backend endpoint ${key} has no operations.`, { key });
     }
-    for (const operation of item.operations) {
+
+    const operations = item.operations.map((operation) => {
       const method = typeof operation?.method === "string" ? operation.method.trim().toUpperCase() : "";
       const pathTemplate = typeof operation?.pathTemplate === "string" ? operation.pathTemplate.trim() : "";
       const isPlayerPath = pathTemplate === "/players/me" || pathTemplate.startsWith("/players/me/");
       if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !isPlayerPath) {
-        throw mismatch(`Backend endpoint ${key} contains an invalid operation.`, { key, method, pathTemplate });
+        throw mismatch(`Backend endpoint ${key} contains an invalid operation.`, {
+          key,
+          method,
+          pathTemplate
+        });
       }
-    }
-    endpointKeys.add(key);
+      return Object.freeze({ method, pathTemplate });
+    });
+
+    reviewedEndpointKeys.add(key);
+    reviewedEndpoints.push(Object.freeze({ key, operations: Object.freeze(operations) }));
   }
 
   const capabilities = object(manifest.capabilities);
   if (!capabilities) throw mismatch("The capability flags are missing.");
-  validateCapabilityGroup("routes", capabilities.routes, endpointKeys, ROUTE_REQUIREMENTS);
-  validateCapabilityGroup("actions", capabilities.actions, endpointKeys, ACTION_REQUIREMENTS);
+  const routes = validateCapabilityGroup(
+    "routes",
+    capabilities.routes,
+    reviewedEndpointKeys,
+    ROUTE_REQUIREMENTS
+  );
+  const actions = validateCapabilityGroup(
+    "actions",
+    capabilities.actions,
+    reviewedEndpointKeys,
+    ACTION_REQUIREMENTS
+  );
 
   return Object.freeze({
     schemaVersion: manifest.schemaVersion,
     manifestVersion: manifest.manifestVersion.trim(),
     service: manifest.service,
-    capabilities: Object.freeze({
-      routes: Object.freeze({ ...capabilities.routes }),
-      actions: Object.freeze({ ...capabilities.actions })
-    }),
-    endpoints: Object.freeze(manifest.endpoints.map((descriptor) => Object.freeze({
-      key: descriptor.key,
-      operations: Object.freeze(descriptor.operations.map((operation) => Object.freeze({
-        method: operation.method,
-        pathTemplate: operation.pathTemplate
-      })))
-    })))
+    capabilities: Object.freeze({ routes, actions }),
+    endpoints: Object.freeze(reviewedEndpoints)
   });
 }
