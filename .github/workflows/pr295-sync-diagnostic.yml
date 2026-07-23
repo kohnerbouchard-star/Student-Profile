@@ -1,4 +1,4 @@
-name: PR295 Sync Diagnostic
+name: PR295 Final Main Synchronization
 
 on:
   pull_request:
@@ -9,8 +9,12 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pr295-final-main-synchronization
+  cancel-in-progress: true
+
 jobs:
-  diagnose:
+  synchronize:
     if: github.event.pull_request.number == 295
     runs-on: ubuntu-latest
     steps:
@@ -19,75 +23,67 @@ jobs:
           ref: agent/production-integration-gate-v1
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Capture full synchronization phases
+
+      - name: Merge current main and bind v5 release
         shell: bash
         run: |
-          set +e
-          git config user.name diagnostic
-          git config user.email diagnostic@example.invalid
-          git fetch origin main
-          starting_head="$(git rev-parse HEAD)"
-          remote_head="$(git rev-parse origin/agent/production-integration-gate-v1)"
-          git merge --no-edit origin/main > /tmp/merge.log 2>&1
-          merge_status=$?
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main agent/production-integration-gate-v1
 
-          python3 - <<'PY' > /tmp/replacements.log 2>&1
+          starting_head="$(git rev-parse HEAD)"
+          test "$starting_head" = "${{ github.event.pull_request.head.sha }}"
+          test "$starting_head" = "$(git rev-parse origin/agent/production-integration-gate-v1)"
+          test "$(git rev-parse origin/main)" = "1c3ae6004db442eeed1a4999a733445ca6fcecbd"
+
+          git merge --no-edit origin/main
+
+          python3 - <<'PY'
           from pathlib import Path
+
           acceptance = Path('scripts/pr295-connected-staging-acceptance.mjs')
           text = acceptance.read_text()
-          bad = '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n'
-          good = '    "/functions/v1/classroom-api/players/me/contracts",\n'
-          assert text.count(bad) == 1, text.count(bad)
-          acceptance.write_text(text.replace(bad, good))
+          old = '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n'
+          new = '    "/functions/v1/classroom-api/players/me/contracts",\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected contracts workaround exactly once, found {text.count(old)}')
+          acceptance.write_text(text.replace(old, new))
 
           build = Path('.github/workflows/pr295-immutable-release-build.yml')
           text = build.read_text()
-          unique = {
+          replacements = {
               'pr295-immutable-release-v4-': 'pr295-immutable-release-v5-',
               'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22': 'RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd',
               'OUTPUT_ROOT: /tmp/econovaria-release-v4': 'OUTPUT_ROOT: /tmp/econovaria-release-v5',
               'name: econovaria-release-7838d93ef33908f61a2534486ec92031875a9a22-v4': 'name: econovaria-release-1c3ae6004db442eeed1a4999a733445ca6fcecbd-v5',
           }
-          for old, new in unique.items():
-              assert text.count(old) == 1, (old, text.count(old))
+          for old, new in replacements.items():
+              if text.count(old) != 1:
+                  raise SystemExit(f'Expected unique v4 binding exactly once: {old} ({text.count(old)})')
               text = text.replace(old, new)
-          assert text.count('/tmp/econovaria-release-v4') >= 1
-          text = text.replace('/tmp/econovaria-release-v4', '/tmp/econovaria-release-v5')
-          build.write_text(text)
+          if '/tmp/econovaria-release-v4' not in text:
+              raise SystemExit('Expected remaining v4 artifact paths')
+          build.write_text(text.replace('/tmp/econovaria-release-v4', '/tmp/econovaria-release-v5'))
+
+          deploy = Path('.github/workflows/pr295-staging-artifact-deploy-v2.yml')
+          text = deploy.read_text()
+          old = 'concurrency:\n  group: pr295-staging-artifact-deploy-v4\n  cancel-in-progress: false\n'
+          new = 'concurrency:\n  group: pr295-staging-artifact-deploy-v5\n  cancel-in-progress: true\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected deployment concurrency block exactly once, found {text.count(old)}')
+          deploy.write_text(text.replace(old, new))
+
+          workflow = Path('.github/workflows/pr295-connected-staging-acceptance.yml')
+          text = workflow.read_text()
+          old = 'concurrency:\n  group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}\n  cancel-in-progress: true\n'
+          new = 'concurrency:\n  group: pr295-connected-staging-v1\n  cancel-in-progress: true\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected acceptance concurrency block exactly once, found {text.count(old)}')
+          workflow.write_text(text.replace(old, new))
           PY
-          replacement_status=$?
 
-          rm -f .github/workflows/pr295-sync-contract-hotfix-v5.yml
+          rm -f .github/workflows/pr295-sync-diagnostic.yml
           git add -A
-          git commit -m "diagnostic synchronization commit" > /tmp/commit.log 2>&1
-          commit_status=$?
-          git push --dry-run origin HEAD:agent/production-integration-gate-v1 > /tmp/push.log 2>&1
-          push_status=$?
-
-          {
-            echo "starting_head=$starting_head"
-            echo "remote_head=$remote_head"
-            echo "merge_status=$merge_status"
-            echo "replacement_status=$replacement_status"
-            echo "commit_status=$commit_status"
-            echo "push_dry_run_status=$push_status"
-            echo '--- merge ---'
-            cat /tmp/merge.log
-            echo '--- replacements ---'
-            cat /tmp/replacements.log
-            echo '--- commit ---'
-            cat /tmp/commit.log
-            echo '--- push dry-run ---'
-            cat /tmp/push.log
-            echo '--- latest ---'
-            git log -3 --oneline
-          } > /tmp/merge-diagnostic.txt
-          cat /tmp/merge-diagnostic.txt
-          exit 0
-      - name: Upload merge diagnostic
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr295-merge-diagnostic-${{ github.event.pull_request.head.sha }}
-          path: /tmp/merge-diagnostic.txt
-          if-no-files-found: error
-          retention-days: 3
+          git commit -m "ops(pr295): synchronize current main and bind v5 release"
+          git push origin HEAD:agent/production-integration-gate-v1
