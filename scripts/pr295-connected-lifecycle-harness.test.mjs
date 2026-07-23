@@ -32,9 +32,9 @@ async function runHttpAcceptance() {
 ${legacyBlock}}
 
 async function main() {
-  await runHttpAcceptance();
-  await runRateLimitProbe();
-  captureQueryPlans();
+    await runHttpAcceptance();
+    await runRateLimitProbe();
+    captureQueryPlans();
 }
 `;
 
