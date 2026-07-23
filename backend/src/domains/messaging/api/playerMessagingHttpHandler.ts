@@ -39,7 +39,12 @@ interface RawThread {
   readonly retentionUntil?: unknown;
   readonly messages?: unknown;
 }
-interface RawInbox { readonly unreadCount?: unknown; readonly threads?: unknown }
+interface RawInbox {
+  readonly unreadCount?: unknown;
+  readonly pageUnreadCount?: unknown;
+  readonly nextCursor?: unknown;
+  readonly threads?: unknown;
+}
 interface SendRow {
   readonly send_outcome?: unknown;
   readonly thread_id?: unknown;
@@ -54,6 +59,7 @@ interface ReadRow {
   readonly unread_count?: unknown;
 }
 interface InboxLimits { readonly threadLimit: number; readonly messageLimit: number }
+interface InboxCursor { readonly beforeUpdatedAt: string; readonly beforeThreadId: string }
 
 type ReadRoute = Extract<PlayerMessagingRoute, { readonly kind: "list" | "search" | "thread" }>;
 
@@ -132,30 +138,37 @@ async function handleRead(
 ): Promise<Response> {
   const readRequest = parseReadRequest(request, route);
   if (!readRequest.ok) return readRequest.response;
-  const response = await client.rpc<RawInbox>("read_player_messages_v1", {
+
+  if (route.kind === "thread") {
+    const response = await client.rpc<RawThread>("read_player_message_thread_v1", {
+      p_game_session_id: gameId,
+      p_player_id: playerId,
+      p_thread_public_id: route.threadId,
+      p_message_limit: readRequest.limits.messageLimit,
+    });
+    if (response.error) return mapRpcError(response.error);
+    return privateJsonResponse(200, {
+      ok: true,
+      data: { thread: normalizeThread(response.data) },
+    });
+  }
+
+  const response = await client.rpc<RawInbox>("read_player_messages_v2", {
     p_game_session_id: gameId,
     p_player_id: playerId,
     p_thread_limit: readRequest.limits.threadLimit,
     p_message_limit: readRequest.limits.messageLimit,
+    p_query: route.kind === "search" ? readRequest.query : null,
+    p_before_updated_at: readRequest.cursor?.beforeUpdatedAt ?? null,
+    p_before_thread_public_id: readRequest.cursor?.beforeThreadId ?? null,
   });
   if (response.error) return mapRpcError(response.error);
   const inbox = normalizeInbox(response.data);
 
-  if (route.kind === "thread") {
-    const thread = inbox.threads.find((item) => item.id === route.threadId);
-    return thread
-      ? privateJsonResponse(200, { ok: true, data: { thread } })
-      : messagingError(404, "player_message_thread_not_found", "Message thread was not found.");
-  }
   if (route.kind === "search") {
-    const threads = inbox.threads.filter((thread) => threadMatches(thread, readRequest.query));
     return privateJsonResponse(200, {
       ok: true,
-      data: Object.freeze({
-        query: readRequest.query,
-        unread: threads.reduce((sum, thread) => sum + thread.unread, 0),
-        threads: Object.freeze(threads),
-      }),
+      data: Object.freeze({ query: readRequest.query, ...inbox }),
     });
   }
   return privateJsonResponse(200, { ok: true, data: inbox });
@@ -217,18 +230,30 @@ function validateMethod(method: string, kind: PlayerMessagingRoute["kind"]): Res
 }
 
 function parseReadRequest(request: Request, route: ReadRoute):
-  | { readonly ok: true; readonly limits: InboxLimits; readonly query: string }
+  | {
+    readonly ok: true;
+    readonly limits: InboxLimits;
+    readonly query: string;
+    readonly cursor: InboxCursor | null;
+  }
   | { readonly ok: false; readonly response: Response } {
   const url = new URL(request.url);
   if (route.kind === "thread") {
-    return url.searchParams.size
-      ? invalidResult("Message thread reads do not accept query parameters.")
-      : { ok: true, limits: { threadLimit: 50, messageLimit: 100 }, query: "" };
+    const allowed = new Set(["messageLimit"]);
+    for (const key of searchParameterKeys(url.searchParams)) {
+      if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) {
+        return invalidResult(`Unsupported or repeated query parameter: ${key}.`);
+      }
+    }
+    const messageLimit = boundedInteger(url.searchParams.get("messageLimit"), 100, 1, 100);
+    return messageLimit === null
+      ? invalidResult("Message pagination is invalid.")
+      : { ok: true, limits: { threadLimit: 1, messageLimit }, query: "", cursor: null };
   }
   const allowed = new Set(route.kind === "search"
-    ? ["q", "threadLimit", "messageLimit"]
-    : ["threadLimit", "messageLimit"]);
-  for (const key of url.searchParams.keys()) {
+    ? ["q", "threadLimit", "messageLimit", "cursor"]
+    : ["threadLimit", "messageLimit", "cursor"]);
+  for (const key of searchParameterKeys(url.searchParams)) {
     if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1) {
       return invalidResult(`Unsupported or repeated query parameter: ${key}.`);
     }
@@ -240,7 +265,31 @@ function parseReadRequest(request: Request, route: ReadRoute):
   if (route.kind === "search" && (!query || query.length > 100 || hasUnsafeText(query))) {
     return invalidResult("Message search requires 1 to 100 safe text characters.");
   }
-  return { ok: true, limits: { threadLimit, messageLimit }, query };
+  const cursor = parseInboxCursor(url.searchParams.get("cursor"));
+  if (cursor === undefined) return invalidResult("Message cursor is invalid.");
+  return { ok: true, limits: { threadLimit, messageLimit }, query, cursor };
+}
+
+function searchParameterKeys(parameters: URLSearchParams): readonly string[] {
+  const keys = new Set<string>();
+  parameters.forEach((_value, key) => keys.add(key));
+  return [...keys];
+}
+
+function parseInboxCursor(value: string | null): InboxCursor | null | undefined {
+  if (value === null || value === "") return null;
+  if (value.length > 128 || hasUnsafeText(value)) return undefined;
+  const separator = value.lastIndexOf("|");
+  if (separator <= 0) return undefined;
+  const beforeUpdatedAt = value.slice(0, separator);
+  const beforeThreadId = value.slice(separator + 1);
+  if (!/^thr_[0-9a-f]{32}$/.test(beforeThreadId)) return undefined;
+  const timestamp = Date.parse(beforeUpdatedAt);
+  if (!Number.isFinite(timestamp)) return undefined;
+  return Object.freeze({
+    beforeUpdatedAt: new Date(timestamp).toISOString(),
+    beforeThreadId,
+  });
 }
 
 async function parseSendCommand(request: Request): Promise<
@@ -268,10 +317,26 @@ function normalizeInbox(value: RawInbox | null) {
   if (!isRecord(value)) throw new Error("invalid inbox response");
   const rawThreads = Array.isArray(value.threads) ? value.threads : null;
   const unread = safeInteger(value.unreadCount, 0, 100000);
-  if (!rawThreads || rawThreads.length > 50 || unread === null) throw new Error("invalid inbox response");
+  const pageUnread = safeInteger(value.pageUnreadCount, 0, 100000);
+  const nextCursor = value.nextCursor === null || value.nextCursor === undefined
+    ? ""
+    : requiredText(value.nextCursor, 128);
+  if (!rawThreads || rawThreads.length > 50 || unread === null || pageUnread === null) {
+    throw new Error("invalid inbox response");
+  }
   const threads = rawThreads.map(normalizeThread);
-  if (threads.reduce((sum, thread) => sum + thread.unread, 0) !== unread) throw new Error("inconsistent unread count");
-  return Object.freeze({ unread, threads: Object.freeze(threads) });
+  if (threads.reduce((sum, thread) => sum + thread.unread, 0) !== pageUnread) {
+    throw new Error("inconsistent page unread count");
+  }
+  if (nextCursor && parseInboxCursor(nextCursor) === undefined) {
+    throw new Error("invalid next cursor");
+  }
+  return Object.freeze({
+    unread,
+    pageUnread,
+    nextCursor,
+    threads: Object.freeze(threads),
+  });
 }
 
 function normalizeThread(value: unknown) {
@@ -353,12 +418,6 @@ function normalizeReadRow(value: ReadRow | undefined, expectedThreadId: string) 
   const threadId = publicId(value.thread_id, /^thr_[0-9a-f]{32}$/);
   if (threadId !== expectedThreadId || safeInteger(value.unread_count, 0, 0) !== 0) throw new Error("read identity mismatch");
   return Object.freeze({ threadId, readAt: isoTimestamp(value.read_at), unreadCount: 0 });
-}
-
-function threadMatches(thread: ReturnType<typeof normalizeThread>, query: string): boolean {
-  const needle = query.toLocaleLowerCase();
-  return [thread.title, thread.contractKey, thread.type, ...thread.messages.flatMap((message) => [message.sender, message.body])]
-    .some((value) => String(value || "").toLocaleLowerCase().includes(needle));
 }
 
 function mapRpcError(error: RpcError): Response {

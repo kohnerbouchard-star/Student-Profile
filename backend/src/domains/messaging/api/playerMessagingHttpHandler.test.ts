@@ -16,8 +16,10 @@ Deno.test("player messaging handler returns UUID-private inbox data", async () =
     request("/players/me/messages?threadLimit=20&messageLimit=40"),
     { kind: "list" },
     dependencies({
-      read_player_messages_v1: {
-        unreadCount: 1,
+      read_player_messages_v2: {
+        unreadCount: 4,
+        pageUnreadCount: 1,
+        nextCursor: `${NOW.toISOString()}|${THREAD}`,
         threads: [{
           id: THREAD,
           type: "player",
@@ -48,7 +50,9 @@ Deno.test("player messaging handler returns UUID-private inbox data", async () =
   assertEquals(response.headers.get("cache-control"), "private, no-store");
   const body = await response.json();
   assertEquals(body.ok, true);
-  assertEquals(body.data.unread, 1);
+  assertEquals(body.data.unread, 4);
+  assertEquals(body.data.pageUnread, 1);
+  assertEquals(body.data.nextCursor, `${NOW.toISOString()}|${THREAD}`);
   assertEquals(body.data.threads[0].id, THREAD);
   assertEquals(body.data.threads[0].messages[0].id, MESSAGE);
   assertNoUuid(JSON.stringify(body));
@@ -59,32 +63,11 @@ Deno.test("player messaging search filters private results and rejects unsafe or
     request("/players/me/messages/search?q=attendance&threadLimit=10&messageLimit=20"),
     { kind: "search" },
     dependencies({
-      read_player_messages_v1: {
+      read_player_messages_v2: {
         unreadCount: 3,
-        threads: [
-          {
-            id: THREAD,
-            type: "player",
-            title: "Trade coordination",
-            contractKey: null,
-            status: "active",
-            allowPlayerReplies: true,
-            participantCount: 2,
-            unreadCount: 1,
-            updatedAt: NOW.toISOString(),
-            retentionUntil: "2027-07-20T04:00:00.000Z",
-            messages: [{
-              id: MESSAGE,
-              senderType: "player",
-              senderName: "Player Two",
-              senderReference: "PLAYER-002",
-              body: "Ready for the market.",
-              moderated: false,
-              self: false,
-              createdAt: NOW.toISOString(),
-            }],
-          },
-          {
+        pageUnreadCount: 2,
+        nextCursor: null,
+        threads: [{
             id: THREAD_TWO,
             type: "announcement",
             title: "Attendance notice",
@@ -105,8 +88,7 @@ Deno.test("player messaging search filters private results and rejects unsafe or
               self: false,
               createdAt: NOW.toISOString(),
             }],
-          },
-        ],
+        }],
       },
     }),
   );
@@ -115,7 +97,8 @@ Deno.test("player messaging search filters private results and rejects unsafe or
   assertEquals(response.headers.get("cache-control"), "private, no-store");
   const body = await response.json();
   assertEquals(body.data.query, "attendance");
-  assertEquals(body.data.unread, 2);
+  assertEquals(body.data.unread, 3);
+  assertEquals(body.data.pageUnread, 2);
   assertEquals(body.data.threads.length, 1);
   assertEquals(body.data.threads[0].id, THREAD_TWO);
   assertNoUuid(JSON.stringify(body));
@@ -132,6 +115,41 @@ Deno.test("player messaging search filters private results and rejects unsafe or
     assertEquals(invalid.status, 400);
     assertEquals((await invalid.json()).error.code, "invalid_player_message_request");
   }
+});
+
+Deno.test("player messaging handler reads an exact participant thread outside inbox pagination", async () => {
+  const response = await handlePlayerMessagingRequest(
+    request(`/players/me/messages/threads/${THREAD}?messageLimit=25`),
+    { kind: "thread", threadId: THREAD },
+    dependencies({
+      read_player_message_thread_v1: {
+        id: THREAD,
+        type: "player",
+        title: "Older exact thread",
+        contractKey: null,
+        status: "active",
+        allowPlayerReplies: true,
+        participantCount: 2,
+        unreadCount: 0,
+        updatedAt: NOW.toISOString(),
+        retentionUntil: "2027-07-20T04:00:00.000Z",
+        messages: [{
+          id: MESSAGE,
+          senderType: "player",
+          senderName: "Player Two",
+          senderReference: "PLAYER-002",
+          body: "Exact lookup succeeded.",
+          moderated: false,
+          self: false,
+          createdAt: NOW.toISOString(),
+        }],
+      },
+    }),
+  );
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.data.thread.id, THREAD);
+  assertNoUuid(JSON.stringify(body));
 });
 
 Deno.test("player messaging handler preserves applied and replayed send outcomes", async () => {

@@ -333,6 +333,7 @@ Deno.serve(async (request) => {
       { createServiceClient },
     );
   }
+
   const playerMessagingResponse = await dispatchClassroomMessagingRequest(
     request,
     { createServiceClient },

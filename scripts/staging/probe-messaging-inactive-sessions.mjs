@@ -31,8 +31,9 @@ if (process.argv.includes("--plan")) {
       "MESSAGING_STAGING_ENDED_PLAYER_SESSION_TOKEN",
     ],
     guards: [
-      "manual dispatch from exact main only",
+      "manual dispatch from exact candidate head only",
       "protected staging environment",
+      "exact source SHA and artifact digest binding",
       "known production project refs rejected",
       "no game lifecycle mutation performed by the probe",
       "synthetic inactive sessions only",

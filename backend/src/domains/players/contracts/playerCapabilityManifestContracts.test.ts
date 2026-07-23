@@ -47,16 +47,6 @@ const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "loanRepay",
 ]);
 
-const MESSAGING_ENDPOINTS: readonly PlayerCapabilityEndpointKey[] = [
-  "messages",
-  "messageThread",
-  "messagePolicy",
-  "messageSearch",
-  "messageThreadCreate",
-  "messageSend",
-  "messageRead",
-];
-
 Deno.test("player capability manifest is generated from the reviewed endpoint allowlist", () => {
   const manifest = buildPlayerCapabilityManifest();
   assertEquals(manifest.schemaVersion, PLAYER_CAPABILITY_SCHEMA_VERSION);
@@ -67,8 +57,7 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
   for (const key of [
     "dashboard", "profile", "news", "market", "portfolio", "contracts",
-    "inventory", "store", "banking", "business", "loans", "world", "marketplace",
-    "messages",
+    "inventory", "store", "banking", "business", "loans", "world", "marketplace", "messages",
   ] as const) assertEquals(manifest.capabilities.routes[key], true);
 
   for (const key of [
@@ -80,8 +69,10 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "businessProduction", "businessPrice", "businessHire",
     "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute", "messageSearch", "messageSend",
+    "marketplaceCancel", "marketplaceDispute",
+    "messageSearch", "messageSend",
   ] as const) assertEquals(manifest.capabilities.actions[key], true);
+
   assertEquals(manifest.capabilities.actions.messageAttachment, false);
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
@@ -93,8 +84,9 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
     "worldRuntime", "arrivalClass", "travelQuote", "travelExecute",
     "travelComplete", "residencyRequest", "marketplace",
     "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute", ...BUSINESS_BANKING_ENDPOINTS,
-    ...MESSAGING_ENDPOINTS,
+    "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
+    "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
+    "messageRead", ...BUSINESS_BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -120,13 +112,13 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":listingId", `lst_${"b".repeat(32)}`)
         .replace(":orderId", `ord_${"c".repeat(32)}`)
+        .replace(":threadId", `thr_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
         .replace(":offerKey", `lop_${"a".repeat(32)}`)
-        .replace(":loanKey", `lon_${"a".repeat(32)}`)
-        .replace(":threadId", `thr_${"a".repeat(32)}`),
+        .replace(":loanKey", `lon_${"a".repeat(32)}`),
     }))
   );
 

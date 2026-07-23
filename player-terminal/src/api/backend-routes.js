@@ -17,10 +17,9 @@ import {
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
   ...CORE_PLAYER_BACKEND_ROUTE_KEYS,
   ...CRAFTING_BACKEND_ROUTE_KEYS.filter((key) => !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key)),
-  ...MESSAGING_BACKEND_ROUTE_KEYS.filter(
-    (key) =>
-      !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
-      !CRAFTING_BACKEND_ROUTE_KEYS.includes(key),
+  ...MESSAGING_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !CRAFTING_BACKEND_ROUTE_KEYS.includes(key)
   ),
 ]);
 

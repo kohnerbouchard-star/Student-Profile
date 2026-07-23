@@ -73,7 +73,11 @@ assert.match(messagesPage, /escapeHtml\(message\.body\)/);
 
 assert.match(backendRoutes, /resolveMessagingBackendRequest/);
 assert.match(backendRoutes, /hasMessagingBackendRoute/);
-assert.doesNotMatch(backendRoutes, /backend-routes-core/);
+assert.match(backendRoutes, /backend-routes-core/);
+assert.match(backendRoutes, /crafting-backend-routes/);
+assert.match(backendRoutes, /messaging-backend-routes/);
+assert.match(backendRoutes, /hasCorePlayerBackendRoute/);
+assert.match(backendRoutes, /hasCraftingBackendRoute/);
 assert.match(messagingRoutes, /\/players\/me\/messages\/threads/);
 assert.match(messagingRoutes, /recipientPlayerId/);
 assert.match(messagingRoutes, /UUID\.test/);

@@ -15,10 +15,10 @@ import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
-import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
-import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import { handleMessagingOperation } from "./messagingOperations.ts";
 import { guardStaffMessagingRateLimit } from "../../../src/security/staffMessagingRateLimitDispatch.ts";
+import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
+import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -277,6 +277,9 @@ Deno.serve(async (request: Request) => {
         marketplaceOperation.status || 500,
         marketplaceOperation.body,
       );
+    }
+
+
     if (suffix.startsWith("/messages")) {
       const rateLimit = await guardStaffMessagingRateLimit(
         context.service,

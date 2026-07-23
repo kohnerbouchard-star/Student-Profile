@@ -95,6 +95,8 @@ jobs:
               $0 == "scripts/admin-messaging-moderation-contract.mjs" { next }
               $0 == "scripts/staging/probe-messaging-lifecycle.mjs" { next }
               $0 == "scripts/staging/probe-messaging-inactive-sessions.mjs" { next }
+              $0 == "scripts/staging/messaging-connected-acceptance.sql" { next }
+              $0 == "scripts/staging/verify-messaging-zero-residue.sql" { next }
               $0 == "scripts/environment-neutral-browser-integration.test.mjs" { next }
               $0 == "scripts/runtime-config-contract.test.mjs" { next }
               $0 ~ /^scripts\/business-banking-[A-Za-z0-9.-]*[.]mjs$/ { next }
@@ -111,7 +113,6 @@ jobs:
               $0 ~ /^backend\/src\/domains\/business-banking\/(api|contracts|domain|infrastructure)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/crafting\// { next }
               $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/messaging\/(api|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
               $0 ~ /^backend\/src\/domains\/game-dashboard\/(api\/playerGameDashboardHttpHandler([.]test)?[.]ts|contracts\/playerGameDashboardContracts[.]ts)$/ { next }
               $0 ~ /^backend\/src\/domains\/economy\/api\/playerBankingPublic[A-Za-z0-9.-]*[.]ts$/ { next }
@@ -137,19 +138,16 @@ jobs:
               $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072110[0-8]000_/ { next }
               $0 ~ /^backend\/supabase\/migrations\/2026072112[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
-              $0 ~ /^backend\/supabase\/migrations\/2026072115[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072113[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
               $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
-              $0 == "backend/src/security/playerMessagingRateLimitDispatch.test.ts" { next }
-              $0 == "backend/src/security/staffMessagingRateLimitDispatch.ts" { next }
               $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
               $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
               $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/(worldRuntimeOperations|campaignProgramRuntime|campaignWorkersRuntime)([.]test)?[.]ts$/ { next }
               $0 == "backend/supabase/functions/classroom-api/messagingDispatch.ts" { next }
-              $0 == "backend/supabase/functions/admin-api/index.ts" { next }
               $0 ~ /^backend\/supabase\/functions\/admin-api\/messaging[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/supabase\/migrations\/2026072115[0-9]{4}_[A-Za-z0-9_]+[.]sql$/ { next }
+              $0 ~ /^backend\/supabase\/migrations\/2026072115(0000|1000|2000|3000|4000)_[A-Za-z0-9_]+[.]sql$/ { next }
               $0 == "docs/workstreams/messaging-communication-v1.md" { next }
               $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
               $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
