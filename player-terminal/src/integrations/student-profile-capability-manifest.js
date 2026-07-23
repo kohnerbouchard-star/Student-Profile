@@ -4,7 +4,7 @@ import { ApiRequestError } from "../api/errors.js";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const SUPPORTED_SERVICE = "classroom-api";
-const CORE_ENDPOINT_KEYS = new Set(["bootstrap", "capabilities", "dashboard", "countries"]);
+const CORE_CAPABILITY_ENDPOINT_KEYS = new Set(["bootstrap", "dashboard"]);
 
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
@@ -155,12 +155,7 @@ function object(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
-function coreEndpointFailure(endpointKey, message, detail = {}) {
-  if (CORE_ENDPOINT_KEYS.has(endpointKey)) throw mismatch(message, { endpointKey, ...detail });
-  return null;
-}
-
-function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
+function validateCapabilityGroup(groupName, values, endpointKeys, requirements, invalidEndpointDetails) {
   const group = object(values);
   if (!group) throw mismatch(`The ${groupName} capability group is missing.`, { groupName });
 
@@ -170,7 +165,7 @@ function validateCapabilityGroup(groupName, values, endpointKeys, requirements) 
     if (!endpointKey) continue;
 
     if (typeof enabled !== "boolean") {
-      if (CORE_ENDPOINT_KEYS.has(endpointKey)) {
+      if (CORE_CAPABILITY_ENDPOINT_KEYS.has(endpointKey)) {
         throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key, endpointKey });
       }
       reviewed[key] = false;
@@ -178,11 +173,13 @@ function validateCapabilityGroup(groupName, values, endpointKeys, requirements) 
     }
 
     if (enabled && !endpointKeys.has(endpointKey)) {
-      if (CORE_ENDPOINT_KEYS.has(endpointKey)) {
+      const invalidDetail = invalidEndpointDetails.get(endpointKey) || {};
+      if (CORE_CAPABILITY_ENDPOINT_KEYS.has(endpointKey)) {
         throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, {
           groupName,
           key,
-          endpointKey
+          endpointKey,
+          ...invalidDetail
         });
       }
       reviewed[key] = false;
@@ -220,6 +217,7 @@ export function validateStudentProfileCapabilityManifest(raw) {
   const seenEndpointKeys = new Set();
   const reviewedEndpointKeys = new Set();
   const reviewedEndpoints = [];
+  const invalidEndpointDetails = new Map();
 
   for (const descriptor of manifest.endpoints) {
     const item = object(descriptor);
@@ -232,11 +230,11 @@ export function validateStudentProfileCapabilityManifest(raw) {
     const frontendKeys = ENDPOINT_COVERAGE[key];
     if (!frontendKeys?.length) continue;
     if (!frontendKeys.every(reviewedFrontendRoute)) {
-      coreEndpointFailure(key, `Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
+      invalidEndpointDetails.set(key, { key });
       continue;
     }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {
-      coreEndpointFailure(key, `Backend endpoint ${key} has no operations.`, { key });
+      invalidEndpointDetails.set(key, { key });
       continue;
     }
 
@@ -247,11 +245,7 @@ export function validateStudentProfileCapabilityManifest(raw) {
       const pathTemplate = typeof operation?.pathTemplate === "string" ? operation.pathTemplate.trim() : "";
       const isPlayerPath = pathTemplate === "/players/me" || pathTemplate.startsWith("/players/me/");
       if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !isPlayerPath) {
-        coreEndpointFailure(key, `Backend endpoint ${key} contains an invalid operation.`, {
-          key,
-          method,
-          pathTemplate
-        });
+        invalidEndpointDetails.set(key, { key, method, pathTemplate });
         valid = false;
         break;
       }
@@ -263,26 +257,31 @@ export function validateStudentProfileCapabilityManifest(raw) {
     reviewedEndpoints.push(Object.freeze({ key, operations: Object.freeze(operations) }));
   }
 
-  for (const key of CORE_ENDPOINT_KEYS) {
-    if (!reviewedEndpointKeys.has(key)) {
-      throw mismatch(`The core endpoint ${key} is missing or invalid.`, { endpointKey: key, key });
-    }
-  }
-
   const capabilities = object(manifest.capabilities);
   if (!capabilities) throw mismatch("The capability flags are missing.");
   const routes = validateCapabilityGroup(
     "routes",
     capabilities.routes,
     reviewedEndpointKeys,
-    ROUTE_REQUIREMENTS
+    ROUTE_REQUIREMENTS,
+    invalidEndpointDetails
   );
   const actions = validateCapabilityGroup(
     "actions",
     capabilities.actions,
     reviewedEndpointKeys,
-    ACTION_REQUIREMENTS
+    ACTION_REQUIREMENTS,
+    invalidEndpointDetails
   );
+
+  if (routes.dashboard && !reviewedEndpointKeys.has("countries")) {
+    throw mismatch("The Dashboard capability is missing the Countries endpoint descriptor.", {
+      groupName: "routes",
+      key: "dashboard",
+      endpointKey: "countries",
+      ...(invalidEndpointDetails.get("countries") || {})
+    });
+  }
 
   return Object.freeze({
     schemaVersion: manifest.schemaVersion,
