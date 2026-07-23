@@ -1,6 +1,6 @@
 # Progression convergence and acceptance ledger v1
 
-Status: `CONNECTED_STAGING_SQL_REPAIRS_PENDING_FINAL_EXACT_HEAD_ACCEPTANCE`
+Status: `FINAL_ACCEPTANCE_CANDIDATE_PINNED`
 
 Authority: PR #261, branch `agent/progression-reputation-achievements-v1`.
 
