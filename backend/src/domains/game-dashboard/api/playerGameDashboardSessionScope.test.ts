@@ -17,7 +17,7 @@ const PLAYER_ID = "00000000-0000-4000-8000-000000000021";
 Deno.test(
   "player dashboard derives game scope from the authenticated session when the query omits gameSessionId",
   async () => {
-    let capturedInput: PlayerGameDashboardReadInput | null = null;
+    let capturedGameSessionId = "";
 
     const response = await handlePlayerGameDashboardRequest(
       new Request("https://example.test/players/me/game/dashboard", {
@@ -53,7 +53,7 @@ Deno.test(
         } as never),
         createRepository: () => ({
           read: async (input: PlayerGameDashboardReadInput) => {
-            capturedInput = input;
+            capturedGameSessionId = input.gameSessionId;
             return {
               gameSession: {
                 id: GAME_SESSION_ID,
@@ -120,7 +120,7 @@ Deno.test(
       throw new Error(`Expected dashboard status 200, received ${response.status}.`);
     }
 
-    if (capturedInput?.gameSessionId !== GAME_SESSION_ID) {
+    if (capturedGameSessionId !== GAME_SESSION_ID) {
       throw new Error(
         "Dashboard repository did not receive the game scope derived from the authenticated player session.",
       );
