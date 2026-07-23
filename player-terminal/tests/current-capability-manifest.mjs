@@ -17,7 +17,7 @@ try {
     message: error?.message,
     code: error?.code,
     endpointKey: error?.endpointKey,
-    body: error?.body,
+    detail: error?.detail,
   }, null, 2));
   throw error;
 }
@@ -51,4 +51,27 @@ assert.equal(
 assert.equal(forwardCompatible.capabilities.routes.dashboard, true);
 assert.ok(forwardCompatible.endpoints.some((endpoint) => endpoint.key === "dashboard"));
 
-console.log("Exact backend manifest and feature-scoped future capability drift passed Player Terminal validation.");
+const optionalDrift = structuredClone(generated);
+const messageSearch = optionalDrift.endpoints.find((endpoint) => endpoint.key === "messageSearch");
+assert.ok(messageSearch, "The generated manifest must include the optional messageSearch descriptor.");
+messageSearch.operations[0].method = "PATCH";
+optionalDrift.capabilities.actions.messageSearch = true;
+const optionalQuarantined = validateStudentProfileCapabilityManifest(optionalDrift);
+assert.equal(optionalQuarantined.capabilities.actions.messageSearch, false);
+assert.equal(optionalQuarantined.endpoints.some((endpoint) => endpoint.key === "messageSearch"), false);
+assert.equal(optionalQuarantined.capabilities.routes.dashboard, true);
+assert.ok(optionalQuarantined.endpoints.some((endpoint) => endpoint.key === "dashboard"));
+
+const coreDrift = structuredClone(generated);
+const dashboard = coreDrift.endpoints.find((endpoint) => endpoint.key === "dashboard");
+assert.ok(dashboard, "The generated manifest must include the core dashboard descriptor.");
+dashboard.operations[0].method = "PATCH";
+assert.throws(
+  () => validateStudentProfileCapabilityManifest(coreDrift),
+  (error) => error?.code === "CAPABILITY_CONTRACT_MISMATCH"
+    && error?.detail?.endpointKey === "dashboard"
+    && error?.detail?.method === "PATCH",
+  "Core capability drift must remain fail closed with bounded diagnostics.",
+);
+
+console.log("Exact backend manifest, feature-scoped optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
