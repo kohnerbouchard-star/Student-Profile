@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CONVERGENCE_OVERLAY_REVISION: "7"
+      CONVERGENCE_OVERLAY_REVISION: "8"
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
@@ -48,7 +48,10 @@ jobs:
           if [ "$status" -eq 0 ]; then
             sed -i 's|git diff --cached --check$|git diff --cached --check -- . ":(exclude)docs/workstreams/messaging-communication-v1.md"|' scripts/progression-final-convergence.sh
             sed -i '/Messaging main not incorporated/c\test "$(cat .git/MERGE_HEAD)" = "$EXPECTED_MAIN_HEAD" || fail "Messaging main merge parent missing"' scripts/progression-final-convergence.sh
+            sed -i '/rm -f .github\/workflows\/progression-final-convergence-carrier.yml/d' scripts/progression-final-convergence.sh
+            sed -i '/git checkout .*progression-runtime-v1.yml/c\git checkout "origin/$BRANCH_NAME" -- .github/workflows/progression-runtime-v1.yml .github/workflows/progression-final-convergence-carrier.yml' scripts/progression-final-convergence.sh
             grep -Fq 'Messaging main merge parent missing' scripts/progression-final-convergence.sh || status=1
+            grep -Fq 'origin/$BRANCH_NAME' scripts/progression-final-convergence.sh || status=1
           fi
           exit "$status"
       - name: Execute guarded Progression convergence
