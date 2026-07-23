@@ -19,18 +19,40 @@ jobs:
           ref: agent/production-integration-gate-v1
           fetch-depth: 0
           persist-credentials: false
-      - name: Capture merge result
+      - name: Capture merge and replacement state
         shell: bash
         run: |
           set +e
           git config user.name diagnostic
           git config user.email diagnostic@example.invalid
           git fetch origin main
+          starting_head="$(git rev-parse HEAD)"
+          remote_head="$(git rev-parse origin/agent/production-integration-gate-v1)"
           git merge --no-edit origin/main > /tmp/merge.log 2>&1
-          status=$?
+          merge_status=$?
+          python3 - <<'PY' > /tmp/replacements.log 2>&1
+          from pathlib import Path
+          acceptance = Path('scripts/pr295-connected-staging-acceptance.mjs').read_text()
+          build = Path('.github/workflows/pr295-immutable-release-build.yml').read_text()
+          values = [
+            ('acceptance_bad', '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n', acceptance),
+            ('group', 'pr295-immutable-release-v4-', build),
+            ('release_commit', 'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', build),
+            ('output_env', 'OUTPUT_ROOT: /tmp/econovaria-release-v4', build),
+            ('artifact_name', 'name: econovaria-release-7838d93ef33908f61a2534486ec92031875a9a22-v4', build),
+            ('all_v4_paths', '/tmp/econovaria-release-v4', build),
+          ]
+          for name, needle, text in values:
+            print(f'{name}={text.count(needle)}')
+          PY
+          replacement_status=$?
           {
-            echo "merge_status=$status"
+            echo "starting_head=$starting_head"
+            echo "remote_head=$remote_head"
+            echo "merge_status=$merge_status"
+            echo "replacement_status=$replacement_status"
             cat /tmp/merge.log
+            cat /tmp/replacements.log
             echo '--- porcelain ---'
             git status --porcelain=v1
             echo '--- unmerged ---'
