@@ -189,6 +189,26 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   marketplaceDispute: byMethod({
     POST: operation("player.marketplace.dispute.open", "sensitive"),
+  messages: byMethod({
+    GET: operation("player.messages.read", "read"),
+  }),
+  messageThread: byMethod({
+    GET: operation("player.messages.thread.read", "read"),
+  }),
+  messagePolicy: byMethod({
+    GET: operation("player.messages.policy.read", "read"),
+  }),
+  messageSearch: byMethod({
+    GET: operation("player.messages.search", "read"),
+  }),
+  messageThreadCreate: byMethod({
+    POST: operation("player.messages.thread.create", "sensitive"),
+  }),
+  messageSend: byMethod({
+    POST: operation("player.messages.send", "sensitive"),
+  }),
+  messageRead: byMethod({
+    POST: operation("player.messages.receipt", "write"),
   }),
   news: byMethod({
     GET: operation("player.news.read", "read"),
@@ -246,7 +266,10 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
 
   const limited = await guardReviewedPlayerRequest(
     request,
-    operation,
+    {
+      ...operation,
+      action: threadScopedMessagingAction(request, endpointKey) ?? operation.action,
+    },
     dependencies,
   );
   return limited ?? next();
@@ -260,6 +283,23 @@ export async function dispatchRateLimitedPlayerLoginRequest(
   if (request.method !== "POST") return next();
   const limited = await guardPlayerLoginRequest(request, dependencies);
   return limited ?? next();
+}
+
+function threadScopedMessagingAction(
+  request: Request,
+  endpointKey: ReviewedPlayerRateLimitEndpointKey,
+): string | null {
+  if (!new Set<ReviewedPlayerRateLimitEndpointKey>([
+    "messageThread",
+    "messageSend",
+    "messageRead",
+  ]).has(endpointKey)) return null;
+  const match = new URL(request.url).pathname.match(
+    /\/messages\/threads\/thr_([0-9a-f]{32})(?:\/|$)/,
+  );
+  return match?.[1]
+    ? `player.messages.thr_${match[1].slice(0, 24)}`
+    : null;
 }
 
 async function guardReviewedPlayerRequest(
