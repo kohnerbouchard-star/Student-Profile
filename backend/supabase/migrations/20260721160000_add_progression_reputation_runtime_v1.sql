@@ -398,7 +398,7 @@ begin
     select 1 from public.players as player_row
     where player_row.game_session_id = p_game_session_id
       and player_row.id = p_player_id
-      and player_row.archived_at is null
+      and player_row.status = 'active'
   ) then
     raise exception 'PROGRESSION_PLAYER_NOT_FOUND' using errcode = 'P0001';
   end if;
@@ -964,7 +964,7 @@ begin
   join public.players as player_row
     on player_row.game_session_id = profile_row.game_session_id and player_row.id = profile_row.player_id
   where profile_row.game_session_id = p_game_session_id and profile_row.player_id = p_player_id
-    and player_row.archived_at is null;
+    and player_row.status = 'active';
   if not found then raise exception 'PROGRESSION_PLAYER_NOT_FOUND' using errcode = 'P0001'; end if;
   select * into v_profile from public.player_progression_profiles
   where game_session_id = p_game_session_id and player_id = p_player_id;
@@ -1097,7 +1097,7 @@ begin
   from public.players as player_row
   where player_row.game_session_id = p_game_session_id
     and player_row.player_identifier_normalized = lower(btrim(p_player_identifier))
-    and player_row.archived_at is null;
+    and player_row.status = 'active';
   if v_player_id is null then raise exception 'PROGRESSION_PUBLIC_PROFILE_NOT_FOUND' using errcode = 'P0001'; end if;
   perform public.ensure_player_progression_profile_v1(p_game_session_id,v_player_id);
   select * into v_profile from public.player_progression_profiles
@@ -1151,7 +1151,7 @@ begin
   insert into public.player_progression_profiles (game_session_id, player_id)
   select p_game_session_id, player_row.id
   from public.players as player_row
-  where player_row.game_session_id = p_game_session_id and player_row.archived_at is null
+  where player_row.game_session_id = p_game_session_id and player_row.status = 'active'
   on conflict do nothing;
   select jsonb_build_object(
     'players', coalesce((
@@ -1169,7 +1169,7 @@ begin
       ) order by player_row.display_name, player_row.player_identifier)
       from (
         select * from public.players
-        where game_session_id = p_game_session_id and archived_at is null
+        where game_session_id = p_game_session_id and status = 'active'
         order by display_name, player_identifier
         limit p_limit offset p_offset
       ) as player_row
@@ -1243,7 +1243,7 @@ begin
   from public.players
   where game_session_id = p_game_session_id
     and player_identifier_normalized = lower(btrim(p_player_identifier))
-    and archived_at is null;
+    and status = 'active';
   if v_player is null then raise exception 'PROGRESSION_PLAYER_NOT_FOUND' using errcode = 'P0001'; end if;
   perform public.ensure_player_progression_profile_v1(p_game_session_id,v_player);
   if p_correction_type = 'experience' then
