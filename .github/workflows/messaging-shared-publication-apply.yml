@@ -102,10 +102,11 @@ jobs:
           done
           printf 'commit' > /tmp/messaging-shared-stage
           git commit -m "feat(messaging): publish shared routes and capabilities additively"
+          git rev-parse HEAD > /tmp/messaging-generated-sha
           printf 'push' > /tmp/messaging-shared-stage
           git push origin HEAD:agent/messaging-communication-v1
 
-      - name: Publish shared-publication status
+      - name: Publish generated identity and status
         if: always()
         uses: actions/github-script@v8
         with:
@@ -115,14 +116,19 @@ jobs:
             const stage = fs.existsSync('/tmp/messaging-shared-stage')
               ? fs.readFileSync('/tmp/messaging-shared-stage', 'utf8').trim()
               : 'unknown';
-            const slug = stage.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70);
+            const generated = fs.existsSync('/tmp/messaging-generated-sha')
+              ? fs.readFileSync('/tmp/messaging-generated-sha', 'utf8').trim()
+              : '';
+            const context = generated && /^[0-9a-f]{40}$/.test(generated)
+              ? `messaging/generated/${generated}`
+              : `messaging/shared-stage/${stage.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70)}`;
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.sha,
               state: success ? 'success' : 'failure',
-              context: success ? 'messaging/shared-publication' : `messaging/shared-stage/${slug}`,
-              description: success ? 'Messaging shared registrations unioned with Marketplace main' : `Failed at ${stage}`.slice(0, 140),
+              context,
+              description: generated ? `Generated commit ${generated}` : `Failed at ${stage}`.slice(0, 140),
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
 
