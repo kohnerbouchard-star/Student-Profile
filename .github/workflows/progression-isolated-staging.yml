@@ -92,7 +92,7 @@ jobs:
           grep -Fq 'read_admin_progression_corrections_v1' backend/supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql
           grep -Fq 'PROGRESSION_CONNECTED_STAGING_AUTHORIZED_20260723' .github/workflows/progression-isolated-staging.yml
           cat > /tmp/progression-staging-plan.json <<JSON
-          {"schemaVersion":1,"connectedExecution":false,"guards":["exact pull-request head binding","exact artifact digest binding","protected staging environment","known production project refs rejected","zero-or-exact-four migration ledger only","transactional migration application and rollback","independent zero-residue verification","sanitized evidence only"],"acceptance":["private Player read","public profile filtering","event apply and replay","reward claim and replay","skill unlock and replay","owner Admin read","wrong-owner denial","Admin correction and replay","immutable audit denial","paused and ended lifecycle denial","committed replay after pause","zero residue"]}
+          {"schemaVersion":1,"connectedExecution":false,"guards":["exact pull-request head binding","exact artifact digest binding","protected staging environment","known production project refs rejected","exact linked staging project","zero-or-exact-four migration ledger only","transactional migration application and rollback","independent zero-residue verification","sanitized evidence only"],"acceptance":["private Player read","public profile filtering","event apply and replay","reward claim and replay","skill unlock and replay","owner Admin read","wrong-owner denial","Admin correction and replay","immutable audit denial","paused and ended lifecycle denial","committed replay after pause","zero residue"]}
           JSON
 
       - name: Compute exact Progression artifact digest
@@ -163,14 +163,16 @@ jobs:
     timeout-minutes: 30
     environment: staging
     env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PROGRESSION_PRODUCTION_PROJECT_REFS: ${{ vars.PROGRESSION_PRODUCTION_PROJECT_REFS }}
       EXPECTED_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.expected_head_sha }}
       VALIDATED_SOURCE_SHA: ${{ needs.validate-harness.outputs.source_sha }}
       VALIDATED_ARTIFACT_DIGEST: ${{ needs.validate-harness.outputs.artifact_digest }}
       EXPECTED_ARTIFACT_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_artifact_digest || needs.validate-harness.outputs.artifact_digest }}
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
     steps:
       - name: Check out immutable candidate
         uses: actions/checkout@v7
@@ -183,6 +185,34 @@ jobs:
         with:
           node-version: "22.23.1"
 
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Link exact isolated staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          )
+          test -s backend/supabase/.temp/pooler-url
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
+            *) echo 'Linked pooler identity is invalid.' >&2; exit 1 ;;
+          esac
+          echo "POOLER_URL=$pooler_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+
       - name: Enforce source, artifact, and staging project bindings
         shell: bash
         run: |
@@ -192,32 +222,33 @@ jobs:
           test "$EXPECTED_ARTIFACT_DIGEST" = "$VALIDATED_ARTIFACT_DIGEST"
           node - <<'NODE'
           const projectRef = String(process.env.SUPABASE_PROJECT_REF || '').trim();
+          const expectedStaging = String(process.env.EXPECTED_STAGING_PROJECT_REF || '').trim();
           const production = new Set([
             'cgiukdjwicykrmtkhudh',
             ...String(process.env.PROGRESSION_PRODUCTION_PROJECT_REFS || '')
               .split(',').map((value) => value.trim()).filter(Boolean),
           ]);
-          if (!/^[a-z0-9]{20}$/.test(projectRef) || production.has(projectRef)) {
+          if (!/^[a-z0-9]{20}$/.test(projectRef) || projectRef !== expectedStaging || production.has(projectRef)) {
             throw new Error('Connected Progression acceptance rejected the project ref.');
           }
           const api = new URL(process.env.SUPABASE_URL);
           if (api.protocol !== 'https:' || api.hostname !== `${projectRef}.supabase.co`) {
-            throw new Error('Supabase API URL does not match the staging project ref.');
+            throw new Error('Supabase API URL does not match the isolated staging project ref.');
           }
-          const db = new URL(process.env.SUPABASE_DB_URL);
-          if (!['postgres:', 'postgresql:'].includes(db.protocol) || !db.hostname.includes(projectRef)) {
-            throw new Error('Supabase database URL is not bound to the declared staging project ref.');
+          const db = new URL(process.env.POOLER_URL);
+          if (db.protocol !== 'postgresql:' || db.username !== `postgres.${projectRef}` || db.port !== '5432' || db.pathname !== '/postgres') {
+            throw new Error('Linked database pooler is not bound to isolated staging.');
           }
           NODE
-          printf '{"schemaVersion":1,"sourceSha":"%s","artifactDigest":"%s","projectBinding":"staging"}\n' \
-            "$EXPECTED_SOURCE_SHA" "$EXPECTED_ARTIFACT_DIGEST" > /tmp/progression-artifact-identity.json
+          printf '{"schemaVersion":1,"sourceSha":"%s","artifactDigest":"%s","projectRef":"%s","projectBinding":"isolated-staging"}\n' \
+            "$EXPECTED_SOURCE_SHA" "$EXPECTED_ARTIFACT_DIGEST" "$SUPABASE_PROJECT_REF" > /tmp/progression-artifact-identity.json
 
       - name: Determine exact staging ledger mode
         id: ledger
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/progression-ledger-count.txt
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' > /tmp/progression-ledger-count.txt
           with expected(version) as (
             values ('20260721160000'),('20260721161000'),('20260721162000'),('20260721163000')
           ), actual as (
@@ -590,7 +621,7 @@ jobs:
           } > /tmp/progression-connected.sql
 
           set +e
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
             -v run_id="$ACCEPTANCE_RUN_ID" \
             -f /tmp/progression-connected.sql \
             > /tmp/progression-acceptance.raw.log 2>&1
@@ -605,7 +636,7 @@ jobs:
             .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]');
           fs.writeFileSync('/tmp/progression-acceptance.log', sanitized, { mode: 0o600 });
           const lines = sanitized.trim().split(/\r?\n/);
-          const evidence = lines.reverse().find((line) => line.startsWith('{"schemaVersion":'));
+          const evidence = [...lines].reverse().find((line) => line.startsWith('{"schemaVersion":'));
           if (evidence) fs.writeFileSync('/tmp/progression-acceptance.json', evidence + '\n', { mode: 0o600 });
           NODE
           rm -f /tmp/progression-acceptance.raw.log /tmp/progression-connected.sql
@@ -619,7 +650,7 @@ jobs:
           ACCEPTANCE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 \
+          psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 \
             -v run_id="$ACCEPTANCE_RUN_ID" \
             -v migration_mode="$MIGRATION_MODE" <<'SQL' > /tmp/progression-zero-residue.json
           set app.progression_acceptance_run_id = :'run_id';
