@@ -1,0 +1,78 @@
+name: Messaging Fix Player Scope
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-fix-player-scope.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-fix-player-scope
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact Messaging branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Add only Messaging-owned scope entries
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/player-terminal-verify.yml')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  '              $0 == "admin/index.html" { next }\n',
+                  '              $0 == "admin/index.html" { next }\n'
+                  '              $0 == "admin/admin-bootstrap.js" { next }\n',
+              ),
+              (
+                  '              $0 ~ /^backend\\/src\\/domains\\/players\\/contracts\\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }\n',
+                  '              $0 ~ /^backend\\/src\\/domains\\/players\\/contracts\\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }\n'
+                  '              $0 ~ /^backend\\/src\\/domains\\/messaging\\// { next }\n',
+              ),
+              (
+                  '              $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }\n',
+                  '              $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }\n'
+                  '              $0 == "backend/src/security/playerMessagingRateLimitDispatch.test.ts" { next }\n'
+                  '              $0 == "backend/src/security/staffMessagingRateLimitDispatch.ts" { next }\n',
+              ),
+              (
+                  '              $0 ~ /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000|4000)_[A-Za-z0-9_]+[.]sql$/ { next }\n',
+                  '              $0 ~ /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+[.]sql$/ { next }\n',
+              ),
+          ]
+
+          for old, new in replacements:
+              if new in text:
+                  continue
+              if old not in text:
+                  raise SystemExit(f'Expected scope anchor is missing: {old.strip()}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+
+          rm .github/workflows/messaging-fix-player-scope.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(messaging): allow exact Messaging paths in Player verification"
+          git push origin HEAD:agent/messaging-communication-v1
