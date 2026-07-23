@@ -45,6 +45,10 @@ const BOOTSTRAP_PHASES = Object.freeze([
 
 const GAME_CODE_RESET_SELECTOR =
   '[data-admin-terminal-action="reset-game-code"]';
+const GAME_CODE_SHARE_ACTIONS = new Set([
+  "share-game-code",
+  "share-current-game",
+]);
 const HIDDEN_GAME_CODE_LABELS = new Set([
   "Generate Code",
   "Create Replacement Code",
@@ -84,14 +88,30 @@ function enhanceGameCodeResetButtons(root = document) {
     .forEach(enhanceHiddenGameCodeResetButton);
 }
 
+function scheduleGameCodeResetEnhancement() {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => enhanceGameCodeResetButtons());
+  });
+}
+
 function installGameCodeResetSafety() {
   document.addEventListener(
     "click",
     (event) => {
-      const button = event.target?.closest?.(GAME_CODE_RESET_SELECTOR);
-      if (!(button instanceof HTMLButtonElement)) return;
+      const action = event.target?.closest?.("[data-admin-terminal-action]");
+      const actionName = String(
+        action?.dataset?.adminTerminalAction || "",
+      ).trim();
 
-      const label = String(button.textContent || "").trim();
+      if (GAME_CODE_SHARE_ACTIONS.has(actionName)) {
+        scheduleGameCodeResetEnhancement();
+        return;
+      }
+
+      if (!(action instanceof HTMLButtonElement)) return;
+      if (!action.matches(GAME_CODE_RESET_SELECTOR)) return;
+
+      const label = String(action.textContent || "").trim();
       if (!HIDDEN_GAME_CODE_LABELS.has(label)) return;
 
       const confirmed = window.confirm(
@@ -105,23 +125,6 @@ function installGameCodeResetSafety() {
     },
     true,
   );
-
-  const observer = new MutationObserver((records) => {
-    for (const record of records) {
-      for (const node of record.addedNodes) {
-        if (!(node instanceof Element)) continue;
-        if (node.matches(GAME_CODE_RESET_SELECTOR)) {
-          enhanceHiddenGameCodeResetButton(node);
-        }
-        enhanceGameCodeResetButtons(node);
-      }
-    }
-  });
-
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
 
   enhanceGameCodeResetButtons();
 }
