@@ -56,7 +56,7 @@ Deno.test("Messaging participant lifecycle is serialized, scoped, bounded, and i
     "v_thread.retention_until <= now()",
     "v_count >= 500",
     "admin_message_last_participant",
-    "on conflict (thread_id, player_id) do nothing",
+    "on conflict on constraint message_thread_participants_pkey do nothing",
     "delete from public.message_thread_participants",
     "insert into public.message_moderation_audit",
     "participant_reference",
