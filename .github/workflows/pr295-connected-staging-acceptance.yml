@@ -14,7 +14,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-connected-staging-v5
+  group: pr295-connected-staging-v7
   cancel-in-progress: true
 
 jobs:
@@ -36,17 +36,19 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd
-      TOOLING_COMMIT: 3588532e3923cb979b146402f793c2e984b63976
-      SOURCE_RUN_ID: "30003987908"
-      SOURCE_ARTIFACT_ID: "8562186042"
-      EXPECTED_MANIFEST_SHA256: 6c39fe561a7ff8ae6747f13b6799152b05e42ba6798b8088e97d8c49dce2569e
-      EXPECTED_ARTIFACT_SET_SHA256: bc5053043cb7c77dd02a7f4260ae5f347770308cfc5ebfbe8f7eed9eff037a84
+      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
+      TOOLING_COMMIT: bf121afae982389753deaa9215aa7e36e8de132c
+      SOURCE_RUN_ID: "30047109190"
+      SOURCE_ARTIFACT_ID: "8579554182"
+      DEPLOYMENT_RUN_ID: "30047245207"
+      DEPLOYMENT_HEAD: 316ae1318c548a1bb1da39e59ee1bea162a8eb66
+      EXPECTED_MANIFEST_SHA256: 2b6d11e501bcbe6ac23fbe6dfd88c25ef0b14e6e144b9638c37f6f5c1ab3d435
+      EXPECTED_ARTIFACT_SET_SHA256: 46006e662361b754802cda78733a014373a666ec56cf990cc0fe9616f1d28d4c
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-      EXPECTED_LEDGER_COUNT: "140"
-      EXPECTED_LEDGER_HEAD: "20260723061659"
-      EXPECTED_LEDGER_SHA256: 1a318610e798f9c8a8d200282c42d65696c507ab51141398636dacf8b7cc80eb
+      EXPECTED_LEDGER_COUNT: "141"
+      EXPECTED_LEDGER_HEAD: "20260723213038"
+      EXPECTED_LEDGER_SHA256: fc161f70d158fcf16a586456d7831adc59a07e9b7bb7d0270ce9fec81f51f218
       EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -80,42 +82,25 @@ jobs:
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
           echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
 
-      - name: Require exact staging deployment success
+      - name: Require exact completed staging deployment
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/pr295-staging-artifact-deploy-v2.yml/runs?event=pull_request&per_page=30"
-          for attempt in $(seq 1 90); do
-            response="$(curl --fail --silent --show-error \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "$api")"
-            printf '%s' "$response" > /tmp/pr295-deployment-runs.json
-            read -r run_id status conclusion < <(
-              node - "$EXPECTED_PR_HEAD" <<'NODE'
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$DEPLOYMENT_RUN_ID" \
+            > /tmp/pr295-deployment-run.json
+          node - <<'NODE'
           const fs = require('node:fs');
-          const expected = process.argv[2];
-          const payload = JSON.parse(fs.readFileSync('/tmp/pr295-deployment-runs.json', 'utf8'));
-          const runs = (payload.workflow_runs || [])
-            .filter((run) => run.head_sha === expected)
-            .sort((a, b) => b.run_number - a.run_number);
-          const run = runs[0];
-          if (!run) process.exit(0);
-          process.stdout.write(`${run.id} ${run.status} ${run.conclusion || 'pending'}\n`);
+          const run = JSON.parse(fs.readFileSync('/tmp/pr295-deployment-run.json', 'utf8'));
+          if (String(run.id) !== process.env.DEPLOYMENT_RUN_ID) throw new Error('deployment run ID mismatch');
+          if (run.head_sha !== process.env.DEPLOYMENT_HEAD) throw new Error('deployment head mismatch');
+          if (run.path !== '.github/workflows/pr295-staging-artifact-deploy-v2.yml') throw new Error('deployment workflow mismatch');
+          if (run.status !== 'completed' || run.conclusion !== 'success') throw new Error('exact staging deployment did not succeed');
           NODE
-            )
-            if [ -n "${run_id:-}" ] && [ "$status" = "completed" ]; then
-              test "$conclusion" = "success"
-              echo "Exact staging deployment run $run_id succeeded for $EXPECTED_PR_HEAD."
-              rm -f /tmp/pr295-deployment-runs.json
-              exit 0
-            fi
-            sleep 10
-          done
-          rm -f /tmp/pr295-deployment-runs.json
-          echo "Timed out waiting for exact staging deployment success for $EXPECTED_PR_HEAD." >&2
-          exit 1
+          rm -f /tmp/pr295-deployment-run.json
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -133,8 +118,8 @@ jobs:
       - name: Download exact immutable artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8562186042
-          run-id: 30003987908
+          artifact-ids: 8579554182
+          run-id: 30047109190
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
