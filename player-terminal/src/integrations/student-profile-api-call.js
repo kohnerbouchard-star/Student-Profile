@@ -39,15 +39,30 @@ function backendPayload(context) {
   return payload;
 }
 
-function headersFor(context) {
+export function headersFor(context) {
   const token = String(context.session?.playerSessionToken || "").trim();
   if (!token) {
     throw new ApiRequestError("Your player session has expired. Reconnect through the Econovaria sign-in screen.", {
       status: 401, code: "SESSION_INVALID", endpointKey: context.endpointKey, requestId: context.requestId
     });
   }
+
+  const accessToken = String(
+    context.session?.accessToken || context.config?.accessToken || ""
+  ).replace(/^Bearer\s+/i, "").trim();
+  if (!accessToken) {
+    throw new ApiRequestError("The Player Terminal is missing its public API credential.", {
+      status: 500,
+      code: "PLAYER_RUNTIME_CONFIG_MISSING",
+      endpointKey: context.endpointKey,
+      requestId: context.requestId
+    });
+  }
+
   const headers = {
     "content-type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    apikey: accessToken,
     "x-player-session-token": token,
     "x-request-id": String(context.requestId || "")
   };
