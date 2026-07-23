@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Add only Messaging-owned scope entries
+      - name: Repair exact Messaging verification guards
         shell: bash
         run: |
           set -euo pipefail
@@ -35,8 +35,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          path = Path('.github/workflows/player-terminal-verify.yml')
-          text = path.read_text()
+          scope_path = Path('.github/workflows/player-terminal-verify.yml')
+          text = scope_path.read_text()
 
           replacements = [
               (
@@ -68,11 +68,21 @@ jobs:
                   raise SystemExit(f'Expected scope anchor is missing: {old.strip()}')
               text = text.replace(old, new, 1)
 
-          path.write_text(text)
+          scope_path.write_text(text)
+
+          staging_path = Path('.github/workflows/messaging-isolated-staging.yml')
+          staging = staging_path.read_text()
+          old_guard = "          grep -Fq '\\\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql\n"
+          new_guard = "          grep -Fq '\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql\n"
+          if new_guard not in staging:
+              if old_guard not in staging:
+                  raise SystemExit('Expected doubled-backslash staging guard is missing.')
+              staging = staging.replace(old_guard, new_guard, 1)
+          staging_path.write_text(staging)
           PY
 
           rm .github/workflows/messaging-fix-player-scope.yml
           git add -A
           git diff --cached --check
-          git commit -m "fix(messaging): allow exact Messaging paths in Player verification"
+          git commit -m "fix(messaging): repair exact verification guards"
           git push origin HEAD:agent/messaging-communication-v1
