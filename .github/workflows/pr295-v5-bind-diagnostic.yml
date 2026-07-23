@@ -1,0 +1,70 @@
+name: PR295 V5 Bind Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-v5-bind-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Capture exact binding state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main agent/production-integration-gate-v1
+          {
+            echo "head=$(git rev-parse HEAD)"
+            echo "remote_branch=$(git rev-parse origin/agent/production-integration-gate-v1)"
+            echo "main=$(git rev-parse origin/main)"
+            python3 - <<'PY'
+          from pathlib import Path
+          files = {
+              'deploy': Path('.github/workflows/pr295-staging-artifact-deploy-v2.yml').read_text(),
+              'acceptance': Path('.github/workflows/pr295-connected-staging-acceptance.yml').read_text(),
+          }
+          tokens = [
+              'group: pr295-staging-artifact-deploy-v4',
+              'group: pr295-staging-artifact-deploy-v5',
+              'cancel-in-progress: false',
+              'group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}',
+              'group: pr295-connected-staging-v1',
+              'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22',
+              'RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd',
+              'TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749',
+              'TOOLING_COMMIT: d86e3a52766855a44e3a4c970c0bac567a4d2f3d',
+              'SOURCE_RUN_ID: "30001209235"',
+              'SOURCE_RUN_ID: "30003930949"',
+              'SOURCE_ARTIFACT_ID: "8561056024"',
+              'SOURCE_ARTIFACT_ID: "8562164246"',
+              'artifact-ids: 8561056024',
+              'artifact-ids: 8562164246',
+              'run-id: 30001209235',
+              'run-id: 30003930949',
+          ]
+          for name, text in files.items():
+              print(f'[{name}]')
+              for token in tokens:
+                  count = text.count(token)
+                  if count:
+                      print(f'{count} {token}')
+          PY
+          } | tee /tmp/pr295-v5-bind-diagnostic.txt
+      - name: Upload binding diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-v5-bind-diagnostic-${{ github.event.pull_request.head.sha }}
+          path: /tmp/pr295-v5-bind-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 3
