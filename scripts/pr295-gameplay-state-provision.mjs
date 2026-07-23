@@ -10,6 +10,7 @@ import {
   selectGameplayTargetGame,
   validateGameplayProvisionedState,
   validatePhysicalEconomyPack,
+  validateProgressionBaseline,
 } from "./pr295-gameplay-state-provision-lib.mjs";
 
 function required(name) {
@@ -28,6 +29,10 @@ function safeError(error) {
 
 function exact(value) {
   return encodeURIComponent(`eq.${value}`);
+}
+
+function sum(rows, field) {
+  return rows.reduce((total, row) => total + Number(row?.[field] ?? 0), 0);
 }
 
 async function requestJson(baseUrl, serviceRoleKey, resource, options = {}) {
@@ -79,7 +84,154 @@ async function rpc(baseUrl, serviceRoleKey, name, body) {
 }
 
 async function count(baseUrl, serviceRoleKey, resource) {
-  return await requestJson(baseUrl, serviceRoleKey, `${resource}${resource.includes("?") ? "&" : "?"}select=id`, { count: true });
+  return await requestJson(
+    baseUrl,
+    serviceRoleKey,
+    `${resource}${resource.includes("?") ? "&" : "?"}select=id`,
+    { count: true },
+  );
+}
+
+async function initializeProgression({ bindings, serviceRoleKey, game }) {
+  const activePlayers = await requestJson(
+    bindings.supabaseUrl,
+    serviceRoleKey,
+    `players?select=id&game_session_id=${exact(game.id)}&status=eq.active&order=created_at.asc`,
+  );
+  if (!Array.isArray(activePlayers) || activePlayers.length === 0) {
+    throw new Error("No active Players found for Progression initialization");
+  }
+  for (const player of activePlayers) {
+    await rpc(bindings.supabaseUrl, serviceRoleKey, "ensure_player_progression_profile_v1", {
+      p_game_session_id: game.id,
+      p_player_id: player.id,
+    });
+  }
+
+  const [profiles, reputation, achievements, rewards] = await Promise.all([
+    requestJson(
+      bindings.supabaseUrl,
+      serviceRoleKey,
+      `player_progression_profiles?select=experience,earned_skill_points,spent_skill_points,bonus_skill_points&game_session_id=${exact(game.id)}`,
+    ),
+    requestJson(
+      bindings.supabaseUrl,
+      serviceRoleKey,
+      `player_reputation_scores?select=score&game_session_id=${exact(game.id)}`,
+    ),
+    requestJson(
+      bindings.supabaseUrl,
+      serviceRoleKey,
+      `player_achievement_progress?select=completed_at&game_session_id=${exact(game.id)}`,
+    ),
+    requestJson(
+      bindings.supabaseUrl,
+      serviceRoleKey,
+      `player_progression_reward_grants?select=claimed_at&game_session_id=${exact(game.id)}`,
+    ),
+  ]);
+  const baseline = {
+    activePlayerCount: activePlayers.length,
+    progressionProfiles: profiles.length,
+    reputationRows: reputation.length,
+    experienceTotal: sum(profiles, "experience"),
+    earnedSkillPointsTotal: sum(profiles, "earned_skill_points"),
+    spentSkillPointsTotal: sum(profiles, "spent_skill_points"),
+    bonusSkillPointsTotal: sum(profiles, "bonus_skill_points"),
+    nonzeroReputationRows: reputation.filter((row) => Number(row?.score ?? 0) !== 0).length,
+    completedAchievements: achievements.filter((row) => row?.completed_at).length,
+    claimedRewards: rewards.filter((row) => row?.claimed_at).length,
+  };
+  validateProgressionBaseline(baseline);
+  return baseline;
+}
+
+async function activateCrafting({ bindings, serviceRoleKey, game, pack, packIdentity }) {
+  if (!packIdentity.activationAuthorized) {
+    const activeLinks = await count(
+      bindings.supabaseUrl,
+      serviceRoleKey,
+      `game_session_physical_economy_packs?game_session_id=${exact(game.id)}&status=eq.active`,
+    );
+    return {
+      active: activeLinks > 0,
+      importOutcome: null,
+      activationOutcome: null,
+      verification: {
+        physicalItems: 0,
+        activePhysicalItems: 0,
+        recipes: 0,
+        enabledRecipes: 0,
+        regulatedRecipes: packIdentity.regulatedRecipeCount,
+        supplyRows: 0,
+      },
+    };
+  }
+
+  const importIdempotencyKey = `pr295.physical.import.${bindings.releaseCommit.slice(0, 12)}.${bindings.targetGameIdSha256.slice(0, 12)}`;
+  const activationIdempotencyKey = `pr295.physical.activate.${bindings.releaseCommit.slice(0, 12)}.${bindings.targetGameIdSha256.slice(0, 12)}`;
+  const importOutcome = await rpc(bindings.supabaseUrl, serviceRoleKey, "import_physical_economy_pack_v1", {
+    p_game_session_id: game.id,
+    p_staff_user_id: game.owner_staff_user_id,
+    p_pack: pack,
+    p_content_digest: packIdentity.contentDigest,
+    p_idempotency_key: importIdempotencyKey,
+  });
+  const activationOutcome = await rpc(bindings.supabaseUrl, serviceRoleKey, "activate_physical_economy_pack_v1", {
+    p_game_session_id: game.id,
+    p_staff_user_id: game.owner_staff_user_id,
+    p_pack_key: packIdentity.packKey,
+    p_content_version: packIdentity.contentVersion,
+    p_idempotency_key: activationIdempotencyKey,
+  });
+
+  const contentPacks = await requestJson(
+    bindings.supabaseUrl,
+    serviceRoleKey,
+    `physical_economy_content_packs?select=id,pack_key,content_version,content_digest,status&pack_key=${exact(packIdentity.packKey)}&content_version=${exact(packIdentity.contentVersion)}&content_digest=${exact(packIdentity.contentDigest)}`,
+  );
+  if (!Array.isArray(contentPacks) || contentPacks.length !== 1) {
+    throw new Error("Physical economy content pack did not resolve exactly once");
+  }
+  const contentPack = contentPacks[0];
+  const packLinks = await requestJson(
+    bindings.supabaseUrl,
+    serviceRoleKey,
+    `game_session_physical_economy_packs?select=status,pack_id&game_session_id=${exact(game.id)}&pack_id=${exact(contentPack.id)}`,
+  );
+  if (!Array.isArray(packLinks) || packLinks.length !== 1) {
+    throw new Error("Game physical economy pack link did not resolve exactly once");
+  }
+  const packLink = packLinks[0];
+  const itemCount = await count(bindings.supabaseUrl, serviceRoleKey, `physical_economy_item_definitions?pack_id=${exact(contentPack.id)}`);
+  const activeItemCount = await count(bindings.supabaseUrl, serviceRoleKey, `physical_economy_item_definitions?pack_id=${exact(contentPack.id)}&status=eq.active`);
+  const recipeCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_recipe_availability?game_session_id=${exact(game.id)}`);
+  const enabledRecipeCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_recipe_availability?game_session_id=${exact(game.id)}&enabled=eq.true`);
+  const supplyCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_item_supply?game_session_id=${exact(game.id)}`);
+
+  validateGameplayProvisionedState({
+    packLink,
+    contentPack,
+    itemCount,
+    activeItemCount,
+    recipeCount,
+    enabledRecipeCount,
+    supplyCount,
+    packIdentity,
+  });
+  return {
+    active: true,
+    importOutcome,
+    activationOutcome,
+    verification: {
+      physicalItems: itemCount,
+      activePhysicalItems: activeItemCount,
+      recipes: recipeCount,
+      enabledRecipes: enabledRecipeCount,
+      regulatedRecipes: packIdentity.regulatedRecipeCount,
+      supplyRows: supplyCount,
+    },
+  };
 }
 
 export async function runGameplayStateProvisioning() {
@@ -104,84 +256,21 @@ export async function runGameplayStateProvisioning() {
     `game_sessions?select=id,name,status,lifecycle_state,owner_staff_user_id&name=${exact(bindings.targetGameName)}`,
   );
   const game = selectGameplayTargetGame(games, bindings);
-  const importIdempotencyKey = `pr295.physical.import.${bindings.releaseCommit.slice(0, 12)}.${bindings.targetGameIdSha256.slice(0, 12)}`;
-  const activationIdempotencyKey = `pr295.physical.activate.${bindings.releaseCommit.slice(0, 12)}.${bindings.targetGameIdSha256.slice(0, 12)}`;
-
-  const importOutcome = await rpc(bindings.supabaseUrl, serviceRoleKey, "import_physical_economy_pack_v1", {
-    p_game_session_id: game.id,
-    p_staff_user_id: game.owner_staff_user_id,
-    p_pack: pack,
-    p_content_digest: packIdentity.contentDigest,
-    p_idempotency_key: importIdempotencyKey,
-  });
-  const activationOutcome = await rpc(bindings.supabaseUrl, serviceRoleKey, "activate_physical_economy_pack_v1", {
-    p_game_session_id: game.id,
-    p_staff_user_id: game.owner_staff_user_id,
-    p_pack_key: packIdentity.packKey,
-    p_content_version: packIdentity.contentVersion,
-    p_idempotency_key: activationIdempotencyKey,
-  });
-
-  const activePlayers = await requestJson(
-    bindings.supabaseUrl,
-    serviceRoleKey,
-    `players?select=id&game_session_id=${exact(game.id)}&status=eq.active&order=created_at.asc`,
-  );
-  if (!Array.isArray(activePlayers) || activePlayers.length === 0) throw new Error("No active Players found for Progression initialization");
-  for (const player of activePlayers) {
-    await rpc(bindings.supabaseUrl, serviceRoleKey, "ensure_player_progression_profile_v1", {
-      p_game_session_id: game.id,
-      p_player_id: player.id,
-    });
-  }
-
-  const contentPacks = await requestJson(
-    bindings.supabaseUrl,
-    serviceRoleKey,
-    `physical_economy_content_packs?select=id,pack_key,content_version,content_digest,status&pack_key=${exact(packIdentity.packKey)}&content_version=${exact(packIdentity.contentVersion)}&content_digest=${exact(packIdentity.contentDigest)}`,
-  );
-  if (!Array.isArray(contentPacks) || contentPacks.length !== 1) throw new Error("Physical economy content pack did not resolve exactly once");
-  const contentPack = contentPacks[0];
-  const packLinks = await requestJson(
-    bindings.supabaseUrl,
-    serviceRoleKey,
-    `game_session_physical_economy_packs?select=status,pack_id&game_session_id=${exact(game.id)}&pack_id=${exact(contentPack.id)}`,
-  );
-  if (!Array.isArray(packLinks) || packLinks.length !== 1) throw new Error("Game physical economy pack link did not resolve exactly once");
-  const packLink = packLinks[0];
-
-  const itemCount = await count(bindings.supabaseUrl, serviceRoleKey, `physical_economy_item_definitions?pack_id=${exact(contentPack.id)}`);
-  const activeItemCount = await count(bindings.supabaseUrl, serviceRoleKey, `physical_economy_item_definitions?pack_id=${exact(contentPack.id)}&status=eq.active`);
-  const recipeCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_recipe_availability?game_session_id=${exact(game.id)}`);
-  const enabledRecipeCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_recipe_availability?game_session_id=${exact(game.id)}&enabled=eq.true`);
-  const supplyCount = await count(bindings.supabaseUrl, serviceRoleKey, `game_session_item_supply?game_session_id=${exact(game.id)}&country_code=eq.*`);
-  const progressionProfileCount = await count(bindings.supabaseUrl, serviceRoleKey, `player_progression_profiles?game_session_id=${exact(game.id)}`);
-  const reputationCount = await count(bindings.supabaseUrl, serviceRoleKey, `player_reputation_scores?game_session_id=${exact(game.id)}`);
-
-  validateGameplayProvisionedState({
-    packLink,
-    contentPack,
-    itemCount,
-    activeItemCount,
-    recipeCount,
-    enabledRecipeCount,
-    supplyCount,
-    activePlayerCount: activePlayers.length,
-    progressionProfileCount,
-    reputationCount,
-    packIdentity,
-  });
+  const progression = await initializeProgression({ bindings, serviceRoleKey, game });
+  const crafting = await activateCrafting({ bindings, serviceRoleKey, game, pack, packIdentity });
 
   const verification = {
-    activePlayers: activePlayers.length,
-    physicalItems: itemCount,
-    activePhysicalItems: activeItemCount,
-    recipes: recipeCount,
-    enabledRecipes: enabledRecipeCount,
-    regulatedRecipes: packIdentity.regulatedRecipeCount,
-    supplyRows: supplyCount,
-    progressionProfiles: progressionProfileCount,
-    reputationRows: reputationCount,
+    activePlayers: progression.activePlayerCount,
+    progressionProfiles: progression.progressionProfiles,
+    reputationRows: progression.reputationRows,
+    experienceTotal: progression.experienceTotal,
+    earnedSkillPointsTotal: progression.earnedSkillPointsTotal,
+    spentSkillPointsTotal: progression.spentSkillPointsTotal,
+    bonusSkillPointsTotal: progression.bonusSkillPointsTotal,
+    nonzeroReputationRows: progression.nonzeroReputationRows,
+    completedAchievements: progression.completedAchievements,
+    claimedRewards: progression.claimedRewards,
+    ...crafting.verification,
   };
   const evidence = buildGameplayEvidence({
     generatedAt: new Date().toISOString(),
@@ -191,8 +280,9 @@ export async function runGameplayStateProvisioning() {
     targetGameName: bindings.targetGameName,
     targetGameIdSha256: bindings.targetGameIdSha256,
     packIdentity,
-    importOutcome,
-    activationOutcome,
+    importOutcome: crafting.importOutcome,
+    activationOutcome: crafting.activationOutcome,
+    craftingActive: crafting.active,
     verification,
   });
   await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
