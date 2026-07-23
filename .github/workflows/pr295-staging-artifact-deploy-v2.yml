@@ -11,7 +11,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-staging-artifact-deploy-v6
+  group: pr295-staging-artifact-deploy-v7
   cancel-in-progress: true
 
 jobs:
@@ -21,18 +21,21 @@ jobs:
     timeout-minutes: 45
     environment: staging
     env:
-      RELEASE_COMMIT: a5f3764eb7f3fab07211304560ae5ffdc13ffb05
-      TOOLING_COMMIT: ccfe1a51952789952917e6e57c7c1ee0490c230c
-      SOURCE_RUN_ID: "30005550021"
-      SOURCE_ARTIFACT_ID: "8562818936"
-      EXPECTED_ARCHIVE_SHA256: 74ee4acaeed69dcfec9267d8273a290f76eb29f455ca1e6a7a8bc8c28d52febd
-      EXPECTED_MANIFEST_SHA256: 89a5a14f5dd12d0f7c37a56b6258e089cec4a438209cd770f1ad9eca9f829951
-      EXPECTED_ARTIFACT_SET_SHA256: 02bce4398a8d3a0a70534d9e7d785fbba5f6440001d5ba8bf73e46064b4bf739
+      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
+      TOOLING_COMMIT: bf121afae982389753deaa9215aa7e36e8de132c
+      SOURCE_RUN_ID: "30047109190"
+      SOURCE_ARTIFACT_ID: "8579554182"
+      EXPECTED_ARCHIVE_SHA256: d64e5f2e6033e51592c2689f72248aa5baaaeb897e7f42b22eea2dde4c373608
+      EXPECTED_MANIFEST_SHA256: 2b6d11e501bcbe6ac23fbe6dfd88c25ef0b14e6e144b9638c37f6f5c1ab3d435
+      EXPECTED_ARTIFACT_SET_SHA256: 46006e662361b754802cda78733a014373a666ec56cf990cc0fe9616f1d28d4c
+      EXPECTED_MIGRATION_COUNT: "132"
+      EXPECTED_MIGRATION_HEAD: "20260723213038"
+      EXPECTED_MIGRATION_SET_SHA256: a1a00d8a91338fdf54b35745939a86ca53ca81ce4269434262c464ae36bff54b
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-      EXPECTED_LEDGER_COUNT: "140"
-      EXPECTED_LEDGER_HEAD: "20260723061659"
-      EXPECTED_LEDGER_SHA256: 1a318610e798f9c8a8d200282c42d65696c507ab51141398636dacf8b7cc80eb
+      EXPECTED_LEDGER_COUNT: "141"
+      EXPECTED_LEDGER_HEAD: "20260723213038"
+      EXPECTED_LEDGER_SHA256: fc161f70d158fcf16a586456d7831adc59a07e9b7bb7d0270ce9fec81f51f218
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -41,7 +44,7 @@ jobs:
       - name: Check out exact artifact tooling
         uses: actions/checkout@v7
         with:
-          ref: ccfe1a51952789952917e6e57c7c1ee0490c230c
+          ref: bf121afae982389753deaa9215aa7e36e8de132c
           fetch-depth: 0
           persist-credentials: false
 
@@ -59,11 +62,34 @@ jobs:
           test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
 
-      - name: Download exact corrected artifact
+      - name: Verify exact artifact metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$SOURCE_ARTIFACT_ID" \
+            > /tmp/source-artifact.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const row = JSON.parse(fs.readFileSync('/tmp/source-artifact.json', 'utf8'));
+          if (String(row.id) !== process.env.SOURCE_ARTIFACT_ID) throw new Error('artifact ID mismatch');
+          if (row.expired === true) throw new Error('artifact expired');
+          if (row.workflow_run?.id !== Number(process.env.SOURCE_RUN_ID)) throw new Error('artifact run mismatch');
+          if (row.workflow_run?.head_sha !== process.env.TOOLING_COMMIT) throw new Error('artifact tooling mismatch');
+          if (row.digest !== `sha256:${process.env.EXPECTED_ARCHIVE_SHA256}`) throw new Error('artifact archive digest mismatch');
+          NODE
+          rm -f /tmp/source-artifact.json
+
+      - name: Download exact playable staging artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8562818936
-          run-id: 30005550021
+          artifact-ids: 8579554182
+          run-id: 30047109190
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
@@ -96,6 +122,9 @@ jobs:
           if (manifest.provenance.toolingCommit !== process.env.TOOLING_COMMIT) throw new Error('tooling mismatch');
           if (String(manifest.provenance.workflowRunId) !== process.env.SOURCE_RUN_ID) throw new Error('run mismatch');
           if (manifest.artifactSetSha256 !== process.env.EXPECTED_ARTIFACT_SET_SHA256) throw new Error('artifact-set mismatch');
+          if (String(manifest.migrations.count) !== process.env.EXPECTED_MIGRATION_COUNT) throw new Error('migration count mismatch');
+          if (manifest.migrations.head !== process.env.EXPECTED_MIGRATION_HEAD) throw new Error('migration head mismatch');
+          if (manifest.migrations.versionSetSha256 !== process.env.EXPECTED_MIGRATION_SET_SHA256) throw new Error('migration set mismatch');
           NODE
 
       - name: Install pinned Supabase CLI
@@ -193,6 +222,7 @@ jobs:
             echo "- Runtime source: \`$RELEASE_COMMIT\`"
             echo "- Tooling source: \`$TOOLING_COMMIT\`"
             echo "- Source artifact: \`$SOURCE_ARTIFACT_ID\`"
+            echo "- Artifact archive: \`$EXPECTED_ARCHIVE_SHA256\`"
             echo "- Artifact set: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
             echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
             echo '- Exact functions deployed: `7`'
