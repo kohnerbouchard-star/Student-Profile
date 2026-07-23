@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import test from "node:test";
 
+import { HttpTransport } from "../player-terminal/src/api/http-transport.js";
+
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gatewayPath = path.join(repositoryRoot, "scripts", "local-staging-gateway.py");
 
@@ -70,4 +72,41 @@ test("local staging config keeps Auth on Supabase and Edge APIs on loopback", ()
     apiProxyUrl: "http://127.0.0.1:4173",
     supabasePublishableKey: "sb_publishable_contract_test",
   });
+});
+
+test("Player Terminal sends the canonical backend session contract", async () => {
+  const originalFetch = globalThis.fetch;
+  let request = null;
+
+  try {
+    globalThis.fetch = async (url, options) => {
+      request = { url, options };
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+
+    const transport = new HttpTransport({
+      apiBaseUrl: "http://127.0.0.1:4173/functions/v1/classroom-api",
+      requestTimeoutMs: 1000,
+      accessToken: "sb_publishable_contract_test",
+      playerSessionToken: "ps_contract",
+      gameSessionId: "game_contract",
+    });
+
+    await transport.request({
+      endpointKey: "session",
+      method: "GET",
+      path: "/players/me",
+      requestId: "ptr_contract",
+      idempotencyKey: "ptr_contract_idempotency",
+    });
+
+    assert.equal(request.options.headers["x-player-session-token"], "ps_contract");
+    assert.equal(request.options.headers["x-econovaria-game-id"], "game_contract");
+    assert.equal(request.options.headers["x-idempotency-key"], "ptr_contract_idempotency");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
