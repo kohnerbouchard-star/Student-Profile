@@ -14,6 +14,19 @@ import {
   validateWorldConnectedState,
 } from "./world-staging-provision-lib.mjs";
 
+const CURRENCY_CODES = Object.freeze([
+  "NRC",
+  "YRC",
+  "THD",
+  "SLV",
+  "ELD",
+  "VAL",
+  "LUM",
+  "XAL",
+  "DRV",
+  "SYN",
+]);
+
 function fixture() {
   const capitalNames = {
     northreach: "frostgate",
@@ -78,7 +91,7 @@ function fixture() {
   const profiles = COUNTRY_IDS.map((country, index) => ({
     id: `00000000-0000-4000-8${String(index).padStart(3, "0")}-000000000001`,
     country_code: country.toUpperCase(),
-    currency_code: `C${String(index).padStart(2, "0")}`,
+    currency_code: CURRENCY_CODES[index],
     status: "active",
   }));
   return {
