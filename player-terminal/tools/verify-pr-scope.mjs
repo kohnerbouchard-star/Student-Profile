@@ -18,6 +18,7 @@ const exactAllowed = new Set([
   ".github/workflows/marketplace-preconvergence.yml",
   ".github/workflows/messaging-isolated-staging.yml",
   ".github/workflows/messaging-final-connected-acceptance.yml",
+  ".github/workflows/progression-runtime-v1.yml",
   ".github/workflows/environment-neutral-browser.yml",
   ".github/workflows/admin-shell-smoke.yml",
   ".github/workflows/admin-game-lifecycle-controls-v1.yml",
@@ -128,6 +129,14 @@ const allowedPatterns = [
   /^backend\/supabase\/migrations\/2026072113[0-9]{4}_[A-Za-z0-9_]+\.sql$/,
   /^backend\/supabase\/migrations\/2026072114(0000_add_marketplace_reference_scopes_v1|1000_add_player_marketplace_lifecycle_v2|2000_harden_marketplace_resolution_replay_v1|2500_add_marketplace_inventory_event_types_v1|2600_fix_marketplace_listing_item_lookup_v1|2700_fix_marketplace_listing_currency_lookup_v1|2800_restore_marketplace_listing_reservation_wrapper_v1|2900_fix_marketplace_listing_legacy_lookups_v1|3000_harden_marketplace_legacy_projection_conflicts_v1|3100_harden_marketplace_table_return_conflicts_v1)\.sql$/,
   /^backend\/supabase\/migrations\/2026072115(0000|1000|2000|3000)_[A-Za-z0-9_]+\.sql$/,
+  /^admin\/progression-review-(client|loader|surface)\.js$/,
+  /^admin\/progression-review\.css$/,
+  /^backend\/src\/domains\/progression\//,
+  /^backend\/src\/security\/progressionRateLimitDispatch(\.test)?\.ts$/,
+  /^backend\/supabase\/functions\/admin-api\/progression[A-Za-z0-9.-]*\.ts$/,
+  /^backend\/supabase\/migrations\/2026072116(0000|1000|2000|3000)_[A-Za-z0-9_]+\.sql$/,
+  /^docs\/workstreams\/progression-preconvergence-v1\.md$/,
+  /^scripts\/(admin-progression-contract|progression-(abuse-threshold-simulation|balance-simulation|event-delivery-simulation))\.mjs$/,
 ];
 
 function isAllowed(path) {

@@ -129,7 +129,7 @@ async function readPlayers(
 ): Promise<ProgressionOperationResult> {
   try {
     const pagination = parsePagination(input.request, ["limit", "offset"]);
-    if (!pagination.ok) return invalid(pagination.message);
+    if (pagination.ok === false) return invalid(pagination.message);
     const response = await service.rpc<Record<string, unknown>>(
       "read_admin_progression_players_v1",
       {
@@ -153,7 +153,7 @@ async function readCorrections(
 ): Promise<ProgressionOperationResult> {
   try {
     const pagination = parsePagination(input.request, ["limit", "offset", "playerId"]);
-    if (!pagination.ok) return invalid(pagination.message);
+    if (pagination.ok === false) return invalid(pagination.message);
     const url = new URL(input.request.url);
     const playerId = url.searchParams.get("playerId")?.trim() ?? "";
     if (playerId && !PLAYER_ID_PATTERN.test(playerId)) {
