@@ -55,7 +55,7 @@ jobs:
       - name: Check out exact Messaging candidate
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_head_sha || github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_head_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Bind immutable source SHA
