@@ -4,7 +4,7 @@
 **Roadmap items:** `EXP-MSG-001` through `EXP-MSG-007`  
 **Authority branch:** `agent/messaging-communication-v1`  
 **Pull request:** #248  
-**Status:** `FINAL_EXACT_HEAD_VERIFICATION`  
+**Status:** `MERGE_AUTHORIZED`  
 **Started:** 2026-07-20  
 **Final convergence:** 2026-07-23
 
@@ -12,9 +12,9 @@
 
 PR #248 remains the sole Messaging authority. Marketplace PR #249 merged at `fcef04f9327efc24955ff17406aaa2d368da2e55`.
 
-Messaging has completed the explicitly authorized exceptional reconciliation with current `main` at `f41af4be9853cbcc0bdb9f6d36639e1f0e399dba`. The branch is zero commits behind that base. The reconciliation preserves the audit, Admin bootstrap, DOM-safety, CORS, security, World, Business, Crafting, Marketplace, Store, Inventory, Story, Notifications, login, proxy, lifecycle, observability, recovery, and release behavior already present on `main`.
+Messaging completed the authorized reconciliation with `main` at `f41af4be9853cbcc0bdb9f6d36639e1f0e399dba`. The final candidate is zero commits behind that base and preserves the repository's security, audit, Admin bootstrap, DOM-safety, CORS, World, Business, Crafting, Marketplace, Store, Inventory, Story, Notifications, login, proxy, lifecycle, observability, recovery, and release behavior.
 
-Production remains unchanged and unauthorized.
+Production remains unchanged.
 
 ## Final migration authority
 
@@ -25,7 +25,7 @@ The controller-assigned Messaging migration family is final:
 3. `20260721152000_complete_messaging_lifecycle_v1.sql`
 4. `20260721153000_compat_messaging_player_status_v1.sql`
 
-Player read, search, privacy, cursor, and compatibility hardening are folded into slot four. No fifth Messaging migration is permitted. No Messaging migration has been applied to production.
+Player read, search, privacy, cursor, and compatibility hardening are folded into slot four. No fifth Messaging migration exists. No Messaging migration has been applied to production.
 
 ## Permanent implementation
 
@@ -46,19 +46,6 @@ Messaging owns and implements:
 
 Attachments remain disabled and fail closed. This workstream adds no attachment storage, upload, scanning, delivery, or retention capability.
 
-## Privacy and authorization contract
-
-The implementation requires:
-
-- participant membership for Player thread access;
-- active same-game Player scope for participant changes;
-- owner-scoped staff authorization for policy, moderation, participant, retention, and audit operations;
-- explicit Contract linkage validation;
-- announcement visibility through explicit delivery membership;
-- generic non-enumerating failures for wrong-game, hidden, removed, and unavailable participants;
-- public identifiers at browser boundaries and no durable ownership UUID exposure;
-- immutable message content and immutable moderation evidence.
-
 ## Connected isolated-staging acceptance
 
 Connected acceptance was executed only against the isolated non-production staging project. Production was not contacted or modified.
@@ -69,11 +56,8 @@ The staging run established:
 - exact candidate `classroom-api` and `admin-api` publication with JWT verification retained;
 - expired-session, paused-game, and ended-game HTTP denial without identifier or token leakage;
 - transaction-scoped synthetic Player fixtures and temporary game activation;
-- Player thread creation and exact idempotent replay;
-- conflicting replay denial;
-- recipient unread visibility and private inbox search;
-- Player sends and send replay;
-- read receipt transition;
+- Player thread creation, exact idempotent replay, and conflicting replay denial;
+- recipient unread visibility, private inbox search, sends, send replay, and read receipt transition;
 - same-game participant addition and removal;
 - immutable moderation action evidence;
 - disabled and closed thread denial;
@@ -82,32 +66,26 @@ The staging run established:
 - independent zero-residue verification;
 - `productionTouched: false`.
 
-The connected run exposed and the final slot-four migration now permanently corrects:
+The connected run exposed and slot four permanently corrects:
 
-- transaction-stable initial message timestamps that incorrectly suppressed the recipient's first unread message;
+- transaction-stable initial message timestamps that suppressed the recipient's first unread message;
 - stale `players.archived_at` references in legacy Player read, Player send, and Admin thread-creation functions;
-- ambiguous read-receipt `thread_id` output/table references;
+- ambiguous read-receipt output/table references;
 - ambiguous participant-addition conflict targeting.
 
 Regression assertions require the stable active-Player interface, `clock_timestamp()` initial-message semantics, qualified read-receipt updates, and the named participant primary-key conflict target.
 
-## Validation contract
+## Final exact-head verification
 
-The exact candidate must pass:
+Final source SHA: `b73d463e12c5ae9523cf8b33e510615c607237af`  
+Final artifact digest: `5ddad21f4a61de1db4d1c47cf69823da640515acfec13aedddc466ea0de830ee`
 
-- Backend Typecheck and Edge checks;
-- Admin API Check, Admin Bundle Contract Audit, Admin Shell Smoke, and Admin lifecycle checks;
-- Player Terminal Verify and desktop/mobile browser Messaging lifecycle coverage;
-- Repository Quality, Supply Chain Security, Beta Security Contract, and Environment Neutral Browser;
-- World, Business, Crafting, Marketplace, exchange-calendar, timezone, Seed, release-artifact, and staging-readiness regression gates;
-- database replay from zero twice and database lint;
-- Messaging lifecycle, privacy, moderation, retention, replay, rate-limit, accessibility, and abuse simulations;
-- protected isolated-staging acceptance with exact source and artifact binding;
-- transactional cleanup and independent zero-residue verification;
-- zero unresolved review threads.
+All 27 pull-request workflows are green on the final source SHA, including Database Replay, Seed transactional replay, Player desktop/mobile Chromium verification, the complete Admin browser/accessibility matrix, security, release, observability, predecessor regression, and Messaging isolated-staging validation.
 
-The pull request remains draft and unmerged until the normal authenticated exact-head workflow matrix completes. Production modification is prohibited.
+Database Replay started a disposable PostgreSQL service, replayed the complete migration ledger from zero twice, and passed database lint.
+
+The branch is 242 commits ahead and zero behind `main`. Zero unresolved review threads remain. Temporary repair carriers are absent from the final diff.
 
 ## Completion rule
 
-Messaging is complete when the final zero-behind exact head is green, protected isolated-staging acceptance has passed with zero residue, review threads are clear, PR #248 is authorized and merged, and the exact merge SHA plus the four final migration identities are handed to Progression PR #261.
+The exact head is repository-green, connected isolated-staging acceptance passed with zero residue, review threads are clear, and merge is explicitly authorized. The merge SHA and four final migration identities must be handed to Progression PR #261 after PR #248 merges.
