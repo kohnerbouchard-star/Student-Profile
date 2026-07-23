@@ -28,7 +28,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           test "$(git rev-parse origin/main)" = "1c3ae6004db442eeed1a4999a733445ca6fcecbd"
-          git merge --no-edit origin/main
+
+          if ! git merge --no-edit origin/main; then
+            git checkout --theirs -- \
+              backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts \
+              backend/src/domains/contracts/api/playerContractPublicListRoutePaths.test.ts
+            git add \
+              backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts \
+              backend/src/domains/contracts/api/playerContractPublicListRoutePaths.test.ts
+            test -z "$(git diff --name-only --diff-filter=U)"
+            git commit --no-edit
+          fi
 
           python3 - <<'PY'
           from pathlib import Path
