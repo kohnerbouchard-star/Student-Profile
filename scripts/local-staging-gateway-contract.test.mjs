@@ -5,6 +5,8 @@ import path from "node:path";
 import test from "node:test";
 
 import { HttpTransport } from "../player-terminal/src/api/http-transport.js";
+import { headersFor } from "../player-terminal/src/integrations/student-profile-api-call.js";
+import { resolvePlayerLogoutUrl } from "../player-terminal/src/integrations/player-logout-controller.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gatewayPath = path.join(repositoryRoot, "scripts", "local-staging-gateway.py");
@@ -109,4 +111,44 @@ test("Player Terminal sends the canonical backend session contract", async () =>
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("Student-Profile adapter supplies platform JWT and Player session headers", () => {
+  const headers = headersFor({
+    endpointKey: "session",
+    requestId: "ptr_adapter_contract",
+    session: {
+      accessToken: "sb_publishable_contract_test",
+      playerSessionToken: "ps_adapter_contract",
+    },
+    config: {},
+  });
+
+  assert.equal(headers.Authorization, "Bearer sb_publishable_contract_test");
+  assert.equal(headers.apikey, "sb_publishable_contract_test");
+  assert.equal(headers["x-player-session-token"], "ps_adapter_contract");
+  assert.equal(headers["x-request-id"], "ptr_adapter_contract");
+});
+
+test("Student-Profile adapter fails closed without its public API credential", () => {
+  assert.throws(
+    () => headersFor({
+      endpointKey: "session",
+      requestId: "ptr_missing_runtime",
+      session: { playerSessionToken: "ps_adapter_contract" },
+      config: {},
+    }),
+    (error) => error.code === "PLAYER_RUNTIME_CONFIG_MISSING" && error.status === 500,
+  );
+});
+
+test("voluntary logout does not reuse the invalid-session destination", () => {
+  const result = resolvePlayerLogoutUrl({
+    logoutExitUrl: "http://127.0.0.1:4173/?mode=player&reason=logged-out",
+    sessionExitUrl: "http://127.0.0.1:4173/?mode=player&reason=session-invalid",
+  }, {
+    href: "http://127.0.0.1:4173/player-terminal/",
+  });
+
+  assert.equal(result, "http://127.0.0.1:4173/?mode=player&reason=logged-out");
 });
