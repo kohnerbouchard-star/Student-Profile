@@ -1,0 +1,95 @@
+name: Messaging Workflow Publication
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-workflow-publication.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build workflow candidates
+        shell: bash
+        env:
+          SOURCE_HEAD: c485c2369d9a0e73a2fdbd04d5f87a4439f154aa
+          MERGE_BASE: 7f89e8f7bd390a0d27877cc970b4deff993f9c9a
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/messaging-workflow-candidate/.github/workflows
+          for path in .github/workflows/database-replay.yml .github/workflows/player-terminal-verify.yml; do
+            current=/tmp/current
+            base=/tmp/base
+            source=/tmp/source
+            cp "$path" "$current"
+            git show "$MERGE_BASE:$path" > "$base"
+            git show "$SOURCE_HEAD:$path" > "$source"
+            git merge-file --union "$current" "$base" "$source" || true
+            test -z "$(grep -nE '^(<<<<<<<|=======|>>>>>>>)' "$current" || true)"
+            cp "$current" "/tmp/messaging-workflow-candidate/$path"
+          done
+          sed -i \
+            -e 's/20260721130000_add_messaging_communication_v2.sql/20260721150000_add_messaging_communication_v2.sql/g' \
+            -e 's/20260721131000_harden_messaging_retention_and_audit_v2.sql/20260721151000_harden_messaging_retention_and_audit_v2.sql/g' \
+            -e 's/20260721132000_complete_messaging_lifecycle_v1.sql/20260721152000_complete_messaging_lifecycle_v1.sql/g' \
+            -e 's/20260721133000_compat_messaging_player_status_v1.sql/20260721153000_compat_messaging_player_status_v1.sql/g' \
+            -e 's/2026072113\[0-9\]{4}/2026072115[0-9]{4}/g' \
+            /tmp/messaging-workflow-candidate/.github/workflows/*.yml
+          grep -Fq '20260721150000_add_messaging_communication_v2.sql' /tmp/messaging-workflow-candidate/.github/workflows/database-replay.yml
+          grep -Fq 'messaging-isolated-staging.yml' /tmp/messaging-workflow-candidate/.github/workflows/player-terminal-verify.yml
+          grep -Fq 'backend/src/domains/messaging' /tmp/messaging-workflow-candidate/.github/workflows/player-terminal-verify.yml
+
+      - name: Publish workflow files sequentially
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const branch = 'agent/messaging-communication-v1';
+            for (const file of [
+              '.github/workflows/database-replay.yml',
+              '.github/workflows/player-terminal-verify.yml',
+            ]) {
+              const current = await github.rest.repos.getContent({
+                owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch,
+              });
+              if (Array.isArray(current.data) || !current.data.sha) throw new Error(`Invalid file: ${file}`);
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: file,
+                branch,
+                sha: current.data.sha,
+                message: `ci(messaging): publish ${file} additively`,
+                content: fs.readFileSync(`/tmp/messaging-workflow-candidate/${file}`).toString('base64'),
+              });
+            }
+
+      - name: Publish workflow-publication status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/workflow-publication',
+              description: '${{ job.status }}' === 'success'
+                ? 'Messaging workflow registrations published'
+                : 'Messaging workflow publication failed',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
