@@ -1,4 +1,4 @@
-name: PR295 Immutable Release Build
+name: Release Artifact Build
 
 on:
   pull_request:
