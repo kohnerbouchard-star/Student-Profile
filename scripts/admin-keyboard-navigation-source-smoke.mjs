@@ -6,6 +6,7 @@ const root = process.cwd();
 const controllerPath = resolve(root, "admin/keyboard-navigation.js");
 const stylesheetPath = resolve(root, "admin/css/keyboard-navigation.css");
 const indexPath = resolve(root, "admin/index.html");
+const bootstrapPath = resolve(root, "admin/admin-bootstrap.js");
 const mountedSmokePath = resolve(root, "scripts/admin-mounted-keyboard-navigation-smoke.mjs");
 const workflowSmokePath = resolve(root, "scripts/admin-keyboard-workflows-smoke.mjs");
 const focusOrderSmokePath = resolve(root, "scripts/admin-keyboard-focus-order-smoke.mjs");
@@ -21,6 +22,7 @@ const evidencePaths = [
   controllerPath,
   stylesheetPath,
   indexPath,
+  bootstrapPath,
   mountedSmokePath,
   workflowSmokePath,
   focusOrderSmokePath,
@@ -35,6 +37,7 @@ for (const path of evidencePaths) {
 const controller = readFileSync(controllerPath, "utf8");
 const stylesheet = readFileSync(stylesheetPath, "utf8");
 const html = readFileSync(indexPath, "utf8");
+const bootstrap = readFileSync(bootstrapPath, "utf8");
 const mountedSmoke = readFileSync(mountedSmokePath, "utf8");
 const workflowSmoke = readFileSync(workflowSmokePath, "utf8");
 const focusOrderSmoke = readFileSync(focusOrderSmokePath, "utf8");
@@ -44,6 +47,7 @@ const accountSurfacesSmoke = readFileSync(accountSurfacesSmokePath, "utf8");
 
 for (const [label, path] of [
   ["Keyboard navigation", controllerPath],
+  ["Admin bootstrap", bootstrapPath],
   ["Mounted keyboard smoke", mountedSmokePath],
   ["Keyboard workflow smoke", workflowSmokePath],
   ["Focus-order smoke", focusOrderSmokePath],
@@ -56,7 +60,8 @@ for (const [label, path] of [
 }
 
 assert(html.includes("./css/keyboard-navigation.css"), "Admin keyboard focus stylesheet is not loaded.");
-assert(html.includes("import('./keyboard-navigation.js')"), "Admin keyboard controller is not loaded through the accepted script order.");
+assert(html.includes("./admin-bootstrap.js"), "Admin external bootstrap is not loaded through the accepted script order.");
+assert(bootstrap.includes("./keyboard-navigation.js"), "Admin keyboard controller is not registered in the external bootstrap.");
 assert(controller.includes("[data-admin-section]"), "Primary Admin section navigation is not covered.");
 assert(controller.includes('[role="tab"]'), "Admin tab controls are not covered.");
 assert(controller.includes("[data-admin-terminal-action]"), "Delegated Admin actions are not covered.");
