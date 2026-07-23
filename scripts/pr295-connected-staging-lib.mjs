@@ -223,8 +223,9 @@ export function setupDatabaseFixture(fixture) {
     select id,${sqlLiteral(fixture.gameName)},'active',${sqlLiteral(joinHash)},'active','active',now()
     from public.staff_users where email=${sqlLiteral(fixture.adminEmail)};
 
-    insert into public.game_settings (game_session_id,difficulty_preset)
-    select id,'standard' from public.game_sessions where name=${sqlLiteral(fixture.gameName)};
+    insert into public.game_settings (game_session_id,difficulty_preset,stock_market_window)
+    select id,'standard',jsonb_build_object('timezone','Asia/Seoul')
+    from public.game_sessions where name=${sqlLiteral(fixture.gameName)};
 
     insert into public.message_game_policies (
       game_session_id,player_threads_enabled,max_player_thread_participants,
