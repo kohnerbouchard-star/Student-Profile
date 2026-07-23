@@ -58,7 +58,10 @@ begin
     and player_row.id = v_player_id
     and player_row.country_id is distinct from v_country_profile_id;
 
-  return case when tg_op = 'DELETE' then old else new end;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end;
 $function$;
 
@@ -70,7 +73,7 @@ grant execute on function public.sync_player_country_assignment_compatibility_v1
 drop trigger if exists sync_player_country_assignment_compatibility
   on public.player_country_assignments;
 create trigger sync_player_country_assignment_compatibility
-after insert or update of country_profile_id, status, assigned_at, ended_at or delete
+after insert or delete or update of country_profile_id, status, assigned_at, ended_at
 on public.player_country_assignments
 for each row execute function public.sync_player_country_assignment_compatibility_v1();
 
