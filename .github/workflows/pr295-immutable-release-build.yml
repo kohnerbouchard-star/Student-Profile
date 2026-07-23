@@ -86,8 +86,11 @@ jobs:
           (cd "$OUTPUT_ROOT" && sha256sum --check checksums.sha256)
           for name in admin-api classroom-api stock-market-player-read stock-market-read stock-market-runner stock-market-seed-copy stock-market-trading; do
             archive="$OUTPUT_ROOT/artifacts/edge-${name}.tar.gz"
-            tar -tzf "$archive" | grep -Fxq "./backend/supabase/functions/${name}/index.ts"
-            tar -tzf "$archive" | grep -q '^./backend/src/'
+            listing="$(mktemp)"
+            tar -tzf "$archive" > "$listing"
+            grep -Fxq "./backend/supabase/functions/${name}/index.ts" "$listing"
+            grep -q '^./backend/src/' "$listing"
+            rm -f "$listing"
           done
           node - <<'NODE' >> "$GITHUB_OUTPUT"
           const crypto = require('node:crypto');
