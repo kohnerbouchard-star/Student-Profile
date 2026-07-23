@@ -49,12 +49,12 @@ requireCondition(
   "Admin script CSP must not permit unsafe-inline",
 );
 requireCondition(
-  /<script type="module" src="\.\/admin-bootstrap\.js"><\/script>/.test(adminHtml),
-  "Admin HTML must load the external bootstrap module",
+  /<script defer src="\.\/admin-bootstrap\.js"><\/script>/.test(adminHtml),
+  "Admin HTML must load the deferred external bootstrap",
 );
 requireCondition(
-  adminBootstrap.includes("DOMContentLoaded") && adminBootstrap.includes("await import(modulePath)"),
-  "Admin bootstrap must wait for deferred scripts and load modules explicitly",
+  adminBootstrap.includes("bootstrapAdminCompatibilityModules") && adminBootstrap.includes("await import(modulePath)"),
+  "Admin bootstrap must be deferred and load modules explicitly",
 );
 for (const modulePath of [
   "session-timeout-safe-exit.js",
