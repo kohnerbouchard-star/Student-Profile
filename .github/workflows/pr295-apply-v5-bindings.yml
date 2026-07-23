@@ -1,0 +1,129 @@
+name: PR295 Apply V5 Bindings
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-apply-v5-bindings.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr295-apply-v5-bindings
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply exact v5 identities and serialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main agent/production-integration-gate-v1
+          git reset --hard origin/agent/production-integration-gate-v1
+          test "$(git rev-parse origin/main)" = "1c3ae6004db442eeed1a4999a733445ca6fcecbd"
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          release = '1c3ae6004db442eeed1a4999a733445ca6fcecbd'
+          tooling = 'd86e3a52766855a44e3a4c970c0bac567a4d2f3d'
+          run_id = '30003930949'
+          artifact_id = '8562164246'
+          archive = '59dc293a67fdf7df0bbd50d948383cd63de5a00aae8e58526fc88c388c11309d'
+          manifest = '648154b04eab8a98e187042131b996ae7eb7e515dd225f17c3723cf093f263f2'
+          artifact_set = 'bc5053043cb7c77dd02a7f4260ae5f347770308cfc5ebfbe8f7eed9eff037a84'
+
+          deploy = Path('.github/workflows/pr295-staging-artifact-deploy-v2.yml')
+          text = deploy.read_text()
+          replacements = [
+              ('group: pr295-staging-artifact-deploy-v4', 'group: pr295-staging-artifact-deploy-v5'),
+              ('cancel-in-progress: false', 'cancel-in-progress: true'),
+              ('RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', f'RELEASE_COMMIT: {release}'),
+              ('TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749', f'TOOLING_COMMIT: {tooling}'),
+              ('SOURCE_RUN_ID: "30001209235"', f'SOURCE_RUN_ID: "{run_id}"'),
+              ('SOURCE_ARTIFACT_ID: "8561056024"', f'SOURCE_ARTIFACT_ID: "{artifact_id}"'),
+              ('EXPECTED_ARCHIVE_SHA256: f17d1622a2ef22873eda3371bbdbbce73dde8c9f610fe522e48c7e7db977e944', f'EXPECTED_ARCHIVE_SHA256: {archive}'),
+              ('EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12', f'EXPECTED_MANIFEST_SHA256: {manifest}'),
+              ('EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7', f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}'),
+              ('ref: 6e3745430354839ae8da65944f4f53a3b3586749', f'ref: {tooling}'),
+              ('artifact-ids: 8561056024', f'artifact-ids: {artifact_id}'),
+              ('run-id: 30001209235', f'run-id: {run_id}'),
+          ]
+          for old, new in replacements:
+              text = text.replace(old, new)
+          required = [
+              'group: pr295-staging-artifact-deploy-v5',
+              'cancel-in-progress: true',
+              f'RELEASE_COMMIT: {release}',
+              f'TOOLING_COMMIT: {tooling}',
+              f'SOURCE_RUN_ID: "{run_id}"',
+              f'SOURCE_ARTIFACT_ID: "{artifact_id}"',
+              f'EXPECTED_ARCHIVE_SHA256: {archive}',
+              f'EXPECTED_MANIFEST_SHA256: {manifest}',
+              f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}',
+              f'artifact-ids: {artifact_id}',
+              f'run-id: {run_id}',
+          ]
+          for value in required:
+              if value not in text:
+                  raise SystemExit(f'deployment final binding missing {value}')
+          deploy.write_text(text)
+
+          acceptance = Path('.github/workflows/pr295-connected-staging-acceptance.yml')
+          text = acceptance.read_text()
+          text, count = re.subn(
+              r'(?m)^  group: pr295-connected-staging-.*$',
+              '  group: pr295-connected-staging-v1',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'acceptance concurrency group replacements={count}')
+          replacements = [
+              ('RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', f'RELEASE_COMMIT: {release}'),
+              ('TOOLING_COMMIT: 6e3745430354839ae8da65944f4f53a3b3586749', f'TOOLING_COMMIT: {tooling}'),
+              ('SOURCE_RUN_ID: "30001209235"', f'SOURCE_RUN_ID: "{run_id}"'),
+              ('SOURCE_ARTIFACT_ID: "8561056024"', f'SOURCE_ARTIFACT_ID: "{artifact_id}"'),
+              ('EXPECTED_MANIFEST_SHA256: 90e63b7494b5f0ee7d3892f52d15e81fadf25e0434803d3d57ad8bfa08485d12', f'EXPECTED_MANIFEST_SHA256: {manifest}'),
+              ('EXPECTED_ARTIFACT_SET_SHA256: 8e822d010c5802b63473dd9be8617151419fde79dd846e783f05522c498e28e7', f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}'),
+              ('artifact-ids: 8561056024', f'artifact-ids: {artifact_id}'),
+              ('run-id: 30001209235', f'run-id: {run_id}'),
+          ]
+          for old, new in replacements:
+              text = text.replace(old, new)
+          required = [
+              'group: pr295-connected-staging-v1',
+              f'RELEASE_COMMIT: {release}',
+              f'TOOLING_COMMIT: {tooling}',
+              f'SOURCE_RUN_ID: "{run_id}"',
+              f'SOURCE_ARTIFACT_ID: "{artifact_id}"',
+              f'EXPECTED_MANIFEST_SHA256: {manifest}',
+              f'EXPECTED_ARTIFACT_SET_SHA256: {artifact_set}',
+              f'artifact-ids: {artifact_id}',
+              f'run-id: {run_id}',
+          ]
+          for value in required:
+              if value not in text:
+                  raise SystemExit(f'acceptance final binding missing {value}')
+          acceptance.write_text(text)
+          PY
+
+          rm -f \
+            .github/workflows/pr295-apply-v5-bindings.yml \
+            .github/workflows/pr295-v5-bind-diagnostic.yml
+          git add -A
+          git commit -m "ops(pr295): bind exact v5 staging candidate"
+          git push origin HEAD:agent/production-integration-gate-v1
