@@ -10,7 +10,9 @@ assert.doesNotMatch(
 );
 assert.match(source, /textContent\s*=/, "Processing labels must be assigned as text.");
 assert.match(source, /replaceChildren\(/, "Button contents must be replaced with DOM nodes.");
-assert.match(source, /cloneNode\(true\)/, "The original button contents must be restored structurally.");
+assert.match(source, /const previousNodes = \[\.\.\.button\.childNodes\]/, "The original button nodes must be retained by identity.");
+assert.doesNotMatch(source, /cloneNode\(/, "Processing cleanup must not replace original child-node identities.");
+assert.match(source, /button\.replaceChildren\(\.\.\.previousNodes\)/, "The exact original button nodes must be restored.");
 assert.match(source, /setAttribute\("aria-busy",\s*"true"\)/, "Processing state must remain accessible.");
 assert.match(source, /removeAttribute\("aria-busy"\)/, "Processing cleanup must remove busy state.");
 
