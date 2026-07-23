@@ -1,0 +1,271 @@
+name: PR295 Connected Staging Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pr295-connected-staging-acceptance.yml"
+      - "scripts/pr295-connected-staging-lib.mjs"
+      - "scripts/pr295-connected-staging-acceptance.mjs"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  connected-acceptance:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: staging
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
+      TOOLING_COMMIT: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
+      SOURCE_RUN_ID: "29996788487"
+      SOURCE_ARTIFACT_ID: "8559284849"
+      EXPECTED_MANIFEST_SHA256: d39eb20743082aa93e601bd8d7cfcdda8140a665a197e2cc42da7a046975f474
+      EXPECTED_ARTIFACT_SET_SHA256: 6eb97d5bf98451bad4232be99530c7449376f96168522ea0701e8e6567dc2148
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      EXPECTED_LEDGER_COUNT: "140"
+      EXPECTED_LEDGER_HEAD: "20260723061659"
+      EXPECTED_LEDGER_SHA256: 1a318610e798f9c8a8d200282c42d65696c507ab51141398636dacf8b7cc80eb
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      LOCAL_RESTORE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      EVIDENCE_PATH: /tmp/pr295-connected-acceptance.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and project boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/pr295-connected-staging-lib.mjs
+          node --check scripts/pr295-connected-staging-acceptance.mjs
+
+      - name: Download exact immutable artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 8559284849
+          run-id: 29996788487
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/release
+          merge-multiple: true
+
+      - name: Revalidate exact artifact identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum dist/release/release-manifest.json | awk '{print $1}')" = "$EXPECTED_MANIFEST_SHA256"
+          (cd dist/release && sha256sum --check checksums.sha256)
+          node scripts/release-platform.mjs validate \
+            --repo-root . \
+            --manifest dist/release/release-manifest.json \
+            --artifact-root dist/release \
+            --expected-commit "$RELEASE_COMMIT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('runtime source mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.TOOLING_COMMIT) throw new Error('tooling source mismatch');
+          if (String(manifest.provenance.workflowRunId) !== process.env.SOURCE_RUN_ID) throw new Error('source run mismatch');
+          if (manifest.artifactSetSha256 !== process.env.EXPECTED_ARTIFACT_SET_SHA256) throw new Error('artifact-set mismatch');
+          NODE
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Resolve protected staging API keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          anon="$CONFIGURED_ANON_KEY"
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$anon" ] || [ -z "$service" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > /tmp/project-api-keys.json
+            node - <<'NODE'
+            const fs = require('node:fs');
+            const rows = JSON.parse(fs.readFileSync('/tmp/project-api-keys.json', 'utf8'));
+            const key = (name) => rows.find((row) => row.name === name && row.api_key)?.api_key || '';
+            fs.writeFileSync('/tmp/anon-key', key('anon'));
+            fs.writeFileSync('/tmp/service-role-key', key('service_role'));
+            NODE
+            [ -n "$anon" ] || anon="$(cat /tmp/anon-key)"
+            [ -n "$service" ] || service="$(cat /tmp/service-role-key)"
+          fi
+          test -n "$anon"
+          test -n "$service"
+          echo "::add-mask::$anon"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_ANON_KEY=%s\n' "$anon" >> "$GITHUB_ENV"
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f /tmp/project-api-keys.json /tmp/anon-key /tmp/service-role-key
+
+      - name: Link exact staging database and verify ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'POOLER_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          read -r count head digest < <(
+            psql "$pooler_url" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
+              select count(*)::int,
+                     max(version),
+                     encode(extensions.digest(string_agg(version, E'\\n' order by version) || E'\\n', 'sha256'), 'hex')
+              from supabase_migrations.schema_migrations
+            "
+          )
+          test "$count" = "$EXPECTED_LEDGER_COUNT"
+          test "$head" = "$EXPECTED_LEDGER_HEAD"
+          test "$digest" = "$EXPECTED_LEDGER_SHA256"
+
+      - name: Capture exact pre-acceptance function inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions-raw.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/functions-raw.json', 'utf8'));
+          const sanitized = rows.map((row) => ({
+            name: row.slug ?? row.name,
+            version: row.version,
+            verifyJwt: row.verify_jwt,
+            status: row.status,
+          })).sort((a, b) => a.name.localeCompare(b.name));
+          const required = new Set([
+            'admin-api','classroom-api','stock-market-player-read','stock-market-read',
+            'stock-market-runner','stock-market-seed-copy','stock-market-trading'
+          ]);
+          for (const row of sanitized) {
+            if (required.has(row.name)) {
+              if (row.verifyJwt !== true || row.status !== 'ACTIVE') throw new Error(`${row.name} is not active with JWT enforcement`);
+              required.delete(row.name);
+            }
+          }
+          if (required.size) throw new Error(`Missing functions: ${[...required].join(',')}`);
+          fs.writeFileSync('/tmp/functions-before.json', JSON.stringify(sanitized, null, 2) + '\n');
+          NODE
+          rm -f /tmp/functions-raw.json
+
+      - name: Execute connected Player Admin load security recovery acceptance
+        id: acceptance
+        continue-on-error: true
+        run: node scripts/pr295-connected-staging-acceptance.mjs
+
+      - name: Verify function inventory remained unchanged
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions-raw.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/functions-raw.json', 'utf8'));
+          const sanitized = rows.map((row) => ({
+            name: row.slug ?? row.name,
+            version: row.version,
+            verifyJwt: row.verify_jwt,
+            status: row.status,
+          })).sort((a, b) => a.name.localeCompare(b.name));
+          fs.writeFileSync('/tmp/functions-after.json', JSON.stringify(sanitized, null, 2) + '\n');
+          const before = fs.readFileSync('/tmp/functions-before.json', 'utf8');
+          const after = fs.readFileSync('/tmp/functions-after.json', 'utf8');
+          if (before !== after) throw new Error('Edge Function inventory changed during connected acceptance');
+          NODE
+          rm -f /tmp/functions-raw.json
+
+      - name: Upload sanitized connected evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-connected-staging-evidence-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/pr295-connected-acceptance.json
+            /tmp/functions-before.json
+            /tmp/functions-after.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Fail closed when connected acceptance fails
+        if: steps.acceptance.outcome != 'success'
+        run: |
+          test -f /tmp/pr295-connected-acceptance.json && cat /tmp/pr295-connected-acceptance.json
+          exit 1
+
+      - name: Record connected acceptance result
+        shell: bash
+        run: |
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('node:fs');
+          const evidence = JSON.parse(fs.readFileSync('/tmp/pr295-connected-acceptance.json', 'utf8'));
+          console.log('## PR #295 connected staging acceptance');
+          console.log(`- Decision: \`${evidence.decision}\``);
+          console.log(`- Runtime source: \`${evidence.source.releaseCommit}\``);
+          console.log(`- Artifact set: \`${evidence.source.artifactSetSha256}\``);
+          console.log(`- 30-player p95: \`${evidence.metrics.expected30.p95Ms} ms\``);
+          console.log(`- 40-player p95: \`${evidence.metrics.maximum40.p95Ms} ms\``);
+          console.log(`- Cleanup complete: \`${evidence.cleanup.completed}\``);
+          console.log('- Production selected: `false`');
+          NODE
