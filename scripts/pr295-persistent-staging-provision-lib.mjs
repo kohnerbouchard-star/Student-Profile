@@ -131,7 +131,10 @@ export function validateProvisionedState({
   activePublicContractCount,
   activeVisibleStoreItemCount,
 }) {
-  requireCondition(release?.status === "active", "Seed release is not active");
+  requireCondition(
+    new Set(["active", "applied_active"]).has(String(release?.status ?? "")),
+    "Seed release is not active",
+  );
   requireCondition(Number(release?.operation_count) === EXPECTED_RELEASE_MEMBER_TOTAL, "Seed release operation count mismatch");
   let memberTotal = 0;
   for (const [type, expected] of Object.entries(EXPECTED_RELEASE_MEMBER_COUNTS)) {
