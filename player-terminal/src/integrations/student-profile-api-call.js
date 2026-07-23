@@ -50,22 +50,16 @@ export function headersFor(context) {
   const accessToken = String(
     context.session?.accessToken || context.config?.accessToken || ""
   ).replace(/^Bearer\s+/i, "").trim();
-  if (!accessToken) {
-    throw new ApiRequestError("The Player Terminal is missing its public API credential.", {
-      status: 500,
-      code: "PLAYER_RUNTIME_CONFIG_MISSING",
-      endpointKey: context.endpointKey,
-      requestId: context.requestId
-    });
-  }
 
   const headers = {
     "content-type": "application/json",
-    Authorization: `Bearer ${accessToken}`,
-    apikey: accessToken,
     "x-player-session-token": token,
     "x-request-id": String(context.requestId || "")
   };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+    headers.apikey = accessToken;
+  }
   if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
   return headers;
 }
