@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 30
     environment: staging
     env:
-      RELEASE_COMMIT: dac68561c2d0d3607e8367394ebcaed77972fb6c
+      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
       TARGET_GAME_NAME: Econovaria Staging Preview
