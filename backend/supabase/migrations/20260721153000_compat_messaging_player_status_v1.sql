@@ -488,7 +488,7 @@ as $function$
           'senderReference', case
             when message_row.sender_type = 'player'
               and player_sender.player_identifier is not null
-              and player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
+              and player_sender.player_identifier !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
               then player_sender.player_identifier
             else null
           end,
@@ -545,7 +545,7 @@ begin
       or v_query ~ E'[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]'
     ))
     or ((p_before_updated_at is null) <> (p_before_thread_public_id is null))
-    or (p_before_thread_public_id is not null and p_before_thread_public_id !~ '^thr_[0-9a-f]{32})
+    or (p_before_thread_public_id is not null and p_before_thread_public_id !~ '^thr_[0-9a-f]{32}$')
   then
     raise exception 'PLAYER_MESSAGES_READ_INVALID' using errcode = 'P0001';
   end if;
@@ -703,7 +703,7 @@ begin
   if p_game_session_id is null
     or p_player_id is null
     or p_thread_public_id is null
-    or p_thread_public_id !~ '^thr_[0-9a-f]{32}
+    or p_thread_public_id !~ '^thr_[0-9a-f]{32}$'
     or p_message_limit is null or p_message_limit not between 1 and 100
   then
     raise exception 'PLAYER_MESSAGE_THREAD_READ_INVALID' using errcode = 'P0001';
