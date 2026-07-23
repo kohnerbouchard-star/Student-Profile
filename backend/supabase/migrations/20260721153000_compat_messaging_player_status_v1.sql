@@ -116,7 +116,7 @@ begin
     raise exception 'PLAYER_MESSAGE_RECIPIENT_NOT_FOUND' using errcode = 'P0001';
   end if;
 
-  v_fingerprint := md5(v_recipient.id::text || E'\000' || v_title || E'\000' || v_body);
+  v_fingerprint := md5(v_recipient.id::text || chr(31) || v_title || chr(31) || v_body);
 
   select * into v_existing
   from public.message_threads as thread_row
