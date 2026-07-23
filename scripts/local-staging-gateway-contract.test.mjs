@@ -16,6 +16,7 @@ function probeGateway() {
 import importlib.util
 import json
 import sys
+from email.message import Message
 
 path = sys.argv[1]
 spec = importlib.util.spec_from_file_location("econovaria_local_gateway", path)
@@ -33,12 +34,19 @@ assert generated.startswith(prefix)
 assert generated.endswith(suffix)
 config = json.loads(generated[len(prefix):-len(suffix)])
 
+conditional_headers = Message()
+conditional_headers["If-Modified-Since"] = "Wed, 22 Jul 2026 00:00:00 GMT"
+conditional_headers["If-None-Match"] = '"stale-player-bundle"'
+module.remove_static_conditionals(conditional_headers)
+
 print(json.dumps({
     "functions": module.is_proxy_path("/functions/v1/classroom-api/players/login"),
     "auth": module.is_proxy_path("/auth/v1/token?grant_type=password"),
     "rest": module.is_proxy_path("/rest/v1/players"),
     "storage": module.is_proxy_path("/storage/v1/object/public/example"),
     "config": config,
+    "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
+    "remainingConditionals": list(conditional_headers.keys()),
 }))
 `;
 
@@ -74,6 +82,16 @@ test("local staging config keeps Auth on Supabase and Edge APIs on loopback", ()
     apiProxyUrl: "http://127.0.0.1:4173",
     supabasePublishableKey: "sb_publishable_contract_test",
   });
+});
+
+test("connected local static assets cannot reuse stale browser validators", () => {
+  const result = probeGateway();
+
+  assert.deepEqual(result.remainingConditionals, []);
+  assert.equal(result.staticHeaders["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0");
+  assert.equal(result.staticHeaders.Pragma, "no-cache");
+  assert.equal(result.staticHeaders.Expires, "0");
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "connected-no-cache-v1");
 });
 
 test("Player Terminal sends the canonical backend session contract", async () => {
@@ -113,7 +131,7 @@ test("Player Terminal sends the canonical backend session contract", async () =>
   }
 });
 
-test("Student-Profile adapter supplies platform JWT and Player session headers", () => {
+test("Student-Profile adapter supplies platform and Player session headers when configured", () => {
   const headers = headersFor({
     endpointKey: "session",
     requestId: "ptr_adapter_contract",
@@ -130,16 +148,17 @@ test("Student-Profile adapter supplies platform JWT and Player session headers",
   assert.equal(headers["x-request-id"], "ptr_adapter_contract");
 });
 
-test("Student-Profile adapter fails closed without its public API credential", () => {
-  assert.throws(
-    () => headersFor({
-      endpointKey: "session",
-      requestId: "ptr_missing_runtime",
-      session: { playerSessionToken: "ps_adapter_contract" },
-      config: {},
-    }),
-    (error) => error.code === "PLAYER_RUNTIME_CONFIG_MISSING" && error.status === 500,
-  );
+test("Student-Profile adapter retains Player session headers in injected test adapters", () => {
+  const headers = headersFor({
+    endpointKey: "session",
+    requestId: "ptr_injected_adapter",
+    session: { playerSessionToken: "ps_adapter_contract" },
+    config: {},
+  });
+
+  assert.equal(headers.Authorization, undefined);
+  assert.equal(headers.apikey, undefined);
+  assert.equal(headers["x-player-session-token"], "ps_adapter_contract");
 });
 
 test("voluntary logout does not reuse the invalid-session destination", () => {
