@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = Object.freeze({
   sessionInvalidEvent: "econovaria:player-session-invalid",
   logoutRequestedEvent: "econovaria:player-logout-requested",
   sessionExitUrl: "",
+  logoutExitUrl: "",
   sessionExitDelayMs: 120,
   sessionExpirySkewMs: 250,
   sessionExpiryWatchIntervalMs: 1000,
