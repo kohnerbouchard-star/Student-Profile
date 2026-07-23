@@ -91,11 +91,12 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "$api")"
+            printf '%s' "$response" > /tmp/pr295-deployment-runs.json
             read -r run_id status conclusion < <(
-              printf '%s' "$response" | node - "$EXPECTED_PR_HEAD" <<'NODE'
+              node - "$EXPECTED_PR_HEAD" <<'NODE'
           const fs = require('node:fs');
           const expected = process.argv[2];
-          const payload = JSON.parse(fs.readFileSync(0, 'utf8'));
+          const payload = JSON.parse(fs.readFileSync('/tmp/pr295-deployment-runs.json', 'utf8'));
           const runs = (payload.workflow_runs || [])
             .filter((run) => run.head_sha === expected)
             .sort((a, b) => b.run_number - a.run_number);
@@ -107,10 +108,12 @@ jobs:
             if [ -n "${run_id:-}" ] && [ "$status" = "completed" ]; then
               test "$conclusion" = "success"
               echo "Exact staging deployment run $run_id succeeded for $EXPECTED_PR_HEAD."
+              rm -f /tmp/pr295-deployment-runs.json
               exit 0
             fi
             sleep 10
           done
+          rm -f /tmp/pr295-deployment-runs.json
           echo "Timed out waiting for exact staging deployment success for $EXPECTED_PR_HEAD." >&2
           exit 1
 
