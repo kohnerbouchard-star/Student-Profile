@@ -173,7 +173,7 @@ const ROUTE_BUILDERS = Object.freeze({
     payload: {
       quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
-      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt.trim() : null,
+      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
     },
   }),
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
