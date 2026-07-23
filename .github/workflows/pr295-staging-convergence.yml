@@ -143,7 +143,8 @@ jobs:
           echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
           echo "PGSSLMODE=require" >> "$GITHUB_ENV"
 
-      - name: Verify exact pre-convergence staging ledger
+      - name: Determine exact staging ledger mode
+        id: ledger
         shell: bash
         run: |
           set -euo pipefail
@@ -156,18 +157,23 @@ jobs:
               from supabase_migrations.schema_migrations
             "
           )
-          test "$count" = "$EXPECTED_PRE_COUNT"
-          test "$head" = "$EXPECTED_PRE_HEAD"
-          test "$digest" = "$EXPECTED_PRE_DIGEST"
-          test "$progression_count" = "0"
+          if [ "$count" = "$EXPECTED_PRE_COUNT" ] && [ "$head" = "$EXPECTED_PRE_HEAD" ] && [ "$digest" = "$EXPECTED_PRE_DIGEST" ] && [ "$progression_count" = "0" ]; then
+            mode=apply
+          elif [ "$count" = "$EXPECTED_POST_COUNT" ] && [ "$head" = "$EXPECTED_POST_HEAD" ] && [ "$digest" = "$EXPECTED_POST_DIGEST" ] && [ "$progression_count" = "4" ]; then
+            mode=preinstalled
+          else
+            echo "Unexpected staging ledger: count=$count head=$head digest=$digest progression=$progression_count" >&2
+            exit 1
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Build atomic Progression schema and ledger transaction
+        if: steps.ledger.outputs.mode == 'apply'
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           migrations = [
               ('20260721160000', 'add_progression_reputation_runtime_v1'),
               ('20260721161000', 'fix_progression_read_volatility_v1'),
@@ -187,12 +193,10 @@ jobs:
               output.append(f'-- {path.name}')
               output.extend(lines[1:-1])
               tag = 'econovaria_progression_ledger'
-              while f'${tag}$' in original:
-                  tag += '_x'
-              quoted_name = name.replace("'", "''")
+              while f'${tag}$' in original: tag += '_x'
               ledger.append(
                   "insert into supabase_migrations.schema_migrations(version,name,statements) "
-                  f"values ('{version}','{quoted_name}',array[${tag}${original}${tag}$]);"
+                  f"values ('{version}','{name}',array[${tag}${original}${tag}$]);"
               )
           output.extend(ledger)
           output.append('commit;')
@@ -201,6 +205,7 @@ jobs:
           test -s /tmp/pr295-apply-progression.sql
 
       - name: Apply exact Progression migrations and ledger atomically
+        if: steps.ledger.outputs.mode == 'apply'
         shell: bash
         run: |
           set -euo pipefail
@@ -228,7 +233,7 @@ jobs:
             to_regprocedure('public.read_player_progression_v1(uuid,uuid)') is not null,
             to_regprocedure('public.read_public_player_progression_profile_v1(uuid,text)') is not null,
             to_regprocedure('public.record_progression_integration_event_v1(uuid,uuid,text,text,text,text,timestamptz)') is not null,
-            to_regprocedure('public.apply_admin_progression_correction_atomic_v1(uuid,uuid,text,text,numeric,text,text,text,text)') is not null;
+            to_regprocedure('public.apply_admin_progression_correction_atomic_v1(uuid,uuid,text,text,integer,text,text,text,text)') is not null;
           SQL
           test "$(tr -d '[:space:]' < /tmp/progression-runtime-state.txt)" = "t|t|t|t"
 
@@ -269,8 +274,9 @@ jobs:
             echo "- Source artifact ID: \`$SOURCE_ARTIFACT_ID\`"
             echo "- Artifact-set SHA-256: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
             echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
+            echo "- Migration mode: \`${{ steps.ledger.outputs.mode }}\`"
             echo "- Migration ledger: \`$EXPECTED_POST_COUNT / $EXPECTED_POST_HEAD / $EXPECTED_POST_DIGEST\`"
-            echo '- Progression migrations applied: `4`'
+            echo '- Progression migrations present: `4`'
             echo '- Exact Edge Function artifacts deployed: `7`'
             echo '- Function JWT verification requested: `true`'
             echo '- Artifact rebuilt during deployment: `false`'
