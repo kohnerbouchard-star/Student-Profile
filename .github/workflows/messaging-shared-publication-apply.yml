@@ -102,6 +102,7 @@ jobs:
           done
           printf 'commit' > /tmp/messaging-shared-stage
           git commit -m "feat(messaging): publish shared routes and capabilities additively"
+          printf 'push' > /tmp/messaging-shared-stage
           git push origin HEAD:agent/messaging-communication-v1
 
       - name: Publish shared-publication status
