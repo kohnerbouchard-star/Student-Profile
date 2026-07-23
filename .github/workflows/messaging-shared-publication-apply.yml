@@ -1,4 +1,4 @@
-name: Messaging Shared Publication Apply
+name: Messaging Shared Publication Candidate
 
 on:
   push:
@@ -8,11 +8,11 @@ on:
       - .github/workflows/messaging-shared-publication-apply.yml
 
 permissions:
-  contents: write
+  contents: read
   statuses: write
 
 jobs:
-  apply:
+  candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -20,11 +20,9 @@ jobs:
         with:
           ref: agent/messaging-communication-v1
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Three-way union Messaging publication with Marketplace main
-        id: publish
-        continue-on-error: true
+      - name: Build validated shared publication candidate
         shell: bash
         env:
           SOURCE_HEAD: c485c2369d9a0e73a2fdbd04d5f87a4439f154aa
@@ -32,9 +30,6 @@ jobs:
           EXPECTED_MAIN: fcef04f9327efc24955ff17406aaa2d368da2e55
         run: |
           set -euo pipefail
-          printf 'initialization' > /tmp/messaging-shared-stage
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --no-tags
           test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
           test "$(git merge-base HEAD origin/main)" = "$EXPECTED_MAIN"
@@ -60,7 +55,6 @@ jobs:
           workdir="$(mktemp -d)"
           trap 'rm -rf "$workdir"' EXIT
           for path in "${shared[@]}"; do
-            printf 'union:%s' "$path" > /tmp/messaging-shared-stage
             current="$workdir/current"
             base="$workdir/base"
             source="$workdir/source"
@@ -72,23 +66,11 @@ jobs:
             install -m 0644 "$current" "$path"
           done
 
-          rm -f .github/workflows/messaging-final-bundle.yml
-          rm -f .github/workflows/messaging-shared-publication-apply.yml
-          git add -A
-          for spec in \
-            'classroom:messagingDispatch:backend/supabase/functions/classroom-api/index.ts' \
-            'rate-limit:messageSend:backend/src/security/playerRateLimitDispatch.ts' \
-            'capability:messageSend:backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts' \
-            'player-endpoints:messageSend:player-terminal/src/api/endpoints.js' \
-            'admin:messaging:backend/supabase/functions/admin-api/index.ts'
-          do
-            stage="${spec%%:*}"
-            rest="${spec#*:}"
-            needle="${rest%%:*}"
-            file="${rest#*:}"
-            printf 'grep:%s' "$stage" > /tmp/messaging-shared-stage
-            git grep -Fq "$needle" -- "$file"
-          done
+          git grep -Fq 'messagingDispatch' backend/supabase/functions/classroom-api/index.ts
+          git grep -Fq 'messageSend' backend/src/security/playerRateLimitDispatch.ts
+          git grep -Fq 'messageSend' backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+          git grep -Fq 'messageSend' player-terminal/src/api/endpoints.js
+          git grep -Fq 'messaging' backend/supabase/functions/admin-api/index.ts
           for file in \
             player-terminal/src/api/backend-routes.js \
             player-terminal/src/api/endpoints.js \
@@ -97,41 +79,36 @@ jobs:
             player-terminal/src/integrations/student-profile-capability-manifest.js \
             player-terminal/src/pages/messages-page.js
           do
-            printf 'node-check:%s' "$file" > /tmp/messaging-shared-stage
             node --input-type=module --check < "$file"
           done
-          printf 'commit' > /tmp/messaging-shared-stage
-          git commit -m "feat(messaging): publish shared routes and capabilities additively"
-          git rev-parse HEAD > /tmp/messaging-generated-sha
-          printf 'push' > /tmp/messaging-shared-stage
-          git push origin HEAD:agent/messaging-communication-v1
 
-      - name: Publish generated identity and status
+          mkdir -p /tmp/messaging-shared-candidate
+          for path in "${shared[@]}"; do
+            mkdir -p "/tmp/messaging-shared-candidate/$(dirname "$path")"
+            cp "$path" "/tmp/messaging-shared-candidate/$path"
+          done
+          find /tmp/messaging-shared-candidate -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/messaging-shared-candidate/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: messaging-shared-candidate-${{ github.sha }}
+          path: /tmp/messaging-shared-candidate
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Publish candidate status
         if: always()
         uses: actions/github-script@v8
         with:
           script: |
-            const fs = require('fs');
-            const success = '${{ steps.publish.outcome }}' === 'success';
-            const stage = fs.existsSync('/tmp/messaging-shared-stage')
-              ? fs.readFileSync('/tmp/messaging-shared-stage', 'utf8').trim()
-              : 'unknown';
-            const generated = fs.existsSync('/tmp/messaging-generated-sha')
-              ? fs.readFileSync('/tmp/messaging-generated-sha', 'utf8').trim()
-              : '';
-            const context = generated && /^[0-9a-f]{40}$/.test(generated)
-              ? `messaging/generated/${generated}`
-              : `messaging/shared-stage/${stage.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70)}`;
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.sha,
-              state: success ? 'success' : 'failure',
-              context,
-              description: generated ? `Generated commit ${generated}` : `Failed at ${stage}`.slice(0, 140),
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/shared-candidate',
+              description: '${{ job.status }}' === 'success'
+                ? 'Validated Messaging shared publication candidate exported'
+                : 'Messaging shared candidate generation failed',
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
-
-      - name: Enforce shared-publication success
-        if: steps.publish.outcome != 'success'
-        run: false
