@@ -11,10 +11,6 @@ permissions:
   contents: write
   statuses: write
 
-concurrency:
-  group: messaging-shared-publication-apply
-  cancel-in-progress: false
-
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -28,6 +24,7 @@ jobs:
 
       - name: Three-way union Messaging publication with Marketplace main
         id: publish
+        continue-on-error: true
         shell: bash
         env:
           SOURCE_HEAD: c485c2369d9a0e73a2fdbd04d5f87a4439f154aa
@@ -35,6 +32,7 @@ jobs:
           EXPECTED_MAIN: fcef04f9327efc24955ff17406aaa2d368da2e55
         run: |
           set -euo pipefail
+          printf 'initialization' > /tmp/messaging-shared-stage
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main --no-tags
@@ -64,6 +62,7 @@ jobs:
           workdir="$(mktemp -d)"
           trap 'rm -rf "$workdir"' EXIT
           for path in "${shared[@]}"; do
+            printf 'union:%s' "$path" > /tmp/messaging-shared-stage
             current="$workdir/current"
             base="$workdir/base"
             source="$workdir/source"
@@ -78,17 +77,32 @@ jobs:
           rm -f .github/workflows/messaging-final-bundle.yml
           rm -f .github/workflows/messaging-shared-publication-apply.yml
           git add -A
-          git grep -Fq 'messagingDispatch' backend/supabase/functions/classroom-api/index.ts
-          git grep -Fq 'messageSend' backend/src/security/playerRateLimitDispatch.ts
-          git grep -Fq 'messaging' backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
-          git grep -Fq 'messaging' player-terminal/src/api/endpoints.js
-          git grep -Fq 'messaging' backend/supabase/functions/admin-api/index.ts
-          node --check player-terminal/src/api/backend-routes.js
-          node --check player-terminal/src/api/endpoints.js
-          node --check player-terminal/src/api/payload-normalizer.js
-          node --check player-terminal/src/api/resource-plan.js
-          node --check player-terminal/src/integrations/student-profile-capability-manifest.js
-          node --check player-terminal/src/pages/messages-page.js
+          for spec in \
+            'classroom:messagingDispatch:backend/supabase/functions/classroom-api/index.ts' \
+            'rate-limit:messageSend:backend/src/security/playerRateLimitDispatch.ts' \
+            'capability:messaging:backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts' \
+            'player-endpoints:messaging:player-terminal/src/api/endpoints.js' \
+            'admin:messaging:backend/supabase/functions/admin-api/index.ts'
+          do
+            stage="${spec%%:*}"
+            rest="${spec#*:}"
+            needle="${rest%%:*}"
+            file="${rest#*:}"
+            printf 'grep:%s' "$stage" > /tmp/messaging-shared-stage
+            git grep -Fq "$needle" -- "$file"
+          done
+          for file in \
+            player-terminal/src/api/backend-routes.js \
+            player-terminal/src/api/endpoints.js \
+            player-terminal/src/api/payload-normalizer.js \
+            player-terminal/src/api/resource-plan.js \
+            player-terminal/src/integrations/student-profile-capability-manifest.js \
+            player-terminal/src/pages/messages-page.js
+          do
+            printf 'node-check:%s' "$file" > /tmp/messaging-shared-stage
+            node --check "$file"
+          done
+          printf 'commit' > /tmp/messaging-shared-stage
           git commit -m "feat(messaging): publish shared routes and capabilities additively"
           git push origin HEAD:agent/messaging-communication-v1
 
@@ -97,14 +111,22 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const fs = require('fs');
+            const success = '${{ steps.publish.outcome }}' === 'success';
+            const stage = fs.existsSync('/tmp/messaging-shared-stage')
+              ? fs.readFileSync('/tmp/messaging-shared-stage', 'utf8').trim()
+              : 'unknown';
+            const slug = stage.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70);
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.sha,
-              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/shared-publication',
-              description: '${{ job.status }}' === 'success'
-                ? 'Messaging shared registrations unioned with Marketplace main'
-                : 'Messaging shared publication union failed',
+              state: success ? 'success' : 'failure',
+              context: success ? 'messaging/shared-publication' : `messaging/shared-stage/${slug}`,
+              description: success ? 'Messaging shared registrations unioned with Marketplace main' : `Failed at ${stage}`.slice(0, 140),
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
+
+      - name: Enforce shared-publication success
+        if: steps.publish.outcome != 'success'
+        run: false
