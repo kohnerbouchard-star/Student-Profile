@@ -1,114 +1,30 @@
-name: Progression Runtime
+name: Progression Final Convergence Launcher
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/progression-runtime-v1.yml"
-      - "backend/src/domains/progression/**"
-      - "backend/supabase/functions/classroom-api/index.ts"
-      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
-      - "backend/src/security/playerRateLimitDispatch.ts"
-      - "backend/src/security/progressionRateLimitDispatch.test.ts"
-      - "backend/supabase/functions/admin-api/**"
-      - "backend/supabase/migrations/*progression*.sql"
-      - "admin/progression-review-*"
-      - "admin/index.html"
-      - "player-terminal/src/api/**"
-      - "player-terminal/src/pages/progression-page.js"
-      - "player-terminal/src/data/empty-read-models.js"
-      - "player-terminal/tests/browser/player-progression.spec.mjs"
-      - "scripts/admin-progression-contract.mjs"
-      - "scripts/progression-balance-simulation.mjs"
-      - "scripts/progression-event-delivery-simulation.mjs"
-      - "scripts/progression-abuse-threshold-simulation.mjs"
-      - "docs/workstreams/progression-preconvergence-v1.md"
-      - "backend/package.json"
-      - "package.json"
   push:
     branches:
-      - "agent/progression-reputation-achievements-v1"
+      - agent/progression-reputation-achievements-v1
     paths:
-      - ".github/workflows/progression-runtime-v1.yml"
-      - "backend/src/domains/progression/**"
-      - "backend/src/security/progressionRateLimitDispatch.test.ts"
-      - "backend/supabase/functions/admin-api/**"
-      - "backend/supabase/migrations/*progression*.sql"
-      - "admin/progression-review-*"
-      - "player-terminal/src/pages/progression-page.js"
-      - "player-terminal/tests/browser/player-progression.spec.mjs"
-      - "scripts/admin-progression-contract.mjs"
-      - "scripts/progression-balance-simulation.mjs"
-      - "scripts/progression-event-delivery-simulation.mjs"
-      - "scripts/progression-abuse-threshold-simulation.mjs"
-      - "docs/workstreams/progression-preconvergence-v1.md"
-      - "backend/package.json"
-      - "package.json"
-  workflow_dispatch:
+      - .github/workflows/progression-runtime-v1.yml
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: progression-final-convergence
+  cancel-in-progress: false
 
 jobs:
-  verify:
+  converge:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Check out repository
+      - name: Check out Progression authority
         uses: actions/checkout@v7
-      - name: Set up Node
-        uses: actions/setup-node@v7
         with:
-          node-version: "22.23.1"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
-            player-terminal/package-lock.json
-      - name: Pin npm
-        run: npm install --global npm@10.9.8
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.9.3
-      - name: Install repository dependencies
-        run: npm ci
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-      - name: Install Player dependencies
-        working-directory: player-terminal
-        run: npm ci
-      - name: Validate migration catalog
-        run: npm run audit:migrations
-      - name: Run deterministic Progression simulations
-        run: npm run test:progression-simulation
-      - name: Validate Player and Admin browser contracts
-        run: npm run test:admin-progression
-      - name: Run Progression backend contracts
-        working-directory: backend
-        run: |
-          npm run test:player-progression
-          deno test --config supabase/functions/classroom-api/deno.json --lock=supabase/functions/deno.lock --frozen src/security/progressionRateLimitDispatch.test.ts
-      - name: Run Player capability contracts
-        working-directory: backend
-        run: npm run test:player-capabilities
-      - name: Run Player static verification
-        working-directory: player-terminal
-        run: npm run verify
-      - name: Install Chromium
-        working-directory: player-terminal
-        run: npx playwright install --with-deps chromium
-      - name: Run Progression browser verification
-        working-directory: player-terminal
-        run: npx playwright test tests/browser/player-progression.spec.mjs
-      - name: Run Player security contracts
-        working-directory: backend
-        run: npm run test:player-security
-      - name: Typecheck all backend surfaces
-        working-directory: backend
-        run: npm run typecheck:all
-      - name: Run backend smoke
-        working-directory: backend
-        run: npm run test:smoke
-      - name: Scan repository for committed credentials
-        run: npm run security:secrets
+          ref: agent/progression-reputation-achievements-v1
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Execute guarded post-Messaging convergence
+        shell: bash
+        run: bash scripts/progression-final-convergence.sh
