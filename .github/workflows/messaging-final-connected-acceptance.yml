@@ -184,16 +184,19 @@ jobs:
             from supabase_migrations.schema_migrations
             where version::text in (select version from expected)
           )
-          select case
-            when (select count(*) from actual) = 4
+          select jsonb_build_object(
+            'schemaVersion', 1,
+            'exactMessagingLedger',
+              (select count(*) from actual) = 4
               and to_regclass('public.message_threads') is not null
               and to_regclass('public.messages') is not null
               and to_regprocedure('public.create_player_message_thread_atomic_v1(uuid,uuid,text,text,text,text)') is not null
-              and to_regprocedure('public.moderate_admin_message_atomic_v2(uuid,uuid,text,text,text,text,text)') is not null
-            then jsonb_build_object('schemaVersion', 1, 'exactMessagingLedger', true, 'migrationCount', 4)::text
-            else (select 1 / 0)::text
-          end;
+              and to_regprocedure('public.moderate_admin_message_atomic_v2(uuid,uuid,text,text,text,text,text)') is not null,
+            'migrationCount', (select count(*) from actual)
+          )::text;
           SQL
+          grep -Fq '"exactMessagingLedger": true' /tmp/messaging-ledger.json
+          grep -Fq '"migrationCount": 4' /tmp/messaging-ledger.json
           unset PGPASSWORD
 
       - name: Execute inactive-session acceptance
@@ -207,7 +210,7 @@ jobs:
           const fs = require('node:fs');
           const source = fs.readFileSync('/tmp/messaging-inactive-session.raw.log', 'utf8');
           const sanitized = source
-            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
+            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{3}-[0-9a-f]{12}/gi, '[redacted-id]')
             .replace(/eyJ[a-zA-Z0-9_-]{20,}/g, '[redacted-token]')
             .replace(/(authorization|x-player-session-token)\s*[:=]\s*\S+/gi, '$1=[redacted]');
           fs.writeFileSync('/tmp/messaging-inactive-session.log', sanitized, { mode: 0o600 });
