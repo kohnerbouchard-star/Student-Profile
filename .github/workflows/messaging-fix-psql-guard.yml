@@ -1,0 +1,47 @@
+name: Messaging Fix Psql Guard
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-fix-psql-guard.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-fix-psql-guard
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Correct exact psql guard and remove repair workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/messaging-isolated-staging.yml')
+          text = path.read_text()
+          old = "grep -Fq '\\\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql"
+          new = "grep -Fq '\\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql"
+          if old not in text:
+              raise SystemExit('Expected doubled-backslash psql guard is missing.')
+          path.write_text(text.replace(old, new))
+          PY
+          rm -f .github/workflows/messaging-fix-psql-guard.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(messaging): validate psql guard with exact backslash"
+          git push origin HEAD:agent/messaging-communication-v1
