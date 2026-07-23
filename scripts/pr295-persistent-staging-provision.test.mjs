@@ -104,7 +104,7 @@ test("canonical bounded pack requires 240, 30, 50 and 24 instruments per country
   assert.throws(() => validatePackBundle(broken), /Expected 240 market templates/);
 });
 
-test("connected verification preserves staff content while requiring release-owned content", () => {
+test("connected verification preserves staff content and accepts canonical applied-active status", () => {
   const memberRows = Object.entries(EXPECTED_RELEASE_MEMBER_COUNTS).flatMap(([object_type, count]) =>
     Array.from({ length: count }, () => ({ object_type })),
   );
@@ -114,7 +114,7 @@ test("connected verification preserves staff content while requiring release-own
   const memberCounts = summarizeMemberCounts(memberRows);
   const countryCounts = summarizeCountryCounts(marketRows);
   assert.equal(validateProvisionedState({
-    release: { status: "active", operation_count: 590 },
+    release: { status: "applied_active", operation_count: 590 },
     memberCounts,
     countryCounts,
     activeAssetCount: 240,
@@ -122,7 +122,7 @@ test("connected verification preserves staff content while requiring release-own
     activeVisibleStoreItemCount: 50,
   }), true);
   assert.throws(() => validateProvisionedState({
-    release: { status: "active", operation_count: 590 },
+    release: { status: "applied_active", operation_count: 590 },
     memberCounts,
     countryCounts,
     activeAssetCount: 240,
