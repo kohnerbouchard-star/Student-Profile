@@ -48,14 +48,40 @@ npm --prefix backend run typecheck:all
 npm --prefix backend run smoke
 ```
 
-Run the static application locally:
+For a static UI-only preview, run:
 
 ```zsh
 python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-Then open `http://127.0.0.1:4173/` or
-`http://127.0.0.1:4173/admin/`.
+This static server does not provide a connected authenticated session. Open
+`http://127.0.0.1:4173/` only for layout inspection.
+
+For connected Admin and Player login against staging, use the repository-owned
+local gateway. Supply the public staging publishable key through your local
+environment; do not commit it into the repository.
+
+```zsh
+export ECONOVARIA_STAGING_PUBLISHABLE_KEY='replace-with-staging-publishable-key'
+
+python3 scripts/local-staging-gateway.py \
+  --project-ref eecvbssdvarfcykcfrny \
+  --publishable-key "$ECONOVARIA_STAGING_PUBLISHABLE_KEY" \
+  --port 4173 \
+  --open
+```
+
+Then open:
+
+- Login: `http://127.0.0.1:4173/`
+- Admin: `http://127.0.0.1:4173/admin/`
+- Player: `http://127.0.0.1:4173/player-terminal/`
+
+The gateway sends Supabase Auth directly to the staging project and proxies only
+Edge Function traffic through loopback. This preserves strict staging CORS while
+allowing authenticated localhost testing. A game join code remains valid until
+an administrator explicitly resets it; normal sign-in must not require a new
+game code.
 
 Database migrations must also pass the Docker-backed `Database Replay` GitHub
 workflow, which resets a blank Supabase database twice and runs database lint.
