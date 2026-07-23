@@ -1,0 +1,43 @@
+name: PR295 Merge Main Hotfix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-merge-main-hotfix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  merge-main:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge exact main and remove invalid scope workaround
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "1c3ae6004db442eeed1a4999a733445ca6fcecbd"
+          git merge --no-edit origin/main
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/pr295-connected-staging-acceptance.mjs')
+          text = path.read_text()
+          bad = '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n'
+          good = '    "/functions/v1/classroom-api/players/me/contracts",\n'
+          if text.count(bad) != 1:
+              raise SystemExit('Expected invalid contracts workaround was not found exactly once')
+          path.write_text(text.replace(bad, good))
+          PY
+          git add scripts/pr295-connected-staging-acceptance.mjs
+          git commit -m "ops(pr295): synchronize hosted contract route fix"
+          git push origin HEAD:agent/production-integration-gate-v1
