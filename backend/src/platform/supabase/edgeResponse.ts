@@ -28,13 +28,44 @@ export class EdgeActivationError extends Error {
   }
 }
 
+const PRODUCTION_BROWSER_ORIGIN = "https://kohnerbouchard-star.github.io";
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
+
+function environmentValue(name: string): string {
+  try {
+    return globalThis.Deno?.env.get(name)?.trim() || "";
+  } catch {
+    return "";
+  }
+}
+
+function validatedBrowserOrigin(value: string): string {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const secure = url.protocol === "https:";
+    const loopback = url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
+    if ((!secure && !loopback) || url.pathname !== "/" || url.search || url.hash) {
+      return PRODUCTION_BROWSER_ORIGIN;
+    }
+    return url.origin;
+  } catch {
+    return PRODUCTION_BROWSER_ORIGIN;
+  }
+}
+
+export const EDGE_BROWSER_ORIGIN = validatedBrowserOrigin(
+  environmentValue("ECONOVARIA_BROWSER_ORIGIN") || PRODUCTION_BROWSER_ORIGIN,
+);
+
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
-  "access-control-allow-origin": "*",
+  "access-control-allow-origin": EDGE_BROWSER_ORIGIN,
   "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "access-control-allow-headers":
     "authorization, apikey, content-type, x-client-info, x-request-id, x-player-session-token, x-econovaria-game-id, x-idempotency-key",
   "access-control-max-age": "86400",
+  "vary": "Origin",
 };
 
 export function jsonError(
@@ -47,7 +78,7 @@ export function jsonError(
   }, {
     "cache-control": "private, no-store, max-age=0",
     "pragma": "no-cache",
-    "vary": "authorization, x-player-session-token",
+    "vary": "Origin, Authorization, X-Player-Session-Token",
   });
 }
 
