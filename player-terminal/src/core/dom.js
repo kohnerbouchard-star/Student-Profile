@@ -13,7 +13,7 @@ function replaceButtonContents(button, label, includeSpinner = false) {
 
 export function setButtonProcessing(button, label = "Processing") {
   if (!(button instanceof HTMLButtonElement)) return () => {};
-  const previousNodes = [...button.childNodes].map((node) => node.cloneNode(true));
+  const previousNodes = [...button.childNodes];
   const previousDisabled = button.disabled;
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
@@ -25,7 +25,7 @@ export function setButtonProcessing(button, label = "Processing") {
     button.removeAttribute("aria-busy");
     button.disabled = previousDisabled;
     if (finalLabel) replaceButtonContents(button, finalLabel);
-    else button.replaceChildren(...previousNodes.map((node) => node.cloneNode(true)));
+    else button.replaceChildren(...previousNodes);
   };
 }
 
