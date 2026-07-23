@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Apply additive Messaging publication patches
+      - name: Scan and apply additive Messaging publication patches
         id: publish
         continue-on-error: true
         shell: bash
@@ -64,17 +64,23 @@ jobs:
 
           workdir="$(mktemp -d)"
           trap 'rm -rf "$workdir"' EXIT
-          : > /tmp/messaging-shared-failure
+          : > /tmp/messaging-shared-failures
           for path in "${shared[@]}"; do
             patch="$workdir/$(printf '%s' "$path" | tr '/' '_').patch"
             git diff --binary "$MERGE_BASE" "$SOURCE_HEAD" -- "$path" > "$patch"
             if [ -s "$patch" ]; then
-              if ! git apply --3way --index "$patch"; then
-                printf '%s' "$path" > /tmp/messaging-shared-failure
-                exit 1
+              if git apply --3way --check "$patch" >/dev/null 2>&1; then
+                git apply --3way --index "$patch"
+              else
+                printf '%s\n' "$path" >> /tmp/messaging-shared-failures
               fi
             fi
           done
+
+          if [ -s /tmp/messaging-shared-failures ]; then
+            cat /tmp/messaging-shared-failures
+            exit 1
+          fi
 
           rm -f .github/workflows/messaging-final-bundle.yml
           rm -f .github/workflows/messaging-shared-publication-apply.yml
@@ -95,19 +101,27 @@ jobs:
           script: |
             const fs = require('fs');
             const success = '${{ steps.publish.outcome }}' === 'success';
-            const failedPath = fs.existsSync('/tmp/messaging-shared-failure')
-              ? fs.readFileSync('/tmp/messaging-shared-failure', 'utf8').trim()
-              : '';
-            const slug = failedPath.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70) || 'unknown';
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: success ? 'success' : 'failure',
-              context: success ? 'messaging/shared-publication' : `messaging/shared-failure/${slug}`,
-              description: success ? 'Messaging shared registrations applied additively' : `Collision: ${failedPath || 'unknown'}`,
-              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-            });
+            const paths = fs.existsSync('/tmp/messaging-shared-failures')
+              ? fs.readFileSync('/tmp/messaging-shared-failures', 'utf8').trim().split(/\r?\n/).filter(Boolean)
+              : [];
+            if (success) {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner, repo: context.repo.repo, sha: context.sha,
+                state: 'success', context: 'messaging/shared-publication',
+                description: 'Messaging shared registrations applied additively',
+                target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              });
+            } else {
+              for (const path of paths.slice(0, 20)) {
+                const slug = path.replace(/[^A-Za-z0-9_.-]+/g, '-').slice(0, 70);
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner, repo: context.repo.repo, sha: context.sha,
+                  state: 'failure', context: `messaging/shared-failure/${slug}`,
+                  description: `Manual additive merge required: ${path}`.slice(0, 140),
+                  target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                });
+              }
+            }
 
       - name: Enforce shared-publication success
         if: steps.publish.outcome != 'success'
