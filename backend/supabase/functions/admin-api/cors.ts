@@ -6,6 +6,28 @@ const LOOPBACK_HOSTS = new Set([
   "::1",
 ]);
 
+function normalizedOrigin(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const secure = url.protocol === "https:";
+    const loopback = url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
+    if (
+      (!secure && !loopback) ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 function configuredOrigins(): Set<string> {
   let configured = "";
   try {
@@ -13,24 +35,25 @@ function configuredOrigins(): Set<string> {
   } catch {
     configured = "";
   }
-  return new Set([
-    PRODUCTION_ORIGIN,
-    ...configured.split(",").map((value) => value.trim()).filter(Boolean),
-  ]);
+
+  const origins = new Set([PRODUCTION_ORIGIN]);
+  for (const value of configured.split(",")) {
+    const origin = normalizedOrigin(value.trim());
+    if (origin) origins.add(origin);
+  }
+  return origins;
 }
 
 const ALLOWED_ORIGINS = configuredOrigins();
 
 function isAllowedOrigin(origin: string): boolean {
-  if (ALLOWED_ORIGINS.has(origin)) return true;
+  const normalized = normalizedOrigin(origin);
+  if (!normalized) return false;
+  if (ALLOWED_ORIGINS.has(normalized)) return true;
 
-  try {
-    const url = new URL(origin);
-    const hostname = url.hostname.replace(/^\[|\]$/g, "");
-    return url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
-  } catch {
-    return false;
-  }
+  const url = new URL(normalized);
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  return url.protocol === "http:" && LOOPBACK_HOSTS.has(hostname);
 }
 
 export function corsHeaders(request: Request): Record<string, string> {
