@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Operational carrier: never merge this branch.
 EXPECTED_HEAD="4f6a47ecec782d4c17d2eaf9b531a917c179c196"
 BRANCH="agent/progression-reputation-achievements-v1"
 MIGRATION="backend/supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql"
