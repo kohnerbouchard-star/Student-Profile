@@ -13,6 +13,9 @@ const IDENTIFIER_KEY = /(?:Id|Ids)$/;
 const PUBLIC_LOCATION_ID = /^loc_[a-z0-9_]+$/;
 const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
 const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
+const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
+const PUBLIC_PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COUNTRY_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const TOKEN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const TRAVEL_MODES = new Set(["land", "sea", "air", "meridian"]);
@@ -43,6 +46,12 @@ function requirePattern(value, pattern, endpointKey, field) {
   const clean = normalizeString(field, value, endpointKey).toLowerCase();
   if (!pattern.test(clean)) throw invalidPayload(endpointKey, field);
   return clean;
+}
+
+function messageText(value, endpointKey) {
+  const text = normalizeString("body", value, endpointKey);
+  if (!text) throw invalidPayload(endpointKey, "body");
+  return text;
 }
 
 function normalizeArrivalAnswers(raw, endpointKey) {
@@ -101,6 +110,23 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
       throw invalidPayload(endpointKey, "action");
     }
     return { action };
+  }
+  if (endpointKey === "messageSend") {
+    return { body: messageText(raw.body, endpointKey) };
+  }
+  if (endpointKey === "messageRead") {
+    const threadId = normalizeString("threadId", raw.threadId, endpointKey).toLowerCase();
+    if (!PUBLIC_THREAD_ID.test(threadId)) throw invalidPayload(endpointKey, "threadId");
+    return { threadId };
+  }
+  if (endpointKey === "messageThreadCreate") {
+    const recipientPlayerId = normalizeString("recipientPlayerId", raw.recipientPlayerId, endpointKey);
+    const title = normalizeString("title", raw.title, endpointKey);
+    if (!PUBLIC_PLAYER_ID.test(recipientPlayerId) || UUID.test(recipientPlayerId)) {
+      throw invalidPayload(endpointKey, "recipientPlayerId");
+    }
+    if (!title || title.length > 160) throw invalidPayload(endpointKey, "title");
+    return { recipientPlayerId, title, body: messageText(raw.body, endpointKey) };
   }
   if (endpointKey === "contractAccept") return {};
   if (endpointKey === "contractSubmit") {
