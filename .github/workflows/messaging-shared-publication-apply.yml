@@ -51,7 +51,6 @@ jobs:
             backend/supabase/functions/classroom-api/index.ts
             package.json
             player-terminal/package.json
-            player-terminal/src/api/backend-routes.js
             player-terminal/src/api/endpoints.js
             player-terminal/src/api/payload-normalizer.js
             player-terminal/src/api/resource-plan.js
