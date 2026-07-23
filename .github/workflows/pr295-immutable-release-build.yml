@@ -13,8 +13,8 @@ permissions:
   attestations: write
 
 concurrency:
-  group: pr295-immutable-release-v2
-  cancel-in-progress: false
+  group: pr295-immutable-release-v2-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
 
 jobs:
   build:
