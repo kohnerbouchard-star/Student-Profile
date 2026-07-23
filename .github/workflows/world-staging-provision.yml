@@ -1,0 +1,52 @@
+name: World Staging Provision
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/world-staging-provision.yml"
+      - "scripts/world-staging-provision.mjs"
+      - "scripts/world-staging-provision-lib.mjs"
+      - "scripts/world-staging-provision.test.mjs"
+      - "backend/supabase/migrations/20260724010000_restore_player_country_assignment_compatibility_v1.sql"
+      - "backend/src/domains/world/tests/playerCountryAssignmentCompatibilityMigration.test.ts"
+      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
+      - "docs/seed-content/executable/beta-pack-v1/location-registry-verified-v1.json"
+      - "docs/seed-content/executable/beta-pack-v1/calibration-scenarios-v1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: world-staging-provision-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Canonical World publication contract
+    if: github.event.pull_request.number == 325
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+      - name: Verify publication bridge and migration boundary
+        run: |
+          node --check scripts/world-staging-provision-lib.mjs
+          node --check scripts/world-staging-provision.mjs
+          node --test scripts/world-staging-provision.test.mjs
+          node scripts/supply-chain-secret-scan.mjs
