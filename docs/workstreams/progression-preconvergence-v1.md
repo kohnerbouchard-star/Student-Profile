@@ -1,6 +1,6 @@
 # Progression convergence and acceptance ledger v1
 
-Status: `FINAL_ACCEPTANCE_CANDIDATE_PINNED`
+Status: `FINAL_ACCEPTANCE_CANDIDATE_FROZEN`
 
 Authority: PR #261, branch `agent/progression-reputation-achievements-v1`.
 
