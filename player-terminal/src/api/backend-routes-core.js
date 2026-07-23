@@ -83,9 +83,11 @@ const ROUTE_BUILDERS = Object.freeze({
   capabilities: () => ({ method: "GET", path: "/players/me/capabilities" }),
   dashboard: ({ session }) => ({
     method: "GET",
-    path: queryPath("/players/me/game/dashboard", {
-      gameSessionId: requiredText(session?.gameSessionId, "gameSessionId", "dashboard"),
-    }),
+    path: session?.gameSessionId
+      ? queryPath("/players/me/game/dashboard", {
+        gameSessionId: session.gameSessionId,
+      })
+      : "/players/me/game/dashboard",
   }),
   countries: () => ({ method: "GET", path: "/players/me/world/countries" }),
   country: ({ params = {}, payload = {} }) => ({
