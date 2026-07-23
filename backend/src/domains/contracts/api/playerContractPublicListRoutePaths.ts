@@ -19,6 +19,14 @@ function readExactRouteSegments(
   segments: readonly string[],
 ): readonly string[] | null {
   if (segments[0] === "players") return segments;
+
+  if (
+    segments[0] === "classroom-api" &&
+    segments[1] === "players"
+  ) {
+    return segments.slice(1);
+  }
+
   if (
     segments[0] === "functions" &&
     segments[1] === "v1" &&
