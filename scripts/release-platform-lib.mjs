@@ -307,6 +307,7 @@ export async function buildImmutableRelease({ repoRoot, outputRoot, commit, conf
   for (const functionName of facts.edgeFunctions) {
     const stage = path.join(workRoot, `edge-${functionName}`);
     await mkdir(path.join(stage, "backend/supabase/functions"), { recursive: true });
+    await copyRoot(repoRoot, "backend/src", stage);
     await copyRoot(repoRoot, `backend/supabase/functions/${functionName}`, stage);
     try {
       await copyRoot(repoRoot, "backend/supabase/functions/_shared", stage);
