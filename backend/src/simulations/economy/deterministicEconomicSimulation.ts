@@ -1,7 +1,7 @@
 import {
+  type CountryEconomyProfile,
   ECONOMIC_DOMAINS,
   ECONOMIC_PHASES,
-  type CountryEconomyProfile,
   type EconomicBalanceFinding,
   type EconomicDomain,
   type EconomicPlayerState,
@@ -38,7 +38,12 @@ const PHASE_MODIFIERS: Readonly<Record<string, PhaseModifiers>> = {
   peace: { income: 1, cost: 1, scarcity: 1, marketVolatility: 1 },
   shortage: { income: 0.92, cost: 1.25, scarcity: 1.3, marketVolatility: 1.2 },
   war: { income: 0.78, cost: 1.55, scarcity: 1.65, marketVolatility: 1.65 },
-  reconstruction: { income: 1.12, cost: 1.15, scarcity: 1.1, marketVolatility: 1.35 },
+  reconstruction: {
+    income: 1.12,
+    cost: 1.15,
+    scarcity: 1.1,
+    marketVolatility: 1.35,
+  },
 };
 
 export function runDeterministicEconomicSimulation(
@@ -86,14 +91,18 @@ export function runDeterministicEconomicSimulation(
 
     const immutablePlayers = players
       .map(toImmutablePlayer)
-      .sort((left, right) => left.playerPublicId.localeCompare(right.playerPublicId));
+      .sort((left, right) =>
+        left.playerPublicId.localeCompare(right.playerPublicId)
+      );
     const wealth = immutablePlayers.map(netWealthMinor).sort((a, b) => a - b);
     phaseResults.push({
       phase,
       endingPlayers: immutablePlayers,
       totalWealthMinor: sum(wealth),
       medianWealthMinor: median(wealth),
-      insolventPlayerCount: immutablePlayers.filter((player) => player.insolvent).length,
+      insolventPlayerCount: immutablePlayers.filter((player) =>
+        player.insolvent
+      ).length,
       recoveredPlayerCount: immutablePlayers.filter((player) =>
         player.recoveredFromInsolvency
       ).length,
@@ -103,9 +112,13 @@ export function runDeterministicEconomicSimulation(
 
   const finalPlayers = players
     .map(toImmutablePlayer)
-    .sort((left, right) => left.playerPublicId.localeCompare(right.playerPublicId));
+    .sort((left, right) =>
+      left.playerPublicId.localeCompare(right.playerPublicId)
+    );
   const dominantPathShare = calculateDominantPathShare(finalPlayers);
-  const richestToPoorestCountryRatio = calculateCountryWealthRatio(finalPlayers);
+  const richestToPoorestCountryRatio = calculateCountryWealthRatio(
+    finalPlayers,
+  );
   const insolvencyRecoveryRate = calculateRecoveryRate(finalPlayers);
   const giniCoefficient = calculateGini(finalPlayers.map(netWealthMinor));
   const findings = buildFindings(
@@ -163,7 +176,9 @@ function applyAttendance(
   aggregateActions: Record<EconomicDomain, number>,
 ): void {
   const reliability = 0.94 + random() * 0.06;
-  const income = boundedRound(1_000 * country.incomeModifier * phase.income * reliability);
+  const income = boundedRound(
+    1_000 * country.incomeModifier * phase.income * reliability,
+  );
   player.cashMinor += income;
   incrementAction(player, aggregateActions, "attendance");
 }
@@ -252,8 +267,13 @@ function performBusiness(
       (phase.cost - 1) * 0.16 + strategy.riskTolerance * 0.04,
   );
   if (random() < failureProbability) {
-    const impairment = boundedRound(player.businessValueMinor * (0.08 + random() * 0.18));
-    player.businessValueMinor = Math.max(0, player.businessValueMinor - impairment);
+    const impairment = boundedRound(
+      player.businessValueMinor * (0.08 + random() * 0.18),
+    );
+    player.businessValueMinor = Math.max(
+      0,
+      player.businessValueMinor - impairment,
+    );
     return;
   }
   player.cashMinor += boundedRound(
@@ -284,7 +304,10 @@ function performMarketplace(
   random: () => number,
 ): void {
   if (player.inventoryValueMinor > 0) {
-    const soldValue = Math.max(1, boundedRound(player.inventoryValueMinor * 0.3));
+    const soldValue = Math.max(
+      1,
+      boundedRound(player.inventoryValueMinor * 0.3),
+    );
     player.inventoryValueMinor -= soldValue;
     const scarcityPremium = Math.min(
       0.45,
@@ -298,7 +321,9 @@ function performMarketplace(
   const purchase = Math.min(player.cashMinor, 220);
   if (purchase <= 0) return;
   player.cashMinor -= purchase;
-  player.inventoryValueMinor += boundedRound(purchase * (0.9 + random() * 0.12));
+  player.inventoryValueMinor += boundedRound(
+    purchase * (0.9 + random() * 0.12),
+  );
 }
 
 function performFinancialMarketAction(
@@ -380,8 +405,13 @@ function updateSolvency(
 function selectWeightedAction(
   strategy: PlayerStrategyProfile,
   draw: number,
-): "contracts" | "business" | "crafting" | "marketplace" |
-  "financial_markets" | "banking" {
+):
+  | "contracts"
+  | "business"
+  | "crafting"
+  | "marketplace"
+  | "financial_markets"
+  | "banking" {
   const choices = [
     ["contracts", strategy.contractWeight],
     ["business", strategy.businessWeight],
@@ -411,7 +441,8 @@ function buildFindings(
     findings.push({
       code: "dominant_economic_path_exceeded",
       severity: "critical",
-      message: "One economic path exceeds the configured share of productive actions.",
+      message:
+        "One economic path exceeds the configured share of productive actions.",
       observedValue: round(dominantPathShare),
       threshold: config.maximumDominantPathShare,
     });
@@ -420,7 +451,8 @@ function buildFindings(
     findings.push({
       code: "country_wealth_ratio_exceeded",
       severity: "critical",
-      message: "Average country wealth diverges beyond the configured balance limit.",
+      message:
+        "Average country wealth diverges beyond the configured balance limit.",
       observedValue: round(countryRatio),
       threshold: config.maximumCountryWealthRatio,
     });
@@ -438,7 +470,8 @@ function buildFindings(
     findings.push({
       code: "wealth_inequality_high",
       severity: "warning",
-      message: "Final player wealth concentration is above the simulation guardrail.",
+      message:
+        "Final player wealth concentration is above the simulation guardrail.",
       observedValue: round(gini),
       threshold: 0.6,
     });
@@ -447,7 +480,8 @@ function buildFindings(
     findings.push({
       code: "economic_balance_within_guardrails",
       severity: "info",
-      message: "The deterministic run remained inside configured balance guardrails.",
+      message:
+        "The deterministic run remained inside configured balance guardrails.",
       observedValue: 0,
       threshold: 0,
     });
@@ -455,7 +489,9 @@ function buildFindings(
   return findings.sort((left, right) => left.code.localeCompare(right.code));
 }
 
-function calculateDominantPathShare(players: readonly EconomicPlayerState[]): number {
+function calculateDominantPathShare(
+  players: readonly EconomicPlayerState[],
+): number {
   const productiveDomains: EconomicDomain[] = [
     "contracts",
     "business",
@@ -470,25 +506,32 @@ function calculateDominantPathShare(players: readonly EconomicPlayerState[]): nu
   return totalActions === 0 ? 0 : Math.max(...totals) / totalActions;
 }
 
-function calculateCountryWealthRatio(players: readonly EconomicPlayerState[]): number {
+function calculateCountryWealthRatio(
+  players: readonly EconomicPlayerState[],
+): number {
   const grouped = new Map<string, number[]>();
   for (const player of players) {
     const values = grouped.get(player.countryCode) ?? [];
     values.push(netWealthMinor(player));
     grouped.set(player.countryCode, values);
   }
-  const averages = [...grouped.values()].map((values) => sum(values) / values.length);
+  const averages = [...grouped.values()].map((values) =>
+    sum(values) / values.length
+  );
   const richest = Math.max(...averages);
   const poorest = Math.max(1, Math.min(...averages));
   return richest / poorest;
 }
 
-function calculateRecoveryRate(players: readonly EconomicPlayerState[]): number {
+function calculateRecoveryRate(
+  players: readonly EconomicPlayerState[],
+): number {
   const everAffected = players.filter((player) =>
     player.insolvent || player.recoveredFromInsolvency
   );
   if (everAffected.length === 0) return 1;
-  return everAffected.filter((player) => player.recoveredFromInsolvency).length /
+  return everAffected.filter((player) => player.recoveredFromInsolvency)
+    .length /
     everAffected.length;
 }
 
@@ -509,41 +552,67 @@ function calculateGini(values: readonly number[]): number {
 }
 
 function validateConfig(config: EconomicSimulationConfig): void {
-  if (!config.simulationPublicId.trim() || config.simulationPublicId.length > 180) {
+  if (
+    !config.simulationPublicId.trim() || config.simulationPublicId.length > 180
+  ) {
     throw new Error("simulation_public_id_invalid");
   }
-  if (!Number.isInteger(config.deterministicSeed) || config.deterministicSeed < 0) {
+  if (
+    !Number.isInteger(config.deterministicSeed) || config.deterministicSeed < 0
+  ) {
     throw new Error("simulation_seed_invalid");
   }
   if (config.playerCount !== 30 && config.playerCount !== 40) {
     throw new Error("simulation_player_count_invalid");
   }
-  if (!Number.isInteger(config.ticksPerPhase) || config.ticksPerPhase < 1 || config.ticksPerPhase > 10_000) {
+  if (
+    !Number.isInteger(config.ticksPerPhase) || config.ticksPerPhase < 1 ||
+    config.ticksPerPhase > 10_000
+  ) {
     throw new Error("simulation_ticks_invalid");
   }
-  if (config.countries.length !== 10) throw new Error("simulation_requires_ten_countries");
-  if (config.strategies.length < 3) throw new Error("simulation_strategies_insufficient");
-  assertUnique(config.countries.map((country) => country.countryCode), "duplicate_country_code");
-  assertUnique(config.countries.map((country) => country.currencyCode), "duplicate_currency_code");
+  if (config.countries.length !== 10) {
+    throw new Error("simulation_requires_ten_countries");
+  }
+  if (config.strategies.length < 3) {
+    throw new Error("simulation_strategies_insufficient");
+  }
+  assertUnique(
+    config.countries.map((country) => country.countryCode),
+    "duplicate_country_code",
+  );
+  assertUnique(
+    config.countries.map((country) => country.currencyCode),
+    "duplicate_currency_code",
+  );
   assertUnique(
     config.strategies.map((strategy) => strategy.strategyPublicId),
     "duplicate_strategy_public_id",
   );
   for (const country of config.countries) validateCountry(country);
   for (const strategy of config.strategies) validateStrategy(strategy);
-  for (const [value, errorCode] of [
-    [config.startingCashMinor, "starting_cash_invalid"],
-    [config.subsistenceCostMinor, "subsistence_cost_invalid"],
-  ] as const) {
+  for (
+    const [value, errorCode] of [
+      [config.startingCashMinor, "starting_cash_invalid"],
+      [config.subsistenceCostMinor, "subsistence_cost_invalid"],
+    ] as const
+  ) {
     if (!Number.isInteger(value) || value <= 0) throw new Error(errorCode);
   }
-  for (const [value, errorCode] of [
-    [config.maximumDominantPathShare, "dominant_path_threshold_invalid"],
-    [config.minimumRecoveryRate, "recovery_threshold_invalid"],
-  ] as const) {
-    if (!Number.isFinite(value) || value < 0 || value > 1) throw new Error(errorCode);
+  for (
+    const [value, errorCode] of [
+      [config.maximumDominantPathShare, "dominant_path_threshold_invalid"],
+      [config.minimumRecoveryRate, "recovery_threshold_invalid"],
+    ] as const
+  ) {
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      throw new Error(errorCode);
+    }
   }
-  if (!Number.isFinite(config.maximumCountryWealthRatio) || config.maximumCountryWealthRatio < 1) {
+  if (
+    !Number.isFinite(config.maximumCountryWealthRatio) ||
+    config.maximumCountryWealthRatio < 1
+  ) {
     throw new Error("country_wealth_threshold_invalid");
   }
 }
@@ -555,13 +624,15 @@ function validateCountry(country: CountryEconomyProfile): void {
   if (!/^[A-Z]{3,16}$/.test(country.currencyCode)) {
     throw new Error("currency_code_invalid");
   }
-  for (const value of [
-    country.incomeModifier,
-    country.costModifier,
-    country.scarcityModifier,
-    country.creditModifier,
-    country.marketVolatilityModifier,
-  ]) {
+  for (
+    const value of [
+      country.incomeModifier,
+      country.costModifier,
+      country.scarcityModifier,
+      country.creditModifier,
+      country.marketVolatilityModifier,
+    ]
+  ) {
     if (!Number.isFinite(value) || value <= 0 || value > 5) {
       throw new Error("country_modifier_invalid");
     }
@@ -569,7 +640,9 @@ function validateCountry(country: CountryEconomyProfile): void {
 }
 
 function validateStrategy(strategy: PlayerStrategyProfile): void {
-  if (!strategy.strategyPublicId.trim() || strategy.strategyPublicId.length > 180) {
+  if (
+    !strategy.strategyPublicId.trim() || strategy.strategyPublicId.length > 180
+  ) {
     throw new Error("strategy_public_id_invalid");
   }
   const weights = [
@@ -584,7 +657,10 @@ function validateStrategy(strategy: PlayerStrategyProfile): void {
     throw new Error("strategy_weight_invalid");
   }
   if (sum(weights) <= 0) throw new Error("strategy_weight_total_invalid");
-  if (!Number.isFinite(strategy.riskTolerance) || strategy.riskTolerance < 0 || strategy.riskTolerance > 1) {
+  if (
+    !Number.isFinite(strategy.riskTolerance) || strategy.riskTolerance < 0 ||
+    strategy.riskTolerance > 1
+  ) {
     throw new Error("strategy_risk_tolerance_invalid");
   }
 }
@@ -599,7 +675,9 @@ function incrementAction(
 }
 
 function emptyActionCounts(): Record<EconomicDomain, number> {
-  return Object.fromEntries(ECONOMIC_DOMAINS.map((domain) => [domain, 0])) as Record<
+  return Object.fromEntries(
+    ECONOMIC_DOMAINS.map((domain) => [domain, 0]),
+  ) as Record<
     EconomicDomain,
     number
   >;
@@ -620,8 +698,11 @@ function toImmutablePlayer(player: MutablePlayerState): EconomicPlayerState {
   };
 }
 
-function netWealthMinor(player: EconomicPlayerState | MutablePlayerState): number {
-  return player.cashMinor + player.inventoryValueMinor + player.businessValueMinor +
+function netWealthMinor(
+  player: EconomicPlayerState | MutablePlayerState,
+): number {
+  return player.cashMinor + player.inventoryValueMinor +
+    player.businessValueMinor +
     player.portfolioValueMinor - player.debtMinor;
 }
 

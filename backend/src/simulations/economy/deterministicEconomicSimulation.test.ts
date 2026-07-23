@@ -23,7 +23,10 @@ Deno.test("economic simulation is deterministic and covers every campaign phase"
     "reconstruction",
   ]);
   assertEquals(first.finalPlayers.length, 30);
-  assertEquals(new Set(first.finalPlayers.map((player) => player.countryCode)).size, 10);
+  assertEquals(
+    new Set(first.finalPlayers.map((player) => player.countryCode)).size,
+    10,
+  );
   assertEquals(first.seedCatalogsModified, false);
   assertEquals(first.activationAuthorized, false);
   assertEquals(first.deterministic, true);
@@ -43,7 +46,9 @@ Deno.test("economic simulation supports the maximum 40-player classroom profile"
   const playerCounts = Object.fromEntries(
     countries().map((country) => [
       country.countryCode,
-      report.finalPlayers.filter((player) => player.countryCode === country.countryCode)
+      report.finalPlayers.filter((player) =>
+        player.countryCode === country.countryCode
+      )
         .length,
     ]),
   );
@@ -68,10 +73,12 @@ Deno.test("dominant strategy configurations produce a critical finding", () => {
   });
 
   assert(report.dominantPathShare > 0.99);
-  assert(report.findings.some((finding) =>
-    finding.code === "dominant_economic_path_exceeded" &&
-    finding.severity === "critical"
-  ));
+  assert(
+    report.findings.some((finding) =>
+      finding.code === "dominant_economic_path_exceeded" &&
+      finding.severity === "critical"
+    ),
+  );
 });
 
 Deno.test("simulation rejects incomplete country coverage and duplicate identities", () => {
@@ -88,7 +95,9 @@ Deno.test("simulation rejects incomplete country coverage and duplicate identiti
       runDeterministicEconomicSimulation({
         ...baseConfig(),
         countries: countries().map((country, index) =>
-          index === 9 ? { ...country, countryCode: countries()[0].countryCode } : country
+          index === 9
+            ? { ...country, countryCode: countries()[0].countryCode }
+            : country
         ),
       }),
     "duplicate_country_code",
@@ -190,7 +199,9 @@ function assert(condition: boolean): void {
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+      `Expected ${JSON.stringify(expected)}, received ${
+        JSON.stringify(actual)
+      }.`,
     );
   }
 }
@@ -199,7 +210,9 @@ function assertThrows(run: () => unknown, expectedMessage: string): void {
   try {
     run();
   } catch (error) {
-    if (error instanceof Error && error.message.includes(expectedMessage)) return;
+    if (error instanceof Error && error.message.includes(expectedMessage)) {
+      return;
+    }
     throw error;
   }
   throw new Error(`Expected error containing ${expectedMessage}.`);
