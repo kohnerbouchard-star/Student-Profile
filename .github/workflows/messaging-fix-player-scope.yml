@@ -1,4 +1,4 @@
-name: Messaging Fix Verification Guards
+name: Messaging Export Corrected Staging Workflow
 
 on:
   pull_request:
@@ -6,21 +6,16 @@ on:
       - main
     paths:
       - .github/workflows/messaging-fix-player-scope.yml
-  push:
-    branches:
-      - agent/messaging-communication-v1
-    paths:
-      - .github/workflows/messaging-fix-player-scope.yml
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: messaging-fix-verification-guards
+  group: messaging-export-corrected-staging
   cancel-in-progress: true
 
 jobs:
-  fix:
+  export:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -28,15 +23,13 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: agent/messaging-communication-v1
-          fetch-depth: 0
-          persist-credentials: true
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Correct exact staging guard and remove helper
+      - name: Materialize corrected staging workflow
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python - <<'PY'
           from pathlib import Path
 
@@ -54,10 +47,12 @@ jobs:
           lines[matches[0]] = r"          grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql"
           path.write_text('\n'.join(lines) + '\n')
           PY
-
           grep -Fq '\set ON_ERROR_STOP on' scripts/staging/messaging-connected-acceptance.sql
-          rm .github/workflows/messaging-fix-player-scope.yml
-          git add -A
-          git diff --cached --check
-          git commit -m "fix(messaging): correct exact staging validation guard"
-          git push origin HEAD:agent/messaging-communication-v1
+
+      - name: Upload corrected workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrected-messaging-isolated-staging
+          path: .github/workflows/messaging-isolated-staging.yml
+          if-no-files-found: error
+          retention-days: 1
