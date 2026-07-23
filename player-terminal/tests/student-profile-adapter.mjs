@@ -315,7 +315,7 @@ const dashboard = await apiCall(context("dashboard", "GET", "/dashboard"));
 assert.equal(dashboard.netWorth, 1500);
 assert.ok(Array.isArray(dashboard.worldEvents));
 assert.ok(Array.isArray(dashboard.marketPulse));
-assert.equal(calls.at(-1).path, "/players/me/game/dashboard?gameSessionId=game-1");
+assert.equal(calls.at(-1).path, "/players/me/game/dashboard");
 
 const contracts = await apiCall(context("contracts", "GET", "/contracts"));
 assert.equal(contracts.items[0].id, "arrival-orientation");
