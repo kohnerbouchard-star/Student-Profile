@@ -28,11 +28,21 @@ jobs:
           git fetch origin main
           git merge --no-edit origin/main > /tmp/merge.log 2>&1
           status=$?
-          echo "merge_status=$status"
-          cat /tmp/merge.log
-          echo '--- porcelain ---'
-          git status --porcelain=v1
-          echo '--- unmerged ---'
-          git diff --name-only --diff-filter=U
+          {
+            echo "merge_status=$status"
+            cat /tmp/merge.log
+            echo '--- porcelain ---'
+            git status --porcelain=v1
+            echo '--- unmerged ---'
+            git diff --name-only --diff-filter=U
+          } > /tmp/merge-diagnostic.txt
+          cat /tmp/merge-diagnostic.txt
           git merge --abort >/dev/null 2>&1 || true
           exit 0
+      - name: Upload merge diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-merge-diagnostic-${{ github.event.pull_request.head.sha }}
+          path: /tmp/merge-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 3
