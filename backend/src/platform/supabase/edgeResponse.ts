@@ -33,7 +33,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 
 function environmentValue(name: string): string {
   try {
-    return globalThis.Deno?.env.get(name)?.trim() || "";
+    return Deno.env.get(name)?.trim() || "";
   } catch {
     return "";
   }
