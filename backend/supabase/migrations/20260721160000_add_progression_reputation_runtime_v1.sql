@@ -1247,20 +1247,26 @@ begin
   if v_player is null then raise exception 'PROGRESSION_PLAYER_NOT_FOUND' using errcode = 'P0001'; end if;
   perform public.ensure_player_progression_profile_v1(p_game_session_id,v_player);
   if p_correction_type = 'experience' then
-    select * into v_profile from public.player_progression_profiles
-    where game_session_id = p_game_session_id and player_id = v_player for update;
+    select profile.* into v_profile
+    from public.player_progression_profiles as profile
+    where profile.game_session_id = p_game_session_id
+      and profile.player_id = v_player
+    for update;
     v_before := least(2147483647, v_profile.experience)::integer;
     v_after := greatest(0, least(1000000000, v_profile.experience + p_amount))::integer;
-    update public.player_progression_profiles
+    update public.player_progression_profiles as profile
     set experience = v_after,
         level = public.progression_level_for_experience_v1(v_after),
-        earned_skill_points = greatest(earned_skill_points, public.progression_level_for_experience_v1(v_after) - 1),
+        earned_skill_points = greatest(profile.earned_skill_points, public.progression_level_for_experience_v1(v_after) - 1),
         updated_at = now()
-    where game_session_id = p_game_session_id and player_id = v_player;
+    where profile.game_session_id = p_game_session_id
+      and profile.player_id = v_player;
     perform public.increment_player_progression_counter_v1(p_game_session_id,v_player,'level.current',0);
-    update public.player_progression_counters
+    update public.player_progression_counters as counter
     set counter_value = public.progression_level_for_experience_v1(v_after), updated_at = now()
-    where game_session_id = p_game_session_id and player_id = v_player and counter_key = 'level.current';
+    where counter.game_session_id = p_game_session_id
+      and counter.player_id = v_player
+      and counter.counter_key = 'level.current';
   else
     select before_score,after_score into v_before,v_after
     from public.apply_player_reputation_delta_v1(
