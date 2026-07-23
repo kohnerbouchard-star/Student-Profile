@@ -1,0 +1,50 @@
+name: PR295 Serialize Connected Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-serialize-connected-staging.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Serialize deployment and acceptance across PR heads
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          deploy = Path('.github/workflows/pr295-staging-artifact-deploy-v2.yml')
+          text = deploy.read_text()
+          old = """concurrency:\n  group: pr295-staging-artifact-deploy-v4\n  cancel-in-progress: false\n"""
+          new = """concurrency:\n  group: pr295-staging-artifact-deploy-v4\n  cancel-in-progress: true\n"""
+          if text.count(old) != 1:
+              raise SystemExit('Expected deployment concurrency block was not found exactly once')
+          deploy.write_text(text.replace(old, new))
+
+          acceptance = Path('.github/workflows/pr295-connected-staging-acceptance.yml')
+          text = acceptance.read_text()
+          old = """concurrency:\n  group: pr295-connected-staging-${{ github.event.pull_request.head.sha || github.sha }}\n  cancel-in-progress: true\n"""
+          new = """concurrency:\n  group: pr295-connected-staging-v1\n  cancel-in-progress: true\n"""
+          if text.count(old) != 1:
+              raise SystemExit('Expected acceptance concurrency block was not found exactly once')
+          acceptance.write_text(text.replace(old, new))
+          PY
+          rm -f .github/workflows/pr295-serialize-connected-staging.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "ci(pr295): serialize connected staging runs"
+          git push origin HEAD:agent/production-integration-gate-v1
