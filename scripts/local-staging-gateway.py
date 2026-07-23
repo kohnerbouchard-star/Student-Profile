@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Serve Econovaria locally and proxy Supabase requests through the same origin.
+"""Serve Econovaria locally and proxy Edge Function requests through the same origin.
 
-This keeps browser traffic same-origin during local development while preserving
-strict CORS on the connected Supabase staging project.
+This keeps browser traffic to connected Supabase Edge Functions same-origin during
+local development while preserving strict CORS on the staging project. Supabase
+Auth continues to use the real staging URL so login behavior matches hosted builds.
 """
 
 from __future__ import annotations
@@ -21,10 +22,7 @@ from typing import Final
 from urllib.parse import urlsplit
 
 PROXY_PREFIXES: Final[tuple[str, ...]] = (
-    "/auth/v1/",
     "/functions/v1/",
-    "/rest/v1/",
-    "/storage/v1/",
 )
 HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
     {
@@ -41,7 +39,7 @@ HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
 
 
 def is_proxy_path(path: str) -> bool:
-    """Return whether a request path belongs to a proxied Supabase HTTP API."""
+    """Return whether a request path belongs to a proxied Supabase Edge API."""
     clean_path = urlsplit(path).path
     return any(clean_path.startswith(prefix) for prefix in PROXY_PREFIXES)
 
@@ -167,7 +165,8 @@ def runtime_config(project_ref: str, publishable_key: str, port: int) -> str:
     config = {
         "environment": "staging",
         "projectRef": project_ref,
-        "supabaseUrl": f"http://127.0.0.1:{port}",
+        "supabaseUrl": f"https://{project_ref}.supabase.co",
+        "apiProxyUrl": f"http://127.0.0.1:{port}",
         "supabasePublishableKey": publishable_key,
     }
     return (
@@ -179,7 +178,7 @@ def runtime_config(project_ref: str, publishable_key: str, port: int) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve Econovaria locally with a same-origin Supabase staging gateway."
+        description="Serve Econovaria locally with a same-origin Supabase Edge gateway."
     )
     parser.add_argument("--project-ref", required=True)
     parser.add_argument("--publishable-key", required=True)
@@ -238,6 +237,7 @@ def main() -> int:
     print(f"Econovaria local staging gateway is running at {address}")
     print(f"Admin: {address}admin/")
     print(f"Player: {address}player-terminal/")
+    print("Supabase Auth: direct to staging; Edge APIs: proxied through loopback.")
     print("Press Ctrl+C to stop.")
 
     if args.open_browser:
