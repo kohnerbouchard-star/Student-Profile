@@ -6,44 +6,51 @@ on:
       - main
     paths:
       - ".github/workflows/pr295-immutable-release-build.yml"
+      - "scripts/release-platform-lib.mjs"
 
 permissions:
   contents: read
-  actions: read
+  id-token: write
+  attestations: write
 
 concurrency:
-  group: pr295-immutable-release-verification
+  group: pr295-immutable-release-v2
   cancel-in-progress: false
 
 jobs:
-  verify:
+  build:
     if: github.event.pull_request.number == 295
-    name: Verify original immutable release artifact
+    name: Build corrected immutable release artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
-      RELEASE_COMMIT: 623b82e004ea8446f6358c7ae4cc7ab4f6ec340d
-      SOURCE_RUN_ID: "29994325542"
-      SOURCE_ARTIFACT_ID: "8558309964"
-      EXPECTED_ARCHIVE_DIGEST: 684c5602c7e8a1730bd231a94b6bcf63fe280ed50cfd0a33d87dc22d23e14c4d
-      EXPECTED_MANIFEST_SHA256: 74c00a69804cab21fa2da7a7af96b7017a17706de62551ad861c3040803d670d
-      EXPECTED_ARTIFACT_SET_SHA256: 95b50f909e9b83b89d60d78539eb03fe5eb01bd9abc6e3985f0e3fb187bd1727
+      RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
+      EXPECTED_TOOLING_COMMIT: 6ee5707261cf005df7180acaf5c7d29edd71a945
+      CONFIGURATION_PATH: docs/operations/release-configuration.v1.json
+      OUTPUT_ROOT: /tmp/econovaria-release-v2
+      SOURCE_ROOT: /tmp/econovaria-release-source
     steps:
-      - name: Check out exact merged-main source
+      - name: Check out exact PR295 release tooling
         uses: actions/checkout@v7
         with:
-          ref: 623b82e004ea8446f6358c7ae4cc7ab4f6ec340d
+          ref: agent/production-integration-gate-v1
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Download original immutable artifact
-        uses: actions/download-artifact@v4
-        with:
-          artifact-ids: 8558309964
-          run-id: 29994325542
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: dist/release
-          merge-multiple: true
+      - name: Bind tooling and exact current main source
+        id: bind
+        shell: bash
+        run: |
+          set -euo pipefail
+          tooling_commit="$(git rev-parse HEAD)"
+          test "$tooling_commit" = "$EXPECTED_TOOLING_COMMIT"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          rm -rf "$SOURCE_ROOT"
+          git worktree add --detach "$SOURCE_ROOT" "$RELEASE_COMMIT"
+          test "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -f "$SOURCE_ROOT/$CONFIGURATION_PATH"
+          echo "tooling_commit=$tooling_commit" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -58,41 +65,112 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
 
-      - name: Verify original manifest and artifact bytes
+      - name: Reject environment-bound source frontend
         shell: bash
+        run: node scripts/release-environment-neutrality.mjs --repo-root "$SOURCE_ROOT"
+
+      - name: Build corrected immutable release set exactly once
+        shell: bash
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
-          test "$(sha256sum dist/release/release-manifest.json | awk '{print $1}')" = "$EXPECTED_MANIFEST_SHA256"
+          rm -rf "$OUTPUT_ROOT"
+          node scripts/release-platform.mjs build \
+            --repo-root "$SOURCE_ROOT" \
+            --commit "$RELEASE_COMMIT" \
+            --config "$CONFIGURATION_PATH" \
+            --output "$OUTPUT_ROOT"
+
+      - name: Validate corrected manifest and artifact bytes
+        shell: bash
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
+        run: |
+          set -euo pipefail
+          node scripts/release-platform.mjs validate \
+            --repo-root "$SOURCE_ROOT" \
+            --manifest "$OUTPUT_ROOT/release-manifest.json" \
+            --artifact-root "$OUTPUT_ROOT" \
+            --expected-commit "$RELEASE_COMMIT"
           (
-            cd dist/release
+            cd "$OUTPUT_ROOT"
             sha256sum --check checksums.sha256
           )
-          npm run release:validate -- \
-            --manifest dist/release/release-manifest.json \
-            --artifact-root dist/release \
-            --expected-commit "$RELEASE_COMMIT"
-          node - <<'NODE'
+
+      - name: Verify complete Edge dependency closure and identities
+        id: metadata
+        shell: bash
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
+        run: |
+          set -euo pipefail
+          functions=(
+            admin-api
+            classroom-api
+            stock-market-player-read
+            stock-market-read
+            stock-market-runner
+            stock-market-seed-copy
+            stock-market-trading
+          )
+          for function_name in "${functions[@]}"; do
+            archive="$OUTPUT_ROOT/artifacts/edge-${function_name}.tar.gz"
+            test -f "$archive"
+            tar -tzf "$archive" | grep -Fxq "./backend/supabase/functions/${function_name}/index.ts"
+            tar -tzf "$archive" | grep -q '^./backend/src/'
+          done
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const crypto = require('node:crypto');
           const fs = require('node:fs');
-          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
-          if (manifest.provenance.workflowRunId !== process.env.SOURCE_RUN_ID) throw new Error('Source workflow run mismatch');
+          const path = process.env.OUTPUT_ROOT;
+          const bytes = fs.readFileSync(`${path}/release-manifest.json`);
+          const manifest = JSON.parse(bytes.toString('utf8'));
           if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('Source commit mismatch');
-          if (manifest.artifactSetSha256 !== process.env.EXPECTED_ARTIFACT_SET_SHA256) throw new Error('Artifact-set mismatch');
-          if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('Provenance workflow mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('Tooling commit mismatch');
+          if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('Workflow provenance mismatch');
+          if (manifest.migrations.count !== 131 || manifest.migrations.head !== '20260721163000') throw new Error('Migration identity mismatch');
+          if (manifest.migrations.versionSetSha256 !== '145d443670547d794c2e9e31b452a58338b784540eff64393cf2ad2d312193f3') throw new Error('Migration digest mismatch');
+          console.log(`release_id=${manifest.releaseId}`);
+          console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
+          console.log(`manifest_sha256=${crypto.createHash('sha256').update(bytes).digest('hex')}`);
           NODE
 
-      - name: Record immutable verification identity
+      - name: Upload corrected immutable release set
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-release-10caf7a2355520484f8071489508e5ef576e5e04-v2
+          path: /tmp/econovaria-release-v2
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          overwrite: false
+
+      - name: Attest corrected release artifact provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            /tmp/econovaria-release-v2/artifacts/*
+            /tmp/econovaria-release-v2/checksums.sha256
+            /tmp/econovaria-release-v2/release-configuration.json
+            /tmp/econovaria-release-v2/release-manifest.json
+          show-summary: true
+
+      - name: Record corrected immutable build identity
         shell: bash
         run: |
           {
-            echo '## Original immutable release artifact verified'
-            echo "- Source commit: \`$RELEASE_COMMIT\`"
-            echo "- Source workflow run: \`$SOURCE_RUN_ID\`"
-            echo "- Source artifact ID: \`$SOURCE_ARTIFACT_ID\`"
-            echo "- GitHub archive SHA-256: \`$EXPECTED_ARCHIVE_DIGEST\`"
-            echo "- Release-manifest SHA-256: \`$EXPECTED_MANIFEST_SHA256\`"
-            echo "- Artifact-set SHA-256: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
-            echo '- Rebuilt: `false`'
+            echo '## Corrected immutable release artifact built'
+            echo "- Runtime source: \`$RELEASE_COMMIT\`"
+            echo "- Release tooling: \`${{ steps.bind.outputs.tooling_commit }}\`"
+            echo "- Release ID: \`${{ steps.metadata.outputs.release_id }}\`"
+            echo "- Artifact-set SHA-256: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
+            echo "- Release-manifest SHA-256: \`${{ steps.metadata.outputs.manifest_sha256 }}\`"
+            echo "- GitHub artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
+            echo "- GitHub archive digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
+            echo '- Edge dependency closure: `backend/src included`'
+            echo '- Environment-neutrality: `passed`'
             echo '- Deployment performed: `false`'
             echo '- Production modified: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
