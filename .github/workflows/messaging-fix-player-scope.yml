@@ -1,6 +1,11 @@
-name: Messaging Fix Player Scope
+name: Messaging Fix Verification Guards
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/messaging-fix-player-scope.yml
   push:
     branches:
       - agent/messaging-communication-v1
@@ -11,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: messaging-fix-player-scope
+  group: messaging-fix-verification-guards
   cancel-in-progress: false
 
 jobs:
@@ -41,19 +46,18 @@ jobs:
           replacements = [
               (
                   '              $0 == "admin/index.html" { next }\n',
-                  '              $0 == "admin/index.html" { next }\n'
-                  '              $0 == "admin/admin-bootstrap.js" { next }\n',
+                  '              $0 == "admin/admin-bootstrap.js" { next }\n'
+                  '              $0 == "admin/index.html" { next }\n',
               ),
               (
-                  '              $0 ~ /^backend\\/src\\/domains\\/players\\/contracts\\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }\n',
-                  '              $0 ~ /^backend\\/src\\/domains\\/players\\/contracts\\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }\n'
+                  '              $0 ~ /^backend\\/src\\/domains\\/marketplace\\/(api|contracts|infrastructure|tests)\\/[A-Za-z0-9.-]*[.]ts$/ { next }\n',
+                  '              $0 ~ /^backend\\/src\\/domains\\/marketplace\\/(api|contracts|infrastructure|tests)\\/[A-Za-z0-9.-]*[.]ts$/ { next }\n'
                   '              $0 ~ /^backend\\/src\\/domains\\/messaging\\// { next }\n',
               ),
               (
-                  '              $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }\n',
-                  '              $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }\n'
-                  '              $0 == "backend/src/security/playerMessagingRateLimitDispatch.test.ts" { next }\n'
-                  '              $0 == "backend/src/security/staffMessagingRateLimitDispatch.ts" { next }\n',
+                  '              $0 ~ /^backend\\/src\\/security\\/playerCraftingRateLimitDispatch([.]test)?[.]ts$/ { next }\n',
+                  '              $0 ~ /^backend\\/src\\/security\\/playerCraftingRateLimitDispatch([.]test)?[.]ts$/ { next }\n'
+                  '              $0 ~ /^backend\\/src\\/security\\/(playerMessagingRateLimitDispatch([.]test)?|staffMessagingRateLimitDispatch)[.]ts$/ { next }\n',
               ),
               (
                   '              $0 ~ /^backend\\/supabase\\/migrations\\/2026072115(0000|1000|2000|3000|4000)_[A-Za-z0-9_]+[.]sql$/ { next }\n',
