@@ -1,3 +1,5 @@
+import { collectSafeApiDiagnostic } from "../api/errors.js";
+
 const SESSION_CODES = new Set([
   "INVALID_PLAYER_SESSION",
   "PLAYER_SESSION_EXPIRED",
@@ -25,6 +27,37 @@ function normalizedError(error = {}) {
     code: String(error?.code || "").trim().toUpperCase(),
     retryAfterMs: Math.max(0, Number(error?.retryAfterMs || 0))
   });
+}
+
+function loopbackDiagnosticsEnabled(explicit) {
+  if (explicit === true) return true;
+  if (explicit === false) return false;
+  if (globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG?.developerDiagnostics === true) return true;
+  const hostname = String(globalThis.location?.hostname || "").toLowerCase();
+  return new Set(["localhost", "127.0.0.1", "::1"]).has(hostname);
+}
+
+function diagnosticText(error, explicit) {
+  if (!loopbackDiagnosticsEnabled(explicit)) return "";
+  const diagnostic = collectSafeApiDiagnostic(error);
+  const segments = [];
+  if (diagnostic.code) segments.push(`Code ${diagnostic.code}`);
+  if (diagnostic.endpointKey) segments.push(`Endpoint ${diagnostic.endpointKey}`);
+  if (diagnostic.status) segments.push(`Status ${diagnostic.status}`);
+  if (diagnostic.requestId) segments.push(`Request ${diagnostic.requestId}`);
+  const detail = diagnostic.detail || {};
+  if (detail.groupName) segments.push(`Group ${detail.groupName}`);
+  if (detail.key) segments.push(`Key ${detail.key}`);
+  if (detail.endpointKey && detail.endpointKey !== diagnostic.endpointKey) {
+    segments.push(`Contract endpoint ${detail.endpointKey}`);
+  }
+  if (detail.method) segments.push(`Method ${detail.method}`);
+  if (detail.pathTemplate) segments.push(`Template ${detail.pathTemplate}`);
+  if (detail.receivedSchemaVersion !== undefined) {
+    segments.push(`Schema ${detail.receivedSchemaVersion}`);
+  }
+  if (detail.receivedService) segments.push(`Service ${detail.receivedService}`);
+  return segments.length ? ` Diagnostic: ${segments.join(" · ")}.` : "";
 }
 
 export function retryAfterSeconds(error = {}) {
@@ -77,6 +110,7 @@ export function classifyPlayerRecovery(error = {}, {
 
 export function buildPlayerRecoveryPresentation(error = {}, {
   committed = false,
+  diagnostics,
   idempotentWrite = false,
   online = true,
   operationLabel = "this action",
@@ -219,5 +253,10 @@ export function buildPlayerRecoveryPresentation(error = {}, {
     }
   };
 
-  return Object.freeze({ kind, ...presentations[kind] });
+  const presentation = presentations[kind];
+  return Object.freeze({
+    kind,
+    ...presentation,
+    detail: `${presentation.detail}${diagnosticText(error, diagnostics)}`
+  });
 }

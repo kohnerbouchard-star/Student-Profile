@@ -13,6 +13,30 @@ function hasReadyWorldResource(state) {
   return state?.data?.resourceStatus?.worldRuntime?.state === "ready";
 }
 
+function hasReadyCountriesResource(state) {
+  return state?.data?.resourceStatus?.countries?.state === "ready" && Array.isArray(state?.data?.countries);
+}
+
+function fallbackWorldModel(state) {
+  const countries = Array.isArray(state?.data?.countries) ? state.data.countries : [];
+  if (!countries.length) return null;
+  return {
+    runtimeAvailable: false,
+    countries,
+    campaign: null,
+    arrival: { required: false },
+    travel: { state: null, activeJourney: null },
+    residency: null,
+    world: null,
+  };
+}
+
+function liveWorldModel(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? { ...value, runtimeAvailable: true }
+    : value;
+}
+
 function statusNode(form) {
   return form?.querySelector("[data-world-form-status]") || null;
 }
@@ -56,6 +80,7 @@ function stateMessage(error) {
     return "Connection is unavailable. The last committed World view remains visible.";
   }
   if (normalized.status === 401) return "Your player session expired.";
+  if (normalized.status === 404) return "Travel runtime is not deployed in this staging environment. Country data remains available.";
   if (normalized.status === 409) return "World state changed. Refresh and review the current conditions.";
   if (normalized.status === 429) return "World actions are temporarily rate limited. Retry after the displayed interval.";
   return normalized.message || "The World service could not complete the request.";
@@ -114,18 +139,27 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     try {
       const next = await api.request("worldRuntime", { force });
       if (destroyed || version !== requestVersion) return null;
-      model = next;
+      model = liveWorldModel(next);
       state = "ready";
       updatedAt = Date.now();
       if (!preserveMessage) message = "World runtime refreshed.";
       scheduleRender();
-      return next;
+      return model;
     } catch (error) {
       if (destroyed || version !== requestVersion) return null;
       const normalized = normalizeApiError(error);
       if (Number(normalized.status) === 401) {
         await terminal.refresh();
         return null;
+      }
+      const fallback = fallbackWorldModel(terminal.getState());
+      if (Number(normalized.status) === 404 && fallback) {
+        model = fallback;
+        state = "ready";
+        updatedAt = Date.now();
+        message = stateMessage(normalized);
+        scheduleRender();
+        return fallback;
       }
       state = model ? "ready" : "unavailable";
       message = stateMessage(normalized);
@@ -245,12 +279,17 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   const unsubscribe = terminal.subscribe((terminalState) => {
     if (!isWorldRoute(terminalState)) return;
     if (hasReadyWorldResource(terminalState) && terminalState.data?.worldRuntime && !model) {
-      model = terminalState.data.worldRuntime;
+      model = liveWorldModel(terminalState.data.worldRuntime);
       state = "ready";
+      updatedAt = Date.now();
+    } else if (hasReadyCountriesResource(terminalState) && !model) {
+      model = fallbackWorldModel(terminalState);
+      state = "ready";
+      message = "Country data loaded. Travel runtime is not deployed in this staging environment.";
       updatedAt = Date.now();
     }
     scheduleRender();
-    if (!model && state === "idle") void load({ force: true });
+    if (model?.runtimeAvailable !== true && state !== "loading") void load({ force: true, preserveMessage: true });
   });
   mount.addEventListener("submit", handleSubmit);
   mount.addEventListener("click", handleClick);
@@ -258,7 +297,16 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   globalThis.addEventListener("offline", handleConnectivity);
   const staleTimer = globalThis.setInterval(scheduleRender, 15_000);
 
-  if (isWorldRoute(terminal.getState()) && !model && state === "idle") void load({ force: true });
+  if (isWorldRoute(terminal.getState()) && !model && state === "idle") {
+    const fallback = fallbackWorldModel(terminal.getState());
+    if (fallback) {
+      model = fallback;
+      state = "ready";
+      message = "Country data loaded. Travel runtime is not deployed in this staging environment.";
+      updatedAt = Date.now();
+    }
+    void load({ force: true, preserveMessage: Boolean(fallback) });
+  }
 
   return Object.freeze({
     refresh: () => load({ force: true }),

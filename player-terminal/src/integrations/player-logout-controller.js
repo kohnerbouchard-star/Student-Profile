@@ -82,8 +82,11 @@ function dispatchCompletion(runtime, detail) {
 }
 
 export function resolvePlayerLogoutUrl(config = {}, locationLike = globalThis.location) {
-  const configured = String(config.sessionExitUrl || "").trim();
-  if (configured) return new URL(configured, locationLike?.href || undefined).href;
+  const configuredLogout = String(config.logoutExitUrl || "").trim();
+  if (configuredLogout) return new URL(configuredLogout, locationLike?.href || undefined).href;
+
+  const configuredSession = String(config.sessionExitUrl || "").trim();
+  if (configuredSession) return new URL(configuredSession, locationLike?.href || undefined).href;
 
   const url = new URL("../", locationLike?.href || "http://localhost/player-terminal/");
   url.searchParams.set("mode", "player");

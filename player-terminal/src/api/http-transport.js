@@ -24,9 +24,18 @@ export class HttpTransport {
 
     if (payload !== undefined) headers["Content-Type"] = "application/json";
     if (this.config.accessToken) headers.Authorization = `Bearer ${this.config.accessToken}`;
-    if (this.config.playerSessionToken) headers["x-econovaria-player-session-token"] = this.config.playerSessionToken;
-    if (this.config.gameSessionId) headers["x-econovaria-game-session-id"] = this.config.gameSessionId;
-    if (idempotencyKey) headers["idempotency-key"] = idempotencyKey;
+    if (this.config.playerSessionToken) {
+      headers["x-player-session-token"] = this.config.playerSessionToken;
+      headers["x-econovaria-player-session-token"] = this.config.playerSessionToken;
+    }
+    if (this.config.gameSessionId) {
+      headers["x-econovaria-game-id"] = this.config.gameSessionId;
+      headers["x-econovaria-game-session-id"] = this.config.gameSessionId;
+    }
+    if (idempotencyKey) {
+      headers["x-idempotency-key"] = idempotencyKey;
+      headers["idempotency-key"] = idempotencyKey;
+    }
 
     try {
       const response = await fetch(`${this.config.apiBaseUrl}${path}`, {
