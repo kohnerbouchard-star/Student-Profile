@@ -28,6 +28,14 @@
     }
   }
 
+  function parseRuntimeUrl(value, invalidCode) {
+    try {
+      return new URL(value);
+    } catch (_) {
+      throw new Error(invalidCode);
+    }
+  }
+
   function requireRuntimeConfig() {
     const config = record(source);
     if (!config) {
@@ -39,6 +47,7 @@
     const environment = text(config.environment).toLowerCase();
     const projectRef = text(config.projectRef).toLowerCase();
     const supabaseUrl = text(config.supabaseUrl).replace(/\/+$/, "");
+    const apiProxyUrl = text(config.apiProxyUrl).replace(/\/+$/, "");
     const supabasePublishableKey = text(config.supabasePublishableKey);
 
     if (!allowedEnvironments.has(environment)) {
@@ -48,13 +57,10 @@
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_PROJECT_REF");
     }
 
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(supabaseUrl);
-    } catch (_) {
-      throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_SUPABASE_URL");
-    }
-
+    const parsedUrl = parseRuntimeUrl(
+      supabaseUrl,
+      "ECONOVARIA_RUNTIME_CONFIG_INVALID_SUPABASE_URL"
+    );
     const localHost = new Set(["localhost", "127.0.0.1", "::1"]);
     if (parsedUrl.protocol !== "https:" && !localHost.has(parsedUrl.hostname)) {
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_REQUIRES_HTTPS");
@@ -67,6 +73,33 @@
     }
     if (parsedUrl.pathname !== "/" || parsedUrl.search || parsedUrl.hash) {
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_SUPABASE_URL_SHAPE");
+    }
+
+    let apiBaseUrl = supabaseUrl;
+    if (apiProxyUrl) {
+      if (environment === "production") {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_API_PROXY_PROHIBITED_IN_PRODUCTION");
+      }
+      const parsedProxyUrl = parseRuntimeUrl(
+        apiProxyUrl,
+        "ECONOVARIA_RUNTIME_CONFIG_INVALID_API_PROXY_URL"
+      );
+      if (!localHost.has(parsedProxyUrl.hostname)) {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_API_PROXY_MUST_BE_LOOPBACK");
+      }
+      if (!new Set(["http:", "https:"]).has(parsedProxyUrl.protocol)) {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_API_PROXY_PROTOCOL");
+      }
+      if (
+        parsedProxyUrl.pathname !== "/" ||
+        parsedProxyUrl.search ||
+        parsedProxyUrl.hash ||
+        parsedProxyUrl.username ||
+        parsedProxyUrl.password
+      ) {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_API_PROXY_URL_SHAPE");
+      }
+      apiBaseUrl = apiProxyUrl;
     }
 
     if (!supabasePublishableKey) {
@@ -86,9 +119,10 @@
       environment,
       projectRef,
       supabaseUrl,
+      apiProxyUrl,
       supabasePublishableKey,
-      classroomApiUrl: `${supabaseUrl}/functions/v1/classroom-api`,
-      adminApiUrl: `${supabaseUrl}/functions/v1/admin-api`,
+      classroomApiUrl: `${apiBaseUrl}/functions/v1/classroom-api`,
+      adminApiUrl: `${apiBaseUrl}/functions/v1/admin-api`,
     });
   }
 
