@@ -1,0 +1,51 @@
+name: Messaging Player Scope Diagnostics
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-player-scope-diagnostics.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = 'agent/messaging-communication-v1';
+            const file = '.github/workflows/player-terminal-verify.yml';
+            const current = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch });
+            if (Array.isArray(current.data) || !current.data.sha || !current.data.content) throw new Error('Invalid Player workflow');
+            let text = Buffer.from(current.data.content, 'base64').toString('utf8');
+            const marker = `          if [ -n "$unexpected" ]; then\n            echo "Player Terminal verification detected protected repository paths:"`;
+            if (!text.includes(marker)) throw new Error('Scope failure marker not found');
+            text = text.replace(marker, `          printf '%s\\n' "$unexpected" > /tmp/player-terminal-unexpected.txt\n\n          if [ -n "$unexpected" ]; then\n            echo "Player Terminal verification detected protected repository paths:"`);
+            const setupMarker = `      - name: Set up Node\n`;
+            if (!text.includes(setupMarker)) throw new Error('Set up Node marker not found');
+            const diagnosticStep = `      - name: Upload Player scope diagnostics\n        if: failure()\n        uses: actions/upload-artifact@v4\n        with:\n          name: player-terminal-scope-diagnostics\n          path: |\n            /tmp/player-terminal-changed-files.txt\n            /tmp/player-terminal-unexpected.txt\n          if-no-files-found: warn\n          retention-days: 7\n\n`;
+            text = text.replace(setupMarker, diagnosticStep + setupMarker);
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner, repo: context.repo.repo, path: file, branch,
+              sha: current.data.sha,
+              message: 'ci(messaging): capture exact Player scope failures',
+              content: Buffer.from(text).toString('base64'),
+            });
+
+      - name: Publish diagnostics patch status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner, repo: context.repo.repo, sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/player-scope-diagnostics',
+              description: 'Exact Player scope diagnostic artifact enabled',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
