@@ -31,11 +31,13 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Enforce isolated pull-request scope
         if: github.event_name == 'pull_request'
@@ -43,81 +45,10 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
         run: |
+          set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
-
-          if grep -q '^player-terminal/' /tmp/player-terminal-changed-files.txt; then
-            unexpected="$(awk '
-              $0 ~ /^player-terminal\// { next }
-              $0 == ".github/workflows/player-terminal-verify.yml" { next }
-              $0 == ".github/workflows/progression-runtime-v1.yml" { next }
-              $0 == ".github/workflows/environment-neutral-browser.yml" { next }
-              $0 == ".github/workflows/admin-shell-smoke.yml" { next }
-              $0 == ".github/workflows/admin-game-lifecycle-controls-v1.yml" { next }
-              $0 ~ /^admin\/(admin-auth|auth-session-manager|classroom-write-fallback|player-access-code-bridge)[.]js$/ { next }
-              $0 ~ /^admin\/progression-review-(client|loader|surface)[.]js$/ { next }
-              $0 == "admin/progression-review.css" { next }
-              $0 == "admin/index.html" { next }
-              $0 ~ /^auth\/reset-password[.](html|js)$/ { next }
-              $0 == "docs/operations/environments/runtime-config.env.template.js" { next }
-              $0 == "frontend/src/core/runtime-config.js" { next }
-              $0 == "scripts/admin-attendance-action-smoke.mjs" { next }
-              $0 == "scripts/admin-classroom-identity-fallback-smoke.mjs" { next }
-              $0 == "scripts/admin-player-access-code-smoke.mjs" { next }
-              $0 == "scripts/admin-session-manager-smoke.mjs" { next }
-              $0 == "scripts/admin-shell-identity-smoke.mjs" { next }
-              $0 == "scripts/admin-v606-full-drift-audit.mjs" { next }
-              $0 == "scripts/admin-progression-contract.mjs" { next }
-              $0 == "scripts/progression-balance-simulation.mjs" { next }
-              $0 == "scripts/environment-neutral-browser-integration.test.mjs" { next }
-              $0 == "scripts/runtime-config-contract.test.mjs" { next }
-              $0 ~ /^(\.github\/workflows\/(database-replay|player-runtime-cutover-verify|repository-quality)[.]yml|docs\/audits\/remaining-cloudflare-api-url-v1[.]md|docs\/roadmaps\/econovaria-player-runtime-cutover-amendment-2026-07-19[.]md|frontend\/src\/core\/(api|constants|login)[.]js|index[.]html|package[.]json|scripts\/(apply-shared-game-timezone-ui-v1|fix-shared-game-timezone-smoke-v1|player-contracts-workspace-smoke|player-login-identity-smoke|player-terminal-runtime-cutover-smoke|shared-game-timezone-ui-smoke)[.]mjs)$/ { next }
-              $0 == "backend/package.json" { next }
-              $0 ~ /^backend\/src\/domains\/progression\/(api|contracts|services|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/inventory\/(api|contracts|domain|infrastructure|tests)\/[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/notifications\/(api|contracts|infrastructure|services)\/[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/game-dashboard\/(api\/playerGameDashboardHttpHandler([.]test)?[.]ts|contracts\/playerGameDashboardContracts[.]ts)$/ { next }
-              $0 ~ /^backend\/src\/domains\/economy\/api\/playerBankingPublic[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 == "backend/src/domains/economy/contracts/playerBankingPublicContracts.ts" { next }
-              $0 ~ /^backend\/src\/domains\/economy\/infrastructure\/supabasePlayerBankingPublicRepository([.]test)?[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicList[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/contracts\/api\/playerContractPublicSubmit[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/contracts\/contracts\/playerContractPublicListContracts([.]test)?[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/players\/contracts\/playerCapabilityManifestContracts([.]test)?[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/players\/api\/playerCapabilityManifest(RoutePaths|HttpHandler)([.]test)?[.]ts$/ { next }
-              $0 ~ /^backend\/src\/domains\/stocks\/api\/playerStockMarket[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 == "backend/src/domains/stocks/contracts/stockMarketTradingContracts.ts" { next }
-              $0 ~ /^backend\/src\/domains\/store\/api\/playerStorePublic[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 == "backend/src/domains/store/contracts/playerStorePublicContracts.ts" { next }
-              $0 == "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts" { next }
-              $0 ~ /^backend\/src\/domains\/store\/tests\/playerStore[A-Za-z0-9.-]*[.]ts$/ { next }
-              $0 == "backend/supabase/migrations/20260719150000_add_player_store_public_keys_v1.sql" { next }
-              $0 ~ /^backend\/supabase\/migrations\/[0-9]{14}_[a-z0-9_]*progression[a-z0-9_]*_v1[.]sql$/ { next }
-              $0 == "backend/src/security/playerRateLimitDispatch.ts" { next }
-              $0 == "backend/src/security/playerRateLimitDispatch.test.ts" { next }
-              $0 == "backend/src/security/progressionRateLimitDispatch.test.ts" { next }
-              $0 == "backend/src/security/classroomApiRateLimitDispatch.test.ts" { next }
-              $0 == "backend/supabase/functions/classroom-api/index.ts" { next }
-              $0 ~ /^backend\/supabase\/functions\/admin-api\/progression(RateLimit|Operations)([.]test)?[.]ts$/ { next }
-              $0 == "backend/supabase/functions/admin-api/index.ts" { next }
-              $0 == "docs/operations/evidence/pr-244-player-story-delivery.md" { next }
-              $0 == "docs/audits/player-market-reconciliation-v1.md" { next }
-              $0 == "docs/roadmaps/active/player-market-reconciliation-v1.md" { next }
-              $0 == "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md" { next }
-              $0 ~ /^scripts\/trigger-stock-market-tick([.]test)?[.]mjs$/ { next }
-              { print }
-            ' /tmp/player-terminal-changed-files.txt)"
-          else
-            unexpected="$(awk '
-              $0 !~ /^\.github\/workflows\/[^/]+\.ya?ml$/ { print }
-            ' /tmp/player-terminal-changed-files.txt)"
-          fi
-
-          if [ -n "$unexpected" ]; then
-            echo "Player Terminal verification detected protected repository paths:"
-            echo "$unexpected"
-            false
-          fi
+          node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
 
       - name: Set up Node
         uses: actions/setup-node@v7

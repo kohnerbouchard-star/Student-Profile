@@ -1,0 +1,113 @@
+name: World Runtime
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/world-runtime.yml"
+      - "backend/package.json"
+      - "backend/src/domains/arrival/**"
+      - "backend/src/domains/campaign/**"
+      - "backend/src/domains/world/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
+      - "backend/src/security/playerRateLimitDispatch*"
+      - "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/functions/admin-api/worldRuntimeOperations*"
+      - "backend/supabase/functions/admin-api/campaign*Runtime.test.ts"
+      - "backend/supabase/migrations/2026072110*.sql"
+      - "player-terminal/src/**"
+      - "player-terminal/css/player-world-runtime.css"
+      - "player-terminal/index.html"
+      - "player-terminal/tests/world-runtime-flow.mjs"
+      - "player-terminal/package.json"
+      - "admin/world-runtime-console.js"
+      - "admin/world-runtime-console-loader.js"
+      - "admin/css/world-runtime-console.css"
+      - "admin/index.html"
+      - "scripts/admin-world-runtime-console-contract.mjs"
+  push:
+    branches:
+      - agent/story-arrival-world-runtime-v1
+    paths:
+      - ".github/workflows/world-runtime.yml"
+      - "backend/package.json"
+      - "backend/src/domains/arrival/**"
+      - "backend/src/domains/campaign/**"
+      - "backend/src/domains/world/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*"
+      - "backend/src/security/playerRateLimitDispatch*"
+      - "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/functions/admin-api/worldRuntimeOperations*"
+      - "backend/supabase/functions/admin-api/campaign*Runtime.test.ts"
+      - "backend/supabase/migrations/2026072110*.sql"
+      - "player-terminal/src/**"
+      - "player-terminal/css/player-world-runtime.css"
+      - "player-terminal/index.html"
+      - "player-terminal/tests/world-runtime-flow.mjs"
+      - "player-terminal/package.json"
+      - "admin/world-runtime-console.js"
+      - "admin/world-runtime-console-loader.js"
+      - "admin/css/world-runtime-console.css"
+      - "admin/index.html"
+      - "scripts/admin-world-runtime-console-contract.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: world-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify permanent-source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .github/workflows/world-runtime-source-snapshot.yml
+          ! git ls-files | grep -E '(^|/)(world.*(payload|carrier|materializer|reconstruction)|.*branch-mutating.*)$'
+          test "$(git ls-files 'backend/supabase/migrations/2026072110*.sql' | wc -l | tr -d ' ')" = "9"
+          test "$(git ls-files 'backend/supabase/migrations/*player_travel_execution*.sql' | grep '^backend/supabase/migrations/2026072110' | wc -l | tr -d ' ')" = "1"
+
+      - name: Run focused World runtime tests
+        working-directory: backend
+        run: npm run test:world-runtime
+
+      - name: Verify Player World publication
+        run: node player-terminal/tests/world-runtime-flow.mjs
+
+      - name: Verify Admin World publication
+        run: |
+          node --check admin/world-runtime-console-loader.js
+          node --check admin/world-runtime-console.js
+          node scripts/admin-world-runtime-console-contract.mjs
+
+      - name: Typecheck all backend surfaces
+        working-directory: backend
+        run: npm run typecheck:all

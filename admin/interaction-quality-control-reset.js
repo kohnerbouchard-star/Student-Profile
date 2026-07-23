@@ -78,6 +78,17 @@
     return manualVisible ? elements.manualInput : (elements.autoInput || elements.manualInput);
   }
 
+  function focusScannerInput(elements, forceFocus) {
+    const current = elements || scannerElements();
+    const input = activeScannerInput(current);
+    if (!(input instanceof HTMLElement)) return;
+    const active = document.activeElement;
+    const activeInsideScanner = active instanceof HTMLElement &&
+      current.consoleElement.contains(active);
+    if (!forceFocus && activeInsideScanner && active !== input) return;
+    input.focus({ preventScroll: true });
+  }
+
   function clearScannerResult(elements) {
     if (!elements) return;
     for (const input of [elements.manualInput, elements.autoInput]) {
@@ -123,7 +134,9 @@
     }
 
     if (options.focus === true) {
-      window.requestAnimationFrame(() => activeScannerInput(scannerElements())?.focus({ preventScroll: true }));
+      window.requestAnimationFrame(() => {
+        focusScannerInput(scannerElements(), options.forceFocus === true);
+      });
     }
   }
 
@@ -138,7 +151,7 @@
       const dataState = text(current.consoleElement.dataset.adminQolScannerState).toLowerCase();
       const visibleState = text(current.state?.textContent).toLowerCase();
       if (![state, "armed"].includes(dataState) && ![state, "armed"].includes(visibleState)) return;
-      setScannerReady({ force: true, clear: true, focus: true });
+      setScannerReady({ force: true, clear: true, focus: true, forceFocus: true });
     }, delay);
     scannerResetTimers.set(elements.consoleElement, timer);
   }

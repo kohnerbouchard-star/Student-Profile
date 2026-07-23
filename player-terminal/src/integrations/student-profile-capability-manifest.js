@@ -1,4 +1,5 @@
 import { hasPlayerBackendRoute } from "../api/backend-routes.js";
+import { hasMarketplaceBackendRoute } from "../api/marketplace-backend-routes.js";
 import { ApiRequestError } from "../api/errors.js";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
@@ -7,7 +8,23 @@ const SUPPORTED_SERVICE = "classroom-api";
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
   capabilities: Object.freeze(["capabilities"]),
+  worldRuntime: Object.freeze(["worldRuntime"]),
+  arrivalClass: Object.freeze(["arrivalClass"]),
+  travelQuote: Object.freeze(["travelQuote"]),
+  travelExecute: Object.freeze(["travelExecute"]),
+  travelComplete: Object.freeze(["travelComplete"]),
+  residencyRequest: Object.freeze(["residencyRequest"]),
   banking: Object.freeze(["banking"]),
+  bankTransfer: Object.freeze(["bankTransfer"]),
+  business: Object.freeze(["business"]),
+  businessCreate: Object.freeze(["businessCreate"]),
+  businessHire: Object.freeze(["businessHire"]),
+  businessInputPurchase: Object.freeze(["businessInputPurchase"]),
+  businessPrice: Object.freeze(["businessPrice"]),
+  businessProductCreate: Object.freeze(["businessProductCreate"]),
+  businessProduction: Object.freeze(["businessProduction"]),
+  businessStatus: Object.freeze(["businessStatus"]),
+  businessTerminate: Object.freeze(["businessTerminate"]),
   contractAccept: Object.freeze(["contractAccept"]),
   contractSubmit: Object.freeze(["contractSubmit"]),
   contracts: Object.freeze(["contracts"]),
@@ -16,15 +33,32 @@ const ENDPOINT_COVERAGE = Object.freeze({
   dashboard: Object.freeze(["dashboard"]),
   inventory: Object.freeze(["inventory"]),
   inventoryRedemptions: Object.freeze(["inventoryUse"]),
+  loanApply: Object.freeze(["loanApply"]),
+  loanRepay: Object.freeze(["loanRepay"]),
+  loans: Object.freeze(["loans"]),
   logout: Object.freeze(["logout"]),
   market: Object.freeze(["market"]),
   marketAsset: Object.freeze(["marketAsset"]),
   marketOrder: Object.freeze(["marketOrder"]),
   marketWatchlist: Object.freeze(["marketWatchlist"]),
+  marketplace: Object.freeze(["marketplace"]),
+  marketplaceListing: Object.freeze(["marketplaceListing"]),
+  marketplaceActivate: Object.freeze(["marketplaceActivate"]),
+  marketplacePurchase: Object.freeze(["marketplacePurchase"]),
+  marketplaceCancel: Object.freeze(["marketplaceCancel"]),
+  marketplaceDispute: Object.freeze(["marketplaceDispute"]),
+  messages: Object.freeze(["messages"]),
+  messageThread: Object.freeze(["messageThread"]),
+  messagePolicy: Object.freeze(["messagePolicy"]),
+  messageSearch: Object.freeze(["messageSearch"]),
+  messageThreadCreate: Object.freeze(["messageThreadCreate"]),
+  messageSend: Object.freeze(["messageSend"]),
+  messageRead: Object.freeze(["messageRead"]),
   news: Object.freeze(["news"]),
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
   portfolio: Object.freeze(["portfolio"]),
+  savingsTransfer: Object.freeze(["savingsTransfer"]),
   store: Object.freeze(["store"]),
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"]),
@@ -34,27 +68,60 @@ const ENDPOINT_COVERAGE = Object.freeze({
 
 const ROUTE_REQUIREMENTS = Object.freeze({
   dashboard: "dashboard",
+  world: "worldRuntime",
   news: "news",
   banking: "banking",
+  business: "business",
+  loans: "loans",
   market: "market",
   portfolio: "portfolio",
   contracts: "contracts",
   inventory: "inventory",
   store: "store",
+  marketplace: "marketplace",
+  messages: "messages",
   profile: "bootstrap"
 });
 
 const ACTION_REQUIREMENTS = Object.freeze({
+  arrivalClassSubmit: "arrivalClass",
+  bankTransfer: "bankTransfer",
+  businessCreate: "businessCreate",
+  businessEmployeeTerminate: "businessTerminate",
+  businessHire: "businessHire",
+  businessInputPurchase: "businessInputPurchase",
+  businessPrice: "businessPrice",
+  businessProductCreate: "businessProductCreate",
+  businessProduction: "businessProduction",
+  businessStatus: "businessStatus",
   contractAccept: "contractAccept",
   contractSubmit: "contractSubmit",
   inventoryUse: "inventoryRedemptions",
+  loanApply: "loanApply",
+  loanRepay: "loanRepay",
   logout: "logout",
   marketOrder: "marketOrder",
   marketWatchlist: "marketWatchlist",
+  marketplaceListing: "marketplaceListing",
+  marketplaceActivate: "marketplaceActivate",
+  marketplacePurchase: "marketplacePurchase",
+  marketplaceCancel: "marketplaceCancel",
+  marketplaceDispute: "marketplaceDispute",
+  messageSearch: "messageSearch",
+  messageSend: "messageSend",
   notificationsRead: "notificationsRead",
+  residencyRequest: "residencyRequest",
+  savingsTransfer: "savingsTransfer",
   storePurchase: "storePurchase",
-  storyDeliveryState: "storyDeliveryState"
+  storyDeliveryState: "storyDeliveryState",
+  travelComplete: "travelComplete",
+  travelExecute: "travelExecute",
+  travelQuote: "travelQuote"
 });
+
+function reviewedFrontendRoute(key) {
+  return hasPlayerBackendRoute(key) || hasMarketplaceBackendRoute(key);
+}
 
 function mismatch(message, detail = {}) {
   return new ApiRequestError(message, {
@@ -71,7 +138,6 @@ function object(value) {
 function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
   const group = object(values);
   if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
-
   for (const [key, enabled] of Object.entries(group)) {
     if (typeof enabled !== "boolean") {
       throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });
@@ -113,7 +179,7 @@ export function validateStudentProfileCapabilityManifest(raw) {
     const key = typeof item?.key === "string" ? item.key.trim() : "";
     if (!key || endpointKeys.has(key)) throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
     const frontendKeys = ENDPOINT_COVERAGE[key];
-    if (!frontendKeys?.length || !frontendKeys.every(hasPlayerBackendRoute)) {
+    if (!frontendKeys?.length || !frontendKeys.every(reviewedFrontendRoute)) {
       throw mismatch(`Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
     }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {

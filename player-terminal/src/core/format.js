@@ -31,5 +31,8 @@ export function toneFromChange(value) {
 }
 
 export function serializeForm(form) {
-  return Object.fromEntries(new FormData(form).entries());
+  const payload = Object.fromEntries(new FormData(form).entries());
+  const employeeKey = String(form?.dataset?.employeeId || "").trim();
+  if (employeeKey && !payload.employeeKey) payload.employeeKey = employeeKey;
+  return payload;
 }

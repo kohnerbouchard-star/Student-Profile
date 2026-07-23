@@ -1,10 +1,10 @@
 # Progression pre-convergence ledger v1
 
-Status: `PROVISIONAL_UNSYNCHRONIZED_DRAFT`
+Status: `CONVERGED_AFTER_MESSAGING_PENDING_EXACT_HEAD_ACCEPTANCE`
 
 Authority: PR #261, branch `agent/progression-reputation-achievements-v1`.
 
-Final predecessor: Messaging PR #248. This ledger is preparation evidence only. It does not authorize synchronization, authoritative migration identities, canonical staging, production changes, ready-for-review, or merge.
+Final predecessor: Messaging PR #248, merge SHA `955c97a9a2c8e734cfd89e5202a052afc74edacd`. The one authorized synchronization and migration rekey are complete. Canonical staging, production, ready-for-review, and merge remain unauthorized pending exact-head acceptance.
 
 ## Permanent Progression scope completed before convergence
 
@@ -23,10 +23,10 @@ Do not rename these files until Messaging has merged and Chat 1 assigns the fina
 
 | Provisional migration | Final placeholder | Dependency |
 |---|---|---|
-| `20260721113000_add_progression_reputation_runtime_v1.sql` | `PROGRESSION_SLOT_01_add_progression_reputation_runtime_v1.sql` | First Progression migration after final Messaging range |
-| `20260721114500_fix_progression_read_volatility_v1.sql` | `PROGRESSION_SLOT_02_fix_progression_read_volatility_v1.sql` | Immediately after slot 01 |
-| `20260721115500_harden_progression_event_idempotency_v1.sql` | `PROGRESSION_SLOT_03_harden_progression_event_idempotency_v1.sql` | Immediately after slot 02 |
-| `20260721120500_rebalance_progression_curve_v1.sql` | `PROGRESSION_SLOT_04_rebalance_progression_curve_v1.sql` | Immediately after slot 03 |
+| `20260721160000_add_progression_reputation_runtime_v1.sql` | `PROGRESSION_SLOT_01_add_progression_reputation_runtime_v1.sql` | First Progression migration after final Messaging range |
+| `20260721161000_fix_progression_read_volatility_v1.sql` | `PROGRESSION_SLOT_02_fix_progression_read_volatility_v1.sql` | Immediately after slot 01 |
+| `20260721162000_harden_progression_event_idempotency_v1.sql` | `PROGRESSION_SLOT_03_harden_progression_event_idempotency_v1.sql` | Immediately after slot 02 |
+| `20260721163000_rebalance_progression_curve_v1.sql` | `PROGRESSION_SLOT_04_rebalance_progression_curve_v1.sql` | Immediately after slot 03 |
 
 The authoritative operation is one rename pass after the exact Messaging merge SHA and final controller range are known. No additional migration family is planned.
 
@@ -143,19 +143,19 @@ The exact-head Progression simulation fails when any bound is exceeded:
 
 The immutable Progression head may be returned to Chat 1 only after all items are complete:
 
-- [ ] exact Messaging merge SHA recorded;
-- [ ] final controller-assigned Progression migration range recorded;
-- [ ] one authoritative migration rekey completed;
-- [ ] zero provisional migration references remain;
-- [ ] one synchronization with final predecessor `main` completed;
-- [ ] shared files reconstructed additively from final `main`;
-- [ ] migration uniqueness and monotonic ordering verified;
-- [ ] Capability Manifest complete and descriptive only;
-- [ ] central Player and Admin rate limits complete;
-- [ ] Classroom API Progression read/unlock/claim reachable;
-- [ ] Admin API review/history/correction reachable;
-- [ ] Player endpoint, resource, invalidation, adapter and page publication complete;
-- [ ] Admin loader publication complete;
+- [x] exact Messaging merge SHA recorded;
+- [x] final controller-assigned Progression migration range recorded;
+- [x] one authoritative migration rekey completed;
+- [x] zero provisional migration references remain;
+- [x] one synchronization with final predecessor `main` completed;
+- [x] shared files reconstructed additively from final `main`;
+- [x] migration uniqueness and monotonic ordering verified;
+- [x] Capability Manifest complete and descriptive only;
+- [x] central Player and Admin rate limits complete;
+- [x] Classroom API Progression read/unlock/claim reachable;
+- [x] Admin API review/history/correction reachable;
+- [x] Player endpoint, resource, invalidation, adapter and page publication complete;
+- [x] Admin loader publication complete;
 - [ ] experience, levels, skills, rewards, achievements and all four reputation types verified;
 - [ ] public/private profile boundaries verified;
 - [ ] atomic claim/unlock and committed-success retry verified;

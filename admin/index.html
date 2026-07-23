@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob: https:; media-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self' https://*.supabase.co" />
   <meta name="econovaria-admin-api-base" content="" />
   <meta name="econovaria-csrf-token" content="" />
   <meta name="econovaria-admin-reauth-url" content="../?mode=admin&amp;reason=session-expired" />
@@ -24,10 +25,10 @@
   <link rel="stylesheet" href="./css/loading-scope-overrides.css" />
   <link rel="stylesheet" href="./css/data-state-contracts.css" />
   <link rel="stylesheet" href="./css/keyboard-navigation.css" />
-  <link rel="preload" as="style" href="./css/game-lifecycle-controls.css" onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="stylesheet" href="./css/game-lifecycle-controls.css" />
   <script src="../runtime-config.env.js"></script>
   <script src="../frontend/src/core/runtime-config.js"></script>
-  <script defer src="./auth-session-manager.js" onload="void import('./session-timeout-safe-exit.js')"></script>
+  <script defer src="./auth-session-manager.js"></script>
   <script defer src="./session-gate.js"></script>
   <script defer src="./admin-auth.js"></script>
   <script defer src="./dist/admin-overview-terminal.js"></script>
@@ -35,18 +36,19 @@
   <script defer src="./classroom-write-fallback.js"></script>
   <script defer src="./create-action-adapter.js"></script>
   <script defer src="./player-access-code-bridge.js"></script>
-  <script defer src="./modal-accessibility.js" onload="void import('./modal-lifecycle-bridge.js').then(() =&gt; import('./keyboard-navigation.js'))"></script>
+  <script defer src="./modal-accessibility.js"></script>
   <script defer src="./player-create-lifecycle.js"></script>
-  <script defer src="./player-drawer-wiring.js" onload="void import('./player-drawer-accessibility.js')"></script>
+  <script defer src="./player-drawer-wiring.js"></script>
   <script defer src="./player-identity-wiring.js"></script>
   <script defer src="./player-create-ux.js"></script>
   <script defer src="./game-code-wiring.js"></script>
-  <script defer src="./admin-stabilization.js" onload="void import('./overview-quick-actions.js')"></script>
+  <script defer src="./admin-stabilization.js"></script>
   <script defer src="./interaction-quality.js"></script>
   <script defer src="./data-state-contracts.js"></script>
-  <script defer src="./interaction-quality-control-reset.js" onload="void import('./scanner-auto-refresh.js').then(() =&gt; import('./scanner-lifecycle-settle.js')).then(() =&gt; import('./scanner-reward-localization.js')).then(() =&gt; import('./attendance-reward-settings-route-bridge-v2.js')).then(() =&gt; import('./attendance-reward-save-controller-v3.js')).then(() =&gt; import('./attendance-reward-settings-v4.js')).then(() =&gt; import('./settings-simplified.js')).then(() =&gt; import('./settings-lifecycle-bridge.js')).then(() =&gt; import('./settings-save-error-bridge.js'))"></script>
+  <script defer src="./interaction-quality-control-reset.js"></script>
   <script defer src="./dist/admin-overview-boot.js"></script>
-  <script defer src="./shape-accurate-skeletons.js" onload="void import('./shape-accurate-skeleton-lifecycle.js').then(() =&gt; import('./inventory-redemption-queue-loader.js')).then(() =&gt; import('./game-lifecycle-controls.js')).then(() =&gt; setTimeout(() =&gt; void import('./progression-review-loader.js'), 0))"></script>
+  <script defer src="./shape-accurate-skeletons.js"></script>
+  <script defer src="./admin-bootstrap.js"></script>
 </head>
 <body>
   <div id="adminSessionGate" class="admin-session-gate" role="status" aria-live="polite" aria-label="Verifying administrator access">

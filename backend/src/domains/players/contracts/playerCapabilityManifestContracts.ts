@@ -1,5 +1,5 @@
 export const PLAYER_CAPABILITY_SCHEMA_VERSION = 1 as const;
-export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-21.1" as const;
+export const PLAYER_CAPABILITY_MANIFEST_VERSION = "2026-07-23.2" as const;
 
 export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "dashboard",
@@ -17,14 +17,21 @@ export const PLAYER_ROUTE_CAPABILITY_KEYS = [
   "messages",
   "progression",
   "profile",
+  "world",
 ] as const;
 
 export const PLAYER_ACTION_CAPABILITY_KEYS = [
+  "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
+  "businessCreate",
+  "businessEmployeeTerminate",
   "businessHire",
+  "businessInputPurchase",
   "businessPrice",
+  "businessProductCreate",
   "businessProduction",
+  "businessStatus",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -36,18 +43,24 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "marketOrder",
   "marketSearch",
   "marketWatchlist",
+  "marketplaceActivate",
   "marketplaceCancel",
   "marketplaceListing",
   "marketplacePurchase",
+  "marketplaceDispute",
   "messageAttachment",
   "messageSearch",
   "messageSend",
   "notificationsRead",
   "progressionClaim",
   "progressionUnlock",
+  "residencyRequest",
   "savingsTransfer",
   "storePurchase",
   "storyDeliveryState",
+  "travelComplete",
+  "travelExecute",
+  "travelQuote",
 ] as const;
 
 export type PlayerRouteCapabilityKey =
@@ -58,7 +71,18 @@ export type PlayerActionCapabilityKey =
 export type PlayerCapabilityEndpointKey =
   | "bootstrap"
   | "capabilities"
+  | "arrivalClass"
   | "banking"
+  | "bankTransfer"
+  | "business"
+  | "businessCreate"
+  | "businessHire"
+  | "businessInputPurchase"
+  | "businessPrice"
+  | "businessProductCreate"
+  | "businessProduction"
+  | "businessStatus"
+  | "businessTerminate"
   | "contractAccept"
   | "contractSubmit"
   | "contracts"
@@ -67,11 +91,27 @@ export type PlayerCapabilityEndpointKey =
   | "dashboard"
   | "inventory"
   | "inventoryRedemptions"
+  | "loanApply"
+  | "loanRepay"
+  | "loans"
   | "logout"
   | "market"
   | "marketAsset"
   | "marketOrder"
   | "marketWatchlist"
+  | "marketplace"
+  | "marketplaceActivate"
+  | "marketplaceCancel"
+  | "marketplaceDispute"
+  | "marketplaceListing"
+  | "marketplacePurchase"
+  | "messages"
+  | "messageThread"
+  | "messagePolicy"
+  | "messageSearch"
+  | "messageThreadCreate"
+  | "messageSend"
+  | "messageRead"
   | "news"
   | "notifications"
   | "notificationsRead"
@@ -79,11 +119,17 @@ export type PlayerCapabilityEndpointKey =
   | "progression"
   | "progressionUnlock"
   | "progressionClaim"
+  | "residencyRequest"
+  | "savingsTransfer"
   | "store"
   | "storeQuote"
   | "storePurchase"
   | "storyDeliveries"
-  | "storyDeliveryState";
+  | "storyDeliveryState"
+  | "travelComplete"
+  | "travelExecute"
+  | "travelQuote"
+  | "worldRuntime";
 
 export type PlayerCapabilityHttpMethod = "DELETE" | "GET" | "POST" | "PUT";
 
@@ -132,9 +178,150 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     operations: [{ method: "GET", pathTemplate: "/players/me/capabilities" }],
   },
   {
+    key: "worldRuntime",
+    operations: [{ method: "GET", pathTemplate: "/players/me/world-runtime" }],
+    routeCapabilities: ["world"],
+  },
+  {
+    key: "arrivalClass",
+    operations: [{ method: "POST", pathTemplate: "/players/me/arrival-class" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["arrivalClassSubmit"],
+  },
+  {
+    key: "travelQuote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel/quotes" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelQuote"],
+  },
+  {
+    key: "travelExecute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/travel" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelExecute"],
+  },
+  {
+    key: "travelComplete",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/travel/:journeyId/complete",
+    }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["travelComplete"],
+  },
+  {
+    key: "residencyRequest",
+    operations: [{ method: "POST", pathTemplate: "/players/me/residency" }],
+    routeCapabilities: ["world"],
+    actionCapabilities: ["residencyRequest"],
+  },
+  {
     key: "banking",
     operations: [{ method: "GET", pathTemplate: "/players/me/ledger" }],
     routeCapabilities: ["banking"],
+  },
+  {
+    key: "bankTransfer",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/transfers",
+    }],
+    actionCapabilities: ["bankTransfer"],
+  },
+  {
+    key: "savingsTransfer",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/savings/transfers",
+    }],
+    actionCapabilities: ["savingsTransfer"],
+  },
+  {
+    key: "business",
+    operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
+    routeCapabilities: ["business"],
+  },
+  {
+    key: "businessCreate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/businesses" }],
+    actionCapabilities: ["businessCreate"],
+  },
+  {
+    key: "businessProductCreate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/products",
+    }],
+    actionCapabilities: ["businessProductCreate"],
+  },
+  {
+    key: "businessInputPurchase",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/inputs/purchases",
+    }],
+    actionCapabilities: ["businessInputPurchase"],
+  },
+  {
+    key: "businessProduction",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/production-runs",
+    }],
+    actionCapabilities: ["businessProduction"],
+  },
+  {
+    key: "businessPrice",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/products/:productKey/pricing",
+    }],
+    actionCapabilities: ["businessPrice"],
+  },
+  {
+    key: "businessHire",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/employees/hire",
+    }],
+    actionCapabilities: ["businessHire"],
+  },
+  {
+    key: "businessTerminate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/employees/:employeeKey/terminate",
+    }],
+    actionCapabilities: ["businessEmployeeTerminate"],
+  },
+  {
+    key: "businessStatus",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/business/status",
+    }],
+    actionCapabilities: ["businessStatus"],
+  },
+  {
+    key: "loans",
+    operations: [{ method: "GET", pathTemplate: "/players/me/banking/loans" }],
+    routeCapabilities: ["loans"],
+  },
+  {
+    key: "loanApply",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/loans/applications/:offerKey",
+    }],
+    actionCapabilities: ["loanApply"],
+  },
+  {
+    key: "loanRepay",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/banking/loans/:loanKey/payments",
+    }],
+    actionCapabilities: ["loanRepay"],
   },
   {
     key: "contractAccept",
@@ -229,10 +416,7 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
   },
   {
     key: "progression",
-    operations: [{
-      method: "GET",
-      pathTemplate: "/players/me/progression",
-    }],
+    operations: [{ method: "GET", pathTemplate: "/players/me/progression" }],
     routeCapabilities: ["progression"],
   },
   {
@@ -293,6 +477,101 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     ],
     routeCapabilities: ["inventory"],
     actionCapabilities: ["inventoryUse"],
+  },
+  {
+    key: "marketplace",
+    operations: [{ method: "GET", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: [],
+  },
+  {
+    key: "marketplaceListing",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceListing"],
+  },
+  {
+    key: "marketplaceActivate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/activate" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceActivate"],
+  },
+  {
+    key: "marketplacePurchase",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/purchase" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplacePurchase"],
+  },
+  {
+    key: "marketplaceCancel",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/listings/:listingId/cancel" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceCancel"],
+  },
+  {
+    key: "marketplaceDispute",
+    operations: [{ method: "POST", pathTemplate: "/players/me/marketplace/orders/:orderId/disputes" }],
+    routeCapabilities: ["marketplace"],
+    actionCapabilities: ["marketplaceDispute"],
+  },
+  {
+    key: "messages",
+    operations: [{ method: "GET", pathTemplate: "/players/me/messages" }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageThread",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/threads/:threadId",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messagePolicy",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/policy",
+    }],
+    routeCapabilities: ["messages"],
+  },
+  {
+    key: "messageSearch",
+    operations: [{
+      method: "GET",
+      pathTemplate: "/players/me/messages/search",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSearch"],
+  },
+  {
+    key: "messageThreadCreate",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageSend",
+    operations: [{
+      method: "POST",
+      pathTemplate: "/players/me/messages/threads/:threadId/messages",
+    }],
+    routeCapabilities: ["messages"],
+    actionCapabilities: ["messageSend"],
+  },
+  {
+    key: "messageRead",
+    operations: [
+      { method: "POST", pathTemplate: "/players/me/messages/read" },
+      {
+        method: "POST",
+        pathTemplate: "/players/me/messages/threads/:threadId/read",
+      },
+    ],
+    routeCapabilities: ["messages"],
   },
   {
     key: "notifications",

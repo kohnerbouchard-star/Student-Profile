@@ -7,6 +7,13 @@ export function createEmptyReadModels() {
     notifications: [],
     countries: [],
     news: { categories: ["All"], selectedId: "", items: [] },
+    worldRuntime: {
+      campaign: null,
+      arrival: { required: false, questionnaire: null, assignment: null },
+      travel: { state: null, activeJourney: null },
+      residency: null,
+      world: { revision: 0, locations: [], routes: [] }
+    },
     market: { status: "UNAVAILABLE", nextClose: "", selectedAssetId: "", sectors: ["All"], assets: [] },
     portfolio: {
       netWorth: 0,
@@ -48,7 +55,13 @@ export function createEmptyReadModels() {
     },
     contracts: { tabs: ["Available", "Active", "Submitted", "Completed"], lifecycle: [], items: [] },
     store: { categories: ["All"], items: [] },
-    marketplace: { categories: ["All"], listings: [], myListings: [], feeRate: 0 },
+    marketplace: {
+      configured: false, enabled: false, crossCountryTradingEnabled: false, moderationRequired: false,
+      categories: ["All"], volume: 0, activeSellers: 0, feeRate: 0, platformFeeRate: 0,
+      taxRate: 0, listingDurationHours: 168, purchaseReservationMinutes: 5,
+      disputeWindowDays: 7, disputesEnabled: false, listings: [], myListings: [],
+      reservations: [], orders: [], disputes: []
+    },
     inventory: { categories: ["All"], items: [], capacityUsed: 0, capacityMax: 0 },
     crafting: {
       workshopLevel: "Unavailable",

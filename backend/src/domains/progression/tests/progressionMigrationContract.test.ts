@@ -3,15 +3,15 @@ declare const Deno: {
   readTextFile(path: URL): Promise<string>;
 };
 const MIGRATION = new URL(
-  "../../../../supabase/migrations/20260721113000_add_progression_reputation_runtime_v1.sql",
+  "../../../../supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql",
   import.meta.url,
 );
 const IDEMPOTENCY_MIGRATION = new URL(
-  "../../../../supabase/migrations/20260721115500_harden_progression_event_idempotency_v1.sql",
+  "../../../../supabase/migrations/20260721162000_harden_progression_event_idempotency_v1.sql",
   import.meta.url,
 );
 const CURVE_AND_LIFECYCLE_MIGRATION = new URL(
-  "../../../../supabase/migrations/20260721120500_rebalance_progression_curve_v1.sql",
+  "../../../../supabase/migrations/20260721163000_rebalance_progression_curve_v1.sql",
   import.meta.url,
 );
 

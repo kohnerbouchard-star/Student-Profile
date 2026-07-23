@@ -1,0 +1,120 @@
+name: Business Banking Runtime
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/2026072112*.sql"
+      - "player-terminal/src/api/business-banking-backend-routes.js"
+      - "player-terminal/src/api/backend-routes.js"
+      - "player-terminal/src/api/endpoints.js"
+      - "player-terminal/src/api/capabilities.js"
+      - "player-terminal/src/api/resource-plan.js"
+      - "player-terminal/src/core/format.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/banking-page.js"
+      - "player-terminal/src/pages/loans-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "player-terminal/tests/student-profile-adapter.mjs"
+      - "scripts/business-banking-*.mjs"
+      - ".github/workflows/business-banking-runtime.yml"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/domains/business-banking/**"
+      - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
+      - "backend/src/security/playerRateLimitDispatch.ts"
+      - "backend/supabase/functions/classroom-api/index.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/migrations/2026072112*.sql"
+      - "player-terminal/src/api/business-banking-backend-routes.js"
+      - "player-terminal/src/api/backend-routes.js"
+      - "player-terminal/src/api/endpoints.js"
+      - "player-terminal/src/api/capabilities.js"
+      - "player-terminal/src/api/resource-plan.js"
+      - "player-terminal/src/core/format.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/banking-page.js"
+      - "player-terminal/src/pages/loans-page.js"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "player-terminal/tests/student-profile-adapter.mjs"
+      - "scripts/business-banking-*.mjs"
+      - ".github/workflows/business-banking-runtime.yml"
+      - "package.json"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install repository dependencies
+        run: npm ci --ignore-scripts
+      - name: Run deterministic economic simulations
+        run: node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
+      - name: Validate runtime and migration contract
+        id: runtime-contract
+        shell: bash
+        run: |
+          set +e
+          node scripts/business-banking-runtime-contract.mjs 2>&1 | tee "$RUNNER_TEMP/business-banking-runtime-contract.log"
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -eq 0
+      - name: Upload failed runtime contract diagnostics
+        if: failure() && steps.runtime-contract.outputs.status != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-banking-runtime-contract-diagnostics
+          path: ${{ runner.temp }}/business-banking-runtime-contract.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify complete Player Business surface
+        run: node player-terminal/tests/business-banking-surface.mjs
+      - name: Run focused Player and Admin tests
+        working-directory: backend
+        run: |
+          deno test --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
+          deno test --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/businessBankingOperations.test.ts
+      - name: Typecheck Business Banking domain and Admin publication
+        working-directory: backend
+        run: |
+          deno check --config supabase/functions/classroom-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts \
+            src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts \
+            src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts \
+            src/domains/business-banking/domain/businessBankingEconomicSimulation.ts
+          deno check --config supabase/functions/admin-api/deno.json \
+            --lock=supabase/functions/deno.lock --frozen \
+            supabase/functions/admin-api/index.ts
+      - name: Check Player route adapter syntax
+        run: |
+          node --check player-terminal/src/api/business-banking-backend-routes.js
+          node --check player-terminal/src/pages/business-page.js
+          node --check player-terminal/src/pages/banking-page.js
+          node --check player-terminal/src/pages/loans-page.js

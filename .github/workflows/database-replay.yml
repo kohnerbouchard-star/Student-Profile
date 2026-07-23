@@ -54,18 +54,18 @@ jobs:
       - name: Validate migration source
         run: npm run audit:migrations
 
-      - name: Start disposable Supabase stack
+      - name: Start disposable Postgres service
         shell: bash
         run: |
           LOG="/tmp/database-replay-startup.log"
           : > "$LOG"
           STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
 
           for ATTEMPT in 1 2 3; do
-            printf '\n## Supabase startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
             set +e
-            npx supabase start --workdir backend \
-              --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor \
+            npx supabase start --workdir backend --exclude "$EXCLUDED" \
               2>&1 | tee -a "$LOG"
             STATUS=${PIPESTATUS[0]}
             set -e
@@ -106,6 +106,10 @@ jobs:
             /tmp/database-replay-startup.log
             /tmp/database-replay-status.log
             /tmp/database-replay-docker.log
+            backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql
+            backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql
+            backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
           if-no-files-found: warn
           retention-days: 14
 

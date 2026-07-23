@@ -13,8 +13,13 @@ import { handleAccountOperation } from "./accountOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
-import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
 import { handleProgressionOperation } from "./progressionOperations.ts";
+import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { handleMarketplaceAdminOperation } from "./marketplaceOperations.ts";
+import { handleMessagingOperation } from "./messagingOperations.ts";
+import { guardStaffMessagingRateLimit } from "../../../src/security/staffMessagingRateLimitDispatch.ts";
+import { handleBusinessBankingAdminOperation } from "./businessBankingOperations.ts";
+import { handleWorldRuntimeAdminOperation } from "./worldRuntimeOperations.ts";
 import {
   guardGameScopedMutation,
   handleGameLifecycleOperation,
@@ -239,6 +244,77 @@ Deno.serve(async (request: Request) => {
       return json(request, mutationGuard.status || 409, mutationGuard.body);
     }
 
+    const worldOperation = await handleWorldRuntimeAdminOperation(
+      context.service as unknown as Parameters<
+        typeof handleWorldRuntimeAdminOperation
+      >[0],
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (worldOperation.handled) {
+      return json(
+        request,
+        worldOperation.status || 500,
+        worldOperation.body,
+      );
+    }
+
+    // Cast through never to prevent Deno from recursively expanding the full
+    // generated Supabase client type at this bounded Marketplace adapter.
+    const marketplaceOperation = await handleMarketplaceAdminOperation(
+      context.service as never,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (marketplaceOperation.handled) {
+      return json(
+        request,
+        marketplaceOperation.status || 500,
+        marketplaceOperation.body,
+      );
+    }
+
+
+    if (suffix.startsWith("/messages")) {
+      const rateLimit = await guardStaffMessagingRateLimit(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (rateLimit) {
+        return json(request, rateLimit.status, rateLimit.body);
+      }
+
+      const messagingOperation = await handleMessagingOperation(
+        context.service,
+        {
+          request,
+          gameId,
+          staffUserId: context.staff.id,
+          suffix,
+        },
+      );
+      if (messagingOperation.handled) {
+        return json(
+          request,
+          messagingOperation.status || 500,
+          messagingOperation.body,
+        );
+      }
+    }
+
     const progressionOperation = await handleProgressionOperation(
       context.service,
       {
@@ -270,6 +346,23 @@ Deno.serve(async (request: Request) => {
         request,
         redemptionOperation.status || 500,
         redemptionOperation.body,
+      );
+    }
+
+    const businessBankingOperation = await handleBusinessBankingAdminOperation(
+      context.service,
+      {
+        request,
+        gameId,
+        staffUserId: context.staff.id,
+        suffix,
+      },
+    );
+    if (businessBankingOperation.handled) {
+      return json(
+        request,
+        businessBankingOperation.status || 500,
+        businessBankingOperation.body,
       );
     }
 

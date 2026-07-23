@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "admin/**"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "assets/**"
       - "favicon.ico"
       - "index.html"
@@ -55,6 +57,8 @@ on:
       - main
     paths:
       - "admin/**"
+      - "backend/supabase/functions/admin-api/index.ts"
+      - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
       - "assets/**"
       - "favicon.ico"
       - "index.html"

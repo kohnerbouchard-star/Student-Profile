@@ -36,6 +36,12 @@ import {
   readPlayerBankingPublicRoutePath,
 } from "../../../src/domains/economy/api/playerBankingPublicRoutePaths.ts";
 import {
+  handlePlayerBusinessBankingRequest,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts";
+import {
+  readPlayerBusinessBankingRoutePath,
+} from "../../../src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts";
+import {
   handleStaffPlayerLedgerHistoryRequest,
 } from "../../../src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts";
 import {
@@ -152,6 +158,12 @@ import {
   readPlayerWorldRoutePath,
 } from "../../../src/domains/countries/api/playerWorldRoutePaths.ts";
 import {
+  handlePlayerWorldRuntimeEdgeRequest,
+} from "../../../src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts";
+import {
+  parsePlayerWorldRuntimeRoute,
+} from "../../../src/domains/world/api/playerWorldRuntimeRoutePaths.ts";
+import {
   handlePlayerInventoryReadRequest,
 } from "../../../src/domains/inventory/api/playerInventoryReadHttpHandler.ts";
 import {
@@ -176,6 +188,12 @@ import {
   readPlayerStoryDeliveryRoutePath,
 } from "../../../src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts";
 import {
+  handlePlayerMarketplaceRequest,
+} from "../../../src/domains/marketplace/api/playerMarketplaceHttpHandler.ts";
+import {
+  readPlayerMarketplaceRoutePath,
+} from "../../../src/domains/marketplace/api/playerMarketplaceRoutePaths.ts";
+import {
   readStaffDemoStorylineInitializeRoutePath,
 } from "../../../src/domains/storylines/api/demoStorylineRoutePaths.ts";
 import {
@@ -185,6 +203,9 @@ import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
 } from "../../../src/security/playerRateLimitDispatch.ts";
+import { handlePlayerProgressionRequest } from "../../../src/domains/progression/api/playerProgressionHttpHandler.ts";
+import { readPlayerProgressionRoutePath } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";
+import { dispatchClassroomMessagingRequest } from "./messagingDispatch.ts";
 
 interface EdgeHealthBody {
   readonly ok: true;
@@ -221,6 +242,25 @@ Deno.serve(async (request) => {
           playerCapabilityManifestRoute,
           { createServiceClient },
         ),
+      { createServiceClient },
+    );
+  }
+
+  const playerWorldRuntimeRoute = parsePlayerWorldRuntimeRoute(url.pathname);
+
+  if (playerWorldRuntimeRoute) {
+    const endpointKey = ({
+      context: "worldRuntime",
+      arrivalClass: "arrivalClass",
+      travelQuote: "travelQuote",
+      travelExecute: "travelExecute",
+      travelComplete: "travelComplete",
+      residencyRequest: "residencyRequest",
+    } as const)[playerWorldRuntimeRoute.operation];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () => handlePlayerWorldRuntimeEdgeRequest(request, { createServiceClient }),
       { createServiceClient },
     );
   }
@@ -265,6 +305,56 @@ Deno.serve(async (request) => {
       "inventory",
       () =>
         handlePlayerInventoryReadRequest(request, playerInventoryRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerMarketplaceRoute = readPlayerMarketplaceRoutePath(url.pathname);
+
+  if (playerMarketplaceRoute) {
+    const endpointKey = playerMarketplaceRoute.kind === "collection"
+      ? request.method === "GET"
+        ? "marketplace"
+        : "marketplaceListing"
+      : playerMarketplaceRoute.kind === "activate"
+      ? "marketplaceActivate"
+      : playerMarketplaceRoute.kind === "purchase"
+      ? "marketplacePurchase"
+      : playerMarketplaceRoute.kind === "cancel"
+      ? "marketplaceCancel"
+      : "marketplaceDispute";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerMarketplaceRequest(request, playerMarketplaceRoute, {
+          createServiceClient,
+        }),
+      { createServiceClient },
+    );
+  }
+
+  const playerMessagingResponse = await dispatchClassroomMessagingRequest(
+    request,
+    { createServiceClient },
+  );
+  if (playerMessagingResponse) return playerMessagingResponse;
+
+  const playerProgressionRoute = readPlayerProgressionRoutePath(url.pathname);
+
+  if (playerProgressionRoute) {
+    const endpointKey = playerProgressionRoute.kind === "unlock"
+      ? "progressionUnlock"
+      : playerProgressionRoute.kind === "claim"
+      ? "progressionClaim"
+      : "progression";
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerProgressionRequest(request, playerProgressionRoute, {
           createServiceClient,
         }),
       { createServiceClient },
@@ -490,6 +580,40 @@ Deno.serve(async (request) => {
         handlePlayerStockMarketReadRequest(request, "read_trades", {
           createServiceClient,
         }),
+      { createServiceClient },
+    );
+  }
+
+  const playerBusinessBankingRoute = readPlayerBusinessBankingRoutePath(
+    url.pathname,
+  );
+
+  if (playerBusinessBankingRoute) {
+    const endpointKey = ({
+      businessRead: "business",
+      businessCreate: "businessCreate",
+      businessProductCreate: "businessProductCreate",
+      businessInputPurchase: "businessInputPurchase",
+      businessProduction: "businessProduction",
+      businessPrice: "businessPrice",
+      businessHire: "businessHire",
+      businessTerminate: "businessTerminate",
+      businessStatus: "businessStatus",
+      playerTransfer: "bankTransfer",
+      savingsTransfer: "savingsTransfer",
+      loansRead: "loans",
+      loanApply: "loanApply",
+      loanRepay: "loanRepay",
+    } as const)[playerBusinessBankingRoute.kind];
+    return dispatchRateLimitedReviewedPlayerRequest(
+      request,
+      endpointKey,
+      () =>
+        handlePlayerBusinessBankingRequest(
+          request,
+          playerBusinessBankingRoute,
+          { createServiceClient },
+        ),
       { createServiceClient },
     );
   }

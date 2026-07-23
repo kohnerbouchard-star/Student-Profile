@@ -296,7 +296,11 @@
     const initial = options.initialFocus instanceof HTMLElement && dialog.contains(options.initialFocus) && visible(options.initialFocus) && enabled(options.initialFocus)
       ? options.initialFocus
       : focusableElements(dialog)[0] || dialog;
-    window.requestAnimationFrame(() => focusInside(initial));
+    window.requestAnimationFrame(() => {
+      if (!closed && !dialog.contains(document.activeElement)) {
+        focusInside(initial);
+      }
+    });
 
     backdrop.dispatchEvent(new CustomEvent("econovaria:admin-modal-activated", {
       bubbles: true,

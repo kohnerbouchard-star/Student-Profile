@@ -88,7 +88,9 @@ assert.ok(refreshPending.includes("FILLED · REFRESH PENDING"));
 assert.ok(refreshPending.includes("Order completed, refresh pending."));
 
 const source = await readFile(new URL("../src/features/market/market-order-flow.js", import.meta.url), "utf8");
-const routes = await readFile(new URL("../src/api/backend-routes.js", import.meta.url), "utf8");
+const routeWrapper = await readFile(new URL("../src/api/backend-routes.js", import.meta.url), "utf8");
+const routeCore = await readFile(new URL("../src/api/backend-routes-core.js", import.meta.url), "utf8");
+const routes = `${routeWrapper}\n${routeCore}`;
 const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
 assert.ok(main.includes("installMarketOrderFlow"));
 assert.ok(source.includes('addEventListener("submit", handleSubmit, true)'), "Market submission must intercept the legacy direct-submit controller.");

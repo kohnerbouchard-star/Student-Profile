@@ -107,6 +107,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
   let destroyed = false;
   let version = 0;
   let opener = null;
+  let pendingDismissal = false;
 
   function enabled() {
     return isEndpointEnabled(terminal.getState()?.data?.capabilities, "storyDeliveries");
@@ -127,6 +128,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
     opener = null;
     loadingList = false;
     transitioning = false;
+    pendingDismissal = false;
     closeOwnedModal();
   }
 
@@ -185,6 +187,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
   }
 
   function removeCurrentAndContinue(message = "") {
+    pendingDismissal = false;
     queue.shift();
     current = null;
     closeOwnedModal();
@@ -194,6 +197,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
   }
 
   async function reconcileConflict() {
+    pendingDismissal = false;
     queue = [];
     current = null;
     closeOwnedModal();
@@ -215,6 +219,7 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
     } catch (error) {
       if (destroyed || transitionVersion !== version) return;
       transitioning = false;
+      pendingDismissal = false;
       if (dispatchInvalidSession(error)) return;
       const code = errorCode(error);
       if (Number(error?.status) === 404 || code === "player_story_delivery_not_found") {
@@ -248,6 +253,10 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
       current = Object.freeze({ ...target, ...committed });
       queue[0] = current;
       renderCurrent();
+      if (pendingDismissal) {
+        pendingDismissal = false;
+        void updateState("dismissed");
+      }
       return;
     }
     removeCurrentAndContinue();
@@ -261,9 +270,16 @@ export function installStoryDeliveryFlow({ mount, terminal, config, api: supplie
   }
 
   function handleCloseRequest(event) {
-    if (!current || event.detail?.deliveryId !== current.deliveryId || transitioning) return;
+    if (!current || event.detail?.deliveryId !== current.deliveryId) return;
     if (current.requiresAcknowledgement) {
-      renderCurrent({ error: "Acknowledge this briefing before continuing." });
+      renderCurrent({
+        error: "Acknowledge this briefing before continuing.",
+        processing: transitioning,
+      });
+      return;
+    }
+    if (transitioning) {
+      pendingDismissal = true;
       return;
     }
     void updateState("dismissed");

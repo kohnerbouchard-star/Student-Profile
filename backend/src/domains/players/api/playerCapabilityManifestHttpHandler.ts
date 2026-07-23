@@ -11,6 +11,7 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { buildPlayerCraftingCapabilityResponse } from "../../crafting/contracts/playerCraftingCapabilityManifest.ts";
 import {
   buildPlayerCapabilityManifest,
   type PlayerCapabilityManifestResponseBody,
@@ -67,10 +68,9 @@ export async function handlePlayerCapabilityManifestRequest(
       now: () => now,
     });
 
-    return playerCapabilityManifestJsonResponse({
-      ok: true,
-      ...buildPlayerCapabilityManifest(),
-    });
+    return playerCapabilityManifestJsonResponse(
+      buildPlayerCraftingCapabilityResponse(buildPlayerCapabilityManifest()),
+    );
   } catch (error) {
     if (error instanceof EdgeActivationError) {
       return jsonError(error.status, {

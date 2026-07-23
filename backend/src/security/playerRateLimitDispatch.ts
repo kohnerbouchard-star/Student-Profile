@@ -72,8 +72,56 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   capabilities: byMethod({
     GET: operation("player.capabilities.read", "read"),
   }),
+  worldRuntime: byMethod({
+    GET: operation("player.world.context.read", "read"),
+  }),
+  arrivalClass: byMethod({
+    POST: operation("player.world.arrival.assign", "sensitive"),
+  }),
+  travelQuote: byMethod({
+    POST: operation("player.world.travel.quote", "write"),
+  }),
+  travelExecute: byMethod({
+    POST: operation("player.world.travel.execute", "sensitive"),
+  }),
+  travelComplete: byMethod({
+    POST: operation("player.world.travel.complete", "write"),
+  }),
+  residencyRequest: byMethod({
+    POST: operation("player.world.residency.request", "sensitive"),
+  }),
   banking: byMethod({
     GET: operation("player.banking.read", "read"),
+  }),
+  bankTransfer: byMethod({
+    POST: operation("player.banking.transfers.create", "sensitive"),
+  }),
+  business: byMethod({
+    GET: operation("player.business.read", "read"),
+  }),
+  businessCreate: byMethod({
+    POST: operation("player.business.create", "sensitive"),
+  }),
+  businessHire: byMethod({
+    POST: operation("player.business.employees.hire", "sensitive"),
+  }),
+  businessInputPurchase: byMethod({
+    POST: operation("player.business.inputs.purchase", "sensitive"),
+  }),
+  businessPrice: byMethod({
+    POST: operation("player.business.pricing.write", "write"),
+  }),
+  businessProductCreate: byMethod({
+    POST: operation("player.business.products.write", "write"),
+  }),
+  businessProduction: byMethod({
+    POST: operation("player.business.production.run", "sensitive"),
+  }),
+  businessStatus: byMethod({
+    POST: operation("player.business.status.write", "sensitive"),
+  }),
+  businessTerminate: byMethod({
+    POST: operation("player.business.employees.terminate", "write"),
   }),
   contractAccept: byMethod({
     POST: operation("player.contracts.accept", "write"),
@@ -98,6 +146,15 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   inventoryRedemption: redemptionOperations,
   inventoryRedemptions: redemptionOperations,
+  loanApply: byMethod({
+    POST: operation("player.loans.apply", "sensitive"),
+  }),
+  loanRepay: byMethod({
+    POST: operation("player.loans.repay", "sensitive"),
+  }),
+  loans: byMethod({
+    GET: operation("player.loans.read", "read"),
+  }),
   logout: byMethod({
     POST: operation("player.session.logout", "sensitive"),
   }),
@@ -114,6 +171,45 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     DELETE: operation("player.watchlist.write", "write"),
     GET: operation("player.watchlist.read", "read"),
     PUT: operation("player.watchlist.write", "write"),
+  }),
+  messages: byMethod({
+    GET: operation("player.messages.read", "read"),
+  }),
+  messageThread: byMethod({
+    GET: operation("player.messages.thread.read", "read"),
+  }),
+  messagePolicy: byMethod({
+    GET: operation("player.messages.policy.read", "read"),
+  }),
+  messageSearch: byMethod({
+    GET: operation("player.messages.search", "read"),
+  }),
+  messageThreadCreate: byMethod({
+    POST: operation("player.messages.thread.create", "sensitive"),
+  }),
+  messageSend: byMethod({
+    POST: operation("player.messages.send", "sensitive"),
+  }),
+  messageRead: byMethod({
+    POST: operation("player.messages.receipt", "write"),
+  }),
+  marketplace: byMethod({
+    GET: operation("player.marketplace.read", "read"),
+  }),
+  marketplaceListing: byMethod({
+    POST: operation("player.marketplace.listing.create", "write"),
+  }),
+  marketplaceActivate: byMethod({
+    POST: operation("player.marketplace.listing.activate", "write"),
+  }),
+  marketplacePurchase: byMethod({
+    POST: operation("player.marketplace.purchase", "sensitive"),
+  }),
+  marketplaceCancel: byMethod({
+    POST: operation("player.marketplace.listing.cancel", "write"),
+  }),
+  marketplaceDispute: byMethod({
+    POST: operation("player.marketplace.dispute.open", "sensitive"),
   }),
   news: byMethod({
     GET: operation("player.news.read", "read"),
@@ -141,6 +237,9 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   }),
   progressionClaim: byMethod({
     POST: operation("player.progression.reward.claim", "sensitive"),
+  }),
+  savingsTransfer: byMethod({
+    POST: operation("player.banking.savings.transfer", "sensitive"),
   }),
   store: byMethod({
     GET: operation("player.store.read", "read"),
@@ -177,7 +276,10 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
 
   const limited = await guardReviewedPlayerRequest(
     request,
-    operation,
+    {
+      ...operation,
+      action: threadScopedMessagingAction(request, endpointKey) ?? operation.action,
+    },
     dependencies,
   );
   return limited ?? next();
@@ -191,6 +293,23 @@ export async function dispatchRateLimitedPlayerLoginRequest(
   if (request.method !== "POST") return next();
   const limited = await guardPlayerLoginRequest(request, dependencies);
   return limited ?? next();
+}
+
+function threadScopedMessagingAction(
+  request: Request,
+  endpointKey: ReviewedPlayerRateLimitEndpointKey,
+): string | null {
+  if (!new Set<ReviewedPlayerRateLimitEndpointKey>([
+    "messageThread",
+    "messageSend",
+    "messageRead",
+  ]).has(endpointKey)) return null;
+  const match = new URL(request.url).pathname.match(
+    /\/messages\/threads\/thr_([0-9a-f]{32})(?:\/|$)/,
+  );
+  return match?.[1]
+    ? `player.messages.thr_${match[1].slice(0, 24)}`
+    : null;
 }
 
 async function guardReviewedPlayerRequest(
