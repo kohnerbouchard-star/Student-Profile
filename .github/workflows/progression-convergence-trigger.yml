@@ -1,0 +1,31 @@
+name: Progression Convergence Trigger
+
+on:
+  pull_request:
+    types:
+      - opened
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: progression-final-convergence
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    if: github.head_ref == 'ops/progression-convergence-trigger-20260723'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out sole Progression authority
+        uses: actions/checkout@v7
+        with:
+          ref: agent/progression-reputation-achievements-v1
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Execute guarded Progression convergence
+        shell: bash
+        run: bash scripts/progression-final-convergence.sh
