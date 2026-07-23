@@ -1,0 +1,128 @@
+name: PR295 Immutable Release Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pr295-immutable-release-build.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: pr295-immutable-release-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.pull_request.number == 295
+    name: Build and attest exact main artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out current main for ancestry verification
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select immutable release source
+        id: select
+        shell: bash
+        env:
+          RELEASE_COMMIT: 623b82e004ea8446f6358c7ae4cc7ab4f6ec340d
+          CONFIGURATION_PATH: docs/operations/release-configuration.v1.json
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          git cat-file -e "${RELEASE_COMMIT}^{commit}"
+          git checkout --detach "$RELEASE_COMMIT"
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -f "$CONFIGURATION_PATH"
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install repository tooling
+        run: npm ci
+
+      - name: Reject environment-bound frontend source
+        run: npm run release:validate-neutrality
+
+      - name: Build frontend and Edge Function artifacts exactly once
+        env:
+          RELEASE_COMMIT: ${{ steps.select.outputs.release_commit }}
+          CONFIGURATION_PATH: docs/operations/release-configuration.v1.json
+        run: >-
+          npm run release:build --
+          --commit "$RELEASE_COMMIT"
+          --config "$CONFIGURATION_PATH"
+          --output dist/release
+
+      - name: Validate generated manifest and artifact bytes
+        env:
+          RELEASE_COMMIT: ${{ steps.select.outputs.release_commit }}
+        run: >-
+          npm run release:validate --
+          --manifest dist/release/release-manifest.json
+          --artifact-root dist/release
+          --expected-commit "$RELEASE_COMMIT"
+
+      - name: Export release metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          console.log(`release_id=${manifest.releaseId}`);
+          console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
+          NODE
+
+      - name: Upload immutable release set
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-release-623b82e004ea8446f6358c7ae4cc7ab4f6ec340d
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          overwrite: false
+
+      - name: Attest release artifact provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/release/artifacts/*
+            dist/release/checksums.sha256
+            dist/release/release-configuration.json
+            dist/release/release-manifest.json
+          show-summary: true
+
+      - name: Record immutable build identity
+        shell: bash
+        run: |
+          {
+            echo "## PR #295 immutable release build"
+            echo "- Source commit: \`${{ steps.select.outputs.release_commit }}\`"
+            echo "- Release ID: \`${{ steps.metadata.outputs.release_id }}\`"
+            echo "- Artifact-set SHA-256: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
+            echo "- GitHub artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
+            echo "- GitHub artifact digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
+            echo "- Environment-neutrality: passed"
+            echo "- Deployment performed: false"
+            echo "- Production modified: false"
+          } >> "$GITHUB_STEP_SUMMARY"
