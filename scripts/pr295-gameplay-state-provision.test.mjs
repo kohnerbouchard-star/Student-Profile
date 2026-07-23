@@ -8,6 +8,7 @@ import {
   sha256,
   validateGameplayProvisionedState,
   validatePhysicalEconomyPack,
+  validateProgressionBaseline,
 } from "./pr295-gameplay-state-provision-lib.mjs";
 
 const stagingRef = "eecvbssdvarfcykcfrny";
@@ -44,6 +45,12 @@ function pack() {
       downstreamContractValidated: true,
       productionAuthorized: false,
     },
+    calibrationEvidence: {
+      balanceGateSummary: {
+        activationAuthorized: true,
+        failures: [],
+      },
+    },
     items: [{ itemKey: "item.one" }, { itemKey: "item.two" }],
     recipes: [{ recipeKey: "recipe.one", regulated: false }, { recipeKey: "recipe.two", regulated: true }],
     counts: { items: 2, recipes: 2 },
@@ -68,18 +75,59 @@ test("target game is exact, active, and owner-bound", () => {
   assert.throws(() => selectGameplayTargetGame([], bindings()), /resolve exactly once/);
 });
 
-test("physical pack requires exact authorization and derives enabled recipes", () => {
+test("physical pack records authorization blockers without bypassing them", () => {
   const identity = validatePhysicalEconomyPack(pack(), releaseCommit);
+  assert.equal(identity.activationAuthorized, true);
   assert.equal(identity.itemCount, 2);
   assert.equal(identity.recipeCount, 2);
   assert.equal(identity.expectedEnabledRecipes, 1);
   assert.equal(identity.regulatedRecipeCount, 1);
+
+  const blocked = pack();
+  blocked.activationAuthorization.catalogAuthorized = false;
+  blocked.calibrationEvidence.balanceGateSummary.activationAuthorized = false;
+  blocked.calibrationEvidence.balanceGateSummary.failures = ["catalog_not_approved"];
+  const blockedIdentity = validatePhysicalEconomyPack(blocked, releaseCommit);
+  assert.equal(blockedIdentity.activationAuthorized, false);
+  assert.deepEqual(blockedIdentity.blockers, [
+    "catalogAuthorized",
+    "balanceGateAuthorized",
+    "zeroBalanceGateFailures",
+  ]);
+
   const invalid = pack();
   invalid.activationAuthorization.productionAuthorized = true;
   assert.throws(() => validatePhysicalEconomyPack(invalid, releaseCommit), /prohibit production/);
 });
 
-test("connected state requires active pack and one baseline profile per Player", () => {
+test("safe Progression baseline requires zero awards and four reputations per Player", () => {
+  assert.equal(validateProgressionBaseline({
+    activePlayerCount: 1,
+    progressionProfiles: 1,
+    reputationRows: 4,
+    experienceTotal: 0,
+    earnedSkillPointsTotal: 0,
+    spentSkillPointsTotal: 0,
+    bonusSkillPointsTotal: 0,
+    nonzeroReputationRows: 0,
+    completedAchievements: 0,
+    claimedRewards: 0,
+  }), true);
+  assert.throws(() => validateProgressionBaseline({
+    activePlayerCount: 1,
+    progressionProfiles: 1,
+    reputationRows: 4,
+    experienceTotal: 10,
+    earnedSkillPointsTotal: 0,
+    spentSkillPointsTotal: 0,
+    bonusSkillPointsTotal: 0,
+    nonzeroReputationRows: 0,
+    completedAchievements: 0,
+    claimedRewards: 0,
+  }), /must not award experience/);
+});
+
+test("connected Crafting state requires an authorized active pack", () => {
   const identity = validatePhysicalEconomyPack(pack(), releaseCommit);
   assert.equal(validateGameplayProvisionedState({
     packLink: { status: "active" },
@@ -94,15 +142,16 @@ test("connected state requires active pack and one baseline profile per Player",
     recipeCount: 2,
     enabledRecipeCount: 1,
     supplyCount: 2,
-    activePlayerCount: 1,
-    progressionProfileCount: 1,
-    reputationCount: 4,
     packIdentity: identity,
   }), true);
 });
 
-test("evidence excludes internal IDs and gameplay rewards", () => {
-  const identity = validatePhysicalEconomyPack(pack(), releaseCommit);
+test("blocked evidence excludes internal IDs, rewards, and authorization bypass", () => {
+  const blocked = pack();
+  blocked.activationAuthorization.catalogAuthorized = false;
+  blocked.calibrationEvidence.balanceGateSummary.activationAuthorized = false;
+  blocked.calibrationEvidence.balanceGateSummary.failures = ["catalog_not_approved"];
+  const identity = validatePhysicalEconomyPack(blocked, releaseCommit);
   const evidence = buildGameplayEvidence({
     generatedAt: "2026-07-24T00:00:00.000Z",
     sourceCommit: releaseCommit,
@@ -111,20 +160,26 @@ test("evidence excludes internal IDs and gameplay rewards", () => {
     targetGameName: gameName,
     targetGameIdSha256: gameHash,
     packIdentity: identity,
-    importOutcome: { replayed: false },
-    activationOutcome: { replayed: false },
+    importOutcome: null,
+    activationOutcome: null,
+    craftingActive: false,
     verification: {
       activePlayers: 1,
-      physicalItems: 2,
-      activePhysicalItems: 2,
-      recipes: 2,
-      enabledRecipes: 1,
+      physicalItems: 0,
+      activePhysicalItems: 0,
+      recipes: 0,
+      enabledRecipes: 0,
       regulatedRecipes: 1,
-      supplyRows: 2,
+      supplyRows: 0,
       progressionProfiles: 1,
       reputationRows: 4,
+      experienceTotal: 0,
+      completedAchievements: 0,
+      claimedRewards: 0,
     },
   });
+  assert.equal(evidence.crafting.activationBlocked, true);
+  assert.equal(evidence.crafting.authorizationBypassed, false);
   assert.equal(evidence.progression.experienceAwarded, false);
   assert.equal(evidence.crafting.inventoryFabricated, false);
   assert.doesNotMatch(JSON.stringify(evidence), new RegExp(gameId));
