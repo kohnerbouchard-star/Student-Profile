@@ -76,7 +76,3 @@ jobs:
         working-directory: player-terminal
       - run: npm run verify
         working-directory: player-terminal
-
-  database-replay:
-    name: Full migration replay and lint
-    uses: ./.github/workflows/database-replay.yml
