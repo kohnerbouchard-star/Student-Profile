@@ -47,6 +47,10 @@ requireCondition(
   "Admin script CSP must not permit unsafe-inline",
 );
 requireCondition(
+  adminHtml.includes("wss://*.supabase.co"),
+  "Admin CSP must preserve Supabase Realtime WebSockets",
+);
+requireCondition(
   /<script defer src="\.\/admin-bootstrap\.js"><\/script>/.test(adminHtml),
   "Admin HTML must load the deferred external bootstrap",
 );
@@ -80,17 +84,22 @@ requireCondition(
   "Admin API CORS must support a deployment-owned allowlist",
 );
 requireCondition(
+  adminCors.includes('url.pathname !== "/"') && adminCors.includes("url.username") && adminCors.includes("url.password"),
+  "Admin API configured origins must reject path, credential, and insecure variants",
+);
+requireCondition(
   adminCors.includes('headers["Access-Control-Allow-Origin"] = origin'),
   "Admin API must return an origin only after allowlist validation",
 );
 
 console.log(JSON.stringify({
   status: "pass",
-  checks: 14,
+  checks: 16,
   boundaries: [
     "backend-crafting-smoke",
     "world-runtime-retention",
     "admin-csp-bootstrap",
+    "admin-realtime-csp",
     "player-api-cors",
     "admin-api-cors",
   ],
