@@ -26,6 +26,7 @@ const policySurface = readFileSync(paths[4], "utf8");
 const loader = readFileSync(paths[1], "utf8");
 const stylesheet = readFileSync("admin/messaging-moderation.css", "utf8");
 const adminIndex = readFileSync("admin/index.html", "utf8");
+const adminBootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 const messagesPage = readFileSync("player-terminal/src/pages/messages-page.js", "utf8");
 const backendRoutes = readFileSync("player-terminal/src/api/backend-routes.js", "utf8");
 const messagingRoutes = readFileSync("player-terminal/src/api/messaging-backend-routes.js", "utf8");
@@ -58,11 +59,13 @@ assert.doesNotMatch(loader, /DOMContentLoaded|MutationObserver|window\.fetch\s*=
 assert.match(stylesheet, /@media \(max-width:620px\)/);
 assert.match(stylesheet, /@media \(forced-colors:active\)/);
 assert.doesNotMatch(stylesheet, /(^|})button:disabled/);
-assert.match(adminIndex, /admin-overview-boot\.js" onload="void import\('\.\/messaging-moderation-loader\.js'\)"/);
-assert.match(adminIndex, /shape-accurate-skeletons\.js" onload="void import\('\.\/shape-accurate-skeleton-lifecycle\.js'\).*game-lifecycle-controls\.js/);
-assert.doesNotMatch(adminIndex, /game-lifecycle-controls\.js'\)\.then\(\(\) =&gt; import\('\.\/messaging-moderation-loader\.js'\)/);
+assert.match(adminIndex, /Content-Security-Policy/);
+assert.match(adminIndex, /<script defer src="\.\/admin-bootstrap\.js"><\/script>/);
+assert.doesNotMatch(adminIndex, /\sonload=/);
 assert.doesNotMatch(adminIndex, /<script[^>]+src=["']\.\/messaging-moderation-loader\.js["']/);
 assert.doesNotMatch(adminIndex, /<link[^>]+messaging-moderation\.css/);
+assert.match(adminBootstrap, /"\.\/messaging-moderation-loader\.js"/);
+assert.match(adminBootstrap, /name:\s*"operational-surfaces"/);
 
 assert.match(messagesPage, /data-endpoint="messageThreadCreate"/);
 assert.match(messagesPage, /data-endpoint="messageSend"/);
@@ -86,4 +89,4 @@ assert.match(capabilityManifest, /messagePolicy/);
 assert.match(capabilityManifest, /messageSend/);
 assert.match(capabilityManifest, /messageRead/);
 
-console.log("Admin and Player Messaging source, privacy, capability, independent boot, and attachment-disablement contracts passed.");
+console.log("Admin and Player Messaging source, privacy, capability, hardened bootstrap, and attachment-disablement contracts passed.");
