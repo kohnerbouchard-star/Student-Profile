@@ -19,6 +19,9 @@ Deno.test("Messaging compatibility migration uses the stable active Player inter
     "player_row.game_session_id = p_game_session_id",
     "player_row.player_identifier = v_recipient_identifier",
     "player_message_recipient_not_found",
+    "v_initial_created_at := clock_timestamp()",
+    "created_at, updated_at",
+    "v_initial_created_at, v_initial_created_at",
     "grant execute on function public.read_player_message_policy_v1(uuid, uuid) to service_role",
     "grant execute on function public.create_player_message_thread_atomic_v1(uuid, uuid, text, text, text, text) to service_role",
   ]) {
