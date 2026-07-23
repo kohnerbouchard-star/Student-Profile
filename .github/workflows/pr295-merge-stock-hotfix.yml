@@ -1,0 +1,36 @@
+name: PR295 Merge Stock Hotfix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-merge-stock-hotfix.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr295-merge-stock-hotfix
+  cancel-in-progress: true
+
+jobs:
+  merge-main:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge exact stock-route hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main agent/production-integration-gate-v1
+          git reset --hard origin/agent/production-integration-gate-v1
+          test "$(git rev-parse origin/main)" = "a5f3764eb7f3fab07211304560ae5ffdc13ffb05"
+          git merge --no-edit origin/main
+          git push origin HEAD:agent/production-integration-gate-v1
