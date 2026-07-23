@@ -13,7 +13,7 @@ permissions:
   attestations: write
 
 concurrency:
-  group: pr295-immutable-release-v6-${{ github.event.pull_request.head.sha }}
+  group: pr295-immutable-release-v7-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      RELEASE_COMMIT: a5f3764eb7f3fab07211304560ae5ffdc13ffb05
+      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
       SOURCE_ROOT: /tmp/econovaria-release-source
-      OUTPUT_ROOT: /tmp/econovaria-release-v6
+      OUTPUT_ROOT: /tmp/econovaria-release-v7
     steps:
       - name: Check out exact PR295 tooling
         uses: actions/checkout@v7
@@ -101,30 +101,34 @@ jobs:
           if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
           if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('tooling mismatch');
           if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('workflow mismatch');
-          if (manifest.migrations.count !== 131 || manifest.migrations.head !== '20260721163000') throw new Error('migration mismatch');
+          if (manifest.migrations.head !== '20260723213038') throw new Error('migration head mismatch');
+          if (!Number.isInteger(manifest.migrations.count) || manifest.migrations.count < 132) throw new Error('migration count is incomplete');
+          console.log(`migration_count=${manifest.migrations.count}`);
+          console.log(`migration_head=${manifest.migrations.head}`);
+          console.log(`migration_set_sha256=${manifest.migrations.versionSetSha256}`);
           console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
           console.log(`manifest_sha256=${crypto.createHash('sha256').update(bytes).digest('hex')}`);
           NODE
 
-      - name: Upload corrected immutable artifact
+      - name: Upload playable staging immutable artifact
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: econovaria-release-a5f3764eb7f3fab07211304560ae5ffdc13ffb05-v6
-          path: /tmp/econovaria-release-v6
+          name: econovaria-release-91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5-v7
+          path: /tmp/econovaria-release-v7
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
           overwrite: false
 
-      - name: Attest corrected artifact
+      - name: Attest playable staging artifact
         uses: actions/attest@v4
         with:
           subject-path: |
-            /tmp/econovaria-release-v6/artifacts/*
-            /tmp/econovaria-release-v6/checksums.sha256
-            /tmp/econovaria-release-v6/release-configuration.json
-            /tmp/econovaria-release-v6/release-manifest.json
+            /tmp/econovaria-release-v7/artifacts/*
+            /tmp/econovaria-release-v7/checksums.sha256
+            /tmp/econovaria-release-v7/release-configuration.json
+            /tmp/econovaria-release-v7/release-manifest.json
           show-summary: true
 
       - name: Record immutable identity
@@ -132,6 +136,9 @@ jobs:
           {
             echo "- Runtime source: \`$RELEASE_COMMIT\`"
             echo "- Tooling source: \`${{ steps.bind.outputs.tooling_commit }}\`"
+            echo "- Migration count: \`${{ steps.metadata.outputs.migration_count }}\`"
+            echo "- Migration head: \`${{ steps.metadata.outputs.migration_head }}\`"
+            echo "- Migration set: \`${{ steps.metadata.outputs.migration_set_sha256 }}\`"
             echo "- Artifact set: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
             echo "- Manifest: \`${{ steps.metadata.outputs.manifest_sha256 }}\`"
             echo "- Artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
