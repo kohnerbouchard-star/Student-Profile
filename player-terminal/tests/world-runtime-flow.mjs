@@ -3,6 +3,7 @@ import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
 import { isEndpointEnabled } from "../src/api/capabilities.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
 import { normalizeApiResponse } from "../src/api/response-normalizer.js";
+import { resourcesForRoute } from "../src/api/resource-plan.js";
 import { PreviewTransport } from "../src/api/preview-transport.js";
 import { createResourceSupport } from "../src/api/resource-support.js";
 import { formatCurrency } from "../src/core/format.js";
@@ -36,6 +37,10 @@ assert.equal(manifest.capabilities.routes.world, true);
 assert.equal(isEndpointEnabled(manifest.capabilities, "arrivalClass"), true);
 assert.equal(isEndpointEnabled({ actions: { arrivalClassSubmit: false } }, "arrivalClass"), false);
 assert.equal(createResourceSupport({ session: { capabilityEndpointKeys: manifest.endpoints.map((item) => item.key) } }).worldRuntime, true);
+assert.deepEqual(resourcesForRoute("world"), {
+  required: ["countries"],
+  optional: ["worldRuntime", "storyDeliveries"],
+});
 
 assert.deepEqual(resolvePlayerBackendRequest({
   endpointKey: "worldRuntime", method: "GET", path: "/world-runtime", params: {}, payload: undefined, session: {},
@@ -107,6 +112,28 @@ for (const required of [
 assert.match(html, new RegExp(formatCurrency(quoteResponse.quote.totalCostMinor / 100, quoteResponse.quote.currencyCode).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.doesNotMatch(html, /playerUuid|gameSessionId|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
+const fallbackHtml = renderWorldPage({
+  runtimeAvailable: false,
+  countries: [{
+    id: "val",
+    name: "Valerion",
+    capital: "Novaris",
+    currencyCode: "VAL",
+    condition: "Expansion",
+  }],
+}, {
+  state: "ready",
+  message: "Travel runtime is not deployed in this staging environment.",
+  capabilities: manifest.capabilities,
+});
+assert.match(fallbackHtml, /Countries and world conditions/);
+assert.match(fallbackHtml, /COUNTRY DIRECTORY/);
+assert.match(fallbackHtml, /Valerion/);
+assert.match(fallbackHtml, /Travel runtime unavailable/);
+assert.match(fallbackHtml, /Country data only/);
+assert.doesNotMatch(fallbackHtml, /data-world-form=/);
+assert.doesNotMatch(fallbackHtml, /WORLD UNAVAILABLE/);
+
 assert.match(renderWorldPage(null, { state: "loading" }), /aria-busy="true"/);
 assert.match(renderWorldPage(null, { state: "unavailable", message: "Offline" }), /role="alert"/);
 
@@ -114,6 +141,8 @@ const controllerSource = await import("node:fs").then((fs) => fs.readFileSync(ne
 assert.doesNotMatch(controllerSource, /@ts-nocheck|\bas any\b|playerUuid|gameSessionId/);
 assert.match(controllerSource, /Refresh failed; the committed result will reconcile/);
 assert.match(controllerSource, /Number\(normalized\.status\) === 401/);
+assert.match(controllerSource, /Number\(normalized\.status\) === 404/);
+assert.match(controllerSource, /fallbackWorldModel/);
 assert.match(controllerSource, /isEndpointEnabled\(currentCapabilities\(\), endpointKey\)/);
 
 console.log("World runtime Player publication checks passed");

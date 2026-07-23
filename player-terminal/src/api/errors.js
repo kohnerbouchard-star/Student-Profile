@@ -41,6 +41,40 @@ const CODE_MESSAGES = Object.freeze({
   STORE_QUOTE_NOT_FOUND: "This Store quote is no longer available. Request a new quote."
 });
 
+const SAFE_DETAIL_KEYS = new Set([
+  "groupName",
+  "key",
+  "endpointKey",
+  "expectedSchemaVersion",
+  "receivedSchemaVersion",
+  "expectedService",
+  "receivedService",
+  "method",
+  "pathTemplate"
+]);
+const GENERIC_DIAGNOSTIC_CODES = new Set(["", "REQUEST_FAILED", "ROUTE_DATA_UNAVAILABLE"]);
+
+function safeDiagnosticText(value, maximum = 160) {
+  const text = String(value ?? "").trim();
+  return text ? text.slice(0, maximum) : "";
+}
+
+export function sanitizeApiErrorDetail(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const detail = {};
+  for (const key of SAFE_DETAIL_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    const item = value[key];
+    if (typeof item === "boolean" || (typeof item === "number" && Number.isFinite(item))) {
+      detail[key] = item;
+      continue;
+    }
+    const text = safeDiagnosticText(item);
+    if (text) detail[key] = text;
+  }
+  return Object.keys(detail).length ? Object.freeze(detail) : null;
+}
+
 export function playerSafeErrorMessage({ status = 0, code = "" } = {}) {
   return CODE_MESSAGES[code] || STATUS_MESSAGES[status] || "The request could not be completed. Try again.";
 }
@@ -53,6 +87,7 @@ export class ApiRequestError extends Error {
     endpointKey = "",
     requestId = "",
     retryAfterMs = 0,
+    detail = null,
     cause = null
   } = {}) {
     super(message || playerSafeErrorMessage({ status, code }));
@@ -63,6 +98,8 @@ export class ApiRequestError extends Error {
     this.endpointKey = endpointKey;
     this.requestId = requestId;
     this.retryAfterMs = retryAfterMs;
+    const safeDetail = sanitizeApiErrorDetail(detail);
+    if (safeDetail) this.detail = safeDetail;
     if (cause) this.cause = cause;
   }
 }
@@ -81,12 +118,39 @@ function codeFrom(error, status) {
   return "REQUEST_FAILED";
 }
 
+export function collectSafeApiDiagnostic(error) {
+  let current = error;
+  let selected = null;
+  for (let depth = 0; current && depth < 6; depth += 1) {
+    const status = statusFrom(current);
+    const code = codeFrom(current, status);
+    const candidate = {
+      status,
+      code,
+      endpointKey: safeDiagnosticText(current?.endpointKey, 80),
+      path: safeDiagnosticText(current?.path, 200),
+      requestId: safeDiagnosticText(current?.requestId, 100),
+      detail: sanitizeApiErrorDetail(current?.detail || current?.body)
+    };
+    if (!selected || (GENERIC_DIAGNOSTIC_CODES.has(selected.code) && !GENERIC_DIAGNOSTIC_CODES.has(code))) {
+      selected = candidate;
+    }
+    current = current?.cause;
+  }
+  if (!selected) return Object.freeze({ status: 0, code: "REQUEST_FAILED", endpointKey: "", path: "", requestId: "", detail: null });
+  return Object.freeze(selected);
+}
+
 export function normalizeApiError(error, context = {}) {
   if (error instanceof ApiConnectionPendingError) return error;
   if (error instanceof ApiRequestError) {
     if (!error.endpointKey) error.endpointKey = context.endpointKey || "";
     if (!error.path) error.path = context.path || "";
     if (!error.requestId) error.requestId = context.requestId || "";
+    if (!error.detail) {
+      const detail = sanitizeApiErrorDetail(error?.body);
+      if (detail) error.detail = detail;
+    }
     return error;
   }
 
@@ -99,6 +163,7 @@ export function normalizeApiError(error, context = {}) {
     endpointKey: context.endpointKey || "",
     requestId: context.requestId || "",
     retryAfterMs: Number(context.retryAfterMs || error?.retryAfterMs || 0),
+    detail: error?.detail || error?.body,
     cause: error instanceof Error ? error : null
   });
 }

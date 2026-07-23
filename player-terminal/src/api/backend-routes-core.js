@@ -92,7 +92,7 @@ const ROUTE_BUILDERS = Object.freeze({
   }),
   news: ({ payload = {} }) => ({
     method: "GET",
-    path: queryPath("/players/me/world/news", { limit: payload.limit ?? 100, category: payload.category }),
+    path: queryPath("/players/me/world/news", { limit: payload.limit ?? 50, category: payload.category }),
   }),
   worldRuntime: () => ({ method: "GET", path: "/players/me/world-runtime" }),
   arrivalClass: ({ payload = {} }) => ({

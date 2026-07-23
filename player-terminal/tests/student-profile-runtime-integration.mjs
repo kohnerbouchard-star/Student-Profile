@@ -97,16 +97,19 @@ assert.equal(validated.schemaVersion, 1);
 assert.equal(validated.manifestVersion, "2026-07-18.3");
 assert.equal(validated.capabilities.actions.inventoryUse, true);
 
-assert.throws(
-  () => validateStudentProfileCapabilityManifest({
-    ...capabilityManifest,
-    capabilities: {
-      ...capabilityManifest.capabilities,
-      actions: { ...capabilityManifest.capabilities.actions, storePurchase: true }
-    }
-  }),
-  (error) => error?.code === "CAPABILITY_CONTRACT_MISMATCH"
+const optionalActionDrift = validateStudentProfileCapabilityManifest({
+  ...capabilityManifest,
+  capabilities: {
+    ...capabilityManifest.capabilities,
+    actions: { ...capabilityManifest.capabilities.actions, storePurchase: true }
+  }
+});
+assert.equal(
+  optionalActionDrift.capabilities.actions.storePurchase,
+  false,
+  "An optional action without a reviewed endpoint descriptor must be disabled without blocking other Player routes."
 );
+assert.equal(optionalActionDrift.capabilities.actions.inventoryUse, true);
 
 const runtimeConfig = installStudentProfileRuntime({
   usePreviewData: false,

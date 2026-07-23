@@ -4,6 +4,7 @@ import { ApiRequestError } from "../api/errors.js";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const SUPPORTED_SERVICE = "classroom-api";
+const CORE_CAPABILITY_ENDPOINT_KEYS = new Set(["bootstrap", "dashboard"]);
 
 const ENDPOINT_COVERAGE = Object.freeze({
   bootstrap: Object.freeze(["session"]),
@@ -63,7 +64,16 @@ const ENDPOINT_COVERAGE = Object.freeze({
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"]),
   storyDeliveries: Object.freeze(["storyDeliveries"]),
-  storyDeliveryState: Object.freeze(["storyDeliveryState"])
+  storyDeliveryState: Object.freeze(["storyDeliveryState"]),
+  crafting: Object.freeze(["crafting", "craftItem"]),
+  craftingJobCancel: Object.freeze(["craftCancel"]),
+  craftingJobClaim: Object.freeze(["craftClaim"]),
+  itemEffectUse: Object.freeze(["itemEffectUse"]),
+  equipmentEquip: Object.freeze(["equipmentEquip"]),
+  equipmentSalvage: Object.freeze(["itemSalvage"]),
+  progression: Object.freeze(["progression"]),
+  progressionUnlock: Object.freeze(["progressionUnlock"]),
+  progressionClaim: Object.freeze(["progressionClaim"])
 });
 
 const ROUTE_REQUIREMENTS = Object.freeze({
@@ -80,6 +90,8 @@ const ROUTE_REQUIREMENTS = Object.freeze({
   store: "store",
   marketplace: "marketplace",
   messages: "messages",
+  crafting: "crafting",
+  progression: "progression",
   profile: "bootstrap"
 });
 
@@ -116,7 +128,15 @@ const ACTION_REQUIREMENTS = Object.freeze({
   storyDeliveryState: "storyDeliveryState",
   travelComplete: "travelComplete",
   travelExecute: "travelExecute",
-  travelQuote: "travelQuote"
+  travelQuote: "travelQuote",
+  craftItem: "crafting",
+  craftCancel: "craftingJobCancel",
+  craftClaim: "craftingJobClaim",
+  equipmentEquip: "equipmentEquip",
+  itemEffectUse: "itemEffectUse",
+  itemSalvage: "equipmentSalvage",
+  progressionUnlock: "progressionUnlock",
+  progressionClaim: "progressionClaim"
 });
 
 function reviewedFrontendRoute(key) {
@@ -127,7 +147,7 @@ function mismatch(message, detail = {}) {
   return new ApiRequestError(message, {
     code: "CAPABILITY_CONTRACT_MISMATCH",
     endpointKey: "capabilities",
-    body: { code: "capability_contract_mismatch", ...detail }
+    detail
   });
 }
 
@@ -135,22 +155,43 @@ function object(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
-function validateCapabilityGroup(groupName, values, endpointKeys, requirements) {
+function validateCapabilityGroup(groupName, values, endpointKeys, requirements, invalidEndpointDetails) {
   const group = object(values);
-  if (!group) throw mismatch(`The ${groupName} capability group is missing.`);
+  if (!group) throw mismatch(`The ${groupName} capability group is missing.`, { groupName });
+
+  const reviewed = {};
   for (const [key, enabled] of Object.entries(group)) {
-    if (typeof enabled !== "boolean") {
-      throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key });
-    }
-    if (!enabled) continue;
     const endpointKey = requirements[key];
-    if (!endpointKey) {
-      throw mismatch(`Capability ${groupName}.${key} is advertised without reviewed frontend coverage.`, { groupName, key });
+    if (!endpointKey) continue;
+
+    if (typeof enabled !== "boolean") {
+      if (CORE_CAPABILITY_ENDPOINT_KEYS.has(endpointKey)) {
+        throw mismatch(`Capability ${groupName}.${key} must be boolean.`, { groupName, key, endpointKey });
+      }
+      reviewed[key] = false;
+      continue;
     }
-    if (!endpointKeys.has(endpointKey)) {
-      throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, { groupName, key, endpointKey });
+
+    if (enabled && !endpointKeys.has(endpointKey)) {
+      const invalidDetail = invalidEndpointDetails.get(endpointKey) || {};
+      if (CORE_CAPABILITY_ENDPOINT_KEYS.has(endpointKey)) {
+        throw mismatch(`Capability ${groupName}.${key} is missing its endpoint descriptor.`, {
+          groupName,
+          key,
+          endpointKey,
+          ...invalidDetail
+        });
+      }
+      reviewed[key] = false;
+      continue;
     }
+    reviewed[key] = enabled;
   }
+
+  for (const key of Object.keys(requirements)) {
+    if (!Object.hasOwn(reviewed, key)) reviewed[key] = false;
+  }
+  return Object.freeze(reviewed);
 }
 
 export function validateStudentProfileCapabilityManifest(raw) {
@@ -173,48 +214,71 @@ export function validateStudentProfileCapabilityManifest(raw) {
   }
   if (!Array.isArray(manifest.endpoints)) throw mismatch("The capability endpoint registry is missing.");
 
-  const endpointKeys = new Set();
+  const seenEndpointKeys = new Set();
+  const reviewedEndpointKeys = new Set();
+  const reviewedEndpoints = [];
+  const invalidEndpointDetails = new Map();
+
   for (const descriptor of manifest.endpoints) {
     const item = object(descriptor);
     const key = typeof item?.key === "string" ? item.key.trim() : "";
-    if (!key || endpointKeys.has(key)) throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
+    if (!key || seenEndpointKeys.has(key)) {
+      throw mismatch("Capability endpoint keys must be unique and non-empty.", { key });
+    }
+    seenEndpointKeys.add(key);
+
     const frontendKeys = ENDPOINT_COVERAGE[key];
-    if (!frontendKeys?.length || !frontendKeys.every(reviewedFrontendRoute)) {
-      throw mismatch(`Backend endpoint ${key} has no reviewed frontend route mapping.`, { key });
+    if (!frontendKeys?.length) continue;
+    if (!frontendKeys.every(reviewedFrontendRoute)) {
+      invalidEndpointDetails.set(key, { key });
+      continue;
     }
     if (!Array.isArray(item.operations) || item.operations.length === 0) {
-      throw mismatch(`Backend endpoint ${key} has no operations.`, { key });
+      invalidEndpointDetails.set(key, { key });
+      continue;
     }
+
+    const operations = [];
+    let valid = true;
     for (const operation of item.operations) {
       const method = typeof operation?.method === "string" ? operation.method.trim().toUpperCase() : "";
       const pathTemplate = typeof operation?.pathTemplate === "string" ? operation.pathTemplate.trim() : "";
       const isPlayerPath = pathTemplate === "/players/me" || pathTemplate.startsWith("/players/me/");
       if (!new Set(["DELETE", "GET", "POST", "PUT"]).has(method) || !isPlayerPath) {
-        throw mismatch(`Backend endpoint ${key} contains an invalid operation.`, { key, method, pathTemplate });
+        invalidEndpointDetails.set(key, { key, method, pathTemplate });
+        valid = false;
+        break;
       }
+      operations.push(Object.freeze({ method, pathTemplate }));
     }
-    endpointKeys.add(key);
+    if (!valid) continue;
+
+    reviewedEndpointKeys.add(key);
+    reviewedEndpoints.push(Object.freeze({ key, operations: Object.freeze(operations) }));
   }
 
   const capabilities = object(manifest.capabilities);
   if (!capabilities) throw mismatch("The capability flags are missing.");
-  validateCapabilityGroup("routes", capabilities.routes, endpointKeys, ROUTE_REQUIREMENTS);
-  validateCapabilityGroup("actions", capabilities.actions, endpointKeys, ACTION_REQUIREMENTS);
+  const routes = validateCapabilityGroup(
+    "routes",
+    capabilities.routes,
+    reviewedEndpointKeys,
+    ROUTE_REQUIREMENTS,
+    invalidEndpointDetails
+  );
+  const actions = validateCapabilityGroup(
+    "actions",
+    capabilities.actions,
+    reviewedEndpointKeys,
+    ACTION_REQUIREMENTS,
+    invalidEndpointDetails
+  );
 
   return Object.freeze({
     schemaVersion: manifest.schemaVersion,
     manifestVersion: manifest.manifestVersion.trim(),
     service: manifest.service,
-    capabilities: Object.freeze({
-      routes: Object.freeze({ ...capabilities.routes }),
-      actions: Object.freeze({ ...capabilities.actions })
-    }),
-    endpoints: Object.freeze(manifest.endpoints.map((descriptor) => Object.freeze({
-      key: descriptor.key,
-      operations: Object.freeze(descriptor.operations.map((operation) => Object.freeze({
-        method: operation.method,
-        pathTemplate: operation.pathTemplate
-      })))
-    })))
+    capabilities: Object.freeze({ routes, actions }),
+    endpoints: Object.freeze(reviewedEndpoints)
   });
 }

@@ -39,18 +39,27 @@ function backendPayload(context) {
   return payload;
 }
 
-function headersFor(context) {
+export function headersFor(context) {
   const token = String(context.session?.playerSessionToken || "").trim();
   if (!token) {
     throw new ApiRequestError("Your player session has expired. Reconnect through the Econovaria sign-in screen.", {
       status: 401, code: "SESSION_INVALID", endpointKey: context.endpointKey, requestId: context.requestId
     });
   }
+
+  const accessToken = String(
+    context.session?.accessToken || context.config?.accessToken || ""
+  ).replace(/^Bearer\s+/i, "").trim();
+
   const headers = {
     "content-type": "application/json",
     "x-player-session-token": token,
     "x-request-id": String(context.requestId || "")
   };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+    headers.apikey = accessToken;
+  }
   if (context.idempotencyKey) headers["idempotency-key"] = String(context.idempotencyKey);
   return headers;
 }
