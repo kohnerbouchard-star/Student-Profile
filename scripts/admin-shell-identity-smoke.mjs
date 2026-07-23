@@ -36,6 +36,7 @@ const expectedAdminScripts = [
   "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",
   "./shape-accurate-skeletons.js",
+  "./admin-bootstrap.js",
 ];
 const expectedScripts = [...runtimeBootstrapScripts, ...expectedAdminScripts];
 
