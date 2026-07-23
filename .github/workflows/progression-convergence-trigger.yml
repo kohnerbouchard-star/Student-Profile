@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CONVERGENCE_OVERLAY_REVISION: "2"
+      CONVERGENCE_OVERLAY_REVISION: "3"
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
@@ -32,10 +32,12 @@ jobs:
       - name: Prepare current-main convergence overlay
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 scripts/progression-final-convergence-overlay.py
+          python3 scripts/progression-final-convergence-overlay.py 2>&1 | tee "$RUNNER_TEMP/progression-overlay.log"
+          status=${PIPESTATUS[0]}
+          exit "$status"
       - name: Execute guarded Progression convergence
         shell: bash
         run: |
@@ -48,6 +50,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: progression-convergence-diagnostics-${{ github.run_id }}
-          path: ${{ runner.temp }}/progression-convergence.log
-          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/progression-overlay.log
+            ${{ runner.temp }}/progression-convergence.log
+          if-no-files-found: warn
           retention-days: 7
