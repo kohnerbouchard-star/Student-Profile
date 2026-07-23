@@ -4,7 +4,7 @@
 **Roadmap items:** `EXP-MSG-001` through `EXP-MSG-007`  
 **Authority branch:** `agent/messaging-communication-v1`  
 **Pull request:** #248  
-**Status:** `FINAL_CONVERGENCE_VALIDATION_ACTIVE`  
+**Status:** `FINAL_EXACT_HEAD_VERIFICATION`  
 **Started:** 2026-07-20  
 **Final convergence:** 2026-07-23
 
@@ -25,7 +25,7 @@ The controller-assigned Messaging migration family is final:
 3. `20260721152000_complete_messaging_lifecycle_v1.sql`
 4. `20260721153000_compat_messaging_player_status_v1.sql`
 
-Player read, search, privacy, and cursor hardening are folded into slot four. No fifth Messaging migration is permitted. No Messaging migration has been applied to production.
+Player read, search, privacy, cursor, and compatibility hardening are folded into slot four. No fifth Messaging migration is permitted. No Messaging migration has been applied to production.
 
 ## Permanent implementation
 
@@ -59,6 +59,38 @@ The implementation requires:
 - public identifiers at browser boundaries and no durable ownership UUID exposure;
 - immutable message content and immutable moderation evidence.
 
+## Connected isolated-staging acceptance
+
+Connected acceptance was executed only against the isolated non-production staging project. Production was not contacted or modified.
+
+The staging run established:
+
+- the exact four-entry Messaging migration ledger and required schema objects;
+- exact candidate `classroom-api` and `admin-api` publication with JWT verification retained;
+- expired-session, paused-game, and ended-game HTTP denial without identifier or token leakage;
+- transaction-scoped synthetic Player fixtures and temporary game activation;
+- Player thread creation and exact idempotent replay;
+- conflicting replay denial;
+- recipient unread visibility and private inbox search;
+- Player sends and send replay;
+- read receipt transition;
+- same-game participant addition and removal;
+- immutable moderation action evidence;
+- disabled and closed thread denial;
+- Admin broadcast creation using active Player scope;
+- rollback of all synthetic acceptance data;
+- independent zero-residue verification;
+- `productionTouched: false`.
+
+The connected run exposed and the final slot-four migration now permanently corrects:
+
+- transaction-stable initial message timestamps that incorrectly suppressed the recipient's first unread message;
+- stale `players.archived_at` references in legacy Player read, Player send, and Admin thread-creation functions;
+- ambiguous read-receipt `thread_id` output/table references;
+- ambiguous participant-addition conflict targeting.
+
+Regression assertions require the stable active-Player interface, `clock_timestamp()` initial-message semantics, qualified read-receipt updates, and the named participant primary-key conflict target.
+
 ## Validation contract
 
 The exact candidate must pass:
@@ -70,11 +102,11 @@ The exact candidate must pass:
 - World, Business, Crafting, Marketplace, exchange-calendar, timezone, Seed, release-artifact, and staging-readiness regression gates;
 - database replay from zero twice and database lint;
 - Messaging lifecycle, privacy, moderation, retention, replay, rate-limit, accessibility, and abuse simulations;
-- protected isolated-staging acceptance with exact source SHA and artifact-digest binding;
+- protected isolated-staging acceptance with exact source and artifact binding;
 - transactional cleanup and independent zero-residue verification;
 - zero unresolved review threads.
 
-The pull request remains draft and unmerged while exact-head checks and protected staging acceptance are being evaluated. Production modification is prohibited.
+The pull request remains draft and unmerged until the normal authenticated exact-head workflow matrix completes. Production modification is prohibited.
 
 ## Completion rule
 
