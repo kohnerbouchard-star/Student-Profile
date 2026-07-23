@@ -7,7 +7,7 @@ on:
       - ".github/workflows/pr295-sync-diagnostic.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diagnose:
@@ -18,8 +18,8 @@ jobs:
         with:
           ref: agent/production-integration-gate-v1
           fetch-depth: 0
-          persist-credentials: false
-      - name: Capture merge and replacement state
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Capture full synchronization phases
         shell: bash
         run: |
           set +e
@@ -30,36 +30,59 @@ jobs:
           remote_head="$(git rev-parse origin/agent/production-integration-gate-v1)"
           git merge --no-edit origin/main > /tmp/merge.log 2>&1
           merge_status=$?
+
           python3 - <<'PY' > /tmp/replacements.log 2>&1
           from pathlib import Path
-          acceptance = Path('scripts/pr295-connected-staging-acceptance.mjs').read_text()
-          build = Path('.github/workflows/pr295-immutable-release-build.yml').read_text()
-          values = [
-            ('acceptance_bad', '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n', acceptance),
-            ('group', 'pr295-immutable-release-v4-', build),
-            ('release_commit', 'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22', build),
-            ('output_env', 'OUTPUT_ROOT: /tmp/econovaria-release-v4', build),
-            ('artifact_name', 'name: econovaria-release-7838d93ef33908f61a2534486ec92031875a9a22-v4', build),
-            ('all_v4_paths', '/tmp/econovaria-release-v4', build),
-          ]
-          for name, needle, text in values:
-            print(f'{name}={text.count(needle)}')
+          acceptance = Path('scripts/pr295-connected-staging-acceptance.mjs')
+          text = acceptance.read_text()
+          bad = '    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,\n'
+          good = '    "/functions/v1/classroom-api/players/me/contracts",\n'
+          assert text.count(bad) == 1, text.count(bad)
+          acceptance.write_text(text.replace(bad, good))
+
+          build = Path('.github/workflows/pr295-immutable-release-build.yml')
+          text = build.read_text()
+          unique = {
+              'pr295-immutable-release-v4-': 'pr295-immutable-release-v5-',
+              'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22': 'RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd',
+              'OUTPUT_ROOT: /tmp/econovaria-release-v4': 'OUTPUT_ROOT: /tmp/econovaria-release-v5',
+              'name: econovaria-release-7838d93ef33908f61a2534486ec92031875a9a22-v4': 'name: econovaria-release-1c3ae6004db442eeed1a4999a733445ca6fcecbd-v5',
+          }
+          for old, new in unique.items():
+              assert text.count(old) == 1, (old, text.count(old))
+              text = text.replace(old, new)
+          assert text.count('/tmp/econovaria-release-v4') >= 1
+          text = text.replace('/tmp/econovaria-release-v4', '/tmp/econovaria-release-v5')
+          build.write_text(text)
           PY
           replacement_status=$?
+
+          rm -f .github/workflows/pr295-sync-contract-hotfix-v5.yml
+          git add -A
+          git commit -m "diagnostic synchronization commit" > /tmp/commit.log 2>&1
+          commit_status=$?
+          git push --dry-run origin HEAD:agent/production-integration-gate-v1 > /tmp/push.log 2>&1
+          push_status=$?
+
           {
             echo "starting_head=$starting_head"
             echo "remote_head=$remote_head"
             echo "merge_status=$merge_status"
             echo "replacement_status=$replacement_status"
+            echo "commit_status=$commit_status"
+            echo "push_dry_run_status=$push_status"
+            echo '--- merge ---'
             cat /tmp/merge.log
+            echo '--- replacements ---'
             cat /tmp/replacements.log
-            echo '--- porcelain ---'
-            git status --porcelain=v1
-            echo '--- unmerged ---'
-            git diff --name-only --diff-filter=U
+            echo '--- commit ---'
+            cat /tmp/commit.log
+            echo '--- push dry-run ---'
+            cat /tmp/push.log
+            echo '--- latest ---'
+            git log -3 --oneline
           } > /tmp/merge-diagnostic.txt
           cat /tmp/merge-diagnostic.txt
-          git merge --abort >/dev/null 2>&1 || true
           exit 0
       - name: Upload merge diagnostic
         uses: actions/upload-artifact@v4
