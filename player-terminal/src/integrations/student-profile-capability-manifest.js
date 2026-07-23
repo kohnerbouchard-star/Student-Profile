@@ -47,6 +47,13 @@ const ENDPOINT_COVERAGE = Object.freeze({
   marketplacePurchase: Object.freeze(["marketplacePurchase"]),
   marketplaceCancel: Object.freeze(["marketplaceCancel"]),
   marketplaceDispute: Object.freeze(["marketplaceDispute"]),
+  messages: Object.freeze(["messages"]),
+  messageThread: Object.freeze(["messageThread"]),
+  messagePolicy: Object.freeze(["messagePolicy"]),
+  messageSearch: Object.freeze(["messageSearch"]),
+  messageThreadCreate: Object.freeze(["messageThreadCreate"]),
+  messageSend: Object.freeze(["messageSend"]),
+  messageRead: Object.freeze(["messageRead"]),
   news: Object.freeze(["news"]),
   notifications: Object.freeze(["notifications"]),
   notificationsRead: Object.freeze(["notificationsRead"]),
@@ -72,6 +79,7 @@ const ROUTE_REQUIREMENTS = Object.freeze({
   inventory: "inventory",
   store: "store",
   marketplace: "marketplace",
+  messages: "messages",
   profile: "bootstrap"
 });
 
@@ -99,6 +107,8 @@ const ACTION_REQUIREMENTS = Object.freeze({
   marketplacePurchase: "marketplacePurchase",
   marketplaceCancel: "marketplaceCancel",
   marketplaceDispute: "marketplaceDispute",
+  messageSearch: "messageSearch",
+  messageSend: "messageSend",
   notificationsRead: "notificationsRead",
   residencyRequest: "residencyRequest",
   savingsTransfer: "savingsTransfer",
