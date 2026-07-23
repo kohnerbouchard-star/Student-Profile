@@ -97,7 +97,7 @@ async function runHttpAcceptance() {
     "/functions/v1/classroom-api/players/me/ledger?limit=10",
     "/functions/v1/classroom-api/players/me/messages/policy",
     "/functions/v1/classroom-api/players/me/marketplace/listings",
-    "/functions/v1/classroom-api/players/me/contracts",
+    `/functions/v1/classroom-api/players/me/contracts?gameSessionId=${encodeURIComponent(fixture.gameId)}`,
     "/functions/v1/classroom-api/players/me/notifications?status=unread&limit=10",
     "/functions/v1/classroom-api/players/me/world/countries",
     "/functions/v1/classroom-api/players/me/stocks/assets?limit=1&offset=0",
