@@ -9,7 +9,7 @@
     "hardening": "node tests/v75-hardening.mjs",
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
-    "capability-manifest-current": "node tests/current-capability-manifest.mjs",
+    "capability-manifest-current": "node --experimental-strip-types tests/current-capability-manifest.mjs",
     "dashboard-profile": "node tests/dashboard-profile-capabilities.mjs",
     "runtime-integration": "node tests/student-profile-runtime-integration.mjs",
     "connected-reads": "node tests/connected-read-surface-gating.mjs",
