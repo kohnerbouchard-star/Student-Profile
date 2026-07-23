@@ -99,7 +99,7 @@ jobs:
             player-terminal/src/pages/messages-page.js
           do
             printf 'node-check:%s' "$file" > /tmp/messaging-shared-stage
-            node --check "$file"
+            node --input-type=module --check < "$file"
           done
           printf 'commit' > /tmp/messaging-shared-stage
           git commit -m "feat(messaging): publish shared routes and capabilities additively"
