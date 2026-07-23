@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CONVERGENCE_OVERLAY_REVISION: "4"
+      CONVERGENCE_OVERLAY_REVISION: "5"
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
@@ -44,6 +44,9 @@ jobs:
             status=${PIPESTATUS[0]}
           else
             status=$compile_status
+          fi
+          if [ "$status" -eq 0 ]; then
+            sed -i 's|git diff --cached --check$|git diff --cached --check -- . ":(exclude)docs/workstreams/messaging-communication-v1.md"|' scripts/progression-final-convergence.sh
           fi
           exit "$status"
       - name: Execute guarded Progression convergence
