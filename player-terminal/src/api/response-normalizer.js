@@ -187,7 +187,10 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "session") {
-    for (const key of ["displayName", "gameSessionId", "currencyCode"]) {
+    // Internal game/session UUIDs are intentionally omitted from browser-safe
+    // session bootstrap responses. The terminal only requires player-facing
+    // identity and currency data to establish the local read model.
+    for (const key of ["displayName", "currencyCode"]) {
       if (typeof value[key] !== "string" || !value[key].trim()) throw invalidResponse(endpointKey, context.requestId, context.path);
     }
   }
