@@ -51,3 +51,4 @@ jobs:
           git add scripts/release-platform-lib.mjs .github/workflows/pr295-bind-release-tooling-provenance.yml
           git commit --amend --no-edit
           git push --force-with-lease origin HEAD:agent/production-integration-gate-v1
+# trigger: 2026-07-23T09:34Z
