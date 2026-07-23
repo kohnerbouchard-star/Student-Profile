@@ -76,7 +76,7 @@ begin
     or length(v_title) not between 1 and 160
     or length(v_body) not between 1 and 1000
     or v_title ~ '[[:cntrl:]]'
-    or v_body ~ E'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'
+    or v_body ~ E'[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]'
     or v_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
   then
     raise exception 'PLAYER_MESSAGE_THREAD_CREATE_INVALID' using errcode = 'P0001';
