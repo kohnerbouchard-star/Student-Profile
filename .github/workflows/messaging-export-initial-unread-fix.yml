@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   export:
+    # Read-only artifact export; repository application is performed separately.
     if: >-
       github.event.pull_request.number == 248 &&
       github.event.pull_request.head.repo.full_name == github.repository &&
