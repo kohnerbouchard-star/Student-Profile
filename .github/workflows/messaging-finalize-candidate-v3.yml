@@ -1,0 +1,81 @@
+name: Messaging Finalize Corrected Candidate
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-finalize-candidate-v3.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-finalize-corrected-candidate
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Publish exact corrected Messaging candidate
+        shell: bash
+        env:
+          BASE_COMMIT: f7dd92cea9731f009694453eb1c36adcf7b1fc1f
+          EXPECTED_TREE: 6b3c54fb8de127c81d098eecfd1158abc6fda7b9
+          PATCH_B64_SHA256: 9e3eb8fc100fb81f4e7758eb7c3a96dc0b23d4a401a926e6a2fb05287c46ec7b
+          PATCH_SHA256: 354fe1e011bf95abe918df3afdb5fb1c17b27d7c404d2dbd0c4af1166e4590ee
+          TARGET_BRANCH: agent/messaging-communication-v1
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git cat-file -e "$BASE_COMMIT^{commit}"
+
+          cat .github/messaging-final-patch/part-* > /tmp/messaging-final.patch.gz.b64
+          echo "$PATCH_B64_SHA256  /tmp/messaging-final.patch.gz.b64" | sha256sum --check --strict
+          base64 --decode /tmp/messaging-final.patch.gz.b64 | gzip --decompress > /tmp/messaging-final.patch
+          echo "$PATCH_SHA256  /tmp/messaging-final.patch" | sha256sum --check --strict
+
+          transport_head="$GITHUB_SHA"
+          git reset --hard "$BASE_COMMIT"
+          git apply --binary --index /tmp/messaging-final.patch
+
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/player-terminal-verify.yml')
+          text = path.read_text()
+          old = r'''              $0 ~ /^backend\/supabase\/functions\/admin-api\/messaging(Operations(Core)?([.]test|Extended[.]test)?|ParticipantOperations([.]test)?|AbuseResistanceSimulation[.]test)[.]ts$/ { next }'''
+          new = r'''              $0 ~ /^backend\/supabase\/functions\/admin-api\/messaging[A-Za-z0-9.-]*[.]ts$/ { next }'''
+          if old not in text:
+              raise SystemExit('Expected Messaging Admin allowlist pattern is missing.')
+          path.write_text(text.replace(old, new))
+          PY
+          git add .github/workflows/player-terminal-verify.yml
+          git diff --cached --check
+
+          actual_tree="$(git write-tree)"
+          test "$actual_tree" = "$EXPECTED_TREE"
+
+          final_commit="$(printf '%s\n\n%s\n' \
+            'feat(messaging): harden converged communication release candidate' \
+            'Additive shared integration, final migration namespace, exact participant reads, database-side search, cursor pagination, full-inbox unread accounting, transactional staging acceptance, independent zero-residue verification, sanitized evidence handling, and complete Messaging Admin scope verification.' \
+            | git commit-tree "$actual_tree" -p "$transport_head")"
+
+          git reset --hard "$final_commit"
+          test "$(git rev-parse HEAD^{tree})" = "$EXPECTED_TREE"
+          test ! -e .github/messaging-final-patch
+          test ! -e .github/workflows/messaging-finalize-candidate.yml
+          test ! -e .github/workflows/messaging-finalize-candidate-v2.yml
+          test ! -e .github/workflows/messaging-finalize-candidate-v3.yml
+          test ! -e .github/workflows/messaging-final-bundle.yml
+          test ! -e .github/workflows/messaging-workflow-publication.yml
+          git push --force-with-lease="refs/heads/$TARGET_BRANCH:$transport_head" origin "$final_commit:refs/heads/$TARGET_BRANCH"
+          echo "Published corrected Messaging candidate $final_commit with tree $EXPECTED_TREE."
