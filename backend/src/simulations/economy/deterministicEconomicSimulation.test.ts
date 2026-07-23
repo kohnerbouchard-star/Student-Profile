@@ -125,9 +125,21 @@ function countries(): CountryEconomyProfile[] {
     "TALVORA",
     "ZENITHIA",
   ];
+  const currencies = [
+    "NRC",
+    "YRT",
+    "VLR",
+    "KRT",
+    "SLM",
+    "DRV",
+    "AUR",
+    "MRD",
+    "TLV",
+    "ZEN",
+  ];
   return names.map((countryCode, index) => ({
     countryCode,
-    currencyCode: `C${String(index).padStart(2, "0")}`,
+    currencyCode: currencies[index],
     incomeModifier: 0.94 + index * 0.012,
     costModifier: 1.05 - index * 0.01,
     scarcityModifier: 0.96 + (index % 3) * 0.04,
