@@ -23,13 +23,16 @@ jobs:
             const current = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch });
             if (Array.isArray(current.data) || !current.data.sha || !current.data.content) throw new Error('Invalid Player workflow');
             let text = Buffer.from(current.data.content, 'base64').toString('utf8');
-            const marker = `          if [ -n "$unexpected" ]; then\n            echo "Player Terminal verification detected protected repository paths:"`;
-            if (!text.includes(marker)) throw new Error('Scope failure marker not found');
-            text = text.replace(marker, `          printf '%s\\n' "$unexpected" > /tmp/player-terminal-unexpected.txt\n\n          if [ -n "$unexpected" ]; then\n            echo "Player Terminal verification detected protected repository paths:"`);
-            const setupMarker = `      - name: Set up Node\n`;
-            if (!text.includes(setupMarker)) throw new Error('Set up Node marker not found');
-            const diagnosticStep = `      - name: Upload Player scope diagnostics\n        if: failure()\n        uses: actions/upload-artifact@v4\n        with:\n          name: player-terminal-scope-diagnostics\n          path: |\n            /tmp/player-terminal-changed-files.txt\n            /tmp/player-terminal-unexpected.txt\n          if-no-files-found: warn\n          retention-days: 7\n\n`;
-            text = text.replace(setupMarker, diagnosticStep + setupMarker);
+            if (!text.includes('/tmp/player-terminal-unexpected.txt')) {
+              const failurePattern = /(\n\s*if \[ -n "\$unexpected" \]; then\n\s*echo "Player Terminal verification detected protected repository paths:")/;
+              if (!failurePattern.test(text)) throw new Error('Scope failure block not found');
+              text = text.replace(failurePattern, `\n          printf '%s\\n' "$unexpected" > /tmp/player-terminal-unexpected.txt$1`);
+            }
+            if (!text.includes('name: player-terminal-scope-diagnostics')) {
+              const setupPattern = /\n      - name: Set up Node\n/;
+              if (!setupPattern.test(text)) throw new Error('Set up Node step not found');
+              text = text.replace(setupPattern, `\n      - name: Upload Player scope diagnostics\n        if: failure()\n        uses: actions/upload-artifact@v4\n        with:\n          name: player-terminal-scope-diagnostics\n          path: |\n            /tmp/player-terminal-changed-files.txt\n            /tmp/player-terminal-unexpected.txt\n          if-no-files-found: warn\n          retention-days: 7\n\n      - name: Set up Node\n`);
+            }
             await github.rest.repos.createOrUpdateFileContents({
               owner: context.repo.owner, repo: context.repo.repo, path: file, branch,
               sha: current.data.sha,
