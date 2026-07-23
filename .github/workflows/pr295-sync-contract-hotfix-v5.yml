@@ -53,17 +53,20 @@ jobs:
 
           build = Path('.github/workflows/pr295-immutable-release-build.yml')
           text = build.read_text()
-          replacements = {
+          unique_replacements = {
               'pr295-immutable-release-v4-': 'pr295-immutable-release-v5-',
               'RELEASE_COMMIT: 7838d93ef33908f61a2534486ec92031875a9a22': 'RELEASE_COMMIT: 1c3ae6004db442eeed1a4999a733445ca6fcecbd',
               'OUTPUT_ROOT: /tmp/econovaria-release-v4': 'OUTPUT_ROOT: /tmp/econovaria-release-v5',
               'name: econovaria-release-7838d93ef33908f61a2534486ec92031875a9a22-v4': 'name: econovaria-release-1c3ae6004db442eeed1a4999a733445ca6fcecbd-v5',
-              'path: /tmp/econovaria-release-v4': 'path: /tmp/econovaria-release-v5',
           }
-          for old, new in replacements.items():
+          for old, new in unique_replacements.items():
               if text.count(old) != 1:
-                  raise SystemExit(f'Expected v4 build binding not found exactly once: {old}')
+                  raise SystemExit(f'Expected unique v4 build binding not found exactly once: {old}')
               text = text.replace(old, new)
+          old_path = '/tmp/econovaria-release-v4'
+          if text.count(old_path) < 1:
+              raise SystemExit('Expected v4 artifact paths were not found')
+          text = text.replace(old_path, '/tmp/econovaria-release-v5')
           build.write_text(text)
           PY
 
