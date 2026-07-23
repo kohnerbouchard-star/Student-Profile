@@ -3,88 +3,116 @@ name: Database Replay
 on:
   pull_request:
     paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/**"
+      - "backend/src/domains/notifications/infrastructure/**"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/database-replay.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/**"
+      - "backend/src/domains/notifications/infrastructure/**"
+      - "scripts/validate-supabase-migrations.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/database-replay.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: database-replay-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   replay:
-    if: >-
-      github.event.pull_request.number == 248 &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'agent/messaging-communication-v1'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+
     steps:
-      - name: Check out Messaging branch
+      - name: Check out repository
         uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
-          ref: agent/messaging-communication-v1
-          fetch-depth: 0
+          node-version: "22.23.1"
+          cache: npm
 
-      - name: Apply timestamp repair and contract assertion
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install pinned tooling
+        run: npm ci
+
+      - name: Validate migration source
+        run: npm run audit:migrations
+
+      - name: Start disposable Postgres service
         shell: bash
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
+          LOG="/tmp/database-replay-startup.log"
+          : > "$LOG"
+          STATUS=1
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
 
-          migration_path = Path('backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql')
-          sql = migration_path.read_text(encoding='utf-8')
-          if 'v_initial_created_at := clock_timestamp();' not in sql:
-              old_decl = """  v_message public.messages%rowtype;
-  v_notification_id uuid;
-"""
-              new_decl = """  v_message public.messages%rowtype;
-  v_notification_id uuid;
-  v_initial_created_at timestamptz;
-"""
-              if old_decl not in sql:
-                  raise SystemExit('Missing Messaging declaration anchor.')
-              sql = sql.replace(old_decl, new_decl, 1)
+          for ATTEMPT in 1 2 3; do
+            printf '\n## Supabase Postgres startup attempt %s\n' "$ATTEMPT" | tee -a "$LOG"
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" \
+              2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
 
-              old_insert = """  insert into public.messages (
-    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key
-  ) values (
-    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial'
-  ) returning * into v_message;
-"""
-              new_insert = """  v_initial_created_at := clock_timestamp();
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
 
-  insert into public.messages (
-    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key,
-    created_at, updated_at
-  ) values (
-    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial',
-    v_initial_created_at, v_initial_created_at
-  ) returning * into v_message;
-"""
-              if old_insert not in sql:
-                  raise SystemExit('Missing Messaging initial insert anchor.')
-              sql = sql.replace(old_insert, new_insert, 1)
-              migration_path.write_text(sql, encoding='utf-8')
+            npx supabase status --workdir backend 2>&1 | tee -a "$LOG" || true
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
 
-          test_path = Path('backend/src/domains/messaging/tests/messagingCompatibilityMigrationContract.test.ts')
-          test = test_path.read_text(encoding='utf-8')
-          if '    "v_initial_created_at := clock_timestamp()",\n' not in test:
-              anchor = '    "player_message_recipient_not_found",\n'
-              replacement = anchor + '    "v_initial_created_at := clock_timestamp()",\n    "created_at, updated_at",\n    "v_initial_created_at, v_initial_created_at",\n'
-              if anchor not in test:
-                  raise SystemExit('Missing Messaging contract test anchor.')
-              test = test.replace(anchor, replacement, 1)
-              test_path.write_text(test, encoding='utf-8')
-          PY
+          exit "$STATUS"
 
-          git diff --check
-          grep -Fq 'v_initial_created_at := clock_timestamp();' backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+      - name: Replay migrations from zero twice
+        run: |
+          npx supabase db reset --workdir backend --local
+          npx supabase db reset --workdir backend --local
 
-      - name: Commit bounded repair
+      - name: Lint rebuilt database
+        run: npx supabase db lint --workdir backend --local --level warning
+
+      - name: Capture local service diagnostics
+        if: failure()
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql \
-            backend/src/domains/messaging/tests/messagingCompatibilityMigrationContract.test.ts
-          git commit -m "fix(messaging): preserve initial recipient unread state"
-          git push origin HEAD:agent/messaging-communication-v1
+          npx supabase status --workdir backend 2>&1 | tee -a /tmp/database-replay-status.log || true
+          docker ps -a 2>&1 | tee -a /tmp/database-replay-docker.log || true
+          docker system df 2>&1 | tee -a /tmp/database-replay-docker.log || true
+
+      - name: Upload replay diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-replay-diagnostics
+          path: |
+            /tmp/database-replay-startup.log
+            /tmp/database-replay-status.log
+            /tmp/database-replay-docker.log
+            backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql
+            backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql
+            backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
