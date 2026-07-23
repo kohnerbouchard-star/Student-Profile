@@ -63,7 +63,16 @@ const ENDPOINT_COVERAGE = Object.freeze({
   storeQuote: Object.freeze(["storeQuote"]),
   storePurchase: Object.freeze(["storePurchase"]),
   storyDeliveries: Object.freeze(["storyDeliveries"]),
-  storyDeliveryState: Object.freeze(["storyDeliveryState"])
+  storyDeliveryState: Object.freeze(["storyDeliveryState"]),
+  crafting: Object.freeze(["crafting", "craftItem"]),
+  craftingJobCancel: Object.freeze(["craftCancel"]),
+  craftingJobClaim: Object.freeze(["craftClaim"]),
+  itemEffectUse: Object.freeze(["itemEffectUse"]),
+  equipmentEquip: Object.freeze(["equipmentEquip"]),
+  equipmentSalvage: Object.freeze(["itemSalvage"]),
+  progression: Object.freeze(["progression"]),
+  progressionUnlock: Object.freeze(["progressionUnlock"]),
+  progressionClaim: Object.freeze(["progressionClaim"])
 });
 
 const ROUTE_REQUIREMENTS = Object.freeze({
@@ -80,6 +89,8 @@ const ROUTE_REQUIREMENTS = Object.freeze({
   store: "store",
   marketplace: "marketplace",
   messages: "messages",
+  crafting: "crafting",
+  progression: "progression",
   profile: "bootstrap"
 });
 
@@ -116,7 +127,15 @@ const ACTION_REQUIREMENTS = Object.freeze({
   storyDeliveryState: "storyDeliveryState",
   travelComplete: "travelComplete",
   travelExecute: "travelExecute",
-  travelQuote: "travelQuote"
+  travelQuote: "travelQuote",
+  craftItem: "crafting",
+  craftCancel: "craftingJobCancel",
+  craftClaim: "craftingJobClaim",
+  equipmentEquip: "equipmentEquip",
+  itemEffectUse: "itemEffectUse",
+  itemSalvage: "equipmentSalvage",
+  progressionUnlock: "progressionUnlock",
+  progressionClaim: "progressionClaim"
 });
 
 function reviewedFrontendRoute(key) {
