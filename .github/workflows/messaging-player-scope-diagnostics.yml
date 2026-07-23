@@ -1,4 +1,4 @@
-name: Messaging Player Scope Diagnostics
+name: Messaging Player Scope Diagnostic Candidate
 
 on:
   push:
@@ -8,39 +8,61 @@ on:
       - .github/workflows/messaging-player-scope-diagnostics.yml
 
 permissions:
-  contents: write
+  contents: read
   statuses: write
 
 jobs:
-  patch:
+  candidate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v8
+      - uses: actions/checkout@v7
         with:
-          script: |
-            const branch = 'agent/messaging-communication-v1';
-            const file = '.github/workflows/player-terminal-verify.yml';
-            const current = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path: file, ref: branch });
-            if (Array.isArray(current.data) || !current.data.sha || !current.data.content) throw new Error('Invalid Player workflow');
-            let text = Buffer.from(current.data.content, 'base64').toString('utf8');
-            if (!text.includes('/tmp/player-terminal-unexpected.txt')) {
-              const failurePattern = /(\n\s*if \[ -n "\$unexpected" \]; then\n\s*echo "Player Terminal verification detected protected repository paths:")/;
-              if (!failurePattern.test(text)) throw new Error('Scope failure block not found');
-              text = text.replace(failurePattern, `\n          printf '%s\\n' "$unexpected" > /tmp/player-terminal-unexpected.txt$1`);
-            }
-            if (!text.includes('name: player-terminal-scope-diagnostics')) {
-              const setupPattern = /\n      - name: Set up Node\n/;
-              if (!setupPattern.test(text)) throw new Error('Set up Node step not found');
-              text = text.replace(setupPattern, `\n      - name: Upload Player scope diagnostics\n        if: failure()\n        uses: actions/upload-artifact@v4\n        with:\n          name: player-terminal-scope-diagnostics\n          path: |\n            /tmp/player-terminal-changed-files.txt\n            /tmp/player-terminal-unexpected.txt\n          if-no-files-found: warn\n          retention-days: 7\n\n      - name: Set up Node\n`);
-            }
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner, repo: context.repo.repo, path: file, branch,
-              sha: current.data.sha,
-              message: 'ci(messaging): capture exact Player scope failures',
-              content: Buffer.from(text).toString('base64'),
-            });
+          ref: agent/messaging-communication-v1
+          persist-credentials: false
 
-      - name: Publish diagnostics patch status
+      - name: Build diagnostic workflow candidate
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('.github/workflows/player-terminal-verify.yml')
+          text = path.read_text()
+          if '/tmp/player-terminal-unexpected.txt' not in text:
+              marker = '\n          if [ -n "$unexpected" ]; then\n            echo "Player Terminal verification detected protected repository paths:"'
+              if marker not in text:
+                  raise SystemExit('scope failure marker not found')
+              text = text.replace(marker, '\n          printf \'%s\\n\' "$unexpected" > /tmp/player-terminal-unexpected.txt' + marker, 1)
+          if 'name: player-terminal-scope-diagnostics' not in text:
+              marker = '\n      - name: Set up Node\n'
+              if marker not in text:
+                  raise SystemExit('setup node marker not found')
+              step = '''
+      - name: Upload Player scope diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: player-terminal-scope-diagnostics
+          path: |
+            /tmp/player-terminal-changed-files.txt
+            /tmp/player-terminal-unexpected.txt
+          if-no-files-found: warn
+          retention-days: 7
+'''
+              text = text.replace(marker, step + marker, 1)
+          out = Path('/tmp/player-terminal-verify.yml')
+          out.write_text(text)
+
+      - run: sha256sum /tmp/player-terminal-verify.yml > /tmp/player-terminal-verify.yml.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: player-scope-diagnostic-workflow-${{ github.sha }}
+          path: |
+            /tmp/player-terminal-verify.yml
+            /tmp/player-terminal-verify.yml.sha256
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Publish candidate status
         if: always()
         uses: actions/github-script@v8
         with:
@@ -48,7 +70,7 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner, repo: context.repo.repo, sha: context.sha,
               state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/player-scope-diagnostics',
-              description: 'Exact Player scope diagnostic artifact enabled',
+              context: 'messaging/player-scope-candidate',
+              description: 'Player scope diagnostic workflow candidate exported',
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
