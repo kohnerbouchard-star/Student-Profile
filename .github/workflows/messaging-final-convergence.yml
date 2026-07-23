@@ -1,0 +1,65 @@
+name: Messaging Final Convergence
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-final-convergence.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: messaging-final-convergence
+  cancel-in-progress: false
+
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out Messaging branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/messaging-communication-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge current main exactly once
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          marketplace_merge="fcef04f9327efc24955ff17406aaa2d368da2e55"
+          git merge-base --is-ancestor "$marketplace_merge" origin/main
+          git merge --no-ff origin/main -m "merge(main): converge Messaging after Marketplace"
+
+      - name: Verify final Messaging migration range
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            backend/supabase/migrations/20260721150000_add_messaging_communication_v2.sql \
+            backend/supabase/migrations/20260721151000_harden_messaging_retention_and_audit_v2.sql \
+            backend/supabase/migrations/20260721152000_complete_messaging_lifecycle_v1.sql \
+            backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql; do
+            test -f "$file"
+          done
+          test "$(find backend/supabase/migrations -maxdepth 1 -type f -name '*messaging*.sql' | wc -l | tr -d ' ')" -eq 4
+          ! grep -RInE '<MSG_0[1-4]>|temporary identities|provisional migration' \
+            backend/package.json \
+            backend/src/domains/messaging \
+            .github/workflows/database-replay.yml \
+            .github/workflows/player-terminal-verify.yml || true
+
+      - name: Remove one-shot convergence workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/messaging-final-convergence.yml
+          git add -A
+          git commit -m "chore(messaging): remove convergence helper"
+          git push origin HEAD:agent/messaging-communication-v1
