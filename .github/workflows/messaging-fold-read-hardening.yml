@@ -1,0 +1,84 @@
+name: Messaging Fold Read Hardening
+
+on:
+  push:
+    branches:
+      - agent/messaging-communication-v1
+    paths:
+      - .github/workflows/messaging-fold-read-hardening.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  fold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = 'agent/messaging-communication-v1';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            async function read(path) {
+              const r = await github.rest.repos.getContent({ owner, repo, path, ref: branch });
+              if (Array.isArray(r.data) || !r.data.sha || !r.data.content) throw new Error(`Invalid file ${path}`);
+              return { sha: r.data.sha, text: Buffer.from(r.data.content, 'base64').toString('utf8') };
+            }
+            async function write(path, currentSha, text, message) {
+              await github.rest.repos.createOrUpdateFileContents({
+                owner, repo, path, branch, sha: currentSha, message,
+                content: Buffer.from(text).toString('base64'),
+              });
+            }
+            const slot4Path = 'backend/supabase/migrations/20260721153000_compat_messaging_player_status_v1.sql';
+            const extraPath = 'backend/supabase/migrations/20260721154000_harden_messaging_player_reads_v1.sql';
+            const slot4 = await read(slot4Path);
+            const extra = await read(extraPath);
+            if (!slot4.text.trimEnd().endsWith('commit;')) throw new Error('Slot four is not transaction wrapped');
+            if (!extra.text.trimStart().startsWith('begin;') || !extra.text.trimEnd().endsWith('commit;')) throw new Error('Read hardening migration is not transaction wrapped');
+            let body = extra.text.trim();
+            body = body.replace(/^begin;\s*/i, '').replace(/\s*commit;\s*$/i, '');
+            body = body.replace(/player_row\.archived_at is null/g, "player_row.status = 'active'");
+            let merged = slot4.text.replace(/\s*commit;\s*$/i, `\n\n-- Folded private Player read hardening; retained in assigned Messaging slot four.\n${body}\n\ncommit;\n`);
+            if (merged.includes('archived_at')) throw new Error('Folded migration still depends on archived_at');
+            await write(slot4Path, slot4.sha, merged, 'fix(messaging): fold Player read hardening into slot four');
+
+            const refs = [
+              'backend/src/domains/messaging/tests/messagingPlayerReadHardeningMigrationContract.test.ts',
+              'backend/package.json',
+              '.github/workflows/database-replay.yml',
+              '.github/workflows/messaging-isolated-staging.yml',
+              'docs/workstreams/messaging-communication-v1.md',
+            ];
+            for (const path of refs) {
+              try {
+                const current = await read(path);
+                let text = current.text.replaceAll('20260721154000_harden_messaging_player_reads_v1.sql', '20260721153000_compat_messaging_player_status_v1.sql');
+                text = text.replaceAll('20260721154000', '20260721153000');
+                if (text !== current.text) await write(path, current.sha, text, `fix(messaging): update folded read-hardening reference in ${path}`);
+              } catch (error) {
+                if (!String(error).includes('404')) throw error;
+              }
+            }
+
+            const latestExtra = await github.rest.repos.getContent({ owner, repo, path: extraPath, ref: branch });
+            if (Array.isArray(latestExtra.data) || !latestExtra.data.sha) throw new Error('Invalid extra migration');
+            await github.rest.repos.deleteFile({
+              owner, repo, path: extraPath, branch, sha: latestExtra.data.sha,
+              message: 'fix(messaging): remove fifth migration after slot-four fold',
+            });
+
+      - name: Publish fold status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner, repo: context.repo.repo, sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              context: 'messaging/fold-read-hardening',
+              description: 'Player read hardening folded into assigned slot four',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
