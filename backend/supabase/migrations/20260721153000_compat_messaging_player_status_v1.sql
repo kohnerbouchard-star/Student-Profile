@@ -68,6 +68,7 @@ declare
   v_thread public.message_threads%rowtype;
   v_message public.messages%rowtype;
   v_notification_id uuid;
+  v_initial_created_at timestamptz;
 begin
   if p_game_session_id is null
     or p_player_id is null
@@ -156,10 +157,14 @@ begin
     (v_thread.id, p_game_session_id, p_player_id),
     (v_thread.id, p_game_session_id, v_recipient.id);
 
+  v_initial_created_at := clock_timestamp();
+
   insert into public.messages (
-    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key
+    thread_id, game_session_id, sender_type, sender_player_id, body, idempotency_key,
+    created_at, updated_at
   ) values (
-    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial'
+    v_thread.id, p_game_session_id, 'player', p_player_id, v_body, v_key || ':initial',
+    v_initial_created_at, v_initial_created_at
   ) returning * into v_message;
 
   update public.message_threads set updated_at = v_message.created_at
