@@ -11,7 +11,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-staging-artifact-deploy-v2
+  group: pr295-staging-artifact-deploy-v3
   cancel-in-progress: false
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
     timeout-minutes: 45
     environment: staging
     env:
-      RELEASE_COMMIT: 10caf7a2355520484f8071489508e5ef576e5e04
-      TOOLING_COMMIT: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
-      SOURCE_RUN_ID: "29996788487"
-      SOURCE_ARTIFACT_ID: "8559284849"
-      EXPECTED_ARCHIVE_SHA256: 87c5102ce4a774bbe428bbd7ec7284e3609ecbacb2b6a2a5a68fb7375c26fbfe
-      EXPECTED_MANIFEST_SHA256: d39eb20743082aa93e601bd8d7cfcdda8140a665a197e2cc42da7a046975f474
-      EXPECTED_ARTIFACT_SET_SHA256: 6eb97d5bf98451bad4232be99530c7449376f96168522ea0701e8e6567dc2148
+      RELEASE_COMMIT: 50e2f9e5dec2199f35e66960849cc00e0274e3a5
+      TOOLING_COMMIT: 1958d38a3fb3e14ac24323bb3a95004d807c581c
+      SOURCE_RUN_ID: "30000908721"
+      SOURCE_ARTIFACT_ID: "8560939290"
+      EXPECTED_ARCHIVE_SHA256: 73e6f8ec458d720f6e604ae15516e67c501d892cd626d2dbc99984b97c64c2db
+      EXPECTED_MANIFEST_SHA256: abba5506924468a2fe883e4b57164db1ac39cb19dded89ceaa24f13927f03dc4
+      EXPECTED_ARTIFACT_SET_SHA256: 6a216b11966fa2413ec125d2b644cbe69284a1d860b0d699526262bec72b1b96
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
       EXPECTED_LEDGER_COUNT: "140"
@@ -41,7 +41,7 @@ jobs:
       - name: Check out exact artifact tooling
         uses: actions/checkout@v7
         with:
-          ref: b11aed48a876fcb7e4c41a2496ac258cf35c0c6d
+          ref: 1958d38a3fb3e14ac24323bb3a95004d807c581c
           fetch-depth: 0
           persist-credentials: false
 
@@ -62,8 +62,8 @@ jobs:
       - name: Download exact corrected artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8559284849
-          run-id: 29996788487
+          artifact-ids: 8560939290
+          run-id: 30000908721
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
