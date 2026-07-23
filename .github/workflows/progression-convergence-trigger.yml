@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CONVERGENCE_OVERLAY_REVISION: "3"
+      CONVERGENCE_OVERLAY_REVISION: "4"
     steps:
       - name: Check out sole Progression authority
         uses: actions/checkout@v7
@@ -35,8 +35,16 @@ jobs:
           set +e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 scripts/progression-final-convergence-overlay.py 2>&1 | tee "$RUNNER_TEMP/progression-overlay.log"
-          status=${PIPESTATUS[0]}
+          sed -i "0,/block = '''save(manifest_path, manifest)/s//block = \"\"\"save(manifest_path, manifest)/" scripts/progression-final-convergence-overlay.py
+          sed -i "0,/classroom_path ='''/s//classroom_path =\"\"\"/" scripts/progression-final-convergence-overlay.py
+          python3 -m py_compile scripts/progression-final-convergence-overlay.py 2>&1 | tee "$RUNNER_TEMP/progression-overlay.log"
+          compile_status=${PIPESTATUS[0]}
+          if [ "$compile_status" -eq 0 ]; then
+            python3 scripts/progression-final-convergence-overlay.py 2>&1 | tee -a "$RUNNER_TEMP/progression-overlay.log"
+            status=${PIPESTATUS[0]}
+          else
+            status=$compile_status
+          fi
           exit "$status"
       - name: Execute guarded Progression convergence
         shell: bash
