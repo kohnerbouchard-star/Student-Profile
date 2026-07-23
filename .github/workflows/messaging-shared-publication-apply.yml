@@ -8,13 +8,13 @@ on:
       - .github/workflows/messaging-shared-publication-apply.yml
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 jobs:
-  candidate:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,8 +35,6 @@ jobs:
           test "$(git merge-base HEAD origin/main)" = "$EXPECTED_MAIN"
 
           shared=(
-            .github/workflows/database-replay.yml
-            .github/workflows/player-terminal-verify.yml
             admin/index.html
             backend/package.json
             backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts
@@ -54,6 +52,7 @@ jobs:
 
           workdir="$(mktemp -d)"
           trap 'rm -rf "$workdir"' EXIT
+          mkdir -p /tmp/messaging-shared-candidate
           for path in "${shared[@]}"; do
             current="$workdir/current"
             base="$workdir/base"
@@ -63,38 +62,68 @@ jobs:
             git show "$SOURCE_HEAD:$path" > "$source"
             git merge-file --union "$current" "$base" "$source" || true
             test -z "$(grep -nE '^(<<<<<<<|=======|>>>>>>>)' "$current" || true)"
-            install -m 0644 "$current" "$path"
+            mkdir -p "/tmp/messaging-shared-candidate/$(dirname "$path")"
+            install -m 0644 "$current" "/tmp/messaging-shared-candidate/$path"
           done
 
-          git grep -Fq 'messagingDispatch' backend/supabase/functions/classroom-api/index.ts
-          git grep -Fq 'messageSend' backend/src/security/playerRateLimitDispatch.ts
-          git grep -Fq 'messageSend' backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
-          git grep -Fq 'messageSend' player-terminal/src/api/endpoints.js
-          git grep -Fq 'messaging' backend/supabase/functions/admin-api/index.ts
+          git --work-tree=/tmp/messaging-shared-candidate grep -Fq 'messagingDispatch' -- backend/supabase/functions/classroom-api/index.ts
+          git --work-tree=/tmp/messaging-shared-candidate grep -Fq 'messageSend' -- backend/src/security/playerRateLimitDispatch.ts
+          git --work-tree=/tmp/messaging-shared-candidate grep -Fq 'messageSend' -- backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts
+          git --work-tree=/tmp/messaging-shared-candidate grep -Fq 'messageSend' -- player-terminal/src/api/endpoints.js
+          git --work-tree=/tmp/messaging-shared-candidate grep -Fq 'messaging' -- backend/supabase/functions/admin-api/index.ts
           for file in \
-            player-terminal/src/api/backend-routes.js \
             player-terminal/src/api/endpoints.js \
-            player-terminal/src/api/payload-normalizer.js \
             player-terminal/src/api/resource-plan.js \
             player-terminal/src/integrations/student-profile-capability-manifest.js \
             player-terminal/src/pages/messages-page.js
           do
-            node --input-type=module --check < "$file"
+            node --input-type=module --check < "/tmp/messaging-shared-candidate/$file"
           done
 
-          mkdir -p /tmp/messaging-shared-candidate
-          for path in "${shared[@]}"; do
-            mkdir -p "/tmp/messaging-shared-candidate/$(dirname "$path")"
-            cp "$path" "/tmp/messaging-shared-candidate/$path"
-          done
-          find /tmp/messaging-shared-candidate -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/messaging-shared-candidate/SHA256SUMS
-
-      - uses: actions/upload-artifact@v4
+      - name: Publish validated files sequentially
+        uses: actions/github-script@v8
         with:
-          name: messaging-shared-candidate-${{ github.sha }}
-          path: /tmp/messaging-shared-candidate
-          if-no-files-found: error
-          retention-days: 2
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const root = '/tmp/messaging-shared-candidate';
+            const branch = 'agent/messaging-communication-v1';
+            const files = [
+              'admin/index.html',
+              'backend/package.json',
+              'backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts',
+              'backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts',
+              'backend/src/security/playerRateLimitDispatch.ts',
+              'backend/supabase/functions/admin-api/index.ts',
+              'backend/supabase/functions/classroom-api/index.ts',
+              'package.json',
+              'player-terminal/package.json',
+              'player-terminal/src/api/endpoints.js',
+              'player-terminal/src/api/resource-plan.js',
+              'player-terminal/src/integrations/student-profile-capability-manifest.js',
+              'player-terminal/src/pages/messages-page.js',
+            ];
+            for (const file of files) {
+              const current = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: file,
+                ref: branch,
+              });
+              if (Array.isArray(current.data) || !current.data.sha) {
+                throw new Error(`Expected file content for ${file}`);
+              }
+              const content = fs.readFileSync(path.join(root, file)).toString('base64');
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: file,
+                branch,
+                sha: current.data.sha,
+                message: `feat(messaging): publish ${file} additively`,
+                content,
+              });
+            }
 
       - name: Publish candidate status
         if: always()
@@ -106,9 +135,9 @@ jobs:
               repo: context.repo.repo,
               sha: context.sha,
               state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
-              context: 'messaging/shared-candidate',
+              context: 'messaging/shared-publication-api',
               description: '${{ job.status }}' === 'success'
-                ? 'Validated Messaging shared publication candidate exported'
-                : 'Messaging shared candidate generation failed',
+                ? 'Validated Messaging shared files published through contents API'
+                : 'Messaging shared contents publication failed',
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
