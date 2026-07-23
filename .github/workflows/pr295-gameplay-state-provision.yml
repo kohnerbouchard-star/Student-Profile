@@ -1,0 +1,161 @@
+name: PR295 Gameplay State Provision
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-gameplay-state-provision.yml"
+      - "scripts/pr295-gameplay-state-provision.mjs"
+      - "scripts/pr295-gameplay-state-provision-lib.mjs"
+      - "scripts/pr295-gameplay-state-provision.test.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr295-gameplay-state-provision-v1
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Crafting and Progression provisioning contract
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+      - name: Verify gameplay provisioning sources
+        run: |
+          node --check scripts/pr295-gameplay-state-provision-lib.mjs
+          node --check scripts/pr295-gameplay-state-provision.mjs
+          node --test scripts/pr295-gameplay-state-provision.test.mjs
+          node scripts/supply-chain-secret-scan.mjs
+
+  provision:
+    name: Activate Crafting and initialize Progression
+    if: github.event.pull_request.number == 295
+    needs: [contract]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: staging
+    env:
+      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
+      SOURCE_ROOT: /tmp/econovaria-gameplay-source
+      PHYSICAL_ECONOMY_PACK_PATH: /tmp/physical-economy-runtime-pack.json
+      EVIDENCE_PATH: /tmp/pr295-gameplay-state-provision.json
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      TARGET_GAME_NAME: Econovaria Staging Preview
+      TARGET_GAME_ID_SHA256: c15408fa67056586134331a39ba9c59ded9b6f45772d3c48a38bbbab002a9b2c
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Check out exact PR tooling
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind exact merged source and staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          rm -rf "$SOURCE_ROOT"
+          git worktree add --detach "$SOURCE_ROOT" "$RELEASE_COMMIT"
+          test "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Build exact canonical physical-economy pack
+        run: |
+          node "$SOURCE_ROOT/scripts/build-physical-economy-runtime-pack.mjs" \
+            --source-root "$SOURCE_ROOT" \
+            --source-commit "$RELEASE_COMMIT" \
+            --approved-source-commit "$RELEASE_COMMIT" \
+            --pack-key econovaria.beta-seed-pack.v1 \
+            --content-version 1.0.0-beta \
+            --output "$PHYSICAL_ECONOMY_PACK_PATH"
+
+      - name: Resolve protected staging service credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$service" ]; then
+            test -n "$SUPABASE_ACCESS_TOKEN"
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > /tmp/project-api-keys.json
+            node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/project-api-keys.json', 'utf8'));
+          const service = rows.find((row) => row.name === 'service_role' && row.api_key)?.api_key || '';
+          fs.writeFileSync('/tmp/service-role-key', service);
+          NODE
+            service="$(cat /tmp/service-role-key)"
+          fi
+          test -n "$service"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f /tmp/project-api-keys.json /tmp/service-role-key
+
+      - name: Re-run contract immediately before connected write
+        run: node --test scripts/pr295-gameplay-state-provision.test.mjs
+
+      - name: Activate Crafting and initialize Progression baselines
+        run: node scripts/pr295-gameplay-state-provision.mjs
+
+      - name: Upload sanitized gameplay-state evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-gameplay-state-provision-${{ github.event.pull_request.head.sha }}
+          path: /tmp/pr295-gameplay-state-provision.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Record staging gameplay baseline
+        if: success()
+        run: |
+          {
+            echo "## Staging gameplay baseline"
+            echo '- Canonical physical-economy pack active: `true`'
+            echo '- Recipes projected and enabled by regulation status: `true`'
+            echo '- Item supply projections created: `true`'
+            echo '- Progression profile per active Player: `true`'
+            echo '- Four baseline reputation dimensions per active Player: `true`'
+            echo '- XP, achievements, cash, and inventory fabricated: `false`'
+            echo '- Production touched: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
