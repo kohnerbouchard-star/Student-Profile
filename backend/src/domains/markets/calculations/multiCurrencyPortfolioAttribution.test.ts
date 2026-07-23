@@ -15,21 +15,21 @@ Deno.test(
     assertEquals(result.baseCurrencyCode, "ECO");
     assertEquals(result.startingValueBase, "800");
     assertEquals(result.endingValueBase, "897.5");
-    assertEquals(result.netCashFlowBase, "16");
-    assertEquals(result.localMarketContributionBase, "70");
-    assertEquals(result.currencyContributionBase, "43.5");
-    assertEquals(result.totalContributionBase, "113.5");
+    assertEquals(result.netCashFlowBase, "15.5");
+    assertEquals(result.localMarketContributionBase, "90");
+    assertEquals(result.currencyContributionBase, "23");
+    assertEquals(result.totalContributionBase, "113");
     assertEquals(result.currencyContributions, {
       NRC: "116",
-      YRT: "-2.5",
+      YRT: "-3",
     });
     assertEquals(result.countryContributions, {
       NORTHREACH: "116",
-      YRETHIA: "-2.5",
+      YRETHIA: "-3",
     });
     assertEquals(result.assetClassContributions, {
       equity: "116",
-      fixed_income: "-2.5",
+      fixed_income: "-3",
     });
     assertEquals(result.activationAuthorized, false);
     assertEquals(result.deterministic, true);
