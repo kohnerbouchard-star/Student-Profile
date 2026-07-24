@@ -10,6 +10,7 @@ on:
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
       - "admin/logout-confirmation.js"
+      - "admin/logout-account-trigger-bridge.js"
       - "admin/game-session-share-link-contract.js"
       - "admin/game-creation-runtime-bridge.js"
       - "admin/game-creation-style-loader.js"
@@ -67,6 +68,7 @@ jobs:
           node --check admin/game-creation-runtime-bridge.js
           node --check admin/game-creation-style-loader.js
           node --check admin/game-creation-controls.js
+          node --check admin/logout-account-trigger-bridge.js
           node --check scripts/admin-game-creation-browser-smoke.mjs
           node --check scripts/admin-game-creation-browser-smoke-runner.mjs
           node --check scripts/admin-logout-confirmation-browser-smoke.mjs
@@ -117,7 +119,7 @@ jobs:
           PY
           node scripts/admin-game-session-controls-browser-smoke.mjs
 
-      - name: Exercise bounded logout confirmation in Chromium
+      - name: Exercise real account-menu logout confirmation in Chromium
         shell: bash
         run: |
           set -o pipefail
