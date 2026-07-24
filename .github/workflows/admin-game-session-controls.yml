@@ -6,8 +6,10 @@ on:
     paths:
       - ".github/workflows/admin-game-session-controls.yml"
       - "admin/index.html"
+      - "admin/admin-bootstrap.js"
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
+      - "admin/game-session-share-link-contract.js"
       - "admin/css/game-session-controls.css"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"
