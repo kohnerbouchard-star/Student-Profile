@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   canonicalJson,
+  exists,
   readJson,
   sha256,
   sha256File,
@@ -41,11 +42,34 @@ function recordKey(country, itemKey) {
   return `${String(country).toLowerCase()}|${String(itemKey).toLowerCase()}`;
 }
 
+function expectedRuntimeImagePath(record) {
+  return `player-terminal/assets/images/items/store/${record.country}/${record.itemKey}.webp`;
+}
+
 function assertPlayerFacingDescription(record) {
   const description = String(record.description ?? '').trim();
   requireCondition(description.length >= 80, `${record.country}/${record.itemKey} description is too short.`);
   requireCondition(description.length <= 520, `${record.country}/${record.itemKey} description is too long.`);
   requireCondition(!PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(description)), `${record.country}/${record.itemKey} description contains placeholder or internal seed language.`);
+}
+
+async function assertArtworkDelivery(record, runtimeReady) {
+  if (!runtimeReady) {
+    requireCondition(record.runtimeImagePath === null, `${record.country}/${record.itemKey} must not claim a runtime path before binary export.`);
+    requireCondition(record.assetStatus === 'generated-awaiting-repository-export', `${record.country}/${record.itemKey} has an invalid pre-export status.`);
+    return;
+  }
+
+  const expectedPath = expectedRuntimeImagePath(record);
+  requireCondition(record.runtimeImagePath === expectedPath, `${record.country}/${record.itemKey} runtime path must be ${expectedPath}.`);
+  requireCondition(record.assetStatus === 'repository-owned', `${record.country}/${record.itemKey} must be marked repository-owned.`);
+  requireCondition(/^[a-f0-9]{64}$/.test(String(record.sha256 ?? '')), `${record.country}/${record.itemKey} must carry a SHA-256 digest.`);
+  requireCondition(Number.isInteger(record.bytes) && record.bytes > 0, `${record.country}/${record.itemKey} must carry a positive byte size.`);
+  requireCondition(record.width === 1024 && record.height === 1024, `${record.country}/${record.itemKey} must be a 1024x1024 runtime asset.`);
+  const assetPath = path.join(REPO_ROOT, record.runtimeImagePath);
+  requireCondition(await exists(assetPath), `${record.runtimeImagePath} is missing from the repository.`);
+  requireCondition(await sha256File(assetPath) === record.sha256, `${record.runtimeImagePath} digest does not match the artwork manifest.`);
+  requireCondition((await readFile(assetPath)).byteLength === record.bytes, `${record.runtimeImagePath} byte size does not match the artwork manifest.`);
 }
 
 async function rebuildIntegrityManifest(pack) {
@@ -89,6 +113,8 @@ export async function applyStoreContentOverrides() {
   requireCondition(contentSource.count === 50 && contentSource.records?.length === 50, 'Store content source must contain exactly 50 records.');
   requireCondition(artworkSource.recordCount === 50 && artworkSource.records?.length === 50, 'Store artwork source must contain exactly 50 records.');
   requireCondition(store.itemCount === 50 && store.items?.length === 50, 'Generated Store catalog must contain exactly 50 records.');
+  const runtimeReady = artworkSource.runtimeDelivery?.runtimeImagePathsAvailable === true;
+  requireCondition(artworkSource.runtimeDelivery?.binaryFilesCommitted === runtimeReady, 'Store artwork binary and runtime readiness flags must agree.');
 
   const contentByKey = new Map();
   for (const record of contentSource.records) {
@@ -107,7 +133,7 @@ export async function applyStoreContentOverrides() {
     requireCondition(/^[A-Za-z0-9_-]{6,64}$/.test(String(record.creationIdentifier ?? '')), `${key} has an invalid Magnific creation identifier.`);
     requireCondition(!creationIdentifiers.has(record.creationIdentifier), `${key} reuses another item's artwork creation.`);
     requireCondition(record.sourcePageUrl === `https://www.magnific.com/app/creation/${record.creationIdentifier}`, `${key} has inconsistent artwork provenance.`);
-    requireCondition(record.runtimeImagePath === null, `${key} must not claim a runtime path before the binary is exported.`);
+    await assertArtworkDelivery(record, runtimeReady);
     creationIdentifiers.add(record.creationIdentifier);
     artworkByKey.set(key, record);
   }
@@ -137,6 +163,10 @@ export async function applyStoreContentOverrides() {
         sourcePageUrl: artwork.sourcePageUrl,
         runtimeImagePath: artwork.runtimeImagePath,
         assetStatus: artwork.assetStatus,
+        sha256: artwork.sha256 ?? null,
+        bytes: artwork.bytes ?? null,
+        width: artwork.width ?? null,
+        height: artwork.height ?? null,
         aspectRatio: artworkSource.artDirection.aspectRatio,
         resolution: artworkSource.artDirection.resolution,
         theme: artworkSource.artDirection.theme,
@@ -153,7 +183,7 @@ export async function applyStoreContentOverrides() {
     contentRevision: 'store-content-v2',
     descriptionPolicy: 'player-facing-authored-copy-no-internal-seed-language',
     artworkPolicy: 'one-individual-square-Magnific-creation-per-Store-item',
-    artworkRuntimeReady: artworkSource.runtimeDelivery.runtimeImagePathsAvailable === true,
+    artworkRuntimeReady: runtimeReady,
     items: enrichedItems,
   };
 
@@ -180,6 +210,10 @@ export async function applyStoreContentOverrides() {
       sourcePageUrl: item.artwork.sourcePageUrl,
       runtimeImagePath: item.artwork.runtimeImagePath,
       assetStatus: item.artwork.assetStatus,
+      sha256: item.artwork.sha256,
+      bytes: item.artwork.bytes,
+      width: item.artwork.width,
+      height: item.artwork.height,
     })),
   };
 
@@ -196,6 +230,7 @@ export async function applyStoreContentOverrides() {
           ...entry,
           artworkStableId: artwork.stableId,
           artworkRuntimeImagePath: artwork.runtimeImagePath,
+          artworkSha256: artwork.sha256,
         };
       }),
     },
@@ -208,8 +243,9 @@ export async function applyStoreContentOverrides() {
     storeDescriptionsAuthored: 50,
     placeholderStoreDescriptions: 0,
     individualStoreArtworkRecords: 50,
+    repositoryOwnedStoreArtwork: runtimeReady ? 50 : 0,
     duplicateArtworkAssignments: 0,
-    runtimeImagePathsAvailable: artworkSource.runtimeDelivery.runtimeImagePathsAvailable === true,
+    runtimeImagePathsAvailable: runtimeReady,
   };
 
   await writeJson(path.join(PACK_ROOT, 'store-catalog-v1.json'), enrichedStore);
