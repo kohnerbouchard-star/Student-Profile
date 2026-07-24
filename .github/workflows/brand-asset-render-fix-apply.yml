@@ -1,0 +1,443 @@
+name: Apply Brand Asset Render Fix
+
+on:
+  push:
+    branches:
+      - agent/brand-asset-render-fix-v1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-asset-render-fix-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/brand-asset-render-fix-v1
+          fetch-depth: 0
+
+      - name: Apply cross-surface branding repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          VERSION = "20260724.2"
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if text.count(old) != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {text.count(old)}: {old[:80]!r}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "index.html",
+              '  <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />',
+              f'  <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png?v={VERSION}" />\n'
+              f'  <link rel="shortcut icon" type="image/png" href="assets/brand/favicon-32.png?v={VERSION}" />',
+          )
+          replace_once(
+              "index.html",
+              """      aspect-ratio: 1672 / 941;
+              animation: none;""",
+              """      position: relative;
+              display: grid;
+              place-items: center;
+              aspect-ratio: 600 / 338;
+              overflow: hidden;
+              animation: none;""",
+          )
+          replace_once(
+              "index.html",
+              """    .login-root .logo-mark.is-econovaria-logo img {
+              display: block;
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              filter: drop-shadow(0 0 22px rgba(0, 212, 255, .24)) drop-shadow(0 0 26px rgba(255, 0, 238, .14));
+            }""",
+              """    .login-root .logo-mark.is-econovaria-logo img {
+              position: relative;
+              z-index: 1;
+              display: block;
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              filter: drop-shadow(0 0 22px rgba(0, 212, 255, .24)) drop-shadow(0 0 26px rgba(255, 0, 238, .14));
+            }
+
+            .login-root .logo-mark-fallback {
+              position: absolute;
+              inset: 0;
+              display: grid;
+              place-items: center;
+              color: #8eeeff;
+              font: 900 clamp(22px, 5vw, 38px)/1 ui-sans-serif, system-ui, sans-serif;
+              letter-spacing: .08em;
+              text-shadow: 0 0 16px rgba(0, 212, 255, .55), 0 0 22px rgba(255, 0, 238, .28);
+            }
+
+            .login-root .logo-mark.has-brand-error img {
+              display: none;
+            }""",
+          )
+          replace_once(
+              "index.html",
+              '              <img src="assets/brand/econovaria-logo.webp" width="286" height="161" alt="Econovaria" />',
+              f'              <span class="logo-mark-fallback" aria-hidden="true">ECONOVARIA</span>\n'
+              f'              <img src="assets/brand/econovaria-logo.jpg?v={VERSION}" width="600" height="338" alt="Econovaria" decoding="sync" fetchpriority="high" data-econovaria-brand-image />',
+          )
+          replace_once(
+              "index.html",
+              """  <script>
+              window.setTimeout(function releasePreloadFallback() {
+                document.documentElement.classList.remove("preload");
+              }, 1800);
+            </script>""",
+              """  <script>
+              (function installLoginBrandFallback() {
+                const image = document.querySelector("[data-econovaria-brand-image]");
+                const mark = image?.closest(".logo-mark");
+                image?.addEventListener("load", function () {
+                  mark?.classList.remove("has-brand-error");
+                });
+                image?.addEventListener("error", function () {
+                  mark?.classList.add("has-brand-error");
+                }, { once: true });
+                window.setTimeout(function releasePreloadFallback() {
+                  document.documentElement.classList.remove("preload");
+                }, 1800);
+              })();
+            </script>""",
+          )
+
+          replace_once(
+              "player-terminal/index.html",
+              '  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />',
+              f'  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png?v={VERSION}" />\n'
+              f'  <link rel="shortcut icon" type="image/png" href="./assets/favicon-32.png?v={VERSION}" />',
+          )
+          replace_once(
+              "player-terminal/src/components/layout.js",
+              """function logoMark() {
+              return `<img src="./assets/econovaria-icon.webp" class="player-terminal-logo-svg" width="42" height="42" alt="" aria-hidden="true" style="display:block;width:42px;height:42px;object-fit:cover;border-radius:10px;box-shadow:0 0 16px rgba(0,212,255,.18),0 0 18px rgba(255,0,238,.10)">`;
+            }""",
+              f"""function logoMark() {{
+              return `<span class="player-terminal-logo-fallback" aria-hidden="true"><svg viewBox="0 0 56 56" class="player-terminal-logo-svg"><circle cx="28" cy="28" r="25"></circle><path d="M28 7 L45 17 L45 39 L28 49 L11 39 L11 17 Z"></path><ellipse cx="28" cy="28" rx="11" ry="17"></ellipse><line x1="28" y1="11" x2="28" y2="45"></line><path d="M18 23 Q28 19 38 23"></path><path d="M18 33 Q28 37 38 33"></path><path class="logo-e" d="M21 21 L21 35 L33 35 M21 28 L31 28 M21 21 L33 21"></path><circle class="orbit-dot" cx="45" cy="28" r="2.4"></circle></svg></span><img src="./assets/econovaria-icon.png?v={VERSION}" class="player-terminal-logo-image" width="42" height="42" alt="" aria-hidden="true" decoding="sync" data-player-brand-image>`;
+            }}""",
+          )
+          replace_once(
+              "player-terminal/css/player-terminal.css",
+              """.player-terminal-brand-mark { width: 42px; min-width: 42px; height: 42px; display: grid; place-items: center; color: var(--terminal-cyan); }
+            .player-terminal-logo-svg { width: 42px; height: 42px; fill: none; stroke: currentColor; stroke-width: 1.2; }
+            .player-terminal-logo-svg .logo-e { stroke: var(--terminal-amber); stroke-width: 1.8; }
+            .player-terminal-logo-svg .orbit-dot { fill: var(--terminal-amber); stroke: none; }""",
+              """.player-terminal-brand-mark {
+              position: relative;
+              width: 42px;
+              min-width: 42px;
+              height: 42px;
+              display: grid;
+              place-items: center;
+              overflow: hidden;
+              color: var(--terminal-cyan);
+              border-radius: 10px;
+              box-shadow: 0 0 16px rgba(0,212,255,.18), 0 0 18px rgba(255,0,238,.10);
+            }
+            .player-terminal-logo-fallback,
+            .player-terminal-logo-image { position: absolute; inset: 0; width: 42px; height: 42px; }
+            .player-terminal-logo-fallback { z-index: 0; display: grid; place-items: center; }
+            .player-terminal-logo-image { z-index: 1; display: block; object-fit: cover; border-radius: 10px; }
+            .player-terminal-logo-image[hidden] { display: none; }
+            .player-terminal-logo-svg { width: 42px; height: 42px; fill: none; stroke: currentColor; stroke-width: 1.2; }
+            .player-terminal-logo-svg .logo-e { stroke: var(--terminal-amber); stroke-width: 1.8; }
+            .player-terminal-logo-svg .orbit-dot { fill: var(--terminal-amber); stroke: none; }""",
+          )
+          replace_once(
+              "player-terminal/src/main.js",
+              'import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";\n\nconst mount = document.getElementById("playerTerminal");',
+              '''import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
+
+function installBrandImageFallback(root) {
+  function handleBrandImage(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement) || !target.matches("[data-player-brand-image]")) return;
+    const failed = event.type === "error";
+    target.hidden = failed;
+    target.closest(".player-terminal-brand-mark")?.classList.toggle("is-brand-fallback", failed);
+  }
+
+  root.addEventListener("error", handleBrandImage, true);
+  root.addEventListener("load", handleBrandImage, true);
+  return Object.freeze({
+    destroy() {
+      root.removeEventListener("error", handleBrandImage, true);
+      root.removeEventListener("load", handleBrandImage, true);
+    },
+  });
+}
+
+const mount = document.getElementById("playerTerminal");''',
+          )
+          replace_once(
+              "player-terminal/src/main.js",
+              'const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());',
+              'const brandAssets = installBrandImageFallback(mount);\nconst config = installStudentProfileRuntime(resolvePlayerTerminalConfig());',
+          )
+          replace_once(
+              "player-terminal/src/main.js",
+              '  skipLink.destroy();\n  destroyTerminal();',
+              '  skipLink.destroy();\n  brandAssets.destroy();\n  destroyTerminal();',
+          )
+
+          replace_once(
+              "admin/index.html",
+              '  <link rel="icon" type="image/png" sizes="32x32" href="../assets/brand/favicon-32.png" />',
+              f'  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png?v={VERSION}" />\n'
+              f'  <link rel="shortcut icon" type="image/png" href="./assets/favicon-32.png?v={VERSION}" />',
+          )
+          replace_once(
+              "admin/css/admin-stabilization-visual-finish.css",
+              """/* Canonical Econovaria icon in the Admin left navigation header. */
+            .admin-terminal-brand-mark {
+              overflow: hidden;
+              color: transparent !important;
+              background: url("../../assets/brand/econovaria-icon.webp") center / cover no-repeat !important;
+              border-color: rgba(0, 212, 255, 0.42) !important;
+              border-radius: 12px !important;
+              box-shadow: 0 0 18px rgba(0, 212, 255, 0.18), 0 0 20px rgba(255, 0, 238, 0.10) !important;
+              filter: none !important;
+            }
+
+            .admin-terminal-brand-mark .admin-terminal-logo-svg {
+              display: none !important;
+            }""",
+              f"""/* Canonical Econovaria icon in the Admin left navigation header. */
+            .admin-terminal-brand-mark {{
+              position: relative;
+              overflow: hidden;
+              color: var(--admin-terminal-cyan, #62e5ff) !important;
+              background: none !important;
+              border-color: rgba(0, 212, 255, 0.42) !important;
+              border-radius: 12px !important;
+              box-shadow: 0 0 18px rgba(0, 212, 255, 0.18), 0 0 20px rgba(255, 0, 238, 0.10) !important;
+              filter: none !important;
+            }}
+
+            .admin-terminal-brand-mark::after {{
+              content: "";
+              position: absolute;
+              inset: 0;
+              z-index: 2;
+              background: url("../assets/econovaria-icon.png?v={VERSION}") center / cover no-repeat;
+              pointer-events: none;
+            }}
+
+            .admin-terminal-brand-mark .admin-terminal-logo-svg {{
+              position: relative;
+              z-index: 1;
+              display: block !important;
+            }}""",
+          )
+
+          gateway = Path("scripts/local-staging-gateway.py")
+          gateway_text = gateway.read_text(encoding="utf-8")
+          gateway_text = gateway_text.replace('server_version = "EconovariaLocalGateway/1.1"', 'server_version = "EconovariaLocalGateway/1.2"', 1)
+          marker = '''STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
+              "If-Modified-Since",
+              "If-None-Match",
+          )
+
+
+          def is_proxy_path'''
+          replacement = '''STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
+              "If-Modified-Since",
+              "If-None-Match",
+          )
+          PNG_SIGNATURE: Final[bytes] = b"\\x89PNG\\r\\n\\x1a\\n"
+          JPEG_SIGNATURE: Final[bytes] = b"\\xff\\xd8\\xff"
+          REQUIRED_BRAND_ASSETS: Final[tuple[tuple[str, bytes], ...]] = (
+              ("assets/brand/econovaria-logo.jpg", JPEG_SIGNATURE),
+              ("assets/brand/econovaria-icon.png", PNG_SIGNATURE),
+              ("assets/brand/favicon-32.png", PNG_SIGNATURE),
+              ("player-terminal/assets/econovaria-icon.png", PNG_SIGNATURE),
+              ("player-terminal/assets/favicon-32.png", PNG_SIGNATURE),
+              ("admin/assets/econovaria-icon.png", PNG_SIGNATURE),
+              ("admin/assets/favicon-32.png", PNG_SIGNATURE),
+          )
+
+
+          def validate_brand_assets(root: Path) -> None:
+              """Reject incomplete or corrupt local checkouts before serving the UI."""
+              failures: list[str] = []
+              for relative_path, signature in REQUIRED_BRAND_ASSETS:
+                  asset_path = root / relative_path
+                  if not asset_path.is_file():
+                      failures.append(f"missing {relative_path}")
+                      continue
+                  if not asset_path.read_bytes().startswith(signature):
+                      failures.append(f"invalid image signature {relative_path}")
+              if failures:
+                  raise SystemExit("Local brand asset validation failed: " + "; ".join(failures))
+
+
+          def is_proxy_path'''
+          if marker not in gateway_text:
+              raise SystemExit("Could not locate local gateway asset-validation insertion point")
+          gateway_text = gateway_text.replace(marker, replacement, 1)
+          gateway_text = gateway_text.replace(
+              '    if not (root / "index.html").is_file():\n        raise SystemExit(f"Repository root does not contain index.html: {root}")\n\n    config_path',
+              '    if not (root / "index.html").is_file():\n        raise SystemExit(f"Repository root does not contain index.html: {root}")\n    validate_brand_assets(root)\n\n    config_path',
+              1,
+          )
+          gateway.write_text(gateway_text, encoding="utf-8")
+
+          replace_once(
+              "scripts/local-staging-gateway-contract.test.mjs",
+              'import sys\nfrom email.message import Message',
+              'import sys\nfrom email.message import Message\nfrom pathlib import Path',
+          )
+          replace_once(
+              "scripts/local-staging-gateway-contract.test.mjs",
+              'module.remove_static_conditionals(conditional_headers)\n\nprint(json.dumps({',
+              'module.remove_static_conditionals(conditional_headers)\nmodule.validate_brand_assets(Path(sys.argv[2]))\n\nprint(json.dumps({',
+          )
+          replace_once(
+              "scripts/local-staging-gateway-contract.test.mjs",
+              '    "remainingConditionals": list(conditional_headers.keys()),',
+              '    "remainingConditionals": list(conditional_headers.keys()),\n    "brandAssetCount": len(module.REQUIRED_BRAND_ASSETS),',
+          )
+          replace_once(
+              "scripts/local-staging-gateway-contract.test.mjs",
+              '  const result = spawnSync("python3", ["-c", program, gatewayPath], {',
+              '  const result = spawnSync("python3", ["-c", program, gatewayPath, repositoryRoot], {',
+          )
+          replace_once(
+              "scripts/local-staging-gateway-contract.test.mjs",
+              '''test("connected local static assets cannot reuse stale browser validators", () => {
+              const result = probeGateway();''',
+              '''test("local staging validates all required cross-surface brand assets", () => {
+              assert.equal(probeGateway().brandAssetCount, 7);
+            });
+
+            test("connected local static assets cannot reuse stale browser validators", () => {
+              const result = probeGateway();''',
+          )
+
+          scope = Path("player-terminal/tools/verify-pr-scope.mjs")
+          scope_text = scope.read_text(encoding="utf-8")
+          scope_text = scope_text.replace(
+              '  "assets/brand/econovaria-icon.webp",\n  "assets/brand/econovaria-logo.webp",\n  "assets/brand/favicon-32.png",',
+              '  "assets/brand/econovaria-icon.webp",\n  "assets/brand/econovaria-logo.webp",\n  "assets/brand/econovaria-icon.png",\n  "assets/brand/econovaria-logo.jpg",\n  "assets/brand/favicon-32.png",\n  "admin/assets/econovaria-icon.png",\n  "admin/assets/favicon-32.png",',
+              1,
+          )
+          scope_text = scope_text.replace(
+              '  "scripts/local-staging-gateway-contract.test.mjs",',
+              '  "scripts/local-staging-gateway-contract.test.mjs",\n  "scripts/brand-asset-contract.mjs",',
+              1,
+          )
+          scope.write_text(scope_text, encoding="utf-8")
+
+          package = Path("package.json")
+          package_text = package.read_text(encoding="utf-8")
+          package_text = package_text.replace(
+              '    "test:beta-e2e": "node --test scripts/beta-e2e-pilot.test.mjs",',
+              '    "test:beta-e2e": "node --test scripts/beta-e2e-pilot.test.mjs",\n    "test:brand-assets": "node scripts/brand-asset-contract.mjs",',
+              1,
+          )
+          package_text = package_text.replace(
+              '    "test": "npm run audit &&',
+              '    "test": "npm run audit && npm run test:brand-assets &&',
+              1,
+          )
+          package.write_text(package_text, encoding="utf-8")
+          PY
+
+          cat > scripts/brand-asset-contract.mjs <<'EOF'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { fileURLToPath } from "node:url";
+          import path from "node:path";
+
+          const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+          const version = "20260724.2";
+          const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+          const jpegSignature = Buffer.from([0xff, 0xd8, 0xff]);
+
+          function binary(relativePath) {
+            return readFileSync(path.join(root, relativePath));
+          }
+
+          function text(relativePath) {
+            return readFileSync(path.join(root, relativePath), "utf8");
+          }
+
+          function assertSignature(relativePath, signature) {
+            const payload = binary(relativePath);
+            assert.ok(payload.length > signature.length, `${relativePath} is unexpectedly empty`);
+            assert.ok(payload.subarray(0, signature.length).equals(signature), `${relativePath} has an invalid image signature`);
+          }
+
+          for (const relativePath of [
+            "assets/brand/econovaria-icon.png",
+            "assets/brand/favicon-32.png",
+            "player-terminal/assets/econovaria-icon.png",
+            "player-terminal/assets/favicon-32.png",
+            "admin/assets/econovaria-icon.png",
+            "admin/assets/favicon-32.png",
+          ]) assertSignature(relativePath, pngSignature);
+          assertSignature("assets/brand/econovaria-logo.jpg", jpegSignature);
+
+          const login = text("index.html");
+          const player = text("player-terminal/index.html");
+          const playerLayout = text("player-terminal/src/components/layout.js");
+          const admin = text("admin/index.html");
+          const adminFinish = text("admin/css/admin-stabilization-visual-finish.css");
+
+          assert.match(login, new RegExp(`econovaria-logo\\.jpg\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.match(login, new RegExp(`favicon-32\\.png\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.doesNotMatch(login, /econovaria-logo\.webp/);
+          assert.match(player, new RegExp(`favicon-32\\.png\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.match(playerLayout, new RegExp(`econovaria-icon\\.png\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.match(admin, new RegExp(`\.\/assets\/favicon-32\\.png\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.match(adminFinish, new RegExp(`\.\.\/assets\/econovaria-icon\\.png\\?v=${version.replaceAll(".", "\\.")}`));
+          assert.match(login, /rel="shortcut icon"/);
+          assert.match(player, /rel="shortcut icon"/);
+          assert.match(admin, /rel="shortcut icon"/);
+
+          console.log("Econovaria brand asset contract verified across Login, Player, and Admin.");
+          EOF
+
+          git rm -f assets/brand/econovaria-logo.webp assets/brand/econovaria-icon.webp player-terminal/assets/econovaria-icon.webp
+
+      - name: Validate repaired assets and local startup contract
+        run: |
+          python3 -m py_compile scripts/local-staging-gateway.py
+          node scripts/brand-asset-contract.mjs
+          node --test scripts/local-staging-gateway-contract.test.mjs
+          node --check player-terminal/src/main.js
+          node --check player-terminal/src/components/layout.js
+
+      - name: Commit applied repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No remaining repair changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(brand): repair cross-surface logo and favicon rendering"
+          git push origin HEAD:agent/brand-asset-render-fix-v1
