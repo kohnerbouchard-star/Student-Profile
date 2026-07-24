@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/crafting-activation-calibration-v2.yml"
       - "scripts/simulate-physical-economy-activation-v2.mjs"
+      - "scripts/simulate-physical-economy-activation-v3.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/lib/physical-economy-pack-*.mjs"
       - "docs/seed-content/items/**"
@@ -43,15 +44,17 @@ jobs:
           npm ci
 
       - name: Validate simulator syntax
-        run: node --check scripts/simulate-physical-economy-activation-v2.mjs
+        run: |
+          node --check scripts/simulate-physical-economy-activation-v2.mjs
+          node --check scripts/simulate-physical-economy-activation-v3.mjs
 
-      - name: Execute reproducible 16,000-run candidate calibration
+      - name: Execute cycle-level 16,000-run candidate calibration
         shell: bash
         run: |
           set -o pipefail
-          node scripts/simulate-physical-economy-activation-v2.mjs \
-            --output-dir /tmp/physical-economy-calibration-v2 \
-            2>&1 | tee /tmp/physical-economy-calibration-v2.log
+          node scripts/simulate-physical-economy-activation-v3.mjs \
+            --output-dir /tmp/physical-economy-calibration-v3 \
+            2>&1 | tee /tmp/physical-economy-calibration-v3.log
 
       - name: Run legacy structural checks against the exact generated pack
         shell: bash
@@ -59,28 +62,29 @@ jobs:
           set +e
           set -o pipefail
           node scripts/simulate-physical-economy-balance.mjs \
-            --pack /tmp/physical-economy-calibration-v2/physical-economy-runtime-pack-v2-candidate.json \
-            --output /tmp/physical-economy-calibration-v2/physical-economy-structural-report-v2.json \
-            2>&1 | tee /tmp/physical-economy-structural-v2.log
+            --pack /tmp/physical-economy-calibration-v3/physical-economy-runtime-pack-v3-candidate.json \
+            --output /tmp/physical-economy-calibration-v3/physical-economy-structural-report-v3.json \
+            2>&1 | tee /tmp/physical-economy-structural-v3.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          printf '%s\n' "$STATUS" > /tmp/physical-economy-calibration-v2/legacy-structural-exit-code.txt
-          test -s /tmp/physical-economy-calibration-v2/physical-economy-structural-report-v2.json
+          printf '%s\n' "$STATUS" > /tmp/physical-economy-calibration-v3/legacy-structural-exit-code.txt
+          test -s /tmp/physical-economy-calibration-v3/physical-economy-structural-report-v3.json
 
       - name: Validate generated evidence contract
         shell: bash
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from "node:fs/promises";
-          const root = "/tmp/physical-economy-calibration-v2";
-          const manifest = JSON.parse(await readFile(`${root}/physical-economy-run-manifest-v2.json`, "utf8"));
-          const summary = JSON.parse(await readFile(`${root}/physical-economy-gate-summary-v2.json`, "utf8"));
-          const structural = JSON.parse(await readFile(`${root}/physical-economy-structural-report-v2.json`, "utf8"));
-          if (manifest.schemaVersion !== "econovaria-physical-economy-run-manifest-v2") throw new Error("Invalid run manifest schema");
-          if (summary.schemaVersion !== "econovaria-physical-economy-gate-summary-v2") throw new Error("Invalid gate summary schema");
+          const root = "/tmp/physical-economy-calibration-v3";
+          const manifest = JSON.parse(await readFile(`${root}/physical-economy-run-manifest-v3.json`, "utf8"));
+          const summary = JSON.parse(await readFile(`${root}/physical-economy-gate-summary-v3.json`, "utf8"));
+          const structural = JSON.parse(await readFile(`${root}/physical-economy-structural-report-v3.json`, "utf8"));
+          if (manifest.schemaVersion !== "econovaria-physical-economy-run-manifest-v3") throw new Error("Invalid run manifest schema");
+          if (summary.schemaVersion !== "econovaria-physical-economy-gate-summary-v3") throw new Error("Invalid gate summary schema");
           if (manifest.runConfiguration.runCount !== 16000) throw new Error("Expected exactly 16,000 runs");
           if (summary.runConfiguration.runCount !== 16000) throw new Error("Gate summary run count is incorrect");
-          if (manifest.activationAuthorized !== false) throw new Error("Candidate workflow must not authorize activation");
+          if (manifest.activationAuthorized !== false || summary.activationAuthorized !== false) throw new Error("Candidate workflow must not authorize activation");
+          if (summary.gateCounts.implemented !== 167) throw new Error("Expected 167 executable calibration gates");
           if (summary.gateCounts.unresolved !== 0) throw new Error("All integrity gates must be executable");
           if (!Number.isInteger(summary.integrityGates.substitutionExecutions)) throw new Error("Substitution evidence is missing");
           if (!Array.isArray(summary.integrityGates.recraftLoopEvidence)) throw new Error("Salvage/recraft evidence is missing");
@@ -88,20 +92,43 @@ jobs:
           if (structural.gates?.repairEnabled !== false) throw new Error("Repair boundary changed");
           NODE
 
+      - name: Require candidate calibration pass
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const summary = JSON.parse(await readFile(
+            "/tmp/physical-economy-calibration-v3/physical-economy-gate-summary-v3.json",
+            "utf8",
+          ));
+          if (summary.calibrationPassed !== true) {
+            const counts = summary.failures.reduce((result, failure) => {
+              result[failure.gate] = (result[failure.gate] || 0) + 1;
+              return result;
+            }, {});
+            console.error(JSON.stringify({
+              decision: summary.decision,
+              failedGates: summary.gateCounts.failed,
+              failureTypes: counts,
+            }, null, 2));
+            process.exit(1);
+          }
+          NODE
+
       - name: Upload immutable candidate calibration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: crafting-activation-calibration-v2-${{ github.event.pull_request.head.sha }}
+          name: crafting-activation-calibration-v3-${{ github.event.pull_request.head.sha }}
           path: |
-            /tmp/physical-economy-calibration-v2.log
-            /tmp/physical-economy-structural-v2.log
-            /tmp/physical-economy-calibration-v2/legacy-structural-exit-code.txt
-            /tmp/physical-economy-calibration-v2/physical-economy-runtime-pack-v2-candidate.json
-            /tmp/physical-economy-calibration-v2/physical-economy-aggregate-results-v2.json
-            /tmp/physical-economy-calibration-v2/physical-economy-gate-summary-v2.json
-            /tmp/physical-economy-calibration-v2/physical-economy-run-manifest-v2.json
-            /tmp/physical-economy-calibration-v2/physical-economy-structural-report-v2.json
-            /tmp/physical-economy-calibration-v2/physical-economy-raw-results-v2.jsonl.gz
+            /tmp/physical-economy-calibration-v3.log
+            /tmp/physical-economy-structural-v3.log
+            /tmp/physical-economy-calibration-v3/legacy-structural-exit-code.txt
+            /tmp/physical-economy-calibration-v3/physical-economy-runtime-pack-v3-candidate.json
+            /tmp/physical-economy-calibration-v3/physical-economy-aggregate-results-v3.json
+            /tmp/physical-economy-calibration-v3/physical-economy-gate-summary-v3.json
+            /tmp/physical-economy-calibration-v3/physical-economy-run-manifest-v3.json
+            /tmp/physical-economy-calibration-v3/physical-economy-structural-report-v3.json
+            /tmp/physical-economy-calibration-v3/physical-economy-raw-results-v3.jsonl.gz
           if-no-files-found: warn
           retention-days: 30
