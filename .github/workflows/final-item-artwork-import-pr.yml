@@ -1,0 +1,189 @@
+name: Final Item Artwork Import PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/final-item-artwork-import-pr.yml"
+      - "docs/seed-content/items/blueprint-artwork-source-v2.json"
+      - "docs/seed-content/items/material-artwork-expansion-v2.json"
+      - "docs/seed-content/items/.final-item-artwork-download-v2.json"
+      - "scripts/final-item-artwork-contract.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: final-item-artwork-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  import-final-artwork:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'agent/seed-content-usable-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install deterministic image tooling
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+
+      - name: Import and optimize final item artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import io
+          import json
+          import pathlib
+          import urllib.request
+          from PIL import Image, ImageOps
+
+          root = pathlib.Path.cwd()
+          blueprint_path = root / 'docs/seed-content/items/blueprint-artwork-source-v2.json'
+          material_path = root / 'docs/seed-content/items/material-artwork-expansion-v2.json'
+          download_path = root / 'docs/seed-content/items/.final-item-artwork-download-v2.json'
+          store_path = root / 'docs/seed-content/items/store-artwork-source-v2.json'
+
+          blueprints = json.loads(blueprint_path.read_text(encoding='utf-8'))
+          materials = json.loads(material_path.read_text(encoding='utf-8'))
+          downloads = json.loads(download_path.read_text(encoding='utf-8'))
+          store = json.loads(store_path.read_text(encoding='utf-8'))
+          url_by_creation = {entry['creationIdentifier']: entry['url'] for entry in downloads['records']}
+          store_by_key = {record['itemKey']: record for record in store['records']}
+
+          new_blueprints = [record for record in blueprints['records'] if record.get('reuseSource') is None]
+          new_materials = materials['records']
+          expected_ids = {record['creationIdentifier'] for record in [*new_blueprints, *new_materials]}
+          if downloads.get('recordCount') != 18 or len(url_by_creation) != 18 or expected_ids != set(url_by_creation):
+              raise SystemExit('Final artwork download coverage does not match the permanent manifests.')
+
+          def import_record(record, relative_path):
+              output_path = root / relative_path
+              request = urllib.request.Request(
+                  url_by_creation[record['creationIdentifier']],
+                  headers={'User-Agent': 'Econovaria-Seed-Asset-Importer/2.0'},
+              )
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  source = response.read()
+              with Image.open(io.BytesIO(source)) as original:
+                  image = ImageOps.exif_transpose(original).convert('RGB')
+                  image = ImageOps.fit(image, (1024, 1024), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+                  output_path.parent.mkdir(parents=True, exist_ok=True)
+                  image.save(output_path, format='WEBP', quality=86, method=6)
+              data = output_path.read_bytes()
+              record.update({
+                  'runtimeImagePath': relative_path.as_posix(),
+                  'assetStatus': 'repository-owned',
+                  'sha256': hashlib.sha256(data).hexdigest(),
+                  'bytes': len(data),
+                  'width': 1024,
+                  'height': 1024,
+                  'mediaType': 'image/webp',
+              })
+
+          for record in blueprints['records']:
+              if record.get('reuseSource') == 'store-artwork-source-v2':
+                  source = store_by_key.get(record['itemKey'])
+                  if source is None:
+                      raise SystemExit(f"Missing Store reuse source for {record['itemKey']}")
+                  record.update({
+                      'creationIdentifier': source['creationIdentifier'],
+                      'sourcePageUrl': source['sourcePageUrl'],
+                      'runtimeImagePath': source['runtimeImagePath'],
+                      'assetStatus': 'repository-reused',
+                      'sha256': source['sha256'],
+                      'bytes': source['bytes'],
+                      'width': source['width'],
+                      'height': source['height'],
+                      'mediaType': source['mediaType'],
+                  })
+                  continue
+              relative = pathlib.Path('player-terminal/assets/images/items/blueprints') / record['country'] / f"{record['itemKey']}.webp"
+              import_record(record, relative)
+
+          for record in materials['records']:
+              relative = pathlib.Path('player-terminal/assets/images/items/materials') / record['country'] / f"{record['itemKey']}.webp"
+              import_record(record, relative)
+
+          blueprints['runtimeDelivery'].update({
+              'binaryFilesCommitted': True,
+              'runtimeImagePathsAvailable': True,
+              'reason': 'Seventeen optimized blueprint and authorization WebPs are repository-owned; the identical Syndalis blueprint reuses its verified Store asset.',
+          })
+          materials['runtimeDelivery'].update({
+              'binaryFilesCommitted': True,
+              'runtimeImagePathsAvailable': True,
+              'reason': 'The remaining material artwork is an optimized repository-owned WebP.',
+          })
+          blueprint_path.write_text(json.dumps(blueprints, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          material_path.write_text(json.dumps(materials, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          print(json.dumps({'blueprints': 18, 'newBlueprintBinaries': 17, 'reusedBlueprintBinaries': 1, 'newMaterialBinaries': 1}, indent=2))
+          PY
+
+      - name: Wire permanent artwork validation
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          path = pathlib.Path('package.json')
+          package = json.loads(path.read_text(encoding='utf-8'))
+          package['scripts']['validate:physical-item-artwork'] = 'node scripts/store-content-artwork-contract.mjs && node scripts/component-artwork-contract.mjs && node scripts/equipment-artwork-contract.mjs && node scripts/consumable-artwork-contract.mjs && node scripts/final-item-artwork-contract.mjs'
+          current = package['scripts']['test:seed-beta-pack']
+          suffix = ' && npm run validate:physical-item-artwork'
+          if suffix not in current:
+              package['scripts']['test:seed-beta-pack'] = current + suffix
+          path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Validate complete physical-economy content and artwork
+        run: |
+          node scripts/store-content-artwork-contract.mjs
+          node scripts/component-artwork-contract.mjs
+          node scripts/equipment-artwork-contract.mjs
+          node scripts/consumable-artwork-contract.mjs
+          node scripts/final-item-artwork-contract.mjs
+          node --test scripts/item-content-coverage.test.mjs
+
+      - name: Commit final assets, manifests, and validation wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            package.json \
+            docs/seed-content/items/blueprint-artwork-source-v2.json \
+            docs/seed-content/items/material-artwork-expansion-v2.json \
+            player-terminal/assets/images/items/blueprints \
+            player-terminal/assets/images/items/materials
+          if git diff --cached --quiet; then
+            echo "Final item artwork is already current."
+            exit 0
+          fi
+          git commit -m "seed: import final physical-economy artwork assets"
+          git push origin "HEAD:${{ github.head_ref }}"
