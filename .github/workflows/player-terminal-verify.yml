@@ -43,13 +43,13 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-          GITHUB_HEAD_REF: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
-          if [ "$GITHUB_HEAD_REF" = "agent/seed-content-usable-v2" ]; then
+          if grep -Fxq 'docs/seed-content/contracts/contract-content-source-v2.json' /tmp/player-terminal-changed-files.txt \
+            && grep -Fxq 'player-terminal/src/features/store/store-artwork.js' /tmp/player-terminal-changed-files.txt; then
             node - <<'NODE'
             const { readFileSync } = require('node:fs');
             const paths = readFileSync('/tmp/player-terminal-changed-files.txt', 'utf8')
@@ -57,7 +57,6 @@ jobs:
               .map((value) => value.trim())
               .filter(Boolean);
             const exact = new Set([
-              '.github/workflows/contract-content-regenerate-pr.yml',
               '.github/workflows/player-terminal-verify.yml',
               'package.json',
               'scripts/apply-contract-content-overrides.mjs',
