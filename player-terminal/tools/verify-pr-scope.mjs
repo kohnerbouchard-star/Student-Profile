@@ -47,7 +47,6 @@ const exactAllowed = new Set([
   "admin/assets/econovaria-icon.png",
   "admin/assets/favicon-32.png",
   "scripts/brand-asset-contract.mjs",
-  "scripts/apply-brand-render-fix.py",
   "assets/brand/econovaria-logo.webp",
   "assets/brand/favicon-32.png",
   "assets/brand/econovaria-logo-loop.mp4",
