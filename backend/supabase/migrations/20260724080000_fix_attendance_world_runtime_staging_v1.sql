@@ -2,12 +2,12 @@ begin;
 
 -- Player residency state is a durable runtime record. Restore the conventional
 -- creation timestamp expected by deployed World readers while preserving the
--- existing requested/updated chronology for already-created rows.
+-- existing update chronology for already-created rows.
 alter table public.player_residency_states
   add column if not exists created_at timestamptz;
 
 update public.player_residency_states
-set created_at = coalesce(requested_at, updated_at, now())
+set created_at = coalesce(updated_at, now())
 where created_at is null;
 
 alter table public.player_residency_states
