@@ -1,5 +1,4 @@
-# diagnostic revision: 2
-name: Progression Content Regenerate PR
+name: Progression Content Finalize PR
 
 on:
   pull_request:
@@ -11,21 +10,17 @@ on:
       - reopened
     paths:
       - ".github/workflows/progression-content-regenerate-pr.yml"
-      - "package.json"
-      - "docs/seed-content/progression/progression-content-source-v2.json"
-      - "scripts/apply-progression-content-overrides.mjs"
-      - "scripts/progression-content-quality.test.mjs"
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: progression-content-regenerate-${{ github.event.pull_request.number }}
+  group: progression-content-finalize-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  regenerate-progression-content:
+  finalize-progression-content:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'agent/seed-content-usable-v2'
@@ -38,12 +33,63 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
+      - name: Recover permanent progression sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/seed-content/progression scripts
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/contents/docs/seed-content/progression/progression-content-source-v2.json?ref=596846672eecdd5a9ce761c5c974dac5921f1973" \
+            --jq .content | base64 --decode > docs/seed-content/progression/progression-content-source-v2.json
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/contents/scripts/apply-progression-content-overrides.mjs?ref=43576823766b843dae9da8b83a92cd53be31faed" \
+            --jq .content | base64 --decode > scripts/apply-progression-content-overrides.mjs
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/contents/scripts/progression-content-quality.test.mjs?ref=14b608176e1c0394a29cbb555e2759df17c2180c" \
+            --jq .content | base64 --decode > scripts/progression-content-quality.test.mjs
+
+      - name: Repair progression presentation quality
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+
+          path = pathlib.Path('docs/seed-content/progression/progression-content-source-v2.json')
+          source = json.loads(path.read_text(encoding='utf-8'))
+          records = {entry['publicAchievementId']: entry for entry in source['achievements']}
+
+          records['ach_enterprise_operator_v1']['completionEvidence'] = (
+              'Only authoritative completed business-operation events with valid game, player, source, and idempotency scope count toward this achievement.'
+          )
+          records['ach_enterprise_operator_v1']['rewardDisclosure'] = (
+              'Awards one skill point and five general career reputation after the fifth eligible business operation is committed atomically.'
+          )
+          records['ach_workshop_regular_v1']['rewardDisclosure'] = (
+              'Awards one skill point and five general career reputation after the fifth eligible Crafting completion is committed atomically.'
+          )
+          records['ach_story_pathfinder_v1']['rewardDisclosure'] = (
+              'Awards one skill point and six campaign story reputation after the third eligible chapter completion is committed atomically.'
+          )
+          records['ach_skilled_generalist_v1']['playerFacingDescription'] = (
+              'Unlock four distinct active skills and build usable capability beyond a single isolated specialization while preserving each skill’s prerequisites and cost.'
+          )
+          records['ach_level_ten_v1']['rewardDisclosure'] = (
+              'Awards two skill points and ten general career reputation after the authoritative progression profile reaches level ten.'
+          )
+
+          path.write_text(json.dumps(source, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+
       - name: Wire progression content into canonical seed build
         shell: bash
         run: |
           python - <<'PY'
           import json
           import pathlib
+
           path = pathlib.Path('package.json')
           package = json.loads(path.read_text(encoding='utf-8'))
           progression_step = 'node scripts/apply-progression-content-overrides.mjs'
@@ -55,11 +101,15 @@ jobs:
               else:
                   build += ' && ' + progression_step
           package['scripts']['build:seed-beta-pack'] = build
+
           test_file = 'scripts/progression-content-quality.test.mjs'
           test_command = package['scripts']['test:seed-beta-pack']
           if test_file not in test_command:
               marker = 'scripts/interaction-content-quality.test.mjs'
-              package['scripts']['test:seed-beta-pack'] = test_command.replace(marker, marker + ' ' + test_file)
+              if marker not in test_command:
+                  raise SystemExit('Interaction content quality test marker is absent from the canonical Seed test command.')
+              test_command = test_command.replace(marker, marker + ' ' + test_file)
+          package['scripts']['test:seed-beta-pack'] = test_command
           package['scripts']['validate:progression-content'] = 'node --test scripts/progression-content-quality.test.mjs'
           path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
           PY
@@ -76,7 +126,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild executable seed pack with authored progression content
+      - name: Rebuild executable Seed pack
         id: build
         continue-on-error: true
         shell: bash
@@ -84,26 +134,26 @@ jobs:
           set -o pipefail
           npm run build:seed-beta-pack 2>&1 | tee /tmp/progression-content-build.log
 
-      - name: Publish concise progression build failure
+      - name: Publish progression failure
         if: steps.build.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           {
-            echo '### Progression content concise failure'
+            echo '### Progression content finalization failure'
             echo
             echo '```text'
-            tail -n 30 /tmp/progression-content-build.log | sed -E 's#https://[^ ]+#<url-redacted>#g'
+            tail -n 50 /tmp/progression-content-build.log | sed -E 's#https://[^ ]+#<url-redacted>#g'
             echo '```'
           } > /tmp/progression-content-build-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/progression-content-build-comment.md
 
-      - name: Stop after progression build failure
+      - name: Stop after build failure
         if: steps.build.outcome == 'failure'
         run: exit 1
 
-      - name: Validate executable pack and authored progression content
+      - name: Validate authored Seed pack
         if: steps.build.outcome == 'success'
         run: |
           npm run validate:seed-beta-pack
@@ -115,23 +165,29 @@ jobs:
           npm run validate:physical-item-artwork
           npm run test:seed-beta-pack
 
-      - name: Commit deterministic progression content artifacts
+      - name: Commit permanent progression content
         if: steps.build.outcome == 'success'
-        env:
-          ACCEPTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/refresh-seed-consumer-contract.mjs --source-sha "$ACCEPTED_SOURCE_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             package.json \
-            docs/seed-content/executable/beta-pack-v1 \
-            docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
-          if git diff --cached --quiet; then
-            echo "Progression content pack and consumer contract are already current."
-            exit 0
-          fi
-          git commit -m "seed: regenerate authored progression content pack"
+            docs/seed-content/progression/progression-content-source-v2.json \
+            scripts/apply-progression-content-overrides.mjs \
+            scripts/progression-content-quality.test.mjs \
+            docs/seed-content/executable/beta-pack-v1
+          git commit -m "seed: add authored progression content"
+
+      - name: Bind consumer contract and remove temporary workflow
+        if: steps.build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          accepted_source_sha="$(git rev-parse HEAD)"
+          node scripts/refresh-seed-consumer-contract.mjs --source-sha "$accepted_source_sha"
+          git add docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
+          git rm .github/workflows/progression-content-regenerate-pr.yml
+          git commit -m "ci(seed): finalize progression content binding"
           git push origin "HEAD:${{ github.head_ref }}"
