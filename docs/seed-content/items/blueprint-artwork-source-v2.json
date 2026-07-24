@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "econovaria-blueprint-artwork-source-v2",
+  "status": "generated-artwork-provenance",
+  "provider": "Magnific",
+  "recordCount": 18,
+  "runtimeDelivery": {
+    "binaryFilesCommitted": false,
+    "runtimeImagePathsAvailable": false,
+    "newBinaryCount": 17,
+    "reusedBinaryCount": 1,
+    "reason": "Seventeen individual blueprint and authorization renders are generated; the existing Syndalis Store artwork is reused for the identical blueprint identity.",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp"
+  },
+  "artDirection": {
+    "theme": "grounded cyberpunk industrial credential and blueprint catalog",
+    "aspectRatio": "1:1",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp",
+    "embeddedTextProhibited": true,
+    "peopleProhibited": true,
+    "weaponsProhibited": true
+  },
+  "records": [
+    {"stableId":"artwork.blueprint.northreach.precision-sensor-blueprint.v2","country":"northreach","sourceItemStableId":"item.precision-sensor-blueprint.v1","itemKey":"precision-sensor-blueprint","provider":"Magnific","creationIdentifier":"swjmPs9l8e","sourcePageUrl":"https://www.magnific.com/app/creation/swjmPs9l8e","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.yrethia.maritime-navigation-blueprint.v2","country":"yrethia","sourceItemStableId":"item.maritime-navigation-blueprint.v1","itemKey":"maritime-navigation-blueprint","provider":"Magnific","creationIdentifier":"DBVPhIQpcl","sourcePageUrl":"https://www.magnific.com/app/creation/DBVPhIQpcl","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.thaloris.high-capacity-energy-blueprint.v2","country":"thaloris","sourceItemStableId":"item.high-capacity-energy-blueprint.v1","itemKey":"high-capacity-energy-blueprint","provider":"Magnific","creationIdentifier":"EqfcrsbuuO","sourcePageUrl":"https://www.magnific.com/app/creation/EqfcrsbuuO","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.solvend.research-instrument-blueprint.v2","country":"solvend","sourceItemStableId":"item.research-instrument-blueprint.v1","itemKey":"research-instrument-blueprint","provider":"Magnific","creationIdentifier":"CHaW1JFEEy","sourcePageUrl":"https://www.magnific.com/app/creation/CHaW1JFEEy","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.eldoran.financial-analytics-blueprint.v2","country":"eldoran","sourceItemStableId":"item.financial-analytics-blueprint.v1","itemKey":"financial-analytics-blueprint","provider":"Magnific","creationIdentifier":"0pW78rkTfW","sourcePageUrl":"https://www.magnific.com/app/creation/0pW78rkTfW","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.valerion.water-resilience-blueprint.v2","country":"valerion","sourceItemStableId":"item.water-resilience-blueprint.v1","itemKey":"water-resilience-blueprint","provider":"Magnific","creationIdentifier":"kL5Xwp516B","sourcePageUrl":"https://www.magnific.com/app/creation/kL5Xwp516B","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.lumenor.translation-systems-blueprint.v2","country":"lumenor","sourceItemStableId":"item.translation-systems-blueprint.v1","itemKey":"translation-systems-blueprint","provider":"Magnific","creationIdentifier":"CHaW1D9EEy","sourcePageUrl":"https://www.magnific.com/app/creation/CHaW1D9EEy","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.xalvoria.portable-fabrication-blueprint.v2","country":"xalvoria","sourceItemStableId":"item.portable-fabrication-blueprint.v1","itemKey":"portable-fabrication-blueprint","provider":"Magnific","creationIdentifier":"9RPbnUjNYZ","sourcePageUrl":"https://www.magnific.com/app/creation/9RPbnUjNYZ","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.dravenlok.heavy-maintenance-blueprint.v2","country":"dravenlok","sourceItemStableId":"item.heavy-maintenance-blueprint.v1","itemKey":"heavy-maintenance-blueprint","provider":"Magnific","creationIdentifier":"DBVPhMtpcl","sourcePageUrl":"https://www.magnific.com/app/creation/DBVPhMtpcl","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.syndalis.secure-communications-blueprint.v2","country":"syndalis","sourceItemStableId":"item.secure-communications-blueprint.v1","itemKey":"secure-communications-blueprint","provider":"Magnific","creationIdentifier":"PiOFhCQ42C","sourcePageUrl":"https://www.magnific.com/app/creation/PiOFhCQ42C","runtimeImagePath":"player-terminal/assets/images/items/store/syndalis/secure-communications-blueprint.webp","assetStatus":"repository-reused","reuseSource":"store-artwork-source-v2","sha256":"af7dd1bbe2ca616ba0a55229b9215070fa6f763cfec40e7e3571ccdd70b05855","bytes":87048,"width":1024,"height":1024,"mediaType":"image/webp"},
+    {"stableId":"artwork.blueprint.global.tier-one-workshop-permit.v2","country":"global","sourceItemStableId":"item.tier-one-workshop-permit.v1","itemKey":"tier-one-workshop-permit","provider":"Magnific","creationIdentifier":"WMnU3xycXe","sourcePageUrl":"https://www.magnific.com/app/creation/WMnU3xycXe","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.tier-two-workshop-permit.v2","country":"global","sourceItemStableId":"item.tier-two-workshop-permit.v1","itemKey":"tier-two-workshop-permit","provider":"Magnific","creationIdentifier":"ohX3T3g829","sourcePageUrl":"https://www.magnific.com/app/creation/ohX3T3g829","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.tier-three-workshop-permit.v2","country":"global","sourceItemStableId":"item.tier-three-workshop-permit.v1","itemKey":"tier-three-workshop-permit","provider":"Magnific","creationIdentifier":"DBVPzZupcl","sourcePageUrl":"https://www.magnific.com/app/creation/DBVPzZupcl","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.commercial-equipment-fabrication-license.v2","country":"global","sourceItemStableId":"item.commercial-equipment-fabrication-license.v1","itemKey":"commercial-equipment-fabrication-license","provider":"Magnific","creationIdentifier":"CHaWomhEEy","sourcePageUrl":"https://www.magnific.com/app/creation/CHaWomhEEy","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.strategic-materials-handling-permit.v2","country":"global","sourceItemStableId":"item.strategic-materials-handling-permit.v1","itemKey":"strategic-materials-handling-permit","provider":"Magnific","creationIdentifier":"dIpNcoNXSL","sourcePageUrl":"https://www.magnific.com/app/creation/dIpNcoNXSL","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.emergency-infrastructure-production-permit.v2","country":"global","sourceItemStableId":"item.emergency-infrastructure-production-permit.v1","itemKey":"emergency-infrastructure-production-permit","provider":"Magnific","creationIdentifier":"PiOHg2l42C","sourcePageUrl":"https://www.magnific.com/app/creation/PiOHg2l42C","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.cross-border-supplier-credential.v2","country":"global","sourceItemStableId":"item.cross-border-supplier-credential.v1","itemKey":"cross-border-supplier-credential","provider":"Magnific","creationIdentifier":"NZ45wMh6D9","sourcePageUrl":"https://www.magnific.com/app/creation/NZ45wMh6D9","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"},
+    {"stableId":"artwork.blueprint.global.advanced-salvage-recovery-license.v2","country":"global","sourceItemStableId":"item.advanced-salvage-recovery-license.v1","itemKey":"advanced-salvage-recovery-license","provider":"Magnific","creationIdentifier":"brHpfZh5Y2","sourcePageUrl":"https://www.magnific.com/app/creation/brHpfZh5Y2","runtimeImagePath":null,"assetStatus":"generated-awaiting-repository-export"}
+  ]
+}
