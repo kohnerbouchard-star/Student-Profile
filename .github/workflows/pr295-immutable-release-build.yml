@@ -13,18 +13,18 @@ permissions:
   attestations: write
 
 concurrency:
-  group: pr295-immutable-release-v8-${{ github.event.pull_request.head.sha }}
+  group: pr295-immutable-release-v9-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event.pull_request.number == 295 && github.event.pull_request.head.sha == 'feb32bc9d8b387bc565151e8a6c622f300c702e6'
+    if: github.event.pull_request.number == 295
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      RELEASE_COMMIT: 43d2534e3f7e958119b7cb15ed474065a66f2574
+      RELEASE_COMMIT: b2738b83993cf6ed8ac47d68bad7e548f9b0293c
       SOURCE_ROOT: /tmp/econovaria-release-source
-      OUTPUT_ROOT: /tmp/econovaria-release-v8
+      OUTPUT_ROOT: /tmp/econovaria-release-v9
     steps:
       - name: Check out exact PR295 tooling
         uses: actions/checkout@v7
@@ -114,8 +114,8 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: econovaria-release-43d2534e3f7e958119b7cb15ed474065a66f2574-v8
-          path: /tmp/econovaria-release-v8
+          name: econovaria-release-b2738b83993cf6ed8ac47d68bad7e548f9b0293c-v9
+          path: /tmp/econovaria-release-v9
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
@@ -125,10 +125,10 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: |
-            /tmp/econovaria-release-v8/artifacts/*
-            /tmp/econovaria-release-v8/checksums.sha256
-            /tmp/econovaria-release-v8/release-configuration.json
-            /tmp/econovaria-release-v8/release-manifest.json
+            /tmp/econovaria-release-v9/artifacts/*
+            /tmp/econovaria-release-v9/checksums.sha256
+            /tmp/econovaria-release-v9/release-configuration.json
+            /tmp/econovaria-release-v9/release-manifest.json
           show-summary: true
 
       - name: Record immutable identity
