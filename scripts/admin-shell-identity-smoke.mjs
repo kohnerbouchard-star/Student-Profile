@@ -30,6 +30,7 @@ const expectedAdminScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./game-session-controls.js",
   "./admin-stabilization.js",
   "./interaction-quality.js",
   "./data-state-contracts.js",
@@ -70,12 +71,14 @@ const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle
 const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
+const gameSessionControls = readFileSync(resolve(adminRoot, "game-session-controls.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
 const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
 const dataStateContracts = readFileSync(resolve(adminRoot, "data-state-contracts.js"), "utf8");
 const interactionControlReset = readFileSync(resolve(adminRoot, "interaction-quality-control-reset.js"), "utf8");
 const shapeSkeletons = readFileSync(resolve(adminRoot, "shape-accurate-skeletons.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
+const gameSessionControlsCss = readFileSync(resolve(adminRoot, "css/game-session-controls.css"), "utf8");
 const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
 const dataStateCss = readFileSync(resolve(adminRoot, "css/data-state-contracts.css"), "utf8");
 const shapeSkeletonCss = readFileSync(resolve(adminRoot, "css/shape-accurate-skeletons.css"), "utf8");
@@ -156,6 +159,20 @@ assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials 
 assert(playerCreateUx.includes("dismissOnBackdrop: false"), "One-time credentials can be dismissed by accidental backdrop click.");
 assert(playerCreateUx.includes("lastCreateOpener"), "Player confirmation does not retain its opening control for focus restoration.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
+
+assert(gameSessionControls.includes("econovaria.admin.selected-game.v1"), "Selected-game control does not bind to the active Admin game.");
+assert(gameSessionControls.includes("Players using this code join this game instance."), "Selected-game card does not explain the multiplayer target.");
+assert(gameSessionControls.includes('url.searchParams.set("mode", "player")'), "Shared game link does not target Player login.");
+assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared game link omits the selected Game Code.");
+assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admin sign-out route is missing.");
+assert(gameSessionControls.includes("event.stopImmediatePropagation()"), "Broken delegated logout handlers are not isolated.");
+assert(gameSessionControls.includes("EconovariaAdminAuthSession?.clear?.()"), "Admin logout does not clear the session manager.");
+assert(gameSessionControls.includes("createFallbackShareSurface"), "Share Game Access has no bounded fallback surface.");
+assert(!gameSessionControls.includes("window.fetch ="), "Selected-game controls replace the global fetch transport.");
+assert(gameSessionControlsCss.includes("pointer-events: auto !important"), "Selected-game controls do not restore pointer input.");
+assert(gameSessionControlsCss.includes('width: min(620px, calc(100vw - 32px))'), "Share Game Access is not responsively bounded.");
+assert(html.includes("./css/game-session-controls.css"), "Selected-game control stylesheet is not loaded.");
+assert(html.includes("./game-session-controls.js"), "Selected-game controller is not loaded.");
 
 assert(stabilization.includes("reconcileKnownButtons"), "Admin glyph reconciliation is missing.");
 assert(stabilization.includes("reconcileNumericFormatting"), "Admin numeric-format reconciliation is missing.");
@@ -242,4 +259,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, runtime configuration bootstrap, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
+console.log("Original v606 shell, selected multiplayer game controls, runtime configuration bootstrap, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
