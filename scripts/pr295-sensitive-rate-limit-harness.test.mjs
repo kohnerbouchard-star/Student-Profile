@@ -48,10 +48,17 @@ function captureQueryPlans() {
 test("installs the replay-safe sensitive rate-limit probe", () => {
   const patched = patchSensitiveRateLimitAcceptance(LEGACY_SOURCE);
   assert.match(patched, /player\.messages\.thread\.create/);
+  assert.match(patched, /probePlayerIndex = 2/);
+  assert.match(
+    patched,
+    /playerToken: fixture\.directSessionTokens\[probePlayerIndex\]/,
+  );
+  assert.match(patched, /lifecyclePlayerIndex: 0/);
   assert.match(patched, /configuredActionLimit: 10/);
   assert.match(patched, /configuredWindowSeconds: 300/);
   assert.match(patched, /expectedStatuses: \[200, 201, 429\]/);
   assert.match(patched, /assertSafePlayerResponse/);
+  assert.doesNotMatch(patched, /playerToken: loginSessionToken/);
   assert.doesNotMatch(patched, /bounded-abuse-ramp/);
   assert.doesNotMatch(
     patched,
