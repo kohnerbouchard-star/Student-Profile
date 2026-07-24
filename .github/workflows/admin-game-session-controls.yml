@@ -106,6 +106,12 @@ jobs:
           cat /tmp/admin-game-session-controls.log
           exit 1
 
+      - name: Exercise real account-menu logout confirmation in Chromium
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-logout-confirmation-browser-smoke.mjs 2>&1 | tee /tmp/admin-logout-confirmation-browser.log
+
       - name: Click Share and verify direct logout transport in Chromium
         run: |
           cp admin/index.html /tmp/admin-index-with-logout-confirmation.html
@@ -120,12 +126,6 @@ jobs:
           )
           PY
           node scripts/admin-game-session-controls-browser-smoke.mjs
-
-      - name: Exercise real account-menu logout confirmation in Chromium
-        shell: bash
-        run: |
-          set -o pipefail
-          node scripts/admin-logout-confirmation-browser-smoke.mjs 2>&1 | tee /tmp/admin-logout-confirmation-browser.log
 
       - name: Create game and verify Player target in Chromium
         if: github.event.pull_request.number == 334
