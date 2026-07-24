@@ -139,7 +139,7 @@ jobs:
         with:
           version: 2.81.3
 
-      - name: Link isolated staging and verify pre-migration ledger
+      - name: Link isolated staging and classify migration state
         shell: bash
         run: |
           set -euo pipefail
@@ -161,12 +161,18 @@ jobs:
               from supabase_migrations.schema_migrations
             "
           )
-          test "$count" = "$EXPECTED_LEDGER_COUNT_BEFORE"
-          test "$head" = "$EXPECTED_LEDGER_HEAD_BEFORE"
-          test "$digest" = "$EXPECTED_LEDGER_SHA256_BEFORE"
-          test "$(psql "$pooler_url" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")" = "0"
+          present="$(psql "$pooler_url" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")"
+          if [ "$count" = "$EXPECTED_LEDGER_COUNT_BEFORE" ] && [ "$head" = "$EXPECTED_LEDGER_HEAD_BEFORE" ] && [ "$digest" = "$EXPECTED_LEDGER_SHA256_BEFORE" ] && [ "$present" = "0" ]; then
+            echo 'MIGRATION_REQUIRED=true' >> "$GITHUB_ENV"
+          elif [ "$count" = "$EXPECTED_LEDGER_COUNT_AFTER" ] && [ "$head" = "$EXPECTED_LEDGER_HEAD_AFTER" ] && [ "$digest" = "$EXPECTED_LEDGER_SHA256_AFTER" ] && [ "$present" = "1" ]; then
+            echo 'MIGRATION_REQUIRED=false' >> "$GITHUB_ENV"
+          else
+            echo "Unexpected staging migration state: count=$count head=$head digest=$digest present=$present" >&2
+            exit 1
+          fi
 
       - name: Apply exact forward lifecycle repair atomically
+        if: env.MIGRATION_REQUIRED == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -282,7 +288,7 @@ jobs:
             echo "- Source artifact: \`$SOURCE_ARTIFACT_ID\`"
             echo "- Artifact archive: \`$EXPECTED_ARCHIVE_SHA256\`"
             echo "- Artifact set: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
-            echo "- Migration applied: \`$MIGRATION_VERSION\`"
+            echo "- Migration required on this run: \`$MIGRATION_REQUIRED\`"
             echo "- Staging ledger: \`$EXPECTED_LEDGER_COUNT_AFTER / $EXPECTED_LEDGER_HEAD_AFTER / $EXPECTED_LEDGER_SHA256_AFTER\`"
             echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
             echo '- Exact functions deployed: `7`'
