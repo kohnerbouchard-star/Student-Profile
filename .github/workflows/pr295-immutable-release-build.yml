@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.pull_request.number == 295
+    if: github.event.pull_request.number == 295 && github.event.pull_request.head.sha == '1cc7373a2444807033e038d1d10ccf423dac74ab'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
