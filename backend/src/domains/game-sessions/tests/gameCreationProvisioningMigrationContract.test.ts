@@ -11,6 +11,10 @@ const V2_MIGRATION = new URL(
   "../../../../supabase/migrations/20260724120000_add_full_game_feature_activation_v2.sql",
   import.meta.url,
 );
+const STORY_REPAIR_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260724121000_repair_demo_storyline_activation_conflict_v2.sql",
+  import.meta.url,
+);
 
 Deno.test("Admin game creation provisions one isolated multiplayer game atomically", async () => {
   const sql = await Deno.readTextFile(V1_MIGRATION);
@@ -111,6 +115,18 @@ Deno.test("full activation v2 publishes executable Story and Arrival services wi
   assertIncludes(sql, "to service_role");
   assertNotIncludes(sql, "to authenticated");
   assertNotIncludes(sql, "productionAuthorized', true");
+});
+
+Deno.test("Story activation conflict ambiguity is repaired forward-only", async () => {
+  const sql = await Deno.readTextFile(STORY_REPAIR_MIGRATION);
+
+  assertIncludes(sql, "create or replace function public.initialize_demo_storyline_for_game");
+  assertIncludes(sql, "on conflict on constraint game_session_storylines_scope_unique");
+  assertNotIncludes(sql, "on conflict (game_session_id, storyline_id)");
+  assertIncludes(sql, "revoke all on function public.initialize_demo_storyline_for_game(uuid, text)");
+  assertIncludes(sql, "from public, anon, authenticated");
+  assertIncludes(sql, "grant execute on function public.initialize_demo_storyline_for_game(uuid, text)");
+  assertIncludes(sql, "to service_role");
 });
 
 function assertIncludes(text: string, expected: string): void {
