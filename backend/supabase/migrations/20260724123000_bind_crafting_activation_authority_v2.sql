@@ -1,6 +1,6 @@
 begin;
 
--- Forward-only identity binding for the exact PR #163 physical-economy
+-- Forward-only identity binding for the exact accepted Seed physical-economy
 -- definitions with the reviewed V3 non-production activation authority.
 -- Definition bytes, source SHA, Seed digest, and production denial remain fixed.
 
@@ -19,8 +19,8 @@ as $function$
 declare
   v_pack_key constant text := 'econovaria.beta-seed-pack.v1';
   v_pack_version constant text := '1.0.0-beta';
-  v_seed_pack_digest constant text := '190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8';
-  v_merged_seed_sha constant text := '6ced5aa36e60dfbd82620463f4f4bf6f56a349dd';
+  v_seed_pack_digest constant text := '31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7';
+  v_merged_seed_sha constant text := '04824da5ed8ea47bbabd893ab27f7ac285f050f2';
   v_definition_authority constant text := 'PR #163 with bounded V3 staging activation authority';
   v_runtime_digest text := lower(btrim(coalesce(p_pack->>'contentDigest','')));
   v_event public.physical_economy_admin_events%rowtype;
@@ -46,7 +46,7 @@ begin
   then
     raise exception 'PHYSICAL_ECONOMY_PACK_IDENTITY_MISMATCH'
       using errcode='P0001',
-      hint='Import requires exact PR #163 definitions, V3 activation authority, matching runtime and Seed digests, and production denial.';
+      hint='Import requires the exact accepted Seed definitions, V3 activation authority, matching runtime and Seed digests, and production denial.';
   end if;
 
   select event_row.* into v_event
@@ -80,7 +80,7 @@ $function$;
 comment on function public.import_physical_economy_pack_v1(
   uuid, uuid, jsonb, text, text
 ) is
-  'Imports exact PR #163 physical-economy definitions only when bound to the reviewed V3 local/test/staging activation authority. Production authorization remains false.';
+  'Imports the exact accepted Seed physical-economy definitions only when bound to the reviewed V3 local/test/staging activation authority. Production authorization remains false.';
 
 revoke all on function public.import_physical_economy_pack_v1(
   uuid, uuid, jsonb, text, text
