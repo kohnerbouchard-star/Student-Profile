@@ -4,6 +4,10 @@ import { spawnSync } from "node:child_process";
 const index = readFileSync("admin/index.html", "utf8");
 const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 const controls = readFileSync("admin/game-session-controls.js", "utf8");
+const logoutController = readFileSync(
+  "admin/admin-logout-controller.js",
+  "utf8",
+);
 const shareLinkContract = readFileSync(
   "admin/game-session-share-link-contract.js",
   "utf8",
@@ -28,6 +32,7 @@ function checkJavaScript(path) {
 }
 
 checkJavaScript("admin/game-session-controls.js");
+checkJavaScript("admin/admin-logout-controller.js");
 checkJavaScript("admin/game-session-share-link-contract.js");
 
 assert(
@@ -44,8 +49,9 @@ assert(
 );
 assert(
   bootstrap.includes('name: "game-session-access"') &&
-    bootstrap.includes('modules: ["./game-session-share-link-contract.js"]'),
-  "Admin bootstrap must load the canonical selected-game share-link contract.",
+    bootstrap.includes('"./admin-logout-controller.js"') &&
+    bootstrap.includes('"./game-session-share-link-contract.js"'),
+  "Admin bootstrap must load the logout owner and canonical share-link contract.",
 );
 
 for (const contract of [
@@ -74,14 +80,25 @@ for (const contract of [
 }
 
 for (const contract of [
-  "/api/admin/auth/sign-out",
-  "EconovariaAdminAuthSession?.clear?.()",
-  "window.location.replace(loginUrl())",
+  "clearSessionSynchronously();",
+  "captureSession()",
+  "window.addEventListener(\"click\"",
   "event.stopImmediatePropagation()",
-  "data-econovaria-admin-logout",
+  "keepalive: true",
+  "/auth/sign-out",
+  "/auth/v1/logout",
+  "window.location.replace(loginUrl())",
 ]) {
-  assert(controls.includes(contract), `Admin logout repair is missing ${contract}.`);
+  assert(
+    logoutController.includes(contract),
+    `Synchronous Admin logout controller is missing ${contract}.`,
+  );
 }
+assert(
+  logoutController.indexOf("clearSessionSynchronously();") <
+    logoutController.indexOf("logoutPromise = revokeCapturedSession"),
+  "Admin session must be cleared before asynchronous revocation begins.",
+);
 
 assert(
   controls.includes("input[id*='share-admin-link']"),
@@ -92,7 +109,7 @@ assert(
   "Share repair must fail over to an accessible local surface when the bundle modal does not mount.",
 );
 assert(
-  styles.includes('pointer-events: auto !important;'),
+  styles.includes("pointer-events: auto !important;"),
   "Logout and share controls must explicitly restore pointer interaction.",
 );
 assert(
@@ -123,6 +140,6 @@ console.log(JSON.stringify({
   canonicalPlayerShareRoute: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
-  logoutFallback: true,
+  logoutSynchronousClear: true,
   backendGameCodeBinding: true,
 }, null, 2));
