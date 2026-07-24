@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "econovaria-physical-economy-activation-authorization-v2",
+  "status": "approved_non_production",
+  "authorizationId": "crafting.activation.v3.20260724",
+  "approvedBy": "Econovaria Controller",
+  "approvedAt": "2026-07-24T11:40:00Z",
+  "expiresAt": "2026-08-23T23:59:59Z",
+  "approvedEnvironments": ["local", "test", "staging"],
+  "productionAuthorized": false,
+  "catalogAuthorized": true,
+  "recipeAuthorized": true,
+  "calibrationAuthorized": true,
+  "definitions": {
+    "packKey": "econovaria.beta-seed-pack.v1",
+    "contentVersion": "1.0.0-beta",
+    "catalogSchemaVersion": "econovaria-base-item-manifest-v1",
+    "recipeSchemaVersion": "econovaria-recipe-manifest-v1",
+    "itemCount": 144,
+    "recipeCount": 60,
+    "substitutionCount": 44,
+    "salvageRuleCount": 30,
+    "durabilityEnabled": false,
+    "repairEnabled": false,
+    "hiddenCraftFailureRollAllowed": false
+  },
+  "calibrationEvidence": {
+    "gateSummaryPath": "docs/seed-content/simulation/physical-economy/physical-economy-gate-summary-v3.json",
+    "runManifestPath": "docs/seed-content/simulation/physical-economy/physical-economy-run-manifest-v3.json",
+    "inputPath": "docs/seed-content/simulation/physical-economy/physical-economy-simulation-input-v3.json",
+    "scriptPath": "scripts/simulate-physical-economy-activation-v3.mjs",
+    "runCount": 16000,
+    "implementedGates": 167,
+    "failedGates": 0,
+    "unresolvedGates": 0,
+    "substitutionExecutions": 82677,
+    "positiveSalvageRecraftLoops": 0,
+    "guaranteedSystemBuybackArbitrage": 0,
+    "sha256": {
+      "input": "b8021ab6112f466f5fb5c498e3d1e37804cb940d70e530a2e6ff61a170f0ed5d",
+      "script": "eb7a93af49342f83f3851c1b6dd701b0433674743b21635db1763fbcf3fcda7c",
+      "gateSummary": "a19530e54c9a40ebbd0b6b34ed5f5d37bec7616a733c78070a1351b1fa5c0a4e",
+      "aggregateResults": "b296fc7fc37e6117f246a1971d5383d54c264010b03fc1b6c12dd0e17f04a744",
+      "rawResultsArchive": "0c1fe1710646db0dc133314679896b5674bfefd7b0e4f76f55a1fb27a79e5bd3"
+    }
+  },
+  "acceptedStagingRisks": [
+    {
+      "risk": "import_spend_concentration",
+      "severity": "monitor",
+      "evidence": "Successful Crafting spends approximately 90% to 97% on imported inputs in the current candidate model.",
+      "reasonAccepted": "The ten-country physical economy intentionally depends on cross-border materials and substitutions. This is accepted for isolated staging only and remains a balance-monitoring requirement before production.",
+      "requiredMonitoring": [
+        "country-level Crafting access",
+        "import-price sensitivity",
+        "route disruption exposure",
+        "dominant supplier concentration",
+        "Player insolvency caused by Crafting inputs"
+      ]
+    }
+  ],
+  "deniedScope": [
+    "production deployment",
+    "automatic production activation",
+    "durability",
+    "repair",
+    "hidden random Crafting failure",
+    "guaranteed system buyback",
+    "unbounded salvage recovery"
+  ]
+}
