@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "econovaria-physical-economy-simulation-input-v3",
+  "status": "candidate-calibration",
+  "activationAuthorized": false,
+  "purpose": "Model the current Crafting runtime using cycle-level game supply state instead of independent ingredient-attempt stockouts.",
+  "runConfiguration": {
+    "countries": [
+      "NORTHREACH",
+      "YRETHIA",
+      "THALORIS",
+      "SOLVEND",
+      "ELDORAN",
+      "VALERION",
+      "LUMENOR",
+      "XALVORIA",
+      "DRAVENLOK",
+      "SYNDALIS"
+    ],
+    "difficulties": ["easy", "moderate", "hard", "insane"],
+    "scenarios": ["baseline", "shortage", "border_disruption", "reconstruction"],
+    "seeds": 100,
+    "playersPerCountry": 12,
+    "cycles": 30,
+    "tierUnlockCrafts": {
+      "tier2": 2,
+      "tier3": 2
+    }
+  },
+  "playerEconomy": {
+    "startingFunds": {
+      "easy": 700,
+      "moderate": 575,
+      "hard": 475,
+      "insane": 400
+    },
+    "cycleIncome": {
+      "easy": 150,
+      "moderate": 125,
+      "hard": 105,
+      "insane": 90
+    },
+    "maximumCraftAttemptsPerCycle": 1,
+    "outputRetentionValueRatio": 0.35
+  },
+  "supplyStateModel": {
+    "description": "Each item receives one shared available/unavailable state per game cycle. An available item has unbounded quantity, matching the current null available_quantity runtime semantics. Players may use approved substitutions when the preferred item is unavailable.",
+    "scarcityRiskMultiplier": {
+      "abundant": 0.5,
+      "low": 0.6,
+      "available": 0.7,
+      "common": 0.8,
+      "limited": 1.0,
+      "moderate": 1.0,
+      "controlled": 1.1,
+      "constrained": 1.1,
+      "high": 1.2,
+      "scarce": 1.2,
+      "strategic": 1.25,
+      "rare": 1.3,
+      "restricted": 1.4,
+      "default": 1.0
+    },
+    "stockoutRisk": {
+      "baseline": {
+        "easy": {"domestic": 0.0005, "imported": 0.002},
+        "moderate": {"domestic": 0.001, "imported": 0.003},
+        "hard": {"domestic": 0.002, "imported": 0.005},
+        "insane": {"domestic": 0.003, "imported": 0.007}
+      },
+      "shortage": {
+        "easy": {"domestic": 0.01, "imported": 0.025},
+        "moderate": {"domestic": 0.015, "imported": 0.035},
+        "hard": {"domestic": 0.022, "imported": 0.05},
+        "insane": {"domestic": 0.03, "imported": 0.065}
+      },
+      "border_disruption": {
+        "easy": {"domestic": 0.001, "imported": 0.005},
+        "moderate": {"domestic": 0.002, "imported": 0.009},
+        "hard": {"domestic": 0.004, "imported": 0.016},
+        "insane": {"domestic": 0.006, "imported": 0.028}
+      },
+      "reconstruction": {
+        "easy": {"domestic": 0.005, "imported": 0.012},
+        "moderate": {"domestic": 0.008, "imported": 0.018},
+        "hard": {"domestic": 0.012, "imported": 0.025},
+        "insane": {"domestic": 0.018, "imported": 0.035}
+      }
+    }
+  },
+  "scenarioEconomy": {
+    "baseline": {
+      "domesticPriceMultiplier": 1.0,
+      "importPriceMultiplier": 1.1,
+      "incomeMultiplier": 1.0
+    },
+    "shortage": {
+      "domesticPriceMultiplier": 1.18,
+      "importPriceMultiplier": 1.3,
+      "incomeMultiplier": 0.95
+    },
+    "border_disruption": {
+      "domesticPriceMultiplier": 1.08,
+      "importPriceMultiplier": 1.48,
+      "incomeMultiplier": 0.92
+    },
+    "reconstruction": {
+      "domesticPriceMultiplier": 1.12,
+      "importPriceMultiplier": 1.24,
+      "incomeMultiplier": 1.18
+    }
+  },
+  "gates": {
+    "baselineCraftSuccessMinimum": {
+      "easy": 0.75,
+      "moderate": 0.6,
+      "hard": 0.45,
+      "insane": 0.32
+    },
+    "borderDisruptionSupplyFailureMaximum": {
+      "easy": 0.08,
+      "moderate": 0.12,
+      "hard": 0.18,
+      "insane": 0.25
+    },
+    "tier1ByCycle5Minimum": {
+      "easy": 0.95,
+      "moderate": 0.92,
+      "hard": 0.85,
+      "insane": 0.75
+    },
+    "baselineFirstTier1MedianCycleMaximum": {
+      "easy": 2,
+      "moderate": 3,
+      "hard": 5,
+      "insane": 7
+    },
+    "countryFirstTier1RangeMaximum": {
+      "easy": 2,
+      "moderate": 3,
+      "hard": 4,
+      "insane": 5
+    },
+    "maximumImportSpendShareWarning": 0.8,
+    "minimumSubstitutionExecutions": 1,
+    "guaranteedSystemBuybackArbitrageMaximum": 0,
+    "positiveSalvageRecraftLoopsMaximum": 0
+  },
+  "safety": {
+    "hiddenCraftFailureRollAllowed": false,
+    "durabilityEnabled": false,
+    "repairEnabled": false,
+    "systemBuybackAssumed": false,
+    "productionActivationAllowed": false
+  }
+}
