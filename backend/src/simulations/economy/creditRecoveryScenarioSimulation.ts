@@ -115,7 +115,9 @@ export function runCreditRecoveryScenario(
     config.countries.map((country) => [country.countryCode, country]),
   );
   const states = [...config.players]
-    .sort((left, right) => left.playerPublicId.localeCompare(right.playerPublicId))
+    .sort((left, right) =>
+      left.playerPublicId.localeCompare(right.playerPublicId)
+    )
     .map<MutableCreditPlayerState>((profile) => ({
       profile,
       joined: false,
@@ -139,7 +141,12 @@ export function runCreditRecoveryScenario(
           joinPlayer(state, config, absoluteTick);
         }
         if (state.joined) {
-          applyTick(state, requireValue(countries.get(state.profile.countryCode)), phaseWindow, config);
+          applyTick(
+            state,
+            requireValue(countries.get(state.profile.countryCode)),
+            phaseWindow,
+            config,
+          );
         }
       }
       absoluteTick += 1;
@@ -150,7 +157,9 @@ export function runCreditRecoveryScenario(
     left.playerPublicId.localeCompare(right.playerPublicId)
   );
   const defaulted = playerResults.filter((player) => player.defaultedEver);
-  const recovered = defaulted.filter((player) => player.recoveredAfterDefault);
+  const recovered = defaulted.filter((player) =>
+    player.recoveredAfterDefault
+  );
   const defaultRate = playerResults.length === 0
     ? 0
     : defaulted.length / playerResults.length;
@@ -332,11 +341,14 @@ function calculateLateJoinWealthGap(
   const early = players.filter((player) => player.joinTick === 0);
   const late = players.filter((player) => player.joinTick > 0);
   if (early.length === 0 || late.length === 0) return 1;
-  const earlyAverage = average(early.map((player) => player.endingNetWealthMinor));
-  const lateAverage = average(late.map((player) => player.endingNetWealthMinor));
-  const higher = Math.max(1, earlyAverage, lateAverage);
-  const lower = Math.max(1, Math.min(earlyAverage, lateAverage));
-  return higher / lower;
+  const earlyAverage = average(
+    early.map((player) => player.endingNetWealthMinor),
+  );
+  const lateAverage = average(
+    late.map((player) => player.endingNetWealthMinor),
+  );
+  return 1 + Math.abs(earlyAverage - lateAverage) /
+    Math.max(1, Math.abs(earlyAverage));
 }
 
 function buildFindings(
@@ -386,7 +398,9 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
   if (config.countries.length !== 10) {
     throw new Error("credit_scenario_requires_ten_countries");
   }
-  if (config.players.length === 0) throw new Error("credit_scenario_players_required");
+  if (config.players.length === 0) {
+    throw new Error("credit_scenario_players_required");
+  }
   if (config.phaseWindows.length === 0) {
     throw new Error("credit_scenario_phase_windows_required");
   }
@@ -398,7 +412,9 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
     config.players.map((player) => player.playerPublicId),
     "duplicate_credit_player_public_id",
   );
-  const countryCodes = new Set(config.countries.map((country) => country.countryCode));
+  const countryCodes = new Set(
+    config.countries.map((country) => country.countryCode),
+  );
   for (const country of config.countries) {
     if (!/^[A-Z][A-Z0-9_]{2,31}$/.test(country.countryCode)) {
       throw new Error("credit_country_code_invalid");
@@ -414,7 +430,11 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
     }
   }
   const totalTicks = config.phaseWindows.reduce((total, window) => {
-    if (!Number.isInteger(window.ticks) || window.ticks < 1 || window.ticks > 10_000) {
+    if (
+      !Number.isInteger(window.ticks) ||
+      window.ticks < 1 ||
+      window.ticks > 10_000
+    ) {
       throw new Error("credit_phase_ticks_invalid");
     }
     for (const value of [
@@ -433,34 +453,58 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
     if (!countryCodes.has(player.countryCode)) {
       throw new Error("credit_player_unknown_country");
     }
-    if (!Number.isInteger(player.joinTick) || player.joinTick < 0 || player.joinTick >= totalTicks) {
+    if (
+      !Number.isInteger(player.joinTick) ||
+      player.joinTick < 0 ||
+      player.joinTick >= totalTicks
+    ) {
       throw new Error("credit_player_join_tick_invalid");
     }
-    validateUnitInterval(player.incomeCapacity, "credit_income_capacity_invalid");
-    validateUnitInterval(player.savingsDiscipline, "credit_savings_discipline_invalid");
+    validateUnitInterval(
+      player.incomeCapacity,
+      "credit_income_capacity_invalid",
+    );
+    validateUnitInterval(
+      player.savingsDiscipline,
+      "credit_savings_discipline_invalid",
+    );
     if (!Number.isInteger(player.initialDebtMinor) || player.initialDebtMinor < 0) {
       throw new Error("credit_initial_debt_invalid");
     }
   }
-  for (const [value, errorCode] of [
-    [config.startingCashMinor, "credit_starting_cash_invalid"],
-    [config.baseIncomeMinor, "credit_base_income_invalid"],
-    [config.subsistenceCostMinor, "credit_subsistence_cost_invalid"],
-    [config.lateJoinCatchUpGrantMinor, "credit_catch_up_grant_invalid"],
-    [config.minimumScheduledPaymentMinor, "credit_minimum_payment_invalid"],
-    [config.reconstructionRecoveryIncomeMinor, "credit_recovery_income_invalid"],
-  ] as const) {
+  for (
+    const [value, errorCode] of [
+      [config.startingCashMinor, "credit_starting_cash_invalid"],
+      [config.baseIncomeMinor, "credit_base_income_invalid"],
+      [config.subsistenceCostMinor, "credit_subsistence_cost_invalid"],
+      [config.lateJoinCatchUpGrantMinor, "credit_catch_up_grant_invalid"],
+      [config.minimumScheduledPaymentMinor, "credit_minimum_payment_invalid"],
+      [config.reconstructionRecoveryIncomeMinor, "credit_recovery_income_invalid"],
+    ] as const
+  ) {
     if (!Number.isInteger(value) || value < 0) throw new Error(errorCode);
   }
-  for (const [value, errorCode] of [
-    [config.scheduledPaymentRate, "credit_payment_rate_invalid"],
-    [config.restructuringPrincipalReductionRate, "credit_restructuring_rate_invalid"],
-    [config.maximumDefaultRate, "credit_default_threshold_invalid"],
-    [config.minimumDefaultRecoveryRate, "credit_recovery_threshold_invalid"],
-  ] as const) {
+  for (
+    const [value, errorCode] of [
+      [config.scheduledPaymentRate, "credit_payment_rate_invalid"],
+      [
+        config.restructuringPrincipalReductionRate,
+        "credit_restructuring_rate_invalid",
+      ],
+      [config.maximumDefaultRate, "credit_default_threshold_invalid"],
+      [
+        config.minimumDefaultRecoveryRate,
+        "credit_recovery_threshold_invalid",
+      ],
+    ] as const
+  ) {
     validateUnitInterval(value, errorCode);
   }
-  if (!Number.isFinite(config.lateJoinIncomeMultiplier) || config.lateJoinIncomeMultiplier < 1 || config.lateJoinIncomeMultiplier > 5) {
+  if (
+    !Number.isFinite(config.lateJoinIncomeMultiplier) ||
+    config.lateJoinIncomeMultiplier < 1 ||
+    config.lateJoinIncomeMultiplier > 5
+  ) {
     throw new Error("credit_late_join_multiplier_invalid");
   }
   if (
@@ -471,11 +515,15 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
   }
   if (
     !Number.isInteger(config.defaultAfterMissedPayments) ||
-    config.defaultAfterMissedPayments <= config.delinquencyAfterMissedPayments
+    config.defaultAfterMissedPayments <=
+      config.delinquencyAfterMissedPayments
   ) {
     throw new Error("credit_default_window_invalid");
   }
-  if (!Number.isFinite(config.maximumLateJoinWealthGapRatio) || config.maximumLateJoinWealthGapRatio < 1) {
+  if (
+    !Number.isFinite(config.maximumLateJoinWealthGapRatio) ||
+    config.maximumLateJoinWealthGapRatio < 1
+  ) {
     throw new Error("credit_late_join_gap_threshold_invalid");
   }
 }
@@ -495,7 +543,9 @@ function assertUnique(values: readonly string[], errorCode: string): void {
 }
 
 function requireValue<T>(value: T | undefined): T {
-  if (value === undefined) throw new Error("credit_scenario_internal_value_missing");
+  if (value === undefined) {
+    throw new Error("credit_scenario_internal_value_missing");
+  }
   return value;
 }
 
