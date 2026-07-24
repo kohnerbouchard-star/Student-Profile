@@ -168,6 +168,38 @@ test("limit-order interface remains visible and sends no unsupported order", asy
   await expect(dialog.locator("[data-player-market-order-confirm]")).toHaveCount(0);
 });
 
+test("market search, chart ranges, and Banking export are operational", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "Local control workflow is proved once in desktop Chromium.");
+  await openTerminal(page, "market");
+
+  const searchToggle = page.locator('[data-player-local-action="market-search"]');
+  await expect(searchToggle).toHaveAttribute("aria-expanded", "false");
+  await searchToggle.click();
+  await expect(searchToggle).toHaveAttribute("aria-expanded", "true");
+  const search = page.locator("[data-player-market-search]");
+  await expect(search).toBeFocused();
+  await search.fill("no-such-instrument-value");
+  await expect(page.locator(".player-terminal-asset-row:visible")).toHaveCount(0);
+  await expect(page.locator("[data-player-market-search-empty]")).toBeVisible();
+  await search.fill("");
+  expect(await page.locator(".player-terminal-asset-row:visible").count()).toBeGreaterThan(0);
+
+  const oneDay = page.locator('[data-player-local-action="chart-range"][data-range="1D"]');
+  await oneDay.click();
+  await expect(oneDay).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-player-market-chart-range-label]")).toHaveText("1D SERIES");
+  await expect(page.locator(".player-terminal-chart-line")).toHaveAttribute("d", /^M/);
+
+  await openTerminal(page, "banking");
+  const exportButton = page.locator('[data-player-local-action="download-transactions"]');
+  await expect(exportButton).toBeEnabled();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    exportButton.click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^econovaria-transactions-\d{4}-\d{2}-\d{2}\.csv$/);
+});
+
 test("mobile viewport has no page-level horizontal overflow", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile reflow is covered by the mobile Chromium project.");
   await openTerminal(page, "dashboard");

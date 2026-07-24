@@ -3,6 +3,7 @@ import { installSkipLinkController } from "./accessibility/skip-link-controller.
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
+import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
 import { installStoryDeliveryFlow } from "./features/notifications/story-delivery-flow.js";
@@ -26,6 +27,7 @@ const formDrafts = installFormDraftPreserver(mount, {
 const terminal = createPlayerTerminal({ mount, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
 const logout = installPlayerLogoutController({ terminal, config, mount });
+const localControls = installLocalControlsFlow({ mount, terminal });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
@@ -44,6 +46,7 @@ terminal.destroy = () => {
   bankingReads.destroy();
   marketOrders.destroy();
   storePurchases.destroy();
+  localControls.destroy();
   formDrafts.destroy();
   countryFocus.destroy();
   skipLink.destroy();

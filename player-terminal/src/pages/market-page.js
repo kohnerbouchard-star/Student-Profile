@@ -34,6 +34,7 @@ export function renderMarketPage(data, ui) {
   const sector = ui.marketSector || "All";
   const assets = market.assets.filter((asset) => sector === "All" || asset.sector === sector);
   const path = chartPath(selected.history);
+  const chartHistory = escapeHtml(JSON.stringify(Array.isArray(selected.history) ? selected.history : []));
   const currencyCode = data.session.currencyCode;
   const positionValue = selected.owned * selected.price;
   const gain = selected.owned ? positionValue - selected.owned * selected.averageCost : 0;
@@ -61,11 +62,15 @@ export function renderMarketPage(data, ui) {
 
     <div class="player-terminal-market-layout">
       <section class="player-terminal-panel player-terminal-asset-browser">
-        <header class="player-terminal-panel-header"><div><span>ASSET DIRECTORY</span><strong>${escapeHtml(assets.length)} instruments</strong></div><button class="player-terminal-icon-button" type="button" aria-label="Search assets" data-player-local-action="market-search">${icon("eye")}</button></header>
+        <header class="player-terminal-panel-header"><div><span>ASSET DIRECTORY</span><strong>${escapeHtml(assets.length)} instruments</strong></div><button class="player-terminal-icon-button" type="button" aria-label="Search assets" aria-expanded="false" aria-controls="playerMarketSearchPanel" data-player-local-action="market-search">${icon("eye")}</button></header>
+        <div id="playerMarketSearchPanel" class="player-terminal-filter-row" data-player-market-search-panel hidden>
+          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search symbol, company, or sector"></label>
+          <small data-player-market-search-status>${escapeHtml(assets.length)} listed instruments</small>
+        </div>
         <div class="player-terminal-filter-row">
           ${market.sectors.map((item) => `<button type="button" class="${item === sector ? "active" : ""}" data-player-market-sector="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}
         </div>
-        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}</div>
+        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-chart-panel">
@@ -74,8 +79,8 @@ export function renderMarketPage(data, ui) {
           <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
           <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, currencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
         </header>
-        <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL">ALL</button><small>CURRENT SERIES</small></div>
-        <div class="player-terminal-chart-frame">
+        <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D" aria-pressed="false">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M" aria-pressed="true">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M" aria-pressed="false">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y" aria-pressed="false">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL" aria-pressed="false">ALL</button><small data-player-market-chart-range-label>1M SERIES</small></div>
+        <div class="player-terminal-chart-frame" data-player-market-chart-history="${chartHistory}">
           <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Price chart for ${escapeHtml(selected.name)}">
             <defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
             <g class="player-terminal-chart-grid"><path d="M18 52H702M18 104H702M18 156H702M18 208H702"/><path d="M155 18V242M292 18V242M429 18V242M566 18V242"/></g>
