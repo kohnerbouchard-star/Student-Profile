@@ -12,6 +12,7 @@ const SENSITIVE_PROBE = `async function runRateLimitProbe() {
   const attempts = 16;
   const batchSize = 4;
   const rampDelayMs = 50;
+  const probePlayerIndex = 2;
   const results = [];
   const batches = [];
   const body = {
@@ -28,7 +29,7 @@ const SENSITIVE_PROBE = `async function runRateLimitProbe() {
         () =>
           http("/functions/v1/classroom-api/players/me/messages/threads", {
             method: "POST",
-            playerToken: loginSessionToken,
+            playerToken: fixture.directSessionTokens[probePlayerIndex],
             body,
             expectedStatuses: [200, 201, 429],
           }),
@@ -66,6 +67,8 @@ const SENSITIVE_PROBE = `async function runRateLimitProbe() {
   evidence.metrics.rateLimitProbe = {
     profile: "replay-safe-sensitive-action",
     action: "player.messages.thread.create",
+    probePlayerIndex,
+    lifecyclePlayerIndex: 0,
     configuredActionLimit: 10,
     configuredWindowSeconds: 300,
     attempts,
