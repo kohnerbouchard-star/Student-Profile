@@ -102,7 +102,7 @@ function buildRecords(source) {
     const profile = source.profiles?.[country];
     requireCondition(profile, `Missing Contract content profile for ${country}.`);
     for (const field of ['city','agency','sector','arrival','livelihood_a','livelihood_b','risk','market_opportunity','dependency','substitute','community']) {
-      assertText(profile[field], 12, `${country}.${field}`);
+      assertText(profile[field], field === 'city' ? 4 : 12, `${country}.${field}`);
     }
     records.push(...buildCountryRecords(country, profile));
   }

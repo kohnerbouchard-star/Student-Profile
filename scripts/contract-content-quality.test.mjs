@@ -48,7 +48,7 @@ test('Contract content source defines substantive profiles for all ten countries
   for (const country of COUNTRIES) {
     const profile = source.profiles[country];
     for (const field of PROFILE_FIELDS) {
-      assertPlayerFacingText(profile[field], 12, `${country}.${field}`);
+      assertPlayerFacingText(profile[field], field === 'city' ? 4 : 12, `${country}.${field}`);
     }
   }
 });

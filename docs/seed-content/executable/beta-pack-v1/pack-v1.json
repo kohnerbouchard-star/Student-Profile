@@ -8,6 +8,7 @@
   ],
   "boundedCounts": {
     "arrivalPackages": 10,
+    "authoredContractDefinitions": 50,
     "contractTemplates": 30,
     "itemDefinitionsCalibrated": 144,
     "locationsVerified": 50,
@@ -24,18 +25,26 @@
     "scenarioCountPerCountry": 4
   },
   "contentQuality": {
+    "activeTutorialContractDescriptions": 30,
+    "authoredContractDefinitions": 50,
     "duplicateArtworkAssignments": 0,
     "individualStoreArtworkRecords": 50,
+    "placeholderContractDescriptions": 0,
     "placeholderStoreDescriptions": 0,
+    "repeatedGenericTutorialInstructions": 0,
     "repositoryOwnedStoreArtwork": 50,
     "runtimeImagePathsAvailable": true,
     "storeDescriptionsAuthored": 50
   },
   "contentRevision": "store-content-v2",
+  "contentRevisions": {
+    "contracts": "contract-content-v2"
+  },
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
     "calibration": "calibration-scenarios-v1.json",
     "campaign": "campaign-v1.json",
+    "contractContent": "contract-content-v2.json",
     "contracts": "tutorial-contract-chains-v1.json",
     "integrity": "integrity-manifest-v1.json",
     "locations": "location-registry-verified-v1.json",

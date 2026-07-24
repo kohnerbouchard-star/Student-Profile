@@ -1,5 +1,7 @@
 {
   "activationAuthorized": false,
+  "activeTemplateContentCount": 30,
+  "authoredDefinitionCount": 50,
   "chainCount": 10,
   "chains": [
     {
@@ -293,6 +295,8 @@
       ]
     }
   ],
+  "contentRevision": "contract-content-v2",
+  "descriptionPolicy": "country-specific-authored-player-facing-copy",
   "packId": "econovaria.beta-seed-pack.v1",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-tutorial-contract-chains-v1",
@@ -303,22 +307,25 @@
       "category": "tutorial-arrival",
       "country": "northreach",
       "currencyCode": "NRC",
-      "description": "confirm your temporary housing deadline and review essential heating and transport costs",
+      "description": "Frostgate Settlement Office needs a practical first-week plan before it will clear your settlement support. You must resolve temporary heating allocation, a recognized address, and a verified winter transport route without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Frostgate arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to strategic-minerals, sensor manufacturing, and cold-chain services.\nDocument a fallback through Frostgate Settlement Office and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "northreach",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.northreach.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Frostgate that resolves temporary heating allocation, a recognized address, and a verified winter transport route and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 112,
@@ -334,22 +341,25 @@
       "category": "tutorial-livelihood",
       "country": "northreach",
       "currencyCode": "NRC",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Frostgate, accounting for winter logistics and energy security",
+      "description": "Two legitimate income paths are available in Frostgate: a supervised mineral-assay placement and a cold-chain logistics assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to strategic resources.\nName the principal risk created by winter logistics and energy security.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how heating costs, weather delays, and concentrated energy supply could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "northreach",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.northreach.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a supervised mineral-assay placement with a cold-chain logistics assistant role and select the path that best preserves liquidity under heating costs, weather delays, and concentrated energy supply.",
         "predecessorStableId": "contract.arrival.northreach.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 112,
@@ -365,22 +375,25 @@
       "category": "tutorial-market",
       "country": "northreach",
       "currencyCode": "NRC",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Frostgate, accounting for winter logistics and energy security",
+      "description": "A local operator wants a concise opportunity brief on precision sensing and mineral verification services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to strategic resources.\nName the principal risk created by winter logistics and energy security.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside strategic-minerals, sensor manufacturing, and cold-chain services and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by heating costs, weather delays, and concentrated energy supply.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "northreach",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.northreach.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of precision sensing and mineral verification services in Frostgate and identify the most important downside created by heating costs, weather delays, and concentrated energy supply.",
         "predecessorStableId": "contract.core.northreach.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 62,
@@ -396,22 +409,25 @@
       "category": "tutorial-arrival",
       "country": "yrethia",
       "currencyCode": "YRC",
-      "description": "correct your address and work-document mismatch before accepting port work",
+      "description": "Sableport Port Records Bureau needs a practical first-week plan before it will clear your settlement support. You must resolve your address record, temporary berth district housing, and corrected work documentation without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Sableport arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to maritime logistics, customs services, and trade finance.\nDocument a fallback through Sableport Port Records Bureau and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "yrethia",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.yrethia.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Sableport that resolves your address record, temporary berth district housing, and corrected work documentation and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 108,
@@ -427,22 +443,25 @@
       "category": "tutorial-livelihood",
       "country": "yrethia",
       "currencyCode": "YRC",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Sableport, accounting for port congestion and customs compliance",
+      "description": "Two legitimate income paths are available in Sableport: a licensed cargo-integrity inspection shift and a customs-documentation assistant contract. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to shipping and trade finance.\nName the principal risk created by port congestion and customs compliance.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how port congestion, customs holds, and uninsured route changes could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "yrethia",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.yrethia.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a licensed cargo-integrity inspection shift with a customs-documentation assistant contract and select the path that best preserves liquidity under port congestion, customs holds, and uninsured route changes.",
         "predecessorStableId": "contract.arrival.yrethia.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 108,
@@ -458,22 +477,25 @@
       "category": "tutorial-market",
       "country": "yrethia",
       "currencyCode": "YRC",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Sableport, accounting for port congestion and customs compliance",
+      "description": "A local operator wants a concise opportunity brief on cargo telemetry and compliant rerouting services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to shipping and trade finance.\nName the principal risk created by port congestion and customs compliance.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside maritime logistics, customs services, and trade finance and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by port congestion, customs holds, and uninsured route changes.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "yrethia",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.yrethia.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of cargo telemetry and compliant rerouting services in Sableport and identify the most important downside created by port congestion, customs holds, and uninsured route changes.",
         "predecessorStableId": "contract.core.yrethia.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 59,
@@ -489,22 +511,25 @@
       "category": "tutorial-arrival",
       "country": "thaloris",
       "currencyCode": "THD",
-      "description": "verify lodging and a legally recognized work contact",
+      "description": "Dusk Harbor Repair Cooperative needs a practical first-week plan before it will clear your settlement support. You must resolve legal lodging, a recognized guarantor, and proof that your first work contact is licensed without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Dusk Harbor arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to repair, salvage processing, and re-export trade.\nDocument a fallback through Dusk Harbor Repair Cooperative and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "thaloris",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.thaloris.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Dusk Harbor that resolves legal lodging, a recognized guarantor, and proof that your first work contact is licensed and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 92,
@@ -520,22 +545,25 @@
       "category": "tutorial-livelihood",
       "country": "thaloris",
       "currencyCode": "THD",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Dusk Harbor, accounting for legitimacy, salvage quality, and route volatility",
+      "description": "Two legitimate income paths are available in Dusk Harbor: a supervised thermal-regulator repair bench and a documented salvage-sorting assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to repair and re-export trade.\nName the principal risk created by legitimacy, salvage quality, and route volatility.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how unverified parts, route volatility, and disputes over salvage quality could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "thaloris",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.thaloris.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a supervised thermal-regulator repair bench with a documented salvage-sorting assignment and select the path that best preserves liquidity under unverified parts, route volatility, and disputes over salvage quality.",
         "predecessorStableId": "contract.arrival.thaloris.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 92,
@@ -551,22 +579,25 @@
       "category": "tutorial-market",
       "country": "thaloris",
       "currencyCode": "THD",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Dusk Harbor, accounting for legitimacy, salvage quality, and route volatility",
+      "description": "A local operator wants a concise opportunity brief on tested energy components and certified repair services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to repair and re-export trade.\nName the principal risk created by legitimacy, salvage quality, and route volatility.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside repair, salvage processing, and re-export trade and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by unverified parts, route volatility, and disputes over salvage quality.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "thaloris",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.thaloris.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of tested energy components and certified repair services in Dusk Harbor and identify the most important downside created by unverified parts, route volatility, and disputes over salvage quality.",
         "predecessorStableId": "contract.core.thaloris.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 51,
@@ -582,22 +613,25 @@
       "category": "tutorial-arrival",
       "country": "solvend",
       "currencyCode": "SLV",
-      "description": "validate your credentials or book a provisional skills assessment",
+      "description": "Aurora Skills Verification Directorate needs a practical first-week plan before it will clear your settlement support. You must resolve credential verification, temporary professional housing, and a booked skills assessment without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Aurora Spire arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to aerospace research, advanced instruments, and technical services.\nDocument a fallback through Aurora Skills Verification Directorate and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "solvend",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.solvend.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Aurora Spire that resolves credential verification, temporary professional housing, and a booked skills assessment and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 118,
@@ -613,22 +647,25 @@
       "category": "tutorial-livelihood",
       "country": "solvend",
       "currencyCode": "SLV",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Aurora Spire, accounting for skills scarcity and cyber concentration",
+      "description": "Two legitimate income paths are available in Aurora Spire: a supervised research-instrument calibration placement and an orbital-route data assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to advanced technology and aerospace.\nName the principal risk created by skills scarcity and cyber concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how credential delays, specialist shortages, and concentrated cyber exposure could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "solvend",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.solvend.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a supervised research-instrument calibration placement with an orbital-route data assistant role and select the path that best preserves liquidity under credential delays, specialist shortages, and concentrated cyber exposure.",
         "predecessorStableId": "contract.arrival.solvend.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 118,
@@ -644,22 +681,25 @@
       "category": "tutorial-market",
       "country": "solvend",
       "currencyCode": "SLV",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Aurora Spire, accounting for skills scarcity and cyber concentration",
+      "description": "A local operator wants a concise opportunity brief on instrument calibration and research-data verification. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to advanced technology and aerospace.\nName the principal risk created by skills scarcity and cyber concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside aerospace research, advanced instruments, and technical services and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by credential delays, specialist shortages, and concentrated cyber exposure.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "solvend",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.solvend.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of instrument calibration and research-data verification in Aurora Spire and identify the most important downside created by credential delays, specialist shortages, and concentrated cyber exposure.",
         "predecessorStableId": "contract.core.solvend.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 65,
@@ -675,22 +715,25 @@
       "category": "tutorial-arrival",
       "country": "eldoran",
       "currencyCode": "ELD",
-      "description": "secure affordable housing and identify reliable food-market access",
+      "description": "Crescent Bay Food Security Exchange needs a practical first-week plan before it will clear your settlement support. You must resolve affordable housing, reliable food-market access, and a verified local payment account without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Crescent Bay arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to food distribution, wholesale markets, and secure commercial records.\nDocument a fallback through Crescent Bay Food Security Exchange and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "eldoran",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.eldoran.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Crescent Bay that resolves affordable housing, reliable food-market access, and a verified local payment account and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 84,
@@ -706,22 +749,25 @@
       "category": "tutorial-livelihood",
       "country": "eldoran",
       "currencyCode": "ELD",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Crescent Bay, accounting for harvest variability and affordability",
+      "description": "Two legitimate income paths are available in Crescent Bay: a wholesale inventory-recording placement and a neighborhood food-distribution assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to food and wholesale distribution.\nName the principal risk created by harvest variability and affordability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how harvest variability, affordability pressure, and inventory-record errors could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "eldoran",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.eldoran.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a wholesale inventory-recording placement with a neighborhood food-distribution assistant role and select the path that best preserves liquidity under harvest variability, affordability pressure, and inventory-record errors.",
         "predecessorStableId": "contract.arrival.eldoran.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 84,
@@ -737,22 +783,25 @@
       "category": "tutorial-market",
       "country": "eldoran",
       "currencyCode": "ELD",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Crescent Bay, accounting for harvest variability and affordability",
+      "description": "A local operator wants a concise opportunity brief on verified wholesale records and low-waste distribution. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to food and wholesale distribution.\nName the principal risk created by harvest variability and affordability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside food distribution, wholesale markets, and secure commercial records and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by harvest variability, affordability pressure, and inventory-record errors.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "eldoran",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.eldoran.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of verified wholesale records and low-waste distribution in Crescent Bay and identify the most important downside created by harvest variability, affordability pressure, and inventory-record errors.",
         "predecessorStableId": "contract.core.eldoran.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 46,
@@ -768,22 +817,25 @@
       "category": "tutorial-arrival",
       "country": "valerion",
       "currencyCode": "VAL",
-      "description": "satisfy the address and deposit requirements without exhausting your emergency buffer",
+      "description": "Glassfall Water and Housing Office needs a practical first-week plan before it will clear your settlement support. You must resolve a recognized address, deposit plan, and confirmed access to safe water services without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Glassfall arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to water systems, environmental monitoring, and public infrastructure.\nDocument a fallback through Glassfall Water and Housing Office and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "valerion",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.valerion.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Glassfall that resolves a recognized address, deposit plan, and confirmed access to safe water services and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 126,
@@ -799,22 +851,25 @@
       "category": "tutorial-livelihood",
       "country": "valerion",
       "currencyCode": "VAL",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Glassfall, accounting for water allocation and high living costs",
+      "description": "Two legitimate income paths are available in Glassfall: a water-quality sampling placement and an infrastructure-inspection assistant assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to water, clean energy, and premium services.\nName the principal risk created by water allocation and high living costs.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how housing deposits, filter shortages, and aging water infrastructure could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "valerion",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.valerion.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a water-quality sampling placement with an infrastructure-inspection assistant assignment and select the path that best preserves liquidity under housing deposits, filter shortages, and aging water infrastructure.",
         "predecessorStableId": "contract.arrival.valerion.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 126,
@@ -830,22 +885,25 @@
       "category": "tutorial-market",
       "country": "valerion",
       "currencyCode": "VAL",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Glassfall, accounting for water allocation and high living costs",
+      "description": "A local operator wants a concise opportunity brief on water testing, filtration maintenance, and resilience services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to water, clean energy, and premium services.\nName the principal risk created by water allocation and high living costs.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside water systems, environmental monitoring, and public infrastructure and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by housing deposits, filter shortages, and aging water infrastructure.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "valerion",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.valerion.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of water testing, filtration maintenance, and resilience services in Glassfall and identify the most important downside created by housing deposits, filter shortages, and aging water infrastructure.",
         "predecessorStableId": "contract.core.valerion.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 69,
@@ -861,22 +919,25 @@
       "category": "tutorial-arrival",
       "country": "lumenor",
       "currencyCode": "LUM",
-      "description": "secure a recognized address for work, banking, and residency processing",
+      "description": "Starfall Civic Translation Desk needs a practical first-week plan before it will clear your settlement support. You must resolve a recognized address, translated identity records, and access to public information channels without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Starfall arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to translation, education services, public information, and records support.\nDocument a fallback through Starfall Civic Translation Desk and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "lumenor",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.lumenor.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Starfall that resolves a recognized address, translated identity records, and access to public information channels and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 106,
@@ -892,22 +953,25 @@
       "category": "tutorial-livelihood",
       "country": "lumenor",
       "currencyCode": "LUM",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Starfall, accounting for credential recognition and public trust",
+      "description": "Two legitimate income paths are available in Starfall: a supervised translation-dossier assignment and a public-briefing preparation role. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to education, media, and arbitration.\nName the principal risk created by credential recognition and public trust.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how language barriers, document mismatch, and misinformation could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "lumenor",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.lumenor.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a supervised translation-dossier assignment with a public-briefing preparation role and select the path that best preserves liquidity under language barriers, document mismatch, and misinformation.",
         "predecessorStableId": "contract.arrival.lumenor.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 106,
@@ -923,22 +987,25 @@
       "category": "tutorial-market",
       "country": "lumenor",
       "currencyCode": "LUM",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Starfall, accounting for credential recognition and public trust",
+      "description": "A local operator wants a concise opportunity brief on verified translation and accessible public-information services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to education, media, and arbitration.\nName the principal risk created by credential recognition and public trust.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside translation, education services, public information, and records support and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by language barriers, document mismatch, and misinformation.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "lumenor",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.lumenor.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of verified translation and accessible public-information services in Starfall and identify the most important downside created by language barriers, document mismatch, and misinformation.",
         "predecessorStableId": "contract.core.lumenor.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 58,
@@ -954,22 +1021,25 @@
       "category": "tutorial-arrival",
       "country": "xalvoria",
       "currencyCode": "XAL",
-      "description": "establish a bankable identity, address, and verified sponsor",
+      "description": "Emberhall Development Authority needs a practical first-week plan before it will clear your settlement support. You must resolve a bankable identity, recognized address, and verified employment or enterprise sponsor without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Emberhall arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to manufacturing, construction, warehousing, and industrial services.\nDocument a fallback through Emberhall Development Authority and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "xalvoria",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.xalvoria.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Emberhall that resolves a bankable identity, recognized address, and verified employment or enterprise sponsor and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 116,
@@ -985,22 +1055,25 @@
       "category": "tutorial-livelihood",
       "country": "xalvoria",
       "currencyCode": "XAL",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Emberhall, accounting for debt concentration and project accountability",
+      "description": "Two legitimate income paths are available in Emberhall: a warehouse inventory-controller placement and a supervised construction-planning assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to banking and infrastructure finance.\nName the principal risk created by debt concentration and project accountability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how startup debt, project delays, and volatile material costs could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "xalvoria",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.xalvoria.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a warehouse inventory-controller placement with a supervised construction-planning assistant role and select the path that best preserves liquidity under startup debt, project delays, and volatile material costs.",
         "predecessorStableId": "contract.arrival.xalvoria.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 116,
@@ -1016,22 +1089,25 @@
       "category": "tutorial-market",
       "country": "xalvoria",
       "currencyCode": "XAL",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Emberhall, accounting for debt concentration and project accountability",
+      "description": "A local operator wants a concise opportunity brief on portable fabrication and inventory-control services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to banking and infrastructure finance.\nName the principal risk created by debt concentration and project accountability.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside manufacturing, construction, warehousing, and industrial services and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by startup debt, project delays, and volatile material costs.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "xalvoria",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.xalvoria.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of portable fabrication and inventory-control services in Emberhall and identify the most important downside created by startup debt, project delays, and volatile material costs.",
         "predecessorStableId": "contract.core.xalvoria.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 64,
@@ -1047,22 +1123,25 @@
       "category": "tutorial-arrival",
       "country": "dravenlok",
       "currencyCode": "DRV",
-      "description": "complete technical placement and confirm worker-housing eligibility",
+      "description": "Ironhold Technical Placement Office needs a practical first-week plan before it will clear your settlement support. You must resolve technical placement, worker-housing eligibility, and verified safety credentials without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Ironhold arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to mining, foundry work, heavy maintenance, and structural repair.\nDocument a fallback through Ironhold Technical Placement Office and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "dravenlok",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.dravenlok.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Ironhold that resolves technical placement, worker-housing eligibility, and verified safety credentials and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 95,
@@ -1078,22 +1157,25 @@
       "category": "tutorial-livelihood",
       "country": "dravenlok",
       "currencyCode": "DRV",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Ironhold, accounting for energy intensity and worker safety",
+      "description": "Two legitimate income paths are available in Ironhold: a supervised maintenance-rig service rotation and a structural inspection support assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to heavy industry and rail.\nName the principal risk created by energy intensity and worker safety.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how equipment downtime, housing tied to employment, and heavy-material shortages could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "dravenlok",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.dravenlok.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a supervised maintenance-rig service rotation with a structural inspection support assignment and select the path that best preserves liquidity under equipment downtime, housing tied to employment, and heavy-material shortages.",
         "predecessorStableId": "contract.arrival.dravenlok.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 95,
@@ -1109,22 +1191,25 @@
       "category": "tutorial-market",
       "country": "dravenlok",
       "currencyCode": "DRV",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Ironhold, accounting for energy intensity and worker safety",
+      "description": "A local operator wants a concise opportunity brief on structural inspection and heavy-equipment maintenance. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to heavy industry and rail.\nName the principal risk created by energy intensity and worker safety.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside mining, foundry work, heavy maintenance, and structural repair and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by equipment downtime, housing tied to employment, and heavy-material shortages.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "dravenlok",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.dravenlok.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of structural inspection and heavy-equipment maintenance in Ironhold and identify the most important downside created by equipment downtime, housing tied to employment, and heavy-material shortages.",
         "predecessorStableId": "contract.core.dravenlok.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 52,
@@ -1140,22 +1225,25 @@
       "category": "tutorial-arrival",
       "country": "syndalis",
       "currencyCode": "SYN",
-      "description": "establish verified digital identity while securing temporary physical housing",
+      "description": "Blacklight Identity and Signal Authority needs a practical first-week plan before it will clear your settlement support. You must resolve verified digital identity, temporary physical housing, and access to trusted emergency channels without spending the emergency reserve that protects you from an early setback.",
       "difficulty": "introductory",
-      "estimatedDurationMinutes": 20,
-      "instructions": "Review the official arrival message and local cost bands.\nConfirm one valid housing or address path.\nIdentify one verified employment, training, public-service, or enterprise lead.\nRecord the official recovery route and preserve the emergency buffer.",
+      "estimatedDurationMinutes": 25,
+      "instructions": "Review the official Blacklight arrival notice and list every deadline, deposit, document, or service requirement.\nSelect one verified housing or address path and calculate its first-week cash commitment.\nConfirm one lawful income, training, public-service, or enterprise lead tied to secure communications, media verification, and digital services.\nDocument a fallback through Blacklight Identity and Signal Authority and state the amount of cash that remains protected.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "arrival",
+        "contentRevision": "contract-content-v2",
         "country": "syndalis",
         "recoveryCritical": true,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.arrival.syndalis.stabilization.v1"
       },
       "requirementsPayload": {
+        "objective": "Produce a verified first-week stabilization plan for Blacklight that resolves verified digital identity, temporary physical housing, and access to trusted emergency channels and preserves a minimum emergency reserve.",
         "predecessorStableId": null,
         "sequence": 1,
-        "submissionRequirement": "Submit a short stabilization plan naming the selected housing path, verified opportunity, first-week budget priorities, and fallback route."
+        "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
       },
       "rewardPayload": {
         "amount": 120,
@@ -1171,22 +1259,25 @@
       "category": "tutorial-livelihood",
       "country": "syndalis",
       "currencyCode": "SYN",
-      "description": "compare two verified income paths and select one that preserves the emergency buffer in Blacklight, accounting for identity integrity and infrastructure concentration",
+      "description": "Two legitimate income paths are available in Blacklight: a media-verification assistant assignment and a secure-communications support placement. Compare the real costs, timing, and risks before committing your limited starting capital.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to cybersecurity and digital finance.\nName the principal risk created by identity integrity and infrastructure concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.\nExplain how identity fraud, disputed information, and network concentration could reduce or delay each option’s value.\nReject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.\nChoose one path and define a fallback trigger that would cause you to switch.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "livelihood",
+        "contentRevision": "contract-content-v2",
         "country": "syndalis",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.syndalis.livelihood.v1"
       },
       "requirementsPayload": {
+        "objective": "Compare a media-verification assistant assignment with a secure-communications support placement and select the path that best preserves liquidity under identity fraud, disputed information, and network concentration.",
         "predecessorStableId": "contract.arrival.syndalis.stabilization.v1",
         "sequence": 2,
-        "submissionRequirement": "a one-page income, cost, and fallback comparison"
+        "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
       },
       "rewardPayload": {
         "amount": 120,
@@ -1202,22 +1293,25 @@
       "category": "tutorial-market",
       "country": "syndalis",
       "currencyCode": "SYN",
-      "description": "explain one local industry opportunity and one downside risk using approved market information in Blacklight, accounting for identity integrity and infrastructure concentration",
+      "description": "A local operator wants a concise opportunity brief on verified communications and evidence-checking services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
       "difficulty": "standard",
-      "estimatedDurationMinutes": 30,
-      "instructions": "Use verified information relevant to cybersecurity and digital finance.\nName the principal risk created by identity integrity and infrastructure concentration.\nInclude a legal substitute, fallback, or recovery step.\nDo not assume unavailable Store, market, banking, or event capabilities are active.",
+      "estimatedDurationMinutes": 35,
+      "instructions": "Define the customer problem inside secure communications, media verification, and digital services and name the buyer or institution most likely to pay.\nUse approved market, Store, Contract, or country information to support one demand claim.\nQuantify or rank the downside caused by identity fraud, disputed information, and network concentration.\nRecommend a bounded first transaction or pilot that does not require unsupported features.",
       "isActiveByDefault": false,
       "metadata": {
         "activationScope": "isolated-staging-only",
+        "authoredFamily": "market",
+        "contentRevision": "contract-content-v2",
         "country": "syndalis",
         "recoveryCritical": false,
         "seedPackId": "econovaria.beta-seed-pack.v1",
         "seedStableId": "contract.core.syndalis.market.v1"
       },
       "requirementsPayload": {
+        "objective": "Evaluate the commercial potential of verified communications and evidence-checking services in Blacklight and identify the most important downside created by identity fraud, disputed information, and network concentration.",
         "predecessorStableId": "contract.core.syndalis.livelihood.v1",
         "sequence": 3,
-        "submissionRequirement": "a concise market brief with sources and a risk statement"
+        "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
       },
       "rewardPayload": {
         "amount": 66,

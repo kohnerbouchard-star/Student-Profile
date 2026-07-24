@@ -1,0 +1,770 @@
+{
+  "activationAuthorized": false,
+  "contentRevision": "contract-content-v2",
+  "countryCount": 10,
+  "families": [
+    "arrival",
+    "livelihood",
+    "market",
+    "resilience",
+    "community"
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "recordCount": 50,
+  "records": [
+    {
+      "country": "northreach",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.northreach.stabilization.v1",
+      "instructions": [
+        "Review the official Frostgate arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to strategic-minerals, sensor manufacturing, and cold-chain services.",
+        "Document a fallback through Frostgate Settlement Office and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Frostgate that resolves temporary heating allocation, a recognized address, and a verified winter transport route and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Frostgate Settlement Office needs a practical first-week plan before it will clear your settlement support. You must resolve temporary heating allocation, a recognized address, and a verified winter transport route without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "northreach",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.northreach.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how heating costs, weather delays, and concentrated energy supply could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a supervised mineral-assay placement with a cold-chain logistics assistant role and select the path that best preserves liquidity under heating costs, weather delays, and concentrated energy supply.",
+      "playerFacingDescription": "Two legitimate income paths are available in Frostgate: a supervised mineral-assay placement and a cold-chain logistics assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "northreach",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.northreach.market.v1",
+      "instructions": [
+        "Define the customer problem inside strategic-minerals, sensor manufacturing, and cold-chain services and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by heating costs, weather delays, and concentrated energy supply.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of precision sensing and mineral verification services in Frostgate and identify the most important downside created by heating costs, weather delays, and concentrated energy supply.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on precision sensing and mineral verification services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "northreach",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.northreach.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate cryogenic ceramic and conventional sensor-board production for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on superconductive filament arriving through the northern freight corridor and test whether cryogenic ceramic and conventional sensor-board production can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on superconductive filament arriving through the northern freight corridor. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "northreach",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.northreach.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Frostgate: audit an emergency warming center’s supply list and transport access.",
+      "playerFacingDescription": "Frostgate Settlement Office is commissioning a small public-service task: audit an emergency warming center’s supply list and transport access. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "yrethia",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.yrethia.stabilization.v1",
+      "instructions": [
+        "Review the official Sableport arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to maritime logistics, customs services, and trade finance.",
+        "Document a fallback through Sableport Port Records Bureau and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Sableport that resolves your address record, temporary berth district housing, and corrected work documentation and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Sableport Port Records Bureau needs a practical first-week plan before it will clear your settlement support. You must resolve your address record, temporary berth district housing, and corrected work documentation without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "yrethia",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.yrethia.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how port congestion, customs holds, and uninsured route changes could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a licensed cargo-integrity inspection shift with a customs-documentation assistant contract and select the path that best preserves liquidity under port congestion, customs holds, and uninsured route changes.",
+      "playerFacingDescription": "Two legitimate income paths are available in Sableport: a licensed cargo-integrity inspection shift and a customs-documentation assistant contract. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "yrethia",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.yrethia.market.v1",
+      "instructions": [
+        "Define the customer problem inside maritime logistics, customs services, and trade finance and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by port congestion, customs holds, and uninsured route changes.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of cargo telemetry and compliant rerouting services in Sableport and identify the most important downside created by port congestion, customs holds, and uninsured route changes.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on cargo telemetry and compliant rerouting services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "yrethia",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.yrethia.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate protective packaging and alternate inland transshipment for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on marine seal assemblies moving through a congested customs lane and test whether protective packaging and alternate inland transshipment can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on marine seal assemblies moving through a congested customs lane. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "yrethia",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.yrethia.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Sableport: review a dockside cooperative’s shipment records and damage-prevention process.",
+      "playerFacingDescription": "Sableport Port Records Bureau is commissioning a small public-service task: review a dockside cooperative’s shipment records and damage-prevention process. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "thaloris",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.thaloris.stabilization.v1",
+      "instructions": [
+        "Review the official Dusk Harbor arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to repair, salvage processing, and re-export trade.",
+        "Document a fallback through Dusk Harbor Repair Cooperative and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Dusk Harbor that resolves legal lodging, a recognized guarantor, and proof that your first work contact is licensed and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Dusk Harbor Repair Cooperative needs a practical first-week plan before it will clear your settlement support. You must resolve legal lodging, a recognized guarantor, and proof that your first work contact is licensed without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "thaloris",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.thaloris.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how unverified parts, route volatility, and disputes over salvage quality could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a supervised thermal-regulator repair bench with a documented salvage-sorting assignment and select the path that best preserves liquidity under unverified parts, route volatility, and disputes over salvage quality.",
+      "playerFacingDescription": "Two legitimate income paths are available in Dusk Harbor: a supervised thermal-regulator repair bench and a documented salvage-sorting assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "thaloris",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.thaloris.market.v1",
+      "instructions": [
+        "Define the customer problem inside repair, salvage processing, and re-export trade and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by unverified parts, route volatility, and disputes over salvage quality.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of tested energy components and certified repair services in Dusk Harbor and identify the most important downside created by unverified parts, route volatility, and disputes over salvage quality.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on tested energy components and certified repair services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "thaloris",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.thaloris.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate reconditioned energy cells and lower-capacity thermal systems for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on lithium salt supplied through a volatile coastal route and test whether reconditioned energy cells and lower-capacity thermal systems can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on lithium salt supplied through a volatile coastal route. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "thaloris",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.thaloris.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Dusk Harbor: classify donated repair stock for a neighborhood power-resilience workshop.",
+      "playerFacingDescription": "Dusk Harbor Repair Cooperative is commissioning a small public-service task: classify donated repair stock for a neighborhood power-resilience workshop. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "solvend",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.solvend.stabilization.v1",
+      "instructions": [
+        "Review the official Aurora Spire arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to aerospace research, advanced instruments, and technical services.",
+        "Document a fallback through Aurora Skills Verification Directorate and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Aurora Spire that resolves credential verification, temporary professional housing, and a booked skills assessment and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Aurora Skills Verification Directorate needs a practical first-week plan before it will clear your settlement support. You must resolve credential verification, temporary professional housing, and a booked skills assessment without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "solvend",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.solvend.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how credential delays, specialist shortages, and concentrated cyber exposure could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a supervised research-instrument calibration placement with an orbital-route data assistant role and select the path that best preserves liquidity under credential delays, specialist shortages, and concentrated cyber exposure.",
+      "playerFacingDescription": "Two legitimate income paths are available in Aurora Spire: a supervised research-instrument calibration placement and an orbital-route data assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "solvend",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.solvend.market.v1",
+      "instructions": [
+        "Define the customer problem inside aerospace research, advanced instruments, and technical services and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by credential delays, specialist shortages, and concentrated cyber exposure.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of instrument calibration and research-data verification in Aurora Spire and identify the most important downside created by credential delays, specialist shortages, and concentrated cyber exposure.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on instrument calibration and research-data verification. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "solvend",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.solvend.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate lower-spec optical assemblies and shared calibration capacity for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on research crystal substrates supplied by a single certified producer and test whether lower-spec optical assemblies and shared calibration capacity can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on research crystal substrates supplied by a single certified producer. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "solvend",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.solvend.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Aurora Spire: prepare a public equipment-booking guide for a shared research laboratory.",
+      "playerFacingDescription": "Aurora Skills Verification Directorate is commissioning a small public-service task: prepare a public equipment-booking guide for a shared research laboratory. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "eldoran",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.eldoran.stabilization.v1",
+      "instructions": [
+        "Review the official Crescent Bay arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to food distribution, wholesale markets, and secure commercial records.",
+        "Document a fallback through Crescent Bay Food Security Exchange and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Crescent Bay that resolves affordable housing, reliable food-market access, and a verified local payment account and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Crescent Bay Food Security Exchange needs a practical first-week plan before it will clear your settlement support. You must resolve affordable housing, reliable food-market access, and a verified local payment account without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "eldoran",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.eldoran.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how harvest variability, affordability pressure, and inventory-record errors could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a wholesale inventory-recording placement with a neighborhood food-distribution assistant role and select the path that best preserves liquidity under harvest variability, affordability pressure, and inventory-record errors.",
+      "playerFacingDescription": "Two legitimate income paths are available in Crescent Bay: a wholesale inventory-recording placement and a neighborhood food-distribution assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "eldoran",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.eldoran.market.v1",
+      "instructions": [
+        "Define the customer problem inside food distribution, wholesale markets, and secure commercial records and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by harvest variability, affordability pressure, and inventory-record errors.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of verified wholesale records and low-waste distribution in Crescent Bay and identify the most important downside created by harvest variability, affordability pressure, and inventory-record errors.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on verified wholesale records and low-waste distribution. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "eldoran",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.eldoran.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate shared terminals and identity-laminate paper workflows for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on conductive gold foil used in secure market terminals and test whether shared terminals and identity-laminate paper workflows can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on conductive gold foil used in secure market terminals. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "eldoran",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.eldoran.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Crescent Bay: map affordable food access and delivery gaps for a neighborhood distribution point.",
+      "playerFacingDescription": "Crescent Bay Food Security Exchange is commissioning a small public-service task: map affordable food access and delivery gaps for a neighborhood distribution point. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "valerion",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.valerion.stabilization.v1",
+      "instructions": [
+        "Review the official Glassfall arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to water systems, environmental monitoring, and public infrastructure.",
+        "Document a fallback through Glassfall Water and Housing Office and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Glassfall that resolves a recognized address, deposit plan, and confirmed access to safe water services and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Glassfall Water and Housing Office needs a practical first-week plan before it will clear your settlement support. You must resolve a recognized address, deposit plan, and confirmed access to safe water services without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "valerion",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.valerion.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how housing deposits, filter shortages, and aging water infrastructure could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a water-quality sampling placement with an infrastructure-inspection assistant assignment and select the path that best preserves liquidity under housing deposits, filter shortages, and aging water infrastructure.",
+      "playerFacingDescription": "Two legitimate income paths are available in Glassfall: a water-quality sampling placement and an infrastructure-inspection assistant assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "valerion",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.valerion.market.v1",
+      "instructions": [
+        "Define the customer problem inside water systems, environmental monitoring, and public infrastructure and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by housing deposits, filter shortages, and aging water infrastructure.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of water testing, filtration maintenance, and resilience services in Glassfall and identify the most important downside created by housing deposits, filter shortages, and aging water infrastructure.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on water testing, filtration maintenance, and resilience services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "valerion",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.valerion.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate ceramic filter media and emergency cartridge rotation for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on filtration membranes supplied by one regional processor and test whether ceramic filter media and emergency cartridge rotation can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on filtration membranes supplied by one regional processor. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "valerion",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.valerion.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Glassfall: inspect a public refill station and produce a prioritized maintenance checklist.",
+      "playerFacingDescription": "Glassfall Water and Housing Office is commissioning a small public-service task: inspect a public refill station and produce a prioritized maintenance checklist. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "lumenor",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.lumenor.stabilization.v1",
+      "instructions": [
+        "Review the official Starfall arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to translation, education services, public information, and records support.",
+        "Document a fallback through Starfall Civic Translation Desk and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Starfall that resolves a recognized address, translated identity records, and access to public information channels and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Starfall Civic Translation Desk needs a practical first-week plan before it will clear your settlement support. You must resolve a recognized address, translated identity records, and access to public information channels without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "lumenor",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.lumenor.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how language barriers, document mismatch, and misinformation could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a supervised translation-dossier assignment with a public-briefing preparation role and select the path that best preserves liquidity under language barriers, document mismatch, and misinformation.",
+      "playerFacingDescription": "Two legitimate income paths are available in Starfall: a supervised translation-dossier assignment and a public-briefing preparation role. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "lumenor",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.lumenor.market.v1",
+      "instructions": [
+        "Define the customer problem inside translation, education services, public information, and records support and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by language barriers, document mismatch, and misinformation.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of verified translation and accessible public-information services in Starfall and identify the most important downside created by language barriers, document mismatch, and misinformation.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on verified translation and accessible public-information services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "lumenor",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.lumenor.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate archival polymer sheets and shared display terminals for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on educational display film sourced from a limited supplier and test whether archival polymer sheets and shared display terminals can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on educational display film sourced from a limited supplier. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "lumenor",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.lumenor.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Starfall: translate and simplify a settlement-services guide for newly arrived residents.",
+      "playerFacingDescription": "Starfall Civic Translation Desk is commissioning a small public-service task: translate and simplify a settlement-services guide for newly arrived residents. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "xalvoria",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.xalvoria.stabilization.v1",
+      "instructions": [
+        "Review the official Emberhall arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to manufacturing, construction, warehousing, and industrial services.",
+        "Document a fallback through Emberhall Development Authority and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Emberhall that resolves a bankable identity, recognized address, and verified employment or enterprise sponsor and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Emberhall Development Authority needs a practical first-week plan before it will clear your settlement support. You must resolve a bankable identity, recognized address, and verified employment or enterprise sponsor without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "xalvoria",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.xalvoria.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how startup debt, project delays, and volatile material costs could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a warehouse inventory-controller placement with a supervised construction-planning assistant role and select the path that best preserves liquidity under startup debt, project delays, and volatile material costs.",
+      "playerFacingDescription": "Two legitimate income paths are available in Emberhall: a warehouse inventory-controller placement and a supervised construction-planning assistant role. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "xalvoria",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.xalvoria.market.v1",
+      "instructions": [
+        "Define the customer problem inside manufacturing, construction, warehousing, and industrial services and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by startup debt, project delays, and volatile material costs.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of portable fabrication and inventory-control services in Emberhall and identify the most important downside created by startup debt, project delays, and volatile material costs.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on portable fabrication and inventory-control services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "xalvoria",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.xalvoria.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate refined alloy ingot and staged low-volume fabrication for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on machine steel billet delivered from a concentrated supplier and test whether refined alloy ingot and staged low-volume fabrication can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on machine steel billet delivered from a concentrated supplier. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "xalvoria",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.xalvoria.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Emberhall: prepare a material and labor estimate for a small public repair project.",
+      "playerFacingDescription": "Emberhall Development Authority is commissioning a small public-service task: prepare a material and labor estimate for a small public repair project. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "dravenlok",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.dravenlok.stabilization.v1",
+      "instructions": [
+        "Review the official Ironhold arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to mining, foundry work, heavy maintenance, and structural repair.",
+        "Document a fallback through Ironhold Technical Placement Office and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Ironhold that resolves technical placement, worker-housing eligibility, and verified safety credentials and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Ironhold Technical Placement Office needs a practical first-week plan before it will clear your settlement support. You must resolve technical placement, worker-housing eligibility, and verified safety credentials without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "dravenlok",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.dravenlok.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how equipment downtime, housing tied to employment, and heavy-material shortages could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a supervised maintenance-rig service rotation with a structural inspection support assignment and select the path that best preserves liquidity under equipment downtime, housing tied to employment, and heavy-material shortages.",
+      "playerFacingDescription": "Two legitimate income paths are available in Ironhold: a supervised maintenance-rig service rotation and a structural inspection support assignment. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "dravenlok",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.dravenlok.market.v1",
+      "instructions": [
+        "Define the customer problem inside mining, foundry work, heavy maintenance, and structural repair and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by equipment downtime, housing tied to employment, and heavy-material shortages.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of structural inspection and heavy-equipment maintenance in Ironhold and identify the most important downside created by equipment downtime, housing tied to employment, and heavy-material shortages.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on structural inspection and heavy-equipment maintenance. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "dravenlok",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.dravenlok.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate refined alloy ingot and prioritized reinforcement kits for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on hardened steel plate supplied through an overcommitted foundry and test whether refined alloy ingot and prioritized reinforcement kits can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on hardened steel plate supplied through an overcommitted foundry. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "dravenlok",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.dravenlok.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Ironhold: inspect a worker-housing utility area and document urgent repair priorities.",
+      "playerFacingDescription": "Ironhold Technical Placement Office is commissioning a small public-service task: inspect a worker-housing utility area and document urgent repair priorities. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    },
+    {
+      "country": "syndalis",
+      "estimatedDurationMinutes": 25,
+      "family": "arrival",
+      "id": "contract.arrival.syndalis.stabilization.v1",
+      "instructions": [
+        "Review the official Blacklight arrival notice and list every deadline, deposit, document, or service requirement.",
+        "Select one verified housing or address path and calculate its first-week cash commitment.",
+        "Confirm one lawful income, training, public-service, or enterprise lead tied to secure communications, media verification, and digital services.",
+        "Document a fallback through Blacklight Identity and Signal Authority and state the amount of cash that remains protected."
+      ],
+      "objective": "Produce a verified first-week stabilization plan for Blacklight that resolves verified digital identity, temporary physical housing, and access to trusted emergency channels and preserves a minimum emergency reserve.",
+      "playerFacingDescription": "Blacklight Identity and Signal Authority needs a practical first-week plan before it will clear your settlement support. You must resolve verified digital identity, temporary physical housing, and access to trusted emergency channels without spending the emergency reserve that protects you from an early setback.",
+      "submissionRequirement": "Submit a four-part stabilization dossier: requirement checklist, selected address path, first-week cash plan, and verified fallback contact."
+    },
+    {
+      "country": "syndalis",
+      "estimatedDurationMinutes": 35,
+      "family": "livelihood",
+      "id": "contract.core.syndalis.livelihood.v1",
+      "instructions": [
+        "Record expected first-week income, required equipment or transport, and the earliest realistic payment date for each option.",
+        "Explain how identity fraud, disputed information, and network concentration could reduce or delay each option’s value.",
+        "Reject any option that depends on an unavailable mechanic, unverified employer, or unlicensed transaction.",
+        "Choose one path and define a fallback trigger that would cause you to switch."
+      ],
+      "objective": "Compare a media-verification assistant assignment with a secure-communications support placement and select the path that best preserves liquidity under identity fraud, disputed information, and network concentration.",
+      "playerFacingDescription": "Two legitimate income paths are available in Blacklight: a media-verification assistant assignment and a secure-communications support placement. Compare the real costs, timing, and risks before committing your limited starting capital.",
+      "submissionRequirement": "Submit a side-by-side livelihood comparison with cash timing, required inputs, risk adjustment, selected path, and fallback trigger."
+    },
+    {
+      "country": "syndalis",
+      "estimatedDurationMinutes": 35,
+      "family": "market",
+      "id": "contract.core.syndalis.market.v1",
+      "instructions": [
+        "Define the customer problem inside secure communications, media verification, and digital services and name the buyer or institution most likely to pay.",
+        "Use approved market, Store, Contract, or country information to support one demand claim.",
+        "Quantify or rank the downside caused by identity fraud, disputed information, and network concentration.",
+        "Recommend a bounded first transaction or pilot that does not require unsupported features."
+      ],
+      "objective": "Evaluate the commercial potential of verified communications and evidence-checking services in Blacklight and identify the most important downside created by identity fraud, disputed information, and network concentration.",
+      "playerFacingDescription": "A local operator wants a concise opportunity brief on verified communications and evidence-checking services. The brief must identify a credible buyer, a realistic constraint, and evidence that the opportunity is more than speculative hype.",
+      "submissionRequirement": "Submit a market brief containing customer, problem, evidence, downside risk, and a bounded pilot recommendation."
+    },
+    {
+      "country": "syndalis",
+      "estimatedDurationMinutes": 40,
+      "family": "resilience",
+      "id": "contract.core.syndalis.resilience.v1",
+      "instructions": [
+        "Identify the affected product, service, Contract, or community need and the point where the dependency enters the chain.",
+        "State the disruption trigger, expected duration, and the inventory or cash exposure at risk.",
+        "Evaluate approved encryption modules and lower-bandwidth verified channels for cost, quality, timing, and legal eligibility.",
+        "Define a recovery sequence that limits losses and avoids duplicate claims or unsupported inventory."
+      ],
+      "objective": "Map the dependency on encryption crystal matrix supplied through one trusted network and test whether approved encryption modules and lower-bandwidth verified channels can maintain a minimum viable service.",
+      "playerFacingDescription": "A local supply chain relies on encryption crystal matrix supplied through one trusted network. A disruption would halt essential work, so the operator needs a lawful substitute plan before committing inventory or credit.",
+      "submissionRequirement": "Submit a dependency map, disruption trigger, substitute comparison, and ordered recovery sequence."
+    },
+    {
+      "country": "syndalis",
+      "estimatedDurationMinutes": 40,
+      "family": "community",
+      "id": "contract.core.syndalis.community.v1",
+      "instructions": [
+        "Confirm the beneficiary, scope, and acceptance standard before beginning.",
+        "Use only approved public information, available inventory, and supported Contract evidence.",
+        "Record the completed work with a checklist, calculation, map, or verification log appropriate to the task.",
+        "Explain one measurable local benefit and one limitation that remains unresolved."
+      ],
+      "objective": "Complete and document the following verified service in Blacklight: verify a set of public emergency notices and record correction lineage.",
+      "playerFacingDescription": "Blacklight Identity and Signal Authority is commissioning a small public-service task: verify a set of public emergency notices and record correction lineage. The work must produce evidence that another resident or local operator can actually use.",
+      "submissionRequirement": "Submit completion evidence, the beneficiary’s acceptance criteria, one measurable impact, and one unresolved limitation."
+    }
+  ],
+  "schemaVersion": "econovaria-beta-contract-content-v2",
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}
