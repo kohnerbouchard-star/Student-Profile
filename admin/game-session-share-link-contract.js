@@ -53,6 +53,23 @@
       });
   }
 
+  function hideAdminShareField(input) {
+    const field = input.closest([
+      "label",
+      ".admin-terminal-field",
+      ".admin-terminal-share-field",
+      ".admin-terminal-share-row",
+      "[class*='share-field']",
+      "[class*='share-row']",
+    ].join(", ")) || input.parentElement;
+    if (!(field instanceof HTMLElement)) return;
+    field.hidden = true;
+    field.setAttribute("aria-hidden", "true");
+    field.querySelectorAll("input, button, a, textarea, select").forEach((control) => {
+      if (control instanceof HTMLElement) control.tabIndex = -1;
+    });
+  }
+
   function repairSurface(surface, selected) {
     if (!(surface instanceof Element) || !selected.gameCode) return false;
     const dialog = surface.querySelector('[role="dialog"]') || surface;
@@ -73,11 +90,19 @@
           `Join ${selected.gameName}\n\nGame Code: ${selected.gameCode}\nPlayer login: ${playerUrl}`;
       });
 
-    dialog.querySelectorAll("input[id*='share-admin-link']").forEach((input) => {
-      const field = input.closest(
-        "label, .admin-terminal-field, .admin-terminal-share-field",
-      );
-      if (field) field.hidden = true;
+    dialog.querySelectorAll("input[id*='share-admin-link']").forEach(hideAdminShareField);
+
+    dialog.querySelectorAll([
+      ".admin-terminal-share-modal-code strong",
+      "[data-econovaria-selected-game-code]",
+      "[data-econovaria-share-code]",
+    ].join(", ")).forEach((codeNode) => {
+      codeNode.textContent = selected.gameCode;
+      codeNode.setAttribute("data-game-code", selected.gameCode);
+    });
+
+    dialog.querySelectorAll("[data-econovaria-share-game-context]").forEach((note) => {
+      note.textContent = `Players using ${selected.gameCode} will join ${selected.gameName}.`;
     });
 
     surface.dataset.gameCode = selected.gameCode;
@@ -119,6 +144,7 @@
 
   window.addEventListener("econovaria:admin-bootstrap-complete", scheduleRepairs);
   window.addEventListener("econovaria:admin-session-refreshed", scheduleRepairs);
+  window.addEventListener("econovaria:admin-game-created", scheduleRepairs);
   window.addEventListener("load", scheduleRepairs, { once: true });
 
   window.EconovariaAdminGameShareLinkContract = Object.freeze({
