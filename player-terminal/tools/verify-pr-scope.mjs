@@ -13,20 +13,6 @@ const changedFiles = readFileSync(changedFilePath, "utf8")
 
 const hasPlayerChanges = changedFiles.some((path) => path.startsWith("player-terminal/"));
 
-function pullRequestHeadRef() {
-  if (process.env.GITHUB_HEAD_REF) return process.env.GITHUB_HEAD_REF;
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (!eventPath) return "";
-  try {
-    const event = JSON.parse(readFileSync(eventPath, "utf8"));
-    return event?.pull_request?.head?.ref || "";
-  } catch {
-    return "";
-  }
-}
-
-const isBoundedSeedArtworkPullRequest = pullRequestHeadRef() === "agent/seed-content-usable-v2";
-
 const exactAllowed = new Set([
   ".github/workflows/player-terminal-verify.yml",
   ".github/workflows/marketplace-preconvergence.yml",
@@ -52,8 +38,13 @@ const exactAllowed = new Set([
   "admin/interaction-quality-control-reset.js",
   "admin/world-runtime-console.js",
   "admin/world-runtime-console-loader.js",
+  "admin/css/admin-stabilization-visual-finish.css",
   "admin/css/crafting-oversight.css",
   "admin/css/world-runtime-console.css",
+  "assets/brand/econovaria-icon.webp",
+  "assets/brand/econovaria-logo.webp",
+  "assets/brand/favicon-32.png",
+  "assets/brand/econovaria-logo-loop.mp4",
   "docs/operations/environments/runtime-config.env.template.js",
   "frontend/src/core/runtime-config.js",
   "scripts/admin-attendance-action-smoke.mjs",
@@ -158,18 +149,8 @@ const allowedPatterns = [
   /^scripts\/(admin-progression-contract|progression-(abuse-threshold-simulation|balance-simulation|event-delivery-simulation))\.mjs$/,
 ];
 
-const boundedSeedArtworkPatterns = [
-  /^docs\/seed-content\/contracts\/contract-content-source-v2\.json$/,
-  /^docs\/seed-content\/executable\/beta-pack-v1\/(integrity-manifest-v1|pack-v1|stable-id-map-v1|store-artwork-v2|store-catalog-v1)\.json$/,
-  /^docs\/seed-content\/items\/(blueprint-artwork-source-v2|component-artwork-source-v2|consumable-artwork-source-v2|equipment-artwork-source-v2|item-content-expansion-v2|material-artwork-expansion-v2|store-artwork-source-v2|store-content-overrides-v2)\.json$/,
-  /^scripts\/(apply-store-content-overrides|component-artwork-contract|consumable-artwork-contract|equipment-artwork-contract|final-item-artwork-contract|item-content-coverage\.test|store-content-artwork-contract|store-content-artwork-source\.test)\.mjs$/,
-];
-
 function isAllowed(path) {
   if (!hasPlayerChanges) return /^\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
-  if (isBoundedSeedArtworkPullRequest && boundedSeedArtworkPatterns.some((pattern) => pattern.test(path))) {
-    return true;
-  }
   return exactAllowed.has(path) || allowedPatterns.some((pattern) => pattern.test(path));
 }
 
