@@ -7,25 +7,12 @@ import { fileURLToPath } from "node:url";
 const FUNCTION_ANCHOR = "async function runHttpAcceptance() {";
 const MAIN_ANCHOR = `    await runRateLimitProbe();
     captureQueryPlans();`;
-const LEGACY_BLOCK = `  psql(\`update public.game_sessions set lifecycle_state='paused',paused_at=now() where id=\${sqlLiteral(fixture.gameId)};\`);
-  const paused = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: { ...createBody, idempotencyKey: \`\${fixture.runTag}:message:paused\` },
-    expectedStatuses: [409],
-  });
-  evidence.checks.pausedMutationDenied = paused.status === 409;
-
-  psql(\`update public.game_sessions set lifecycle_state='ended',ended_at=now(),paused_at=null where id=\${sqlLiteral(fixture.gameId)};\`);
-  const ended = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: { ...createBody, idempotencyKey: \`\${fixture.runTag}:message:ended\` },
-    expectedStatuses: [409],
-  });
-  evidence.checks.endedMutationDenied = ended.status === 409;
-  psql(\`update public.game_sessions set lifecycle_state='active',ended_at=null,paused_at=null,resumed_at=now() where id=\${sqlLiteral(fixture.gameId)};\`);
-`;
+const PAUSE_SQL =
+  "update public.game_sessions set lifecycle_state='paused',paused_at=now() where id=${sqlLiteral(fixture.gameId)};";
+const END_SQL =
+  "update public.game_sessions set lifecycle_state='ended',ended_at=now(),paused_at=null where id=${sqlLiteral(fixture.gameId)};";
+const RESUME_SQL =
+  "update public.game_sessions set lifecycle_state='active',ended_at=null,paused_at=null,resumed_at=now() where id=${sqlLiteral(fixture.gameId)};";
 
 const CANONICAL_HELPERS = `function transitionSyntheticLifecycle(action) {
   const idempotencyKey = \`\${fixture.runTag}:lifecycle:\${action}\`;
@@ -109,24 +96,74 @@ async function runLifecycleAcceptance() {
 
 `;
 
+function extractLegacyLifecycleBlock(source) {
+  const pauseTokenIndex = source.indexOf(PAUSE_SQL);
+  const endTokenIndex = source.indexOf(END_SQL);
+  const resumeTokenIndex = source.indexOf(RESUME_SQL);
+  if (
+    pauseTokenIndex < 0 ||
+    endTokenIndex <= pauseTokenIndex ||
+    resumeTokenIndex <= endTokenIndex
+  ) {
+    throw new Error("Legacy lifecycle acceptance block is missing or changed");
+  }
+
+  const startIndex = source.lastIndexOf("  psql(", pauseTokenIndex);
+  const resumeCloseIndex = source.indexOf(");", resumeTokenIndex + RESUME_SQL.length);
+  if (startIndex < 0 || resumeCloseIndex < 0) {
+    throw new Error("Legacy lifecycle acceptance block is missing or changed");
+  }
+  const lineEndIndex = source.indexOf("\n", resumeCloseIndex + 2);
+  const endIndex = lineEndIndex < 0 ? resumeCloseIndex + 2 : lineEndIndex + 1;
+  const block = source.slice(startIndex, endIndex);
+
+  const requiredTokens = [
+    PAUSE_SQL,
+    END_SQL,
+    RESUME_SQL,
+    "${fixture.runTag}:message:paused",
+    "${fixture.runTag}:message:ended",
+    "evidence.checks.pausedMutationDenied = paused.status === 409;",
+    "evidence.checks.endedMutationDenied = ended.status === 409;",
+  ];
+  for (const token of requiredTokens) {
+    if (!block.includes(token)) {
+      throw new Error("Legacy lifecycle acceptance block is missing or changed");
+    }
+  }
+  if ((block.match(/expectedStatuses:\s*\[409\]/g) ?? []).length !== 2) {
+    throw new Error("Legacy lifecycle acceptance block is missing or changed");
+  }
+  return block;
+}
+
 export function patchConnectedLifecycleAcceptance(source) {
-  if (typeof source !== "string" || !source) throw new TypeError("Connected acceptance source is required");
+  if (typeof source !== "string" || !source) {
+    throw new TypeError("Connected acceptance source is required");
+  }
   if (source.includes("function transitionSyntheticLifecycle(action)")) {
     if (source.includes("update public.game_sessions set lifecycle_state=")) {
       throw new Error("Patched acceptance still contains direct lifecycle mutation");
     }
     return source;
   }
-  if (!source.includes(FUNCTION_ANCHOR)) throw new Error("Connected acceptance function anchor is missing");
-  if (!source.includes(LEGACY_BLOCK)) throw new Error("Legacy lifecycle acceptance block is missing or changed");
-  if (!source.includes(MAIN_ANCHOR)) throw new Error("Connected acceptance main sequence anchor is missing");
+  if (!source.includes(FUNCTION_ANCHOR)) {
+    throw new Error("Connected acceptance function anchor is missing");
+  }
+  if (!source.includes(MAIN_ANCHOR)) {
+    throw new Error("Connected acceptance main sequence anchor is missing");
+  }
+  const legacyBlock = extractLegacyLifecycleBlock(source);
 
   const patched = source
     .replace(FUNCTION_ANCHOR, `${CANONICAL_HELPERS}${FUNCTION_ANCHOR}`)
-    .replace(LEGACY_BLOCK, "")
-    .replace(MAIN_ANCHOR, `    await runRateLimitProbe();
+    .replace(legacyBlock, "")
+    .replace(
+      MAIN_ANCHOR,
+      `    await runRateLimitProbe();
     await runLifecycleAcceptance();
-    captureQueryPlans();`);
+    captureQueryPlans();`,
+    );
 
   if (patched.includes("update public.game_sessions set lifecycle_state=")) {
     throw new Error("Direct lifecycle mutation remains after patching");
@@ -142,15 +179,24 @@ export function patchConnectedLifecycleAcceptance(source) {
 
 async function main() {
   const input = process.argv[2];
-  if (!input) throw new Error("Usage: node scripts/pr295-connected-lifecycle-harness.mjs <acceptance-file>");
+  if (!input) {
+    throw new Error(
+      "Usage: node scripts/pr295-connected-lifecycle-harness.mjs <acceptance-file>",
+    );
+  }
   const target = path.resolve(input);
   const source = await readFile(target, "utf8");
   const patched = patchConnectedLifecycleAcceptance(source);
   await writeFile(target, patched, "utf8");
-  console.log("Connected staging lifecycle acceptance now uses canonical atomic transitions.");
+  console.log(
+    "Connected staging lifecycle acceptance now uses canonical atomic transitions.",
+  );
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
