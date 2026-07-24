@@ -114,13 +114,19 @@ test("lifecycle harness fails closed when legacy source drifts", () => {
   );
 });
 
-test("composed harness installs canonical lifecycle and sensitive throttling", () => {
+test("composed harness installs canonical lifecycle and isolated sensitive throttling", () => {
   const lifecyclePatched = patchConnectedLifecycleAcceptance(source);
   const fullyPatched = patchSensitiveRateLimitAcceptance(lifecyclePatched);
 
   assert.match(fullyPatched, /transition_game_lifecycle_atomic_v1/);
   assert.match(fullyPatched, /profile: "replay-safe-sensitive-action"/);
   assert.match(fullyPatched, /action: "player\.messages\.thread\.create"/);
+  assert.match(fullyPatched, /probePlayerIndex = 2/);
+  assert.match(
+    fullyPatched,
+    /playerToken: fixture\.directSessionTokens\[probePlayerIndex\]/,
+  );
+  assert.match(fullyPatched, /lifecyclePlayerIndex: 0/);
   assert.match(fullyPatched, /configuredActionLimit: 10/);
   assert.match(fullyPatched, /expectedStatuses: \[200, 201, 429\]/);
   assert.match(fullyPatched, /assertSafePlayerResponse/);
