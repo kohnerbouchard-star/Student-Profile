@@ -98,7 +98,10 @@ jobs:
 
       - name: Create game and verify Player target in Chromium
         if: github.event.pull_request.number == 334
-        run: node scripts/admin-game-creation-browser-smoke.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-game-creation-browser-smoke.mjs 2>&1 | tee /tmp/admin-game-creation-browser.log
 
       - name: Upload Admin control diagnostics
         if: always()
@@ -108,5 +111,6 @@ jobs:
           path: |
             admin-browser-smoke-artifacts/game-session-controls/
             admin-browser-smoke-artifacts/game-creation/
+            /tmp/admin-game-creation-browser.log
           if-no-files-found: warn
           retention-days: 30
