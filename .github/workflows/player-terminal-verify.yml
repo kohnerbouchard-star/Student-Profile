@@ -43,6 +43,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
+          PLAYER_SCOPE_HEAD_REF: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
