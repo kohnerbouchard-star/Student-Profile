@@ -1,5 +1,5 @@
 {
-  "acceptedImplementationSourceSha": "8690a8d2f94d5f4da099a2a387bb329fa9d2c1d8",
+  "acceptedImplementationSourceSha": "1aed8a1c691328906c5c4ed69bf59bd215ae98ef",
   "activationApproval": {
     "legacyConvenienceTemplateAtAcceptedHeadIsSufficient": false,
     "requiredBindings": {
@@ -11,7 +11,7 @@
       "expiresAt": "ISO-8601 timestamp later than execution time and approvedAt",
       "gameSessionId": "exact target game UUID",
       "packId": "econovaria.beta-seed-pack.v1",
-      "packSha256": "c4b554005f3f0cd4c0c6c278d3f9eb0327c4de0067da83806e5dc833046aa4b2",
+      "packSha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6",
       "productionAuthorized": false,
       "projectRef": "exact isolated-staging project ref",
       "sourceSha": "exact approved 40-character Git source SHA",
@@ -182,6 +182,10 @@
       "path": "docs/seed-content/executable/beta-pack-v1/contract-content-v2.json",
       "sha256": "3907431e095397a615cda947db4aee3d04a44ab01100cf8916fde319983460dd"
     },
+    "interactions": {
+      "path": "docs/seed-content/executable/beta-pack-v1/interactions-v2.json",
+      "sha256": "5fcc4c64935ceb581852090822a67d21063be5821f072f647292159e6e781d17"
+    },
     "locations": {
       "path": "docs/seed-content/executable/beta-pack-v1/location-registry-verified-v1.json",
       "sha256": "69b36df3adfaa658d844bfcfa940b05f52393217eaf473f5484f4f67bc3ace29"
@@ -192,7 +196,7 @@
     },
     "pack": {
       "path": "docs/seed-content/executable/beta-pack-v1/pack-v1.json",
-      "sha256": "c4b554005f3f0cd4c0c6c278d3f9eb0327c4de0067da83806e5dc833046aa4b2"
+      "sha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6"
     },
     "physicalEconomy": {
       "path": "docs/seed-content/executable/beta-pack-v1/physical-economy-calibration-v1.json",
@@ -277,7 +281,7 @@
     "game_contract",
     "store_item"
   ],
-  "packDigest": "c4b554005f3f0cd4c0c6c278d3f9eb0327c4de0067da83806e5dc833046aa4b2",
+  "packDigest": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6",
   "packId": "econovaria.beta-seed-pack.v1",
   "packVersion": "1.0.0-beta",
   "productionAuthorized": false,

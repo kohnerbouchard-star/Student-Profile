@@ -10,6 +10,7 @@
     "arrivalPackages": 10,
     "authoredArrivalBriefs": 10,
     "authoredContractDefinitions": 50,
+    "authoredInteractions": 50,
     "campaignCrisisArcs": 5,
     "campaignEventChains": 10,
     "campaignEvents": 25,
@@ -37,11 +38,15 @@
     "authoredCampaignNewsTemplates": 30,
     "authoredCampaignNotificationTemplates": 30,
     "authoredContractDefinitions": 50,
+    "authoredInteractions": 50,
     "duplicateArtworkAssignments": 0,
     "individualStoreArtworkRecords": 50,
+    "interactionsWithEvidenceRequirements": 50,
+    "interactionsWithRecovery": 50,
     "placeholderArrivalContent": 0,
     "placeholderCampaignContent": 0,
     "placeholderContractDescriptions": 0,
+    "placeholderInteractionContent": 0,
     "placeholderStoreDescriptions": 0,
     "repeatedGenericArrivalTutorials": 0,
     "repeatedGenericTutorialInstructions": 0,
@@ -53,13 +58,16 @@
     "uniqueArrivalWelcomeMessages": 10,
     "uniqueCampaignEventSummaries": 25,
     "uniqueCampaignNewsBodies": 30,
-    "uniqueCampaignNotificationBodies": 30
+    "uniqueCampaignNotificationBodies": 30,
+    "uniqueInteractionOptionDescriptions": 150,
+    "uniqueInteractionPrompts": 50
   },
   "contentRevision": "store-content-v2",
   "contentRevisions": {
     "arrivals": "arrival-content-v2",
     "campaign": "campaign-content-v2",
-    "contracts": "contract-content-v2"
+    "contracts": "contract-content-v2",
+    "interactions": "interaction-content-v2"
   },
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
@@ -72,6 +80,7 @@
     "contractContent": "contract-content-v2.json",
     "contracts": "tutorial-contract-chains-v1.json",
     "integrity": "integrity-manifest-v1.json",
+    "interactions": "interactions-v2.json",
     "locations": "location-registry-verified-v1.json",
     "market": "market-templates-v1.json",
     "physicalEconomy": "physical-economy-calibration-v1.json",
