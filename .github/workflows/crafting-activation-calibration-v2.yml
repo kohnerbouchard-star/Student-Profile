@@ -1,0 +1,90 @@
+name: Crafting Activation Calibration V2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crafting-activation-calibration-v2.yml"
+      - "scripts/simulate-physical-economy-activation-v2.mjs"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
+      - "scripts/lib/physical-economy-pack-*.mjs"
+      - "docs/seed-content/items/**"
+      - "docs/seed-content/simulation/physical-economy/**"
+      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crafting-activation-calibration-v2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate simulator syntax
+        run: node --check scripts/simulate-physical-economy-activation-v2.mjs
+
+      - name: Run current structural physical-economy checks
+        run: npm run simulate:physical-economy
+
+      - name: Execute reproducible 16,000-run candidate calibration
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/simulate-physical-economy-activation-v2.mjs \
+            --output-dir /tmp/physical-economy-calibration-v2 \
+            2>&1 | tee /tmp/physical-economy-calibration-v2.log
+
+      - name: Validate generated evidence contract
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const root = "/tmp/physical-economy-calibration-v2";
+          const manifest = JSON.parse(await readFile(`${root}/physical-economy-run-manifest-v2.json`, "utf8"));
+          const summary = JSON.parse(await readFile(`${root}/physical-economy-gate-summary-v2.json`, "utf8"));
+          if (manifest.schemaVersion !== "econovaria-physical-economy-run-manifest-v2") throw new Error("Invalid run manifest schema");
+          if (summary.schemaVersion !== "econovaria-physical-economy-gate-summary-v2") throw new Error("Invalid gate summary schema");
+          if (manifest.runConfiguration.runCount !== 16000) throw new Error("Expected exactly 16,000 runs");
+          if (summary.runConfiguration.runCount !== 16000) throw new Error("Gate summary run count is incorrect");
+          if (manifest.activationAuthorized !== false) throw new Error("Candidate workflow must not authorize activation");
+          if (summary.gateCounts.unresolved !== 0) throw new Error("All integrity gates must be executable");
+          if (!Number.isInteger(summary.integrityGates.substitutionExecutions)) throw new Error("Substitution evidence is missing");
+          if (!Array.isArray(summary.integrityGates.recraftLoopEvidence)) throw new Error("Salvage/recraft evidence is missing");
+          NODE
+
+      - name: Upload immutable candidate calibration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crafting-activation-calibration-v2-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/physical-economy-calibration-v2.log
+            /tmp/physical-economy-calibration-v2/physical-economy-runtime-pack-v2-candidate.json
+            /tmp/physical-economy-calibration-v2/physical-economy-aggregate-results-v2.json
+            /tmp/physical-economy-calibration-v2/physical-economy-gate-summary-v2.json
+            /tmp/physical-economy-calibration-v2/physical-economy-run-manifest-v2.json
+            /tmp/physical-economy-calibration-v2/physical-economy-raw-results-v2.jsonl.gz
+          if-no-files-found: warn
+          retention-days: 30
