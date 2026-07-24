@@ -141,7 +141,7 @@ function buildCorrelationMatrix(
   correlations: readonly IssuerPairCorrelation[],
 ): number[][] {
   const issuerIndex = new Map(issuerIds.map((issuerId, index) => [issuerId, index]));
-  const matrix = issuerIds.map((_, row) =>
+  const matrix: number[][] = issuerIds.map((_, row) =>
     issuerIds.map((__, column) => row === column ? 1 : 0)
   );
   const seenPairs = new Set<string>();
