@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: pr295-persistent-staging-provision-v1
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   contract-tests:
