@@ -72,9 +72,10 @@
     "preflight:seed-content": "node scripts/seed-content-preflight.mjs --environment test --mode design",
     "preflight:seed-content:staging": "node scripts/seed-beta-staging-preflight.mjs",
     "test:seed-content-preflight": "node --test scripts/seed-content-preflight.test.mjs",
-    "build:seed-beta-pack": "node scripts/build-seed-beta-pack.mjs && node scripts/build-seed-beta-calibration.mjs",
+    "build:seed-beta-pack": "node scripts/build-seed-beta-pack.mjs && node scripts/build-seed-beta-calibration.mjs && node scripts/apply-store-content-overrides.mjs && node scripts/apply-contract-content-overrides.mjs && node scripts/apply-arrival-content-overrides.mjs && node scripts/apply-campaign-content-overrides.mjs && node scripts/apply-interaction-content-overrides.mjs && node scripts/refresh-seed-consumer-contract.mjs",
     "validate:seed-beta-pack": "node scripts/seed-beta-pack-validator.mjs",
-    "test:seed-beta-pack": "node --test scripts/seed-beta-pack.test.mjs scripts/seed-beta-consumer-contract.test.mjs",
+    "validate:store-content-artwork": "node scripts/store-content-artwork-contract.mjs",
+    "test:seed-beta-pack": "node --test scripts/seed-beta-pack.test.mjs scripts/seed-beta-consumer-contract.test.mjs scripts/store-content-artwork-source.test.mjs scripts/item-content-coverage.test.mjs scripts/contract-content-quality.test.mjs scripts/arrival-content-quality.test.mjs scripts/campaign-content-quality.test.mjs scripts/interaction-content-quality.test.mjs && npm run validate:physical-item-artwork",
     "test:seed-beta-release-db": "node scripts/seed-beta-transactional-release-probe.mjs",
     "seed:beta:validate": "node scripts/seed-beta-importer.mjs --mode validate --environment test",
     "seed:beta:dry-run": "node scripts/seed-beta-importer.mjs --mode dry-run --environment staging",
@@ -82,7 +83,13 @@
     "simulate:physical-economy": "node scripts/simulate-physical-economy-balance.mjs",
     "test:crafting-runtime": "node --test scripts/crafting-runtime-contract.test.mjs scripts/crafting-admin-replay-contract.test.mjs scripts/crafting-branch-hygiene.test.mjs scripts/crafting-pack-version-identity-contract.test.mjs scripts/crafting-seed-definition-boundary.test.mjs scripts/crafting-salvage-calibration-contract.test.mjs scripts/crafting-scarcity-projection-contract.test.mjs scripts/crafting-paused-read-lifecycle-contract.test.mjs scripts/lib/physical-economy-pack-contract.test.mjs && node scripts/admin-crafting-oversight-contract.mjs",
     "test:admin-progression": "node scripts/admin-progression-contract.mjs",
-    "test:progression-simulation": "node scripts/progression-balance-simulation.mjs && node scripts/progression-event-delivery-simulation.mjs && node scripts/progression-abuse-threshold-simulation.mjs"
+    "test:progression-simulation": "node scripts/progression-balance-simulation.mjs && node scripts/progression-event-delivery-simulation.mjs && node scripts/progression-abuse-threshold-simulation.mjs",
+    "validate:physical-item-artwork": "node scripts/store-content-artwork-contract.mjs && node scripts/component-artwork-contract.mjs && node scripts/equipment-artwork-contract.mjs && node scripts/consumable-artwork-contract.mjs && node scripts/final-item-artwork-contract.mjs",
+    "validate:contract-content": "node --test scripts/contract-content-quality.test.mjs",
+    "validate:arrival-content": "node --test scripts/arrival-content-quality.test.mjs",
+    "validate:campaign-content": "node --test scripts/campaign-content-quality.test.mjs",
+    "validate:interaction-content": "node --test scripts/interaction-content-quality.test.mjs",
+    "refresh:seed-consumer-contract": "node scripts/refresh-seed-consumer-contract.mjs"
   },
   "devDependencies": {
     "playwright": "1.61.1",

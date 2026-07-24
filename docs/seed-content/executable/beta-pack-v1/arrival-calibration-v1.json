@@ -4,6 +4,7 @@
   "calibrations": [
     {
       "approvedStartingBalance": 495,
+      "arrivalContentStableId": "arrival-content.northreach.frostgate.v2",
       "assumptions": {
         "emergencyReserve": 65,
         "housingDeposit": 94,
@@ -26,6 +27,14 @@
       "country": "northreach",
       "currencyCode": "NRC",
       "ecoReferenceIndex": 0.892857,
+      "firstDayChecklist": [
+        "Confirm your Player identity, Northreach assignment, NRC currency, temporary address, and accommodation expiration time.",
+        "Separate the protected emergency reserve from money available for heating, food, transport, and deposits.",
+        "Compare employer accommodation with the Frostgate Settlement Office housing route, including heating and commute costs.",
+        "Review only currently available Store, banking, Contract, and market functions before committing funds.",
+        "Accept the official stabilization Contract and record the settlement-office recovery route before pursuing industrial work."
+      ],
+      "playerFacingSummary": "You have arrived in Frostgate, a strategic-minerals and cold-chain hub where shelter is inseparable from heat and transport. Your temporary employer accommodation expires soon, and the cheapest room can become the most expensive option once heating deposits and winter transit are included.",
       "recoveryRoute": "settlement-office referral, essential-services Contract, and protected basic-housing review",
       "viability": {
         "approved": true,
@@ -36,6 +45,7 @@
     },
     {
       "approvedStartingBalance": 477,
+      "arrivalContentStableId": "arrival-content.yrethia.sableport.v2",
       "assumptions": {
         "emergencyReserve": 63,
         "housingDeposit": 90,
@@ -58,6 +68,14 @@
       "country": "yrethia",
       "currencyCode": "YRC",
       "ecoReferenceIndex": 0.925926,
+      "firstDayChecklist": [
+        "Verify your Yrethia assignment, YRC account, current address record, and the document field causing the employment mismatch.",
+        "Book the supervised records-correction appointment before responding to port-shift offers.",
+        "Price temporary housing together with dock transit, document fees, and the risk of delayed first payment.",
+        "Check whether cargo, Store, banking, and market functions are actually available in the current game state.",
+        "Accept the official stabilization Contract and save the entry-level port-service recovery route."
+      ],
+      "playerFacingSummary": "Sableport moves goods faster than it corrects records. Your housing address and employment documents do not currently match, which means a legitimate port employer may be unable to place you even when shifts are available.",
       "recoveryRoute": "supervised records correction and entry-level port-service Contract",
       "viability": {
         "approved": true,
@@ -68,6 +86,7 @@
     },
     {
       "approvedStartingBalance": 407,
+      "arrivalContentStableId": "arrival-content.thaloris.dusk-harbor.v2",
       "assumptions": {
         "emergencyReserve": 53,
         "housingDeposit": 78,
@@ -90,6 +109,14 @@
       "country": "thaloris",
       "currencyCode": "THD",
       "ecoReferenceIndex": 1.086957,
+      "firstDayChecklist": [
+        "Confirm your Thaloris assignment, THD balance, lodging status, and the identity of the licensed cooperative contact.",
+        "Compare cooperative-supported lodging with independent rooms, including guarantor and transport requirements.",
+        "Reject any salvage or repair offer that lacks ownership, condition, and authorization records.",
+        "Review currently supported inventory, Crafting, Store, Contract, and market functions before acquiring parts.",
+        "Accept the stabilization Contract and record the cooperative-and-guarantor recovery route."
+      ],
+      "playerFacingSummary": "Dusk Harbor is built around repair, salvage, and re-export, but the line between a valuable recovered part and an unverified liability is strictly enforced. You need lawful lodging and a recognized work contact before the repair cooperatives will place you.",
       "recoveryRoute": "licensed repair cooperative, community guarantor, and regulated starter Contract",
       "viability": {
         "approved": true,
@@ -100,6 +127,7 @@
     },
     {
       "approvedStartingBalance": 522,
+      "arrivalContentStableId": "arrival-content.solvend.aurora-spire.v2",
       "assumptions": {
         "emergencyReserve": 68,
         "housingDeposit": 100,
@@ -122,6 +150,14 @@
       "country": "solvend",
       "currencyCode": "SLV",
       "ecoReferenceIndex": 0.847458,
+      "firstDayChecklist": [
+        "Confirm your Solvend assignment, SLV balance, credential status, temporary address, and assessment availability.",
+        "Choose between document verification and a provisional skills assessment based on timing and evidence requirements.",
+        "Calculate how many days of high-cost housing and ordinary expenses remain after the selected verification path.",
+        "Review currently available research, Store, banking, Contract, and market functions before buying technical equipment.",
+        "Accept the stabilization Contract and preserve the accelerated-training and supervised-placement recovery route."
+      ],
+      "playerFacingSummary": "Aurora Spire offers high-value technical work, but employers cannot use credentials they have not verified. Housing and ordinary expenses are high, so waiting for the perfect role without a provisional skills assessment can consume the starting buffer quickly.",
       "recoveryRoute": "accelerated training, supervised research Contract, and temporary professional placement",
       "viability": {
         "approved": true,
@@ -132,6 +168,7 @@
     },
     {
       "approvedStartingBalance": 371,
+      "arrivalContentStableId": "arrival-content.eldoran.crescent-bay.v2",
       "assumptions": {
         "emergencyReserve": 49,
         "housingDeposit": 70,
@@ -154,6 +191,14 @@
       "country": "eldoran",
       "currencyCode": "ELD",
       "ecoReferenceIndex": 1.190476,
+      "firstDayChecklist": [
+        "Confirm your Eldoran assignment, ELD balance, temporary address, and the nearest verified food-distribution point.",
+        "Compare housing using rent, transport, food access, and storage constraints rather than rent alone.",
+        "Identify one verified food-security or market-assistant opportunity with a clear payment date.",
+        "Review the active Store, banking, Contract, and market functions before purchasing household or wholesale inventory.",
+        "Accept the stabilization Contract and record the Food Security Exchange recovery route."
+      ],
+      "playerFacingSummary": "Crescent Bay is less expensive than several capitals, but affordable housing is useful only when food markets and work routes remain accessible. Seasonal supply changes can make a low-cost neighborhood unexpectedly expensive in transport and groceries.",
       "recoveryRoute": "food-security work, market-assistant Contract, and basic-needs stabilization",
       "viability": {
         "approved": true,
@@ -164,6 +209,7 @@
     },
     {
       "approvedStartingBalance": 557,
+      "arrivalContentStableId": "arrival-content.valerion.glassfall.v2",
       "assumptions": {
         "emergencyReserve": 73,
         "housingDeposit": 106,
@@ -186,6 +232,14 @@
       "country": "valerion",
       "currencyCode": "VAL",
       "ecoReferenceIndex": 0.8,
+      "firstDayChecklist": [
+        "Confirm your Valerion assignment, VAL balance, address requirement, deposit exposure, and safe-water service status.",
+        "Compare private and shared housing using deposit, weekly cost, commute, and utility obligations.",
+        "Identify one verified water, conservation, or infrastructure placement with documented acceptance criteria.",
+        "Review available Store, banking, Contract, and market functions before purchasing filters or field equipment.",
+        "Accept the stabilization Contract and save the shared-housing and public-service recovery route."
+      ],
+      "playerFacingSummary": "Glassfall combines very high housing deposits with strong public infrastructure. A private apartment may consume the emergency reserve before you have earned local income, while shared housing and public-service placements preserve cash but reduce privacy and flexibility.",
       "recoveryRoute": "public-service placement, shared-housing support, and conservation Contract",
       "viability": {
         "approved": true,
@@ -196,6 +250,7 @@
     },
     {
       "approvedStartingBalance": 469,
+      "arrivalContentStableId": "arrival-content.lumenor.starfall.v2",
       "assumptions": {
         "emergencyReserve": 61,
         "housingDeposit": 90,
@@ -218,6 +273,14 @@
       "country": "lumenor",
       "currencyCode": "LUM",
       "ecoReferenceIndex": 0.943396,
+      "firstDayChecklist": [
+        "Confirm your Lumenor assignment, LUM balance, name spelling, translated records, and address status across all official notices.",
+        "Attend the Civic Translation Desk appointment before duplicating applications or paying correction fees.",
+        "Compare public-housing review with private rooms, including document and commute requirements.",
+        "Review currently available messaging, Store, banking, Contract, and market functions before relying on informal information.",
+        "Accept the stabilization Contract and record the settlement-support and records-correction recovery route."
+      ],
+      "playerFacingSummary": "Starfall’s employers, banks, and residency offices all depend on a recognized address and consistent records. A small translation or spelling mismatch can block several systems at once, even when your qualifications and funds are otherwise sufficient.",
       "recoveryRoute": "settlement-support work, language or records Contract, and public-housing review",
       "viability": {
         "approved": true,
@@ -228,6 +291,7 @@
     },
     {
       "approvedStartingBalance": 513,
+      "arrivalContentStableId": "arrival-content.xalvoria.emberhall.v2",
       "assumptions": {
         "emergencyReserve": 67,
         "housingDeposit": 98,
@@ -250,6 +314,14 @@
       "country": "xalvoria",
       "currencyCode": "XAL",
       "ecoReferenceIndex": 0.862069,
+      "firstDayChecklist": [
+        "Confirm your Xalvoria assignment, XAL balance, banking identity, address status, and sponsor requirement.",
+        "Identify one employment or public-project path that does not require immediate high-cost borrowing.",
+        "Separate equipment cost, deposit, operating cash, and repayment timing before evaluating any enterprise offer.",
+        "Review the active Store, banking, Contract, business, and market functions before committing to production.",
+        "Accept the stabilization Contract and record the development-authority and debt-counseling recovery route."
+      ],
+      "playerFacingSummary": "Emberhall offers manufacturing and construction opportunities, but employers and lenders expect a bankable identity, recognized address, and verified sponsor. Expensive equipment or debt can make a promising placement unprofitable before the first invoice is paid.",
       "recoveryRoute": "development-authority placement, debt counseling, and public-project Contract",
       "viability": {
         "approved": true,
@@ -260,6 +332,7 @@
     },
     {
       "approvedStartingBalance": 420,
+      "arrivalContentStableId": "arrival-content.dravenlok.ironhold.v2",
       "assumptions": {
         "emergencyReserve": 55,
         "housingDeposit": 80,
@@ -282,6 +355,14 @@
       "country": "dravenlok",
       "currencyCode": "DRV",
       "ecoReferenceIndex": 1.052632,
+      "firstDayChecklist": [
+        "Confirm your Dravenlok assignment, DRV balance, technical placement status, safety credentials, and worker-housing conditions.",
+        "Calculate the cash and housing consequences if the first placement ends during the initial week.",
+        "Choose only supervised industrial work with documented equipment, shift, and safety requirements.",
+        "Review available Store, inventory, Crafting, Contract, banking, and market functions before obtaining tools or materials.",
+        "Accept the stabilization Contract and save the retraining, worker-congress, and maintenance recovery route."
+      ],
+      "playerFacingSummary": "Ironhold links technical placement, safety credentials, and worker housing. A fast industrial assignment can solve both income and accommodation, but losing the placement may also remove the room, transport access, and workshop authorization attached to it.",
       "recoveryRoute": "technical retraining, worker-congress support, and essential-maintenance Contract",
       "viability": {
         "approved": true,
@@ -292,6 +373,7 @@
     },
     {
       "approvedStartingBalance": 530,
+      "arrivalContentStableId": "arrival-content.syndalis.blacklight.v2",
       "assumptions": {
         "emergencyReserve": 70,
         "housingDeposit": 100,
@@ -314,6 +396,14 @@
       "country": "syndalis",
       "currencyCode": "SYN",
       "ecoReferenceIndex": 0.833333,
+      "firstDayChecklist": [
+        "Confirm your Syndalis assignment, SYN balance, digital identity status, physical address status, and approved correction channel.",
+        "Record every disputed identity field and preserve the source and timestamp of each correction.",
+        "Secure temporary physical housing that satisfies the address requirement without using an unverified intermediary.",
+        "Review currently supported messaging, banking, Store, Contract, notification, and market functions before sharing data.",
+        "Accept the stabilization Contract and save the identity-appeal and community-access recovery route."
+      ],
+      "playerFacingSummary": "Blacklight can recognize a verified digital identity faster than it can provide physical housing. Until both are established, you may be able to access information and limited services while remaining ineligible for employment, banking changes, or secure local channels.",
       "recoveryRoute": "supervised digital-services Contract, identity appeal, and community-access program",
       "viability": {
         "approved": true,
@@ -323,8 +413,10 @@
       }
     }
   ],
+  "contentRevision": "arrival-content-v2",
   "countryCount": 10,
   "packId": "econovaria.beta-seed-pack.v1",
+  "playerFacingContentCount": 10,
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-arrival-calibration-v1",
   "status": "approved-for-isolated-staging",
