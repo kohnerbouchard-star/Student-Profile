@@ -8,13 +8,7 @@ This tranche defines deterministic callable-bond behavior without introducing un
 
 ## Call schedule contract
 
-Every callable bond must reference one explicit call schedule. Each schedule entry contains:
-
-- a stable public entry identity;
-- an exercise date strictly after issue and before maturity;
-- a positive call price per face unit;
-- a minimum refinancing-savings threshold in basis points;
-- a bounded notice period.
+Every callable bond must reference one explicit call schedule. Each schedule entry contains a stable public entry identity, an exercise date strictly after issue and before maturity, a positive call price per face unit, a minimum refinancing-savings threshold in basis points, and a bounded notice period.
 
 Duplicate entry identities, duplicate exercise dates, entries outside the bond term, schedule identity mismatches, and malformed amounts fail closed.
 
