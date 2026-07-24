@@ -70,6 +70,18 @@
     });
   }
 
+  function ensureContextNote(dialog) {
+    let note = dialog.querySelector("[data-econovaria-share-game-context]");
+    if (note instanceof HTMLElement) return note;
+    note = document.createElement("p");
+    note.dataset.econovariaShareGameContext = "true";
+    note.className = "econovaria-admin-share-game-context";
+    const heading = dialog.querySelector("h1, h2, h3");
+    if (heading) heading.insertAdjacentElement("afterend", note);
+    else dialog.prepend(note);
+    return note;
+  }
+
   function repairSurface(surface, selected) {
     if (!(surface instanceof Element) || !selected.gameCode) return false;
     const dialog = surface.querySelector('[role="dialog"]') || surface;
@@ -101,9 +113,8 @@
       codeNode.setAttribute("data-game-code", selected.gameCode);
     });
 
-    dialog.querySelectorAll("[data-econovaria-share-game-context]").forEach((note) => {
-      note.textContent = `Players using ${selected.gameCode} will join ${selected.gameName}.`;
-    });
+    const note = ensureContextNote(dialog);
+    note.textContent = `Players using ${selected.gameCode} will join ${selected.gameName}.`;
 
     surface.dataset.gameCode = selected.gameCode;
     surface.dataset.playerShareUrl = playerUrl;
