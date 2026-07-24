@@ -15,8 +15,9 @@
     "admin-logout",
   ]);
   const EMPTY_CODES = new Set(["", "—", "-", "undefined", "null"]);
-  const RECONCILE_DELAYS_MS = Object.freeze([0, 40, 120, 300, 750, 1500]);
-  let reconcileTimers = [];
+  const MAX_RECONCILE_FRAMES = 180;
+  let reconcileFrame = 0;
+  let reconcileGeneration = 0;
   let signOutPromise = null;
   let fallbackShareSurface = null;
 
@@ -555,17 +556,31 @@
   }, true);
 
   function reconcile() {
-    repairSidebar();
+    const mounted = repairSidebar();
     repairLogoutControls();
     const modal = visibleShareModal();
     if (modal) setShareContext(modal, selectedGameContext());
+    return mounted;
   }
 
   function scheduleReconcile() {
-    reconcileTimers.forEach((timer) => window.clearTimeout(timer));
-    reconcileTimers = RECONCILE_DELAYS_MS.map((delay) =>
-      window.setTimeout(reconcile, delay)
-    );
+    reconcileGeneration += 1;
+    const generation = reconcileGeneration;
+    if (reconcileFrame) {
+      window.cancelAnimationFrame(reconcileFrame);
+      reconcileFrame = 0;
+    }
+    let frames = 0;
+    const step = () => {
+      if (generation !== reconcileGeneration) return;
+      frames += 1;
+      if (reconcile() || frames >= MAX_RECONCILE_FRAMES) {
+        reconcileFrame = 0;
+        return;
+      }
+      reconcileFrame = window.requestAnimationFrame(step);
+    };
+    reconcileFrame = window.requestAnimationFrame(step);
   }
 
   window.addEventListener("econovaria:admin-bootstrap-complete", scheduleReconcile);
