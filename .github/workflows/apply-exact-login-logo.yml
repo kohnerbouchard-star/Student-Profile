@@ -107,7 +107,7 @@ jobs:
           const bytes = (relativePath) => readFileSync(path.join(root, relativePath));
           const text = (relativePath) => readFileSync(path.join(root, relativePath), "utf8");
           const signature = (relativePath, expected) => {{
-            assert.ok(bytes(relativePath).subarray(0, expected.length).equals(expected), `${{relativePath}} has an invalid image signature`);
+            assert.ok(bytes(relativePath).subarray(0, expected.length).equals(expected), relativePath + " has an invalid image signature");
           }};
 
           [
@@ -130,8 +130,8 @@ jobs:
           const admin = text("admin/index.html");
           const adminCss = text("admin/css/admin-stabilization-visual-finish.css");
 
-          assert.match(login, new RegExp(`econovaria-logo\\\\.png\\\\?v=${{version}}`));
-          assert.match(login, new RegExp(`assets/brand/favicon-32\\\\.png\\\\?v=20260724\\\\.2`));
+          assert.match(login, new RegExp("econovaria-logo\\\\.png\\\\?v=" + version));
+          assert.match(login, /assets\\/brand\\/favicon-32\\.png\\?v=20260724\.2/);
           assert.match(player, /\\.\\/assets\\/favicon-32\\.png\\?v=20260724\.2/);
           assert.match(admin, /\\.\\/assets\\/favicon-32\\.png\\?v=20260724\.2/);
           assert.match(login, /rel="shortcut icon"/);
@@ -158,6 +158,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .brand-exact-logo-trigger
           git add -A
           git commit -m 'fix(brand): use exact approved PNG on login screen'
           git push origin HEAD:agent/brand-asset-render-fix-v2
