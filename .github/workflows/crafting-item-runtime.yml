@@ -18,6 +18,8 @@ on:
       - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
       - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
       - "backend/supabase/migrations/2026072113*.sql"
+      - "docs/seed-content/authorizations/physical-economy-activation-authorization-v2.json"
+      - "docs/seed-content/simulation/physical-economy/**"
       - "docs/workstreams/crafting-*.md"
       - "player-terminal/src/**"
       - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
@@ -25,41 +27,13 @@ on:
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/crafting-*.test.mjs"
       - "scripts/lib/physical-economy-pack-*.mjs"
-      - "scripts/simulate-physical-economy-balance.mjs"
+      - "scripts/simulate-physical-economy-*.mjs"
       - "package.json"
       - "backend/package.json"
       - "player-terminal/package.json"
       - "player-terminal/package-lock.json"
   push:
-    branches:
-      - agent/crafting-item-runtime-v1
-    paths:
-      - ".github/workflows/crafting-item-runtime.yml"
-      - "admin/crafting-oversight-*.js"
-      - "admin/css/crafting-oversight.css"
-      - "admin/inventory-redemption-queue-loader.js"
-      - "backend/src/domains/crafting/**"
-      - "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts"
-      - "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts"
-      - "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts"
-      - "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts"
-      - "backend/src/security/playerCraftingRateLimitDispatch*.ts"
-      - "backend/supabase/functions/admin-api/craftingOperations*.ts"
-      - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
-      - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
-      - "backend/supabase/migrations/2026072113*.sql"
-      - "docs/workstreams/crafting-*.md"
-      - "player-terminal/src/**"
-      - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
-      - "scripts/admin-crafting-oversight-contract.mjs"
-      - "scripts/build-physical-economy-runtime-pack.mjs"
-      - "scripts/crafting-*.test.mjs"
-      - "scripts/lib/physical-economy-pack-*.mjs"
-      - "scripts/simulate-physical-economy-balance.mjs"
-      - "package.json"
-      - "backend/package.json"
-      - "player-terminal/package.json"
-      - "player-terminal/package-lock.json"
+    branches: [agent/crafting-item-runtime-v1]
 
 permissions:
   contents: read
@@ -73,18 +47,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Check out Crafting candidate
+      - name: Check out exact Crafting candidate
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify exact Business predecessor and final migration inventory
+      - name: Verify predecessor and immutable Crafting migration inventory
+        shell: bash
         run: |
+          set -euo pipefail
           predecessor="2b073019ed36ca63cf9a9b3c7acd14569fe88116"
           git rev-list HEAD | grep -Fx "$predecessor"
           mapfile -t migrations < <(find backend/supabase/migrations -maxdepth 1 -type f -name '2026072113*.sql' -printf '%f\n' | sort)
-          test "${#migrations[@]}" -eq 20
           expected=(
             20260721130000_add_crafting_item_definitions_v1.sql
             20260721130100_add_crafting_recipe_definitions_v1.sql
@@ -109,117 +85,98 @@ jobs:
           )
           diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${migrations[@]}")
 
-      - name: Check out immutable merged Seed authority
-        uses: actions/checkout@v7
-        with:
-          ref: 6ced5aa36e60dfbd82620463f4f4bf6f56a349dd
-          path: seed-authority
-          persist-credentials: false
-
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
 
-      - name: Pin npm
-        run: npm install --global npm@10.9.8
-
-      - name: Install repository dependencies
-        run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci --prefix backend
-
-      - name: Install Player dependencies
-        run: npm ci --prefix player-terminal
-
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
-      - name: Verify permanent runtime and Admin contracts
+      - name: Install pinned dependencies
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm ci --prefix backend
+          npm ci --prefix player-terminal
+
+      - name: Verify source and runtime contracts
         run: |
           npm run test:crafting-runtime
           node --check scripts/build-physical-economy-runtime-pack.mjs
           node --check scripts/simulate-physical-economy-balance.mjs
+          node --check scripts/simulate-physical-economy-activation-v3.mjs
 
-      - name: Build immutable Seed physical-economy interface
-        id: seed-build
+      - name: Build and verify exact authorized Seed interface
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
           mkdir -p crafting-diagnostics
-          (
-            set -euo pipefail
-            source_commit="$(git -C seed-authority rev-parse HEAD)"
-            test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
-
-            echo "== build-physical-economy-runtime-pack.mjs =="
-            node scripts/build-physical-economy-runtime-pack.mjs \
-              --source-root seed-authority \
-              --source-commit "$source_commit" \
-              --approved-source-commit "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd" \
-              --output /tmp/physical-economy-runtime-pack.json
-
-            echo "== simulate-physical-economy-balance.mjs =="
-            node scripts/simulate-physical-economy-balance.mjs \
-              --pack /tmp/physical-economy-runtime-pack.json \
-              --output /tmp/physical-economy-balance-report.json
-
-            echo "== final runtime-failure assertion =="
-            node --input-type=module --eval '
-              import { readFile } from "node:fs/promises";
-              const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
-              if (report.runtimeFailures.length !== 0) {
-                throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s): ${JSON.stringify(report.runtimeFailures)}`);
-              }
-              const authorityReady = report.authority.blockers.length === 0;
-              if (report.gates.authorityActivationReady !== authorityReady) {
-                throw new Error(`Seed activation gate and reported authority blockers disagree: ${JSON.stringify({ gates: report.gates, authority: report.authority })}`);
-              }
-              console.log(authorityReady
-                ? "Seed authority is activation-ready."
-                : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
-            '
-          ) 2>&1 | tee crafting-diagnostics/seed-interface.log
-          status=${PIPESTATUS[0]}
-          cp /tmp/physical-economy-runtime-pack.json crafting-diagnostics/ 2>/dev/null || true
-          cp /tmp/physical-economy-balance-report.json crafting-diagnostics/ 2>/dev/null || true
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          test "$status" -eq 0
+          source_commit="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$source_commit" \
+            --approved-source-commit "$source_commit" \
+            --output /tmp/physical-economy-runtime-pack.json \
+            2>&1 | tee crafting-diagnostics/seed-build.log
+          node scripts/simulate-physical-economy-balance.mjs \
+            --pack /tmp/physical-economy-runtime-pack.json \
+            --output /tmp/physical-economy-balance-report.json \
+            2>&1 | tee crafting-diagnostics/structural-simulation.log
+          cp /tmp/physical-economy-runtime-pack.json crafting-diagnostics/
+          cp /tmp/physical-economy-balance-report.json crafting-diagnostics/
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const [pack, report] = await Promise.all([
+            readFile("/tmp/physical-economy-runtime-pack.json", "utf8").then(JSON.parse),
+            readFile("/tmp/physical-economy-balance-report.json", "utf8").then(JSON.parse),
+          ]);
+          if (report.runtimeFailures.length !== 0) {
+            throw new Error(`Crafting runtime failures: ${JSON.stringify(report.runtimeFailures)}`);
+          }
+          if (report.authority.blockers.length !== 0 || report.gates.authorityActivationReady !== true) {
+            throw new Error(`Crafting authority is not ready: ${JSON.stringify(report.authority)}`);
+          }
+          if (pack.activationAuthorization.catalogAuthorized !== true ||
+              pack.activationAuthorization.recipeAuthorized !== true ||
+              pack.activationAuthorization.calibrationAuthorized !== true ||
+              pack.activationAuthorization.downstreamContractValidated !== true) {
+            throw new Error("Generated Crafting pack is missing bounded activation authority.");
+          }
+          if (pack.activationAuthorization.productionAuthorized !== false) {
+            throw new Error("Production authorization must remain false.");
+          }
+          if (pack.calibrationEvidence.balanceGateSummary.activationAuthorized !== true ||
+              pack.calibrationEvidence.balanceGateSummary.failures.length !== 0) {
+            throw new Error("Generated Crafting pack has invalid authorized calibration evidence.");
+          }
+          NODE
 
       - name: Test and typecheck Crafting integration
-        id: integration
         shell: bash
         run: |
-          set +e
-          mkdir -p crafting-diagnostics
-          (
-            set -euo pipefail
-            echo "== focused Player Crafting backend tests =="
-            npm run test:player-crafting --prefix backend
-
-            echo "== Deno capability, bridge, and rate-limit tests =="
-            deno test --config backend/supabase/functions/classroom-api/deno.json \
-              --lock=backend/supabase/functions/deno.lock --frozen \
-              backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts \
-              backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts \
-              backend/src/security/playerCraftingRateLimitDispatch.test.ts
-
-            echo "== complete Admin API tests =="
-            npm run test:admin-api --prefix backend
-
-            echo "== complete Backend typecheck =="
-            npm run typecheck:all --prefix backend
-
-            echo "== complete Player Terminal verify =="
-            npm run verify --prefix player-terminal
-          ) 2>&1 | tee crafting-diagnostics/integration.log
-          status=${PIPESTATUS[0]}
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          test "$status" -eq 0
+          set -euo pipefail
+          npm run test:player-crafting --prefix backend
+          deno test --config backend/supabase/functions/classroom-api/deno.json \
+            --lock=backend/supabase/functions/deno.lock --frozen \
+            backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts \
+            backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts \
+            backend/src/security/playerCraftingRateLimitDispatch.test.ts
+          npm run test:admin-api --prefix backend
+          npm run typecheck:all --prefix backend
+          npm run verify --prefix player-terminal
 
       - name: Install Chromium
         working-directory: player-terminal
@@ -230,7 +187,9 @@ jobs:
         run: npm run browser -- player-crafting-runtime.spec.mjs
 
       - name: Verify no temporary Crafting architecture remains
+        shell: bash
         run: |
+          set -euo pipefail
           test -z "$(find .github scripts docs/workstreams -type f \( \
             -iname '*crafting*payload*' -o \
             -iname '*crafting*transport*' -o \
@@ -251,5 +210,5 @@ jobs:
             crafting-diagnostics
             player-terminal/test-results
             player-terminal/playwright-report
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14

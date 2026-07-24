@@ -15,6 +15,98 @@ const diagnosticPath = path.resolve(
   "player-terminal/test-results/crafting-seed-build.log",
 );
 
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function assertEvidenceHash(authority, key, content, filePath) {
+  const expected = authority.calibrationEvidence?.sha256?.[key];
+  if (typeof expected !== "string" || !/^[a-f0-9]{64}$/.test(expected)) {
+    throw new Error(`Activation authority is missing the ${key} SHA-256 binding.`);
+  }
+  const actual = sha256(content);
+  if (actual !== expected) {
+    throw new Error(`${filePath} SHA-256 mismatch: expected ${expected}, got ${actual}`);
+  }
+}
+
+function validateActivationAuthority({
+  authority,
+  catalogManifest,
+  recipeManifest,
+  balanceGateSummary,
+  runManifest,
+  inputContent,
+  scriptContent,
+  gateSummaryContent,
+  inputPath,
+  scriptPath,
+  gateSummaryPath,
+}) {
+  assertSchema(
+    authority,
+    "econovaria-physical-economy-activation-authorization-v2",
+    "physical-economy activation authority",
+  );
+  if (authority.status !== "approved_non_production") {
+    throw new Error("Physical-economy activation authority is not approved.");
+  }
+  if (
+    authority.catalogAuthorized !== true ||
+    authority.recipeAuthorized !== true ||
+    authority.calibrationAuthorized !== true ||
+    authority.productionAuthorized !== false
+  ) {
+    throw new Error("Physical-economy authority must approve catalog, recipes, and calibration while denying production.");
+  }
+  const environments = Array.isArray(authority.approvedEnvironments)
+    ? authority.approvedEnvironments
+    : [];
+  for (const environment of ["local", "test", "staging"]) {
+    if (!environments.includes(environment)) {
+      throw new Error(`Physical-economy authority is missing ${environment} approval.`);
+    }
+  }
+  if (
+    authority.definitions?.catalogSchemaVersion !== catalogManifest.schemaVersion ||
+    authority.definitions?.recipeSchemaVersion !== recipeManifest.schemaVersion ||
+    Number(authority.definitions?.itemCount) !== Number(catalogManifest.totalItemDefinitions) ||
+    Number(authority.definitions?.recipeCount) !== Number(recipeManifest.totalRecipes) ||
+    authority.definitions?.durabilityEnabled !== false ||
+    authority.definitions?.repairEnabled !== false ||
+    authority.definitions?.hiddenCraftFailureRollAllowed !== false
+  ) {
+    throw new Error("Physical-economy authority does not match the current definition manifests.");
+  }
+  if (
+    balanceGateSummary.schemaVersion !== "econovaria-physical-economy-gate-summary-v3" ||
+    balanceGateSummary.calibrationPassed !== true ||
+    balanceGateSummary.gateCounts?.failed !== 0 ||
+    balanceGateSummary.gateCounts?.unresolved !== 0 ||
+    balanceGateSummary.gateCounts?.implemented !== 167 ||
+    !Array.isArray(balanceGateSummary.failures) ||
+    balanceGateSummary.failures.length !== 0
+  ) {
+    throw new Error("Physical-economy V3 calibration evidence has not passed all executable gates.");
+  }
+  if (
+    runManifest.schemaVersion !== "econovaria-physical-economy-run-manifest-v3" ||
+    runManifest.calibrationPassed !== true ||
+    runManifest.failedGates !== 0 ||
+    runManifest.runConfiguration?.runCount !== 16000
+  ) {
+    throw new Error("Physical-economy V3 run manifest is invalid.");
+  }
+  assertEvidenceHash(authority, "input", inputContent, inputPath);
+  assertEvidenceHash(authority, "script", scriptContent, scriptPath);
+  assertEvidenceHash(authority, "gateSummary", gateSummaryContent, gateSummaryPath);
+  if (runManifest.sha256?.input !== authority.calibrationEvidence.sha256.input ||
+      runManifest.sha256?.script !== authority.calibrationEvidence.sha256.script ||
+      runManifest.sha256?.gateSummary !== authority.calibrationEvidence.sha256.gateSummary) {
+    throw new Error("Physical-economy run manifest does not match the activation authority.");
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const sourceRoot = path.resolve(options.sourceRoot);
@@ -26,9 +118,55 @@ async function main() {
   const catalogManifestPath = path.join(seedRoot, "items/catalog-manifest-v1.json");
   const recipeRoot = path.join(seedRoot, "items/recipes");
   const recipeManifestPath = path.join(recipeRoot, "recipe-manifest-v1.json");
-  const consumerContract = JSON.parse(await readFile(consumerContractPath, "utf8"));
-  const catalogManifest = JSON.parse(await readFile(catalogManifestPath, "utf8"));
-  const recipeManifest = JSON.parse(await readFile(recipeManifestPath, "utf8"));
+  const economicsCalibrationPath = path.join(
+    seedRoot,
+    "executable/beta-pack-v1/physical-economy-calibration-v1.json",
+  );
+  const activationAuthorityPath = path.join(
+    seedRoot,
+    "authorizations/physical-economy-activation-authorization-v2.json",
+  );
+  const simulationRoot = path.join(seedRoot, "simulation/physical-economy");
+  const gateSummaryPath = path.join(
+    simulationRoot,
+    "physical-economy-gate-summary-v3.json",
+  );
+  const runManifestPath = path.join(
+    simulationRoot,
+    "physical-economy-run-manifest-v3.json",
+  );
+  const simulationInputPath = path.join(
+    simulationRoot,
+    "physical-economy-simulation-input-v3.json",
+  );
+  const simulationScriptPath = path.join(
+    sourceRoot,
+    "scripts/simulate-physical-economy-activation-v3.mjs",
+  );
+
+  const [
+    consumerContract,
+    catalogManifest,
+    recipeManifest,
+    economicsCalibration,
+    activationAuthority,
+    balanceGateSummary,
+    runManifest,
+    inputContent,
+    scriptContent,
+    gateSummaryContent,
+  ] = await Promise.all([
+    readFile(consumerContractPath, "utf8").then(JSON.parse),
+    readFile(catalogManifestPath, "utf8").then(JSON.parse),
+    readFile(recipeManifestPath, "utf8").then(JSON.parse),
+    readFile(economicsCalibrationPath, "utf8").then(JSON.parse),
+    readFile(activationAuthorityPath, "utf8").then(JSON.parse),
+    readFile(gateSummaryPath, "utf8").then(JSON.parse),
+    readFile(runManifestPath, "utf8").then(JSON.parse),
+    readFile(simulationInputPath),
+    readFile(simulationScriptPath),
+    readFile(gateSummaryPath),
+  ]);
 
   assertSchema(
     consumerContract,
@@ -37,6 +175,19 @@ async function main() {
   );
   assertSchema(catalogManifest, "econovaria-base-item-manifest-v1", catalogManifestPath);
   assertSchema(recipeManifest, "econovaria-recipe-manifest-v1", recipeManifestPath);
+  validateActivationAuthority({
+    authority: activationAuthority,
+    catalogManifest,
+    recipeManifest,
+    balanceGateSummary,
+    runManifest,
+    inputContent,
+    scriptContent,
+    gateSummaryContent,
+    inputPath: simulationInputPath,
+    scriptPath: simulationScriptPath,
+    gateSummaryPath,
+  });
 
   const itemFiles = catalogManifest.files.map((entry) => {
     requireObject(entry, "catalog manifest file");
@@ -50,11 +201,6 @@ async function main() {
   const salvagePath = path.join(recipeRoot, text(recipeManifest.files?.maintenanceSalvage));
   const difficultyPolicyPath = path.join(recipeRoot, text(recipeManifest.files?.difficultyPolicy));
   const difficultyMatrixPath = path.join(recipeRoot, text(recipeManifest.files?.difficultyResolvedMatrix));
-  const calibrationPath = path.join(seedRoot, "executable/beta-pack-v1/physical-economy-calibration-v1.json");
-  const gateSummaryPath = path.join(
-    seedRoot,
-    "simulation/physical-economy/physical-economy-gate-summary-v1.json",
-  );
 
   const items = [];
   for (const file of itemFiles) {
@@ -97,8 +243,6 @@ async function main() {
   const salvageDocument = JSON.parse(await readFile(salvagePath, "utf8"));
   const difficultyPolicy = JSON.parse(await readFile(difficultyPolicyPath, "utf8"));
   const difficultyResolvedMatrix = JSON.parse(await readFile(difficultyMatrixPath, "utf8"));
-  const calibration = JSON.parse(await readFile(calibrationPath, "utf8"));
-  const balanceGateSummary = JSON.parse(await readFile(gateSummaryPath, "utf8"));
   await validateSeedConsumerContract({
     contract: consumerContract,
     sourceCommit: options.sourceCommit,
@@ -107,16 +251,43 @@ async function main() {
     contentVersion: options.contentVersion,
     sourceRoot,
   });
-  const substitutions = normalizeSubstitutions(substitutionDocument, itemByKey, substitutionsPath);
-  const salvageRules = normalizeSalvageRules(salvageDocument, itemByKey, salvagePath);
-  const itemEconomics = normalizeItemEconomics(calibration, itemByKey);
+  const substitutions = normalizeSubstitutions(
+    substitutionDocument,
+    itemByKey,
+    substitutionsPath,
+  );
+  const salvageRules = normalizeSalvageRules(
+    salvageDocument,
+    itemByKey,
+    salvagePath,
+  );
+  const itemEconomics = normalizeItemEconomics(economicsCalibration, itemByKey);
+  if (
+    items.length !== Number(activationAuthority.definitions.itemCount) ||
+    recipes.length !== Number(activationAuthority.definitions.recipeCount) ||
+    substitutions.length !== Number(activationAuthority.definitions.substitutionCount) ||
+    salvageRules.length !== Number(activationAuthority.definitions.salvageRuleCount)
+  ) {
+    throw new Error("Physical-economy definition counts do not match the activation authority.");
+  }
+
+  const authorizedBalanceGateSummary = {
+    ...balanceGateSummary,
+    activationAuthorized: true,
+    authorizationId: activationAuthority.authorizationId,
+    approvedBy: activationAuthority.approvedBy,
+    approvedAt: activationAuthority.approvedAt,
+    approvedEnvironments: activationAuthority.approvedEnvironments,
+    productionAuthorized: false,
+    acceptedStagingRisks: activationAuthority.acceptedStagingRisks,
+  };
 
   const pack = {
     schemaVersion: "econovaria-physical-economy-runtime-pack-v1",
     packKey: options.packKey,
     contentVersion: options.contentVersion,
     sourceCommit: options.sourceCommit,
-    definitionAuthority: "PR #163",
+    definitionAuthority: "PR #163 with bounded V3 staging activation authority",
     durabilityEnabled: false,
     repairEnabled: false,
     sourceContracts: {
@@ -134,21 +305,30 @@ async function main() {
       salvageSchemaVersion: salvageDocument.schemaVersion,
       difficultyPolicySchemaVersion: difficultyPolicy.schemaVersion,
       difficultyMatrixSchemaVersion: difficultyResolvedMatrix.schemaVersion,
-      calibrationPath: relative(calibrationPath, sourceRoot),
+      economicsCalibrationPath: relative(economicsCalibrationPath, sourceRoot),
+      activationAuthorityPath: relative(activationAuthorityPath, sourceRoot),
       balanceGateSummaryPath: relative(gateSummaryPath, sourceRoot),
+      runManifestPath: relative(runManifestPath, sourceRoot),
     },
     activationAuthorization: {
-      catalogAuthorized: catalogManifest.validation?.productionImportApproved === true,
-      recipeAuthorized: recipeManifest.rules?.backendActivationAuthorized === true,
-      calibrationAuthorized: calibration.activationAuthorized === true,
+      catalogAuthorized: activationAuthority.catalogAuthorized === true,
+      recipeAuthorized: activationAuthority.recipeAuthorized === true,
+      calibrationAuthorized: activationAuthority.calibrationAuthorized === true,
       downstreamContractValidated: true,
       productionAuthorized: consumerContract.productionAuthorized === true,
+      approvedEnvironments: activationAuthority.approvedEnvironments,
+      authorizationId: activationAuthority.authorizationId,
+      approvedBy: activationAuthority.approvedBy,
+      approvedAt: activationAuthority.approvedAt,
+      expiresAt: activationAuthority.expiresAt,
       requiredBindings: consumerContract.activationApproval?.requiredBindings ?? {},
     },
     calibrationEvidence: {
-      exploitChecks: calibration.exploitChecks ?? {},
-      concurrencySimulation: calibration.concurrencySimulation ?? {},
-      balanceGateSummary,
+      exploitChecks: economicsCalibration.exploitChecks ?? {},
+      concurrencySimulation: economicsCalibration.concurrencySimulation ?? {},
+      balanceGateSummary: authorizedBalanceGateSummary,
+      runManifest,
+      acceptedStagingRisks: activationAuthority.acceptedStagingRisks,
     },
     difficultyPolicy,
     difficultyResolvedMatrix,
@@ -175,6 +355,9 @@ async function main() {
     output: options.output,
     contentDigest: digest,
     ...output.counts,
+    activationAuthorized: true,
+    approvedEnvironments: activationAuthority.approvedEnvironments,
+    productionAuthorized: false,
     durabilityEnabled: false,
     repairEnabled: false,
   }, null, 2));

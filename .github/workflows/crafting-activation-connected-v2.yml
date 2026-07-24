@@ -1,0 +1,111 @@
+name: Crafting Activation Connected V2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crafting-activation-connected-v2.yml"
+      - "backend/supabase/migrations/**"
+      - "docs/seed-content/authorizations/physical-economy-activation-authorization-v2.json"
+      - "docs/seed-content/simulation/physical-economy/**"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
+      - "scripts/crafting-activation-local-acceptance.mjs"
+      - "scripts/lib/physical-economy-pack-*.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crafting-activation-connected-v2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/build-physical-economy-runtime-pack.mjs
+          node --check scripts/crafting-activation-local-acceptance.mjs
+
+      - name: Build exact authorized physical-economy pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_commit="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$source_commit" \
+            --approved-source-commit "$source_commit" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Start disposable Supabase Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/crafting-activation-startup.log
+          : > "$LOG"
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then exit 0; fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Import and activate Crafting pack
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/crafting-activation-local-acceptance.mjs \
+            2>&1 | tee /tmp/crafting-activation-local-acceptance.log
+
+      - name: Upload sanitized activation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crafting-activation-connected-v2-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/crafting-activation-startup.log
+            /tmp/crafting-activation-local-acceptance.log
+            /tmp/crafting-activation-local-acceptance.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true

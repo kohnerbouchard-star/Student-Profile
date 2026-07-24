@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "econovaria-physical-economy-gate-summary-v3",
+  "status": "executed-candidate-calibration",
+  "calibrationPassed": true,
+  "activationAuthorized": false,
+  "decision": "candidate_pass_requires_authority_review",
+  "runConfiguration": {
+    "countries": 10,
+    "difficulties": 4,
+    "scenarios": 4,
+    "seeds": 100,
+    "playersPerCountry": 12,
+    "cycles": 30,
+    "runCount": 16000
+  },
+  "difficultySummary": {
+    "easy": {
+      "baselineCraftSuccessMinimumObserved": 0.990138889,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.020277778,
+      "tier1ByCycle5MinimumObserved": 1,
+      "baselineFirstTier1MedianCycleMaximumObserved": 1,
+      "countryFirstTier1RangeObserved": 0,
+      "baselineTier3GlobalMeanObserved": 1,
+      "baselineImportSpendShareMean": 0.907174123,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.970548505
+    },
+    "moderate": {
+      "baselineCraftSuccessMinimumObserved": 0.935527778,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.037305556,
+      "tier1ByCycle5MinimumObserved": 1,
+      "baselineFirstTier1MedianCycleMaximumObserved": 1.005,
+      "countryFirstTier1RangeObserved": 0.005,
+      "baselineTier3GlobalMeanObserved": 1,
+      "baselineImportSpendShareMean": 0.906612221,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.968129346
+    },
+    "hard": {
+      "baselineCraftSuccessMinimumObserved": 0.760388889,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.063666667,
+      "tier1ByCycle5MinimumObserved": 1,
+      "baselineFirstTier1MedianCycleMaximumObserved": 1.005,
+      "countryFirstTier1RangeObserved": 0.005,
+      "baselineTier3GlobalMeanObserved": 1,
+      "baselineImportSpendShareMean": 0.90446618,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.963481113
+    },
+    "insane": {
+      "baselineCraftSuccessMinimumObserved": 0.693305556,
+      "borderDisruptionSupplyFailureMaximumObserved": 0.107166667,
+      "tier1ByCycle5MinimumObserved": 1,
+      "baselineFirstTier1MedianCycleMaximumObserved": 1.015,
+      "countryFirstTier1RangeObserved": 0.015,
+      "baselineTier3GlobalMeanObserved": 1,
+      "baselineImportSpendShareMean": 0.903735918,
+      "maximumImportSpendShareMeanAcrossScenarios": 0.964965583
+    }
+  },
+  "integrityGates": {
+    "guaranteedSystemBuybackArbitrage": 0,
+    "positiveSalvageRecraftLoops": 0,
+    "recraftLoopEvidence": [],
+    "substitutionExecutions": 82677
+  },
+  "gateCounts": {
+    "failed": 0,
+    "passed": 167,
+    "implemented": 167,
+    "unresolved": 0
+  },
+  "failures": [],
+  "warnings": [
+    {
+      "difficulty": "easy",
+      "gate": "import_spend_share",
+      "observed": 0.970548505,
+      "threshold": 0.8
+    },
+    {
+      "difficulty": "moderate",
+      "gate": "import_spend_share",
+      "observed": 0.968129346,
+      "threshold": 0.8
+    },
+    {
+      "difficulty": "hard",
+      "gate": "import_spend_share",
+      "observed": 0.963481113,
+      "threshold": 0.8
+    },
+    {
+      "difficulty": "insane",
+      "gate": "import_spend_share",
+      "observed": 0.964965583,
+      "threshold": 0.8
+    }
+  ]
+}
