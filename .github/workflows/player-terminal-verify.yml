@@ -75,6 +75,7 @@ jobs:
             if (!paths.includes(sentinel)) throw new Error(`Missing expected PR329 scope sentinel: ${sentinel}`);
           }
           const exact = new Set([
+            '.github/workflows/campaign-content-regenerate-pr.yml',
             '.github/workflows/player-terminal-verify.yml',
             'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
             'package.json',
