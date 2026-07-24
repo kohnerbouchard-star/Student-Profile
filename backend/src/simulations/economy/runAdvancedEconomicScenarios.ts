@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import {
   runCreditRecoveryScenario,
   type CreditRecoveryCountryProfile,
@@ -10,6 +9,11 @@ import {
   type MacroCountryProfile,
   type MacroScenarioConfig,
 } from "./macroEconomicScenarioSimulation.ts";
+
+declare const Deno: {
+  readonly args: readonly string[];
+  writeTextFile(path: string, data: string): Promise<void>;
+};
 
 interface AdvancedScenarioEvidence {
   readonly schemaVersion: 1;
@@ -61,7 +65,10 @@ const evidence: AdvancedScenarioEvidence = {
   deterministic: true,
 };
 
-await writeFile(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+await Deno.writeTextFile(
+  outputPath,
+  `${JSON.stringify(evidence, null, 2)}\n`,
+);
 console.log(JSON.stringify(evidence.summary));
 
 function macroConfig(): MacroScenarioConfig {
