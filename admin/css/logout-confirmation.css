@@ -1,0 +1,245 @@
+/* Dedicated Admin sign-out confirmation. This layer intentionally does not reuse
+   the legacy account modal grid, which can stretch action buttons to viewport height. */
+
+body.econovaria-admin-logout-confirmation-open {
+  overflow: hidden !important;
+}
+
+.econovaria-admin-logout-confirmation {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 120000 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: clamp(16px, 3vw, 32px) !important;
+  overflow: auto !important;
+  background: rgba(0, 6, 14, 0.84) !important;
+  backdrop-filter: blur(10px);
+}
+
+.econovaria-admin-logout-confirmation,
+.econovaria-admin-logout-confirmation * {
+  box-sizing: border-box;
+}
+
+.econovaria-admin-logout-confirmation__dialog {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto auto !important;
+  align-items: start !important;
+  align-content: start !important;
+  gap: 18px !important;
+  width: min(680px, calc(100vw - 32px)) !important;
+  max-width: 680px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 32px) !important;
+  margin: auto !important;
+  padding: clamp(20px, 3vw, 30px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  border: 1px solid rgba(66, 203, 244, 0.38) !important;
+  border-radius: 16px !important;
+  background:
+    radial-gradient(circle at 84% 4%, rgba(0, 201, 255, 0.11), transparent 34%),
+    linear-gradient(155deg, rgba(8, 24, 38, 0.99), rgba(3, 11, 22, 0.99)) !important;
+  color: #edfaff !important;
+  box-shadow: 0 32px 100px rgba(0, 0, 0, 0.64) !important;
+}
+
+.econovaria-admin-logout-confirmation__header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid rgba(64, 198, 238, 0.22) !important;
+}
+
+.econovaria-admin-logout-confirmation__header > div {
+  display: grid !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+.econovaria-admin-logout-confirmation__header span,
+.econovaria-admin-logout-confirmation__context span {
+  color: #8ccfe2 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase !important;
+}
+
+.econovaria-admin-logout-confirmation__header h2 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: clamp(25px, 4vw, 38px) !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.08 !important;
+}
+
+.econovaria-admin-logout-confirmation__description {
+  width: 100% !important;
+  margin: 0 !important;
+  color: rgba(225, 244, 250, 0.76) !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+
+.econovaria-admin-logout-confirmation__context {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.econovaria-admin-logout-confirmation__context > div {
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  min-height: 86px !important;
+  height: auto !important;
+  padding: 14px !important;
+  border: 1px solid rgba(98, 210, 241, 0.2) !important;
+  border-radius: 10px !important;
+  background: rgba(1, 9, 18, 0.68) !important;
+}
+
+.econovaria-admin-logout-confirmation__context strong {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #f4fbff !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere !important;
+  text-overflow: ellipsis !important;
+}
+
+.econovaria-admin-logout-confirmation__actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 0 !important;
+}
+
+.econovaria-admin-logout-confirmation button {
+  position: relative !important;
+  inset: auto !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 112px !important;
+  max-width: 240px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 18px !important;
+  border-radius: 9px !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  appearance: none !important;
+}
+
+.econovaria-admin-logout-confirmation button.is-secondary {
+  border: 1px solid rgba(135, 213, 235, 0.32) !important;
+  background: rgba(12, 36, 51, 0.86) !important;
+  color: #dff7ff !important;
+}
+
+.econovaria-admin-logout-confirmation button.is-danger {
+  border: 1px solid rgba(255, 105, 118, 0.58) !important;
+  background: rgba(141, 35, 48, 0.28) !important;
+  color: #ffbec5 !important;
+}
+
+.econovaria-admin-logout-confirmation button:hover,
+.econovaria-admin-logout-confirmation button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(77, 213, 250, 0.16) !important;
+}
+
+.econovaria-admin-logout-confirmation button.is-danger:hover,
+.econovaria-admin-logout-confirmation button.is-danger:focus-visible {
+  border-color: rgba(255, 123, 135, 0.95) !important;
+  background: rgba(166, 44, 58, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(255, 105, 118, 0.15) !important;
+}
+
+.econovaria-admin-logout-confirmation button[aria-busy="true"] {
+  opacity: 0.7 !important;
+  cursor: wait !important;
+}
+
+.econovaria-admin-logout-confirmation__close {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(76, 210, 249, 0.46) !important;
+  border-radius: 10px !important;
+  background: rgba(0, 130, 171, 0.22) !important;
+  color: #e8fbff !important;
+  font-size: 25px !important;
+  font-weight: 400 !important;
+}
+
+@media (max-width: 700px) {
+  .econovaria-admin-logout-confirmation__context {
+    grid-template-columns: 1fr !important;
+  }
+
+  .econovaria-admin-logout-confirmation__context > div {
+    min-height: 70px !important;
+  }
+
+  .econovaria-admin-logout-confirmation__actions {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+  }
+
+  .econovaria-admin-logout-confirmation__actions button {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
