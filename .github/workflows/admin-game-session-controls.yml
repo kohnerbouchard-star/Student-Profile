@@ -118,7 +118,10 @@ jobs:
           node scripts/admin-game-session-controls-browser-smoke.mjs
 
       - name: Exercise bounded logout confirmation in Chromium
-        run: node scripts/admin-logout-confirmation-browser-smoke.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-logout-confirmation-browser-smoke.mjs 2>&1 | tee /tmp/admin-logout-confirmation-browser.log
 
       - name: Create game and verify Player target in Chromium
         if: github.event.pull_request.number == 334
@@ -136,6 +139,7 @@ jobs:
             admin-browser-smoke-artifacts/game-session-controls/
             admin-browser-smoke-artifacts/logout-confirmation/
             admin-browser-smoke-artifacts/game-creation/
+            /tmp/admin-logout-confirmation-browser.log
             /tmp/admin-game-creation-browser.log
           if-no-files-found: warn
           retention-days: 30
