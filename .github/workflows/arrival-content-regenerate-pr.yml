@@ -1,0 +1,97 @@
+name: Arrival Content Regenerate PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/arrival-content-regenerate-pr.yml"
+      - "package.json"
+      - "docs/seed-content/players/arrival-content-source-v2.json"
+      - "scripts/apply-arrival-content-overrides.mjs"
+      - "scripts/arrival-content-quality.test.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arrival-content-regenerate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate-arrival-content:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'agent/seed-content-usable-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Wire arrival content into canonical seed build
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          path = pathlib.Path('package.json')
+          package = json.loads(path.read_text(encoding='utf-8'))
+          arrival_step = 'node scripts/apply-arrival-content-overrides.mjs'
+          build = package['scripts']['build:seed-beta-pack']
+          if arrival_step not in build:
+              package['scripts']['build:seed-beta-pack'] = build + ' && ' + arrival_step
+          test_file = 'scripts/arrival-content-quality.test.mjs'
+          test_command = package['scripts']['test:seed-beta-pack']
+          if test_file not in test_command:
+              marker = 'scripts/contract-content-quality.test.mjs'
+              package['scripts']['test:seed-beta-pack'] = test_command.replace(marker, marker + ' ' + test_file)
+          package['scripts']['validate:arrival-content'] = 'node --test scripts/arrival-content-quality.test.mjs'
+          path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild executable seed pack with authored arrival content
+        run: npm run build:seed-beta-pack
+
+      - name: Validate executable pack and authored content
+        run: |
+          npm run validate:seed-beta-pack
+          npm run validate:contract-content
+          npm run validate:arrival-content
+          npm run validate:physical-item-artwork
+          node --test scripts/item-content-coverage.test.mjs
+
+      - name: Commit deterministic arrival content artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            package.json \
+            docs/seed-content/executable/beta-pack-v1
+          if git diff --cached --quiet; then
+            echo "Arrival content pack is already current."
+            exit 0
+          fi
+          git commit -m "seed: regenerate authored arrival content pack"
+          git push origin "HEAD:${{ github.head_ref }}"
