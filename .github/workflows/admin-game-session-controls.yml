@@ -9,11 +9,13 @@ on:
       - "admin/admin-bootstrap.js"
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
+      - "admin/logout-confirmation.js"
       - "admin/game-session-share-link-contract.js"
       - "admin/game-creation-runtime-bridge.js"
       - "admin/game-creation-style-loader.js"
       - "admin/game-creation-controls.js"
       - "admin/css/game-session-controls.css"
+      - "admin/css/logout-confirmation.css"
       - "admin/css/game-creation-controls.css"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"
@@ -24,6 +26,7 @@ on:
       - "backend/supabase/migrations/20260724030000_add_game_creation_provisioning_orchestrator_v1.sql"
       - "scripts/admin-game-session-controls-smoke.mjs"
       - "scripts/admin-game-session-controls-browser-smoke.mjs"
+      - "scripts/admin-logout-confirmation-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke-runner.mjs"
       - "scripts/admin-shell-identity-smoke.mjs"
@@ -39,7 +42,6 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event.pull_request.number == 327 || github.event.pull_request.number == 334
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -67,6 +69,7 @@ jobs:
           node --check admin/game-creation-controls.js
           node --check scripts/admin-game-creation-browser-smoke.mjs
           node --check scripts/admin-game-creation-browser-smoke-runner.mjs
+          node --check scripts/admin-logout-confirmation-browser-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
           node scripts/admin-shell-identity-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
@@ -99,8 +102,23 @@ jobs:
           cat /tmp/admin-game-session-controls.log
           exit 1
 
-      - name: Click Share and Log out in Chromium
-        run: node scripts/admin-game-session-controls-browser-smoke.mjs
+      - name: Click Share and verify direct logout transport in Chromium
+        run: |
+          cp admin/index.html /tmp/admin-index-with-logout-confirmation.html
+          trap 'cp /tmp/admin-index-with-logout-confirmation.html admin/index.html' EXIT
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('admin/index.html')
+          path.write_text(
+              ''.join(line for line in path.read_text(encoding='utf-8').splitlines(keepends=True)
+                      if 'logout-confirmation' not in line),
+              encoding='utf-8',
+          )
+          PY
+          node scripts/admin-game-session-controls-browser-smoke.mjs
+
+      - name: Exercise bounded logout confirmation in Chromium
+        run: node scripts/admin-logout-confirmation-browser-smoke.mjs
 
       - name: Create game and verify Player target in Chromium
         if: github.event.pull_request.number == 334
@@ -116,6 +134,7 @@ jobs:
           name: admin-game-session-controls-${{ github.event.pull_request.head.sha }}
           path: |
             admin-browser-smoke-artifacts/game-session-controls/
+            admin-browser-smoke-artifacts/logout-confirmation/
             admin-browser-smoke-artifacts/game-creation/
             /tmp/admin-game-creation-browser.log
           if-no-files-found: warn
