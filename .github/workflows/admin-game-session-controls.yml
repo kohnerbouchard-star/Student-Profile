@@ -10,6 +10,7 @@ on:
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
       - "admin/game-session-share-link-contract.js"
+      - "admin/game-creation-style-loader.js"
       - "admin/game-creation-controls.js"
       - "admin/css/game-session-controls.css"
       - "admin/css/game-creation-controls.css"
@@ -59,6 +60,7 @@ jobs:
 
       - name: Verify selected-game, creation, and logout source contracts
         run: |
+          node --check admin/game-creation-style-loader.js
           node --check admin/game-creation-controls.js
           node --check scripts/admin-game-creation-browser-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
