@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="en" class="preload">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0f172a" />
   <title>Econovaria</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/favicon-32.png?v=20260724.4" />
+  <link rel="shortcut icon" type="image/png" href="./assets/brand/favicon-32.png?v=20260724.4" />
   <link rel="stylesheet" href="frontend/src/styles/app.css" />
   <style id="app-preload-style">
     html.preload,
@@ -43,6 +44,34 @@
       height: 100%;
       object-fit: contain;
       filter: drop-shadow(0 0 22px rgba(0, 212, 255, .24)) drop-shadow(0 0 26px rgba(255, 0, 238, .14));
+    }
+
+
+    .login-root .logo-mark.is-econovaria-logo {
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .login-root .logo-mark-fallback {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #8eeeff;
+      font: 900 clamp(22px, 5vw, 38px)/1 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: .08em;
+      text-shadow: 0 0 16px rgba(0, 212, 255, .55), 0 0 22px rgba(255, 0, 238, .28);
+    }
+
+    .login-root .logo-mark.is-econovaria-logo img {
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-root .logo-mark.has-brand-error img {
+      display: none;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -112,7 +141,8 @@
           <div class="panel-accent panel-accent-top"></div>
           <div class="brand-block">
             <div class="logo-mark is-econovaria-logo">
-              <img src="assets/brand/econovaria-logo.webp" width="286" height="161" alt="Econovaria" />
+              <span class="logo-mark-fallback" aria-hidden="true">ECONOVARIA</span>
+              <img src="./assets/brand/econovaria-logo.png?v=20260724.4" width="1200" height="675" alt="Econovaria" decoding="async" fetchpriority="high" data-econovaria-brand-image />
             </div>
           </div>
 
@@ -255,9 +285,15 @@
   <script src="frontend/src/core/api.js"></script>
   <script src="frontend/src/core/login.js"></script>
   <script>
-    window.setTimeout(function releasePreloadFallback() {
+    (function installLoginSurfaceGuard() {
       document.documentElement.classList.remove("preload");
-    }, 1800);
+      const image = document.querySelector("[data-econovaria-brand-image]");
+      const mark = image?.closest(".logo-mark");
+      const fail = function () { mark?.classList.add("has-brand-error"); };
+      image?.addEventListener("load", function () { mark?.classList.remove("has-brand-error"); });
+      image?.addEventListener("error", fail, { once: true });
+      if (image?.complete && image.naturalWidth === 0) fail();
+    })();
   </script>
 </body>
 </html>
