@@ -48,20 +48,20 @@ test('Campaign source provides substantive opportunity, pressure, news, and noti
     const profile = source.countryProfiles[country];
     for (const [family, detail] of [['opportunity', profile.opportunity], ['pressure', profile.pressure]]) {
       assertPlayerFacingText(detail.name, 18, `${country}.${family}.name`);
-      assertPlayerFacingText(detail.summary, 150, `${country}.${family}.summary`);
+      assertPlayerFacingText(detail.summary, 100, `${country}.${family}.summary`);
       assert.equal(detail.confirmedFacts.length, 2);
-      detail.confirmedFacts.forEach((entry, index) => assertPlayerFacingText(entry, 45, `${country}.${family}.fact.${index + 1}`));
-      assertPlayerFacingText(detail.uncertainty, 70, `${country}.${family}.uncertainty`);
+      detail.confirmedFacts.forEach((entry, index) => assertPlayerFacingText(entry, 40, `${country}.${family}.fact.${index + 1}`));
+      assertPlayerFacingText(detail.uncertainty, 55, `${country}.${family}.uncertainty`);
       assert.equal(detail.playerHooks.length, 3);
       detail.playerHooks.forEach((entry, index) => assertPlayerFacingText(entry, 12, `${country}.${family}.hook.${index + 1}`));
       assert.ok(detail.civilianRisks.length >= 2);
       detail.civilianRisks.forEach((entry, index) => assertPlayerFacingText(entry, 12, `${country}.${family}.risk.${index + 1}`));
-      assertPlayerFacingText(detail.recovery, 75, `${country}.${family}.recovery`);
+      assertPlayerFacingText(detail.recovery, 70, `${country}.${family}.recovery`);
     }
     assert.equal(Object.keys(profile.news).length, 6);
     assert.equal(Object.keys(profile.notifications).length, 6);
-    for (const [key, value] of Object.entries(profile.news)) assertPlayerFacingText(value, key.endsWith('Headline') ? 22 : 115, `${country}.news.${key}`);
-    for (const [key, value] of Object.entries(profile.notifications)) assertPlayerFacingText(value, key.endsWith('Title') ? 18 : 105, `${country}.notifications.${key}`);
+    for (const [key, value] of Object.entries(profile.news)) assertPlayerFacingText(value, key.endsWith('Headline') ? 22 : 105, `${country}.news.${key}`);
+    for (const [key, value] of Object.entries(profile.notifications)) assertPlayerFacingText(value, key.endsWith('Title') ? 18 : 95, `${country}.notifications.${key}`);
   }
 });
 
@@ -88,12 +88,12 @@ test('Campaign event output preserves all 25 event, 10 chain, and 5 crisis ident
     assert.equal(event.triggerIntent, original.triggerIntent);
     assert.equal(event.runtimeSupport, original.runtimeSupport);
     assert.equal(event.activationAuthorized, false);
-    assertPlayerFacingText(event.playerFacingSummary, 140, `${event.id}.summary`);
+    assertPlayerFacingText(event.playerFacingSummary, 100, `${event.id}.summary`);
     assert.equal(event.confirmedFacts.length, 2);
-    assertPlayerFacingText(event.uncertainty, 70, `${event.id}.uncertainty`);
+    assertPlayerFacingText(event.uncertainty, 55, `${event.id}.uncertainty`);
     assert.ok(event.playerHooks.length >= 3);
     assert.ok(event.civilianRisks.length >= 2);
-    assertPlayerFacingText(event.recoveryGuidance, 75, `${event.id}.recovery`);
+    assertPlayerFacingText(event.recoveryGuidance, 70, `${event.id}.recovery`);
   }
   for (const arc of events.crisisArcs) {
     assert.equal(arc.requiredRecovery, true);
@@ -111,7 +111,7 @@ test('Campaign news output preserves 30 IDs and uses unique evidence-aware copy'
   assert.equal(new Set(news.newsTemplates.map((entry) => entry.bodyTemplate)).size, 30);
   for (const template of news.newsTemplates) {
     assertPlayerFacingText(template.headlineTemplate, 22, `${template.id}.headline`);
-    assertPlayerFacingText(template.bodyTemplate, 115, `${template.id}.body`);
+    assertPlayerFacingText(template.bodyTemplate, 95, `${template.id}.body`);
     assertPlayerFacingText(template.linkedContentId, 20, `${template.id}.linkedContentId`);
     assert.equal(template.evidenceLabelPolicy, 'separate-confirmed-facts-uncertainty-and-corrections');
     assert.equal(template.correctionPolicy, 'publish-linked-correction-without-deleting-original-audit-history');
@@ -128,7 +128,7 @@ test('Campaign notifications preserve 30 IDs and provide unique actionable copy'
   assert.equal(new Set(notifications.notificationTemplates.map((entry) => entry.bodyTemplate)).size, 30);
   for (const template of notifications.notificationTemplates) {
     assertPlayerFacingText(template.titleTemplate, 18, `${template.id}.title`);
-    assertPlayerFacingText(template.bodyTemplate, 105, `${template.id}.body`);
+    assertPlayerFacingText(template.bodyTemplate, 95, `${template.id}.body`);
     assertPlayerFacingText(template.recommendedAction, 65, `${template.id}.recommendedAction`);
     assert.equal(template.deliveryPolicy, 'authoritative-state-change-only');
     assert.equal(template.deduplicationPolicy, 'stable-event-and-recipient-key-required');

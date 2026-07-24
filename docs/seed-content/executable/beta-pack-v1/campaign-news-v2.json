@@ -1,0 +1,582 @@
+{
+  "activationAuthorized": false,
+  "contentRevision": "campaign-content-v2",
+  "newsTemplates": [
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Strategic Resources Office has issued a new procurement schedule for rare-earth concentrate, precision optics, and calibration services. Officials warned suppliers not to finance permanent expansion until winter freight and Meridian demand are independently verified.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "northreach",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Frostgate opens verified procurement for sensor-grade minerals",
+      "id": "news-template.northreach.opening.v1",
+      "linkedContentId": "event.core.northreach.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Freight windows are being consolidated as power maintenance and severe weather raise demand for residential heating. Essential deliveries receive priority, while industrial buyers are being asked to publish revised schedules and substitute plans.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "northreach",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Ice damage compresses Northreach freight and heating capacity",
+      "id": "news-template.northreach.pressure.v1",
+      "linkedContentId": "event.core.northreach.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Repair crews have reopened limited capacity, and the Strategic Resources Office is coordinating staged deliveries. Full recovery depends on verified route inspections, preserved household heating supply, and disciplined procurement.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "northreach",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Northreach begins phased restoration of northern freight routes",
+      "id": "news-template.northreach.recovery.v1",
+      "linkedContentId": "event-chain.northreach.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The port authority and licensed insurers are commissioning compliant monitoring equipment and documentation services. Participation requires verified custody records, approved installers, and transparent route-change reporting.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "yrethia",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Sableport funds cargo telemetry and seal-verification program",
+      "id": "news-template.yrethia.opening.v1",
+      "linkedContentId": "event.core.yrethia.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Priority clearance is restricted to essential, fully documented shipments as inspectors address a verification backlog. Insurers are warning that undocumented transfers and damaged seals may face higher premiums or denied claims.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "yrethia",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Customs backlog extends Sableport cargo delays",
+      "id": "news-template.yrethia.pressure.v1",
+      "linkedContentId": "event.core.yrethia.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Port Records Bureau has opened correction appointments and licensed rerouting windows for delayed cargo. Recovery remains dependent on complete records, verified custody, and available inland capacity.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "yrethia",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Yrethia introduces supervised clearance and rerouting windows",
+      "id": "news-template.yrethia.recovery.v1",
+      "linkedContentId": "event-chain.yrethia.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Trade Legitimacy Commission has published traceability and testing requirements for approved repair exports. Cooperatives must document ownership, component condition, and warranty treatment before delivery.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "thaloris",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Thaloris certifies repair cooperatives for re-export contracts",
+      "id": "news-template.thaloris.opening.v1",
+      "linkedContentId": "event.core.thaloris.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Several lots have been blocked from licensed sale and Crafting after ownership and condition records failed inspection. Authorities are accepting documented appeals while warning buyers not to mix disputed stock with verified inventory.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "thaloris",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Dusk Harbor suspends salvage lots over record mismatches",
+      "id": "news-template.thaloris.pressure.v1",
+      "linkedContentId": "event.core.thaloris.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Repair cooperatives may now submit disputed lots for supervised classification and use approved substitute components. Recovery requires complete records and does not guarantee the original purchase value.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "thaloris",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Thaloris opens controlled salvage review and substitution program",
+      "id": "news-template.thaloris.recovery.v1",
+      "linkedContentId": "event-chain.thaloris.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Advanced Systems Consortium is seeking verified calibration, field-research, and navigation equipment. Shared laboratories and supervised suppliers may participate, but specialist components remain limited.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "solvend",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Aurora consortium commissions Meridian research instruments",
+      "id": "news-template.solvend.opening.v1",
+      "linkedContentId": "event.core.solvend.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "New technical placements and laboratory permissions face additional identity and cybersecurity checks. Existing verified users retain access unless directly notified, and provisional supervised work remains available.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "solvend",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Solvend review slows laboratory and credential access",
+      "id": "news-template.solvend.pressure.v1",
+      "linkedContentId": "event.core.solvend.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Skills Verification Directorate and shared laboratories are adding supervised assessment and calibration capacity. Full normalization depends on secure access review and specialist staffing.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "solvend",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Aurora Spire expands provisional technical placements",
+      "id": "news-template.solvend.recovery.v1",
+      "linkedContentId": "event-chain.solvend.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Commodity Stability Board is supporting verified inventory records, cold-storage coordination, and low-waste distribution. Projects must demonstrate household affordability and realistic storage capacity.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "eldoran",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Eldoran funds neighborhood food-logistics upgrades",
+      "id": "news-template.eldoran.opening.v1",
+      "linkedContentId": "event.core.eldoran.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Several supplier districts report lower output, though final harvest totals are not yet confirmed. The Board is monitoring public reserves, substitution, and misleading scarcity claims.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "eldoran",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Early harvest shortfall raises Eldoran wholesale prices",
+      "id": "news-template.eldoran.pressure.v1",
+      "linkedContentId": "event.core.eldoran.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Public reserves and approved substitutes are moving through verified distribution points. Recovery depends on transparent inventory, controlled purchasing, and access for poorly connected neighborhoods.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "eldoran",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Crescent Bay expands reserve release and substitute distribution",
+      "id": "news-template.eldoran.recovery.v1",
+      "linkedContentId": "event-chain.eldoran.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Water Energy Commission is commissioning public refill monitoring, filtration maintenance, and efficient pumping upgrades. Shared-housing and high-risk districts receive priority.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "valerion",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Glassfall launches water-resilience maintenance program",
+      "id": "news-template.valerion.opening.v1",
+      "linkedContentId": "event.core.valerion.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Utilities are allocating limited filtration membranes to public refill stations and essential housing. Approved emergency cartridges and ceramic media remain available for compatible systems.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "valerion",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Valerion prioritizes essential systems during membrane shortage",
+      "id": "news-template.valerion.pressure.v1",
+      "linkedContentId": "event.core.valerion.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Additional ceramic media, cartridge rotation, and inspection teams are entering service. Full recovery remains dependent on replacement membrane deliveries and verified maintenance.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "valerion",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Glassfall expands substitute filters and utility inspections",
+      "id": "news-template.valerion.recovery.v1",
+      "linkedContentId": "event-chain.valerion.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Public Media Trust is funding source-linked translation, records clarification, and accessible public briefings. Settlement, housing, and emergency information receive priority.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "lumenor",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Starfall expands verified translation and civic briefing work",
+      "id": "news-template.lumenor.opening.v1",
+      "linkedContentId": "event.core.lumenor.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Institutions report altered or inconsistent notices circulating through informal channels. Original records and correction history remain available, and reviewed appeals are being accepted.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "lumenor",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Conflicting translations trigger Lumenor credential disputes",
+      "id": "news-template.lumenor.pressure.v1",
+      "linkedContentId": "event.core.lumenor.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Civic Translation Desk and Public Media Trust are adding reviewers and issuing source-linked corrections. Residents are advised to preserve original notices and avoid unverified summaries.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "lumenor",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Lumenor publishes linked corrections and expands review desks",
+      "id": "news-template.lumenor.recovery.v1",
+      "linkedContentId": "event-chain.lumenor.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Project Accountability Office has opened transparent repair, warehouse, and public-infrastructure pilots. Budgets must separate equipment finance, materials, operating cash, and milestone payments.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "xalvoria",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Emberhall approves staged modular infrastructure pilots",
+      "id": "news-template.xalvoria.opening.v1",
+      "linkedContentId": "event.core.xalvoria.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Infrastructure budgets are under review as steel prices and concentrated borrowing exceed approved limits. Work may continue only within verified funding and material constraints.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "xalvoria",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Xalvoria audits project debt after steel-cost increase",
+      "id": "news-template.xalvoria.pressure.v1",
+      "linkedContentId": "event.core.xalvoria.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Auditors and lenders are approving resized projects, staged procurement, and verified debt restructuring. Priority is shifting from expansion to essential repair and accountable delivery.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "xalvoria",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Emberhall restructures projects around essential repairs",
+      "id": "news-template.xalvoria.recovery.v1",
+      "linkedContentId": "event-chain.xalvoria.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Rail operators and the Workers Congress are commissioning structural scans, maintenance rigs, and documented repair work. Safety clearance and inspection evidence are mandatory.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "dravenlok",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Ironhold launches supervised rail-maintenance drive",
+      "id": "news-template.dravenlok.opening.v1",
+      "linkedContentId": "event.core.dravenlok.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Safety officials have halted identified high-heat equipment and connected lines pending inspection. The duration and effect on hardened steel supply remain under review.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "dravenlok",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Dravenlok foundry lines paused after equipment fault",
+      "id": "news-template.dravenlok.pressure.v1",
+      "linkedContentId": "event.core.dravenlok.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Verified repairs and inspections are allowing limited production to resume. Worker reassignment, housing protection, and essential infrastructure orders remain priorities.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "dravenlok",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Ironhold begins phased foundry restart and worker reassignment",
+      "id": "news-template.dravenlok.recovery.v1",
+      "linkedContentId": "event-chain.dravenlok.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "The Data Rights Tribunal and licensed operators are funding verified emergency communications, identity modules, and media-correction systems. Approved providers must preserve authentication and audit history.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "syndalis",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Blacklight commissions secure channels and correction tools",
+      "id": "news-template.syndalis.opening.v1",
+      "linkedContentId": "event.core.syndalis.sector-expansion.v1",
+      "runtimeSupport": "definition-only",
+      "state": "opportunity",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Duplicate claims and falsified notices have triggered restrictions on high-risk channels. Verified emergency communications remain active, and documented appeals are available.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "syndalis",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Forged notices slow Syndalis identity verification",
+      "id": "news-template.syndalis.pressure.v1",
+      "linkedContentId": "event.core.syndalis.system-pressure.v1",
+      "runtimeSupport": "definition-only",
+      "state": "pressure",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    },
+    {
+      "activationAuthorized": false,
+      "bodyTemplate": "Additional review capacity and secure fallback channels are coming online. Recovery depends on preserved evidence, correction lineage, and avoidance of unverified resubmission services.",
+      "contentRevision": "campaign-content-v2",
+      "correctionPolicy": "publish-linked-correction-without-deleting-original-audit-history",
+      "country": "syndalis",
+      "evidenceLabelPolicy": "separate-confirmed-facts-uncertainty-and-corrections",
+      "headlineTemplate": "Syndalis expands identity appeals and verified low-bandwidth access",
+      "id": "news-template.syndalis.recovery.v1",
+      "linkedContentId": "event-chain.syndalis.adaptation.v1",
+      "runtimeSupport": "definition-only",
+      "state": "recovery",
+      "variablePolicy": [
+        "verified-date",
+        "approved-severity-band",
+        "named-institution",
+        "linked-event-id"
+      ]
+    }
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-campaign-news-v2",
+  "status": "approved-for-isolated-staging",
+  "templateCount": 30,
+  "version": "1.0.0-beta"
+}

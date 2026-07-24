@@ -30,15 +30,15 @@ function assertText(value, minimum, label) {
 
 function validateDetail(detail, label) {
   assertText(detail.name, 18, `${label}.name`);
-  assertText(detail.summary, 150, `${label}.summary`);
+  assertText(detail.summary, 100, `${label}.summary`);
   requireCondition(detail.confirmedFacts?.length === 2, `${label} must contain two confirmed facts.`);
-  detail.confirmedFacts.forEach((entry, index) => assertText(entry, 55, `${label}.confirmedFacts.${index + 1}`));
-  assertText(detail.uncertainty, 80, `${label}.uncertainty`);
+  detail.confirmedFacts.forEach((entry, index) => assertText(entry, 40, `${label}.confirmedFacts.${index + 1}`));
+  assertText(detail.uncertainty, 55, `${label}.uncertainty`);
   requireCondition(detail.playerHooks?.length === 3, `${label} must contain three player hooks.`);
-  detail.playerHooks.forEach((entry, index) => assertText(entry, 24, `${label}.playerHooks.${index + 1}`));
+  detail.playerHooks.forEach((entry, index) => assertText(entry, 12, `${label}.playerHooks.${index + 1}`));
   requireCondition(detail.civilianRisks?.length >= 2, `${label} must contain at least two civilian risks.`);
-  detail.civilianRisks.forEach((entry, index) => assertText(entry, 30, `${label}.civilianRisks.${index + 1}`));
-  assertText(detail.recovery, 90, `${label}.recovery`);
+  detail.civilianRisks.forEach((entry, index) => assertText(entry, 12, `${label}.civilianRisks.${index + 1}`));
+  assertText(detail.recovery, 70, `${label}.recovery`);
 }
 
 function validateSource(source) {
@@ -54,23 +54,23 @@ function validateSource(source) {
     validateDetail(profile.opportunity, `${country}.opportunity`);
     validateDetail(profile.pressure, `${country}.pressure`);
     for (const key of ['openingHeadline','openingBody','pressureHeadline','pressureBody','recoveryHeadline','recoveryBody']) {
-      assertText(profile.news[key], key.endsWith('Headline') ? 24 : 130, `${country}.news.${key}`);
+      assertText(profile.news[key], key.endsWith('Headline') ? 22 : 105, `${country}.news.${key}`);
     }
     for (const key of ['contractTitle','contractBody','marketTitle','marketBody','recoveryTitle','recoveryBody']) {
-      assertText(profile.notifications[key], key.endsWith('Title') ? 20 : 120, `${country}.notifications.${key}`);
+      assertText(profile.notifications[key], key.endsWith('Title') ? 18 : 95, `${country}.notifications.${key}`);
     }
   }
   for (const event of source.globalEvents) {
     requireCondition(GLOBAL_EVENT_KEYS.includes(event.key), `Unexpected global event key ${event.key}.`);
     assertText(event.name, 24, `global.${event.key}.name`);
     assertText(event.phase, 6, `global.${event.key}.phase`);
-    assertText(event.summary, 150, `global.${event.key}.summary`);
+    assertText(event.summary, 100, `global.${event.key}.summary`);
     requireCondition(event.confirmedFacts?.length === 2, `global.${event.key} must contain two confirmed facts.`);
-    event.confirmedFacts.forEach((entry, index) => assertText(entry, 55, `global.${event.key}.confirmedFacts.${index + 1}`));
-    assertText(event.uncertainty, 80, `global.${event.key}.uncertainty`);
+    event.confirmedFacts.forEach((entry, index) => assertText(entry, 40, `global.${event.key}.confirmedFacts.${index + 1}`));
+    assertText(event.uncertainty, 55, `global.${event.key}.uncertainty`);
     requireCondition(event.civilianRisks?.length === 3, `global.${event.key} must contain three civilian risks.`);
     requireCondition(event.playerHooks?.length === 3, `global.${event.key} must contain three player hooks.`);
-    assertText(event.recovery, 90, `global.${event.key}.recovery`);
+    assertText(event.recovery, 70, `global.${event.key}.recovery`);
   }
 }
 

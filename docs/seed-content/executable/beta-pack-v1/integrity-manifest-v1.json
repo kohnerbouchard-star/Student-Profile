@@ -1,6 +1,6 @@
 {
   "activationAuthorized": false,
-  "fileCount": 15,
+  "fileCount": 18,
   "files": [
     {
       "bytes": 676,
@@ -23,6 +23,21 @@
       "sha256": "72de5efbf5f9d873dcbf6d0a826abc042a315ae10f4e9a4cd9e7764ed58f4d8c"
     },
     {
+      "bytes": 65155,
+      "path": "campaign-events-v2.json",
+      "sha256": "ff323ea9b70786cabe89dd355500823c9b7a5a550d385f38f1ef5f58a9deffe9"
+    },
+    {
+      "bytes": 29039,
+      "path": "campaign-news-v2.json",
+      "sha256": "007f50f63381e42dd1f69ae697a020341c43d17bcd69461931e00677e255932d"
+    },
+    {
+      "bytes": 29838,
+      "path": "campaign-notifications-v2.json",
+      "sha256": "c900c46af8923c702de985158e66ff6763fce547e08fa68dd24df46ab557a311"
+    },
+    {
       "bytes": 1451,
       "path": "campaign-v1.json",
       "sha256": "dd80a82c9c51155abb869bf2d21ae78b5a55ec191b005888e33f2d666ee4fa4c"
@@ -43,9 +58,9 @@
       "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
     },
     {
-      "bytes": 2965,
+      "bytes": 3638,
       "path": "pack-v1.json",
-      "sha256": "4fd9e0c9c5980b5ce5361a4343a71ba0f838266d3787c5923f7ce6ce3103ef2e"
+      "sha256": "c4b554005f3f0cd4c0c6c278d3f9eb0327c4de0067da83806e5dc833046aa4b2"
     },
     {
       "bytes": 74019,
@@ -79,9 +94,9 @@
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "acaa95e34d1d6caebbe78177475ed7481b2acd88ad4b37899e605dcf46b7cff1",
+  "manifestContentSha256": "8965b98e6e83b3bdc2cac5690b5162d7cd250b46593188d761318a552f34758c",
   "packId": "econovaria.beta-seed-pack.v1",
-  "packSha256": "4fd9e0c9c5980b5ce5361a4343a71ba0f838266d3787c5923f7ce6ce3103ef2e",
+  "packSha256": "c4b554005f3f0cd4c0c6c278d3f9eb0327c4de0067da83806e5dc833046aa4b2",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-integrity-manifest-v1",
   "status": "approved-for-isolated-staging",
