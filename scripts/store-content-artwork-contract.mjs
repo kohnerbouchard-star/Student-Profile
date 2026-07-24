@@ -2,13 +2,14 @@
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exists, readJson, sha256File } from './seed-beta-pack-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const SEED_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content');
 const PACK_ROOT = path.join(SEED_ROOT, 'executable', 'beta-pack-v1');
+const PLAYER_STORE_ARTWORK_PATH = path.join(REPO_ROOT, 'player-terminal', 'src', 'features', 'store', 'store-artwork.js');
 const PLACEHOLDER_PATTERNS = [
   /bounded beta/i,
   /stable source/i,
@@ -31,6 +32,10 @@ function expectedRuntimeImagePath(record) {
   return `player-terminal/assets/images/items/store/${record.country}/${record.itemKey}.webp`;
 }
 
+function expectedPlayerImagePath(runtimeImagePath) {
+  return `./${String(runtimeImagePath).replace(/^player-terminal\//, '')}`;
+}
+
 export async function validateStoreContentArtworkContract() {
   const requiredPaths = {
     contentSource: path.join(SEED_ROOT, 'items', 'store-content-overrides-v2.json'),
@@ -43,10 +48,13 @@ export async function validateStoreContentArtworkContract() {
   for (const [name, filePath] of Object.entries(requiredPaths)) {
     requireCondition(await exists(filePath), `${name} is missing at ${path.relative(REPO_ROOT, filePath)}.`);
   }
+  requireCondition(await exists(PLAYER_STORE_ARTWORK_PATH), 'Player Store artwork resolver is missing.');
 
   const [contentSource, artworkSource, store, generatedArtwork, pack, mappings] = await Promise.all(
     Object.values(requiredPaths).map((filePath) => readJson(filePath)),
   );
+  const { resolveStoreItemImage } = await import(pathToFileURL(PLAYER_STORE_ARTWORK_PATH).href);
+  requireCondition(typeof resolveStoreItemImage === 'function', 'Player Store artwork resolver is not exported.');
 
   requireCondition(contentSource.count === 50 && contentSource.records?.length === 50, 'Authored Store content must contain exactly 50 records.');
   requireCondition(artworkSource.recordCount === 50 && artworkSource.records?.length === 50, 'Artwork source must contain exactly 50 records.');
@@ -94,7 +102,20 @@ export async function validateStoreContentArtworkContract() {
     requireCondition(item.artwork?.sourcePageUrl === artwork.sourcePageUrl, `${item.stableId} artwork provenance is inconsistent.`);
     requireCondition(item.artwork?.runtimeImagePath === artwork.runtimeImagePath, `${item.stableId} runtime artwork path is inconsistent.`);
     requireCondition(item.artwork?.sha256 === artwork.sha256, `${item.stableId} artwork digest is inconsistent.`);
+    requireCondition(
+      resolveStoreItemImage({ itemKey: item.itemKey, image: './assets/store-items/store-item-custom.svg' }) === expectedPlayerImagePath(artwork.runtimeImagePath),
+      `${item.stableId} does not resolve to its repository-owned Player image.`,
+    );
   }
+
+  requireCondition(
+    resolveStoreItemImage({ itemKey: 'custom-unseeded-item', image: './assets/store-items/custom.svg' }) === './assets/store-items/custom.svg',
+    'Non-seed Store items must preserve their supplied fallback image.',
+  );
+  requireCondition(
+    resolveStoreItemImage({ itemKey: 'beta-nort-../unsafe', image: './assets/store-items/safe.svg' }) === './assets/store-items/safe.svg',
+    'Unsafe Store item slugs must fail closed to the supplied fallback image.',
+  );
 
   const mappingByStore = new Map((mappings.mappings?.storeItems ?? []).map((entry) => [entry.stableId, entry]));
   requireCondition(mappingByStore.size === 50, 'Stable-ID map must contain 50 Store mappings.');
@@ -120,6 +141,7 @@ export async function validateStoreContentArtworkContract() {
     repositoryOwnedArtwork: runtimeReady ? generatedArtwork.records.length : 0,
     duplicateArtworkAssignments: 0,
     runtimeImagePathsAvailable: runtimeReady,
+    playerRuntimeMappings: store.items.length,
   };
 }
 
