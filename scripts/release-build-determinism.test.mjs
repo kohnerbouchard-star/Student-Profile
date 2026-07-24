@@ -29,6 +29,7 @@ async function releaseRepository() {
   await write(root, "auth/reset-password.js", "export const api = '/auth/v1/recover';\n");
   await write(root, "assets/icon.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>\n");
   await write(root, "backend/supabase/migrations/20260101000000_init.sql", "select 1;\n");
+  await write(root, "backend/src/platform/release-fixture.ts", "export const runtime = true;\n");
   await write(root, "backend/supabase/functions/admin-api/index.ts", "export default true;\n");
   await write(root, "backend/supabase/functions/_shared/helper.ts", "export const shared = true;\n");
   await write(root, "backend/supabase/functions/deno.json", "{}\n");

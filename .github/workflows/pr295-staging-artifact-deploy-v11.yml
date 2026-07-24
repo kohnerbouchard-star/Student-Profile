@@ -1,0 +1,296 @@
+name: PR295 Deploy Immutable V11 Artifact To Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-staging-artifact-deploy-v11.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pr295-staging-artifact-deploy-v11
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: staging
+    env:
+      RELEASE_COMMIT: d94ffd0a38e6d00113c657602dd56861d8a362fd
+      TOOLING_COMMIT: 1eb35e3db380c5d3b32354fa8ffb5bdcda23680e
+      SOURCE_RUN_ID: "30069932796"
+      SOURCE_ARTIFACT_ID: "8587622386"
+      EXPECTED_ARCHIVE_SHA256: 863603f5498d5e2043a60503f60575dd3c7a5c9b32d46799fb974564cbe3ebac
+      EXPECTED_MANIFEST_SHA256: e35a2072859caeff2eddcfd5b2bb6c4b2f927d2eb77fb8106a4bbb425ff7b2ef
+      EXPECTED_ARTIFACT_SET_SHA256: dccd4f8a8005d287b79b56885fc6df5ae2d22a3f01f18ce10b3ca18cf1683c11
+      EXPECTED_MIGRATION_COUNT: "134"
+      EXPECTED_MIGRATION_HEAD: "20260724053000"
+      EXPECTED_MIGRATION_SET_SHA256: 81bef858fd31de7d94323f31fa53f09fb37c38a746ee7e16c16372a56ff4a7ff
+      MIGRATION_VERSION: "20260724053000"
+      MIGRATION_NAME: add_seed_release_revision_ledger_v1
+      MIGRATION_FILE: backend/supabase/migrations/20260724053000_add_seed_release_revision_ledger_v1.sql
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      EXPECTED_LEDGER_COUNT_BEFORE: "142"
+      EXPECTED_LEDGER_HEAD_BEFORE: "20260724013000"
+      EXPECTED_LEDGER_SHA256_BEFORE: 27a51b513cba85ec40cc9d5b761ee74a798ff7d83d7cd8614899dca928f09d91
+      EXPECTED_LEDGER_COUNT_AFTER: "143"
+      EXPECTED_LEDGER_HEAD_AFTER: "20260724053000"
+      EXPECTED_LEDGER_SHA256_AFTER: 7bbf73242786f7cb003d16fc293a1fd08328247281e5f8139006388b308cc7af
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: Check out exact artifact tooling
+        uses: actions/checkout@v7
+        with:
+          ref: 1eb35e3db380c5d3b32354fa8ffb5bdcda23680e
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce source and project boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TOOLING_COMMIT"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test -f "$MIGRATION_FILE"
+
+      - name: Verify exact artifact metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$SOURCE_ARTIFACT_ID" \
+            > /tmp/source-artifact.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const row = JSON.parse(fs.readFileSync('/tmp/source-artifact.json', 'utf8'));
+          if (String(row.id) !== process.env.SOURCE_ARTIFACT_ID) throw new Error('artifact ID mismatch');
+          if (row.expired === true) throw new Error('artifact expired');
+          if (row.workflow_run?.id !== Number(process.env.SOURCE_RUN_ID)) throw new Error('artifact run mismatch');
+          if (row.workflow_run?.head_sha !== process.env.TOOLING_COMMIT) throw new Error('artifact tooling mismatch');
+          if (row.digest !== `sha256:${process.env.EXPECTED_ARCHIVE_SHA256}`) throw new Error('artifact archive digest mismatch');
+          NODE
+          rm -f /tmp/source-artifact.json
+
+      - name: Download exact immutable artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 8587622386
+          run-id: 30069932796
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/release
+          merge-multiple: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned release tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate exact artifact identities and bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum dist/release/release-manifest.json | awk '{print $1}')" = "$EXPECTED_MANIFEST_SHA256"
+          (cd dist/release && sha256sum --check checksums.sha256)
+          node scripts/release-platform.mjs validate \
+            --repo-root . \
+            --manifest dist/release/release-manifest.json \
+            --artifact-root dist/release \
+            --expected-commit "$RELEASE_COMMIT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/release/release-manifest.json', 'utf8'));
+          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.TOOLING_COMMIT) throw new Error('tooling mismatch');
+          if (String(manifest.provenance.workflowRunId) !== process.env.SOURCE_RUN_ID) throw new Error('run mismatch');
+          if (manifest.artifactSetSha256 !== process.env.EXPECTED_ARTIFACT_SET_SHA256) throw new Error('artifact-set mismatch');
+          if (String(manifest.migrations.count) !== process.env.EXPECTED_MIGRATION_COUNT) throw new Error('migration count mismatch');
+          if (manifest.migrations.head !== process.env.EXPECTED_MIGRATION_HEAD) throw new Error('migration head mismatch');
+          if (manifest.migrations.versionSetSha256 !== process.env.EXPECTED_MIGRATION_SET_SHA256) throw new Error('migration set mismatch');
+          NODE
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Link isolated staging and classify migration state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'POOLER_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          read -r count head digest < <(
+            psql "$pooler_url" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
+              select count(*)::int,
+                     max(version),
+                     encode(extensions.digest(string_agg(version, E'\\n' order by version) || E'\\n', 'sha256'), 'hex')
+              from supabase_migrations.schema_migrations
+            "
+          )
+          present="$(psql "$pooler_url" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")"
+          if [ "$count" = "$EXPECTED_LEDGER_COUNT_BEFORE" ] && [ "$head" = "$EXPECTED_LEDGER_HEAD_BEFORE" ] && [ "$digest" = "$EXPECTED_LEDGER_SHA256_BEFORE" ] && [ "$present" = "0" ]; then
+            echo 'MIGRATION_REQUIRED=true' >> "$GITHUB_ENV"
+          elif [ "$count" = "$EXPECTED_LEDGER_COUNT_AFTER" ] && [ "$head" = "$EXPECTED_LEDGER_HEAD_AFTER" ] && [ "$digest" = "$EXPECTED_LEDGER_SHA256_AFTER" ] && [ "$present" = "1" ]; then
+            echo 'MIGRATION_REQUIRED=false' >> "$GITHUB_ENV"
+          else
+            echo "Unexpected staging migration state: count=$count head=$head digest=$digest present=$present" >&2
+            exit 1
+          fi
+
+      - name: Apply exact forward revision-ledger migration atomically
+        if: env.MIGRATION_REQUIRED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          combined="$(mktemp)"
+          python3 - "$MIGRATION_VERSION" "$MIGRATION_NAME" "$MIGRATION_FILE" "$combined" <<'PY'
+          from pathlib import Path
+          import re, sys
+          version, name, migration_path, output_path = sys.argv[1:]
+          text = Path(migration_path).read_text(encoding='utf-8')
+          text = re.sub(r'^\s*begin\s*;\s*', '', text, count=1, flags=re.I)
+          text = re.sub(r'\s*commit\s*;\s*$', '\n', text, count=1, flags=re.I)
+          tag = 'econovaria_migration_ledger'
+          while f'${tag}$' in text:
+              tag += '_x'
+          def literal(value: str) -> str:
+              return "'" + value.replace("'", "''") + "'"
+          payload = f'${tag}${text}${tag}$'
+          ledger = f"""
+          insert into supabase_migrations.schema_migrations(version, name, statements)
+          values ({literal(version)}, {literal(name)}, array[{payload}]);
+          """
+          Path(output_path).write_text(text + '\n' + ledger, encoding='utf-8')
+          PY
+          psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 --single-transaction -f "$combined"
+          rm -f "$combined"
+
+      - name: Verify exact post-migration ledger and revision API
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          read -r count head digest < <(
+            psql "$POOLER_URL" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
+              select count(*)::int,
+                     max(version),
+                     encode(extensions.digest(string_agg(version, E'\\n' order by version) || E'\\n', 'sha256'), 'hex')
+              from supabase_migrations.schema_migrations
+            "
+          )
+          test "$count" = "$EXPECTED_LEDGER_COUNT_AFTER"
+          test "$head" = "$EXPECTED_LEDGER_HEAD_AFTER"
+          test "$digest" = "$EXPECTED_LEDGER_SHA256_AFTER"
+          test "$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(name,'') from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")" = "$MIGRATION_NAME"
+          test "$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.apply_seed_content_release_revision_v2(uuid,text,text,text,text,boolean,text,text,jsonb,jsonb,jsonb,integer,text)') is not null")" = "t"
+          test "$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regclass('public.seed_content_release_revisions') is not null")" = "t"
+
+      - name: Extract and deploy exact function artifacts
+        id: deploy
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/pr295-v11-function-logs
+          functions=(admin-api classroom-api stock-market-player-read stock-market-read stock-market-runner stock-market-seed-copy stock-market-trading)
+          status=0
+          for name in "${functions[@]}"; do
+            root="/tmp/pr295-v11-${name}"
+            rm -rf "$root"
+            mkdir -p "$root"
+            tar -xzf "dist/release/artifacts/edge-${name}.tar.gz" -C "$root"
+            test -f "$root/backend/supabase/functions/${name}/index.ts" || { status=1; break; }
+            test -d "$root/backend/src" || { status=1; break; }
+            cp backend/supabase/config.next.toml "$root/backend/supabase/config.toml"
+            printf '\n[functions.%s]\nverify_jwt = true\n' "$name" >> "$root/backend/supabase/config.toml"
+            (cd "$root/backend" && supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_REF" --use-api) \
+              > "/tmp/pr295-v11-function-logs/${name}.log" 2>&1 || { status=$?; break; }
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload function deployment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr295-v11-staging-function-deploy-logs-${{ github.run_id }}
+          path: /tmp/pr295-v11-function-logs
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail closed on deployment error
+        if: steps.deploy.outputs.status != '0'
+        run: |
+          find /tmp/pr295-v11-function-logs -maxdepth 1 -type f -print -exec cat {} \;
+          exit 1
+
+      - name: Verify deployed function inventory and JWT policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "$SUPABASE_PROJECT_REF" --output json > /tmp/functions.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/functions.json', 'utf8'));
+          const required = new Set(['admin-api','classroom-api','stock-market-player-read','stock-market-read','stock-market-runner','stock-market-seed-copy','stock-market-trading']);
+          for (const row of rows) {
+            const name = row.slug ?? row.name;
+            if (required.has(name)) {
+              if (row.verify_jwt !== true) throw new Error(`${name} does not require JWT`);
+              required.delete(name);
+            }
+          }
+          if (required.size) throw new Error(`Missing functions: ${[...required].join(',')}`);
+          NODE
+
+      - name: Record isolated staging deployment
+        run: |
+          {
+            echo "- Runtime source: \`$RELEASE_COMMIT\`"
+            echo "- Tooling source: \`$TOOLING_COMMIT\`"
+            echo "- Source run: \`$SOURCE_RUN_ID\`"
+            echo "- Source artifact: \`$SOURCE_ARTIFACT_ID\`"
+            echo "- Artifact archive: \`$EXPECTED_ARCHIVE_SHA256\`"
+            echo "- Artifact set: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
+            echo "- Migration required on this run: \`$MIGRATION_REQUIRED\`"
+            echo "- Staging ledger: \`$EXPECTED_LEDGER_COUNT_AFTER / $EXPECTED_LEDGER_HEAD_AFTER / $EXPECTED_LEDGER_SHA256_AFTER\`"
+            echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
+            echo '- Exact functions deployed: `7`'
+            echo '- JWT verification: `required`'
+            echo '- Production selected: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,43 @@
+name: PR295 Connected Lifecycle Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-connected-lifecycle-contract.yml"
+      - "scripts/pr295-connected-lifecycle-harness.mjs"
+      - "scripts/pr295-connected-lifecycle-harness.test.mjs"
+      - "scripts/pr295-connected-staging-acceptance.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.number == 295
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+      - name: Check lifecycle harness source
+        run: node --check scripts/pr295-connected-lifecycle-harness.mjs
+      - name: Run lifecycle harness unit tests
+        run: node --test scripts/pr295-connected-lifecycle-harness.test.mjs
+      - name: Transform connected acceptance source
+        run: node scripts/pr295-connected-lifecycle-harness.mjs scripts/pr295-connected-staging-acceptance.mjs
+      - name: Check transformed acceptance source
+        run: node --check scripts/pr295-connected-staging-acceptance.mjs
+      - name: Enforce canonical lifecycle boundary
+        run: |
+          if grep -q "update public.game_sessions set lifecycle_state=" scripts/pr295-connected-staging-acceptance.mjs; then
+            echo 'Direct lifecycle mutation remained in connected acceptance.' >&2
+            exit 1
+          fi
+          grep -q "transition_game_lifecycle_atomic_v1" scripts/pr295-connected-staging-acceptance.mjs
+          grep -q "await runLifecycleAcceptance();" scripts/pr295-connected-staging-acceptance.mjs

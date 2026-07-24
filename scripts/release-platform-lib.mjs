@@ -307,6 +307,7 @@ export async function buildImmutableRelease({ repoRoot, outputRoot, commit, conf
   for (const functionName of facts.edgeFunctions) {
     const stage = path.join(workRoot, `edge-${functionName}`);
     await mkdir(path.join(stage, "backend/supabase/functions"), { recursive: true });
+    await copyRoot(repoRoot, "backend/src", stage);
     await copyRoot(repoRoot, `backend/supabase/functions/${functionName}`, stage);
     try {
       await copyRoot(repoRoot, "backend/supabase/functions/_shared", stage);
@@ -356,6 +357,7 @@ export async function buildImmutableRelease({ repoRoot, outputRoot, commit, conf
       workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "local",
       repository: process.env.GITHUB_REPOSITORY ?? "kohnerbouchard-star/Student-Profile",
       sourceCommit: commit,
+      toolingCommit: process.env.RELEASE_TOOLING_COMMIT ?? commit,
       deterministicArchive: "gnu-tar+gzip-n",
     },
     promotionPolicy: {

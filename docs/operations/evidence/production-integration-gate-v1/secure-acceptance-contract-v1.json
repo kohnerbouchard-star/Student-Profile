@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria-secure-connected-acceptance-v1",
+  "policy": {
+    "schemaVersion": 1,
+    "contractType": "secure-connected-acceptance",
+    "platformJwtVerificationRequired": true,
+    "serverSideGetUserRequired": true,
+    "authorizationMetadataSource": "app_metadata",
+    "userMetadataAuthorizationAllowed": false,
+    "requiredOperatorRole": "staging_acceptance_operator",
+    "allowedReplayProtectionModes": [
+      "one-time-authorization",
+      "signed-request"
+    ],
+    "exactProjectRefBindingRequired": true,
+    "exactSourceShaBindingRequired": true,
+    "exactArtifactDigestBindingRequired": true,
+    "allowedMethods": [
+      "POST"
+    ],
+    "maximumPayloadBytes": 4096,
+    "idempotencyRequired": true,
+    "replayDenialRequired": true,
+    "sanitizedResponsesRequired": true,
+    "guaranteedCleanupRequired": true,
+    "postCleanupZeroResidueRequired": true,
+    "productionProjectDenied": true,
+    "temporaryArtifactUrlsAllowed": false
+  },
+  "referenceMechanism": {
+    "id": "reference-secure-connected-acceptance",
+    "deployment": {
+      "verifyJwt": true,
+      "projectRef": "eecvbssdvarfcykcfrny",
+      "productionProjectRef": "cgiukdjwicykrmtkhudh",
+      "environment": "staging"
+    },
+    "identity": {
+      "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifactDigest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "request": {
+      "allowedMethods": [
+        "POST"
+      ],
+      "maximumPayloadBytes": 4096,
+      "allowedContentTypes": [
+        "application/json"
+      ],
+      "exactProjectRefBinding": true,
+      "exactSourceShaBinding": true,
+      "exactArtifactDigestBinding": true,
+      "expectedProjectRef": "eecvbssdvarfcykcfrny",
+      "expectedSourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expectedArtifactDigest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "authentication": {
+      "serverSideGetUser": true,
+      "metadataSource": "app_metadata",
+      "userMetadataUsed": false,
+      "requiredRole": "staging_acceptance_operator",
+      "stagingOnly": true
+    },
+    "authorization": {
+      "mode": "one-time-authorization",
+      "atomicClaim": true,
+      "expiryRequired": true,
+      "idempotencyRequired": true,
+      "replayDenied": true,
+      "shaOnlyAuthorization": false,
+      "factors": [
+        "app-metadata-role",
+        "authenticated-user",
+        "one-time-authorization"
+      ]
+    },
+    "privilegedAccess": {
+      "usesServiceRole": true,
+      "afterCallerAuthorization": true,
+      "scopeBound": true
+    },
+    "response": {
+      "sanitized": true,
+      "rawIdentifiersAllowed": false,
+      "secretsAllowed": false,
+      "fields": [
+        "artifactDigest",
+        "cleanupVerified",
+        "evidenceId",
+        "ok",
+        "projectRef",
+        "replayProtected",
+        "sourceSha",
+        "status"
+      ]
+    },
+    "cleanup": {
+      "guaranteed": true,
+      "strategy": "finally",
+      "zeroResidueVerified": true,
+      "verificationScopes": [
+        "auth-users",
+        "database-rows",
+        "edge-functions",
+        "sessions",
+        "storage-objects"
+      ]
+    },
+    "productionProjectDenied": true,
+    "temporaryArtifactUrlsAllowed": false,
+    "sourceText": "request.method !== \"POST\"; admin.auth.getUser(jwt); user.app_metadata.acceptance_role;"
+  },
+  "liveAssessment": {
+    "capturedAt": "2026-07-22T07:45:09.552Z",
+    "functionSlug": "crafting-staging-acceptance-v1",
+    "version": 13,
+    "verifyJwt": true,
+    "sourceSha256": "e36e48125c83f18c8cc938327cddba2372520c19c11692488bdb598533af18c5",
+    "boundFeatureSourceSha": "239849ae91cfa2b5807ac8398ac17b0e5cf11182",
+    "currentFeatureSourceSha": "0107c3ceb1eb788d6ea6fd513d27c0ea22d0e7d4",
+    "boundWorkflowRunId": 29897687253,
+    "observedControls": {
+      "platformJwtVerification": true,
+      "serverSideGetUser": true,
+      "appMetadataAuthorization": true,
+      "featureSpecificStagingOperatorRole": true,
+      "oneTimeAuthorizationClaim": true,
+      "strictPostAndPayloadBounds": true,
+      "idempotencyAndReplayDenial": true,
+      "sanitizedEvidenceResponse": true,
+      "productionProjectDenial": true,
+      "privilegedExecutionAfterAuthorization": true,
+      "guaranteedCleanupAttempt": true,
+      "postCleanupZeroResidueVerification": true,
+      "temporarySignedArtifactUrlEmbedded": false
+    },
+    "remainingContractGaps": {
+      "exactSourceShaBinding": "STALE_BOUND_TO_239849AE_LIVE_HEAD_0107C3CE",
+      "immutableExactHeadArtifactDigestBinding": "MISSING",
+      "operatorRolePortability": "FEATURE_SPECIFIC_ROLE_REQUIRES_MAPPING_TO_REPOSITORY_CONTRACT",
+      "executionEligibility": "DENIED_UNTIL_SOURCE_AND_ARTIFACT_IDENTITIES_ARE_CURRENT"
+    },
+    "privilegedExecutionAuthorized": false,
+    "controllerDecision": "BLOCKED_STALE_IDENTITY_NO_GO"
+  }
+}

@@ -1,0 +1,148 @@
+name: Release Artifact Build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr295-immutable-release-build.yml"
+      - "scripts/release-platform-lib.mjs"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: pr295-immutable-release-v12-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.pull_request.number == 295 && github.event.pull_request.head.sha == '1cc7373a2444807033e038d1d10ccf423dac74ab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RELEASE_COMMIT: df8407be6bf9f380940a17c92c94cc4c1072861d
+      SOURCE_ROOT: /tmp/econovaria-release-source
+      OUTPUT_ROOT: /tmp/econovaria-release-v12
+    steps:
+      - name: Check out exact PR295 tooling
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind tooling and runtime source
+        id: bind
+        shell: bash
+        run: |
+          set -euo pipefail
+          tooling_commit="$(git rev-parse HEAD)"
+          test "$tooling_commit" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_COMMIT"
+          rm -rf "$SOURCE_ROOT"
+          git worktree add --detach "$SOURCE_ROOT" "$RELEASE_COMMIT"
+          test "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" = "$RELEASE_COMMIT"
+          echo "tooling_commit=$tooling_commit" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate environment neutrality
+        run: node scripts/release-environment-neutrality.mjs --repo-root "$SOURCE_ROOT"
+
+      - name: Build immutable release
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
+        run: |
+          set -euo pipefail
+          rm -rf "$OUTPUT_ROOT"
+          node scripts/release-platform.mjs build \
+            --repo-root "$SOURCE_ROOT" \
+            --commit "$RELEASE_COMMIT" \
+            --config docs/operations/release-configuration.v1.json \
+            --output "$OUTPUT_ROOT"
+
+      - name: Validate bytes and dependency closure
+        id: metadata
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ steps.bind.outputs.tooling_commit }}
+        run: |
+          set -euo pipefail
+          node scripts/release-platform.mjs validate \
+            --repo-root "$SOURCE_ROOT" \
+            --manifest "$OUTPUT_ROOT/release-manifest.json" \
+            --artifact-root "$OUTPUT_ROOT" \
+            --expected-commit "$RELEASE_COMMIT"
+          (cd "$OUTPUT_ROOT" && sha256sum --check checksums.sha256)
+          for name in admin-api classroom-api stock-market-player-read stock-market-read stock-market-runner stock-market-seed-copy stock-market-trading; do
+            archive="$OUTPUT_ROOT/artifacts/edge-${name}.tar.gz"
+            listing="$(mktemp)"
+            tar -tzf "$archive" > "$listing"
+            grep -Fxq "./backend/supabase/functions/${name}/index.ts" "$listing"
+            grep -q '^./backend/src/' "$listing"
+            rm -f "$listing"
+          done
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const root = process.env.OUTPUT_ROOT;
+          const bytes = fs.readFileSync(`${root}/release-manifest.json`);
+          const manifest = JSON.parse(bytes);
+          if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
+          if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('tooling mismatch');
+          if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('workflow mismatch');
+          if (manifest.migrations.head !== '20260724053000') throw new Error('migration head mismatch');
+          if (!Number.isInteger(manifest.migrations.count) || manifest.migrations.count < 134) throw new Error('migration count is incomplete');
+          console.log(`migration_count=${manifest.migrations.count}`);
+          console.log(`migration_head=${manifest.migrations.head}`);
+          console.log(`migration_set_sha256=${manifest.migrations.versionSetSha256}`);
+          console.log(`artifact_set_sha256=${manifest.artifactSetSha256}`);
+          console.log(`manifest_sha256=${crypto.createHash('sha256').update(bytes).digest('hex')}`);
+          NODE
+
+      - name: Upload playable staging immutable artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: econovaria-release-df8407be6bf9f380940a17c92c94cc4c1072861d-v12
+          path: /tmp/econovaria-release-v12
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+          overwrite: false
+
+      - name: Attest playable staging artifact
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            /tmp/econovaria-release-v12/artifacts/*
+            /tmp/econovaria-release-v12/checksums.sha256
+            /tmp/econovaria-release-v12/release-configuration.json
+            /tmp/econovaria-release-v12/release-manifest.json
+          show-summary: true
+
+      - name: Record immutable identity
+        run: |
+          {
+            echo "- Runtime source: \`$RELEASE_COMMIT\`"
+            echo "- Tooling source: \`${{ steps.bind.outputs.tooling_commit }}\`"
+            echo "- Migration count: \`${{ steps.metadata.outputs.migration_count }}\`"
+            echo "- Migration head: \`${{ steps.metadata.outputs.migration_head }}\`"
+            echo "- Migration set: \`${{ steps.metadata.outputs.migration_set_sha256 }}\`"
+            echo "- Artifact set: \`${{ steps.metadata.outputs.artifact_set_sha256 }}\`"
+            echo "- Manifest: \`${{ steps.metadata.outputs.manifest_sha256 }}\`"
+            echo "- Artifact ID: \`${{ steps.upload.outputs.artifact-id }}\`"
+            echo "- Archive digest: \`${{ steps.upload.outputs.artifact-digest }}\`"
+            echo '- Rebuilt during promotion: `false`'
+            echo '- Production modified: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"

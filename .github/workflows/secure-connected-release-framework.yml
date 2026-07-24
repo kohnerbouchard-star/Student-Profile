@@ -1,0 +1,75 @@
+name: Secure Connected Release Framework
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/secure-connected-release-framework.yml"
+      - "docs/operations/evidence/production-integration-gate-v1/**"
+      - "scripts/connected-release-framework*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secure-connected-release-framework-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Secure acceptance and drift ledger
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SNAPSHOT_PATH: docs/operations/evidence/production-integration-gate-v1/live-staging-inventory-2026-07-22.json
+      SNAPSHOT_SOURCE_ROOT: /tmp/pr295-captured-inventory-source
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate secure acceptance contract
+        run: >-
+          node scripts/connected-release-framework.mjs validate-acceptance
+          --contract docs/operations/evidence/production-integration-gate-v1/secure-acceptance-contract-v1.json
+      - name: Materialize captured canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          snapshot_commit="$(node -e "const row=require('./${SNAPSHOT_PATH}'); process.stdout.write(row.mainCommit)")"
+          [[ "$snapshot_commit" =~ ^[a-f0-9]{40}$ ]]
+          git cat-file -e "${snapshot_commit}^{commit}"
+          rm -rf "$SNAPSHOT_SOURCE_ROOT"
+          git worktree add --detach "$SNAPSHOT_SOURCE_ROOT" "$snapshot_commit"
+          test "$(git -C "$SNAPSHOT_SOURCE_ROOT" rev-parse HEAD)" = "$snapshot_commit"
+      - name: Derive and validate captured staging inventory
+        run: >-
+          node scripts/connected-release-framework.mjs validate-live-inventory
+          --snapshot "$SNAPSHOT_PATH"
+          --repo-root "$SNAPSHOT_SOURCE_ROOT"
+      - name: Validate captured forward-only migration reconciliation
+        run: >-
+          node scripts/connected-release-framework.mjs validate-reconciliation
+          --snapshot "$SNAPSHOT_PATH"
+          --plan docs/operations/evidence/production-integration-gate-v1/forward-only-reconciliation-v1.json
+          --repo-root "$SNAPSHOT_SOURCE_ROOT"
+      - name: Run secure framework tests
+        run: node --test scripts/connected-release-framework.test.mjs
+      - name: Record no-go boundary
+        run: |
+          {
+            echo "## Secure connected release framework"
+            echo "- Secure acceptance contract: \`green\`"
+            echo "- Captured staging inventory: \`green\`"
+            echo "- Captured forward-only reconciliation contract: \`green\`"
+            echo "- Historical evidence evaluated against captured source: \`true\`"
+            echo "- Final production operations executed: \`false\`"
+            echo "- Production modified: \`false\`"
+            echo "- Stop: \`SECURE_ACCEPTANCE_FRAMEWORK_AND_DRIFT_LEDGER_GREEN_STAGING_ONLY\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+# roadmap-complete exact-head validation pulse: 2026-07-24
