@@ -1,0 +1,340 @@
+{
+  "achievementCount": 12,
+  "achievements": [
+    {
+      "antiFarmingNote": "Repeating the same idempotency key or resubmitting the same completed event does not create additional progress.",
+      "completionEvidence": "One authoritative, eligible event must be applied successfully rather than replayed, rejected, or only described in narrative copy.",
+      "criterionKey": "events.total",
+      "playerFacingDescription": "Complete one recognized progression event and establish the first permanent entry in your economic history.",
+      "publicAchievementId": "ach_first_step_v1",
+      "rewardDisclosure": "Awards one skill point after authoritative completion and atomic claim processing.",
+      "threshold": 1,
+      "title": "First Step"
+    },
+    {
+      "antiFarmingNote": "Malformed, stale, wrong-game, duplicated, or conflicting replay events are not valid shortcuts to the threshold.",
+      "completionEvidence": "The counter advances only from authoritative events that pass source, game, replay, and award validation.",
+      "criterionKey": "events.total",
+      "playerFacingDescription": "Build a record of twenty-five recognized progression events across sustained economic participation rather than one isolated success.",
+      "publicAchievementId": "ach_consistent_growth_v1",
+      "rewardDisclosure": "Awards one skill point after the twenty-fifth eligible event is committed.",
+      "threshold": 25,
+      "title": "Consistent Growth"
+    },
+    {
+      "antiFarmingNote": "The threshold rewards breadth and persistence; replay protection prevents artificial event multiplication.",
+      "completionEvidence": "Progress must come from committed authoritative events over time; retries may confirm success but cannot multiply it.",
+      "criterionKey": "events.total",
+      "playerFacingDescription": "Reach one hundred recognized progression events and demonstrate durable participation across the long campaign horizon.",
+      "publicAchievementId": "ach_long_horizon_v1",
+      "rewardDisclosure": "Awards two skill points after the one-hundredth eligible event is committed.",
+      "threshold": 100,
+      "title": "Long Horizon"
+    },
+    {
+      "antiFarmingNote": "Repeated delivery of the same Contract completion or a mismatched Contract event does not advance the counter.",
+      "completionEvidence": "Each counted Contract must reach the recognized completed state through the authoritative Contract workflow.",
+      "criterionKey": "contracts.completed",
+      "playerFacingDescription": "Complete five Contracts with accepted evidence, authoritative completion state, and no duplicate reward claim.",
+      "publicAchievementId": "ach_contract_professional_v1",
+      "rewardDisclosure": "Awards one skill point and five general career reputation after atomic completion.",
+      "threshold": 5,
+      "title": "Contract Professional"
+    },
+    {
+      "antiFarmingNote": "Cancelled, simulated, malformed, or duplicate business events cannot be converted into achievement progress.",
+      "completionEvidence": "Only authoritative completed business-operation events with valid game, player, source, and idempotency scope count toward this achievement.",
+      "criterionKey": "business.operations",
+      "playerFacingDescription": "Complete five recognized business operations and show that the enterprise can execute documented work repeatedly.",
+      "publicAchievementId": "ach_enterprise_operator_v1",
+      "rewardDisclosure": "Awards one skill point and five general career reputation after the fifth eligible business operation is committed atomically.",
+      "threshold": 5,
+      "title": "Enterprise Operator"
+    },
+    {
+      "antiFarmingNote": "Replaying a recipe completion or reusing a conflicting event key does not create another counted operation.",
+      "completionEvidence": "The Crafting runtime must commit the eligible completion; planned recipes and failed jobs do not count.",
+      "criterionKey": "crafting.completed",
+      "playerFacingDescription": "Complete five recognized Crafting operations using valid recipes, inputs, authorization, and completion events.",
+      "publicAchievementId": "ach_workshop_regular_v1",
+      "rewardDisclosure": "Awards one skill point and five general career reputation after the fifth eligible Crafting completion is committed atomically.",
+      "threshold": 5,
+      "title": "Workshop Regular"
+    },
+    {
+      "antiFarmingNote": "Self-trading, duplicate settlement delivery, or conflicting replay keys cannot inflate the settlement counter.",
+      "completionEvidence": "Only authoritative settlement events count; open, rejected, cancelled, or unmatched orders do not satisfy the criterion.",
+      "criterionKey": "market.settled",
+      "playerFacingDescription": "Complete ten settled market orders and demonstrate participation through final settlement rather than order submission alone.",
+      "publicAchievementId": "ach_market_participant_v1",
+      "rewardDisclosure": "Awards one skill point and four reputation in the player’s assigned country scope.",
+      "threshold": 10,
+      "title": "Market Participant"
+    },
+    {
+      "antiFarmingNote": "Reopening a chapter, repeating its delivery, or submitting a wrong-story event cannot create additional progress.",
+      "completionEvidence": "Each chapter must emit a supported authoritative completion event; narrative text alone is not completion state.",
+      "criterionKey": "story.completed",
+      "playerFacingDescription": "Complete three recognized story chapters and establish a traceable path through the campaign’s economic and civilian decisions.",
+      "publicAchievementId": "ach_story_pathfinder_v1",
+      "rewardDisclosure": "Awards one skill point and six campaign story reputation after the third eligible chapter completion is committed atomically.",
+      "threshold": 3,
+      "title": "Story Pathfinder"
+    },
+    {
+      "antiFarmingNote": "Players cannot manufacture a penalty solely to farm recovery, and immutable corrections preserve the full audit history.",
+      "completionEvidence": "The authoritative reputation history must show a real negative score followed by eligible applied recovery, not an erased record.",
+      "criterionKey": "reputation.recovered",
+      "playerFacingDescription": "Recover one reputation score from a verified negative value to a non-negative value through legitimate corrective conduct.",
+      "publicAchievementId": "ach_reputation_recovery_v1",
+      "rewardDisclosure": "Awards one skill point; the recovered reputation remains governed by its original scope and visibility.",
+      "threshold": 1,
+      "title": "Reputation Recovery"
+    },
+    {
+      "antiFarmingNote": "Duplicate claims, inactive definitions, or repeated unlock requests do not increase the distinct-skill counter.",
+      "completionEvidence": "Four distinct active skill definitions must be unlocked through the authoritative skill-claim process.",
+      "criterionKey": "skills.unlocked",
+      "playerFacingDescription": "Unlock four distinct active skills and build usable capability beyond a single isolated specialization while preserving each skill’s prerequisites and cost.",
+      "publicAchievementId": "ach_skilled_generalist_v1",
+      "rewardDisclosure": "Awards one additional skill point after the fourth distinct unlock.",
+      "threshold": 4,
+      "title": "Skilled Generalist"
+    },
+    {
+      "antiFarmingNote": "Multiple skills in one track improve depth but do not count as additional specialization tracks.",
+      "completionEvidence": "The authoritative unlock set must include active skills from three distinct tracks among markets, enterprise, production, and diplomacy.",
+      "criterionKey": "specialization.tracks",
+      "playerFacingDescription": "Unlock at least one skill in three different tracks and demonstrate cross-domain capability without abandoning specialization.",
+      "publicAchievementId": "ach_balanced_specialist_v1",
+      "rewardDisclosure": "Awards two skill points after the third distinct track is represented.",
+      "threshold": 3,
+      "title": "Balanced Specialist"
+    },
+    {
+      "antiFarmingNote": "Experience from duplicated, stale, malformed, or wrong-game events cannot be used to force the level threshold.",
+      "completionEvidence": "The profile’s authoritative current level must reach ten after experience caps, replay protection, and corrections are applied.",
+      "criterionKey": "level.current",
+      "playerFacingDescription": "Reach level ten through accumulated authoritative experience and establish a mature progression profile.",
+      "publicAchievementId": "ach_level_ten_v1",
+      "rewardDisclosure": "Awards two skill points and ten general career reputation after the authoritative progression profile reaches level ten.",
+      "threshold": 10,
+      "title": "Established Professional"
+    }
+  ],
+  "activationAuthorized": false,
+  "contentRevision": "progression-content-v2",
+  "mechanicalAuthority": "backend/supabase/migrations/20260721160000_add_progression_reputation_runtime_v1.sql",
+  "packId": "econovaria.beta-seed-pack.v1",
+  "presentationAuthority": "progression-content-v2",
+  "productionAuthorized": false,
+  "reputationTypeCount": 4,
+  "reputationTypes": [
+    {
+      "defaultVisibility": "public",
+      "disclosureGuidance": "Show the score and scope only when the player’s privacy setting permits it; do not infer hidden relationship or story history from a country score.",
+      "playerFacingDescription": "Reflects verified trust and standing within a specific country scope, including lawful participation, public-service outcomes, and country-linked economic conduct.",
+      "recoveryGuidance": "Recovery should come from eligible corrective actions, completed obligations, and documented country-specific service rather than record deletion.",
+      "title": "Country Reputation",
+      "type": "country"
+    },
+    {
+      "defaultVisibility": "public",
+      "disclosureGuidance": "Present the score with its scope and evidence category; never present it as a guarantee of future performance or employment eligibility.",
+      "playerFacingDescription": "Reflects verified professional reliability across Contracts, enterprise operations, production, and other career-linked outcomes within its declared scope.",
+      "recoveryGuidance": "Use completed corrective work, reliable delivery, and immutable correction records to rebuild a damaged career score.",
+      "title": "Career Reputation",
+      "type": "career"
+    },
+    {
+      "defaultVisibility": "private",
+      "disclosureGuidance": "Do not expose private chapter outcomes, hidden branches, or inferred decisions through public summaries or unrelated APIs.",
+      "playerFacingDescription": "Reflects recognized campaign decisions and chapter outcomes within a story scope, including choices that may remain private until the player elects disclosure.",
+      "recoveryGuidance": "Story recovery must follow supported chapters or correction events and cannot rewrite the immutable history of earlier decisions.",
+      "title": "Story Reputation",
+      "type": "story"
+    },
+    {
+      "defaultVisibility": "private",
+      "disclosureGuidance": "Treat relationship scope and history as private unless explicitly made public; never use the score to enumerate hidden participants or contacts.",
+      "playerFacingDescription": "Reflects verified conduct within a declared relationship scope, such as kept commitments, disputes, corrections, and recovery actions.",
+      "recoveryGuidance": "Restore trust through documented commitments and accepted corrective action while preserving the prior dispute and correction lineage.",
+      "title": "Relationship Reputation",
+      "type": "relationship"
+    }
+  ],
+  "schemaVersion": "econovaria-beta-progression-content-v2",
+  "skillCount": 12,
+  "skills": [
+    {
+      "boundary": "This skill does not reveal future prices, change execution, reduce losses, or guarantee a profitable decision.",
+      "evidenceExamples": [
+        "current price and recent movement",
+        "country and sector exposure",
+        "verified event or market notice"
+      ],
+      "playerFacingDescription": "Learn to separate price movement from evidence. Market Literacy helps you read basic quotes, spreads, liquidity warnings, country exposure, and event context before you place or evaluate a trade.",
+      "practicalUnlock": "Adds clearer explanations and review prompts for market information that already exists in the current runtime.",
+      "publicSkillId": "skl_market_literacy_v1",
+      "tier": 1,
+      "title": "Market Literacy",
+      "track": "markets"
+    },
+    {
+      "boundary": "The review can expose risk but cannot prevent a valid order from losing value or eliminate market uncertainty.",
+      "evidenceExamples": [
+        "maximum affordable loss",
+        "portfolio concentration",
+        "liquidity and event-risk conditions"
+      ],
+      "playerFacingDescription": "Turn market knowledge into a repeatable downside review. Risk Discipline emphasizes position size, concentration, liquidity, timing, and the difference between a verified fact and an uncertain scenario.",
+      "practicalUnlock": "Adds advanced risk explanations and structured order-review prompts before eligible market actions.",
+      "publicSkillId": "skl_risk_discipline_v1",
+      "tier": 2,
+      "title": "Risk Discipline",
+      "track": "markets"
+    },
+    {
+      "boundary": "A coherent strategy is not a promise of performance and does not create automatic diversification or protection.",
+      "evidenceExamples": [
+        "allocation rationale",
+        "cash and liquidity needs",
+        "conditions that invalidate the thesis"
+      ],
+      "playerFacingDescription": "Build a documented portfolio thesis across countries, sectors, time horizons, and cash needs. Portfolio Strategy focuses on why positions belong together and when the original rationale should be reconsidered.",
+      "practicalUnlock": "Adds portfolio-planning guidance, scenario comparison, and rebalancing explanations where supported by current market data.",
+      "publicSkillId": "skl_portfolio_strategy_v1",
+      "tier": 3,
+      "title": "Portfolio Strategy",
+      "track": "markets"
+    },
+    {
+      "boundary": "The skill does not create a business, supply a customer, approve financing, or guarantee that projected demand will occur.",
+      "evidenceExamples": [
+        "named customer or buyer",
+        "input and startup requirements",
+        "payment timing and acceptance standard"
+      ],
+      "playerFacingDescription": "Translate an idea into a bounded operating plan. Enterprise Basics helps identify the customer, value proposition, required inputs, expected payment, fixed commitments, and the first evidence that demand is real.",
+      "practicalUnlock": "Adds business-planning guidance and operating checklists for supported enterprise and Contract decisions.",
+      "publicSkillId": "skl_enterprise_basics_v1",
+      "tier": 1,
+      "title": "Enterprise Basics",
+      "track": "enterprise"
+    },
+    {
+      "boundary": "Better operating analysis does not bypass labor, inventory, time, authorization, or cash constraints.",
+      "evidenceExamples": [
+        "responsible owner and handoff",
+        "inventory and capacity limits",
+        "failure trigger and recovery procedure"
+      ],
+      "playerFacingDescription": "Design repeatable work instead of relying on one successful transaction. Operating Systems connects staffing, inventory, production, quality, cash timing, and exception handling into an auditable routine.",
+      "practicalUnlock": "Adds deeper production, staffing, workflow, and operating-risk analysis for supported business actions.",
+      "publicSkillId": "skl_operating_systems_v1",
+      "tier": 2,
+      "title": "Operating Systems",
+      "track": "enterprise"
+    },
+    {
+      "boundary": "The skill provides decision support only; it does not modify prices, margins, demand, credit approval, or competitive behavior.",
+      "evidenceExamples": [
+        "source of advantage",
+        "critical dependency and substitute",
+        "growth milestone and stop condition"
+      ],
+      "playerFacingDescription": "Make explicit choices about where the enterprise will compete and what it will not pursue. Enterprise Strategy evaluates advantage, dependency, financing exposure, growth sequencing, and exit conditions.",
+      "practicalUnlock": "Adds strategic planning views and scenario guidance without directly changing economic outcomes.",
+      "publicSkillId": "skl_enterprise_strategy_v1",
+      "tier": 3,
+      "title": "Enterprise Strategy",
+      "track": "enterprise"
+    },
+    {
+      "boundary": "The skill does not supply missing inputs, unlock unauthorized recipes, increase output, or remove Crafting failure conditions.",
+      "evidenceExamples": [
+        "complete input list",
+        "equipment and permit eligibility",
+        "expected output and completion time"
+      ],
+      "playerFacingDescription": "Read a recipe as an economic and technical commitment. Workshop Basics clarifies required materials, equipment, authorization, energy, timing, expected output, and the cost of a failed or interrupted job.",
+      "practicalUnlock": "Adds Crafting guidance and material-planning explanations for currently supported recipes and equipment.",
+      "publicSkillId": "skl_workshop_basics_v1",
+      "tier": 1,
+      "title": "Workshop Basics",
+      "track": "production"
+    },
+    {
+      "boundary": "Quality guidance cannot transform an invalid input into a valid one or guarantee that every job passes inspection.",
+      "evidenceExamples": [
+        "input provenance and condition",
+        "inspection or calibration record",
+        "acceptance threshold and defect response"
+      ],
+      "playerFacingDescription": "Define what acceptable output means before production begins. Quality Control emphasizes material verification, calibration, inspection evidence, defect isolation, and the decision to repair, downgrade, or reject an output.",
+      "practicalUnlock": "Adds advanced quality, failure-risk, inspection, and recovery explanations for supported production workflows.",
+      "publicSkillId": "skl_quality_control_v1",
+      "tier": 2,
+      "title": "Quality Control",
+      "track": "production"
+    },
+    {
+      "boundary": "The skill does not create free capacity, reduce authoritative material costs, or permit unsupported parallel production.",
+      "evidenceExamples": [
+        "capacity and queue plan",
+        "maintenance and interruption exposure",
+        "buyer demand and inventory exit plan"
+      ],
+      "playerFacingDescription": "Coordinate production across capacity, maintenance, inventory, quality, and demand. Production Mastery supports deliberate sequencing and makes bottlenecks, downtime, and substitute-material consequences visible.",
+      "practicalUnlock": "Adds production-planning tools and multi-step guidance without bypassing recipe or resource requirements.",
+      "publicSkillId": "skl_production_mastery_v1",
+      "tier": 3,
+      "title": "Production Mastery",
+      "track": "production"
+    },
+    {
+      "boundary": "The skill does not grant eligibility, override policy, expose private information, or prevent a lawful negative decision.",
+      "evidenceExamples": [
+        "issuing institution",
+        "eligibility and expiration",
+        "appeal or correction route"
+      ],
+      "playerFacingDescription": "Understand which institution has authority and which claims are only informal advice. Civic Literacy clarifies country policy, eligibility, public records, correction history, and the consequences of using an unverified route.",
+      "practicalUnlock": "Adds country-policy, institution, eligibility, and reputation explanations where authoritative state is available.",
+      "publicSkillId": "skl_civic_literacy_v1",
+      "tier": 1,
+      "title": "Civic Literacy",
+      "track": "diplomacy"
+    },
+    {
+      "boundary": "The skill does not reveal private reputation fields, force another actor’s response, or erase legitimate negative history.",
+      "evidenceExamples": [
+        "commitment and completion history",
+        "dispute or correction record",
+        "agreed recovery action"
+      ],
+      "playerFacingDescription": "Treat trust as a history of verifiable conduct rather than a hidden score to exploit. Relationship Building emphasizes commitments, corrections, boundaries, reciprocity, and recovery after a documented failure.",
+      "practicalUnlock": "Adds relationship-history and reputation-recovery guidance for supported interactions and progression records.",
+      "publicSkillId": "skl_relationship_building_v1",
+      "tier": 2,
+      "title": "Relationship Building",
+      "track": "diplomacy"
+    },
+    {
+      "boundary": "The skill cannot guarantee agreement, conceal required disclosures, bypass authorization, or prevent consequences from verified misconduct.",
+      "evidenceExamples": [
+        "stakeholder authority and interest",
+        "public and private commitment boundaries",
+        "negotiated fallback and correction process"
+      ],
+      "playerFacingDescription": "Plan across institutions, countries, and competing interests while preserving evidence and recovery options. Diplomatic Strategy makes stakeholder incentives, public commitments, private constraints, and long-term trust effects explicit.",
+      "practicalUnlock": "Adds advanced reputation-planning and stakeholder-analysis guidance without immunity from reputation losses.",
+      "publicSkillId": "skl_diplomatic_strategy_v1",
+      "tier": 3,
+      "title": "Diplomatic Strategy",
+      "track": "diplomacy"
+    }
+  ],
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}

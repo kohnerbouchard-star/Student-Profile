@@ -1,21 +1,21 @@
 {
   "activationAuthorized": false,
-  "fileCount": 12,
+  "fileCount": 20,
   "files": [
-    {
-      "bytes": 1232,
-      "path": "README.md",
-      "sha256": "f5dbcd70783bcf2f6a9594df0da9cda11ade6890d36f157fd31cf59eb79e97e6"
-    },
     {
       "bytes": 676,
       "path": "activation-authorization.template.json",
       "sha256": "a51d67a822fe1d34afcacfdb7f4e62a50dc804ae574aabbc4f029db4e52865be"
     },
     {
-      "bytes": 9636,
+      "bytes": 19743,
       "path": "arrival-calibration-v1.json",
-      "sha256": "a5b4e7e93289d78bd6f354742303a19cb2e1ebd995074b523a67612b71a85164"
+      "sha256": "aa46b466e681fc26e9eb72628d96b8dc2163a36c157d8b700e661ee2e43ba12a"
+    },
+    {
+      "bytes": 27648,
+      "path": "arrival-content-v2.json",
+      "sha256": "ff43a36bf21f196aa7ac34d991e75df97ab7ccac5fc7a9c9e23354433bb475cd"
     },
     {
       "bytes": 171777,
@@ -23,9 +23,34 @@
       "sha256": "72de5efbf5f9d873dcbf6d0a826abc042a315ae10f4e9a4cd9e7764ed58f4d8c"
     },
     {
+      "bytes": 65155,
+      "path": "campaign-events-v2.json",
+      "sha256": "ff323ea9b70786cabe89dd355500823c9b7a5a550d385f38f1ef5f58a9deffe9"
+    },
+    {
+      "bytes": 29039,
+      "path": "campaign-news-v2.json",
+      "sha256": "007f50f63381e42dd1f69ae697a020341c43d17bcd69461931e00677e255932d"
+    },
+    {
+      "bytes": 29838,
+      "path": "campaign-notifications-v2.json",
+      "sha256": "c900c46af8923c702de985158e66ff6763fce547e08fa68dd24df46ab557a311"
+    },
+    {
       "bytes": 1451,
       "path": "campaign-v1.json",
       "sha256": "dd80a82c9c51155abb869bf2d21ae78b5a55ec191b005888e33f2d666ee4fa4c"
+    },
+    {
+      "bytes": 66536,
+      "path": "contract-content-v2.json",
+      "sha256": "3907431e095397a615cda947db4aee3d04a44ab01100cf8916fde319983460dd"
+    },
+    {
+      "bytes": 213221,
+      "path": "interactions-v2.json",
+      "sha256": "5fcc4c64935ceb581852090822a67d21063be5821f072f647292159e6e781d17"
     },
     {
       "bytes": 20926,
@@ -38,9 +63,9 @@
       "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
     },
     {
-      "bytes": 1946,
+      "bytes": 4502,
       "path": "pack-v1.json",
-      "sha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8"
+      "sha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7"
     },
     {
       "bytes": 74019,
@@ -48,25 +73,40 @@
       "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
     },
     {
-      "bytes": 63517,
+      "bytes": 22018,
+      "path": "progression-content-v2.json",
+      "sha256": "74f8619bd70e814bf27ec55932a9af5585f5cee8019677d9f0d85f38557b56f6"
+    },
+    {
+      "bytes": 1232,
+      "path": "README.md",
+      "sha256": "f5dbcd70783bcf2f6a9594df0da9cda11ade6890d36f157fd31cf59eb79e97e6"
+    },
+    {
+      "bytes": 77838,
       "path": "stable-id-map-v1.json",
-      "sha256": "e2e3d4053e869f0836292ad59c673f0231b91459204d68f81854b7bd69e33419"
+      "sha256": "361f0bb443ca33bd3b64812d733f86614e146898b6615e2f9b801f589b3393a0"
     },
     {
-      "bytes": 35387,
+      "bytes": 37649,
+      "path": "store-artwork-v2.json",
+      "sha256": "08617d3ea09b05d9568ea397e59f649a07dd70b1b50308b644c72b808d3dae1a"
+    },
+    {
+      "bytes": 77310,
       "path": "store-catalog-v1.json",
-      "sha256": "ebddac868be1b561665b72eb579eb97fe4f2356a4d8cb3ad09a078c8c74d52b7"
+      "sha256": "0fa342fca769a5085caa1e2dbf1da5342db43f674c2a42bf3f395ba9481089a9"
     },
     {
-      "bytes": 56165,
+      "bytes": 87531,
       "path": "tutorial-contract-chains-v1.json",
-      "sha256": "dcebe7d25fb62d96903d48c1f99399c010746d537028f4fc43f98784732f9043"
+      "sha256": "7593f223571f94d2adbadbc59dbdf7b2b650694aabaca89e32b4ecd311334538"
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "6da756aa92c57c28960a49ae83d968239138ed84685f87bfeb66bce050886fb7",
+  "manifestContentSha256": "d836f2410e902a9abff05cf0bc6ce96559e66f6159f048ea1cb299401d1baeec",
   "packId": "econovaria.beta-seed-pack.v1",
-  "packSha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8",
+  "packSha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-integrity-manifest-v1",
   "status": "approved-for-isolated-staging",

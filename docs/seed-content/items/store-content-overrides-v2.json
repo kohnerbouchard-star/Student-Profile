@@ -1,0 +1,362 @@
+{
+  "schemaVersion": "econovaria-store-content-overrides-v2",
+  "status": "authoritative-seed-content",
+  "count": 50,
+  "styleGuide": {
+    "descriptionAudience": "player-facing",
+    "descriptionRule": "Explain what the item is, what it is used for, and why it matters in Econovaria without internal seed terminology.",
+    "artDirection": "Grounded cyberpunk industrial catalog photography; dark near-future materials, neon faction accents, isolated readable objects, no people, labels, logos, or embedded text."
+  },
+  "records": [
+    {
+      "country": "northreach",
+      "itemKey": "precision-optical-glass",
+      "name": "Precision Optical Glass",
+      "description": "Optically pure glass blanks cut for inspection lenses, survey arrays, and high-resolution verification displays. Northreach fabricators prize the material for its low distortion and stable performance in extreme cold.",
+      "visualDescription": "Stacked circular lens blanks with icy blue refraction and precision-machined edges."
+    },
+    {
+      "country": "northreach",
+      "itemKey": "sensor-board",
+      "name": "Sensor Board",
+      "description": "A compact sensor-control board that combines signal conditioning, diagnostics, and modular device connections. It is a standard building block for market lenses, logistics scanners, and environmental monitors.",
+      "visualDescription": "Dense black circuit board with cyan sensor nodes, gold contacts, and modular ports."
+    },
+    {
+      "country": "northreach",
+      "itemKey": "rare-earth-concentrate",
+      "name": "Rare-Earth Concentrate",
+      "description": "A refined mineral blend rich in the elements required for advanced optics, processors, and compact sensor assemblies. Supply is tightly controlled because small quantities support several high-value production chains.",
+      "visualDescription": "Sealed graphite canister holding iridescent mineral concentrate and magnetic sample vials."
+    },
+    {
+      "country": "northreach",
+      "itemKey": "cryogenic-ceramic",
+      "name": "Cryogenic Ceramic",
+      "description": "A low-expansion ceramic engineered to remain stable under severe temperature changes. It is used in insulated diagnostic tools, thermal barriers, and equipment designed for Northreach's cold industrial zones.",
+      "visualDescription": "Pale ceramic tiles and machined rings with frost vapor and cyan edge lighting."
+    },
+    {
+      "country": "northreach",
+      "itemKey": "superconductive-filament",
+      "name": "Superconductive Filament",
+      "description": "A strategic conductor wound into protected spools for efficient power transfer and high-sensitivity instruments. Its demanding production process makes it one of Northreach's most valuable industrial exports.",
+      "visualDescription": "Protected filament spool glowing faint electric blue inside a black containment frame."
+    },
+    {
+      "country": "yrethia",
+      "itemKey": "compressed-algae-fiber",
+      "name": "Compressed Algae Fiber",
+      "description": "A lightweight biomaterial pressed from cultivated algae into durable sheets and cordage. Yrethian manufacturers use it for filters, protective packaging, and low-mass structural panels.",
+      "visualDescription": "Green-black fiber sheets, braided cord, and compressed blocks with teal bioluminescent accents."
+    },
+    {
+      "country": "yrethia",
+      "itemKey": "deepwater-lubricant",
+      "name": "Deepwater Lubricant",
+      "description": "A pressure-stable industrial fluid formulated for hydraulic systems and machinery operating in wet or submerged environments. It protects moving parts from salt intrusion, heat buildup, and heavy-load wear.",
+      "visualDescription": "Dark sealed lubricant cartridge with teal fluid chamber, pressure seals, and marine fittings."
+    },
+    {
+      "country": "yrethia",
+      "itemKey": "marine-seal-assembly",
+      "name": "Marine Seal Assembly",
+      "description": "A replaceable mechanical seal set built for pumps, cargo monitors, and maritime tools. Multi-layer gaskets and corrosion-safe fittings keep equipment operational during long coastal and deepwater deployments.",
+      "visualDescription": "Precision metal seal rings, polymer gaskets, and locking collar arranged as a compact kit."
+    },
+    {
+      "country": "yrethia",
+      "itemKey": "marine-grade-resin",
+      "name": "Marine-Grade Resin",
+      "description": "A high-bond resin that cures reliably in humid, salt-heavy conditions. It is used to seal cargo housings, repair maritime equipment, and protect electronics from water exposure.",
+      "visualDescription": "Translucent teal resin cartridges, applicator, and cured waterproof sample plate."
+    },
+    {
+      "country": "yrethia",
+      "itemKey": "corrosion-resistant-alloy",
+      "name": "Corrosion-Resistant Alloy",
+      "description": "A nickel-rich alloy designed for ports, water systems, and exposed route infrastructure. It trades higher cost for long service life where ordinary metals would rapidly degrade.",
+      "visualDescription": "Brushed alloy ingots and machined marine fittings with wet reflective highlights."
+    },
+    {
+      "country": "thaloris",
+      "itemKey": "thermal-gel",
+      "name": "Thermal Gel",
+      "description": "A reusable heat-transfer compound that moves thermal energy away from processors, cells, and power equipment. It is commonly packed into cooling modules and emergency stabilization kits.",
+      "visualDescription": "Amber thermal gel capsules and a transparent cooling pad glowing from internal heat paths."
+    },
+    {
+      "country": "thaloris",
+      "itemKey": "high-density-carbon",
+      "name": "High-Density Carbon",
+      "description": "A compressed carbon material used in battery structures, heat-resistant housings, and lightweight reinforced components. Its strength-to-weight ratio makes it central to Thaloris energy manufacturing.",
+      "visualDescription": "Black carbon plates and woven composite samples with orange-hot edge reflections."
+    },
+    {
+      "country": "thaloris",
+      "itemKey": "thermal-regulator",
+      "name": "Thermal Regulator",
+      "description": "An active control module that monitors temperature and redirects heat before equipment reaches damaging limits. It supports portable power banks, maintenance rigs, and precision instruments.",
+      "visualDescription": "Compact regulator block with copper heat channels, amber status lights, and vented fins."
+    },
+    {
+      "country": "thaloris",
+      "itemKey": "catalytic-membrane",
+      "name": "Catalytic Membrane",
+      "description": "A strategic reactive membrane used to accelerate energy conversion and industrial filtration. Even minor contamination can ruin a batch, so intact sheets command a significant premium.",
+      "visualDescription": "Layered metallic membrane disk with honeycomb microstructure and violet-orange catalytic glow."
+    },
+    {
+      "country": "thaloris",
+      "itemKey": "lithium-salt",
+      "name": "Lithium Salt",
+      "description": "Battery-grade lithium compound processed for energy cells, capacitor banks, and portable power systems. Demand rises sharply whenever transport or grid reliability deteriorates.",
+      "visualDescription": "Sealed black sample jars containing pale crystalline salt, orange hazard lighting without labels."
+    },
+    {
+      "country": "solvend",
+      "itemKey": "orbital-grade-aluminum",
+      "name": "Orbital-Grade Aluminum",
+      "description": "A lightweight aluminum stock certified for precision frames, navigation consoles, and research equipment. Solvend mills control impurities closely so finished parts remain dependable under vibration and rapid temperature change.",
+      "visualDescription": "Machined silver frame sections and billet with violet-blue aerospace inspection lighting."
+    },
+    {
+      "country": "solvend",
+      "itemKey": "aerospace-composite",
+      "name": "Aerospace Composite",
+      "description": "A layered structural composite that combines low mass with exceptional rigidity. It is used in portable research systems, navigation housings, and field equipment that cannot afford excess weight.",
+      "visualDescription": "Dark woven composite panels, cutaway layers, and a lightweight angular instrument shell."
+    },
+    {
+      "country": "solvend",
+      "itemKey": "radiation-shielding-polymer",
+      "name": "Radiation-Shielding Polymer",
+      "description": "A dense flexible polymer formulated to protect sensitive electronics and field instruments from radiation exposure. It can be molded into secure enclosures without the weight of traditional shielding.",
+      "visualDescription": "Graphite polymer panels with embedded metallic particles and violet dosimeter-like light accents."
+    },
+    {
+      "country": "solvend",
+      "itemKey": "research-instrument-core",
+      "name": "Research Instrument Core",
+      "description": "A calibrated instrument module containing precision timing, signal processing, and protected measurement interfaces. It turns a basic field terminal into a dependable scientific or verification tool.",
+      "visualDescription": "Compact scientific core with crystal chamber, microconnectors, and controlled violet-blue illumination."
+    },
+    {
+      "country": "solvend",
+      "itemKey": "research-crystal-substrate",
+      "name": "Research Crystal Substrate",
+      "description": "A laboratory-grown substrate used in high-precision processors, verification equipment, and experimental instrument cores. Minute lattice defects can invalidate the material, making certified pieces scarce.",
+      "visualDescription": "Transparent geometric crystal wafers in a black anti-vibration carrier with violet refraction."
+    },
+    {
+      "country": "eldoran",
+      "itemKey": "secure-ledger-substrate",
+      "name": "Secure Ledger Substrate",
+      "description": "A tamper-evident data material used in encrypted chips, audit equipment, and high-trust transaction hardware. Its layered conductive structure makes unauthorized physical modification easy to detect.",
+      "visualDescription": "Dark multilayer data substrate with gold circuit traces and a locked holographic core."
+    },
+    {
+      "country": "eldoran",
+      "itemKey": "identity-laminate",
+      "name": "Identity Laminate",
+      "description": "A durable credential laminate built to hold secure printing, embedded verification marks, and authentication circuitry. It is used in permit cards, access credentials, and regulated equipment records.",
+      "visualDescription": "Stack of blank dark credential cards with gold embedded mesh and subtle holographic edges."
+    },
+    {
+      "country": "eldoran",
+      "itemKey": "anti-tamper-mesh",
+      "name": "Anti-Tamper Mesh",
+      "description": "A fine conductive mesh installed around secure housings and contract-verification equipment. Cutting, drilling, or peeling the material breaks its monitored circuit pattern and exposes interference.",
+      "visualDescription": "Flexible black mesh sheet with glowing gold circuit lattice wrapped around a secure module."
+    },
+    {
+      "country": "eldoran",
+      "itemKey": "encrypted-data-chip",
+      "name": "Encrypted Data Chip",
+      "description": "A hardened storage and processing module designed for confidential financial, identity, and contract data. It supports secure terminals while limiting exposure if the device is removed or intercepted.",
+      "visualDescription": "Black ceramic data chip in a gold-traced security cradle with a dim encrypted core glow."
+    },
+    {
+      "country": "eldoran",
+      "itemKey": "conductive-gold-foil",
+      "name": "Conductive Gold Foil",
+      "description": "Ultra-thin gold conductor supplied for high-reliability contacts, secure processors, and precision financial hardware. It is expensive, but it resists oxidation and maintains stable signal paths.",
+      "visualDescription": "Rolled gold microfoil, precision-cut contact strips, and a dark protective cassette."
+    },
+    {
+      "country": "valerion",
+      "itemKey": "hydrophobic-sealant",
+      "name": "Hydrophobic Sealant",
+      "description": "A fast-curing sealant that forces water away from joints, housings, and emergency repairs. It is inexpensive, portable, and widely used to keep field equipment operational during storms and floods.",
+      "visualDescription": "Cyan sealant cartridges and a waterproofed metal joint with water beading away."
+    },
+    {
+      "country": "valerion",
+      "itemKey": "ceramic-filter-media",
+      "name": "Ceramic Filter Media",
+      "description": "Porous ceramic pellets engineered to trap sediment and support chemical treatment inside compact filtration systems. Cartridges packed with the media are easy to service and transport.",
+      "visualDescription": "Clean porous ceramic rings in a transparent cyan-lit filter cartridge."
+    },
+    {
+      "country": "valerion",
+      "itemKey": "structural-glass-composite",
+      "name": "Structural Glass Composite",
+      "description": "A transparent reinforced panel that combines visibility with impact resistance. It is used for inspection windows, protected displays, and infrastructure modules exposed to debris or pressure changes.",
+      "visualDescription": "Clear armored panel sample with layered edge, cyan fractures stopped inside the laminate."
+    },
+    {
+      "country": "valerion",
+      "itemKey": "filtration-membrane",
+      "name": "Filtration Membrane",
+      "description": "A high-grade membrane that removes fine contaminants from water-analysis and purification systems. Properly stored sheets are critical to public-health and environmental response work.",
+      "visualDescription": "Rolled white-blue membrane, pleated cartridge, and microscopic filtration pattern under cyan light."
+    },
+    {
+      "country": "valerion",
+      "itemKey": "pump-assembly",
+      "name": "Pump Assembly",
+      "description": "A compact pump module for water equipment, emergency infrastructure, and filtration loops. Standardized fittings allow crews to replace a failed unit without rebuilding the entire system.",
+      "visualDescription": "Industrial compact pump with translucent cyan flow chamber and rugged quick-connect ports."
+    },
+    {
+      "country": "lumenor",
+      "itemKey": "archival-polymer-sheet",
+      "name": "Archival Polymer Sheet",
+      "description": "A stable transparent sheet made for long-lived records, field documents, and public information displays. It resists moisture, tearing, and discoloration better than ordinary paper.",
+      "visualDescription": "Clear polymer document sheets in a dark case with magenta-cyan edge illumination."
+    },
+    {
+      "country": "lumenor",
+      "itemKey": "acoustic-fiber",
+      "name": "Acoustic Fiber",
+      "description": "A sound-control fiber used in communication panels, translation devices, and public-information equipment. The material reduces mechanical noise while keeping portable systems light.",
+      "visualDescription": "Soft black acoustic fiber panels with visible wave pattern and magenta-cyan sound pulses."
+    },
+    {
+      "country": "lumenor",
+      "itemKey": "adaptive-textile-mesh",
+      "name": "Adaptive Textile Mesh",
+      "description": "A flexible technical fabric that changes tension across its weave to protect tools and organize field kits. It is lightweight enough for portable work while resisting repeated abrasion.",
+      "visualDescription": "Folded dark smart textile with reactive cyan-magenta weave and modular equipment pockets."
+    },
+    {
+      "country": "lumenor",
+      "itemKey": "educational-display-film",
+      "name": "Educational Display Film",
+      "description": "A thin programmable display material used for learning interfaces, public briefings, and portable contract tools. It can present changing diagrams and instructions without a rigid screen.",
+      "visualDescription": "Rolled translucent display film showing abstract cyan-magenta interface light with no text."
+    },
+    {
+      "country": "lumenor",
+      "itemKey": "learning-interface-module",
+      "name": "Learning Interface Module",
+      "description": "A compact interface core that powers interactive training tools, research terminals, and public briefing stations. It combines touch input, accessible feedback, and local content storage.",
+      "visualDescription": "Slim black interface module with cyan-magenta touch surface and modular education ports."
+    },
+    {
+      "country": "xalvoria",
+      "itemKey": "universal-fastener-set",
+      "name": "Universal Fastener Set",
+      "description": "A standardized collection of bolts, clamps, anchors, and locking hardware used across repair and fabrication work. The broad compatibility makes it a dependable input for emergency maintenance.",
+      "visualDescription": "Organized black metal case of cyber-industrial bolts, clamps, and locking fasteners with red-orange accents."
+    },
+    {
+      "country": "xalvoria",
+      "itemKey": "hydraulic-fluid",
+      "name": "Hydraulic Fluid",
+      "description": "A high-load fluid formulated for actuators, maintenance rigs, and construction machinery. It maintains pressure under heat and protects pumps and valves from internal wear.",
+      "visualDescription": "Rugged dark hydraulic-fluid canister with red-orange pressure window and reinforced couplings."
+    },
+    {
+      "country": "xalvoria",
+      "itemKey": "reinforced-concrete-additive",
+      "name": "Reinforced Concrete Additive",
+      "description": "A powdered and liquid additive package that improves concrete strength, curing control, and resistance to cracking. It is essential for fast infrastructure repairs and field supports.",
+      "visualDescription": "Sealed additive bags, dosing vial, and a fractured concrete sample reinforced by orange fibers."
+    },
+    {
+      "country": "xalvoria",
+      "itemKey": "machine-steel-billet",
+      "name": "Machine Steel Billet",
+      "description": "Dense steel stock prepared for cutting into machine parts, fabricator frames, and warehouse hardware. Its predictable composition reduces tool wear and production defects.",
+      "visualDescription": "Heavy machined steel billets on a dark industrial pallet with red-orange scanner lines."
+    },
+    {
+      "country": "xalvoria",
+      "itemKey": "industrial-bearing-stock",
+      "name": "Industrial Bearing Stock",
+      "description": "Pre-hardened rings and races used to manufacture replacement bearings for motors, fabricators, and warehouse systems. Keeping this stock available prevents small failures from stopping entire production lines.",
+      "visualDescription": "Precision bearing rings, rollers, and unfinished races with red-orange industrial lighting."
+    },
+    {
+      "country": "dravenlok",
+      "itemKey": "iron-ore-concentrate",
+      "name": "Iron Ore Concentrate",
+      "description": "Upgraded ore with most waste rock removed, ready for efficient smelting into steel. It is a foundational Dravenlok export and a common starting point for heavy-industry supply chains.",
+      "visualDescription": "Dark granular ore concentrate in rugged bins with crimson furnace reflections."
+    },
+    {
+      "country": "dravenlok",
+      "itemKey": "refined-alloy-ingot",
+      "name": "Refined Alloy Ingot",
+      "description": "A uniform metal ingot blended for equipment frames, repair kits, and industrial fabrication. Its certified composition gives builders more reliable strength than mixed scrap.",
+      "visualDescription": "Stacked dark alloy ingots stamped only with abstract marks, crimson edge glow, no readable text."
+    },
+    {
+      "country": "dravenlok",
+      "itemKey": "hardened-steel-plate",
+      "name": "Hardened Steel Plate",
+      "description": "Heat-treated plate designed for structural scanners, maintenance rigs, and heavy protective housings. It is difficult to machine but withstands severe impact and repeated load cycles.",
+      "visualDescription": "Thick armored steel plates with beveled edges, heat discoloration, and crimson highlights."
+    },
+    {
+      "country": "dravenlok",
+      "itemKey": "industrial-coke-composite",
+      "name": "Industrial Coke Composite",
+      "description": "A high-carbon industrial feedstock optimized for foundry heat, structural reinforcement, and high-temperature processing. It burns and reacts more consistently than untreated coke.",
+      "visualDescription": "Black porous composite briquettes in a heatproof tray with deep red furnace glow."
+    },
+    {
+      "country": "dravenlok",
+      "itemKey": "structural-reinforcement-kit",
+      "name": "Structural Reinforcement Kit",
+      "description": "A field-ready package of braces, plates, anchors, and joining hardware for urgent structural repairs. Crews use it to stabilize warehouses, equipment mounts, and damaged infrastructure.",
+      "visualDescription": "Compact armored repair crate opened to show braces, plates, anchors, and crimson-lit tools."
+    },
+    {
+      "country": "syndalis",
+      "itemKey": "broadcast-fiber",
+      "name": "Broadcast Fiber",
+      "description": "A high-bandwidth optical fiber designed for public information systems, emergency receivers, and communication arrays. It carries dense signals over long routes with minimal loss.",
+      "visualDescription": "Coiled black optical fiber with electric violet-blue light traveling through the strands."
+    },
+    {
+      "country": "syndalis",
+      "itemKey": "photonic-film",
+      "name": "Photonic Film",
+      "description": "A strategic optical layer that controls and redirects light inside advanced displays, verification tools, and broadcast equipment. Clean film is difficult to manufacture and easily damaged by contamination.",
+      "visualDescription": "Iridescent photonic film sheets bending violet-blue light into sharp geometric patterns."
+    },
+    {
+      "country": "syndalis",
+      "itemKey": "signal-grade-silicon",
+      "name": "Signal-Grade Silicon",
+      "description": "High-purity silicon wafers selected for communication processors, verification terminals, and signal-control hardware. Stable electrical behavior makes it more valuable than general electronic feedstock.",
+      "visualDescription": "Dark silicon wafers with etched circuits and electric violet-blue reflected patterns."
+    },
+    {
+      "country": "syndalis",
+      "itemKey": "encryption-crystal-matrix",
+      "name": "Encryption Crystal Matrix",
+      "description": "A precision crystal lattice used in secure communication and data-protection equipment. Its physical structure supports unique signal behavior that is difficult to duplicate or intercept.",
+      "visualDescription": "Faceted black-violet crystal matrix suspended in a secure frame with electric blue data arcs."
+    },
+    {
+      "country": "syndalis",
+      "itemKey": "secure-communications-blueprint",
+      "name": "Secure Communications Blueprint",
+      "description": "A controlled technical authorization package for constructing hardened communication equipment. It contains validated layouts, component requirements, and security procedures rather than physical hardware.",
+      "visualDescription": "Sealed black data tablet and holographic circuit plan with violet-blue glow, no readable text."
+    }
+  ]
+}

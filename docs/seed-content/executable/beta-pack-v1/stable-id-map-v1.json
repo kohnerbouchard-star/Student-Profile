@@ -1,5 +1,6 @@
 {
   "activationAuthorized": false,
+  "contentRevision": "store-content-v2",
   "mappings": {
     "contractTemplates": [
       {
@@ -1979,6 +1980,9 @@
     ],
     "storeItems": [
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/northreach/precision-optical-glass.webp",
+        "artworkSha256": "2a8c4f1ea60b9ca87b20c078d1d96f1939ead6981c72b12763c8b8f4b3b8482c",
+        "artworkStableId": "artwork.store.northreach.precision-optical-glass.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-nort-precision-optical-glass"
         },
@@ -1986,6 +1990,9 @@
         "stableId": "store.northreach.precision-optical-glass.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/northreach/sensor-board.webp",
+        "artworkSha256": "db33b6e19579ae7cb79703d7d76910fd8bd1a40ac45f689b90f8a99424200a9f",
+        "artworkStableId": "artwork.store.northreach.sensor-board.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-nort-sensor-board"
         },
@@ -1993,6 +2000,9 @@
         "stableId": "store.northreach.sensor-board.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/northreach/rare-earth-concentrate.webp",
+        "artworkSha256": "478b540325384ad85c569a627a2a78285c686e906cc0dda0819ca5e53d0e93bc",
+        "artworkStableId": "artwork.store.northreach.rare-earth-concentrate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-nort-rare-earth-concentrate"
         },
@@ -2000,6 +2010,9 @@
         "stableId": "store.northreach.rare-earth-concentrate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/northreach/cryogenic-ceramic.webp",
+        "artworkSha256": "55d3609d7b14ad031a6912858edb3cbdcabafb3503f8c68b3101a1f4232d41a2",
+        "artworkStableId": "artwork.store.northreach.cryogenic-ceramic.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-nort-cryogenic-ceramic"
         },
@@ -2007,6 +2020,9 @@
         "stableId": "store.northreach.cryogenic-ceramic.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/northreach/superconductive-filament.webp",
+        "artworkSha256": "4b0b3db12ac88e7b9218d3269359e15697f9e74b98345188e8a28281212600bc",
+        "artworkStableId": "artwork.store.northreach.superconductive-filament.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-nort-superconductive-filament"
         },
@@ -2014,6 +2030,9 @@
         "stableId": "store.northreach.superconductive-filament.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/yrethia/compressed-algae-fiber.webp",
+        "artworkSha256": "8682a9e1a95b3a87c4a1e0d9a3f55fd335e5c01aa08d73b5014fe0c18c1ef3cb",
+        "artworkStableId": "artwork.store.yrethia.compressed-algae-fiber.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-yret-compressed-algae-fiber"
         },
@@ -2021,6 +2040,9 @@
         "stableId": "store.yrethia.compressed-algae-fiber.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/yrethia/deepwater-lubricant.webp",
+        "artworkSha256": "e067090a2b6f3713091db5a9f69bdc66b1f617fd7c811da379bb7ed7445be1b2",
+        "artworkStableId": "artwork.store.yrethia.deepwater-lubricant.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-yret-deepwater-lubricant"
         },
@@ -2028,6 +2050,9 @@
         "stableId": "store.yrethia.deepwater-lubricant.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/yrethia/marine-seal-assembly.webp",
+        "artworkSha256": "c5ed8bb5c4bfc592d9476a5597d3f93b7f833dde1619cf0dff658e4dce722b06",
+        "artworkStableId": "artwork.store.yrethia.marine-seal-assembly.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-yret-marine-seal-assembly"
         },
@@ -2035,6 +2060,9 @@
         "stableId": "store.yrethia.marine-seal-assembly.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/yrethia/marine-grade-resin.webp",
+        "artworkSha256": "9470d56e290c90de1601f8a43f298ce1636d00d21a2b6a92454f388c29ee7b9e",
+        "artworkStableId": "artwork.store.yrethia.marine-grade-resin.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-yret-marine-grade-resin"
         },
@@ -2042,6 +2070,9 @@
         "stableId": "store.yrethia.marine-grade-resin.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/yrethia/corrosion-resistant-alloy.webp",
+        "artworkSha256": "af86890ea22e1b6655e33bd3d0532579e7c90a0958ae334a3fc742b610fba08c",
+        "artworkStableId": "artwork.store.yrethia.corrosion-resistant-alloy.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-yret-corrosion-resistant-alloy"
         },
@@ -2049,6 +2080,9 @@
         "stableId": "store.yrethia.corrosion-resistant-alloy.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/thaloris/thermal-gel.webp",
+        "artworkSha256": "7efe1c0d3156025f1134cc69127a5651a6a3db75d7423e34ed7b8bd9a21cb4d4",
+        "artworkStableId": "artwork.store.thaloris.thermal-gel.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-thal-thermal-gel"
         },
@@ -2056,6 +2090,9 @@
         "stableId": "store.thaloris.thermal-gel.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/thaloris/high-density-carbon.webp",
+        "artworkSha256": "12d2c8d8a66bf20679696a5bca699e8d7432044fa1b1a2604fe45e72f72d8e2c",
+        "artworkStableId": "artwork.store.thaloris.high-density-carbon.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-thal-high-density-carbon"
         },
@@ -2063,6 +2100,9 @@
         "stableId": "store.thaloris.high-density-carbon.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/thaloris/thermal-regulator.webp",
+        "artworkSha256": "2ec8b80a1ced98400905a00c31fcdeed426bdd3fd5325bc63dea6b7de76081f1",
+        "artworkStableId": "artwork.store.thaloris.thermal-regulator.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-thal-thermal-regulator"
         },
@@ -2070,6 +2110,9 @@
         "stableId": "store.thaloris.thermal-regulator.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/thaloris/catalytic-membrane.webp",
+        "artworkSha256": "1b9d3b11d8273bce8e52403908c5ce48f6ccf56f22220ba0e627b31b9cd95a3c",
+        "artworkStableId": "artwork.store.thaloris.catalytic-membrane.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-thal-catalytic-membrane"
         },
@@ -2077,6 +2120,9 @@
         "stableId": "store.thaloris.catalytic-membrane.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/thaloris/lithium-salt.webp",
+        "artworkSha256": "0a2da2045eb3c40cdd9f1fbb93fc129075a04da1b4a9790d1f089a525c42ac93",
+        "artworkStableId": "artwork.store.thaloris.lithium-salt.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-thal-lithium-salt"
         },
@@ -2084,6 +2130,9 @@
         "stableId": "store.thaloris.lithium-salt.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/solvend/orbital-grade-aluminum.webp",
+        "artworkSha256": "facd671ea21b2c474c673a6696cd705aeb9e647b80ad1bf8df845eb5472018c4",
+        "artworkStableId": "artwork.store.solvend.orbital-grade-aluminum.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-solv-orbital-grade-aluminum"
         },
@@ -2091,6 +2140,9 @@
         "stableId": "store.solvend.orbital-grade-aluminum.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/solvend/aerospace-composite.webp",
+        "artworkSha256": "51f0492cdabaa0e859fc8c8c2573857c4100b00e8f6fc693249bb942c7a66e1a",
+        "artworkStableId": "artwork.store.solvend.aerospace-composite.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-solv-aerospace-composite"
         },
@@ -2098,6 +2150,9 @@
         "stableId": "store.solvend.aerospace-composite.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/solvend/radiation-shielding-polymer.webp",
+        "artworkSha256": "68ff3dac4a21224b439146bf2cdc131ce24267c43b1f6e70ebc54cbcf9b279d4",
+        "artworkStableId": "artwork.store.solvend.radiation-shielding-polymer.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-solv-radiation-shielding-polymer"
         },
@@ -2105,6 +2160,9 @@
         "stableId": "store.solvend.radiation-shielding-polymer.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/solvend/research-instrument-core.webp",
+        "artworkSha256": "f72a1d393d10a6fb53c5e6beeb942419c700e5141ca1d9206fa723e63ec0b4f0",
+        "artworkStableId": "artwork.store.solvend.research-instrument-core.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-solv-research-instrument-core"
         },
@@ -2112,6 +2170,9 @@
         "stableId": "store.solvend.research-instrument-core.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/solvend/research-crystal-substrate.webp",
+        "artworkSha256": "792692495bb7dcb7b5ffc393dae33bef0935fea22363692d207a2d5ed4f1c023",
+        "artworkStableId": "artwork.store.solvend.research-crystal-substrate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-solv-research-crystal-substrate"
         },
@@ -2119,6 +2180,9 @@
         "stableId": "store.solvend.research-crystal-substrate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/eldoran/secure-ledger-substrate.webp",
+        "artworkSha256": "3bd6a5783f94a2c02d130e862d9d04ac30b3f5ea65a1fb5ee530bdcd7b50cb59",
+        "artworkStableId": "artwork.store.eldoran.secure-ledger-substrate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-eldo-secure-ledger-substrate"
         },
@@ -2126,6 +2190,9 @@
         "stableId": "store.eldoran.secure-ledger-substrate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/eldoran/identity-laminate.webp",
+        "artworkSha256": "044318db853f4164b6a15b2cb6f1ccff1dabc440ceae35da6b55a00278b62f0a",
+        "artworkStableId": "artwork.store.eldoran.identity-laminate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-eldo-identity-laminate"
         },
@@ -2133,6 +2200,9 @@
         "stableId": "store.eldoran.identity-laminate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/eldoran/anti-tamper-mesh.webp",
+        "artworkSha256": "08b5e42e731e488935b198c34f320d282c6d09fd02c081738ae331322aa6769c",
+        "artworkStableId": "artwork.store.eldoran.anti-tamper-mesh.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-eldo-anti-tamper-mesh"
         },
@@ -2140,6 +2210,9 @@
         "stableId": "store.eldoran.anti-tamper-mesh.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/eldoran/encrypted-data-chip.webp",
+        "artworkSha256": "742f4b337043f18fc825908dc90cdcba8fb44269ca552a019b684acf2dd3687c",
+        "artworkStableId": "artwork.store.eldoran.encrypted-data-chip.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-eldo-encrypted-data-chip"
         },
@@ -2147,6 +2220,9 @@
         "stableId": "store.eldoran.encrypted-data-chip.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/eldoran/conductive-gold-foil.webp",
+        "artworkSha256": "c161766679b8a88b4d3c71bff94ea65a66966ddb2ec2b79e615fcf3b3cfd0a09",
+        "artworkStableId": "artwork.store.eldoran.conductive-gold-foil.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-eldo-conductive-gold-foil"
         },
@@ -2154,6 +2230,9 @@
         "stableId": "store.eldoran.conductive-gold-foil.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/valerion/hydrophobic-sealant.webp",
+        "artworkSha256": "389d90b5bebab750c92d4f81501363ec23fa018d71df87469b4bc8a7790807a9",
+        "artworkStableId": "artwork.store.valerion.hydrophobic-sealant.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-vale-hydrophobic-sealant"
         },
@@ -2161,6 +2240,9 @@
         "stableId": "store.valerion.hydrophobic-sealant.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/valerion/ceramic-filter-media.webp",
+        "artworkSha256": "40bc1eb1bdfa7fce5a4df4cf92210d2074f1190bfc76ebd225aced701505963c",
+        "artworkStableId": "artwork.store.valerion.ceramic-filter-media.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-vale-ceramic-filter-media"
         },
@@ -2168,6 +2250,9 @@
         "stableId": "store.valerion.ceramic-filter-media.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/valerion/structural-glass-composite.webp",
+        "artworkSha256": "9d87ad47625102f7626ae64e8f0816aea0f87064c16834edc82ee1ded06f691f",
+        "artworkStableId": "artwork.store.valerion.structural-glass-composite.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-vale-structural-glass-composite"
         },
@@ -2175,6 +2260,9 @@
         "stableId": "store.valerion.structural-glass-composite.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/valerion/filtration-membrane.webp",
+        "artworkSha256": "5a3ebece84cdc2e0b69f34d290df237dfe43feb469dea5cd500be65472f50131",
+        "artworkStableId": "artwork.store.valerion.filtration-membrane.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-vale-filtration-membrane"
         },
@@ -2182,6 +2270,9 @@
         "stableId": "store.valerion.filtration-membrane.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/valerion/pump-assembly.webp",
+        "artworkSha256": "3ed75c4f4388c8e5fefb969c98a7d3ef1620a571dff3cc8b2d9b3b0dec74d8e0",
+        "artworkStableId": "artwork.store.valerion.pump-assembly.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-vale-pump-assembly"
         },
@@ -2189,6 +2280,9 @@
         "stableId": "store.valerion.pump-assembly.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/lumenor/archival-polymer-sheet.webp",
+        "artworkSha256": "eceef9a23ed8e5468ee1ce4298484ca97d2a0801382d0b5703c30c15d87a3449",
+        "artworkStableId": "artwork.store.lumenor.archival-polymer-sheet.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-lume-archival-polymer-sheet"
         },
@@ -2196,6 +2290,9 @@
         "stableId": "store.lumenor.archival-polymer-sheet.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/lumenor/acoustic-fiber.webp",
+        "artworkSha256": "254dde64b6f176bb00783222f28efe877cf71182a590cc4450563a5513aa409a",
+        "artworkStableId": "artwork.store.lumenor.acoustic-fiber.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-lume-acoustic-fiber"
         },
@@ -2203,6 +2300,9 @@
         "stableId": "store.lumenor.acoustic-fiber.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/lumenor/adaptive-textile-mesh.webp",
+        "artworkSha256": "3ec073c10723a735b4b8c42a6542e572b4f2e50ffbab684a29594ade36d0b9fe",
+        "artworkStableId": "artwork.store.lumenor.adaptive-textile-mesh.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-lume-adaptive-textile-mesh"
         },
@@ -2210,6 +2310,9 @@
         "stableId": "store.lumenor.adaptive-textile-mesh.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/lumenor/educational-display-film.webp",
+        "artworkSha256": "b1832a22c0f03f18bed47273f926f7cff17f60019c76dc3b9c9cc70a0a81cba0",
+        "artworkStableId": "artwork.store.lumenor.educational-display-film.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-lume-educational-display-film"
         },
@@ -2217,6 +2320,9 @@
         "stableId": "store.lumenor.educational-display-film.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/lumenor/learning-interface-module.webp",
+        "artworkSha256": "521295ba0a692c70d2a69fa8bd401c7ff78dc2ecc25abbdcfa703072c819b6da",
+        "artworkStableId": "artwork.store.lumenor.learning-interface-module.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-lume-learning-interface-module"
         },
@@ -2224,6 +2330,9 @@
         "stableId": "store.lumenor.learning-interface-module.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/xalvoria/universal-fastener-set.webp",
+        "artworkSha256": "ddfdf7e0ff16e3f9f5b24be35da755b878c4d1569582b35edbf335613d8306cc",
+        "artworkStableId": "artwork.store.xalvoria.universal-fastener-set.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-xalv-universal-fastener-set"
         },
@@ -2231,6 +2340,9 @@
         "stableId": "store.xalvoria.universal-fastener-set.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/xalvoria/hydraulic-fluid.webp",
+        "artworkSha256": "7e48fc94ec07177ca74dbc0d1508cb60c8dca45f88a0024e513717348408d4c5",
+        "artworkStableId": "artwork.store.xalvoria.hydraulic-fluid.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-xalv-hydraulic-fluid"
         },
@@ -2238,6 +2350,9 @@
         "stableId": "store.xalvoria.hydraulic-fluid.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/xalvoria/reinforced-concrete-additive.webp",
+        "artworkSha256": "e034f5fdc4cdaaf1e82afa4ff9dccb653ac4702d5638f5b96744286694bd0e1d",
+        "artworkStableId": "artwork.store.xalvoria.reinforced-concrete-additive.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-xalv-reinforced-concrete-additive"
         },
@@ -2245,6 +2360,9 @@
         "stableId": "store.xalvoria.reinforced-concrete-additive.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/xalvoria/machine-steel-billet.webp",
+        "artworkSha256": "3451e3ee67139df606a87cf297c902b818dd1a73ff397e2658288dab15c835ba",
+        "artworkStableId": "artwork.store.xalvoria.machine-steel-billet.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-xalv-machine-steel-billet"
         },
@@ -2252,6 +2370,9 @@
         "stableId": "store.xalvoria.machine-steel-billet.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/xalvoria/industrial-bearing-stock.webp",
+        "artworkSha256": "2b461f226817659ad1c19c5a17fac5d515b7a28cf7332fcfd668a29121ab3c92",
+        "artworkStableId": "artwork.store.xalvoria.industrial-bearing-stock.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-xalv-industrial-bearing-stock"
         },
@@ -2259,6 +2380,9 @@
         "stableId": "store.xalvoria.industrial-bearing-stock.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/dravenlok/iron-ore-concentrate.webp",
+        "artworkSha256": "e339fb0b056981f3997528afc2f813273217b3dc099632da69d39f32c305d24b",
+        "artworkStableId": "artwork.store.dravenlok.iron-ore-concentrate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-drav-iron-ore-concentrate"
         },
@@ -2266,6 +2390,9 @@
         "stableId": "store.dravenlok.iron-ore-concentrate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/dravenlok/refined-alloy-ingot.webp",
+        "artworkSha256": "38876be6d4c3ed9a74c3f51f0f5297e16ce03d51baa0f5719cd6219426a54aa5",
+        "artworkStableId": "artwork.store.dravenlok.refined-alloy-ingot.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-drav-refined-alloy-ingot"
         },
@@ -2273,6 +2400,9 @@
         "stableId": "store.dravenlok.refined-alloy-ingot.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/dravenlok/hardened-steel-plate.webp",
+        "artworkSha256": "94a67e69a9729570b9932383f0726dc4740b30ed8b5d2c256f847d2aba174ea8",
+        "artworkStableId": "artwork.store.dravenlok.hardened-steel-plate.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-drav-hardened-steel-plate"
         },
@@ -2280,6 +2410,9 @@
         "stableId": "store.dravenlok.hardened-steel-plate.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/dravenlok/industrial-coke-composite.webp",
+        "artworkSha256": "8e80dd789cc0f6c9e97c2950f92cb18301c5ad242f4b4ba4f2d58d78ecdc4521",
+        "artworkStableId": "artwork.store.dravenlok.industrial-coke-composite.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-drav-industrial-coke-composite"
         },
@@ -2287,6 +2420,9 @@
         "stableId": "store.dravenlok.industrial-coke-composite.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/dravenlok/structural-reinforcement-kit.webp",
+        "artworkSha256": "167d470a3f3120f9ecbcf2fb83559e888005c06ee4d2f00ae96f4ebc7e4c0529",
+        "artworkStableId": "artwork.store.dravenlok.structural-reinforcement-kit.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-drav-structural-reinforcement-kit"
         },
@@ -2294,6 +2430,9 @@
         "stableId": "store.dravenlok.structural-reinforcement-kit.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/syndalis/broadcast-fiber.webp",
+        "artworkSha256": "2852d6e913148e3ac5c334b33fcd24683bd6d66d339d0ba3e62891d426295226",
+        "artworkStableId": "artwork.store.syndalis.broadcast-fiber.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-synd-broadcast-fiber"
         },
@@ -2301,6 +2440,9 @@
         "stableId": "store.syndalis.broadcast-fiber.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/syndalis/photonic-film.webp",
+        "artworkSha256": "63708a0890e685fcb61aa83682c26ef65fdeacfee2055f58202070f913376c2f",
+        "artworkStableId": "artwork.store.syndalis.photonic-film.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-synd-photonic-film"
         },
@@ -2308,6 +2450,9 @@
         "stableId": "store.syndalis.photonic-film.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/syndalis/signal-grade-silicon.webp",
+        "artworkSha256": "e74926a0fbc44a8e520a2b4b18a85f53abd15503f798965b80b8df7919e4facf",
+        "artworkStableId": "artwork.store.syndalis.signal-grade-silicon.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-synd-signal-grade-silicon"
         },
@@ -2315,6 +2460,9 @@
         "stableId": "store.syndalis.signal-grade-silicon.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/syndalis/encryption-crystal-matrix.webp",
+        "artworkSha256": "aa9c86a83eb8d628ea27c11b987d5149f00c2e3876f6f5615de4b47dacd440e2",
+        "artworkStableId": "artwork.store.syndalis.encryption-crystal-matrix.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-synd-encryption-crystal-matrix"
         },
@@ -2322,6 +2470,9 @@
         "stableId": "store.syndalis.encryption-crystal-matrix.v1"
       },
       {
+        "artworkRuntimeImagePath": "player-terminal/assets/images/items/store/syndalis/secure-communications-blueprint.webp",
+        "artworkSha256": "af7dd1bbe2ca616ba0a55229b9215070fa6f763cfec40e7e3571ccdd70b05855",
+        "artworkStableId": "artwork.store.syndalis.secure-communications-blueprint.v2",
         "runtimeNaturalKey": {
           "itemKey": "beta-synd-secure-communications-blueprint"
         },

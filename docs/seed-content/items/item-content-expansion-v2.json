@@ -1,0 +1,766 @@
+{
+  "schemaVersion": "econovaria-item-content-expansion-v2",
+  "status": "authoritative-seed-content",
+  "count": 94,
+  "coverage": {
+    "materials": 1,
+    "components": 22,
+    "equipment": 30,
+    "consumables": 24,
+    "blueprintsAuthorizations": 17
+  },
+  "records": [
+    {
+      "category": "materials",
+      "source": "lumenor",
+      "itemKey": "recycled-electronics-feedstock",
+      "name": "Recycled Electronics Feedstock",
+      "description": "A sorted blend of recovered circuit fragments, conductive metals, and reusable electronic substrates. Workshops process it into basic components and repair inputs when new material supply is too expensive or disrupted.",
+      "visualDescription": "Sorted cyberpunk circuit fragments and metal contacts in transparent recycling bins with magenta-cyan inspection light."
+    },
+    {
+      "category": "components",
+      "source": "northreach",
+      "itemKey": "cryogenic-processor",
+      "name": "Cryogenic Processor",
+      "description": "A specialized computing core designed to operate at extremely low temperatures with minimal signal noise. It powers advanced diagnostics, mineral analysis, and research systems that demand unusually precise calculations.",
+      "visualDescription": "Black processor module inside a frost-lined containment cradle with cold cyan conduits."
+    },
+    {
+      "category": "components",
+      "source": "northreach",
+      "itemKey": "precision-optics-assembly",
+      "name": "Precision Optics Assembly",
+      "description": "A factory-aligned package of lenses, micro-actuators, and stabilization hardware. It converts ordinary scanners into reliable survey, inspection, and verification instruments without requiring field alignment.",
+      "visualDescription": "Nested lens assembly with micro-actuators and icy blue optical paths in a graphite frame."
+    },
+    {
+      "category": "components",
+      "source": "yrethia",
+      "itemKey": "navigation-processor",
+      "name": "Navigation Processor",
+      "description": "A rugged route-computation module built to reconcile position, weather, traffic, and port data. Yrethian operators use it to keep cargo and field teams moving when normal routes become unreliable.",
+      "visualDescription": "Sealed marine navigation processor with teal map-light projections and reinforced connectors."
+    },
+    {
+      "category": "components",
+      "source": "yrethia",
+      "itemKey": "cargo-telemetry-beacon",
+      "name": "Cargo Telemetry Beacon",
+      "description": "A compact transmitter that records location, handling shocks, temperature, and seal condition throughout a shipment. Its audit trail helps resolve delivery disputes and identify weak points in a supply route.",
+      "visualDescription": "Dark cargo beacon with teal signal ring, impact sensors, and sealed mounting clamp."
+    },
+    {
+      "category": "components",
+      "source": "thaloris",
+      "itemKey": "energy-cell",
+      "name": "Energy Cell",
+      "description": "A standardized rechargeable power module used by portable equipment, emergency systems, and small fabricators. Its protected casing allows cells to be exchanged quickly without exposing the internal chemistry.",
+      "visualDescription": "Compact black energy cell with amber charge channels and rugged locking rails."
+    },
+    {
+      "category": "components",
+      "source": "thaloris",
+      "itemKey": "capacitor-bank",
+      "name": "Capacitor Bank",
+      "description": "A high-discharge power assembly that stores energy for equipment requiring brief but intense output. It stabilizes analyzers, fabricators, and field power systems during sudden load changes.",
+      "visualDescription": "Stacked industrial capacitors in a vented graphite housing with orange electrical arcs."
+    },
+    {
+      "category": "components",
+      "source": "solvend",
+      "itemKey": "guidance-processor",
+      "name": "Guidance Processor",
+      "description": "A precision routing core that compares long-distance trajectories, timing windows, and transport constraints. It is used in navigation consoles and research systems where small errors can become major delays.",
+      "visualDescription": "Angular aerospace guidance core with violet-blue trajectory lights and precision connectors."
+    },
+    {
+      "category": "components",
+      "source": "solvend",
+      "itemKey": "orbital-communications-relay",
+      "name": "Orbital Communications Relay",
+      "description": "A compact relay module that maintains data links across long-distance and obstructed routes. It supports navigation, emergency receivers, and secure communications when local infrastructure is unavailable.",
+      "visualDescription": "Folded communications relay with violet signal emitters and compact aerospace antenna surfaces."
+    },
+    {
+      "category": "components",
+      "source": "eldoran",
+      "itemKey": "identity-authentication-module",
+      "name": "Identity Authentication Module",
+      "description": "A secure verification component that checks credentials, embedded signatures, and approved access rules. It is installed in regulated terminals and equipment where identity must be confirmed without exposing private records.",
+      "visualDescription": "Black security module with gold biometric mesh and protected credential slot."
+    },
+    {
+      "category": "components",
+      "source": "eldoran",
+      "itemKey": "financial-risk-coprocessor",
+      "name": "Financial Risk Co-Processor",
+      "description": "A dedicated analysis chip optimized for valuation, currency exposure, and portfolio stress calculations. It expands financial terminals without replacing their primary processor or secure data storage.",
+      "visualDescription": "Gold-traced coprocessor with layered risk-analysis cores in a dark security cradle."
+    },
+    {
+      "category": "components",
+      "source": "valerion",
+      "itemKey": "environmental-sensor",
+      "name": "Environmental Sensor",
+      "description": "A calibrated sensor module that measures water, air, temperature, and contamination indicators. Its standardized output allows the same unit to support portable analyzers or permanent monitoring stations.",
+      "visualDescription": "Cyan-lit multi-probe environmental sensor with sealed sampling ports."
+    },
+    {
+      "category": "components",
+      "source": "valerion",
+      "itemKey": "water-quality-cartridge",
+      "name": "Water Quality Cartridge",
+      "description": "A replaceable analysis cartridge containing microfilters, reagent channels, and calibration references. It enables a water system to identify contamination while keeping hazardous samples isolated.",
+      "visualDescription": "Transparent cyan analysis cartridge with microfluidic channels and ceramic filter layers."
+    },
+    {
+      "category": "components",
+      "source": "lumenor",
+      "itemKey": "translation-processor",
+      "name": "Translation Processor",
+      "description": "A language-processing module trained to interpret institutional vocabulary, technical phrasing, and regional context. It helps translation systems preserve meaning rather than merely substituting words.",
+      "visualDescription": "Slim black processor with magenta-cyan waveform layers and modular language ports."
+    },
+    {
+      "category": "components",
+      "source": "lumenor",
+      "itemKey": "public-information-display-core",
+      "name": "Public Information Display Core",
+      "description": "A display-control module built for public briefings, verified alerts, and accessible information stations. It synchronizes visual, audio, and interaction outputs from a single protected content source.",
+      "visualDescription": "Compact display core projecting abstract magenta-cyan information panels without text."
+    },
+    {
+      "category": "components",
+      "source": "xalvoria",
+      "itemKey": "control-module",
+      "name": "Control Module",
+      "description": "A general-purpose industrial controller that coordinates motors, sensors, and safety interlocks. Its standardized ports make it useful across portable fabricators, warehouse systems, and construction equipment.",
+      "visualDescription": "Rugged graphite control box with red-orange status rails and industrial connectors."
+    },
+    {
+      "category": "components",
+      "source": "xalvoria",
+      "itemKey": "hydraulic-actuator",
+      "name": "Hydraulic Actuator",
+      "description": "A sealed linear actuator designed to move heavy loads with precise hydraulic control. It is commonly installed in maintenance rigs, construction tools, and equipment that must operate under sustained pressure.",
+      "visualDescription": "Heavy hydraulic cylinder with orange pressure chamber and reinforced steel joints."
+    },
+    {
+      "category": "components",
+      "source": "xalvoria",
+      "itemKey": "inventory-controller",
+      "name": "Inventory Controller",
+      "description": "A warehouse coordination module that tracks storage zones, incoming goods, and reserved stock. It helps business systems prevent misplacement and identify shortages before they interrupt production.",
+      "visualDescription": "Industrial inventory controller with red-orange scanning grid and modular warehouse ports."
+    },
+    {
+      "category": "components",
+      "source": "dravenlok",
+      "itemKey": "industrial-motor",
+      "name": "Industrial Motor",
+      "description": "A high-torque electric motor built for fabricators, maintenance equipment, and infrastructure machinery. Its heavy windings and reinforced bearings favor dependable output over compact size.",
+      "visualDescription": "Large black industrial motor with crimson windings and armored mounting feet."
+    },
+    {
+      "category": "components",
+      "source": "dravenlok",
+      "itemKey": "heavy-power-coupler",
+      "name": "Heavy Power Coupler",
+      "description": "A reinforced connector that transfers high electrical loads between industrial equipment and protected power sources. Mechanical locks and thermal monitoring reduce the risk of accidental separation or overheating.",
+      "visualDescription": "Armored power coupling with crimson conductor core and heavy locking collar."
+    },
+    {
+      "category": "components",
+      "source": "syndalis",
+      "itemKey": "encryption-module",
+      "name": "Encryption Module",
+      "description": "A hardened communications component that encrypts data and verifies approved key material. It is installed in media, institutional, and emergency systems that cannot rely on unsecured channels.",
+      "visualDescription": "Black-violet encryption block with electric-blue key lattice and shielded ports."
+    },
+    {
+      "category": "components",
+      "source": "syndalis",
+      "itemKey": "signal-processor",
+      "name": "Signal Processor",
+      "description": "A high-speed module that filters, compares, and reconstructs complex communication signals. It improves broadcast receivers and analysis equipment by separating meaningful data from interference.",
+      "visualDescription": "Dark processor board with violet-blue signal waves passing through layered filters."
+    },
+    {
+      "category": "components",
+      "source": "syndalis",
+      "itemKey": "secure-communications-array",
+      "name": "Secure Communications Array",
+      "description": "An integrated antenna and routing assembly for protected institutional and emergency communication. It maintains several authenticated channels while isolating disputed or unverified traffic.",
+      "visualDescription": "Compact antenna array with electric violet beams and black secure routing hardware."
+    },
+    {
+      "category": "equipment",
+      "source": "northreach",
+      "itemKey": "precision-surveyor",
+      "name": "Precision Surveyor",
+      "description": "A field instrument for measuring route distance, terrain constraints, and infrastructure exposure. It produces a reusable site report that supports construction, logistics, and verification contracts.",
+      "visualDescription": "Tripod-mounted cyberpunk survey instrument with icy cyan optics and graphite casing."
+    },
+    {
+      "category": "equipment",
+      "source": "northreach",
+      "itemKey": "cryogenic-diagnostics-kit",
+      "name": "Cryogenic Diagnostics Kit",
+      "description": "A portable diagnostic suite for advanced equipment operating under cold or high-precision conditions. It identifies developing faults before failure and guides technicians through controlled maintenance.",
+      "visualDescription": "Frost-lined diagnostic case with cyan probes, processor cradle, and precision tools."
+    },
+    {
+      "category": "equipment",
+      "source": "northreach",
+      "itemKey": "mineral-assay-scanner",
+      "name": "Mineral Assay Scanner",
+      "description": "A sealed field scanner that determines material composition, quality band, and authenticity. Procurement teams use it to evaluate strategic minerals before purchase or Contract acceptance.",
+      "visualDescription": "Handheld mineral scanner with cyan analysis beam and rugged sample chamber."
+    },
+    {
+      "category": "equipment",
+      "source": "yrethia",
+      "itemKey": "logistics-scanner",
+      "name": "Logistics Scanner",
+      "description": "A supply-chain analysis device that compares lead times, route concentration, and substitute availability. It gives operators a clearer view of where a shipment is most likely to be delayed.",
+      "visualDescription": "Teal-lit logistics scanner projecting abstract route nodes over a cargo module."
+    },
+    {
+      "category": "equipment",
+      "source": "yrethia",
+      "itemKey": "maritime-route-console",
+      "name": "Maritime Route Console",
+      "description": "A planning terminal that compares shipping routes, port costs, insurance exposure, and transit risk. It is designed for cross-border delivery work in a changing maritime economy.",
+      "visualDescription": "Dark marine console with teal route arcs, port indicators, and sealed controls."
+    },
+    {
+      "category": "equipment",
+      "source": "yrethia",
+      "itemKey": "cargo-integrity-monitor",
+      "name": "Cargo Integrity Monitor",
+      "description": "A reusable monitoring unit that records handling, temperature, seal status, and transport shocks. Its delivery record can support marketplace claims and Contract dispute resolution.",
+      "visualDescription": "Compact cargo monitor with teal sensor bands and reinforced attachment frame."
+    },
+    {
+      "category": "equipment",
+      "source": "thaloris",
+      "itemKey": "energy-load-analyzer",
+      "name": "Energy Load Analyzer",
+      "description": "An analysis terminal that models production demand, peak-load exposure, and equipment energy cost. It helps businesses identify inefficient processes before an energy shock becomes an operating loss.",
+      "visualDescription": "Amber-lit analyzer with power-flow channels and graphite industrial housing."
+    },
+    {
+      "category": "equipment",
+      "source": "thaloris",
+      "itemKey": "portable-power-bank",
+      "name": "Portable Power Bank",
+      "description": "A rugged reserve-power unit that stores several standardized equipment charges. It keeps field operations and one emergency device active when normal power access is interrupted.",
+      "visualDescription": "Armored portable power bank with four amber charge cells and locking handle."
+    },
+    {
+      "category": "equipment",
+      "source": "thaloris",
+      "itemKey": "thermal-management-rig",
+      "name": "Thermal Management Rig",
+      "description": "A workshop system that controls heat generated by high-energy crafting and industrial equipment. Proper use reduces thermal wear and prevents a production interruption caused by overheating.",
+      "visualDescription": "Copper-channel cooling rig with orange heat exchangers and violet control lights."
+    },
+    {
+      "category": "equipment",
+      "source": "solvend",
+      "itemKey": "research-field-terminal",
+      "name": "Research Field Terminal",
+      "description": "A portable scientific workstation that organizes evidence, measurements, and authoritative references into a reusable report. It supports research Contracts without requiring a permanent laboratory.",
+      "visualDescription": "Violet-blue foldout research terminal with sample dock and precision display."
+    },
+    {
+      "category": "equipment",
+      "source": "solvend",
+      "itemKey": "orbital-navigation-console",
+      "name": "Orbital Navigation Console",
+      "description": "A specialized route terminal for comparing long-distance surface and orbital logistics. It reveals timing windows and reliability constraints that ordinary navigation systems do not model.",
+      "visualDescription": "Aerospace navigation console with violet trajectory rings and dark angular controls."
+    },
+    {
+      "category": "equipment",
+      "source": "solvend",
+      "itemKey": "prototype-calibration-bench",
+      "name": "Prototype Calibration Bench",
+      "description": "A precision workshop bench used to align experimental equipment and advanced components. It enables demanding recipes while reducing avoidable calibration waste across repeated jobs.",
+      "visualDescription": "Clean black calibration bench with violet metrology arms and crystal reference block."
+    },
+    {
+      "category": "equipment",
+      "source": "eldoran",
+      "itemKey": "market-lens",
+      "name": "Market Lens",
+      "description": "A secure financial analysis terminal that decomposes risk drivers, historical comparisons, and portfolio stress. It does not predict outcomes, but it makes the assumptions behind a decision visible.",
+      "visualDescription": "Black-gold market terminal with layered abstract charts and secure processor cradle."
+    },
+    {
+      "category": "equipment",
+      "source": "eldoran",
+      "itemKey": "currency-analysis-terminal",
+      "name": "Currency Analysis Terminal",
+      "description": "A scenario workstation for testing exchange-rate changes and imported-cost exposure. Traders and businesses use it to compare cross-border quotes before committing scarce capital.",
+      "visualDescription": "Gold-traced currency terminal with abstract exchange arcs and secure dark display."
+    },
+    {
+      "category": "equipment",
+      "source": "eldoran",
+      "itemKey": "contract-valuation-desk",
+      "name": "Contract Valuation Desk",
+      "description": "A secure operations desk that estimates Contract cost, margin, financing, currency, and delivery risk. It helps players recognize attractive revenue that may hide an unprofitable obligation.",
+      "visualDescription": "Graphite valuation desk with gold risk modules and sealed ledger cartridge bay."
+    },
+    {
+      "category": "equipment",
+      "source": "valerion",
+      "itemKey": "water-quality-analyzer",
+      "name": "Water Quality Analyzer",
+      "description": "A portable instrument that evaluates contamination, treatment needs, and filter compatibility. Its test record can support infrastructure, environmental, and emergency-response Contracts.",
+      "visualDescription": "Cyan water analyzer with transparent sample chamber and multi-probe sensor head."
+    },
+    {
+      "category": "equipment",
+      "source": "valerion",
+      "itemKey": "infrastructure-inspection-kit",
+      "name": "Infrastructure Inspection Kit",
+      "description": "A field package for documenting structural condition, damage, and repair priorities. It combines measurement tools and evidence storage so inspection results can be reviewed later.",
+      "visualDescription": "Cyan-lit inspection case with scanner, probes, and reinforced glass tablet."
+    },
+    {
+      "category": "equipment",
+      "source": "valerion",
+      "itemKey": "environmental-monitoring-station",
+      "name": "Environmental Monitoring Station",
+      "description": "A deployable station that tracks environmental indicators and issues threshold alerts over time. It supports water, energy, and public-safety decisions with persistent measurements rather than a single sample.",
+      "visualDescription": "Compact cyan monitoring mast with sealed sensor pods and solar-like panels."
+    },
+    {
+      "category": "equipment",
+      "source": "lumenor",
+      "itemKey": "translation-console",
+      "name": "Translation Console",
+      "description": "An institutional translation workstation that explains terminology and regional context alongside translated content. It reduces costly misunderstandings in cross-border Contracts and official documents.",
+      "visualDescription": "Magenta-cyan translation console with audio waveforms and modular document cradle."
+    },
+    {
+      "category": "equipment",
+      "source": "lumenor",
+      "itemKey": "contract-field-kit",
+      "name": "Contract Field Kit",
+      "description": "A portable documentation system with evidence checklists, source organization, and protected note storage. It helps players assemble clear submissions while working away from a permanent office.",
+      "visualDescription": "Dark field case with magenta-cyan scanner, document film, and modular pockets."
+    },
+    {
+      "category": "equipment",
+      "source": "lumenor",
+      "itemKey": "public-sentiment-analyzer",
+      "name": "Public Sentiment Analyzer",
+      "description": "An analysis terminal that compares public narratives, media signals, and economic indicators. It helps distinguish visible opinion from measurable conditions without treating sentiment as objective truth.",
+      "visualDescription": "Magenta-cyan analysis terminal with abstract crowd signals and filtered wave layers."
+    },
+    {
+      "category": "equipment",
+      "source": "xalvoria",
+      "itemKey": "portable-fabricator",
+      "name": "Portable Fabricator",
+      "description": "A mobile production unit for basic materials processing, standard consumables, and emergency repairs. It trades speed and capacity for the ability to operate outside a fixed workshop.",
+      "visualDescription": "Compact red-orange fabricator with folding tool arms and rugged carry frame."
+    },
+    {
+      "category": "equipment",
+      "source": "xalvoria",
+      "itemKey": "warehouse-expansion-module",
+      "name": "Warehouse Expansion Module",
+      "description": "A modular storage system that adds organized capacity for materials and business inventory. It reduces forced liquidation during supply shocks but still requires careful stock management.",
+      "visualDescription": "Stackable graphite warehouse module with orange inventory lights and locking bins."
+    },
+    {
+      "category": "equipment",
+      "source": "xalvoria",
+      "itemKey": "construction-planning-terminal",
+      "name": "Construction Planning Terminal",
+      "description": "A project-analysis terminal that estimates material requirements, schedules, and infrastructure dependencies. It supports realistic planning before construction resources are committed.",
+      "visualDescription": "Red-orange planning terminal projecting an abstract structural model without text."
+    },
+    {
+      "category": "equipment",
+      "source": "dravenlok",
+      "itemKey": "maintenance-rig",
+      "name": "Maintenance Rig",
+      "description": "A heavy service platform equipped for industrial repairs, alignment, and component replacement. It reduces repair inputs and enables work that cannot be completed with a handheld kit.",
+      "visualDescription": "Crimson-lit maintenance platform with armored tool arms and heavy lifting frame."
+    },
+    {
+      "category": "equipment",
+      "source": "dravenlok",
+      "itemKey": "industrial-fabricator",
+      "name": "Industrial Fabricator",
+      "description": "A fixed workshop machine for producing heavy equipment and processing structural materials. It offers greater capacity than a portable unit but requires substantial power and a stable operating site.",
+      "visualDescription": "Massive black fabricator with crimson furnace chamber and industrial robotic arms."
+    },
+    {
+      "category": "equipment",
+      "source": "dravenlok",
+      "itemKey": "structural-stress-scanner",
+      "name": "Structural Stress Scanner",
+      "description": "A field scanner that identifies load concentration, hidden weakness, and likely failure points. Its inspection evidence helps prioritize repairs before damaged infrastructure becomes unusable.",
+      "visualDescription": "Crimson structural scanner casting a grid across a reinforced steel sample."
+    },
+    {
+      "category": "equipment",
+      "source": "syndalis",
+      "itemKey": "secure-communications-unit",
+      "name": "Secure Communications Unit",
+      "description": "A protected terminal for authenticated messages and controlled communication channels. It distinguishes verified traffic from disputed information and preserves correction history for later review.",
+      "visualDescription": "Black-violet communications terminal with electric-blue verified channel rings."
+    },
+    {
+      "category": "equipment",
+      "source": "syndalis",
+      "itemKey": "emergency-broadcast-receiver",
+      "name": "Emergency Broadcast Receiver",
+      "description": "A resilient receiver designed to deliver verified crisis alerts when ordinary networks are overloaded or compromised. It displays source and correction status so players can evaluate changing instructions.",
+      "visualDescription": "Rugged violet-blue emergency receiver with protected antenna and alert light bands."
+    },
+    {
+      "category": "equipment",
+      "source": "syndalis",
+      "itemKey": "media-verification-terminal",
+      "name": "Media Verification Terminal",
+      "description": "An investigative workstation that compares source consistency, disputed claims, and documented corrections. It supports attribution work without presenting uncertain evidence as settled fact.",
+      "visualDescription": "Electric-violet verification terminal with layered media frames and forensic signal tools."
+    },
+    {
+      "category": "consumables",
+      "source": "northreach",
+      "itemKey": "sensor-calibration-pack",
+      "name": "Sensor Calibration Pack",
+      "description": "A sealed set of reference targets, contacts, and diagnostic materials for one sensor calibration cycle. It restores measurement reliability after transport, repair, or heavy use.",
+      "visualDescription": "Cold cyan calibration targets, probes, and sealed reference chips in a compact case."
+    },
+    {
+      "category": "consumables",
+      "source": "northreach",
+      "itemKey": "cryogenic-coolant-cartridge",
+      "name": "Cryogenic Coolant Cartridge",
+      "description": "A single-service coolant cartridge for cryogenic processors and precision cold equipment. It restores cooling capacity and prevents one temperature-related interruption when installed correctly.",
+      "visualDescription": "Frosted black coolant cartridge with cyan fluid window and insulated couplings."
+    },
+    {
+      "category": "consumables",
+      "source": "yrethia",
+      "itemKey": "marine-seal-replacement-kit",
+      "name": "Marine Seal Replacement Kit",
+      "description": "A service pack containing matched gaskets, seals, and corrosion-safe fasteners for one marine device. It restores water resistance and cargo-monitor integrity after seal wear or damage.",
+      "visualDescription": "Teal-lit replacement gaskets and seal rings organized in a waterproof service case."
+    },
+    {
+      "category": "consumables",
+      "source": "yrethia",
+      "itemKey": "logistics-rerouting-kit",
+      "name": "Logistics Rerouting Kit",
+      "description": "A one-use operations package containing updated route data, permits, and dispatch materials. It allows an eligible shipment to change course before departure and reduce a known delay exposure.",
+      "visualDescription": "Sealed teal route-data module with abstract map chips and dispatch token."
+    },
+    {
+      "category": "consumables",
+      "source": "thaloris",
+      "itemKey": "portable-energy-cell",
+      "name": "Portable Energy Cell",
+      "description": "A compact single-charge power cell for standard equipment or one approved emergency action. It is easy to transport but less efficient than a reusable full-size energy module.",
+      "visualDescription": "Small armored energy cell with amber charge core and snap-lock contacts."
+    },
+    {
+      "category": "consumables",
+      "source": "thaloris",
+      "itemKey": "thermal-stabilization-pack",
+      "name": "Thermal Stabilization Pack",
+      "description": "A consumable cooling and heat-control package used during one high-energy operation. It prevents a thermal interruption and protects equipment from a sudden temperature spike.",
+      "visualDescription": "Amber thermal gel pads, cooling clamps, and heat indicator strips in a dark pack."
+    },
+    {
+      "category": "consumables",
+      "source": "solvend",
+      "itemKey": "research-sample-container",
+      "name": "Research Sample Container",
+      "description": "A sterile transport container that protects one Contract sample from contamination, vibration, and environmental exposure. Its tamper record helps preserve the credibility of later analysis.",
+      "visualDescription": "Violet-blue sealed sample cylinder with shock suspension and transparent inspection chamber."
+    },
+    {
+      "category": "consumables",
+      "source": "solvend",
+      "itemKey": "precision-calibration-pack",
+      "name": "Precision Calibration Pack",
+      "description": "A single-use set of measurement references and alignment materials for precision equipment. It supports one calibration cycle or satisfies the calibration input of an advanced recipe.",
+      "visualDescription": "Violet metrology blocks, micro-shims, and crystal references in a clean case."
+    },
+    {
+      "category": "consumables",
+      "source": "eldoran",
+      "itemKey": "encrypted-data-charge",
+      "name": "Encrypted Data Charge",
+      "description": "A secure data-and-power cartridge used for one advanced financial or Contract analysis. It records the completed report in a protected snapshot before the cartridge is exhausted.",
+      "visualDescription": "Black-gold data cartridge with encrypted light core and sealed terminal contacts."
+    },
+    {
+      "category": "consumables",
+      "source": "eldoran",
+      "itemKey": "secure-ledger-cartridge",
+      "name": "Secure Ledger Cartridge",
+      "description": "A tamper-evident cartridge that creates one verified transaction or valuation snapshot. It is consumed during the process so the resulting record has a clear physical audit trail.",
+      "visualDescription": "Gold-traced ledger cartridge with dark tamper seals and protected memory core."
+    },
+    {
+      "category": "consumables",
+      "source": "valerion",
+      "itemKey": "emergency-filter-cartridge",
+      "name": "Emergency Filter Cartridge",
+      "description": "A portable purification cartridge intended for one emergency treatment cycle. It restores limited filter capacity when ordinary replacement supplies or infrastructure are unavailable.",
+      "visualDescription": "Cyan emergency filter cylinder with layered media visible through a clear shell."
+    },
+    {
+      "category": "consumables",
+      "source": "valerion",
+      "itemKey": "water-test-reagent-pack",
+      "name": "Water Test Reagent Pack",
+      "description": "A measured set of reagents for one complete water-quality sample series. The resulting test record can be attached to infrastructure, environmental, or emergency Contracts.",
+      "visualDescription": "Cyan micro-reagent vials and sampling strips in a sealed field tray."
+    },
+    {
+      "category": "consumables",
+      "source": "lumenor",
+      "itemKey": "translation-data-pack",
+      "name": "Translation Data Pack",
+      "description": "A licensed terminology and language dataset for one extended translation project. It improves coverage of technical, institutional, or regional language not included in a console's basic library.",
+      "visualDescription": "Magenta-cyan data cartridge with abstract language waveforms and secure connector."
+    },
+    {
+      "category": "consumables",
+      "source": "lumenor",
+      "itemKey": "public-briefing-pack",
+      "name": "Public Briefing Pack",
+      "description": "A prepared set of display film, accessibility materials, and distribution media for one public briefing. It helps convert analysis into a clear, consistent information package.",
+      "visualDescription": "Magenta-cyan briefing film, audio module, and compact distribution case."
+    },
+    {
+      "category": "consumables",
+      "source": "xalvoria",
+      "itemKey": "machine-tooling-replacement-pack",
+      "name": "Machine Tooling Replacement Pack",
+      "description": "A matched set of cutting heads, abrasives, and alignment hardware for one fabricator service cycle. It restores production capability after normal tooling wear.",
+      "visualDescription": "Red-orange cutting heads and precision tooling arranged in a rugged metal case."
+    },
+    {
+      "category": "consumables",
+      "source": "xalvoria",
+      "itemKey": "hydraulic-service-kit",
+      "name": "Hydraulic Service Kit",
+      "description": "A one-service package of fluid, seals, filters, and pressure-test fittings. It restores an eligible hydraulic device and supports one heavy-equipment repair operation.",
+      "visualDescription": "Dark service case with orange hydraulic fluid, seals, filter, and pressure gauge."
+    },
+    {
+      "category": "consumables",
+      "source": "dravenlok",
+      "itemKey": "emergency-repair-kit",
+      "name": "Emergency Repair Kit",
+      "description": "A compact collection of patches, fasteners, conductors, and seal materials for one standard equipment repair. It restores limited condition but does not replace a full industrial service.",
+      "visualDescription": "Crimson-lit armored repair case with patches, clamps, and compact tools."
+    },
+    {
+      "category": "consumables",
+      "source": "dravenlok",
+      "itemKey": "welding-consumable-pack",
+      "name": "Welding Consumable Pack",
+      "description": "A measured supply of wire, electrodes, shielding material, and surface preparation media. It supports one structural or heavy-equipment repair performed with appropriate tools.",
+      "visualDescription": "Crimson welding wire spool, electrodes, and shielding canister in a heatproof tray."
+    },
+    {
+      "category": "consumables",
+      "source": "syndalis",
+      "itemKey": "firmware-patch",
+      "name": "Firmware Patch",
+      "description": "An approved software package that restores one supported capability or resolves a documented compatibility fault. Its signature and version history allow the update to be verified before installation.",
+      "visualDescription": "Violet-blue secure data shard with abstract firmware layers and verification ring."
+    },
+    {
+      "category": "consumables",
+      "source": "syndalis",
+      "itemKey": "secure-erasure-module",
+      "name": "Secure Erasure Module",
+      "description": "A one-use hardware module that sanitizes sensitive data before a device is sold, transferred, or dismantled. It produces a verifiable completion record without preserving the erased content.",
+      "visualDescription": "Black-violet erasure module with electric-blue isolation field and sealed port."
+    },
+    {
+      "category": "consumables",
+      "source": "xalvoria",
+      "itemKey": "universal-maintenance-kit",
+      "name": "Universal Maintenance Kit",
+      "description": "A standardized set of lubricants, contacts, fasteners, and cleaning materials for one basic maintenance task. It prevents routine wear from becoming a more expensive equipment failure.",
+      "visualDescription": "Red-orange maintenance case with small tools, lubricant cells, and common fasteners."
+    },
+    {
+      "category": "consumables",
+      "source": "valerion",
+      "itemKey": "field-medical-polymer-pack",
+      "name": "Field Medical Polymer Pack",
+      "description": "A sealed crisis-supply package of sterile polymer sheets, barriers, and support materials. It serves as an approved humanitarian Contract input or part of a field-aid recipe.",
+      "visualDescription": "Clean cyan medical polymer rolls and sterile barrier sheets in a sealed pack."
+    },
+    {
+      "category": "consumables",
+      "source": "yrethia",
+      "itemKey": "protective-packaging-set",
+      "name": "Protective Packaging Set",
+      "description": "A one-shipment package of impact padding, moisture barriers, seals, and securing hardware. It reduces handling damage and satisfies standard export-preparation requirements.",
+      "visualDescription": "Teal protective panels, moisture wrap, and locking cargo straps in a compact bundle."
+    },
+    {
+      "category": "consumables",
+      "source": "dravenlok",
+      "itemKey": "salvage-sorting-kit",
+      "name": "Salvage Sorting Kit",
+      "description": "A controlled set of test tools, containers, and classification markers for one salvage operation. It improves material identification without increasing recovery beyond approved limits.",
+      "visualDescription": "Crimson-lit sorting tray with sample bins, analyzer probe, and salvage tools."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "northreach",
+      "itemKey": "precision-sensor-blueprint",
+      "name": "Precision Sensor Blueprint",
+      "description": "A controlled technical package for manufacturing precision survey and analysis equipment. It defines validated layouts, calibration standards, and component requirements for supported sensor recipes.",
+      "visualDescription": "Cyan holographic sensor diagrams over a sealed black blueprint tablet without text."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "yrethia",
+      "itemKey": "maritime-navigation-blueprint",
+      "name": "Maritime Navigation Blueprint",
+      "description": "A technical authorization package for constructing maritime logistics and cargo-monitoring equipment. It includes tested routing interfaces and environmental sealing requirements.",
+      "visualDescription": "Teal holographic route-console schematics over a waterproof data tablet."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "thaloris",
+      "itemKey": "high-capacity-energy-blueprint",
+      "name": "High-Capacity Energy Storage Blueprint",
+      "description": "A regulated design package for high-capacity power and thermal-management equipment. It specifies safe cell arrangement, discharge control, and heat-handling standards.",
+      "visualDescription": "Amber holographic energy-cell and capacitor layouts over a dark engineering slate."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "solvend",
+      "itemKey": "research-instrument-blueprint",
+      "name": "Research Instrument Blueprint",
+      "description": "A validated design set for advanced research terminals, calibration benches, and navigation equipment. It defines the tolerances required for scientific results to remain dependable.",
+      "visualDescription": "Violet-blue scientific instrument schematics projected from a sealed research tablet."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "eldoran",
+      "itemKey": "financial-analytics-blueprint",
+      "name": "Financial Analytics Blueprint",
+      "description": "A controlled design package for secure financial analysis equipment. It combines processor specifications, audit safeguards, and data-isolation requirements for supported terminals.",
+      "visualDescription": "Gold holographic financial terminal circuitry above a black secure blueprint slate."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "valerion",
+      "itemKey": "water-resilience-blueprint",
+      "name": "Water Resilience Equipment Blueprint",
+      "description": "A technical design set for water analysis, filtration, and monitoring equipment. It standardizes compatible materials and safety requirements for emergency and infrastructure use.",
+      "visualDescription": "Cyan holographic filtration and sensor diagrams above a clean graphite tablet."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "lumenor",
+      "itemKey": "translation-systems-blueprint",
+      "name": "Translation Systems Blueprint",
+      "description": "A design package for translation consoles, Contract field tools, and public-information equipment. It specifies accessible interfaces and protected language-data handling.",
+      "visualDescription": "Magenta-cyan interface and waveform schematics projected from a slim black slate."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "xalvoria",
+      "itemKey": "portable-fabrication-blueprint",
+      "name": "Portable Fabrication Blueprint",
+      "description": "A validated engineering package for mobile production and warehouse-support equipment. It balances compact construction with standardized tooling, power, and safety interfaces.",
+      "visualDescription": "Red-orange fabricator and warehouse module schematics above an industrial tablet."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "dravenlok",
+      "itemKey": "heavy-maintenance-blueprint",
+      "name": "Heavy Maintenance Equipment Blueprint",
+      "description": "A regulated design set for maintenance rigs, industrial fabricators, and structural inspection systems. It defines load, power, and reinforcement requirements for heavy equipment.",
+      "visualDescription": "Crimson holographic maintenance rig diagrams over an armored black blueprint plate."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "tier-one-workshop-permit",
+      "name": "Tier I Workshop Permit",
+      "description": "An entry-level authorization allowing basic materials processing, standard consumable production, and selected equipment recipes. It establishes a legal recovery path for new or struggling workshops.",
+      "visualDescription": "Blank cyberpunk workshop credential with simple silver circuit seal and no text."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "tier-two-workshop-permit",
+      "name": "Tier II Workshop Permit",
+      "description": "An intermediate workshop authorization covering specialized components, standard equipment, and structured repairs. It requires greater operating control than an entry permit.",
+      "visualDescription": "Dark workshop credential with layered blue-silver circuit seal and secure chip."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "tier-three-workshop-permit",
+      "name": "Tier III Workshop Permit",
+      "description": "An advanced authorization for regulated systems, high-tier equipment, and complex upgrades. Holders are expected to maintain stricter material handling and audit standards.",
+      "visualDescription": "Black advanced workshop credential with gold-violet security lattice and chip."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "commercial-equipment-fabrication-license",
+      "name": "Commercial Equipment Fabrication License",
+      "description": "A business license permitting approved equipment to be produced for marketplace sale and Contract delivery. It separates commercial production from personal workshop use.",
+      "visualDescription": "Industrial commercial license card with orange-gold circuit seal and holographic edge."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "strategic-materials-handling-permit",
+      "name": "Strategic Materials Handling Permit",
+      "description": "A regulated authorization for storing and using strategic materials in approved recipes. It confirms that the holder has access to required safeguards and procurement controls.",
+      "visualDescription": "Dark strategic-material permit with amber containment symbol geometry and secure mesh."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "emergency-infrastructure-production-permit",
+      "name": "Emergency Infrastructure Production Permit",
+      "description": "A crisis authorization allowing approved workshops to produce priority infrastructure and reconstruction goods. It enables emergency queues without removing normal material accountability.",
+      "visualDescription": "Emergency production credential with cyan-orange infrastructure grid and secure chip."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "cross-border-supplier-credential",
+      "name": "Cross-Border Supplier Credential",
+      "description": "A verified supplier credential used to request foreign quotes and accept cross-border delivery Contracts. It confirms trade eligibility without guaranteeing route availability or price.",
+      "visualDescription": "Global supplier credential with multi-color route lines and dark holographic seal."
+    },
+    {
+      "category": "blueprints-authorizations",
+      "source": "global",
+      "itemKey": "advanced-salvage-recovery-license",
+      "name": "Advanced Salvage and Recovery License",
+      "description": "A regulated license for component salvage, controlled dismantling, and higher-tier recovery work. It expands eligible operations while preserving recovery caps and audit requirements.",
+      "visualDescription": "Dark salvage license card with crimson-silver recovery circuit pattern and secure chip."
+    }
+  ]
+}

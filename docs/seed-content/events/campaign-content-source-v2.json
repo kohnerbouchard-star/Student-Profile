@@ -1,0 +1,425 @@
+{
+  "schemaVersion": "econovaria-campaign-content-source-v2",
+  "status": "authored-civilian-economic-campaign-source",
+  "countryCount": 10,
+  "globalEventCount": 5,
+  "countryProfiles": {
+    "northreach": {
+      "opportunity": {
+        "name": "Frostgate Sensor-Grade Mineral Expansion",
+        "summary": "The Strategic Resources Office has opened a verified procurement round for sensor-grade rare-earth concentrate, precision optics, and cold-weather logistics support as Meridian demand accelerates.",
+        "confirmedFacts": ["Approved buyers must publish material specifications and payment schedules.", "Winter freight capacity remains limited despite the new orders."],
+        "uncertainty": "The duration of Meridian demand and the number of suppliers that can meet purity standards remain uncertain.",
+        "playerHooks": ["complete mineral-verification or market-analysis Contracts", "supply calibrated sensor components", "offer cold-chain planning without concentrating all cash in one buyer"],
+        "civilianRisks": ["industrial demand can raise heating and transport costs", "small suppliers may overinvest before long-term demand is confirmed"],
+        "recovery": "Diversify buyers, preserve heating reserves, and use staged procurement rather than a single capacity bet."
+      },
+      "pressure": {
+        "name": "Northern Freight and Heating Constraint",
+        "summary": "Ice damage and scheduled power maintenance have reduced northern freight capacity while residential heating demand is near its seasonal peak.",
+        "confirmedFacts": ["Several freight windows have been consolidated.", "Essential residential heating receives priority over discretionary industrial loads."],
+        "uncertainty": "Officials have not confirmed how quickly full corridor capacity can be restored.",
+        "playerHooks": ["identify legal route substitutes", "prioritize essential deliveries", "audit heating and inventory exposure"],
+        "civilianRisks": ["delayed wages and deliveries", "higher heating, food, and transport costs"],
+        "recovery": "Coordinate through the Strategic Resources Office, reserve essential capacity, and substitute locally available materials where quality permits."
+      },
+      "news": {
+        "openingHeadline": "Frostgate opens verified procurement for sensor-grade minerals",
+        "openingBody": "The Strategic Resources Office has issued a new procurement schedule for rare-earth concentrate, precision optics, and calibration services. Officials warned suppliers not to finance permanent expansion until winter freight and Meridian demand are independently verified.",
+        "pressureHeadline": "Ice damage compresses Northreach freight and heating capacity",
+        "pressureBody": "Freight windows are being consolidated as power maintenance and severe weather raise demand for residential heating. Essential deliveries receive priority, while industrial buyers are being asked to publish revised schedules and substitute plans.",
+        "recoveryHeadline": "Northreach begins phased restoration of northern freight routes",
+        "recoveryBody": "Repair crews have reopened limited capacity, and the Strategic Resources Office is coordinating staged deliveries. Full recovery depends on verified route inspections, preserved household heating supply, and disciplined procurement."
+      },
+      "notifications": {
+        "contractTitle": "Frostgate procurement Contract updated",
+        "contractBody": "A Northreach Contract now includes revised purity, winter-delivery, or payment evidence. Recheck the accepted specification and protect heating and transport reserves before committing inventory.",
+        "marketTitle": "Northreach mineral and freight conditions changed",
+        "marketBody": "Verified demand for strategic inputs has increased while northern freight capacity remains constrained. Review buyer concentration, delivery timing, and substitute materials before trading or producing.",
+        "recoveryTitle": "Northreach essential-capacity recovery available",
+        "recoveryBody": "A verified route, heating-support, or staged-procurement option is available through the Strategic Resources Office. Check eligibility and expiration before using high-cost private alternatives."
+      }
+    },
+    "yrethia": {
+      "opportunity": {
+        "name": "Sableport Cargo Telemetry Upgrade",
+        "summary": "Port authorities and licensed insurers are funding cargo telemetry, seal verification, and compliant rerouting services to reduce losses across Meridian-linked shipping lanes.",
+        "confirmedFacts": ["Participating shipments require documented custody and approved telemetry records.", "Insurers will not reimburse unverified route changes."],
+        "uncertainty": "Port congestion may delay installation and customs approval even for accepted projects.",
+        "playerHooks": ["provide cargo-integrity evidence", "compare compliant routes", "support telemetry installation and documentation"],
+        "civilianRisks": ["higher shipping and insurance costs can raise retail prices", "informal workers may be excluded from licensed port access"],
+        "recovery": "Use supervised records correction, split critical shipments, and document every custody or route change."
+      },
+      "pressure": {
+        "name": "Customs Backlog and Insurance Repricing",
+        "summary": "A customs verification backlog has extended port dwell times, and insurers are repricing cargo exposed to undocumented transfers or damaged seals.",
+        "confirmedFacts": ["Priority clearance is limited to essential and fully documented cargo.", "Several insurers have issued revised evidence requirements."],
+        "uncertainty": "The duration of the backlog and the final premium changes remain unresolved.",
+        "playerHooks": ["correct shipment records", "identify insured alternate routes", "protect perishable or essential cargo"],
+        "civilianRisks": ["delayed imported goods", "temporary job losses for crews tied to held cargo"],
+        "recovery": "Coordinate with the Port Records Bureau, use licensed rerouting, and preserve complete custody evidence."
+      },
+      "news": {
+        "openingHeadline": "Sableport funds cargo telemetry and seal-verification program",
+        "openingBody": "The port authority and licensed insurers are commissioning compliant monitoring equipment and documentation services. Participation requires verified custody records, approved installers, and transparent route-change reporting.",
+        "pressureHeadline": "Customs backlog extends Sableport cargo delays",
+        "pressureBody": "Priority clearance is restricted to essential, fully documented shipments as inspectors address a verification backlog. Insurers are warning that undocumented transfers and damaged seals may face higher premiums or denied claims.",
+        "recoveryHeadline": "Yrethia introduces supervised clearance and rerouting windows",
+        "recoveryBody": "The Port Records Bureau has opened correction appointments and licensed rerouting windows for delayed cargo. Recovery remains dependent on complete records, verified custody, and available inland capacity."
+      },
+      "notifications": {
+        "contractTitle": "Sableport cargo Contract evidence changed",
+        "contractBody": "A Yrethia Contract now requires updated custody, customs, seal, or insurance evidence. Confirm every document before dispatch and do not rely on an informal route change.",
+        "marketTitle": "Yrethia port delay and insurance notice",
+        "marketBody": "Customs dwell times and cargo-risk pricing have changed. Review route eligibility, insured value, handling exposure, and payment timing before accepting a shipment or market position.",
+        "recoveryTitle": "Yrethia supervised clearance option available",
+        "recoveryBody": "A verified records-correction or licensed rerouting window is open. Check document requirements and capacity before paying an intermediary or abandoning recoverable cargo."
+      }
+    },
+    "thaloris": {
+      "opportunity": {
+        "name": "Certified Repair Export Program",
+        "summary": "The Trade Legitimacy Commission is approving repair cooperatives that can document component origin, testing, and warranty treatment for re-export buyers.",
+        "confirmedFacts": ["Certified outputs require traceable parts and recorded test results.", "Unlicensed salvage cannot enter the approved export channel."],
+        "uncertainty": "Buyer demand is strong, but the supply of verifiable components may limit production.",
+        "playerHooks": ["perform supervised diagnostics", "document component provenance", "produce bounded repair or salvage plans"],
+        "civilianRisks": ["legitimate parts may become less affordable locally", "workers can be liable for undocumented substitutions"],
+        "recovery": "Use cooperative inventory, preserve test evidence, and downgrade output rather than concealing component uncertainty."
+      },
+      "pressure": {
+        "name": "Salvage Authenticity Crackdown",
+        "summary": "Inspectors have suspended several salvage lots after mismatched ownership and condition records were found in the Dusk Harbor secondary market.",
+        "confirmedFacts": ["Suspended lots cannot be crafted, sold, or exported through licensed channels.", "Owners may appeal with traceable acquisition and condition evidence."],
+        "uncertainty": "Authorities have not established whether the mismatches reflect fraud or widespread record failure.",
+        "playerHooks": ["audit inventory lineage", "identify legal replacement inputs", "support controlled salvage classification"],
+        "civilianRisks": ["repair delays for households and small firms", "losses for workers who purchased unverified stock"],
+        "recovery": "Use the cooperative appeal process, substitute documented components, and isolate disputed inventory."
+      },
+      "news": {
+        "openingHeadline": "Thaloris certifies repair cooperatives for re-export contracts",
+        "openingBody": "The Trade Legitimacy Commission has published traceability and testing requirements for approved repair exports. Cooperatives must document ownership, component condition, and warranty treatment before delivery.",
+        "pressureHeadline": "Dusk Harbor suspends salvage lots over record mismatches",
+        "pressureBody": "Several lots have been blocked from licensed sale and Crafting after ownership and condition records failed inspection. Authorities are accepting documented appeals while warning buyers not to mix disputed stock with verified inventory.",
+        "recoveryHeadline": "Thaloris opens controlled salvage review and substitution program",
+        "recoveryBody": "Repair cooperatives may now submit disputed lots for supervised classification and use approved substitute components. Recovery requires complete records and does not guarantee the original purchase value."
+      },
+      "notifications": {
+        "contractTitle": "Thaloris repair Contract verification required",
+        "contractBody": "A repair or export Contract now requires updated component-origin, test, or warranty evidence. Isolate unverified stock before completing or submitting the work.",
+        "marketTitle": "Thaloris salvage eligibility changed",
+        "marketBody": "Some secondary-market components are suspended from licensed trade and Crafting. Verify ownership, condition, and appeal status before buying or using salvage inventory.",
+        "recoveryTitle": "Thaloris controlled salvage review available",
+        "recoveryBody": "A cooperative classification, substitution, or appeal route is available for eligible disputed inventory. Preserve acquisition records and do not commingle the affected stock."
+      }
+    },
+    "solvend": {
+      "opportunity": {
+        "name": "Aurora Research Instrument Commission",
+        "summary": "The Advanced Systems Consortium is commissioning calibration, field-research, and navigation instruments for a new Meridian observation program.",
+        "confirmedFacts": ["Supervised suppliers may qualify with verified calibration evidence.", "Specialist processors and crystal substrates remain capacity constrained."],
+        "uncertainty": "The program schedule may change if cyber or credential reviews delay shared laboratories.",
+        "playerHooks": ["complete calibration Contracts", "support research reporting", "supply lower-risk verified instrument components"],
+        "civilianRisks": ["technical housing and training costs may rise", "small suppliers may depend on one institutional buyer"],
+        "recovery": "Use shared laboratories, staged milestones, and lower-spec substitutes where the acceptance standard permits."
+      },
+      "pressure": {
+        "name": "Credential and Cyber Bottleneck",
+        "summary": "A joint credential and cybersecurity review has slowed access to several Aurora Spire laboratories and technical placement systems.",
+        "confirmedFacts": ["Existing verified access remains valid unless individually suspended.", "New applicants may use provisional supervised work while reviews continue."],
+        "uncertainty": "Investigators have not disclosed the scope of the suspected access-control weakness.",
+        "playerHooks": ["book provisional assessments", "document calibration work", "support secure equipment verification"],
+        "civilianRisks": ["delayed professional income", "higher demand for temporary housing and training"],
+        "recovery": "Use provisional supervised placements, preserve evidence, and avoid unverified credential brokers."
+      },
+      "news": {
+        "openingHeadline": "Aurora consortium commissions Meridian research instruments",
+        "openingBody": "The Advanced Systems Consortium is seeking verified calibration, field-research, and navigation equipment. Shared laboratories and supervised suppliers may participate, but specialist components remain limited.",
+        "pressureHeadline": "Solvend review slows laboratory and credential access",
+        "pressureBody": "New technical placements and laboratory permissions face additional identity and cybersecurity checks. Existing verified users retain access unless directly notified, and provisional supervised work remains available.",
+        "recoveryHeadline": "Aurora Spire expands provisional technical placements",
+        "recoveryBody": "The Skills Verification Directorate and shared laboratories are adding supervised assessment and calibration capacity. Full normalization depends on secure access review and specialist staffing."
+      },
+      "notifications": {
+        "contractTitle": "Solvend technical Contract access updated",
+        "contractBody": "A research or calibration Contract has revised credential, laboratory, or security requirements. Confirm supervised access and accepted evidence before purchasing specialist inputs.",
+        "marketTitle": "Solvend technical capacity notice",
+        "marketBody": "Research demand remains strong, but credential reviews and specialist-component constraints may delay delivery. Review buyer concentration, access status, and substitute specifications.",
+        "recoveryTitle": "Solvend provisional placement available",
+        "recoveryBody": "A verified supervised assessment, shared-laboratory, or training route is available. Use the official process rather than paying an unverified credential broker."
+      }
+    },
+    "eldoran": {
+      "opportunity": {
+        "name": "Crescent Food Logistics Modernization",
+        "summary": "The Commodity Stability Board is funding low-waste inventory records, neighborhood distribution, and verified cold-storage coordination.",
+        "confirmedFacts": ["Projects must demonstrate affordable household access.", "Perishable inventory requires documented storage and delivery capacity."],
+        "uncertainty": "Future harvest volume and wholesale prices remain weather dependent.",
+        "playerHooks": ["map food access", "improve inventory records", "coordinate bounded distribution pilots"],
+        "civilianRisks": ["speculative buying can reduce local affordability", "poor storage can turn apparent inventory into losses"],
+        "recovery": "Prioritize verified demand, small batches, and shared storage instead of speculative stockpiling."
+      },
+      "pressure": {
+        "name": "Harvest Shortfall and Wholesale Volatility",
+        "summary": "Early harvest reports indicate lower output in several supplier districts, and wholesale prices are moving before final volumes are confirmed.",
+        "confirmedFacts": ["Public distribution reserves remain available but are not unlimited.", "The Board is monitoring hoarding and misleading availability claims."],
+        "uncertainty": "Final harvest volume, import substitution, and the duration of price pressure remain unknown.",
+        "playerHooks": ["verify market availability", "identify substitutes", "support fair distribution and household budgeting"],
+        "civilianRisks": ["higher food costs", "reduced access in low-income or poorly connected districts"],
+        "recovery": "Use public reserves, substitute products, and transparent distribution rather than speculative accumulation."
+      },
+      "news": {
+        "openingHeadline": "Eldoran funds neighborhood food-logistics upgrades",
+        "openingBody": "The Commodity Stability Board is supporting verified inventory records, cold-storage coordination, and low-waste distribution. Projects must demonstrate household affordability and realistic storage capacity.",
+        "pressureHeadline": "Early harvest shortfall raises Eldoran wholesale prices",
+        "pressureBody": "Several supplier districts report lower output, though final harvest totals are not yet confirmed. The Board is monitoring public reserves, substitution, and misleading scarcity claims.",
+        "recoveryHeadline": "Crescent Bay expands reserve release and substitute distribution",
+        "recoveryBody": "Public reserves and approved substitutes are moving through verified distribution points. Recovery depends on transparent inventory, controlled purchasing, and access for poorly connected neighborhoods."
+      },
+      "notifications": {
+        "contractTitle": "Eldoran food-access Contract updated",
+        "contractBody": "A distribution or market Contract now includes revised affordability, storage, or inventory evidence. Recheck demand and spoilage exposure before buying stock.",
+        "marketTitle": "Eldoran wholesale availability changed",
+        "marketBody": "Harvest uncertainty is affecting food prices and supply claims. Verify actual availability, storage capacity, and household demand before trading or accumulating inventory.",
+        "recoveryTitle": "Eldoran reserve or substitute access available",
+        "recoveryBody": "A verified public reserve, substitute product, or distribution placement is available. Review quantity limits and access requirements before using high-cost private supply."
+      }
+    },
+    "valerion": {
+      "opportunity": {
+        "name": "Glassfall Water Resilience Investment",
+        "summary": "The Water Energy Commission is commissioning filtration maintenance, public refill monitoring, and efficient pumping upgrades across high-cost districts.",
+        "confirmedFacts": ["Public-service projects require water-quality evidence and maintenance records.", "Shared-housing and low-income districts receive priority in the first round."],
+        "uncertainty": "Filter-media availability and private utility participation vary by district.",
+        "playerHooks": ["perform water tests", "inspect infrastructure", "coordinate verified filter and pump maintenance"],
+        "civilianRisks": ["private service fees can rise faster than wages", "filter shortages can affect housing eligibility and health"],
+        "recovery": "Use public monitoring, cartridge rotation, and ceramic substitutes while preserving essential household access."
+      },
+      "pressure": {
+        "name": "Filter Allocation and Housing Utility Squeeze",
+        "summary": "A filtration-membrane shortage has forced utilities to prioritize public refill stations and essential housing systems.",
+        "confirmedFacts": ["Emergency cartridges and ceramic media remain approved for specified systems.", "Private landlords must disclose service interruptions and temporary measures."],
+        "uncertainty": "The delivery date for full membrane replacement stock is not confirmed.",
+        "playerHooks": ["audit water-service status", "install approved substitutes", "document landlord or utility compliance"],
+        "civilianRisks": ["temporary water-access interruptions", "higher utility and housing costs"],
+        "recovery": "Coordinate through the Water and Housing Office, rotate approved filters, and prioritize essential sites."
+      },
+      "news": {
+        "openingHeadline": "Glassfall launches water-resilience maintenance program",
+        "openingBody": "The Water Energy Commission is commissioning public refill monitoring, filtration maintenance, and efficient pumping upgrades. Shared-housing and high-risk districts receive priority.",
+        "pressureHeadline": "Valerion prioritizes essential systems during membrane shortage",
+        "pressureBody": "Utilities are allocating limited filtration membranes to public refill stations and essential housing. Approved emergency cartridges and ceramic media remain available for compatible systems.",
+        "recoveryHeadline": "Glassfall expands substitute filters and utility inspections",
+        "recoveryBody": "Additional ceramic media, cartridge rotation, and inspection teams are entering service. Full recovery remains dependent on replacement membrane deliveries and verified maintenance."
+      },
+      "notifications": {
+        "contractTitle": "Valerion water-service Contract updated",
+        "contractBody": "A water or infrastructure Contract now requires revised test, filter, utility, or maintenance evidence. Confirm compatibility before installing substitute materials.",
+        "marketTitle": "Valerion filtration and utility notice",
+        "marketBody": "Membrane availability and service costs have changed. Review approved substitutes, district priority, housing exposure, and maintenance timing before purchasing.",
+        "recoveryTitle": "Valerion filter or inspection support available",
+        "recoveryBody": "A verified public inspection, cartridge rotation, or shared-housing utility support route is open. Check system compatibility and eligibility before private replacement."
+      }
+    },
+    "lumenor": {
+      "opportunity": {
+        "name": "Starfall Translation and Public Information Expansion",
+        "summary": "The Public Media Trust is commissioning verified translation, records clarification, and accessible civic briefings for residents navigating economic and residency changes.",
+        "confirmedFacts": ["Approved work must preserve source and correction history.", "Public institutions are prioritizing settlement, housing, and emergency information."],
+        "uncertainty": "Demand may exceed the number of qualified reviewers and trusted distribution channels.",
+        "playerHooks": ["translate verified dossiers", "produce accessible briefings", "audit correction lineage and public claims"],
+        "civilianRisks": ["inconsistent translations can block services", "fast-moving rumors can undermine public trust"],
+        "recovery": "Use paired review, source-linked corrections, and public distribution rather than unverified summaries."
+      },
+      "pressure": {
+        "name": "Credential Dispute and Trust Erosion",
+        "summary": "Conflicting translations and edited public notices have triggered credential disputes and reduced confidence in several informal information channels.",
+        "confirmedFacts": ["Original notices remain available with correction history.", "Institutions are accepting reviewed translations and documented appeals."],
+        "uncertainty": "The origin and scale of the altered notices remain under investigation.",
+        "playerHooks": ["verify sources", "prepare correction dossiers", "help residents navigate approved appeal routes"],
+        "civilianRisks": ["delayed housing, banking, and employment decisions", "heightened discrimination against unfamiliar records"],
+        "recovery": "Use the Civic Translation Desk, preserve originals, and publish linked corrections without erasing history."
+      },
+      "news": {
+        "openingHeadline": "Starfall expands verified translation and civic briefing work",
+        "openingBody": "The Public Media Trust is funding source-linked translation, records clarification, and accessible public briefings. Settlement, housing, and emergency information receive priority.",
+        "pressureHeadline": "Conflicting translations trigger Lumenor credential disputes",
+        "pressureBody": "Institutions report altered or inconsistent notices circulating through informal channels. Original records and correction history remain available, and reviewed appeals are being accepted.",
+        "recoveryHeadline": "Lumenor publishes linked corrections and expands review desks",
+        "recoveryBody": "The Civic Translation Desk and Public Media Trust are adding reviewers and issuing source-linked corrections. Residents are advised to preserve original notices and avoid unverified summaries."
+      },
+      "notifications": {
+        "contractTitle": "Lumenor document Contract updated",
+        "contractBody": "A translation, briefing, or records Contract now requires revised source and correction evidence. Preserve the original record and do not replace it with an unsupported summary.",
+        "marketTitle": "Lumenor public-information reliability notice",
+        "marketBody": "Credential and information disputes may affect education, media, and service demand. Verify sources, correction status, and institutional acceptance before acting.",
+        "recoveryTitle": "Lumenor reviewed correction route available",
+        "recoveryBody": "A verified translation review, appeal, or public-information support route is open. Bring the original record and its correction history."
+      }
+    },
+    "xalvoria": {
+      "opportunity": {
+        "name": "Emberhall Modular Infrastructure Program",
+        "summary": "The Project Accountability Office is approving modular repair, warehouse, and public-infrastructure pilots with transparent budgets and staged payments.",
+        "confirmedFacts": ["Projects must separate equipment finance from operating cash.", "Payment milestones require inspection evidence and documented material use."],
+        "uncertainty": "Steel costs, lender participation, and the number of projects reaching later stages remain uncertain.",
+        "playerHooks": ["prepare project estimates", "supply bounded fabrication services", "audit inventory and milestone evidence"],
+        "civilianRisks": ["debt-funded overexpansion", "delayed public repairs if projects fail financing review"],
+        "recovery": "Use staged procurement, public-project records, and smaller modules rather than a leveraged full-scale build."
+      },
+      "pressure": {
+        "name": "Project Debt and Steel Cost Audit",
+        "summary": "Auditors are reviewing infrastructure projects after steel-price increases and debt concentration pushed several budgets beyond approved limits.",
+        "confirmedFacts": ["Existing work may continue only within verified funding and material limits.", "Lenders must disclose revised total cost and payment timing."],
+        "uncertainty": "Some projects may be resized, delayed, or cancelled after the review.",
+        "playerHooks": ["recalculate project economics", "identify material substitutes", "support transparent milestone reporting"],
+        "civilianRisks": ["construction delays", "job losses and repayment pressure for small contractors"],
+        "recovery": "Rescope projects, restructure verified debt, and prioritize essential repairs over prestige expansion."
+      },
+      "news": {
+        "openingHeadline": "Emberhall approves staged modular infrastructure pilots",
+        "openingBody": "The Project Accountability Office has opened transparent repair, warehouse, and public-infrastructure pilots. Budgets must separate equipment finance, materials, operating cash, and milestone payments.",
+        "pressureHeadline": "Xalvoria audits project debt after steel-cost increase",
+        "pressureBody": "Infrastructure budgets are under review as steel prices and concentrated borrowing exceed approved limits. Work may continue only within verified funding and material constraints.",
+        "recoveryHeadline": "Emberhall restructures projects around essential repairs",
+        "recoveryBody": "Auditors and lenders are approving resized projects, staged procurement, and verified debt restructuring. Priority is shifting from expansion to essential repair and accountable delivery."
+      },
+      "notifications": {
+        "contractTitle": "Xalvoria project Contract budget updated",
+        "contractBody": "An infrastructure or fabrication Contract now includes revised material, finance, or milestone evidence. Recalculate total cost and payment timing before continuing work.",
+        "marketTitle": "Xalvoria steel and project-finance notice",
+        "marketBody": "Steel costs and project debt conditions have changed. Review approved funding, material substitutes, contractor exposure, and cancellation risk before investing.",
+        "recoveryTitle": "Xalvoria project restructure available",
+        "recoveryBody": "A verified rescoping, debt-counseling, or essential-repair route is available. Preserve invoices and milestone evidence before renegotiating."
+      }
+    },
+    "dravenlok": {
+      "opportunity": {
+        "name": "Ironhold Rail Maintenance Drive",
+        "summary": "The Workers Congress and rail operators are commissioning structural scans, maintenance rigs, and supervised repair crews for aging industrial routes.",
+        "confirmedFacts": ["Safety clearance and inspection evidence are mandatory.", "Essential worker-housing and freight connections receive first priority."],
+        "uncertainty": "Foundry output and replacement-part availability may limit the repair schedule.",
+        "playerHooks": ["support structural inspections", "perform documented maintenance", "coordinate verified material and crew needs"],
+        "civilianRisks": ["housing and wages tied to interrupted industrial work", "unsafe shortcuts if repair demand exceeds capacity"],
+        "recovery": "Use supervised crews, phased closures, and documented substitute materials rather than bypassing safety controls."
+      },
+      "pressure": {
+        "name": "Foundry Downtime and Worker Safety Halt",
+        "summary": "A high-heat equipment fault has reduced foundry output, and safety officials have paused affected lines pending inspection.",
+        "confirmedFacts": ["The halt is limited to identified equipment and connected production lines.", "Worker pay, housing, and reassignment protections are under review."],
+        "uncertainty": "The repair duration and impact on hardened steel supply are not yet confirmed.",
+        "playerHooks": ["inspect equipment", "plan substitute materials", "support worker reassignment and essential repairs"],
+        "civilianRisks": ["lost wages and housing insecurity", "delayed rail, utility, and building repairs"],
+        "recovery": "Coordinate through the Workers Congress, prioritize safe repair, and protect affected workers during reassignment."
+      },
+      "news": {
+        "openingHeadline": "Ironhold launches supervised rail-maintenance drive",
+        "openingBody": "Rail operators and the Workers Congress are commissioning structural scans, maintenance rigs, and documented repair work. Safety clearance and inspection evidence are mandatory.",
+        "pressureHeadline": "Dravenlok foundry lines paused after equipment fault",
+        "pressureBody": "Safety officials have halted identified high-heat equipment and connected lines pending inspection. The duration and effect on hardened steel supply remain under review.",
+        "recoveryHeadline": "Ironhold begins phased foundry restart and worker reassignment",
+        "recoveryBody": "Verified repairs and inspections are allowing limited production to resume. Worker reassignment, housing protection, and essential infrastructure orders remain priorities."
+      },
+      "notifications": {
+        "contractTitle": "Dravenlok maintenance Contract safety updated",
+        "contractBody": "An industrial Contract now includes revised inspection, equipment, or safety evidence. Confirm clearance and worker protections before entering the site or using materials.",
+        "marketTitle": "Dravenlok foundry and steel notice",
+        "marketBody": "Foundry downtime may affect steel and repair schedules. Review verified output, substitute materials, worker exposure, and essential-order priority before acting.",
+        "recoveryTitle": "Dravenlok reassignment or repair support available",
+        "recoveryBody": "A verified worker reassignment, housing-protection, or supervised repair route is open. Use the Workers Congress process and preserve placement records."
+      }
+    },
+    "syndalis": {
+      "opportunity": {
+        "name": "Blacklight Secure Communications Upgrade",
+        "summary": "The Data Rights Tribunal and licensed network operators are commissioning verified emergency channels, identity modules, and media-correction tools.",
+        "confirmedFacts": ["Approved systems must preserve authentication and correction lineage.", "Sensitive data may not be transferred through unverified service providers."],
+        "uncertainty": "Network capacity and public adoption may vary as older systems are replaced.",
+        "playerHooks": ["verify public notices", "support secure channel deployment", "audit identity and data-handling controls"],
+        "civilianRisks": ["temporary access gaps", "exclusion of residents with unresolved identity records"],
+        "recovery": "Maintain low-bandwidth verified access, supervised identity appeals, and transparent correction records."
+      },
+      "pressure": {
+        "name": "Identity Verification Congestion and Network Fraud",
+        "summary": "A surge of forged notices and duplicate identity claims has slowed verification and triggered restrictions on several high-risk digital channels.",
+        "confirmedFacts": ["Verified emergency channels remain operational.", "Affected users may appeal through the Authority with source and correction evidence."],
+        "uncertainty": "The full number of compromised notices and identities remains under investigation.",
+        "playerHooks": ["preserve evidence", "verify correction lineage", "help residents access approved low-bandwidth channels"],
+        "civilianRisks": ["delayed banking, housing, and employment access", "fraud losses and misinformation"],
+        "recovery": "Use supervised appeals, approved secure channels, and correction lineage rather than repeated unverified submissions."
+      },
+      "news": {
+        "openingHeadline": "Blacklight commissions secure channels and correction tools",
+        "openingBody": "The Data Rights Tribunal and licensed operators are funding verified emergency communications, identity modules, and media-correction systems. Approved providers must preserve authentication and audit history.",
+        "pressureHeadline": "Forged notices slow Syndalis identity verification",
+        "pressureBody": "Duplicate claims and falsified notices have triggered restrictions on high-risk channels. Verified emergency communications remain active, and documented appeals are available.",
+        "recoveryHeadline": "Syndalis expands identity appeals and verified low-bandwidth access",
+        "recoveryBody": "Additional review capacity and secure fallback channels are coming online. Recovery depends on preserved evidence, correction lineage, and avoidance of unverified resubmission services."
+      },
+      "notifications": {
+        "contractTitle": "Syndalis verification Contract updated",
+        "contractBody": "A communications or evidence Contract now includes revised authentication, correction, or data-handling requirements. Preserve source records and use only approved channels.",
+        "marketTitle": "Syndalis network and identity-risk notice",
+        "marketBody": "Verification congestion and channel restrictions may affect digital services. Review authentication status, data exposure, and approved fallback access before acting.",
+        "recoveryTitle": "Syndalis identity appeal or secure access available",
+        "recoveryBody": "A verified appeal, correction, or low-bandwidth access route is open. Preserve the original evidence and avoid duplicate unverified submissions."
+      }
+    }
+  },
+  "globalEvents": [
+    {
+      "key": "meridian-disruption",
+      "name": "Meridian Corridor Infrastructure Fracture",
+      "phase": "escalation",
+      "summary": "Coordinated damage has interrupted several Meridian freight, energy, and data segments. Authorities confirm physical disruption but have not established a final attribution.",
+      "confirmedFacts": ["Multiple corridor segments are operating below normal capacity.", "Essential civilian freight, power, and verified communications receive priority."],
+      "uncertainty": "The responsible actor, full damage extent, and restoration timeline remain unconfirmed.",
+      "civilianRisks": ["shortages and delayed wages", "travel restrictions and service interruptions", "misinformation about route safety"],
+      "playerHooks": ["verify local impacts", "support lawful substitutes and continuity plans", "avoid speculation presented as confirmed attribution"],
+      "recovery": "Use alternate verified routes, protect essential civilian access, and publish corrections as facts change."
+    },
+    {
+      "key": "confidence-shock",
+      "name": "Regional Credit and Confidence Shock",
+      "phase": "escalation",
+      "summary": "Banks, firms, and households are increasing cash buffers after the corridor disruption, tightening credit and delaying investment across several countries.",
+      "confirmedFacts": ["Liquidity remains available but risk reviews are stricter.", "Essential accounts and verified existing obligations remain in force."],
+      "uncertainty": "The duration of the confidence shock and the scale of future losses remain unknown.",
+      "civilianRisks": ["loan rejection or repricing", "job and project delays", "pressure to liquidate assets at weak prices"],
+      "playerHooks": ["review cash exposure", "compare verified restructuring routes", "communicate downside risk without causing panic"],
+      "recovery": "Use transparent briefings, bounded liquidity support, and verified restructuring rather than hidden guarantees."
+    },
+    {
+      "key": "cyber-coordination",
+      "name": "Cross-Border Verification Lockdown",
+      "phase": "crisis",
+      "summary": "Forged notices and compromised credentials linked to the Meridian crisis have prompted coordinated verification restrictions across borders.",
+      "confirmedFacts": ["Verified emergency channels remain active.", "Cross-border identity and payment reviews may take longer."],
+      "uncertainty": "Investigators have not determined whether every reported compromise shares the same origin.",
+      "civilianRisks": ["delayed remittances and travel", "loss of access for people with disputed records", "fraud and rumor amplification"],
+      "playerHooks": ["preserve evidence", "verify corrections", "support approved fallback communication and identity recovery"],
+      "recovery": "Coordinate secure channels, supervised appeals, and source-linked corrections while denying unverified shortcuts."
+    },
+    {
+      "key": "food-energy-squeeze",
+      "name": "Regional Food and Energy Affordability Squeeze",
+      "phase": "civilian-crisis",
+      "summary": "Route losses, precautionary buying, and energy constraints are raising essential costs unevenly across the ten countries.",
+      "confirmedFacts": ["Public support and strategic reserves are being released through verified channels.", "Availability differs by country, district, and product."],
+      "uncertainty": "Future supply, weather, and political restrictions may change the duration and severity of the squeeze.",
+      "civilianRisks": ["food and heating insecurity", "housing arrears", "unequal access and speculative hoarding"],
+      "playerHooks": ["map local need", "support fair distribution", "identify legal substitutes and household recovery paths"],
+      "recovery": "Use targeted support, transparent inventory, substitution, and protected essential access."
+    },
+    {
+      "key": "reconstruction-cycle",
+      "name": "Meridian Reconstruction and Accountability Cycle",
+      "phase": "reconstruction",
+      "summary": "Governments, firms, and communities are planning repairs to Meridian infrastructure while debating financing, attribution, and public accountability.",
+      "confirmedFacts": ["Essential repair and verified civilian recovery projects receive priority.", "Procurement and financing require audit records and staged approval."],
+      "uncertainty": "The final political settlement, total cost, and distribution of responsibility remain unresolved.",
+      "civilianRisks": ["debt accumulation", "corrupt or duplicated procurement", "unequal reconstruction and displacement"],
+      "playerHooks": ["prepare accountable project plans", "verify material and financing needs", "support community recovery without exploiting scarcity"],
+      "recovery": "Use phased procurement, transparent financing, independent inspection, and accessible community benefit criteria."
+    }
+  ]
+}
