@@ -20,9 +20,14 @@ jobs:
     name: Secure acceptance and drift ledger
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      SNAPSHOT_PATH: docs/operations/evidence/production-integration-gate-v1/live-staging-inventory-2026-07-22.json
+      SNAPSHOT_SOURCE_ROOT: /tmp/pr295-captured-inventory-source
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
@@ -31,17 +36,27 @@ jobs:
         run: >-
           node scripts/connected-release-framework.mjs validate-acceptance
           --contract docs/operations/evidence/production-integration-gate-v1/secure-acceptance-contract-v1.json
-      - name: Derive and validate live staging inventory
+      - name: Materialize captured canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          snapshot_commit="$(node -e "const row=require('./${SNAPSHOT_PATH}'); process.stdout.write(row.mainCommit)")"
+          [[ "$snapshot_commit" =~ ^[a-f0-9]{40}$ ]]
+          git cat-file -e "${snapshot_commit}^{commit}"
+          rm -rf "$SNAPSHOT_SOURCE_ROOT"
+          git worktree add --detach "$SNAPSHOT_SOURCE_ROOT" "$snapshot_commit"
+          test "$(git -C "$SNAPSHOT_SOURCE_ROOT" rev-parse HEAD)" = "$snapshot_commit"
+      - name: Derive and validate captured staging inventory
         run: >-
           node scripts/connected-release-framework.mjs validate-live-inventory
-          --snapshot docs/operations/evidence/production-integration-gate-v1/live-staging-inventory-2026-07-22.json
-          --repo-root .
-      - name: Validate forward-only migration reconciliation
+          --snapshot "$SNAPSHOT_PATH"
+          --repo-root "$SNAPSHOT_SOURCE_ROOT"
+      - name: Validate captured forward-only migration reconciliation
         run: >-
           node scripts/connected-release-framework.mjs validate-reconciliation
-          --snapshot docs/operations/evidence/production-integration-gate-v1/live-staging-inventory-2026-07-22.json
+          --snapshot "$SNAPSHOT_PATH"
           --plan docs/operations/evidence/production-integration-gate-v1/forward-only-reconciliation-v1.json
-          --repo-root .
+          --repo-root "$SNAPSHOT_SOURCE_ROOT"
       - name: Run secure framework tests
         run: node --test scripts/connected-release-framework.test.mjs
       - name: Record no-go boundary
@@ -49,11 +64,12 @@ jobs:
           {
             echo "## Secure connected release framework"
             echo "- Secure acceptance contract: \`green\`"
-            echo "- Drift-derived staging inventory: \`green\`"
-            echo "- Forward-only reconciliation contract: \`green\`"
-            echo "- Final release operations executed: \`false\`"
+            echo "- Captured staging inventory: \`green\`"
+            echo "- Captured forward-only reconciliation contract: \`green\`"
+            echo "- Historical evidence evaluated against captured source: \`true\`"
+            echo "- Final production operations executed: \`false\`"
             echo "- Production modified: \`false\`"
-            echo "- Stop: \`SECURE_ACCEPTANCE_FRAMEWORK_AND_DRIFT_LEDGER_GREEN_NO_GO\`"
+            echo "- Stop: \`SECURE_ACCEPTANCE_FRAMEWORK_AND_DRIFT_LEDGER_GREEN_STAGING_ONLY\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-# roadmap-complete exact-head validation pulse: 2026-07-23
+# roadmap-complete exact-head validation pulse: 2026-07-24
