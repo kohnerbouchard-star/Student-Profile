@@ -1,6 +1,6 @@
 {
   "activationAuthorized": false,
-  "fileCount": 19,
+  "fileCount": 20,
   "files": [
     {
       "bytes": 676,
@@ -63,14 +63,19 @@
       "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
     },
     {
-      "bytes": 4000,
+      "bytes": 4502,
       "path": "pack-v1.json",
-      "sha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6"
+      "sha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7"
     },
     {
       "bytes": 74019,
       "path": "physical-economy-calibration-v1.json",
       "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
+    },
+    {
+      "bytes": 22018,
+      "path": "progression-content-v2.json",
+      "sha256": "74f8619bd70e814bf27ec55932a9af5585f5cee8019677d9f0d85f38557b56f6"
     },
     {
       "bytes": 1232,
@@ -99,9 +104,9 @@
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "cd70b77feffab6ef10cc67da7b95f6bdd94fae88490ad6f340c86d847335322a",
+  "manifestContentSha256": "d836f2410e902a9abff05cf0bc6ce96559e66f6159f048ea1cb299401d1baeec",
   "packId": "econovaria.beta-seed-pack.v1",
-  "packSha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6",
+  "packSha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-integrity-manifest-v1",
   "status": "approved-for-isolated-staging",

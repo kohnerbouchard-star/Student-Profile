@@ -20,6 +20,9 @@
     "itemDefinitionsCalibrated": 144,
     "locationsVerified": 50,
     "marketInstruments": 240,
+    "progressionAchievements": 12,
+    "progressionReputationTypes": 4,
+    "progressionSkills": 12,
     "storeItemArtwork": 50,
     "storeItems": 50,
     "tutorialContractChains": 10
@@ -39,6 +42,9 @@
     "authoredCampaignNotificationTemplates": 30,
     "authoredContractDefinitions": 50,
     "authoredInteractions": 50,
+    "authoredProgressionAchievements": 12,
+    "authoredProgressionSkills": 12,
+    "authoredReputationTypes": 4,
     "duplicateArtworkAssignments": 0,
     "individualStoreArtworkRecords": 50,
     "interactionsWithEvidenceRequirements": 50,
@@ -47,7 +53,11 @@
     "placeholderCampaignContent": 0,
     "placeholderContractDescriptions": 0,
     "placeholderInteractionContent": 0,
+    "placeholderProgressionContent": 0,
     "placeholderStoreDescriptions": 0,
+    "progressionDefinitionsMatchedToRuntime": 24,
+    "progressionRecordsWithAntiAbuseGuidance": 12,
+    "progressionRecordsWithBoundaries": 24,
     "repeatedGenericArrivalTutorials": 0,
     "repeatedGenericTutorialInstructions": 0,
     "repositoryOwnedStoreArtwork": 50,
@@ -67,7 +77,8 @@
     "arrivals": "arrival-content-v2",
     "campaign": "campaign-content-v2",
     "contracts": "contract-content-v2",
-    "interactions": "interaction-content-v2"
+    "interactions": "interaction-content-v2",
+    "progression": "progression-content-v2"
   },
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
@@ -84,6 +95,7 @@
     "locations": "location-registry-verified-v1.json",
     "market": "market-templates-v1.json",
     "physicalEconomy": "physical-economy-calibration-v1.json",
+    "progressionContent": "progression-content-v2.json",
     "stableIdMap": "stable-id-map-v1.json",
     "store": "store-catalog-v1.json",
     "storeArtwork": "store-artwork-v2.json"
