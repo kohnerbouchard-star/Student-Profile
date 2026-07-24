@@ -235,9 +235,12 @@ try {
   assert(shareState.context?.includes(GAME_CODE) && shareState.context?.includes(GAME_NAME),
     `Share panel omitted the selected game context: ${shareState.context}`);
   assert(shareState.code === GAME_CODE, `Share panel displayed ${shareState.code}.`);
-  assert(shareState.playerLink.includes("mode=player"),
-    `Player link did not target Player mode: ${shareState.playerLink}`);
-  assert(shareState.playerLink.includes(`gameCode=${GAME_CODE}`),
+  const playerShareUrl = new URL(shareState.playerLink);
+  assert(playerShareUrl.pathname === "/play",
+    `Player link did not target the canonical /play route: ${shareState.playerLink}`);
+  assert(playerShareUrl.searchParams.get("mode") === "student",
+    `Player link did not use the canonical Player-share mode: ${shareState.playerLink}`);
+  assert(playerShareUrl.searchParams.get("gameCode") === GAME_CODE,
     `Player link did not include the selected code: ${shareState.playerLink}`);
   assert(shareState.adminLinkVisible === false, "Player share panel still exposes the Admin link.");
   assert(shareState.width <= Math.min(622, shareState.viewportWidth - 30),
