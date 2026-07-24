@@ -84,7 +84,7 @@
   function isLogoutTrigger(node) {
     if (!(node instanceof Element)) return false;
     if (node.closest("[data-econovaria-admin-logout-confirmation]")) return false;
-    if (node.matches('[data-econovaria-admin-logout="true"]')) return true;
+    if (node.matches("[data-econovaria-admin-logout]")) return true;
     const action = text(node.getAttribute("data-admin-terminal-action")).toLowerCase();
     if (LOGOUT_ACTIONS.has(action)) return true;
     const id = text(node.id).toLowerCase();
@@ -197,6 +197,11 @@
     button.textContent = "Signing out…";
 
     signOutPromise = (async () => {
+      const controller = window.EconovariaAdminLogoutController;
+      if (typeof controller?.beginLogout === "function") {
+        await controller.beginLogout(button);
+        return;
+      }
       await revokeSession();
       clearLocalStateAndRedirect();
     })().finally(() => {
@@ -285,7 +290,7 @@
     backdrop.querySelector("[data-econovaria-logout-cancel]")?.focus({ preventScroll: true });
   }
 
-  document.addEventListener("click", (event) => {
+  window.addEventListener("click", (event) => {
     const control = event.target?.closest?.("button, [role='button'], a, [data-admin-terminal-action]");
     if (!isLogoutTrigger(control)) return;
     event.preventDefault();
@@ -293,7 +298,7 @@
     openConfirmation(control);
   }, true);
 
-  document.addEventListener("keydown", (event) => {
+  window.addEventListener("keydown", (event) => {
     if (!["Enter", " "].includes(event.key)) return;
     const control = event.target;
     if (control instanceof HTMLButtonElement || !isLogoutTrigger(control)) return;
