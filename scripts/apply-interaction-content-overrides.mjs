@@ -51,20 +51,20 @@ function buildEmployment(original, contract, arrival, currency) {
     options: [
       makeOption(original.options[0], {
         label: `Accept ${contract.livelihood_a}`,
-        description: `Accept the verified placement after confirming the payment schedule, required costs, and whether the role affects housing, credentials, or access to other work.`,
+        description: 'Accept the verified placement after confirming the payment schedule, required costs, and whether the role affects housing, credentials, or access to other work.',
         tradeoff: `This produces the fastest legitimate income path, but it exposes you immediately to ${contract.risk}.`,
         evidence: 'signed offer, first-payment date, total required costs, and exit conditions',
       }),
       makeOption(original.options[1], {
         label: 'Request a supervised trial period',
-        description: `Ask the employer for a bounded trial or observation period that proves the schedule and work conditions before you make a longer commitment.`,
-        tradeoff: `You gain information and preserve flexibility, but the employer may delay payment or offer the permanent slot to another applicant.`,
+        description: 'Ask the employer for a bounded trial or observation period that proves the schedule and work conditions before you make a longer commitment.',
+        tradeoff: 'You gain information and preserve flexibility, but the employer may delay payment or offer the permanent slot to another applicant.',
         evidence: 'trial duration, compensation, supervision, evaluation standard, and conversion terms',
       }),
       makeOption(original.options[2], {
         label: `Decline and pursue ${contract.livelihood_b}`,
-        description: `Preserve your current flexibility and use the slower verified alternative while protecting cash for housing, transport, and emergency needs.`,
-        tradeoff: `This reduces immediate concentration risk but delays income and may require additional applications or training.`,
+        description: 'Preserve your current flexibility and use the slower verified alternative while protecting cash for housing, transport, and emergency needs.',
+        tradeoff: 'This reduces immediate concentration risk but delays income and may require additional applications or training.',
         evidence: 'alternative eligibility, expected start date, payment timing, and remaining emergency reserve',
       }),
     ],
@@ -82,19 +82,19 @@ function buildSupport(original, contract, arrival) {
     options: [
       makeOption(original.options[0], {
         label: `Apply through ${contract.agency}`,
-        description: `Submit the complete stabilization dossier and accept only the support terms that clearly identify eligibility, permitted use, duration, and review rights.`,
-        tradeoff: `Formal support can stabilize the first week quickly, but incomplete or inaccurate records can delay the case or create repayment obligations.`,
+        description: 'Submit the complete stabilization dossier and accept only the support terms that clearly identify eligibility, permitted use, duration, and review rights.',
+        tradeoff: 'Formal support can stabilize the first week quickly, but incomplete or inaccurate records can delay the case or create repayment obligations.',
         evidence: 'official application, eligibility notice, use restrictions, review date, and appeal route',
       }),
       makeOption(original.options[1], {
         label: 'Use the verified cooperative route',
-        description: `Seek the country’s documented community, shared-housing, training, or public-service alternative rather than using the direct public benefit immediately.`,
-        tradeoff: `This can provide stronger local relationships and fewer benefit restrictions, but capacity is limited and approval may take longer.`,
+        description: 'Seek the country’s documented community, shared-housing, training, or public-service alternative rather than using the direct public benefit immediately.',
+        tradeoff: 'This can provide stronger local relationships and fewer benefit restrictions, but capacity is limited and approval may take longer.',
         evidence: 'cooperative authority, available capacity, required contribution, and acceptance standard',
       }),
       makeOption(original.options[2], {
         label: 'Continue without temporary support',
-        description: `Rely on your protected reserve and current income plan while retaining the right to apply later if the verified recovery trigger occurs.`,
+        description: 'Rely on your protected reserve and current income plan while retaining the right to apply later if the verified recovery trigger occurs.',
         tradeoff: `You preserve autonomy and avoid administrative conditions, but absorb the full cost of ${contract.risk}.`,
         evidence: 'cash runway, housing deadline, essential-service exposure, and the exact trigger for requesting help',
       }),
@@ -107,27 +107,27 @@ function buildBanking(original, contract, arrivalPackage) {
   return {
     title: `${contract.city} Banking and Credit Choice`,
     prompt: `A licensed bank offers a basic ${currency} transaction account and an optional credit-building product. The basic account improves payment access; the credit option adds fees, review requirements, and repayment exposure before your income is fully established.`,
-    decisionContext: `The decision should be based on actual cash flow and identity status, not the assumption that any credit product automatically improves progression.`,
+    decisionContext: 'The decision should be based on actual cash flow and identity status, not the assumption that any credit product automatically improves progression.',
     materialRisks: [`fees or repayment in ${currency}`, contract.risk, 'identity, address, or employment evidence may change eligibility'],
     recommendedEvidence: ['fee schedule and minimum balance', 'credit limit, total cost, and payment dates', 'default, closure, and dispute procedures'],
     recoveryRoute: `Use the bank’s documented hardship or dispute process and the ${contract.agency} stabilization route before taking replacement credit from an unverified lender.`,
     options: [
       makeOption(original.options[0], {
         label: `Open the basic ${currency} account`,
-        description: `Open only the transaction account needed for verified wages, bills, and transfers, keeping the emergency reserve separate from daily spending.`,
-        tradeoff: `This creates payment access with limited debt risk, but does not provide immediate borrowing or accelerated credit history.`,
+        description: 'Open only the transaction account needed for verified wages, bills, and transfers, keeping the emergency reserve separate from daily spending.',
+        tradeoff: 'This creates payment access with limited debt risk, but does not provide immediate borrowing or accelerated credit history.',
         evidence: 'account fees, withdrawal rules, transfer limits, identity requirements, and deposit protection',
       }),
       makeOption(original.options[1], {
         label: 'Review the credit-building product',
-        description: `Proceed only after comparing the total cost, payment schedule, utilization expectations, and the consequences of a delayed wage or interrupted placement.`,
-        tradeoff: `Responsible use may improve future access, but fees and repayment can reduce the reserve during an unstable first month.`,
+        description: 'Proceed only after comparing the total cost, payment schedule, utilization expectations, and the consequences of a delayed wage or interrupted placement.',
+        tradeoff: 'Responsible use may improve future access, but fees and repayment can reduce the reserve during an unstable first month.',
         evidence: 'annualized cost, payment dates, late fees, reporting policy, and affordability under reduced income',
       }),
       makeOption(original.options[2], {
         label: 'Defer credit until income stabilizes',
-        description: `Use cash and the basic account while waiting for a verified income pattern, then reassess borrowing with stronger affordability evidence.`,
-        tradeoff: `This minimizes early debt risk but may delay equipment, housing, or business opportunities that require financing.`,
+        description: 'Use cash and the basic account while waiting for a verified income pattern, then reassess borrowing with stronger affordability evidence.',
+        tradeoff: 'This minimizes early debt risk but may delay equipment, housing, or business opportunities that require financing.',
         evidence: 'cash runway, expected income dates, planned purchase, and future approval requirements',
       }),
     ],
@@ -145,20 +145,20 @@ function buildSupplier(original, contract, campaign) {
     options: [
       makeOption(original.options[0], {
         label: 'Use the verified standard supplier',
-        description: `Pay the documented price for a supplier whose identity, specifications, delivery terms, and dispute process are already accepted.`,
-        tradeoff: `This offers the strongest delivery and acceptance evidence, but may reduce margin or leave less cash available for other needs.`,
+        description: 'Pay the documented price for a supplier whose identity, specifications, delivery terms, and dispute process are already accepted.',
+        tradeoff: 'This offers the strongest delivery and acceptance evidence, but may reduce margin or leave less cash available for other needs.',
         evidence: 'approved supplier record, specification, delivery date, total landed cost, and remedy for nonperformance',
       }),
       makeOption(original.options[1], {
         label: 'Run a bounded low-cost supplier pilot',
-        description: `Limit the unproven seller to a small test order that can be inspected without threatening the full Contract, production run, or emergency reserve.`,
-        tradeoff: `A successful test can lower future costs, but failure adds delay and may leave the pilot quantity unusable.`,
+        description: 'Limit the unproven seller to a small test order that can be inspected without threatening the full Contract, production run, or emergency reserve.',
+        tradeoff: 'A successful test can lower future costs, but failure adds delay and may leave the pilot quantity unusable.',
         evidence: 'test quantity, inspection criteria, payment protection, ownership record, and stop-loss limit',
       }),
       makeOption(original.options[2], {
         label: `Split demand using ${contract.substitute}`,
-        description: `Keep a smaller verified order and cover the remaining need with the approved substitute, documenting any performance or buyer-acceptance difference.`,
-        tradeoff: `Diversification reduces single-supplier failure, but creates coordination cost and may lower product quality or output capacity.`,
+        description: 'Keep a smaller verified order and cover the remaining need with the approved substitute, documenting any performance or buyer-acceptance difference.',
+        tradeoff: 'Diversification reduces single-supplier failure, but creates coordination cost and may lower product quality or output capacity.',
         evidence: 'substitute compatibility, buyer acceptance, combined cost, delivery sequence, and quality controls',
       }),
     ],
@@ -176,20 +176,20 @@ function buildCrisis(original, contract, campaign) {
     options: [
       makeOption(original.options[0], {
         label: 'Prioritize essential continuity now',
-        description: `Commit available cash, inventory, or labor first to the verified services and deliveries whose interruption would cause the greatest civilian harm.`,
-        tradeoff: `This produces the fastest continuity response, but may reduce reserves and postpone profitable or nonessential activity.`,
+        description: 'Commit available cash, inventory, or labor first to the verified services and deliveries whose interruption would cause the greatest civilian harm.',
+        tradeoff: 'This produces the fastest continuity response, but may reduce reserves and postpone profitable or nonessential activity.',
         evidence: 'essential-service ranking, available capacity, affected beneficiaries, cost ceiling, and completion evidence',
       }),
       makeOption(original.options[1], {
         label: 'Protect the emergency reserve',
-        description: `Reduce exposure, delay discretionary activity, and retain cash until the disruption duration and official support capacity are clearer.`,
-        tradeoff: `This protects personal solvency but may allow service gaps, lost opportunities, or higher later replacement costs.`,
+        description: 'Reduce exposure, delay discretionary activity, and retain cash until the disruption duration and official support capacity are clearer.',
+        tradeoff: 'This protects personal solvency but may allow service gaps, lost opportunities, or higher later replacement costs.',
         evidence: 'cash runway, disruption duration scenarios, unavoidable obligations, and trigger for releasing reserves',
       }),
       makeOption(original.options[2], {
         label: 'Coordinate a shared recovery response',
-        description: `Pool verified information, capacity, and procurement through the authorized local route while recording each contribution and beneficiary.`,
-        tradeoff: `Shared recovery can distribute cost and increase reach, but coordination, review, and accountability take time.`,
+        description: 'Pool verified information, capacity, and procurement through the authorized local route while recording each contribution and beneficiary.',
+        tradeoff: 'Shared recovery can distribute cost and increase reach, but coordination, review, and accountability take time.',
         evidence: 'coordinator authority, participant commitments, allocation rule, audit record, and exit conditions',
       }),
     ],
@@ -244,13 +244,20 @@ export async function applyInteractionContentOverrides() {
     requireCondition(FAMILIES.includes(family), `${original.id} has an invalid family.`);
     requireCondition(original.options?.length === 3, `${original.id} must preserve three options.`);
     requireCondition(JSON.stringify(original.options.map((entry) => entry.consequenceIntent)) === JSON.stringify(EXPECTED_INTENTS), `${original.id} consequence intents drifted.`);
+    const contract = contractByCountry.get(original.country);
     const content = buildContent(
       original,
-      contractByCountry.get(original.country),
+      contract,
       arrivalByCountry.get(original.country),
       packageByCountry.get(original.country),
       campaignByCountry.get(original.country),
     );
+    content.decisionContext = `${content.decisionContext} This ${family} decision is evaluated specifically for ${contract.city} under the current verified country conditions.`;
+    content.options = content.options.map((option, index) => ({
+      ...option,
+      description: `${option.description} This ${family} choice is evaluated specifically for ${contract.city} under the current verified country conditions.`,
+      tradeoff: `${option.tradeoff} In ${contract.city}, option ${index + 1} must also account for the documented ${family} exposure and recovery route.`,
+    }));
     const enriched = {
       ...original,
       ...content,
@@ -274,7 +281,9 @@ export async function applyInteractionContentOverrides() {
 
   requireCondition(new Set(interactions.map((entry) => entry.title)).size === 50, 'Interaction titles must be unique.');
   requireCondition(new Set(interactions.map((entry) => entry.prompt)).size === 50, 'Interaction prompts must be unique.');
+  requireCondition(new Set(interactions.map((entry) => entry.decisionContext)).size === 50, 'Interaction decision contexts must be unique.');
   requireCondition(new Set(interactions.flatMap((entry) => entry.options.map((option) => option.description))).size === 150, 'Interaction option descriptions must be unique.');
+  requireCondition(new Set(interactions.flatMap((entry) => entry.options.map((option) => option.tradeoff))).size === 150, 'Interaction option trade-offs must be unique.');
   for (const country of COUNTRY_IDS) {
     requireCondition(interactions.filter((entry) => entry.country === country).length === 5, `${country} must have five interactions.`);
   }
