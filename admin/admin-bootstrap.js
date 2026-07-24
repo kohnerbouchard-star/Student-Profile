@@ -6,6 +6,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
   {
     name: "game-session-access",
     modules: [
+      "./logout-account-trigger-bridge.js",
       "./admin-logout-controller.js",
       "./game-session-share-link-contract.js",
     ],

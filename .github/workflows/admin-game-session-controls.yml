@@ -10,6 +10,7 @@ on:
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
       - "admin/logout-confirmation.js"
+      - "admin/logout-account-trigger-bridge.js"
       - "admin/game-session-share-link-contract.js"
       - "admin/game-creation-runtime-bridge.js"
       - "admin/game-creation-style-loader.js"
@@ -27,6 +28,7 @@ on:
       - "scripts/admin-game-session-controls-smoke.mjs"
       - "scripts/admin-game-session-controls-browser-smoke.mjs"
       - "scripts/admin-logout-confirmation-browser-smoke.mjs"
+      - "scripts/admin-logout-account-trigger-source-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke-runner.mjs"
       - "scripts/admin-shell-identity-smoke.mjs"
@@ -67,9 +69,11 @@ jobs:
           node --check admin/game-creation-runtime-bridge.js
           node --check admin/game-creation-style-loader.js
           node --check admin/game-creation-controls.js
+          node --check admin/logout-account-trigger-bridge.js
           node --check scripts/admin-game-creation-browser-smoke.mjs
           node --check scripts/admin-game-creation-browser-smoke-runner.mjs
           node --check scripts/admin-logout-confirmation-browser-smoke.mjs
+          node scripts/admin-logout-account-trigger-source-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
           node scripts/admin-shell-identity-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
@@ -102,6 +106,12 @@ jobs:
           cat /tmp/admin-game-session-controls.log
           exit 1
 
+      - name: Exercise real account-menu logout confirmation in Chromium
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/admin-logout-confirmation-browser-smoke.mjs 2>&1 | tee /tmp/admin-logout-confirmation-browser.log
+
       - name: Click Share and verify direct logout transport in Chromium
         run: |
           cp admin/index.html /tmp/admin-index-with-logout-confirmation.html
@@ -116,12 +126,6 @@ jobs:
           )
           PY
           node scripts/admin-game-session-controls-browser-smoke.mjs
-
-      - name: Exercise bounded logout confirmation in Chromium
-        shell: bash
-        run: |
-          set -o pipefail
-          node scripts/admin-logout-confirmation-browser-smoke.mjs 2>&1 | tee /tmp/admin-logout-confirmation-browser.log
 
       - name: Create game and verify Player target in Chromium
         if: github.event.pull_request.number == 334

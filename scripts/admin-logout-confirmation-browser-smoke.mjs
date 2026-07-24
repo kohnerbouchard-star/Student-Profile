@@ -57,7 +57,7 @@ function responseFor(pathname) {
 }
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({ viewport: { width: 1728, height: 912 } });
 const page = await context.newPage();
 const errors = [];
 const requests = [];
@@ -96,16 +96,57 @@ await page.route("**/functions/v1/admin-api/**", async (route) => {
 });
 await page.route("**/auth/v1/logout", async (route) => route.fulfill({ status: 204, body: "" }));
 
+async function clickRealAccountLogout() {
+  const user = page.locator("[data-admin-terminal-user]").first();
+  await user.waitFor({ state: "visible", timeout: 10_000 });
+  await user.click();
+  const menu = page.locator("[data-admin-terminal-user-menu]").first();
+  await menu.waitFor({ state: "visible", timeout: 5_000 });
+  const candidates = menu.locator("button, a, [role='button'], [data-admin-terminal-action]");
+  const metadata = await candidates.evaluateAll((nodes) => nodes.map((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    const signals = [
+      node.getAttribute("data-admin-terminal-action"),
+      node.getAttribute("data-action"),
+      node.getAttribute("data-econovaria-admin-logout"),
+      node.id,
+      node.getAttribute("aria-label"),
+      node.getAttribute("title"),
+      node.textContent,
+    ].map((value) => String(value || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+    return {
+      outerHTML: node.outerHTML.slice(0, 1200),
+      signals,
+      visible: style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0,
+    };
+  }));
+  writeFileSync(`${ARTIFACT_DIR}/real-account-menu-controls.json`, JSON.stringify(metadata, null, 2));
+  const logoutIndex = metadata.findIndex((entry) => entry.visible && entry.signals.some((signal) =>
+    /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i.test(` ${signal} `),
+  ));
+  assert(logoutIndex >= 0, `No real account-menu logout control found: ${JSON.stringify(metadata)}`);
+  const logoutControl = candidates.nth(logoutIndex);
+  const selected = metadata[logoutIndex];
+  await logoutControl.click();
+  return selected;
+}
+
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15_000 });
-  const card = page.locator("[data-econovaria-game-session-card]").first();
-  await card.waitFor({ state: "visible", timeout: 10_000 });
-  const logoutButton = card.locator("[data-econovaria-admin-logout]");
-  await logoutButton.click();
+  await page.locator("[data-admin-terminal-user]").first().waitFor({ state: "visible", timeout: 10_000 });
 
+  const realControl = await clickRealAccountLogout();
   const modal = page.locator("[data-econovaria-admin-logout-confirmation]");
   await modal.waitFor({ state: "visible", timeout: 5_000 });
+  const legacyVisible = await page.locator("[data-admin-terminal-modal-backdrop]").evaluateAll((nodes) => nodes.filter((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return !node.hidden && style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+  }).length);
+  assert(legacyVisible === 0, `Legacy logout modal remained visible alongside the owned confirmation: ${legacyVisible}`);
+
   const state = await modal.evaluate((surface) => {
     const dialog = surface.querySelector('[role="dialog"]');
     const title = surface.querySelector("h2").getBoundingClientRect();
@@ -148,7 +189,7 @@ try {
     `Logout buttons are not fixed at 44px: ${JSON.stringify(state.buttons)}`);
   assert(Math.abs(state.buttons[0].y - state.buttons[1].y) <= 1, "Logout buttons are not aligned.");
   assert(!state.horizontalOverflow, "Logout modal overflows horizontally.");
-  await page.screenshot({ path: `${ARTIFACT_DIR}/logout-confirmation.png`, fullPage: true });
+  await page.screenshot({ path: `${ARTIFACT_DIR}/logout-confirmation-real-account-control.png`, fullPage: true });
   writeFileSync(`${ARTIFACT_DIR}/logout-confirmation.html`, await page.content());
 
   await modal.locator("[data-econovaria-logout-cancel]").last().click();
@@ -156,7 +197,7 @@ try {
   assert(await page.evaluate(() => Boolean(sessionStorage.getItem("econovaria.admin.auth.v1"))),
     "Cancel incorrectly cleared the Admin session.");
 
-  await logoutButton.click();
+  await clickRealAccountLogout();
   await modal.waitFor({ state: "visible", timeout: 5_000 });
   await Promise.all([
     page.waitForURL((url) => url.searchParams.get("mode") === "admin" && url.searchParams.get("reason") === "signed-out",
@@ -173,12 +214,14 @@ try {
   assert(requests.some((entry) => entry.includes("POST") && entry.includes("/auth/v1/logout")),
     `Supabase Auth revocation was not attempted: ${JSON.stringify(requests)}`);
   assert(errors.length === 0, errors.join("\n"));
-  writeFileSync(`${ARTIFACT_DIR}/report.json`, JSON.stringify({ state, storage, errors }, null, 2));
-  console.log(JSON.stringify({ boundedLogoutModal: true, cancelPreservesSession: true,
+  writeFileSync(`${ARTIFACT_DIR}/report.json`, JSON.stringify({ realControl, state, storage, errors }, null, 2));
+  console.log(JSON.stringify({ realAccountLogoutControl: true, boundedLogoutModal: true,
+    legacyModalSuppressed: true, cancelPreservesSession: true,
     confirmationClearsSession: true, confirmationRedirects: true }, null, 2));
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }).catch(() => {});
   writeFileSync(`${ARTIFACT_DIR}/failure.html`, await page.content().catch(() => ""));
+  writeFileSync(`${ARTIFACT_DIR}/failure.txt`, String(error?.stack || error?.message || error));
   throw error;
 } finally {
   await browser.close();
