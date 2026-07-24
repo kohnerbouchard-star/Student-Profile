@@ -8,6 +8,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
     modules: [
       "./admin-logout-controller.js",
       "./game-session-share-link-contract.js",
+      "./game-creation-controls.js",
     ],
   },
   {
