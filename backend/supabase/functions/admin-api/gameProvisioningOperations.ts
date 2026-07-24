@@ -156,7 +156,7 @@ export async function handleGameProvisioningOperation(
     };
   }
 
-  const response = await service.rpc("create_provisioned_game_v1", {
+  const response = await service.rpc("create_provisioned_game_v2", {
     p_staff_user_id: operation.staffUserId,
     p_game_name: parsed.input.name,
     p_game_settings: {
@@ -232,6 +232,7 @@ export async function handleGameProvisioningOperation(
           provisioningStatus,
           packId: text(result.packId),
           packVersion: text(result.packVersion),
+          activationVersion: text(result.activationVersion),
           joinCodeStatus: "active",
           joinCode,
           gameCode: joinCode,
@@ -241,6 +242,7 @@ export async function handleGameProvisioningOperation(
         joinCodeReissueRequired: result.joinCodeReissueRequired === true,
         counts: isRecord(result.counts) ? result.counts : {},
         contentGates: isRecord(result.contentGates) ? result.contentGates : {},
+        activationVersion: text(result.activationVersion),
         replayed,
       },
     },

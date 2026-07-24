@@ -1,6 +1,7 @@
 name: Game Creation Provisioning
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -10,6 +11,8 @@ on:
       - "backend/supabase/functions/admin-api/gameProvisioningOperations.ts"
       - "backend/supabase/functions/admin-api/gameProvisioningOperations.test.ts"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/full-game-local-e2e-acceptance.mjs"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/world-staging-provision-lib.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
       - "docs/seed-content/executable/beta-pack-v1/**"
@@ -18,22 +21,22 @@ permissions:
   contents: read
 
 concurrency:
-  group: game-creation-provisioning-${{ github.event.pull_request.number }}
+  group: game-creation-provisioning-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   provision:
-    if: github.event.pull_request.number == 334
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
     steps:
-      - name: Check out exact PR head
+      - name: Check out exact workflow head
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -48,6 +51,26 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/game-creation-provisioning-local-acceptance.mjs
+          node --check scripts/full-game-local-e2e-acceptance.mjs
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
 
       - name: Start disposable Supabase Postgres
         shell: bash
@@ -72,22 +95,31 @@ jobs:
       - name: Rebuild database from zero
         run: npx supabase db reset --workdir backend --local
 
-      - name: Execute canonical source to multiplayer game provisioning
+      - name: Execute canonical V1 source provisioning
         shell: bash
         run: |
           set -o pipefail
           node scripts/game-creation-provisioning-local-acceptance.mjs \
             2>&1 | tee /tmp/game-creation-provisioning-local-acceptance.log
 
+      - name: Execute connected full-game V2 activation
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/full-game-local-e2e-acceptance.mjs \
+            2>&1 | tee /tmp/full-game-local-e2e-acceptance.log
+
       - name: Upload sanitized provisioning evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: game-creation-provisioning-${{ github.event.pull_request.head.sha }}
+          name: game-creation-provisioning-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /tmp/game-creation-provisioning-startup.log
             /tmp/game-creation-provisioning-local-acceptance.log
             /tmp/game-creation-provisioning-local-acceptance.json
+            /tmp/full-game-local-e2e-acceptance.log
+            /tmp/full-game-local-e2e-acceptance.json
           if-no-files-found: warn
           retention-days: 30
 
