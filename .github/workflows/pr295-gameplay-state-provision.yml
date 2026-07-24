@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 35
     environment: staging
     env:
-      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
+      RELEASE_COMMIT: 43d2534e3f7e958119b7cb15ed474065a66f2574
       SOURCE_ROOT: /tmp/econovaria-gameplay-source
       PHYSICAL_ECONOMY_PACK_PATH: /tmp/physical-economy-runtime-pack.json
       EVIDENCE_PATH: /tmp/pr295-gameplay-state-provision.json
