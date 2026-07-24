@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 
 import { HttpTransport } from "../player-terminal/src/api/http-transport.js";
 import { headersFor } from "../player-terminal/src/integrations/student-profile-api-call.js";
@@ -10,6 +12,7 @@ import { resolvePlayerLogoutUrl } from "../player-terminal/src/integrations/play
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gatewayPath = path.join(repositoryRoot, "scripts", "local-staging-gateway.py");
+const runtimeConfigPath = path.join(repositoryRoot, "frontend", "src", "core", "runtime-config.js");
 
 function probeGateway() {
   const program = String.raw`
@@ -28,11 +31,24 @@ generated = module.runtime_config(
     "sb_publishable_contract_test",
     4173,
 )
+local_generated = module.runtime_config(
+    module.LOCAL_DEVELOPMENT_PROJECT_REF,
+    "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
+    4173,
+    environment="development",
+    supabase_url="http://127.0.0.1:54321",
+)
 prefix = "window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze("
 suffix = ");\n"
 assert generated.startswith(prefix)
 assert generated.endswith(suffix)
+assert local_generated.startswith(prefix)
+assert local_generated.endswith(suffix)
 config = json.loads(generated[len(prefix):-len(suffix)])
+local_config = json.loads(local_generated[len(prefix):-len(suffix)])
+parsed_status = module.parse_supabase_status_env(
+    'API_URL="http://127.0.0.1:54321"\nANON_KEY="anon-contract"\nIGNORED\n'
+)
 
 conditional_headers = Message()
 conditional_headers["If-Modified-Since"] = "Wed, 22 Jul 2026 00:00:00 GMT"
@@ -45,6 +61,8 @@ print(json.dumps({
     "rest": module.is_proxy_path("/rest/v1/players"),
     "storage": module.is_proxy_path("/storage/v1/object/public/example"),
     "config": config,
+    "localConfig": local_config,
+    "parsedStatus": parsed_status,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
     "remainingConditionals": list(conditional_headers.keys()),
 }))
@@ -61,6 +79,23 @@ print(json.dumps({
     `local gateway contract probe failed:\n${result.stderr || result.stdout}`,
   );
   return JSON.parse(result.stdout);
+}
+
+function legacyAnonKey(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `eyJhbGciOiJIUzI1NiJ9.${encoded}.signature`;
+}
+
+function evaluateRuntimeConfig(config) {
+  const window = {
+    __ECONOVARIA_RUNTIME_CONFIG__: config,
+    atob(value) {
+      return Buffer.from(value, "base64").toString("binary");
+    },
+    document: { querySelector: () => null },
+  };
+  vm.runInNewContext(readFileSync(runtimeConfigPath, "utf8"), { window, URL });
+  return window.EconovariaRuntimeConfig;
 }
 
 test("local staging gateway proxies only Edge Function traffic", () => {
@@ -82,6 +117,62 @@ test("local staging config keeps Auth on Supabase and Edge APIs on loopback", ()
     apiProxyUrl: "http://127.0.0.1:4173",
     supabasePublishableKey: "sb_publishable_contract_test",
   });
+});
+
+test("local Supabase mode emits an explicit development-only runtime binding", () => {
+  const { localConfig, parsedStatus } = probeGateway();
+
+  assert.deepEqual(localConfig, {
+    environment: "development",
+    projectRef: "localdevelopment0000",
+    supabaseUrl: "http://127.0.0.1:54321",
+    apiProxyUrl: "http://127.0.0.1:4173",
+    supabasePublishableKey:
+      "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
+  });
+  assert.deepEqual(parsedStatus, {
+    API_URL: "http://127.0.0.1:54321",
+    ANON_KEY: "anon-contract",
+  });
+});
+
+test("runtime validator accepts local anon keys only under the local development binding", () => {
+  const anonKey = legacyAnonKey({ role: "anon", ref: "localhost" });
+  const runtime = evaluateRuntimeConfig({
+    environment: "development",
+    projectRef: "localdevelopment0000",
+    supabaseUrl: "http://127.0.0.1:54321",
+    apiProxyUrl: "http://127.0.0.1:4173",
+    supabasePublishableKey: anonKey,
+  });
+
+  assert.equal(runtime.environment, "development");
+  assert.equal(runtime.classroomApiUrl, "http://127.0.0.1:4173/functions/v1/classroom-api");
+  assert.throws(
+    () =>
+      evaluateRuntimeConfig({
+        environment: "staging",
+        projectRef: "localdevelopment0000",
+        supabaseUrl: "http://127.0.0.1:54321",
+        apiProxyUrl: "http://127.0.0.1:4173",
+        supabasePublishableKey: anonKey,
+      }),
+    /ECONOVARIA_RUNTIME_CONFIG_INVALID_LOCAL_BINDING/,
+  );
+});
+
+test("remote legacy anon keys retain exact project binding", () => {
+  assert.throws(
+    () =>
+      evaluateRuntimeConfig({
+        environment: "staging",
+        projectRef: "eecvbssdvarfcykcfrny",
+        supabaseUrl: "https://eecvbssdvarfcykcfrny.supabase.co",
+        apiProxyUrl: "http://127.0.0.1:4173",
+        supabasePublishableKey: legacyAnonKey({ role: "anon", ref: "anotherprojectref000" }),
+      }),
+    /ECONOVARIA_RUNTIME_CONFIG_INVALID_LEGACY_ANON_KEY/,
+  );
 });
 
 test("connected local static assets cannot reuse stale browser validators", () => {

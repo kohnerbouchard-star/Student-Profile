@@ -11,7 +11,17 @@ const changedFiles = readFileSync(changedFilePath, "utf8")
   .map((value) => value.trim())
   .filter(Boolean);
 
-const hasPlayerChanges = changedFiles.some((path) => path.startsWith("player-terminal/"));
+const playerImpactPaths = new Set([
+  "frontend/src/core/runtime-config.js",
+  "docs/operations/environments/runtime-config.env.template.js",
+  "scripts/runtime-config-contract.test.mjs",
+  "scripts/environment-neutral-browser-integration.test.mjs",
+  "scripts/local-staging-gateway.py",
+  "scripts/local-staging-gateway-contract.test.mjs",
+]);
+const hasPlayerChanges = changedFiles.some(
+  (path) => path.startsWith("player-terminal/") || playerImpactPaths.has(path),
+);
 
 const exactAllowed = new Set([
   ".github/workflows/player-terminal-verify.yml",

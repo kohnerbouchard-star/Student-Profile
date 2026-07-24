@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Serve Econovaria locally and proxy Edge Function requests through the same origin.
+"""Serve Econovaria locally and proxy Supabase Edge Function requests.
 
-This keeps browser traffic to connected Supabase Edge Functions same-origin during
-local development while preserving strict CORS on the staging project. Supabase
-Auth continues to use the real staging URL so login behavior matches hosted builds.
+The gateway supports two explicit modes:
+
+* connected staging, using a remote Supabase project reference and publishable key;
+* local development, using the running Supabase CLI stack discovered from
+  ``supabase status -o env``.
+
+In both modes the browser receives a temporary deployment-scoped
+``runtime-config.env.js`` and Edge Function traffic stays same-origin through the
+loopback gateway. The temporary configuration is restored or removed on shutdown.
 """
 
 from __future__ import annotations
@@ -13,6 +19,7 @@ import http.client
 import json
 import os
 import signal
+import subprocess
 import sys
 import threading
 import webbrowser
@@ -46,6 +53,8 @@ STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-Modified-Since",
     "If-None-Match",
 )
+LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
+LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 def is_proxy_path(path: str) -> bool:
@@ -62,7 +71,7 @@ def remove_static_conditionals(headers) -> None:
 
 
 def filtered_request_headers(headers, upstream_host: str) -> dict[str, str]:
-    """Copy end-to-end request headers and bind Host to the upstream project."""
+    """Copy end-to-end request headers and bind Host to the upstream runtime."""
     result: dict[str, str] = {}
     for name, value in headers.items():
         lower_name = name.lower()
@@ -74,12 +83,7 @@ def filtered_request_headers(headers, upstream_host: str) -> dict[str, str]:
 
 
 def filtered_response_headers(headers) -> list[tuple[str, str]]:
-    """Return end-to-end response headers, excluding upstream CORS metadata.
-
-    Browser requests to this gateway are same-origin, so forwarding an upstream
-    Access-Control-Allow-Origin value for a different origin is unnecessary and
-    misleading.
-    """
+    """Return end-to-end response headers, excluding upstream CORS metadata."""
     result: list[tuple[str, str]] = []
     for name, value in headers:
         lower_name = name.lower()
@@ -91,8 +95,98 @@ def filtered_response_headers(headers) -> list[tuple[str, str]]:
     return result
 
 
+def parse_supabase_status_env(source: str) -> dict[str, str]:
+    """Parse ``supabase status -o env`` without executing shell output."""
+    values: dict[str, str] = {}
+    for raw_line in source.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        if key:
+            values[key] = value
+    return values
+
+
+def local_supabase_runtime(root: Path) -> tuple[str, str]:
+    """Return local Supabase API URL and browser-safe anon/publishable key."""
+    command = [
+        "npx",
+        "supabase",
+        "status",
+        "-o",
+        "env",
+        "--workdir",
+        "backend",
+    ]
+    result = subprocess.run(
+        command,
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise SystemExit(
+            "Local Supabase is not running or could not be inspected. "
+            "Run `npx supabase start --workdir backend` and retry."
+            + (f"\n{detail}" if detail else "")
+        )
+
+    values = parse_supabase_status_env(result.stdout)
+    supabase_url = values.get("API_URL", "").rstrip("/")
+    publishable_key = values.get("PUBLISHABLE_KEY") or values.get("ANON_KEY") or ""
+    if not supabase_url:
+        raise SystemExit("Supabase status did not return API_URL")
+    if not publishable_key:
+        raise SystemExit("Supabase status did not return PUBLISHABLE_KEY or ANON_KEY")
+
+    parsed = urlsplit(supabase_url)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in LOCAL_HOSTS:
+        raise SystemExit("Local Supabase API_URL must use a loopback host")
+    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise SystemExit("Local Supabase API_URL must not include a path, query, or fragment")
+    if publishable_key.startswith("sb_secret_"):
+        raise SystemExit("Local Supabase returned a secret key instead of a browser-safe key")
+    if not publishable_key.startswith(("sb_publishable_", "eyJ")):
+        raise SystemExit("Local Supabase browser key has an unsupported format")
+    return supabase_url, publishable_key
+
+
+def runtime_config(
+    project_ref: str,
+    publishable_key: str,
+    port: int,
+    *,
+    environment: str = "staging",
+    supabase_url: str | None = None,
+) -> str:
+    resolved_supabase_url = (
+        supabase_url.rstrip("/")
+        if supabase_url
+        else f"https://{project_ref}.supabase.co"
+    )
+    config = {
+        "environment": environment,
+        "projectRef": project_ref,
+        "supabaseUrl": resolved_supabase_url,
+        "apiProxyUrl": f"http://127.0.0.1:{port}",
+        "supabasePublishableKey": publishable_key,
+    }
+    return (
+        "window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze("
+        + json.dumps(config, separators=(",", ":"))
+        + ");\n"
+    )
+
+
 class LocalStagingHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaLocalGateway/1.1"
+    server_version = "EconovariaLocalGateway/1.2"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -142,8 +236,18 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
     def _proxy(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0") or "0")
         body = self.rfile.read(content_length) if content_length else None
-        upstream_host = self.server.upstream_host  # type: ignore[attr-defined]
-        connection = http.client.HTTPSConnection(upstream_host, timeout=30)
+        upstream = self.server.upstream  # type: ignore[attr-defined]
+        connection_type = (
+            http.client.HTTPSConnection
+            if upstream.scheme == "https"
+            else http.client.HTTPConnection
+        )
+        connection = connection_type(
+            upstream.hostname,
+            port=upstream.port,
+            timeout=30,
+        )
+        upstream_host = upstream.netloc
 
         try:
             connection.request(
@@ -152,11 +256,11 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
                 body=body,
                 headers=filtered_request_headers(self.headers, upstream_host),
             )
-            upstream = connection.getresponse()
-            payload = upstream.read()
+            upstream_response = connection.getresponse()
+            payload = upstream_response.read()
 
-            self.send_response(upstream.status, upstream.reason)
-            for name, value in filtered_response_headers(upstream.getheaders()):
+            self.send_response(upstream_response.status, upstream_response.reason)
+            for name, value in filtered_response_headers(upstream_response.getheaders()):
                 if name.lower() == "content-length":
                     continue
                 self.send_header(name, value)
@@ -169,7 +273,7 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
             payload = json.dumps(
                 {
                     "code": "local_gateway_upstream_failed",
-                    "message": "The local gateway could not reach Supabase staging.",
+                    "message": "The local gateway could not reach the configured Supabase runtime.",
                 }
             ).encode("utf-8")
             self.send_response(502)
@@ -178,7 +282,7 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(payload)
-            print(f"Local staging gateway upstream failure: {error}", file=sys.stderr)
+            print(f"Local gateway upstream failure: {error}", file=sys.stderr)
         finally:
             connection.close()
 
@@ -187,32 +291,21 @@ class LocalStagingServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, server_address, handler_class, upstream_host: str):
+    def __init__(self, server_address, handler_class, upstream_url: str):
         super().__init__(server_address, handler_class)
-        self.upstream_host = upstream_host
-
-
-def runtime_config(project_ref: str, publishable_key: str, port: int) -> str:
-    config = {
-        "environment": "staging",
-        "projectRef": project_ref,
-        "supabaseUrl": f"https://{project_ref}.supabase.co",
-        "apiProxyUrl": f"http://127.0.0.1:{port}",
-        "supabasePublishableKey": publishable_key,
-    }
-    return (
-        "window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze("
-        + json.dumps(config, separators=(",", ":"))
-        + ");\n"
-    )
+        parsed = urlsplit(upstream_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("upstream_url must be an absolute HTTP(S) URL")
+        self.upstream = parsed
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Serve Econovaria locally with a same-origin Supabase Edge gateway."
     )
-    parser.add_argument("--project-ref", required=True)
-    parser.add_argument("--publishable-key", required=True)
+    parser.add_argument("--local-supabase", action="store_true")
+    parser.add_argument("--project-ref")
+    parser.add_argument("--publishable-key")
     parser.add_argument("--port", type=int, default=4173)
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[1]))
     parser.add_argument("--open", action="store_true", dest="open_browser")
@@ -221,10 +314,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not args.project_ref.isalnum() or len(args.project_ref) != 20:
-        raise SystemExit("--project-ref must be the 20-character Supabase project reference")
-    if not args.publishable_key.startswith(("sb_publishable_", "eyJ")):
-        raise SystemExit("--publishable-key must be a Supabase publishable or legacy anon key")
     if not 1 <= args.port <= 65535:
         raise SystemExit("--port must be between 1 and 65535")
 
@@ -232,10 +321,40 @@ def main() -> int:
     if not (root / "index.html").is_file():
         raise SystemExit(f"Repository root does not contain index.html: {root}")
 
+    if args.local_supabase:
+        if args.project_ref or args.publishable_key:
+            raise SystemExit(
+                "--local-supabase cannot be combined with --project-ref or --publishable-key"
+            )
+        supabase_url, publishable_key = local_supabase_runtime(root)
+        project_ref = LOCAL_DEVELOPMENT_PROJECT_REF
+        environment = "development"
+    else:
+        project_ref = args.project_ref or os.environ.get("ECONOVARIA_PROJECT_REF", "")
+        publishable_key = args.publishable_key or os.environ.get(
+            "ECONOVARIA_SUPABASE_PUBLISHABLE_KEY", ""
+        )
+        if not project_ref.isalnum() or len(project_ref) != 20:
+            raise SystemExit(
+                "--project-ref or ECONOVARIA_PROJECT_REF must be the 20-character Supabase project reference"
+            )
+        if not publishable_key.startswith(("sb_publishable_", "eyJ")):
+            raise SystemExit(
+                "--publishable-key or ECONOVARIA_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable or legacy anon key"
+            )
+        supabase_url = f"https://{project_ref}.supabase.co"
+        environment = "staging"
+
     config_path = root / "runtime-config.env.js"
     previous_config = config_path.read_bytes() if config_path.exists() else None
     config_path.write_text(
-        runtime_config(args.project_ref, args.publishable_key, args.port),
+        runtime_config(
+            project_ref,
+            publishable_key,
+            args.port,
+            environment=environment,
+            supabase_url=supabase_url,
+        ),
         encoding="utf-8",
     )
 
@@ -243,7 +362,7 @@ def main() -> int:
     server = LocalStagingServer(
         ("127.0.0.1", args.port),
         LocalStagingHandler,
-        upstream_host=f"{args.project_ref}.supabase.co",
+        upstream_url=supabase_url,
     )
 
     restored = False
@@ -265,7 +384,8 @@ def main() -> int:
     signal.signal(signal.SIGTERM, stop_server)
 
     address = f"http://127.0.0.1:{args.port}/"
-    print(f"Econovaria local staging gateway is running at {address}")
+    runtime_label = "local Supabase" if args.local_supabase else "connected staging"
+    print(f"Econovaria {runtime_label} gateway is running at {address}")
     print(f"Admin: {address}admin/")
     print(f"Player: {address}player-terminal/")
     print("Static assets: no-store; Supabase Auth: direct; Edge APIs: loopback proxy.")
