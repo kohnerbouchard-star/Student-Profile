@@ -31,7 +31,7 @@ if old not in html:
 html = html.replace(old, new, 1)
 INDEX.write_text(html, encoding="utf-8")
 
-smoke = SMOKE.read_text(encoding="utf-8")n
+smoke = SMOKE.read_text(encoding="utf-8")
 smoke = smoke.replace(
     '      logoStatus: logoResponse.status,\n      logoType: logoResponse.headers.get("content-type") || "",',
     '      logoStatus: logoResponse.status,\n      logoType: logoResponse.headers.get("content-type") || "",\n      logoSource: logo?.getAttribute("src") || "",\n      logoMode: logo?.getAttribute("data-econovaria-brand-source") || "",',
