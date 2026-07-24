@@ -20,14 +20,7 @@ Duplicate entry identities, duplicate exercise dates, entries outside the bond t
 
 ## Issuer exercise policy
 
-The deterministic policy evaluates only entries whose notice window contains the evaluation date. It compares:
-
-- the bond coupon rate;
-- the proposed refinancing yield;
-- the entry-specific minimum savings threshold;
-- remaining coupon savings through maturity;
-- call premium cost;
-- explicit refinancing cost.
+The deterministic policy evaluates only entries whose notice window contains the evaluation date. It compares the bond coupon rate, proposed refinancing yield, entry-specific minimum savings threshold, remaining coupon savings through maturity, call premium cost, and explicit refinancing cost.
 
 Exercise is recommended only when the basis-point threshold is met and the resulting net economic benefit is positive. The decision is an issuer-policy result, not an option valuation or automatic settlement instruction.
 
@@ -39,16 +32,12 @@ The implementation does not claim option-adjusted spread, duration under stochas
 
 ## Fail-closed boundary
 
-Every public result records:
-
-- `optionalPricingSupported: false`;
-- `activationAuthorized: false`;
-- `deterministic: true`.
+Every public result records `optionalPricingSupported: false`, `activationAuthorized: false`, and `deterministic: true`.
 
 This tranche creates no migrations, persistence schema, shared API routes, capability publication, Player/Admin route registration, Seed activation, staging deployment, or production deployment.
 
 ## Validation
 
-Focused tests cover economically beneficial call exercise, refinancing savings below the configured threshold, yield-to-worst selection across call and maturity candidates, duplicate and out-of-term call entries, call-schedule identity mismatch, and permanent fail-closed optional-pricing and activation markers.
+Focused tests cover beneficial call exercise, savings below threshold, yield-to-worst selection, duplicate and out-of-term call entries, schedule identity mismatch, and permanent fail-closed markers.
 
 Validation evidence: 136 Financial Markets domain tests passed with zero failures. The complete Financial Markets, Backend Typecheck, Repository Quality, Supply Chain Security, Exchange Calendar Runtime, and Required Game Market Timezone workflow set also passed.
