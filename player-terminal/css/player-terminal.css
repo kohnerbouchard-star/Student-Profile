@@ -1784,33 +1784,3 @@ body {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 }
-
-/* Cross-surface brand asset rendering repair. */
-.player-terminal-brand-mark {
-  position: relative !important;
-  overflow: hidden !important;
-  border-radius: 10px !important;
-  box-shadow: 0 0 16px rgba(0,212,255,.18), 0 0 18px rgba(255,0,238,.10) !important;
-}
-.player-terminal-logo-fallback,
-.player-terminal-logo-image {
-  position: absolute;
-  inset: 0;
-  width: 42px;
-  height: 42px;
-}
-.player-terminal-logo-fallback {
-  z-index: 0;
-  display: grid;
-  place-items: center;
-  color: var(--terminal-amber);
-  font: 900 25px/1 var(--player-terminal-font-ui);
-  text-shadow: 0 0 12px rgba(0,212,255,.7);
-}
-.player-terminal-logo-image {
-  z-index: 1;
-  display: block;
-  object-fit: cover;
-  border-radius: 10px;
-}
-.player-terminal-logo-image[hidden] { display: none !important; }
