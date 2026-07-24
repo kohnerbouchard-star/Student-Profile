@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr295-gameplay-state-provision-v1
+  group: pr295-gameplay-state-provision-v10
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 35
     environment: staging
     env:
-      RELEASE_COMMIT: b2738b83993cf6ed8ac47d68bad7e548f9b0293c
+      RELEASE_COMMIT: 3c37a0cbfbf29f7dafbc16ba222ffd180da03e08
       SOURCE_ROOT: /tmp/econovaria-gameplay-source
       PHYSICAL_ECONOMY_PACK_PATH: /tmp/physical-economy-runtime-pack.json
       EVIDENCE_PATH: /tmp/pr295-gameplay-state-provision.json
@@ -153,6 +153,7 @@ jobs:
           const fs = require('node:fs');
           const evidence = JSON.parse(fs.readFileSync(process.env.EVIDENCE_PATH, 'utf8'));
           console.log('## Staging gameplay baseline');
+          console.log(`- Runtime source: \`${process.env.RELEASE_COMMIT}\``);
           console.log(`- Crafting activation authorized: \`${evidence.crafting.activationAuthorized}\``);
           console.log(`- Crafting activation blocked: \`${evidence.crafting.activationBlocked}\``);
           console.log(`- Crafting authorization bypassed: \`${evidence.crafting.authorizationBypassed}\``);
