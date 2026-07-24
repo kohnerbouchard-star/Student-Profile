@@ -18,6 +18,7 @@ import {
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const PACK_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
+const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 function required(name) {
   const value = String(process.env[name] ?? '').trim();
@@ -71,7 +72,7 @@ async function resolveTargetGame(bindings, serviceRoleKey) {
   return selectExactTargetGame(rows, bindings);
 }
 
-async function verifyConnectedState({ bindings, serviceRoleKey, game, pack }) {
+async function verifyConnectedState({ bindings, serviceRoleKey, game, pack, seedSourceCommit }) {
   const gameFilter = exactFilter(game.id);
   const packFilter = exactFilter(pack.packId);
   const releases = await requestJson(
@@ -129,9 +130,11 @@ async function verifyConnectedState({ bindings, serviceRoleKey, game, pack }) {
   if (!Array.isArray(revisions) || revisions.length < 2) {
     throw new Error('Seed release revision ledger did not preserve predecessor and current identities');
   }
-  const currentRevision = revisions.find((row) => row.pack_sha256 === pack.packSha256);
-  if (!currentRevision || currentRevision.source_sha !== bindings.releaseCommit) {
-    throw new Error('Current Seed revision is not bound to the exact source commit');
+  const currentRevision = revisions.find(
+    (row) => row.pack_sha256 === pack.packSha256 && row.source_sha === seedSourceCommit,
+  );
+  if (!currentRevision) {
+    throw new Error('Current Seed revision is not bound to the exact Seed content source commit');
   }
   if (!revisions.some((row) => row.pack_sha256 !== pack.packSha256)) {
     throw new Error('Seed revision ledger is missing the immutable predecessor identity');
@@ -163,6 +166,10 @@ export async function runPersistentStagingRevisionProvisioning() {
     targetGameName: required('TARGET_GAME_NAME'),
     targetGameIdSha256: required('TARGET_GAME_ID_SHA256').toLowerCase(),
   });
+  const seedSourceCommit = String(process.env.SEED_SOURCE_COMMIT ?? bindings.releaseCommit).trim().toLowerCase();
+  if (!SOURCE_SHA_PATTERN.test(seedSourceCommit)) {
+    throw new Error('SEED_SOURCE_COMMIT must be an exact 40-character Git SHA');
+  }
   const approvedBy = required('PROVISION_APPROVED_BY');
   const evidencePath = process.env.EVIDENCE_PATH || '/tmp/pr295-persistent-staging-revision-provision.json';
   const workflowCommit = String(process.env.GITHUB_SHA ?? '').trim() || null;
@@ -178,7 +185,7 @@ export async function runPersistentStagingRevisionProvisioning() {
   const game = await resolveTargetGame(bindings, serviceRoleKey);
   const now = Date.now();
   const authorization = {
-    authorizationId: `pr295-revision-${bindings.releaseCommit.slice(0, 12)}-${bindings.targetGameIdSha256.slice(0, 12)}`,
+    authorizationId: `pr295-revision-${seedSourceCommit.slice(0, 12)}-${bindings.targetGameIdSha256.slice(0, 12)}`,
     approvedBy,
     approvedAt: new Date(now - 60_000).toISOString(),
     expiresAt: new Date(now + 30 * 60_000).toISOString(),
@@ -198,7 +205,7 @@ export async function runPersistentStagingRevisionProvisioning() {
     p_contract_templates: contracts.templates,
     p_store_items: store.items,
     p_fail_after_operations: null,
-    p_source_sha: bindings.releaseCommit,
+    p_source_sha: seedSourceCommit,
   });
   if (!outcome || outcome.outcome === 'failed') {
     throw new Error(`Seed revision application failed: ${outcome?.failureCode ?? 'unknown'}`);
@@ -212,6 +219,7 @@ export async function runPersistentStagingRevisionProvisioning() {
     serviceRoleKey,
     game,
     pack: packIdentity,
+    seedSourceCommit,
   });
   const evidence = {
     ...buildSanitizedProvisioningEvidence({
@@ -229,11 +237,13 @@ export async function runPersistentStagingRevisionProvisioning() {
       activePublicContractCount: verified.activePublicContractCount,
       activeVisibleStoreItemCount: verified.activeVisibleStoreItemCount,
     }),
+    seedContentSourceCommit: seedSourceCommit,
     revisionLedger: {
       revisionApplied: outcome.revisionApplied === true,
       revisionCount: verified.revisionCount,
       predecessorPreserved: verified.predecessorPreserved,
-      currentSourceBound: true,
+      seedContentSourceBound: true,
+      runtimeSourceBound: true,
       destructiveRollbackUsed: false,
     },
   };
