@@ -58,9 +58,8 @@ Focused tests cover:
 - call-schedule identity mismatch;
 - permanent fail-closed optional-pricing and activation markers.
 
-Exact code head `52659a15a3980802fe458d8f5d8d1ea5970cad81` and documented head `f3537be2fe41a47a54e4bdf71e066d00a93d4031` passed:
+Exact code head `52659a15a3980802fe458d8f5d8d1ea5970cad81` passed 136 Financial Markets domain tests with zero failures. Documentation-only head `57ab2249eaf0a658826bf60038a88bbd5003da20` passed:
 
-- 136 Financial Markets domain tests with zero failures;
 - Full Financial Markets Expansion;
 - Backend Typecheck;
 - Repository Quality;
