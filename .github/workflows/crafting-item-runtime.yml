@@ -125,7 +125,6 @@ jobs:
           NODE
           )"
           [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
-          git cat-file -e "${source_commit}^{commit}"
           node scripts/build-physical-economy-runtime-pack.mjs \
             --source-root . \
             --source-commit "$source_commit" \
