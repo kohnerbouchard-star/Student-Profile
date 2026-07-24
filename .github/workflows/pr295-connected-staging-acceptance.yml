@@ -16,7 +16,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-connected-staging-v8
+  group: pr295-connected-staging-v9
   cancel-in-progress: true
 
 jobs:
@@ -38,14 +38,14 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      RELEASE_COMMIT: 43d2534e3f7e958119b7cb15ed474065a66f2574
-      TOOLING_COMMIT: feb32bc9d8b387bc565151e8a6c622f300c702e6
-      SOURCE_RUN_ID: "30061484368"
-      SOURCE_ARTIFACT_ID: "8584690318"
-      DEPLOYMENT_RUN_ID: "30061727721"
-      DEPLOYMENT_HEAD: 169a9b142c0d8c7246cc21e23c7796ad5a6af97a
-      EXPECTED_MANIFEST_SHA256: 7fd306e1c635bc435b862ef29fc4179ef2568b50669b7a151235fcd6136e50e5
-      EXPECTED_ARTIFACT_SET_SHA256: c83135f67feaea903fb5eab2c48da4ae36de38d108e4b9ea72985a8002b4984a
+      RELEASE_COMMIT: b2738b83993cf6ed8ac47d68bad7e548f9b0293c
+      TOOLING_COMMIT: 60d1935c15450a0661aa464d766637f62a16ceab
+      SOURCE_RUN_ID: "30062364792"
+      SOURCE_ARTIFACT_ID: "8585002043"
+      DEPLOYMENT_RUN_ID: "30062610317"
+      DEPLOYMENT_HEAD: 86cf634f39197cc24cade3ead17a8c3efd1146a4
+      EXPECTED_MANIFEST_SHA256: 61b7c49ce0ade5e7ed53ca35ce4b594c50a43a3bdefc036973953056b1bdc24c
+      EXPECTED_ARTIFACT_SET_SHA256: d303d0a8774e4c75a89f2ca181e70003acf64e36c6c5a79dcd4913becba23af0
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
       EXPECTED_LEDGER_COUNT: "142"
@@ -130,8 +130,8 @@ jobs:
       - name: Download exact immutable artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8584690318
-          run-id: 30061484368
+          artifact-ids: 8585002043
+          run-id: 30062364792
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
