@@ -60,7 +60,10 @@ async function runHttpAcceptance() {
   if (adminBootstrap.body?.data?.admin?.role !== "game_admin") {
     throw new Error("Admin bootstrap did not resolve game_admin scope");
   }
-  if (!Array.isArray(adminBootstrap.body?.data?.games) || adminBootstrap.body.data.games.length !== 1) {
+  if (
+    !Array.isArray(adminBootstrap.body?.data?.games) ||
+    adminBootstrap.body.data.games.length !== 1
+  ) {
     throw new Error("Admin bootstrap did not resolve the synthetic owned game");
   }
   evidence.checks.connectedAdminJwt = true;
@@ -69,12 +72,17 @@ async function runHttpAcceptance() {
     bearer: env.anonKey,
     expectedStatuses: [401, 403],
   });
-  evidence.checks.adminUnauthenticatedDenied = [401, 403].includes(adminDenied.status);
+  evidence.checks.adminUnauthenticatedDenied = [401, 403].includes(
+    adminDenied.status,
+  );
 
-  const adminWrongGame = await http(`/functions/v1/admin-api/games/${randomUUID()}`, {
-    bearer: adminToken,
-    expectedStatuses: [404],
-  });
+  const adminWrongGame = await http(
+    `/functions/v1/admin-api/games/${randomUUID()}`,
+    {
+      bearer: adminToken,
+      expectedStatuses: [404],
+    },
+  );
   evidence.checks.adminWrongGameDenied = adminWrongGame.status === 404;
 
   const login = await http("/functions/v1/classroom-api/players/login", {
@@ -86,7 +94,9 @@ async function runHttpAcceptance() {
     },
   });
   loginSessionToken = login.body?.session?.token;
-  if (!loginSessionToken) throw new Error("Player login did not issue an application session");
+  if (!loginSessionToken) {
+    throw new Error("Player login did not issue an application session");
+  }
   assertSafePlayerResponse(login.body, fixture, "player login");
   evidence.checks.connectedPlayerLogin = true;
 
@@ -146,18 +156,24 @@ async function runHttpAcceptance() {
     body: "Replay-safe staging message.",
     idempotencyKey: `${fixture.runTag}:message:create`,
   };
-  const first = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: createBody,
-    expectedStatuses: [200, 201],
-  });
-  const replay = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: createBody,
-    expectedStatuses: [200, 201],
-  });
+  const first = await http(
+    "/functions/v1/classroom-api/players/me/messages/threads",
+    {
+      method: "POST",
+      playerToken: loginSessionToken,
+      body: createBody,
+      expectedStatuses: [200, 201],
+    },
+  );
+  const replay = await http(
+    "/functions/v1/classroom-api/players/me/messages/threads",
+    {
+      method: "POST",
+      playerToken: loginSessionToken,
+      body: createBody,
+      expectedStatuses: [200, 201],
+    },
+  );
   assertSafePlayerResponse(first.body, fixture, "message create");
   assertSafePlayerResponse(replay.body, fixture, "message replay");
   const firstText = JSON.stringify(first.body);
@@ -166,29 +182,54 @@ async function runHttpAcceptance() {
   const replayThread = replayText.match(PUBLIC_THREAD_PATTERN)?.[0];
   const firstMessage = firstText.match(PUBLIC_MESSAGE_PATTERN)?.[0];
   const replayMessage = replayText.match(PUBLIC_MESSAGE_PATTERN)?.[0];
-  if (!firstThread || firstThread !== replayThread || !firstMessage || firstMessage !== replayMessage) {
-    throw new Error("Messaging idempotent replay did not preserve public identities");
+  if (
+    !firstThread ||
+    firstThread !== replayThread ||
+    !firstMessage ||
+    firstMessage !== replayMessage
+  ) {
+    throw new Error(
+      "Messaging idempotent replay did not preserve public identities",
+    );
   }
   evidence.checks.messagingReplay = true;
 
-  psql(`update public.game_sessions set lifecycle_state='paused',paused_at=now() where id=${sqlLiteral(fixture.gameId)};`);
-  const paused = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: { ...createBody, idempotencyKey: `${fixture.runTag}:message:paused` },
-    expectedStatuses: [409],
-  });
+  psql(
+    `update public.game_sessions set lifecycle_state='paused',paused_at=now() where id=${sqlLiteral(fixture.gameId)};`,
+  );
+  const paused = await http(
+    "/functions/v1/classroom-api/players/me/messages/threads",
+    {
+      method: "POST",
+      playerToken: loginSessionToken,
+      body: {
+        ...createBody,
+        idempotencyKey: `${fixture.runTag}:message:paused`,
+      },
+      expectedStatuses: [409],
+    },
+  );
   evidence.checks.pausedMutationDenied = paused.status === 409;
 
-  psql(`update public.game_sessions set lifecycle_state='ended',ended_at=now(),paused_at=null where id=${sqlLiteral(fixture.gameId)};`);
-  const ended = await http("/functions/v1/classroom-api/players/me/messages/threads", {
-    method: "POST",
-    playerToken: loginSessionToken,
-    body: { ...createBody, idempotencyKey: `${fixture.runTag}:message:ended` },
-    expectedStatuses: [409],
-  });
+  psql(
+    `update public.game_sessions set lifecycle_state='ended',ended_at=now(),paused_at=null where id=${sqlLiteral(fixture.gameId)};`,
+  );
+  const ended = await http(
+    "/functions/v1/classroom-api/players/me/messages/threads",
+    {
+      method: "POST",
+      playerToken: loginSessionToken,
+      body: {
+        ...createBody,
+        idempotencyKey: `${fixture.runTag}:message:ended`,
+      },
+      expectedStatuses: [409],
+    },
+  );
   evidence.checks.endedMutationDenied = ended.status === 409;
-  psql(`update public.game_sessions set lifecycle_state='active',ended_at=null,paused_at=null,resumed_at=now() where id=${sqlLiteral(fixture.gameId)};`);
+  psql(
+    `update public.game_sessions set lifecycle_state='active',ended_at=null,paused_at=null,resumed_at=now() where id=${sqlLiteral(fixture.gameId)};`,
+  );
 }
 
 function runProgressionTransaction() {
@@ -230,17 +271,27 @@ function runProgressionTransaction() {
 
 function percentile(values, fraction) {
   const sorted = [...values].sort((a, b) => a - b);
-  return Number(sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)].toFixed(2));
+  return Number(
+    sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)].toFixed(2),
+  );
 }
 
-async function runLoad(label, count, {
-  batchSize = 10,
-  rampDelayMs = 250,
-} = {}) {
+async function runLoad(
+  label,
+  count,
+  {
+    batchSize = 10,
+    rampDelayMs = 250,
+  } = {},
+) {
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > count) {
     throw new Error(`${label} load batch size is invalid`);
   }
-  if (!Number.isInteger(rampDelayMs) || rampDelayMs < 0 || rampDelayMs > 5_000) {
+  if (
+    !Number.isInteger(rampDelayMs) ||
+    rampDelayMs < 0 ||
+    rampDelayMs > 5_000
+  ) {
     throw new Error(`${label} load ramp delay is invalid`);
   }
   const latencies = [];
@@ -252,20 +303,25 @@ async function runLoad(label, count, {
     const batchTokens = tokens.slice(offset, offset + batchSize);
     const batchLatencies = [];
     const batchStarted = performance.now();
-    await Promise.all(batchTokens.map(async (token) => {
-      try {
-        const result = await http("/functions/v1/classroom-api/players/me/capabilities", {
-          playerToken: token,
-        });
-        statuses.push(result.status);
-        latencies.push(result.latencyMs);
-        batchLatencies.push(result.latencyMs);
-      } catch {
-        statuses.push(0);
-        latencies.push(20_000);
-        batchLatencies.push(20_000);
-      }
-    }));
+    await Promise.all(
+      batchTokens.map(async (token) => {
+        try {
+          const result = await http(
+            "/functions/v1/classroom-api/players/me/capabilities",
+            {
+              playerToken: token,
+            },
+          );
+          statuses.push(result.status);
+          latencies.push(result.latencyMs);
+          batchLatencies.push(result.latencyMs);
+        } catch {
+          statuses.push(0);
+          latencies.push(20_000);
+          batchLatencies.push(20_000);
+        }
+      }),
+    );
     batches.push({
       batchNumber: batches.length + 1,
       players: batchTokens.length,
@@ -290,46 +346,87 @@ async function runLoad(label, count, {
     p95Ms: percentile(latencies, 0.95),
     p99Ms: percentile(latencies, 0.99),
   };
-  if (report.errors) throw new Error(`${label} load produced ${report.errors} failed requests`);
-  if (report.p95Ms > 8_000) throw new Error(`${label} load p95 exceeded 8000ms`);
+  if (report.errors) {
+    throw new Error(`${label} load produced ${report.errors} failed requests`);
+  }
+  if (report.p95Ms > 8_000) {
+    throw new Error(`${label} load p95 exceeded 8000ms`);
+  }
   evidence.metrics[label] = report;
 }
 
 async function runRateLimitProbe() {
   const attempts = 100;
-  const results = await Promise.all(Array.from({ length: attempts }, () =>
-    http("/functions/v1/classroom-api/players/me/capabilities", {
-      playerToken: fixture.directSessionTokens[0],
-      expectedStatuses: [200, 429],
-    })
-  ));
+  const batchSize = 10;
+  const rampDelayMs = 100;
+  const results = [];
+  const batches = [];
+  for (let offset = 0; offset < attempts; offset += batchSize) {
+    const batchStarted = performance.now();
+    const batch = await Promise.all(
+      Array.from(
+        { length: Math.min(batchSize, attempts - offset) },
+        () =>
+          http("/functions/v1/classroom-api/players/me/capabilities", {
+            playerToken: fixture.directSessionTokens[0],
+            expectedStatuses: [200, 429],
+          }),
+      ),
+    );
+    results.push(...batch);
+    batches.push({
+      batchNumber: batches.length + 1,
+      requests: batch.length,
+      durationMs: Number((performance.now() - batchStarted).toFixed(2)),
+      allowed: batch.filter((result) => result.status === 200).length,
+      denied: batch.filter((result) => result.status === 429).length,
+    });
+    if (offset + batchSize < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, rampDelayMs));
+    }
+  }
   const denied = results.filter((result) => result.status === 429);
-  if (!denied.length) throw new Error("Rate-limit probe did not produce a bounded 429 denial");
-  if (!denied.some((result) => /^\d+$/.test(String(result.retryAfter ?? "")))) {
+  if (!denied.length) {
+    throw new Error("Rate-limit probe did not produce a bounded 429 denial");
+  }
+  if (
+    !denied.some((result) => /^\d+$/.test(String(result.retryAfter ?? "")))
+  ) {
     throw new Error("Rate-limit denial did not include Retry-After");
   }
   evidence.metrics.rateLimitProbe = {
+    profile: "bounded-abuse-ramp",
     attempts,
+    batchSize,
+    rampDelayMs,
+    batchCount: batches.length,
+    batches,
     allowed: results.filter((result) => result.status === 200).length,
     denied: denied.length,
+    unexpected: results.filter((result) => ![200, 429].includes(result.status))
+      .length,
   };
   evidence.checks.rateLimitEnforced = true;
 }
 
 function captureQueryPlans() {
-  const sessionPlan = JSON.parse(psql(`
-    explain (analyze, buffers, format json)
-    select * from public.player_sessions
-    where session_token_hash=${sqlLiteral(sha256(fixture.directSessionTokens[0]))}
-    limit 1;
-  `));
-  const playerPlan = JSON.parse(psql(`
-    explain (analyze, buffers, format json)
-    select * from public.players
-    where game_session_id=${sqlLiteral(fixture.gameId)}
-      and player_identifier_normalized=${sqlLiteral(fixture.playerIdentifiers[0])}
-    limit 1;
-  `));
+  const sessionPlan = JSON.parse(
+    psql(`
+      explain (analyze, buffers, format json)
+      select * from public.player_sessions
+      where session_token_hash=${sqlLiteral(sha256(fixture.directSessionTokens[0]))}
+      limit 1;
+    `),
+  );
+  const playerPlan = JSON.parse(
+    psql(`
+      explain (analyze, buffers, format json)
+      select * from public.players
+      where game_session_id=${sqlLiteral(fixture.gameId)}
+        and player_identifier_normalized=${sqlLiteral(fixture.playerIdentifiers[0])}
+      limit 1;
+    `),
+  );
   const summarize = (result) => {
     const plan = result?.[0]?.Plan ?? {};
     return {
@@ -375,18 +472,24 @@ function runEncryptedBackupRestoreRehearsal() {
   const decipher = createDecipheriv("aes-256-gcm", key, nonce);
   decipher.setAuthTag(tag);
   const restored = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  if (!restored.equals(plaintext)) throw new Error("Encrypted backup decrypt verification failed");
+  if (!restored.equals(plaintext)) {
+    throw new Error("Encrypted backup decrypt verification failed");
+  }
 
   const localPayload = restored.toString("utf8");
   const expectedCounts = JSON.parse(localPayload).rowCounts;
-  run("psql", [env.localRestoreUrl, "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], {
-    env: { PGPASSWORD: "postgres", PGSSLMODE: "disable" },
-    input: `
-      create table if not exists restore_payload (id integer primary key, payload jsonb not null);
-      truncate restore_payload;
-      insert into restore_payload values (1,$payload$${localPayload}$payload$::jsonb);
-    `,
-  });
+  run(
+    "psql",
+    [env.localRestoreUrl, "-X", "-qAt", "-v", "ON_ERROR_STOP=1"],
+    {
+      env: { PGPASSWORD: "postgres", PGSSLMODE: "disable" },
+      input: `
+        create table if not exists restore_payload (id integer primary key, payload jsonb not null);
+        truncate restore_payload;
+        insert into restore_payload values (1,$payload$${localPayload}$payload$::jsonb);
+      `,
+    },
+  );
   const restoredCounts = run(
     "psql",
     [
@@ -400,8 +503,12 @@ function runEncryptedBackupRestoreRehearsal() {
     ],
     { env: { PGPASSWORD: "postgres", PGSSLMODE: "disable" } },
   );
-  if (restoredCounts !== `${expectedCounts.players} ${expectedCounts.sessions}`) {
-    throw new Error(`Isolated restore row-count verification failed (${restoredCounts})`);
+  if (
+    restoredCounts !== `${expectedCounts.players} ${expectedCounts.sessions}`
+  ) {
+    throw new Error(
+      `Isolated restore row-count verification failed (${restoredCounts})`,
+    );
   }
   evidence.metrics.backupRestore = {
     scope: "synthetic-fixture-bounded",
@@ -443,7 +550,10 @@ async function main() {
     ].every(Boolean);
     evidence.decision = "GO";
   } catch (error) {
-    evidence.error = { name: error instanceof Error ? error.name : "Error", message: safeError(error, fixture) };
+    evidence.error = {
+      name: error instanceof Error ? error.name : "Error",
+      message: safeError(error, fixture),
+    };
     evidence.decision = "NO_GO";
   } finally {
     try {
@@ -454,11 +564,19 @@ async function main() {
       evidence.decision = "NO_GO";
     }
     evidence.completedAt = new Date().toISOString();
-    await writeFile(env.evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+    await writeFile(
+      env.evidencePath,
+      `${JSON.stringify(evidence, null, 2)}\n`,
+      "utf8",
+    );
   }
 
   if (evidence.decision !== "GO" || !cleanupComplete) {
-    throw new Error(evidence.error?.message || evidence.cleanup.error || "Connected staging acceptance failed");
+    throw new Error(
+      evidence.error?.message ||
+        evidence.cleanup.error ||
+        "Connected staging acceptance failed",
+    );
   }
 }
 
