@@ -17,6 +17,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
   {
     name: "game-creation",
     modules: [
+      "./game-creation-runtime-bridge.js",
       "./game-creation-style-loader.js",
       "./game-creation-controls.js",
     ],
