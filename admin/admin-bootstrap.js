@@ -5,7 +5,10 @@ const BOOTSTRAP_PHASES = Object.freeze([
   },
   {
     name: "game-session-access",
-    modules: ["./game-session-share-link-contract.js"],
+    modules: [
+      "./admin-logout-controller.js",
+      "./game-session-share-link-contract.js",
+    ],
   },
   {
     name: "modal-accessibility",
