@@ -1,0 +1,27 @@
+/* Canonical Econovaria brand assets. */
+.login-root .brand-block {
+  gap: 0;
+  padding: 22px 24px 16px;
+}
+
+.login-root .logo-mark {
+  width: min(286px, 100%);
+  height: auto;
+  aspect-ratio: 1672 / 941;
+  color: transparent;
+  background: url("../../../../assets/brand/econovaria-logo.png") center / contain no-repeat;
+  filter: drop-shadow(0 0 22px rgba(0, 212, 255, 0.24)) drop-shadow(0 0 26px rgba(255, 0, 238, 0.14));
+  animation: none;
+}
+
+.login-root .logo-mark svg,
+.login-root .brand-block h1,
+.login-root .brand-block p {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .login-root .logo-mark {
+    width: min(274px, 100%);
+  }
+}
