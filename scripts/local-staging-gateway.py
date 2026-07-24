@@ -47,9 +47,8 @@ STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-None-Match",
 )
 PNG_SIGNATURE: Final[bytes] = b"\x89PNG\r\n\x1a\n"
-JPEG_SIGNATURE: Final[bytes] = b"\xff\xd8\xff"
 REQUIRED_BRAND_ASSETS: Final[tuple[tuple[str, bytes], ...]] = (
-    ("assets/brand/econovaria-logo.jpg", JPEG_SIGNATURE),
+    ("assets/brand/econovaria-logo.png", PNG_SIGNATURE),
     ("assets/brand/econovaria-icon.png", PNG_SIGNATURE),
     ("assets/brand/favicon-32.png", PNG_SIGNATURE),
     ("player-terminal/assets/econovaria-icon.png", PNG_SIGNATURE),
