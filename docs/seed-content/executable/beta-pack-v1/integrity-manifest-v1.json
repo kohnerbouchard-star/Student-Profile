@@ -1,12 +1,7 @@
 {
   "activationAuthorized": false,
-  "fileCount": 12,
+  "fileCount": 13,
   "files": [
-    {
-      "bytes": 1232,
-      "path": "README.md",
-      "sha256": "f5dbcd70783bcf2f6a9594df0da9cda11ade6890d36f157fd31cf59eb79e97e6"
-    },
     {
       "bytes": 676,
       "path": "activation-authorization.template.json",
@@ -38,9 +33,9 @@
       "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
     },
     {
-      "bytes": 1946,
+      "bytes": 2320,
       "path": "pack-v1.json",
-      "sha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8"
+      "sha256": "5fd2fa7671ee506e4ca2f628f7be58353e08945f27cce7e9bf1c1e15aa7137fe"
     },
     {
       "bytes": 74019,
@@ -48,14 +43,24 @@
       "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
     },
     {
-      "bytes": 63517,
-      "path": "stable-id-map-v1.json",
-      "sha256": "e2e3d4053e869f0836292ad59c673f0231b91459204d68f81854b7bd69e33419"
+      "bytes": 1232,
+      "path": "README.md",
+      "sha256": "f5dbcd70783bcf2f6a9594df0da9cda11ade6890d36f157fd31cf59eb79e97e6"
     },
     {
-      "bytes": 35387,
+      "bytes": 77838,
+      "path": "stable-id-map-v1.json",
+      "sha256": "361f0bb443ca33bd3b64812d733f86614e146898b6615e2f9b801f589b3393a0"
+    },
+    {
+      "bytes": 37649,
+      "path": "store-artwork-v2.json",
+      "sha256": "08617d3ea09b05d9568ea397e59f649a07dd70b1b50308b644c72b808d3dae1a"
+    },
+    {
+      "bytes": 77310,
       "path": "store-catalog-v1.json",
-      "sha256": "ebddac868be1b561665b72eb579eb97fe4f2356a4d8cb3ad09a078c8c74d52b7"
+      "sha256": "0fa342fca769a5085caa1e2dbf1da5342db43f674c2a42bf3f395ba9481089a9"
     },
     {
       "bytes": 56165,
@@ -64,9 +69,9 @@
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "6da756aa92c57c28960a49ae83d968239138ed84685f87bfeb66bce050886fb7",
+  "manifestContentSha256": "977b28fcfffa846a63bf5bc58ce0757bbc280f2a9bca7ae8dfb6c2e451c6370f",
   "packId": "econovaria.beta-seed-pack.v1",
-  "packSha256": "190d09e5d0be729388af1d8e304d27e630bef40fba1f055c4272377f39b3f5e8",
+  "packSha256": "5fd2fa7671ee506e4ca2f628f7be58353e08945f27cce7e9bf1c1e15aa7137fe",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-integrity-manifest-v1",
   "status": "approved-for-isolated-staging",

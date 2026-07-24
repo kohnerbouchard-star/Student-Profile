@@ -19,7 +19,7 @@ const PLACEHOLDER_PATTERNS = [
   /lorem ipsum/i,
   /\btbd\b/i,
   /\btodo\b/i,
-  /replace[- ]?me/i,
+  /\breplace[- ]?me\b/i,
 ];
 
 function key(record) {

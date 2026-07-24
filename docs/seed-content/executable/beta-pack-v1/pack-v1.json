@@ -12,6 +12,7 @@
     "itemDefinitionsCalibrated": 144,
     "locationsVerified": 50,
     "marketInstruments": 240,
+    "storeItemArtwork": 50,
     "storeItems": 50,
     "tutorialContractChains": 10
   },
@@ -22,6 +23,15 @@
     "routeCount": 13,
     "scenarioCountPerCountry": 4
   },
+  "contentQuality": {
+    "duplicateArtworkAssignments": 0,
+    "individualStoreArtworkRecords": 50,
+    "placeholderStoreDescriptions": 0,
+    "repositoryOwnedStoreArtwork": 50,
+    "runtimeImagePathsAvailable": true,
+    "storeDescriptionsAuthored": 50
+  },
+  "contentRevision": "store-content-v2",
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
     "calibration": "calibration-scenarios-v1.json",
@@ -32,7 +42,8 @@
     "market": "market-templates-v1.json",
     "physicalEconomy": "physical-economy-calibration-v1.json",
     "stableIdMap": "stable-id-map-v1.json",
-    "store": "store-catalog-v1.json"
+    "store": "store-catalog-v1.json",
+    "storeArtwork": "store-artwork-v2.json"
   },
   "excluded": {
     "fullMarketUniverse3200": true,
