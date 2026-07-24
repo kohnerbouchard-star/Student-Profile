@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr295-game-policy-provision-v1
+  group: pr295-game-policy-provision-v10
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 25
     environment: staging
     env:
-      RELEASE_COMMIT: b2738b83993cf6ed8ac47d68bad7e548f9b0293c
+      RELEASE_COMMIT: 3c37a0cbfbf29f7dafbc16ba222ffd180da03e08
       EVIDENCE_PATH: /tmp/pr295-game-policy-provision.json
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
@@ -136,6 +136,7 @@ jobs:
         run: |
           {
             echo "## Staging policy baseline"
+            echo "- Runtime source: \`$RELEASE_COMMIT\`"
             echo '- Messaging player threads enabled: `true`'
             echo '- Messaging retention days: `365`'
             echo '- Messaging attachments enabled: `false`'
