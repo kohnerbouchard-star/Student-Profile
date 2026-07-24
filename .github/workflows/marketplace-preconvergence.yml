@@ -74,7 +74,7 @@ jobs:
           sha256sum /tmp/marketplace-convergence.bundle > /tmp/marketplace-convergence.bundle.sha256
 
       - name: Upload read-only convergence bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: marketplace-convergence-bundle
           path: |
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload Marketplace diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: marketplace-preconvergence-diagnostics
           path: |
@@ -165,7 +165,7 @@ jobs:
 
       - name: Publish exact-head Marketplace status
         if: always()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

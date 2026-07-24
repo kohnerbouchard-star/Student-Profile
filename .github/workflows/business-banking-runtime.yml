@@ -83,7 +83,7 @@ jobs:
           test "$status" -eq 0
       - name: Upload failed runtime contract diagnostics
         if: failure() && steps.runtime-contract.outputs.status != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: business-banking-runtime-contract-diagnostics
           path: ${{ runner.temp }}/business-banking-runtime-contract.log
