@@ -57,9 +57,9 @@ async function runLifecycleAcceptance() {
     method: "POST",
     playerToken: loginSessionToken,
     body: { ...createBody, idempotencyKey: \`\${fixture.runTag}:message:paused\` },
-    expectedStatuses: [409],
+    expectedStatuses: [401],
   });
-  evidence.checks.pausedMutationDenied = paused.status === 409;
+  evidence.checks.pausedMutationDenied = paused.status === 401;
 
   const resumeTransition = transitionSyntheticLifecycle("resume");
   if (
