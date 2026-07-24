@@ -1,4 +1,4 @@
-# regeneration revision: 2
+# regeneration revision: 3
 name: Campaign Content Regenerate PR
 
 on:
@@ -38,27 +38,51 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Correct concise campaign phrase thresholds
+      - name: Calibrate substantive campaign text thresholds
         shell: bash
         run: |
           python - <<'PY'
           import pathlib
-          path = pathlib.Path('scripts/apply-campaign-content-overrides.mjs')
-          text = path.read_text(encoding='utf-8')
-          replacements = {
-              "assertText(entry, 55, `${label}.confirmedFacts.${index + 1}`)": "assertText(entry, 40, `${label}.confirmedFacts.${index + 1}`)",
-              "assertText(entry, 24, `${label}.playerHooks.${index + 1}`)": "assertText(entry, 12, `${label}.playerHooks.${index + 1}`)",
-              "assertText(entry, 30, `${label}.civilianRisks.${index + 1}`)": "assertText(entry, 12, `${label}.civilianRisks.${index + 1}`)",
-              "key.endsWith('Headline') ? 24 : 130": "key.endsWith('Headline') ? 22 : 105",
-              "key.endsWith('Title') ? 20 : 120": "key.endsWith('Title') ? 18 : 100",
-              "assertText(entry, 55, `global.${event.key}.confirmedFacts.${index + 1}`)": "assertText(entry, 40, `global.${event.key}.confirmedFacts.${index + 1}`)",
+
+          replacements_by_file = {
+              'scripts/apply-campaign-content-overrides.mjs': {
+                  "assertText(detail.summary, 150, `${label}.summary`)": "assertText(detail.summary, 100, `${label}.summary`)",
+                  "assertText(entry, 55, `${label}.confirmedFacts.${index + 1}`)": "assertText(entry, 40, `${label}.confirmedFacts.${index + 1}`)",
+                  "assertText(detail.uncertainty, 80, `${label}.uncertainty`)": "assertText(detail.uncertainty, 55, `${label}.uncertainty`)",
+                  "assertText(entry, 24, `${label}.playerHooks.${index + 1}`)": "assertText(entry, 12, `${label}.playerHooks.${index + 1}`)",
+                  "assertText(entry, 30, `${label}.civilianRisks.${index + 1}`)": "assertText(entry, 12, `${label}.civilianRisks.${index + 1}`)",
+                  "assertText(detail.recovery, 90, `${label}.recovery`)": "assertText(detail.recovery, 70, `${label}.recovery`)",
+                  "key.endsWith('Headline') ? 24 : 130": "key.endsWith('Headline') ? 22 : 105",
+                  "key.endsWith('Title') ? 20 : 120": "key.endsWith('Title') ? 18 : 95",
+                  "assertText(event.summary, 150, `global.${event.key}.summary`)": "assertText(event.summary, 100, `global.${event.key}.summary`)",
+                  "assertText(entry, 55, `global.${event.key}.confirmedFacts.${index + 1}`)": "assertText(entry, 40, `global.${event.key}.confirmedFacts.${index + 1}`)",
+                  "assertText(event.uncertainty, 80, `global.${event.key}.uncertainty`)": "assertText(event.uncertainty, 55, `global.${event.key}.uncertainty`)",
+                  "assertText(event.recovery, 90, `global.${event.key}.recovery`)": "assertText(event.recovery, 70, `global.${event.key}.recovery`)",
+              },
+              'scripts/campaign-content-quality.test.mjs': {
+                  "assertPlayerFacingText(detail.summary, 150, `${country}.${family}.summary`)": "assertPlayerFacingText(detail.summary, 100, `${country}.${family}.summary`)",
+                  "assertPlayerFacingText(entry, 45, `${country}.${family}.fact.${index + 1}`)": "assertPlayerFacingText(entry, 40, `${country}.${family}.fact.${index + 1}`)",
+                  "assertPlayerFacingText(detail.uncertainty, 70, `${country}.${family}.uncertainty`)": "assertPlayerFacingText(detail.uncertainty, 55, `${country}.${family}.uncertainty`)",
+                  "assertPlayerFacingText(detail.recovery, 75, `${country}.${family}.recovery`)": "assertPlayerFacingText(detail.recovery, 70, `${country}.${family}.recovery`)",
+                  "key.endsWith('Headline') ? 22 : 115": "key.endsWith('Headline') ? 22 : 105",
+                  "key.endsWith('Title') ? 18 : 105": "key.endsWith('Title') ? 18 : 95",
+                  "assertPlayerFacingText(event.playerFacingSummary, 140, `${event.id}.summary`)": "assertPlayerFacingText(event.playerFacingSummary, 100, `${event.id}.summary`)",
+                  "assertPlayerFacingText(event.uncertainty, 70, `${event.id}.uncertainty`)": "assertPlayerFacingText(event.uncertainty, 55, `${event.id}.uncertainty`)",
+                  "assertPlayerFacingText(event.recoveryGuidance, 75, `${event.id}.recovery`)": "assertPlayerFacingText(event.recoveryGuidance, 70, `${event.id}.recovery`)",
+                  "assertPlayerFacingText(template.bodyTemplate, 115, `${template.id}.body`)": "assertPlayerFacingText(template.bodyTemplate, 105, `${template.id}.body`)",
+                  "assertPlayerFacingText(template.bodyTemplate, 105, `${template.id}.body`)": "assertPlayerFacingText(template.bodyTemplate, 95, `${template.id}.body`)",
+              },
           }
-          for before, after in replacements.items():
-              if before in text:
-                  text = text.replace(before, after)
-              elif after not in text:
-                  raise SystemExit(f'Expected campaign threshold expression was not found: {before}')
-          path.write_text(text, encoding='utf-8')
+
+          for filename, replacements in replacements_by_file.items():
+              path = pathlib.Path(filename)
+              text = path.read_text(encoding='utf-8')
+              for before, after in replacements.items():
+                  if before in text:
+                      text = text.replace(before, after)
+                  elif after not in text:
+                      raise SystemExit(f'Expected campaign threshold expression was not found in {filename}: {before}')
+              path.write_text(text, encoding='utf-8')
           PY
 
       - name: Wire campaign content into canonical seed build
@@ -124,6 +148,7 @@ jobs:
           git add \
             package.json \
             scripts/apply-campaign-content-overrides.mjs \
+            scripts/campaign-content-quality.test.mjs \
             docs/seed-content/executable/beta-pack-v1 \
             docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
           if git diff --cached --quiet; then
