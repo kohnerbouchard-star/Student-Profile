@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
 
       - name: Enforce isolated pull-request scope
-        if: github.event_name == 'pull_request' && github.event.pull_request.number != 329
+        if: github.event_name == 'pull_request' && github.event.pull_request.number != 329 && github.event.pull_request.number != 337
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -50,8 +50,8 @@ jobs:
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
           node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
 
-      - name: Enforce exact PR329 content scope
-        if: github.event_name == 'pull_request' && github.event.pull_request.number == 329
+      - name: Enforce exact Seed content scope
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 329 || github.event.pull_request.number == 337)
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -72,7 +72,7 @@ jobs:
             'scripts/store-content-artwork-contract.mjs',
           ]);
           for (const sentinel of sentinels) {
-            if (!paths.includes(sentinel)) throw new Error(`Missing expected PR329 scope sentinel: ${sentinel}`);
+            if (!paths.includes(sentinel)) throw new Error(`Missing expected Seed content scope sentinel: ${sentinel}`);
           }
           const exact = new Set([
             '.github/workflows/player-terminal-verify.yml',
@@ -86,11 +86,11 @@ jobs:
             exact.has(path);
           const unexpected = paths.filter((path) => !allowed(path));
           if (unexpected.length) {
-            console.error('PR329 contains out-of-scope paths:');
+            console.error('Seed content PR contains out-of-scope paths:');
             for (const path of unexpected) console.error(path);
             process.exit(1);
           }
-          console.log(`PR329 content scope verified for ${paths.length} changed files.`);
+          console.log(`Seed content scope verified for ${paths.length} changed files.`);
           NODE
 
       - name: Set up Node
