@@ -1,5 +1,5 @@
 {
-  "acceptedImplementationSourceSha": "0ec0ef075bae374c345adb3298a92afa35839b14",
+  "acceptedImplementationSourceSha": "04824da5ed8ea47bbabd893ab27f7ac285f050f2",
   "activationApproval": {
     "legacyConvenienceTemplateAtAcceptedHeadIsSufficient": false,
     "requiredBindings": {
@@ -11,7 +11,7 @@
       "expiresAt": "ISO-8601 timestamp later than execution time and approvedAt",
       "gameSessionId": "exact target game UUID",
       "packId": "econovaria.beta-seed-pack.v1",
-      "packSha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6",
+      "packSha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
       "productionAuthorized": false,
       "projectRef": "exact isolated-staging project ref",
       "sourceSha": "exact approved 40-character Git source SHA",
@@ -196,11 +196,15 @@
     },
     "pack": {
       "path": "docs/seed-content/executable/beta-pack-v1/pack-v1.json",
-      "sha256": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6"
+      "sha256": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7"
     },
     "physicalEconomy": {
       "path": "docs/seed-content/executable/beta-pack-v1/physical-economy-calibration-v1.json",
       "sha256": "8340cb7254a17961d32ef773ff49f7a693b3a95c7c498a993b230c818aee2d36"
+    },
+    "progressionContent": {
+      "path": "docs/seed-content/executable/beta-pack-v1/progression-content-v2.json",
+      "sha256": "74f8619bd70e814bf27ec55932a9af5585f5cee8019677d9f0d85f38557b56f6"
     },
     "stableIdMap": {
       "path": "docs/seed-content/executable/beta-pack-v1/stable-id-map-v1.json",
@@ -281,7 +285,7 @@
     "game_contract",
     "store_item"
   ],
-  "packDigest": "e856cd2891bbf7f5dbba0ac957b040957cd6543e7cacd52f6a074da3bca078c6",
+  "packDigest": "31f2f8e60c61b18eeab5cdac6e2930ae2f92a695b74e889a24129304e76547b7",
   "packId": "econovaria.beta-seed-pack.v1",
   "packVersion": "1.0.0-beta",
   "productionAuthorized": false,

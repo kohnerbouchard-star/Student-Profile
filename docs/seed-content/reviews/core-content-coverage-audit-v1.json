@@ -95,11 +95,16 @@
     },
     "achievements": {
       "targetMin": 20,
-      "machineReadableRecords": 20,
+      "machineReadableRecords": 32,
       "proseDefinitions": 0,
       "machineReadableGap": 0,
       "status": "target-met",
       "sources": [
+        {
+          "path": "progression/progression-content-source-v2.json",
+          "type": "machine-readable",
+          "count": 12
+        },
         {
           "path": "progression/progression-v1.json",
           "type": "machine-readable",
