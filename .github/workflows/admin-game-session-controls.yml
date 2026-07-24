@@ -28,6 +28,7 @@ on:
       - "scripts/admin-game-session-controls-smoke.mjs"
       - "scripts/admin-game-session-controls-browser-smoke.mjs"
       - "scripts/admin-logout-confirmation-browser-smoke.mjs"
+      - "scripts/admin-logout-account-trigger-source-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke-runner.mjs"
       - "scripts/admin-shell-identity-smoke.mjs"
@@ -72,6 +73,7 @@ jobs:
           node --check scripts/admin-game-creation-browser-smoke.mjs
           node --check scripts/admin-game-creation-browser-smoke-runner.mjs
           node --check scripts/admin-logout-confirmation-browser-smoke.mjs
+          node scripts/admin-logout-account-trigger-source-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
           node scripts/admin-shell-identity-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
