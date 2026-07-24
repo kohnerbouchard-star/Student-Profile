@@ -10,12 +10,19 @@ on:
       - "admin/game-code-wiring.js"
       - "admin/game-session-controls.js"
       - "admin/game-session-share-link-contract.js"
+      - "admin/game-creation-controls.js"
       - "admin/css/game-session-controls.css"
+      - "admin/css/game-creation-controls.css"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"
       - "backend/src/domains/players/api/playerLoginHttpHandler.ts"
+      - "backend/src/domains/game-sessions/tests/gameCreationProvisioningMigrationContract.test.ts"
+      - "backend/supabase/functions/admin-api/gameProvisioningOperations.ts"
+      - "backend/supabase/functions/admin-api/gameProvisioningOperations.test.ts"
+      - "backend/supabase/migrations/20260724030000_add_game_creation_provisioning_orchestrator_v1.sql"
       - "scripts/admin-game-session-controls-smoke.mjs"
       - "scripts/admin-game-session-controls-browser-smoke.mjs"
+      - "scripts/admin-game-creation-browser-smoke.mjs"
       - "scripts/admin-shell-identity-smoke.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "package.json"
@@ -29,9 +36,9 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event.pull_request.number == 327
+    if: github.event.pull_request.number == 327 || github.event.pull_request.number == 334
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Check out exact PR head
         uses: actions/checkout@v7
@@ -50,8 +57,10 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
 
-      - name: Verify selected-game and logout source contracts
+      - name: Verify selected-game, creation, and logout source contracts
         run: |
+          node --check admin/game-creation-controls.js
+          node --check scripts/admin-game-creation-browser-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
           node scripts/admin-shell-identity-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
@@ -87,11 +96,17 @@ jobs:
       - name: Click Share and Log out in Chromium
         run: node scripts/admin-game-session-controls-browser-smoke.mjs
 
+      - name: Create game and verify Player target in Chromium
+        if: github.event.pull_request.number == 334
+        run: node scripts/admin-game-creation-browser-smoke.mjs
+
       - name: Upload Admin control diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: admin-game-session-controls-${{ github.event.pull_request.head.sha }}
-          path: admin-browser-smoke-artifacts/game-session-controls/
+          path: |
+            admin-browser-smoke-artifacts/game-session-controls/
+            admin-browser-smoke-artifacts/game-creation/
           if-no-files-found: warn
           retention-days: 30
