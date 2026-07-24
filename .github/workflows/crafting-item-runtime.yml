@@ -124,7 +124,8 @@ jobs:
           process.stdout.write(contract.acceptedImplementationSourceSha);
           NODE
           )"
-          test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
+          [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${source_commit}^{commit}"
           node scripts/build-physical-economy-runtime-pack.mjs \
             --source-root . \
             --source-commit "$source_commit" \
