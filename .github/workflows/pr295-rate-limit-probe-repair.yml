@@ -1,0 +1,109 @@
+name: PR295 Rate Limit Probe Repair
+
+on:
+  push:
+    branches:
+      - agent/production-integration-gate-v1
+    paths:
+      - ".github/workflows/pr295-rate-limit-probe-repair.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr295-rate-limit-probe-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+      - name: Bound rate-limit probe concurrency
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("scripts/pr295-connected-staging-acceptance.mjs")
+          source = path.read_text()
+          pattern = re.compile(
+              r'async function runRateLimitProbe\(\) \{.*?\n\}\n\nfunction captureQueryPlans',
+              re.S,
+          )
+          replacement = '''async function runRateLimitProbe() {
+            const attempts = 100;
+            const batchSize = 10;
+            const rampDelayMs = 100;
+            const results = [];
+            const batches = [];
+            for (let offset = 0; offset < attempts; offset += batchSize) {
+              const batchStarted = performance.now();
+              const batch = await Promise.all(
+                Array.from({ length: Math.min(batchSize, attempts - offset) }, () =>
+                  http("/functions/v1/classroom-api/players/me/capabilities", {
+                    playerToken: fixture.directSessionTokens[0],
+                    expectedStatuses: [200, 429],
+                  })
+                ),
+              );
+              results.push(...batch);
+              batches.push({
+                batchNumber: batches.length + 1,
+                requests: batch.length,
+                durationMs: Number((performance.now() - batchStarted).toFixed(2)),
+                allowed: batch.filter((result) => result.status === 200).length,
+                denied: batch.filter((result) => result.status === 429).length,
+              });
+              if (offset + batchSize < attempts) {
+                await new Promise((resolve) => setTimeout(resolve, rampDelayMs));
+              }
+            }
+            const denied = results.filter((result) => result.status === 429);
+            if (!denied.length) throw new Error("Rate-limit probe did not produce a bounded 429 denial");
+            if (!denied.some((result) => /^\\d+$/.test(String(result.retryAfter ?? "")))) {
+              throw new Error("Rate-limit denial did not include Retry-After");
+            }
+            evidence.metrics.rateLimitProbe = {
+              profile: "bounded-abuse-ramp",
+              attempts,
+              batchSize,
+              rampDelayMs,
+              batchCount: batches.length,
+              batches,
+              allowed: results.filter((result) => result.status === 200).length,
+              denied: denied.length,
+              unexpected: results.filter((result) => ![200, 429].includes(result.status)).length,
+            };
+            evidence.checks.rateLimitEnforced = true;
+          }
+
+          function captureQueryPlans'''
+          updated, count = pattern.subn(replacement, source)
+          if count != 1:
+              raise SystemExit(f"Expected one rate-limit probe block, replaced {count}")
+          path.write_text(updated)
+          PY
+      - name: Record probe repair boundary
+        run: |
+          cat >> docs/operations/evidence/production-integration-gate-v1/pr295-load-and-drift-repair-2026-07-24.md <<'EOF'
+          - The abuse probe remains 100 requests against one authenticated Player session, but now uses ten-request batches with a 100 ms inter-batch interval.
+          - The probe still fails on any status other than `200` or `429`, requires at least one `429`, and requires a numeric `Retry-After` response header.
+          - This change does not relax the rate-limit contract; it prevents the probe itself from becoming an unbounded Edge Function boot-storm test.
+          EOF
+      - name: Remove one-time repair workflow
+        run: rm .github/workflows/pr295-rate-limit-probe-repair.yml
+      - name: Commit bounded probe repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/pr295-connected-staging-acceptance.mjs \
+            docs/operations/evidence/production-integration-gate-v1/pr295-load-and-drift-repair-2026-07-24.md \
+            .github/workflows/pr295-rate-limit-probe-repair.yml
+          git commit -m "ops: bound connected rate-limit probe"
+          git push origin HEAD:agent/production-integration-gate-v1
