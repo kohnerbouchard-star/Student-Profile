@@ -444,38 +444,61 @@
     if (button instanceof HTMLElement) button.dataset.logoutState = "pending";
 
     signOutPromise = (async () => {
-      let signedOut = false;
+      const session = window.EconovariaAdminAuthSession?.read?.();
+      const token = text(session?.accessToken);
+      const config = window.EconovariaRuntimeConfig;
+      const directAdminApi = text(config?.adminApiUrl);
+
+      if (!directAdminApi) {
+        try {
+          await window.fetch("/api/admin/auth/sign-out", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+        } catch (_) {}
+        return;
+      }
+
+      const signOutUrl = `${directAdminApi.replace(/\/$/, "")}/auth/sign-out`;
+      const adminHeaders = {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      };
+      if (config?.supabasePublishableKey) {
+        adminHeaders.apikey = config.supabasePublishableKey;
+      }
+      if (token) adminHeaders.Authorization = `Bearer ${token}`;
+      const gameId = selectedGameId();
+      if (gameId) adminHeaders["X-Econovaria-Game-Id"] = gameId;
+
       try {
-        const response = await window.fetch("/api/admin/auth/sign-out", {
+        await window.fetch(signOutUrl, {
           method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
+          headers: adminHeaders,
           body: "{}",
-          credentials: "same-origin",
+          credentials: "omit",
           cache: "no-store",
         });
-        signedOut = response.ok;
       } catch (_) {}
 
-      if (!signedOut) {
-        const session = window.EconovariaAdminAuthSession?.read?.();
-        const token = text(session?.accessToken);
-        const config = window.EconovariaRuntimeConfig;
-        if (token && config?.supabaseUrl && config?.supabasePublishableKey) {
-          try {
-            await window.fetch(`${config.supabaseUrl}/auth/v1/logout`, {
-              method: "POST",
-              headers: {
-                apikey: config.supabasePublishableKey,
-                Authorization: `Bearer ${token}`,
-              },
-              credentials: "omit",
-              cache: "no-store",
-            });
-          } catch (_) {}
-        }
+      if (token && config?.supabaseUrl && config?.supabasePublishableKey) {
+        try {
+          await window.fetch(`${config.supabaseUrl}/auth/v1/logout`, {
+            method: "POST",
+            headers: {
+              apikey: config.supabasePublishableKey,
+              Authorization: `Bearer ${token}`,
+            },
+            credentials: "omit",
+            cache: "no-store",
+          });
+        } catch (_) {}
       }
 
       clearLocalAdminState();
