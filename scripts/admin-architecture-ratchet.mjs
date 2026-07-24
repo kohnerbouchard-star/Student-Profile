@@ -11,7 +11,7 @@ const SCOPED_FETCH_ASSIGNMENTS = Object.freeze({
     maximum: 1,
     requiredContracts: Object.freeze([
       "isGameCreationRequest",
-      "X-Idempotency-Key",
+      "x-idempotency-key",
       "XMLHttpRequest",
       "sendGameCreationRequest",
       "CREATE_PATH_SUFFIXES",
