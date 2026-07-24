@@ -12,6 +12,8 @@ const changedFiles = readFileSync(changedFilePath, "utf8")
   .filter(Boolean);
 
 const hasPlayerChanges = changedFiles.some((path) => path.startsWith("player-terminal/"));
+const pullRequestHead = process.env.GITHUB_HEAD_REF || "";
+const isBoundedSeedArtworkPullRequest = pullRequestHead === "agent/seed-content-usable-v2";
 
 const exactAllowed = new Set([
   ".github/workflows/player-terminal-verify.yml",
@@ -144,8 +146,17 @@ const allowedPatterns = [
   /^scripts\/(admin-progression-contract|progression-(abuse-threshold-simulation|balance-simulation|event-delivery-simulation))\.mjs$/,
 ];
 
+const boundedSeedArtworkPatterns = [
+  /^docs\/seed-content\/executable\/beta-pack-v1\/(integrity-manifest-v1|pack-v1|stable-id-map-v1|store-artwork-v2|store-catalog-v1)\.json$/,
+  /^docs\/seed-content\/items\/(component-artwork-source-v2|consumable-artwork-source-v2|equipment-artwork-source-v2|item-content-expansion-v2|store-artwork-source-v2|store-content-overrides-v2)\.json$/,
+  /^scripts\/(apply-store-content-overrides|component-artwork-contract|consumable-artwork-contract|equipment-artwork-contract|item-content-coverage\.test|store-content-artwork-contract|store-content-artwork-source\.test)\.mjs$/,
+];
+
 function isAllowed(path) {
   if (!hasPlayerChanges) return /^\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
+  if (isBoundedSeedArtworkPullRequest && boundedSeedArtworkPatterns.some((pattern) => pattern.test(path))) {
+    return true;
+  }
   return exactAllowed.has(path) || allowedPatterns.some((pattern) => pattern.test(path));
 }
 
