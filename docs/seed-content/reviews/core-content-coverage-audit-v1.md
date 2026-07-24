@@ -16,7 +16,7 @@ Prose files are reported separately and do not satisfy machine-readable content 
 | contracts | 50+ | 50 | 5 | 0 | target-met |
 | bankingProducts | 8–12 | 10 | 0 | 0 | target-met |
 | levels | 10+ | 10 | 0 | 0 | target-met |
-| achievements | 20+ | 20 | 0 | 0 | target-met |
+| achievements | 20+ | 32 | 0 | 0 | target-met |
 | standaloneEvents | 25+ | 25 | 8 | 0 | target-met |
 | eventChains | 10+ | 10 | 8 | 0 | target-met |
 | crisisArcs | 5+ | 5 | 8 | 0 | target-met |
