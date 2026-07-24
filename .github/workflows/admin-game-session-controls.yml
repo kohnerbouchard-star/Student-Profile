@@ -24,6 +24,7 @@ on:
       - "scripts/admin-game-session-controls-smoke.mjs"
       - "scripts/admin-game-session-controls-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke.mjs"
+      - "scripts/admin-game-creation-browser-smoke-runner.mjs"
       - "scripts/admin-shell-identity-smoke.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "package.json"
@@ -63,6 +64,7 @@ jobs:
           node --check admin/game-creation-style-loader.js
           node --check admin/game-creation-controls.js
           node --check scripts/admin-game-creation-browser-smoke.mjs
+          node --check scripts/admin-game-creation-browser-smoke-runner.mjs
           node scripts/admin-game-session-controls-smoke.mjs
           node scripts/admin-shell-identity-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
@@ -103,7 +105,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node scripts/admin-game-creation-browser-smoke.mjs 2>&1 | tee /tmp/admin-game-creation-browser.log
+          node scripts/admin-game-creation-browser-smoke-runner.mjs 2>&1 | tee /tmp/admin-game-creation-browser.log
 
       - name: Upload Admin control diagnostics
         if: always()
