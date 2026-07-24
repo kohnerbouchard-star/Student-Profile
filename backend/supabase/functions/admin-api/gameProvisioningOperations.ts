@@ -148,7 +148,7 @@ export async function handleGameProvisioningOperation(
   }
 
   const parsed = parseInput(body);
-  if (!parsed.ok) {
+  if (parsed.ok === false) {
     return {
       handled: true,
       status: 400,
