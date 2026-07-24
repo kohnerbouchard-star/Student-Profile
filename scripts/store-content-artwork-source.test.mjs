@@ -2,9 +2,10 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COUNTRY_IDS, readJson } from './seed-beta-pack-lib.mjs';
+import { COUNTRY_IDS, exists, readJson, sha256File } from './seed-beta-pack-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
@@ -23,6 +24,10 @@ const PLACEHOLDER_PATTERNS = [
 
 function key(record) {
   return `${record.country}|${record.itemKey}`;
+}
+
+function expectedRuntimeImagePath(record) {
+  return `player-terminal/assets/images/items/store/${record.country}/${record.itemKey}.webp`;
 }
 
 async function sources() {
@@ -44,13 +49,13 @@ test('Store content source contains 50 substantive player-facing descriptions', 
 
 test('Store artwork source assigns one completed individual creation to every item', async () => {
   const [, artwork] = await sources();
+  const runtimeReady = artwork.runtimeDelivery.runtimeImagePathsAvailable === true;
   assert.equal(artwork.provider, 'Magnific');
   assert.equal(artwork.recordCount, 50);
   assert.equal(artwork.records.length, 50);
   assert.match(artwork.artDirection.theme, /cyberpunk/i);
   assert.equal(artwork.artDirection.aspectRatio, '1:1');
-  assert.equal(artwork.runtimeDelivery.binaryFilesCommitted, false);
-  assert.equal(artwork.runtimeDelivery.runtimeImagePathsAvailable, false);
+  assert.equal(artwork.runtimeDelivery.binaryFilesCommitted, runtimeReady);
   assert.equal(new Set(artwork.records.map(key)).size, 50);
   assert.equal(new Set(artwork.records.map((record) => record.stableId)).size, 50);
   assert.equal(new Set(artwork.records.map((record) => record.creationIdentifier)).size, 50);
@@ -58,8 +63,20 @@ test('Store artwork source assigns one completed individual creation to every it
     assert.ok(COUNTRY_IDS.includes(record.country));
     assert.match(record.creationIdentifier, /^[A-Za-z0-9_-]{6,64}$/);
     assert.equal(record.sourcePageUrl, `https://www.magnific.com/app/creation/${record.creationIdentifier}`);
-    assert.equal(record.runtimeImagePath, null);
-    assert.equal(record.assetStatus, 'generated-awaiting-repository-export');
+    if (runtimeReady) {
+      assert.equal(record.runtimeImagePath, expectedRuntimeImagePath(record));
+      assert.equal(record.assetStatus, 'repository-owned');
+      assert.match(record.sha256, /^[a-f0-9]{64}$/);
+      assert.equal(record.width, 1024);
+      assert.equal(record.height, 1024);
+      const assetPath = path.join(REPO_ROOT, record.runtimeImagePath);
+      assert.equal(await exists(assetPath), true, `${record.runtimeImagePath} is missing`);
+      assert.equal(await sha256File(assetPath), record.sha256, `${record.runtimeImagePath} digest mismatch`);
+      assert.equal((await readFile(assetPath)).byteLength, record.bytes, `${record.runtimeImagePath} byte-size mismatch`);
+    } else {
+      assert.equal(record.runtimeImagePath, null);
+      assert.equal(record.assetStatus, 'generated-awaiting-repository-export');
+    }
   }
 });
 
