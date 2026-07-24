@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exists, readJson } from './seed-beta-pack-lib.mjs';
+import { exists, readJson, sha256File } from './seed-beta-pack-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
@@ -24,6 +25,10 @@ function requireCondition(condition, message) {
 
 function unique(values) {
   return new Set(values).size === values.length;
+}
+
+function expectedRuntimeImagePath(record) {
+  return `player-terminal/assets/images/items/store/${record.country}/${record.itemKey}.webp`;
 }
 
 export async function validateStoreContentArtworkContract() {
@@ -61,7 +66,23 @@ export async function validateStoreContentArtworkContract() {
   requireCondition(unique(creationIdentifiers), 'Every Store item must use a distinct Magnific creation.');
   requireCondition(unique(artworkStableIds), 'Every Store artwork stable ID must be unique.');
   requireCondition(artworkSource.records.every((record) => record.sourcePageUrl === `https://www.magnific.com/app/creation/${record.creationIdentifier}`), 'Artwork source provenance URLs are inconsistent.');
-  requireCondition(artworkSource.records.every((record) => record.runtimeImagePath === null), 'Artwork source must not claim repository image paths before binary export.');
+
+  const runtimeReady = artworkSource.runtimeDelivery?.runtimeImagePathsAvailable === true;
+  requireCondition(artworkSource.runtimeDelivery?.binaryFilesCommitted === runtimeReady, 'Artwork binary and runtime readiness flags must agree.');
+  if (runtimeReady) {
+    for (const record of artworkSource.records) {
+      requireCondition(record.runtimeImagePath === expectedRuntimeImagePath(record), `${record.country}/${record.itemKey} has an invalid runtime image path.`);
+      requireCondition(record.assetStatus === 'repository-owned', `${record.country}/${record.itemKey} must be repository-owned.`);
+      requireCondition(/^[a-f0-9]{64}$/.test(String(record.sha256 ?? '')), `${record.country}/${record.itemKey} lacks a SHA-256 digest.`);
+      requireCondition(record.width === 1024 && record.height === 1024, `${record.country}/${record.itemKey} must be 1024x1024.`);
+      const assetPath = path.join(REPO_ROOT, record.runtimeImagePath);
+      requireCondition(await exists(assetPath), `${record.runtimeImagePath} is missing.`);
+      requireCondition(await sha256File(assetPath) === record.sha256, `${record.runtimeImagePath} digest mismatch.`);
+      requireCondition((await readFile(assetPath)).byteLength === record.bytes, `${record.runtimeImagePath} byte-size mismatch.`);
+    }
+  } else {
+    requireCondition(artworkSource.records.every((record) => record.runtimeImagePath === null), 'Pre-export artwork must keep every runtime image path null.');
+  }
 
   const generatedByStore = new Map(generatedArtwork.records.map((record) => [record.storeStableId, record]));
   requireCondition(generatedByStore.size === 50, 'Generated artwork must map to 50 unique Store stable IDs.');
@@ -71,6 +92,8 @@ export async function validateStoreContentArtworkContract() {
     requireCondition(item.artwork?.stableId === artwork.stableId, `${item.stableId} artwork stable ID is inconsistent.`);
     requireCondition(item.artwork?.creationIdentifier === artwork.creationIdentifier, `${item.stableId} artwork creation is inconsistent.`);
     requireCondition(item.artwork?.sourcePageUrl === artwork.sourcePageUrl, `${item.stableId} artwork provenance is inconsistent.`);
+    requireCondition(item.artwork?.runtimeImagePath === artwork.runtimeImagePath, `${item.stableId} runtime artwork path is inconsistent.`);
+    requireCondition(item.artwork?.sha256 === artwork.sha256, `${item.stableId} artwork digest is inconsistent.`);
   }
 
   const mappingByStore = new Map((mappings.mappings?.storeItems ?? []).map((entry) => [entry.stableId, entry]));
@@ -78,9 +101,10 @@ export async function validateStoreContentArtworkContract() {
   for (const item of store.items) {
     const mapping = mappingByStore.get(item.stableId);
     requireCondition(mapping?.artworkStableId === item.artwork.stableId, `${item.stableId} stable-ID mapping does not bind its artwork.`);
+    requireCondition(mapping?.artworkRuntimeImagePath === item.artwork.runtimeImagePath, `${item.stableId} stable-ID mapping does not bind its runtime path.`);
   }
 
-  const runtimeReady = generatedArtwork.runtimeDelivery?.runtimeImagePathsAvailable === true;
+  requireCondition(generatedArtwork.runtimeDelivery?.runtimeImagePathsAvailable === runtimeReady, 'Generated artwork readiness must match its source manifest.');
   if (runtimeReady) {
     requireCondition(generatedArtwork.records.every((record) => typeof record.runtimeImagePath === 'string' && record.runtimeImagePath.length > 0), 'Runtime-ready artwork must provide every repository image path.');
   } else {
@@ -93,6 +117,7 @@ export async function validateStoreContentArtworkContract() {
     authoredDescriptions: descriptions.length,
     placeholderDescriptions: 0,
     individualArtworkRecords: generatedArtwork.records.length,
+    repositoryOwnedArtwork: runtimeReady ? generatedArtwork.records.length : 0,
     duplicateArtworkAssignments: 0,
     runtimeImagePathsAvailable: runtimeReady,
   };
