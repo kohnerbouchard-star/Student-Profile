@@ -1,0 +1,16 @@
+/* Canonical Econovaria icon for the Player left navigation. */
+.player-terminal-brand-mark {
+  overflow: hidden;
+  color: transparent !important;
+  background:
+    linear-gradient(rgba(2, 8, 16, 0.08), rgba(2, 8, 16, 0.08)),
+    url("../../assets/brand/econovaria-icon.png") center / cover no-repeat !important;
+  border-color: rgba(0, 212, 255, 0.42) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.18), 0 0 20px rgba(255, 0, 238, 0.10) !important;
+  filter: none !important;
+}
+
+.player-terminal-brand-mark .player-terminal-logo-svg {
+  display: none !important;
+}
