@@ -15,6 +15,10 @@ const STORY_REPAIR_MIGRATION = new URL(
   "../../../../supabase/migrations/20260724121000_repair_demo_storyline_activation_conflict_v2.sql",
   import.meta.url,
 );
+const ARRIVAL_REPAIR_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260724122000_repair_arrival_grant_scope_ambiguity_v2.sql",
+  import.meta.url,
+);
 
 Deno.test("Admin game creation provisions one isolated multiplayer game atomically", async () => {
   const sql = await Deno.readTextFile(V1_MIGRATION);
@@ -127,6 +131,21 @@ Deno.test("Story activation conflict ambiguity is repaired forward-only", async 
   assertIncludes(sql, "from public, anon, authenticated");
   assertIncludes(sql, "grant execute on function public.initialize_demo_storyline_for_game(uuid, text)");
   assertIncludes(sql, "to service_role");
+});
+
+Deno.test("Arrival grant progression scope ambiguity is repaired forward-only", async () => {
+  const sql = await Deno.readTextFile(ARRIVAL_REPAIR_MIGRATION);
+
+  assertIncludes(sql, "create or replace function public.apply_arrival_grant_command_v1");
+  assertIncludes(sql, "update public.player_progression_profiles as profile_row");
+  assertIncludes(sql, "profile_row.game_session_id = p_game_session_id");
+  assertIncludes(sql, "profile_row.player_id = v_command.player_id");
+  assertIncludes(sql, "update public.arrival_grant_commands as command_row");
+  assertIncludes(sql, "revoke all on function public.apply_arrival_grant_command_v1");
+  assertIncludes(sql, "from public, anon, authenticated");
+  assertIncludes(sql, "grant execute on function public.apply_arrival_grant_command_v1");
+  assertIncludes(sql, "to service_role");
+  assertNotIncludes(sql, "where game_session_id = p_game_session_id\n    and player_id = v_command.player_id");
 });
 
 function assertIncludes(text: string, expected: string): void {
