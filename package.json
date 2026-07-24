@@ -48,7 +48,7 @@
     "test:market-trigger": "node --test scripts/trigger-stock-market-tick.test.mjs",
     "test:observability": "node --experimental-strip-types --test scripts/observability-contract.test.mjs",
     "test:player-runtime-cutover": "node scripts/player-terminal-runtime-cutover-smoke.mjs",
-    "test:recovery-contract": "node --test scripts/recovery-contract.test.mjs validate-templates",
+    "test:recovery-contract": "node --test scripts/recovery-contract.test.mjs",
     "test:release-platform": "node --test scripts/release-platform.test.mjs scripts/release-environment-neutrality.test.mjs scripts/release-build-determinism.test.mjs",
     "test:security-probes": "node --check scripts/staging/probe-beta-security-http.mjs && node --check scripts/staging/probe-beta-security-rate-limit-sql.mjs && node --test scripts/staging/scan-beta-security-evidence.test.mjs",
     "test:supply-chain": "node --test scripts/supply-chain-security.test.mjs",
