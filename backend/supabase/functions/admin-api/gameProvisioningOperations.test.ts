@@ -7,7 +7,7 @@ declare const Deno: {
 const STAFF_ID = "00000000-0000-4000-8000-000000000001";
 const GAME_ID = "00000000-0000-4000-8000-000000000002";
 
-Deno.test("POST games validates input and calls the canonical provisioning RPC", async () => {
+Deno.test("POST games validates input and calls the full activation provisioning RPC", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   const service = {
     async rpc(name: string, args: Record<string, unknown>) {
@@ -20,6 +20,7 @@ Deno.test("POST games validates input and calls the canonical provisioning RPC",
           provisioningStatus: "ready",
           packId: "econovaria.beta-seed-pack.v1",
           packVersion: "1.0.0-beta",
+          activationVersion: "full-game-feature-activation-v2",
           joinCode: "ECO-ABCD2345",
           joinCodeReissueRequired: false,
           counts: {
@@ -28,9 +29,16 @@ Deno.test("POST games validates input and calls the canonical provisioning RPC",
             storeItems: 50,
             worldLocations: 50,
             worldRoutes: 13,
+            storylines: 1,
+            storyEvents: 3,
+            arrivalPackages: 10,
+            arrivalClassGrants: 8,
           },
           contentGates: {
-            crafting: "blocked_by_catalog_authority",
+            crafting: "blocked",
+            story: "active",
+            arrivalGrantProcessor: "active",
+            progressionInitialization: "active",
           },
         },
         error: null,
@@ -51,7 +59,7 @@ Deno.test("POST games validates input and calls the canonical provisioning RPC",
   assertEquals(result.handled, true);
   assertEquals(result.status, 201);
   assertEquals(calls.length, 1);
-  assertEquals(calls[0].name, "create_provisioned_game_v1");
+  assertEquals(calls[0].name, "create_provisioned_game_v2");
   assertEquals(calls[0].args.p_staff_user_id, STAFF_ID);
   assertEquals(calls[0].args.p_game_name, "Period 4 Economy");
   assertEquals(calls[0].args.p_idempotency_key, "game.create.test.001");
@@ -60,9 +68,13 @@ Deno.test("POST games validates input and calls the canonical provisioning RPC",
   const body = result.body as Record<string, any>;
   assertEquals(body.data.game.id, GAME_ID);
   assertEquals(body.data.game.provisioningStatus, "ready");
+  assertEquals(body.data.game.activationVersion, "full-game-feature-activation-v2");
   assertEquals(body.data.game.gameCode, "ECO-ABCD2345");
   assertEquals(body.data.joinCode, "ECO-ABCD2345");
   assertEquals(body.data.counts.marketAssets, 240);
+  assertEquals(body.data.counts.storyEvents, 3);
+  assertEquals(body.data.contentGates.story, "active");
+  assertEquals(body.data.contentGates.arrivalGrantProcessor, "active");
 });
 
 Deno.test("replayed provisioning never returns the original plaintext Game Code", async () => {
@@ -76,6 +88,7 @@ Deno.test("replayed provisioning never returns the original plaintext Game Code"
           provisioningStatus: "ready",
           packId: "econovaria.beta-seed-pack.v1",
           packVersion: "1.0.0-beta",
+          activationVersion: "full-game-feature-activation-v2",
           joinCode: null,
           joinCodeReissueRequired: true,
         },
@@ -99,6 +112,7 @@ Deno.test("replayed provisioning never returns the original plaintext Game Code"
   assertEquals(body.data.replayed, true);
   assertEquals(body.data.joinCode, "");
   assertEquals(body.data.joinCodeReissueRequired, true);
+  assertEquals(body.data.activationVersion, "full-game-feature-activation-v2");
 });
 
 Deno.test("invalid requests fail before any provisioning RPC call", async () => {
