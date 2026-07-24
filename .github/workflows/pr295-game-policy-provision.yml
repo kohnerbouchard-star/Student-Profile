@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 25
     environment: staging
     env:
-      RELEASE_COMMIT: 43d2534e3f7e958119b7cb15ed474065a66f2574
+      RELEASE_COMMIT: b2738b83993cf6ed8ac47d68bad7e548f9b0293c
       EVIDENCE_PATH: /tmp/pr295-game-policy-provision.json
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
