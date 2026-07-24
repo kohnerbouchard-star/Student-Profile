@@ -157,9 +157,7 @@ export function runCreditRecoveryScenario(
     left.playerPublicId.localeCompare(right.playerPublicId)
   );
   const defaulted = playerResults.filter((player) => player.defaultedEver);
-  const recovered = defaulted.filter((player) =>
-    player.recoveredAfterDefault
-  );
+  const recovered = defaulted.filter((player) => player.recoveredAfterDefault);
   const defaultRate = playerResults.length === 0
     ? 0
     : defaulted.length / playerResults.length;
@@ -181,9 +179,9 @@ export function runCreditRecoveryScenario(
     defaultRate: round(defaultRate),
     defaultRecoveryRate: round(defaultRecoveryRate),
     lateJoinWealthGapRatio: round(lateJoinWealthGapRatio),
-    delinquentPlayerCount: playerResults.filter((player) =>
-      player.loanStatus === "delinquent"
-    ).length,
+    delinquentPlayerCount:
+      playerResults.filter((player) => player.loanStatus === "delinquent")
+        .length,
     defaultedPlayerCount: defaulted.length,
     recoveredPlayerCount: recovered.length,
     findings,
@@ -348,7 +346,7 @@ function calculateLateJoinWealthGap(
     late.map((player) => player.endingNetWealthMinor),
   );
   return 1 + Math.abs(earlyAverage - lateAverage) /
-    Math.max(1, Math.abs(earlyAverage));
+      Math.max(1, Math.abs(earlyAverage));
 }
 
 function buildFindings(
@@ -394,7 +392,10 @@ function buildFindings(
 }
 
 function validateConfig(config: CreditRecoveryScenarioConfig): void {
-  validateIdentity(config.scenarioPublicId, "credit_scenario_public_id_invalid");
+  validateIdentity(
+    config.scenarioPublicId,
+    "credit_scenario_public_id_invalid",
+  );
   if (config.countries.length !== 10) {
     throw new Error("credit_scenario_requires_ten_countries");
   }
@@ -419,11 +420,13 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
     if (!/^[A-Z][A-Z0-9_]{2,31}$/.test(country.countryCode)) {
       throw new Error("credit_country_code_invalid");
     }
-    for (const value of [
-      country.incomeModifier,
-      country.costModifier,
-      country.creditModifier,
-    ]) {
+    for (
+      const value of [
+        country.incomeModifier,
+        country.costModifier,
+        country.creditModifier,
+      ]
+    ) {
       if (!Number.isFinite(value) || value <= 0 || value > 5) {
         throw new Error("credit_country_modifier_invalid");
       }
@@ -437,11 +440,13 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
     ) {
       throw new Error("credit_phase_ticks_invalid");
     }
-    for (const value of [
-      window.incomeModifier,
-      window.costModifier,
-      window.interestModifier,
-    ]) {
+    for (
+      const value of [
+        window.incomeModifier,
+        window.costModifier,
+        window.interestModifier,
+      ]
+    ) {
       if (!Number.isFinite(value) || value <= 0 || value > 10) {
         throw new Error("credit_phase_modifier_invalid");
       }
@@ -468,7 +473,9 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
       player.savingsDiscipline,
       "credit_savings_discipline_invalid",
     );
-    if (!Number.isInteger(player.initialDebtMinor) || player.initialDebtMinor < 0) {
+    if (
+      !Number.isInteger(player.initialDebtMinor) || player.initialDebtMinor < 0
+    ) {
       throw new Error("credit_initial_debt_invalid");
     }
   }
@@ -479,7 +486,10 @@ function validateConfig(config: CreditRecoveryScenarioConfig): void {
       [config.subsistenceCostMinor, "credit_subsistence_cost_invalid"],
       [config.lateJoinCatchUpGrantMinor, "credit_catch_up_grant_invalid"],
       [config.minimumScheduledPaymentMinor, "credit_minimum_payment_invalid"],
-      [config.reconstructionRecoveryIncomeMinor, "credit_recovery_income_invalid"],
+      [
+        config.reconstructionRecoveryIncomeMinor,
+        "credit_recovery_income_invalid",
+      ],
     ] as const
   ) {
     if (!Number.isInteger(value) || value < 0) throw new Error(errorCode);

@@ -1,13 +1,13 @@
 import {
-  runCreditRecoveryScenario,
   type CreditRecoveryCountryProfile,
   type CreditRecoveryPlayerProfile,
   type CreditRecoveryScenarioConfig,
+  runCreditRecoveryScenario,
 } from "./creditRecoveryScenarioSimulation.ts";
 import {
-  runMacroEconomicScenario,
   type MacroCountryProfile,
   type MacroScenarioConfig,
+  runMacroEconomicScenario,
 } from "./macroEconomicScenarioSimulation.ts";
 
 declare const Deno: {
@@ -247,7 +247,9 @@ function creditCountries(): CreditRecoveryCountryProfile[] {
 function creditPlayers(): CreditRecoveryPlayerProfile[] {
   const countryCodes = creditCountries().map((country) => country.countryCode);
   return Array.from({ length: 30 }, (_, index) => ({
-    playerPublicId: `simulation.credit.player.${String(index + 1).padStart(3, "0")}`,
+    playerPublicId: `simulation.credit.player.${
+      String(index + 1).padStart(3, "0")
+    }`,
     countryCode: countryCodes[index % countryCodes.length],
     joinTick: index >= 20 ? 8 : 0,
     incomeCapacity: index % 5 === 0 ? 0.3 : 0.72 + (index % 4) * 0.07,

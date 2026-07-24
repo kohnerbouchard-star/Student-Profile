@@ -1,7 +1,7 @@
 import {
-  runMacroEconomicScenario,
   type MacroCountryProfile,
   type MacroScenarioConfig,
+  runMacroEconomicScenario,
 } from "./macroEconomicScenarioSimulation.ts";
 
 declare const Deno: {
@@ -195,7 +195,9 @@ function assert(condition: boolean): void {
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+      `Expected ${JSON.stringify(expected)}, received ${
+        JSON.stringify(actual)
+      }.`,
     );
   }
 }
@@ -204,7 +206,9 @@ function assertThrows(run: () => unknown, expectedMessage: string): void {
   try {
     run();
   } catch (error) {
-    if (error instanceof Error && error.message.includes(expectedMessage)) return;
+    if (error instanceof Error && error.message.includes(expectedMessage)) {
+      return;
+    }
     throw error;
   }
   throw new Error(`Expected error containing ${expectedMessage}.`);

@@ -127,8 +127,9 @@ export function runMacroEconomicScenario(
         scarcity,
         phaseShock.moneyGrowthRate,
       );
-      const confidenceShock = phaseShock.confidenceShockByCountry[countryCode] ??
-        0;
+      const confidenceShock =
+        phaseShock.confidenceShockByCountry[countryCode] ??
+          0;
       const phaseCurrencyReturn = clamp(
         -((phaseInflationRate - averageInflationPressure) *
           state.profile.currencySensitivity) + confidenceShock,

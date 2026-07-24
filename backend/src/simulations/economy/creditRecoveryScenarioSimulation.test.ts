@@ -1,8 +1,8 @@
 import {
-  runCreditRecoveryScenario,
   type CreditRecoveryCountryProfile,
   type CreditRecoveryPlayerProfile,
   type CreditRecoveryScenarioConfig,
+  runCreditRecoveryScenario,
 } from "./creditRecoveryScenarioSimulation.ts";
 
 declare const Deno: {
@@ -18,9 +18,9 @@ Deno.test("credit recovery simulation is deterministic and models late joining",
   assertEquals(first.totalTicks, 24);
   assert(first.playerResults.some((player) => player.joinTick > 0));
   assert(
-    first.playerResults.filter((player) => player.joinTick > 0).every((player) =>
-      player.catchUpGrantReceivedMinor === 2_500
-    ),
+    first.playerResults.filter((player) => player.joinTick > 0).every((
+      player,
+    ) => player.catchUpGrantReceivedMinor === 2_500),
   );
   assertEquals(first.seedCatalogsModified, false);
   assertEquals(first.activationAuthorized, false);
@@ -182,7 +182,9 @@ function countries(): CreditRecoveryCountryProfile[] {
 function players(): CreditRecoveryPlayerProfile[] {
   const countryCodes = countries().map((country) => country.countryCode);
   return Array.from({ length: 30 }, (_, index) => ({
-    playerPublicId: `simulation.credit.player.${String(index + 1).padStart(3, "0")}`,
+    playerPublicId: `simulation.credit.player.${
+      String(index + 1).padStart(3, "0")
+    }`,
     countryCode: countryCodes[index % countryCodes.length],
     joinTick: index >= 20 ? 8 : 0,
     incomeCapacity: index % 5 === 0 ? 0.3 : 0.72 + (index % 4) * 0.07,
@@ -198,7 +200,9 @@ function assert(condition: boolean): void {
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+      `Expected ${JSON.stringify(expected)}, received ${
+        JSON.stringify(actual)
+      }.`,
     );
   }
 }
@@ -207,7 +211,9 @@ function assertThrows(run: () => unknown, expectedMessage: string): void {
   try {
     run();
   } catch (error) {
-    if (error instanceof Error && error.message.includes(expectedMessage)) return;
+    if (error instanceof Error && error.message.includes(expectedMessage)) {
+      return;
+    }
     throw error;
   }
   throw new Error(`Expected error containing ${expectedMessage}.`);
