@@ -17,9 +17,11 @@ Deno.test("credit recovery simulation is deterministic and models late joining",
   assertEquals(first.playerResults.length, 30);
   assertEquals(first.totalTicks, 24);
   assert(first.playerResults.some((player) => player.joinTick > 0));
-  assert(first.playerResults.filter((player) => player.joinTick > 0).every((player) =>
-    player.catchUpGrantReceivedMinor === 2_500
-  ));
+  assert(
+    first.playerResults.filter((player) => player.joinTick > 0).every((player) =>
+      player.catchUpGrantReceivedMinor === 2_500
+    ),
+  );
   assertEquals(first.seedCatalogsModified, false);
   assertEquals(first.activationAuthorized, false);
   assertEquals(first.deterministic, true);
@@ -32,21 +34,38 @@ Deno.test("distressed borrowers become delinquent or default and can recover in 
   assert(report.defaultedPlayerCount > 0);
   assert(report.recoveredPlayerCount > 0);
   assert(report.defaultRecoveryRate > 0);
-  assert(report.playerResults.some((player) =>
-    player.defaultedEver && player.recoveredAfterDefault
-  ));
+  assert(
+    report.playerResults.some((player) =>
+      player.defaultedEver && player.recoveredAfterDefault
+    ),
+  );
 });
 
-Deno.test("catch-up policy narrows the late-join wealth gap", () => {
-  const supported = runCreditRecoveryScenario(baseConfig());
-  const unsupported = runCreditRecoveryScenario({
+Deno.test("catch-up policy narrows a calibrated late-join wealth gap", () => {
+  const calibratedPlayers = players().map((player, index) => ({
+    ...player,
+    joinTick: index >= 20 ? 12 : 0,
+    initialDebtMinor: 0,
+  }));
+  const supportedConfig: CreditRecoveryScenarioConfig = {
     ...baseConfig(),
+    scenarioPublicId: "simulation.credit.catch-up-calibration.v1",
+    players: calibratedPlayers,
+    baseIncomeMinor: 1_200,
+    subsistenceCostMinor: 500,
+    reconstructionRecoveryIncomeMinor: 0,
+    lateJoinCatchUpGrantMinor: 1_000,
+    lateJoinIncomeMultiplier: 1.2,
+  };
+  const supported = runCreditRecoveryScenario(supportedConfig);
+  const unsupported = runCreditRecoveryScenario({
+    ...supportedConfig,
     scenarioPublicId: "simulation.credit.no-catch-up.v1",
     lateJoinCatchUpGrantMinor: 0,
     lateJoinIncomeMultiplier: 1,
   });
 
-  assert(supported.lateJoinWealthGapRatio <= unsupported.lateJoinWealthGapRatio);
+  assert(supported.lateJoinWealthGapRatio < unsupported.lateJoinWealthGapRatio);
 });
 
 Deno.test("credit guardrails report excessive defaults and weak recovery", () => {
