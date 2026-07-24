@@ -9,7 +9,7 @@
   height: auto;
   aspect-ratio: 1672 / 941;
   color: transparent;
-  background: url("../../../../assets/brand/econovaria-logo.png") center / contain no-repeat;
+  background: url("../../../../assets/brand/econovaria-logo.webp") center / contain no-repeat;
   filter: drop-shadow(0 0 22px rgba(0, 212, 255, 0.24)) drop-shadow(0 0 26px rgba(255, 0, 238, 0.14));
   animation: none;
 }
