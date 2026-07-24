@@ -14,6 +14,7 @@ on:
       - "docs/seed-content/events/campaign-content-source-v2.json"
       - "scripts/apply-campaign-content-overrides.mjs"
       - "scripts/campaign-content-quality.test.mjs"
+      - "scripts/refresh-seed-consumer-contract.mjs"
 
 permissions:
   contents: write
@@ -52,9 +53,10 @@ jobs:
               "assertText(entry, 55, `global.${event.key}.confirmedFacts.${index + 1}`)": "assertText(entry, 40, `global.${event.key}.confirmedFacts.${index + 1}`)",
           }
           for before, after in replacements.items():
-              if before not in text:
+              if before in text:
+                  text = text.replace(before, after)
+              elif after not in text:
                   raise SystemExit(f'Expected campaign threshold expression was not found: {before}')
-              text = text.replace(before, after)
           path.write_text(text, encoding='utf-8')
           PY
 
@@ -67,15 +69,20 @@ jobs:
           path = pathlib.Path('package.json')
           package = json.loads(path.read_text(encoding='utf-8'))
           campaign_step = 'node scripts/apply-campaign-content-overrides.mjs'
+          refresh_step = 'node scripts/refresh-seed-consumer-contract.mjs'
           build = package['scripts']['build:seed-beta-pack']
           if campaign_step not in build:
-              package['scripts']['build:seed-beta-pack'] = build + ' && ' + campaign_step
+              build += ' && ' + campaign_step
+          if refresh_step not in build:
+              build += ' && ' + refresh_step
+          package['scripts']['build:seed-beta-pack'] = build
           test_file = 'scripts/campaign-content-quality.test.mjs'
           test_command = package['scripts']['test:seed-beta-pack']
           if test_file not in test_command:
               marker = 'scripts/arrival-content-quality.test.mjs'
               package['scripts']['test:seed-beta-pack'] = test_command.replace(marker, marker + ' ' + test_file)
           package['scripts']['validate:campaign-content'] = 'node --test scripts/campaign-content-quality.test.mjs'
+          package['scripts']['refresh:seed-consumer-contract'] = refresh_step
           path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
           PY
 
@@ -102,19 +109,24 @@ jobs:
           npm run validate:campaign-content
           npm run validate:physical-item-artwork
           node --test scripts/item-content-coverage.test.mjs
+          npm run test:seed-beta-pack
 
       - name: Commit deterministic campaign content artifacts
+        env:
+          ACCEPTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/refresh-seed-consumer-contract.mjs --source-sha "$ACCEPTED_SOURCE_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             package.json \
             scripts/apply-campaign-content-overrides.mjs \
-            docs/seed-content/executable/beta-pack-v1
+            docs/seed-content/executable/beta-pack-v1 \
+            docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
           if git diff --cached --quiet; then
-            echo "Campaign content pack is already current."
+            echo "Campaign content pack and consumer contract are already current."
             exit 0
           fi
           git commit -m "seed: regenerate authored campaign content pack"
