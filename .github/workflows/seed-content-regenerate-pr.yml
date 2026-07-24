@@ -12,6 +12,7 @@ on:
       - ".github/workflows/seed-content-regenerate-pr.yml"
       - "package.json"
       - "docs/seed-content/**"
+      - "player-terminal/assets/images/items/store/**"
       - "scripts/apply-store-content-overrides.mjs"
       - "scripts/store-content-artwork-contract.mjs"
       - "scripts/store-content-artwork-source.test.mjs"
@@ -29,13 +30,102 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'agent/seed-content-usable-v2'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Check out exact PR branch
         uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install deterministic image tooling
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+
+      - name: Import and optimize individual Store artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import io
+          import json
+          import pathlib
+          import urllib.request
+          from PIL import Image, ImageOps
+
+          root = pathlib.Path.cwd()
+          manifest_path = root / 'docs/seed-content/items/store-artwork-source-v2.json'
+          download_path = root / 'docs/seed-content/items/.store-artwork-download-v2.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          downloads = json.loads(download_path.read_text(encoding='utf-8'))
+          url_by_creation = {entry['creationIdentifier']: entry['url'] for entry in downloads['records']}
+
+          if len(manifest['records']) != 50 or len(url_by_creation) != 50:
+              raise SystemExit('Expected exactly 50 artwork records and download URLs.')
+          if {record['creationIdentifier'] for record in manifest['records']} != set(url_by_creation):
+              raise SystemExit('Magnific creation coverage does not match the artwork manifest.')
+
+          already_ready = manifest.get('runtimeDelivery', {}).get('runtimeImagePathsAvailable') is True
+          imported = 0
+          verified = 0
+          for record in manifest['records']:
+              relative_path = pathlib.Path('player-terminal/assets/images/items/store') / record['country'] / f"{record['itemKey']}.webp"
+              output_path = root / relative_path
+              expected_relative = relative_path.as_posix()
+
+              if already_ready and output_path.exists():
+                  data = output_path.read_bytes()
+                  digest = hashlib.sha256(data).hexdigest()
+                  if (
+                      record.get('runtimeImagePath') == expected_relative
+                      and record.get('sha256') == digest
+                      and record.get('bytes') == len(data)
+                      and record.get('width') == 1024
+                      and record.get('height') == 1024
+                  ):
+                      verified += 1
+                      continue
+
+              request = urllib.request.Request(
+                  url_by_creation[record['creationIdentifier']],
+                  headers={'User-Agent': 'Econovaria-Seed-Asset-Importer/2.0'},
+              )
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  source = response.read()
+              with Image.open(io.BytesIO(source)) as original:
+                  image = ImageOps.exif_transpose(original).convert('RGB')
+                  image = ImageOps.fit(image, (1024, 1024), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+                  output_path.parent.mkdir(parents=True, exist_ok=True)
+                  image.save(output_path, format='WEBP', quality=86, method=6)
+
+              data = output_path.read_bytes()
+              record.update({
+                  'runtimeImagePath': expected_relative,
+                  'assetStatus': 'repository-owned',
+                  'sha256': hashlib.sha256(data).hexdigest(),
+                  'bytes': len(data),
+                  'width': 1024,
+                  'height': 1024,
+                  'mediaType': 'image/webp',
+              })
+              imported += 1
+
+          manifest['runtimeDelivery'] = {
+              'binaryFilesCommitted': True,
+              'runtimeImagePathsAvailable': True,
+              'reason': 'Optimized repository-owned WebP assets are bound one-to-one to the Store seed records.',
+              'sourceResolution': '2048x2048',
+              'runtimeResolution': '1024x1024',
+              'runtimeMediaType': 'image/webp',
+          }
+          manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          print(json.dumps({'imported': imported, 'verified': verified, 'records': len(manifest['records'])}, indent=2))
+          PY
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -50,7 +140,10 @@ jobs:
         run: npm ci
 
       - name: Rebuild executable seed pack
-        run: npm run build:seed-beta-pack
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:seed-beta-pack 2>&1 | tee /tmp/seed-content-build.log
 
       - name: Validate generated pack and Store content contract
         run: |
@@ -58,16 +151,19 @@ jobs:
           npm run validate:store-content-artwork
           node --test scripts/store-content-artwork-source.test.mjs
 
-      - name: Commit deterministic generated artifacts
+      - name: Commit assets and deterministic generated artifacts
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/seed-content/executable/beta-pack-v1
+          git add \
+            player-terminal/assets/images/items/store \
+            docs/seed-content/items/store-artwork-source-v2.json \
+            docs/seed-content/executable/beta-pack-v1
           if git diff --cached --quiet; then
-            echo "Generated pack is already current."
+            echo "Store assets and generated pack are already current."
             exit 0
           fi
-          git commit -m "seed: regenerate executable Store content pack"
+          git commit -m "seed: import Store artwork assets and regenerate pack"
           git push origin "HEAD:${{ github.head_ref }}"
