@@ -24,6 +24,7 @@ declare
   v_definition_authority constant text := 'PR #163 with bounded V3 staging activation authority';
   v_runtime_digest text := lower(btrim(coalesce(p_pack->>'contentDigest','')));
   v_event public.physical_economy_admin_events%rowtype;
+  v_result jsonb;
 begin
   if p_pack is null
     or p_pack->>'schemaVersion' <> 'econovaria-physical-economy-runtime-pack-v1'
@@ -67,12 +68,20 @@ begin
       using errcode='P0001';
   end if;
 
-  return public.import_physical_economy_pack_unchecked_v1(
+  v_result := public.import_physical_economy_pack_unchecked_v1(
     p_game_session_id,
     p_staff_user_id,
     p_pack,
     p_content_digest,
     p_idempotency_key
+  );
+
+  return v_result || jsonb_build_object(
+    'outcome',
+    case
+      when coalesce((v_result->>'replayed')::boolean,false) then 'replayed'
+      else 'imported'
+    end
   );
 end
 $function$;
@@ -80,7 +89,7 @@ $function$;
 comment on function public.import_physical_economy_pack_v1(
   uuid, uuid, jsonb, text, text
 ) is
-  'Imports the exact accepted Seed physical-economy definitions only when bound to the reviewed V3 local/test/staging activation authority. Production authorization remains false.';
+  'Imports the exact accepted Seed physical-economy definitions only when bound to the reviewed V3 local/test/staging activation authority. Returns imported or replayed without changing the underlying idempotency semantics. Production authorization remains false.';
 
 revoke all on function public.import_physical_economy_pack_v1(
   uuid, uuid, jsonb, text, text
