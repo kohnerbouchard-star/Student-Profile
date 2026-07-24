@@ -3,6 +3,7 @@
 
   const source = globalObject.__ECONOVARIA_RUNTIME_CONFIG__;
   const allowedEnvironments = new Set(["development", "staging", "production"]);
+  const localDevelopmentProjectRef = "localdevelopment0000";
 
   function record(value) {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -62,13 +63,18 @@
       "ECONOVARIA_RUNTIME_CONFIG_INVALID_SUPABASE_URL"
     );
     const localHost = new Set(["localhost", "127.0.0.1", "::1"]);
-    if (parsedUrl.protocol !== "https:" && !localHost.has(parsedUrl.hostname)) {
+    const isLocalSupabase = localHost.has(parsedUrl.hostname);
+    if (parsedUrl.protocol !== "https:" && !isLocalSupabase) {
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_REQUIRES_HTTPS");
     }
-    if (
-      !localHost.has(parsedUrl.hostname) &&
-      parsedUrl.hostname !== `${projectRef}.supabase.co`
-    ) {
+    if (isLocalSupabase) {
+      if (
+        environment !== "development" ||
+        projectRef !== localDevelopmentProjectRef
+      ) {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_LOCAL_BINDING");
+      }
+    } else if (parsedUrl.hostname !== `${projectRef}.supabase.co`) {
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_PROJECT_URL_MISMATCH");
     }
     if (parsedUrl.pathname !== "/" || parsedUrl.search || parsedUrl.hash) {
@@ -110,7 +116,10 @@
     }
     if (!/^sb_publishable_/i.test(supabasePublishableKey)) {
       const payload = decodeJwtPayload(supabasePublishableKey);
-      if (!payload || payload.role !== "anon" || text(payload.ref).toLowerCase() !== projectRef) {
+      if (!payload || payload.role !== "anon") {
+        throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_LEGACY_ANON_KEY");
+      }
+      if (!isLocalSupabase && text(payload.ref).toLowerCase() !== projectRef) {
         throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_LEGACY_ANON_KEY");
       }
     }
