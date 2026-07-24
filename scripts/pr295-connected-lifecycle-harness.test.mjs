@@ -87,7 +87,9 @@ test("lifecycle harness replaces direct writes with atomic transitions", () => {
   assert.match(patched, /transitionSyntheticLifecycle\("pause"\)/);
   assert.match(patched, /transitionSyntheticLifecycle\("resume"\)/);
   assert.match(patched, /transitionSyntheticLifecycle\("end"\)/);
-  assert.match(patched, /expectedStatuses: \[401\]/);
+  assert.equal((patched.match(/expectedStatuses: \[401\]/g) ?? []).length, 2);
+  assert.match(patched, /evidence\.checks\.pausedMutationDenied = paused\.status === 401;/);
+  assert.match(patched, /evidence\.checks\.endedSessionRevoked = ended\.status === 401;/);
   assert.match(
     patched,
     /await runRateLimitProbe\(\);\n    await runLifecycleAcceptance\(\);\n    captureQueryPlans\(\);/,
