@@ -12,6 +12,18 @@ const PLAYER_SESSION_STORAGE_KEY = "econovaria.player.auth.v1";
 const ADMIN_SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
 const ADMIN_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 
+function installRootFavicon() {
+  if (document.head.querySelector('link[rel~="icon"]')) return;
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.type = "image/png";
+  favicon.sizes = "32x32";
+  favicon.href = "assets/brand/favicon-32.png";
+  document.head.append(favicon);
+}
+
+installRootFavicon();
+
 window.Econovaria.core.constants = Object.freeze({
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY,
