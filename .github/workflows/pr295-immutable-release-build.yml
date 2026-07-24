@@ -13,18 +13,18 @@ permissions:
   attestations: write
 
 concurrency:
-  group: pr295-immutable-release-v10-${{ github.event.pull_request.head.sha }}
+  group: pr295-immutable-release-v11-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event.pull_request.number == 295 && github.event.pull_request.head.sha == '2383a8b2e1aa36d2724a6d8793166b301fb47216'
+    if: github.event.pull_request.number == 295
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      RELEASE_COMMIT: 3c37a0cbfbf29f7dafbc16ba222ffd180da03e08
+      RELEASE_COMMIT: d94ffd0a38e6d00113c657602dd56861d8a362fd
       SOURCE_ROOT: /tmp/econovaria-release-source
-      OUTPUT_ROOT: /tmp/econovaria-release-v10
+      OUTPUT_ROOT: /tmp/econovaria-release-v11
     steps:
       - name: Check out exact PR295 tooling
         uses: actions/checkout@v7
@@ -101,8 +101,8 @@ jobs:
           if (manifest.source.commit !== process.env.RELEASE_COMMIT) throw new Error('source mismatch');
           if (manifest.provenance.toolingCommit !== process.env.RELEASE_TOOLING_COMMIT) throw new Error('tooling mismatch');
           if (manifest.provenance.workflow !== 'Release Artifact Build') throw new Error('workflow mismatch');
-          if (manifest.migrations.head !== '20260724013000') throw new Error('migration head mismatch');
-          if (!Number.isInteger(manifest.migrations.count) || manifest.migrations.count < 133) throw new Error('migration count is incomplete');
+          if (manifest.migrations.head !== '20260724053000') throw new Error('migration head mismatch');
+          if (!Number.isInteger(manifest.migrations.count) || manifest.migrations.count < 134) throw new Error('migration count is incomplete');
           console.log(`migration_count=${manifest.migrations.count}`);
           console.log(`migration_head=${manifest.migrations.head}`);
           console.log(`migration_set_sha256=${manifest.migrations.versionSetSha256}`);
@@ -114,8 +114,8 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: econovaria-release-3c37a0cbfbf29f7dafbc16ba222ffd180da03e08-v10
-          path: /tmp/econovaria-release-v10
+          name: econovaria-release-d94ffd0a38e6d00113c657602dd56861d8a362fd-v11
+          path: /tmp/econovaria-release-v11
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
@@ -125,10 +125,10 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: |
-            /tmp/econovaria-release-v10/artifacts/*
-            /tmp/econovaria-release-v10/checksums.sha256
-            /tmp/econovaria-release-v10/release-configuration.json
-            /tmp/econovaria-release-v10/release-manifest.json
+            /tmp/econovaria-release-v11/artifacts/*
+            /tmp/econovaria-release-v11/checksums.sha256
+            /tmp/econovaria-release-v11/release-configuration.json
+            /tmp/econovaria-release-v11/release-manifest.json
           show-summary: true
 
       - name: Record immutable identity
