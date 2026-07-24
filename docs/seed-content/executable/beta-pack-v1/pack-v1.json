@@ -8,6 +8,7 @@
   ],
   "boundedCounts": {
     "arrivalPackages": 10,
+    "authoredArrivalBriefs": 10,
     "authoredContractDefinitions": 50,
     "contractTemplates": 30,
     "itemDefinitionsCalibrated": 144,
@@ -26,22 +27,29 @@
   },
   "contentQuality": {
     "activeTutorialContractDescriptions": 30,
+    "authoredArrivalBriefs": 10,
     "authoredContractDefinitions": 50,
     "duplicateArtworkAssignments": 0,
     "individualStoreArtworkRecords": 50,
+    "placeholderArrivalContent": 0,
     "placeholderContractDescriptions": 0,
     "placeholderStoreDescriptions": 0,
+    "repeatedGenericArrivalTutorials": 0,
     "repeatedGenericTutorialInstructions": 0,
     "repositoryOwnedStoreArtwork": 50,
     "runtimeImagePathsAvailable": true,
-    "storeDescriptionsAuthored": 50
+    "storeDescriptionsAuthored": 50,
+    "uniqueArrivalFirstDayChecklists": 10,
+    "uniqueArrivalWelcomeMessages": 10
   },
   "contentRevision": "store-content-v2",
   "contentRevisions": {
+    "arrivals": "arrival-content-v2",
     "contracts": "contract-content-v2"
   },
   "domainFiles": {
     "arrival": "arrival-calibration-v1.json",
+    "arrivalContent": "arrival-content-v2.json",
     "calibration": "calibration-scenarios-v1.json",
     "campaign": "campaign-v1.json",
     "contractContent": "contract-content-v2.json",

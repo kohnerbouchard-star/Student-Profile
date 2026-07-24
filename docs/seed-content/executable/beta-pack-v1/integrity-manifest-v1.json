@@ -1,6 +1,6 @@
 {
   "activationAuthorized": false,
-  "fileCount": 14,
+  "fileCount": 15,
   "files": [
     {
       "bytes": 676,
@@ -8,9 +8,14 @@
       "sha256": "a51d67a822fe1d34afcacfdb7f4e62a50dc804ae574aabbc4f029db4e52865be"
     },
     {
-      "bytes": 9636,
+      "bytes": 19743,
       "path": "arrival-calibration-v1.json",
-      "sha256": "a5b4e7e93289d78bd6f354742303a19cb2e1ebd995074b523a67612b71a85164"
+      "sha256": "aa46b466e681fc26e9eb72628d96b8dc2163a36c157d8b700e661ee2e43ba12a"
+    },
+    {
+      "bytes": 27648,
+      "path": "arrival-content-v2.json",
+      "sha256": "ff43a36bf21f196aa7ac34d991e75df97ab7ccac5fc7a9c9e23354433bb475cd"
     },
     {
       "bytes": 171777,
@@ -38,9 +43,9 @@
       "sha256": "5df2e318b52f51b6f6fa45ae61e168b5951bdb2b7fc38cee2d88c7d83bb99201"
     },
     {
-      "bytes": 2651,
+      "bytes": 2965,
       "path": "pack-v1.json",
-      "sha256": "815763c8ac9856dd8b1223b05f603738b8009d744e36b7cdf19e619c63b3c754"
+      "sha256": "4fd9e0c9c5980b5ce5361a4343a71ba0f838266d3787c5923f7ce6ce3103ef2e"
     },
     {
       "bytes": 74019,
@@ -68,15 +73,15 @@
       "sha256": "0fa342fca769a5085caa1e2dbf1da5342db43f674c2a42bf3f395ba9481089a9"
     },
     {
-      "bytes": 76640,
+      "bytes": 87531,
       "path": "tutorial-contract-chains-v1.json",
-      "sha256": "60abbb0c1c68549640576f8754975f74a049f7e545fe5211909a515c461a618a"
+      "sha256": "7593f223571f94d2adbadbc59dbdf7b2b650694aabaca89e32b4ecd311334538"
     }
   ],
   "hashAlgorithm": "sha256",
-  "manifestContentSha256": "f4b558244242665aba7d9ec7b85a15835db5a167e87e6107d46c564028426a0d",
+  "manifestContentSha256": "acaa95e34d1d6caebbe78177475ed7481b2acd88ad4b37899e605dcf46b7cff1",
   "packId": "econovaria.beta-seed-pack.v1",
-  "packSha256": "815763c8ac9856dd8b1223b05f603738b8009d744e36b7cdf19e619c63b3c754",
+  "packSha256": "4fd9e0c9c5980b5ce5361a4343a71ba0f838266d3787c5923f7ce6ce3103ef2e",
   "productionAuthorized": false,
   "schemaVersion": "econovaria-beta-integrity-manifest-v1",
   "status": "approved-for-isolated-staging",
