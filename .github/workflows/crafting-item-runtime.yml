@@ -18,6 +18,8 @@ on:
       - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
       - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
       - "backend/supabase/migrations/2026072113*.sql"
+      - "docs/seed-content/authorizations/physical-economy-activation-authorization-v2.json"
+      - "docs/seed-content/simulation/physical-economy/**"
       - "docs/workstreams/crafting-*.md"
       - "player-terminal/src/**"
       - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
@@ -25,7 +27,7 @@ on:
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/crafting-*.test.mjs"
       - "scripts/lib/physical-economy-pack-*.mjs"
-      - "scripts/simulate-physical-economy-balance.mjs"
+      - "scripts/simulate-physical-economy-*.mjs"
       - "package.json"
       - "backend/package.json"
       - "player-terminal/package.json"
@@ -48,6 +50,8 @@ on:
       - "backend/supabase/functions/admin-api/inventory*Crafting*.test.ts"
       - "backend/supabase/functions/admin-api/inventoryRedemptionOperations*.ts"
       - "backend/supabase/migrations/2026072113*.sql"
+      - "docs/seed-content/authorizations/physical-economy-activation-authorization-v2.json"
+      - "docs/seed-content/simulation/physical-economy/**"
       - "docs/workstreams/crafting-*.md"
       - "player-terminal/src/**"
       - "player-terminal/tests/browser/player-crafting-runtime.spec.mjs"
@@ -55,7 +59,7 @@ on:
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/crafting-*.test.mjs"
       - "scripts/lib/physical-economy-pack-*.mjs"
-      - "scripts/simulate-physical-economy-balance.mjs"
+      - "scripts/simulate-physical-economy-*.mjs"
       - "package.json"
       - "backend/package.json"
       - "player-terminal/package.json"
@@ -76,6 +80,7 @@ jobs:
       - name: Check out Crafting candidate
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -109,13 +114,6 @@ jobs:
           )
           diff -u <(printf '%s\n' "${expected[@]}") <(printf '%s\n' "${migrations[@]}")
 
-      - name: Check out immutable merged Seed authority
-        uses: actions/checkout@v7
-        with:
-          ref: 6ced5aa36e60dfbd82620463f4f4bf6f56a349dd
-          path: seed-authority
-          persist-credentials: false
-
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
@@ -144,8 +142,9 @@ jobs:
           npm run test:crafting-runtime
           node --check scripts/build-physical-economy-runtime-pack.mjs
           node --check scripts/simulate-physical-economy-balance.mjs
+          node --check scripts/simulate-physical-economy-activation-v3.mjs
 
-      - name: Build immutable Seed physical-economy interface
+      - name: Build exact authorized Seed physical-economy interface
         id: seed-build
         shell: bash
         run: |
@@ -153,14 +152,22 @@ jobs:
           mkdir -p crafting-diagnostics
           (
             set -euo pipefail
-            source_commit="$(git -C seed-authority rev-parse HEAD)"
+            source_commit="$(node --input-type=module <<'NODE'
+            import { readFile } from "node:fs/promises";
+            const contract = JSON.parse(await readFile(
+              "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+              "utf8",
+            ));
+            process.stdout.write(contract.acceptedImplementationSourceSha);
+            NODE
+            )"
             test "$source_commit" = "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd"
 
             echo "== build-physical-economy-runtime-pack.mjs =="
             node scripts/build-physical-economy-runtime-pack.mjs \
-              --source-root seed-authority \
+              --source-root . \
               --source-commit "$source_commit" \
-              --approved-source-commit "6ced5aa36e60dfbd82620463f4f4bf6f56a349dd" \
+              --approved-source-commit "$source_commit" \
               --output /tmp/physical-economy-runtime-pack.json
 
             echo "== simulate-physical-economy-balance.mjs =="
@@ -168,20 +175,20 @@ jobs:
               --pack /tmp/physical-economy-runtime-pack.json \
               --output /tmp/physical-economy-balance-report.json
 
-            echo "== final runtime-failure assertion =="
+            echo "== final runtime and authority assertion =="
             node --input-type=module --eval '
               import { readFile } from "node:fs/promises";
               const report = JSON.parse(await readFile("/tmp/physical-economy-balance-report.json", "utf8"));
               if (report.runtimeFailures.length !== 0) {
                 throw new Error(`Crafting runtime simulation has ${report.runtimeFailures.length} failure(s): ${JSON.stringify(report.runtimeFailures)}`);
               }
-              const authorityReady = report.authority.blockers.length === 0;
-              if (report.gates.authorityActivationReady !== authorityReady) {
-                throw new Error(`Seed activation gate and reported authority blockers disagree: ${JSON.stringify({ gates: report.gates, authority: report.authority })}`);
+              if (report.authority.blockers.length !== 0 || report.gates.authorityActivationReady !== true) {
+                throw new Error(`Crafting authority is not ready: ${JSON.stringify({ gates: report.gates, authority: report.authority })}`);
               }
-              console.log(authorityReady
-                ? "Seed authority is activation-ready."
-                : `Runtime passes while activation remains fail-closed: ${report.authority.blockers.length} blocker(s).`);
+              if (report.pack.activationAuthorization.productionAuthorized !== false) {
+                throw new Error("Production authorization must remain false.");
+              }
+              console.log("Seed authority is ready for bounded local/test/staging activation.");
             '
           ) 2>&1 | tee crafting-diagnostics/seed-interface.log
           status=${PIPESTATUS[0]}
