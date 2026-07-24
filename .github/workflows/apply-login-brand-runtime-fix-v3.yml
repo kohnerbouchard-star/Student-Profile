@@ -1,0 +1,59 @@
+name: Apply Login Brand Runtime Fix V3
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-login-brand-runtime-fix-v3-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/login-brand-runtime-fix-v3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/login-brand-runtime-fix-v3
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Apply deterministic login repair
+        run: node scripts/apply-login-brand-runtime-fix-v3.mjs
+
+      - name: Remove one-time repair machinery and unrelated copied assets
+        run: |
+          rm -f scripts/apply-login-brand-runtime-fix-v3.mjs
+          rm -f .github/workflows/apply-login-brand-runtime-fix-v3.yml
+          rm -f assets/brand/econovaria-icon.png
+          rm -f player-terminal/assets/econovaria-icon.png
+          rm -f player-terminal/assets/favicon-32.png
+          rm -f admin/assets/econovaria-icon.png
+          rm -f admin/assets/favicon-32.png
+          rm -f assets/brand/econovaria-logo.webp
+
+      - name: Validate source-level login contract
+        run: |
+          node --check scripts/login-surface-browser-smoke.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          if (!html.includes('./assets/brand/econovaria-logo.png?v=20260724.4')) throw new Error('PNG login logo reference missing');
+          if (html.includes('econovaria-logo.webp')) throw new Error('obsolete WebP reference remains');
+          if (html.includes('<html lang="en" class="preload">')) throw new Error('login remains preload-hidden');
+          NODE
+
+      - name: Commit current-main repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(login): render current-main login surface reliably'
+          git push origin HEAD:agent/login-brand-runtime-fix-v3
