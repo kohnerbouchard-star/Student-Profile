@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+// This test intentionally verifies the login logo without any filesystem image request.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 4317;
 const origin = "http://127.0.0.1:" + port;
