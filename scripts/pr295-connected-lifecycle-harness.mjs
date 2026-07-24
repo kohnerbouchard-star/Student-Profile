@@ -4,6 +4,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { patchSensitiveRateLimitAcceptance } from "./pr295-sensitive-rate-limit-harness.mjs";
+
 const FUNCTION_ANCHOR = "async function runHttpAcceptance() {";
 const MAIN_ANCHOR = `    await runRateLimitProbe();
     captureQueryPlans();`;
@@ -186,10 +188,11 @@ async function main() {
   }
   const target = path.resolve(input);
   const source = await readFile(target, "utf8");
-  const patched = patchConnectedLifecycleAcceptance(source);
+  const lifecyclePatched = patchConnectedLifecycleAcceptance(source);
+  const patched = patchSensitiveRateLimitAcceptance(lifecyclePatched);
   await writeFile(target, patched, "utf8");
   console.log(
-    "Connected staging lifecycle acceptance now uses canonical atomic transitions.",
+    "Connected staging acceptance now uses canonical lifecycle transitions and the replay-safe sensitive rate-limit probe.",
   );
 }
 
