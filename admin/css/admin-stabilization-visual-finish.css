@@ -129,3 +129,18 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Canonical Econovaria icon in the Admin left navigation header. */
+.admin-terminal-brand-mark {
+  overflow: hidden;
+  color: transparent !important;
+  background: url("../../assets/brand/econovaria-icon.webp") center / cover no-repeat !important;
+  border-color: rgba(0, 212, 255, 0.42) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.18), 0 0 20px rgba(255, 0, 238, 0.10) !important;
+  filter: none !important;
+}
+
+.admin-terminal-brand-mark .admin-terminal-logo-svg {
+  display: none !important;
+}
