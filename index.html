@@ -228,6 +228,17 @@
     </div>
   </section>
 
+  <script>
+    (function clearSignedOutAdminState() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("reason") !== "signed-out") return;
+        window.sessionStorage.removeItem("econovaria.admin.auth.v1");
+        window.sessionStorage.removeItem("econovaria.admin.selected-game.v1");
+        window.sessionStorage.removeItem("econovaria.admin.csrf.v1");
+      } catch (_) {}
+    })();
+  </script>
   <script src="runtime-config.env.js"></script>
   <script src="frontend/src/core/runtime-config.js"></script>
   <script src="frontend/src/core/constants.js"></script>
