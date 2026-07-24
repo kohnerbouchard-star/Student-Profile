@@ -30,6 +30,7 @@ const expectedAdminScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./logout-confirmation.js",
   "./game-session-controls.js",
   "./admin-stabilization.js",
   "./interaction-quality.js",
@@ -71,6 +72,7 @@ const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle
 const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
+const logoutConfirmation = readFileSync(resolve(adminRoot, "logout-confirmation.js"), "utf8");
 const gameSessionControls = readFileSync(resolve(adminRoot, "game-session-controls.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
 const interactionQuality = readFileSync(resolve(adminRoot, "interaction-quality.js"), "utf8");
@@ -79,6 +81,7 @@ const interactionControlReset = readFileSync(resolve(adminRoot, "interaction-qua
 const shapeSkeletons = readFileSync(resolve(adminRoot, "shape-accurate-skeletons.js"), "utf8");
 const stabilizationCss = readFileSync(resolve(adminRoot, "css/admin-stabilization.css"), "utf8");
 const gameSessionControlsCss = readFileSync(resolve(adminRoot, "css/game-session-controls.css"), "utf8");
+const logoutConfirmationCss = readFileSync(resolve(adminRoot, "css/logout-confirmation.css"), "utf8");
 const interactionQualityCss = readFileSync(resolve(adminRoot, "css/interaction-quality.css"), "utf8");
 const dataStateCss = readFileSync(resolve(adminRoot, "css/data-state-contracts.css"), "utf8");
 const shapeSkeletonCss = readFileSync(resolve(adminRoot, "css/shape-accurate-skeletons.css"), "utf8");
@@ -159,6 +162,17 @@ assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials 
 assert(playerCreateUx.includes("dismissOnBackdrop: false"), "One-time credentials can be dismissed by accidental backdrop click.");
 assert(playerCreateUx.includes("lastCreateOpener"), "Player confirmation does not retain its opening control for focus restoration.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
+
+assert(logoutConfirmation.includes("event.stopImmediatePropagation()"), "Owned logout confirmation does not isolate the legacy handler.");
+assert(logoutConfirmation.includes("data-econovaria-admin-logout-confirmation"), "Owned logout confirmation surface is missing.");
+assert(logoutConfirmation.includes("clearLocalStateAndRedirect"), "Logout confirmation has no local-session fallback.");
+assert(logoutConfirmation.includes("EconovariaAdminGameSessionControls?.selectedGameContext?.()"), "Logout confirmation is not bound to the selected game.");
+assert(logoutConfirmation.includes("EconovariaAdminAuthSession?.read?.()"), "Logout confirmation is not bound to the authenticated account.");
+assert(logoutConfirmationCss.includes("width: min(680px, calc(100vw - 32px))"), "Logout dialog is not responsively bounded.");
+assert(logoutConfirmationCss.includes("max-height: 44px !important"), "Logout action buttons can stretch vertically.");
+assert(logoutConfirmationCss.includes("flex-direction: row !important"), "Desktop logout actions are not kept in a horizontal row.");
+assert(html.includes("./css/logout-confirmation.css"), "Logout confirmation stylesheet is not loaded.");
+assert(html.indexOf("./logout-confirmation.js") < html.indexOf("./game-session-controls.js"), "Logout confirmation must load before the legacy logout interceptor.");
 
 assert(gameSessionControls.includes("econovaria.admin.selected-game.v1"), "Selected-game control does not bind to the active Admin game.");
 assert(gameSessionControls.includes("Players using this code join this game instance."), "Selected-game card does not explain the multiplayer target.");
@@ -259,4 +273,4 @@ for (const asset of [
   assert(existsSync(path), `Missing repository-owned admin asset ${asset}.`);
 }
 
-console.log("Original v606 shell, selected multiplayer game controls, runtime configuration bootstrap, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
+console.log("Original v606 shell, selected multiplayer game controls, bounded logout confirmation, runtime configuration bootstrap, route-shaped loading shells, explicit six-state data lifecycles, responsive geometry, reduced motion, credential accessibility, explicit request lifecycles, scanner recovery, and completed-control restoration passed.");
