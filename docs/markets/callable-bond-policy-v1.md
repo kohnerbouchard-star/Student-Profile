@@ -58,11 +58,4 @@ Focused tests cover:
 - call-schedule identity mismatch;
 - permanent fail-closed optional-pricing and activation markers.
 
-Exact code head `52659a15a3980802fe458d8f5d8d1ea5970cad81` passed 136 Financial Markets domain tests with zero failures. Documentation-only head `57ab2249eaf0a658826bf60038a88bbd5003da20` passed:
-
-- Full Financial Markets Expansion;
-- Backend Typecheck;
-- Repository Quality;
-- Supply Chain Security;
-- Exchange Calendar Runtime;
-- Required Game Market Timezone.
+Exact code head `52659a15a3980802fe458d8f5d8d1ea5970cad81` passed 136 Financial Markets domain tests with zero failures. Documentation evidence was subsequently refreshed without changing feature semantics; the current PR head remains subject to the same six exact-head validation workflows.
