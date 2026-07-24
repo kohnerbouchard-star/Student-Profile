@@ -37,6 +37,13 @@ begin
     return v_result;
   end if;
 
+  -- V1 stores the fully activated V2 result back into the completed idempotency
+  -- request. A committed-success replay must return that sanitized result without
+  -- rerunning activation or selecting the target game as its own Crafting source.
+  if coalesce(v_result->>'outcome', '') = 'replayed' then
+    return v_result;
+  end if;
+
   v_game_id := nullif(v_result->>'gameSessionId', '')::uuid;
 
   if v_game_id is null then
@@ -59,6 +66,7 @@ begin
   join public.physical_economy_content_packs as pack_row
     on pack_row.id = source_pack.pack_id
   where source_pack.status = 'active'
+    and source_pack.game_session_id <> v_game_id
     and pack_row.status = 'active'
     and pack_row.pack_key = btrim(p_pack_id)
     and coalesce(
@@ -126,7 +134,7 @@ $function$;
 comment on function public.create_provisioned_game_v2(
   uuid, text, jsonb, text, text
 ) is
-  'Creates an isolated multiplayer game through V1, resolves the active non-production Crafting source independently from the canonical Seed/World source, and completes full-game feature activation before returning.';
+  'Creates an isolated multiplayer game through V1, resolves the active non-production Crafting source independently from the canonical Seed/World source, completes full-game feature activation once, and returns persisted activation evidence on committed-success replay.';
 
 revoke all on function public.create_provisioned_game_v2(
   uuid, text, jsonb, text, text
