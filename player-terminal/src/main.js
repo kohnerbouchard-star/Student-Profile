@@ -15,6 +15,14 @@ import { installPlayerInvalidationController } from "./realtime/player-invalidat
 import { installPlayerSessionSafeExit } from "./session-timeout-safe-exit.js";
 
 const mount = document.getElementById("playerTerminal");
+function handlePlayerBrandImage(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLImageElement) || !target.matches("[data-player-brand-image]")) return;
+  target.hidden = event.type === "error";
+}
+mount.addEventListener("error", handlePlayerBrandImage, true);
+mount.addEventListener("load", handlePlayerBrandImage, true);
+
 const config = installStudentProfileRuntime(resolvePlayerTerminalConfig());
 const skipLink = installSkipLinkController(mount);
 const countryFocus = installCountryFocusController(mount);

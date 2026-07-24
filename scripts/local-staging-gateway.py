@@ -46,6 +46,30 @@ STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-Modified-Since",
     "If-None-Match",
 )
+PNG_SIGNATURE: Final[bytes] = b"\x89PNG\r\n\x1a\n"
+JPEG_SIGNATURE: Final[bytes] = b"\xff\xd8\xff"
+REQUIRED_BRAND_ASSETS: Final[tuple[tuple[str, bytes], ...]] = (
+    ("assets/brand/econovaria-logo.jpg", JPEG_SIGNATURE),
+    ("assets/brand/econovaria-icon.png", PNG_SIGNATURE),
+    ("assets/brand/favicon-32.png", PNG_SIGNATURE),
+    ("player-terminal/assets/econovaria-icon.png", PNG_SIGNATURE),
+    ("player-terminal/assets/favicon-32.png", PNG_SIGNATURE),
+    ("admin/assets/econovaria-icon.png", PNG_SIGNATURE),
+    ("admin/assets/favicon-32.png", PNG_SIGNATURE),
+)
+
+
+def validate_brand_assets(root: Path) -> None:
+    failures: list[str] = []
+    for relative_path, signature in REQUIRED_BRAND_ASSETS:
+        asset_path = root / relative_path
+        if not asset_path.is_file():
+            failures.append(f"missing {relative_path}")
+        elif not asset_path.read_bytes().startswith(signature):
+            failures.append(f"invalid image signature {relative_path}")
+    if failures:
+        raise SystemExit("Local brand asset validation failed: " + "; ".join(failures))
+
 
 
 def is_proxy_path(path: str) -> bool:
@@ -92,7 +116,7 @@ def filtered_response_headers(headers) -> list[tuple[str, str]]:
 
 
 class LocalStagingHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaLocalGateway/1.1"
+    server_version = "EconovariaLocalGateway/1.2"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -231,6 +255,7 @@ def main() -> int:
     root = Path(args.root).expanduser().resolve()
     if not (root / "index.html").is_file():
         raise SystemExit(f"Repository root does not contain index.html: {root}")
+    validate_brand_assets(root)
 
     config_path = root / "runtime-config.env.js"
     previous_config = config_path.read_bytes() if config_path.exists() else None

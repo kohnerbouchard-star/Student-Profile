@@ -144,3 +144,24 @@
 .admin-terminal-brand-mark .admin-terminal-logo-svg {
   display: none !important;
 }
+
+/* Cross-surface Admin brand asset rendering repair. */
+.admin-terminal-brand-mark {
+  position: relative !important;
+  overflow: hidden !important;
+  color: var(--admin-terminal-cyan, #62e5ff) !important;
+  background: none !important;
+}
+.admin-terminal-brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: url("../assets/econovaria-icon.png?v=20260724.2") center / cover no-repeat;
+  pointer-events: none;
+}
+.admin-terminal-brand-mark .admin-terminal-logo-svg {
+  position: relative;
+  z-index: 1;
+  display: block !important;
+}
