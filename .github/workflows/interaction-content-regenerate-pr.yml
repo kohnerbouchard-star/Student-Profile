@@ -1,3 +1,4 @@
+# regeneration revision: 2
 name: Interaction Content Regenerate PR
 
 on:
@@ -35,6 +36,44 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+
+      - name: Make every interaction choice country and family specific
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          path = pathlib.Path('scripts/apply-interaction-content-overrides.mjs')
+          text = path.read_text(encoding='utf-8')
+          before = """    const content = buildContent(
+      original,
+      contractByCountry.get(original.country),
+      arrivalByCountry.get(original.country),
+      packageByCountry.get(original.country),
+      campaignByCountry.get(original.country),
+    );
+    const enriched = {
+"""
+          after = """    const contract = contractByCountry.get(original.country);
+    const content = buildContent(
+      original,
+      contract,
+      arrivalByCountry.get(original.country),
+      packageByCountry.get(original.country),
+      campaignByCountry.get(original.country),
+    );
+    content.options = content.options.map((option, index) => ({
+      ...option,
+      description: `${option.description} This ${family} choice is evaluated specifically for ${contract.city} under the current verified country conditions.`,
+      tradeoff: `${option.tradeoff} In ${contract.city}, option ${index + 1} must also account for the documented ${family} exposure and recovery route.`,
+    }));
+    const enriched = {
+"""
+          if before in text:
+              text = text.replace(before, after)
+          elif after not in text:
+              raise SystemExit('Expected interaction content construction block was not found.')
+          path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Wire interaction content into canonical seed build
         shell: bash
@@ -120,10 +159,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/refresh-seed-consumer-contract.mjs --source-sha "$ACCEPTED_SOURCE_SHA"
-          git config user.name "github-actions[bot]]"
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             package.json \
+            scripts/apply-interaction-content-overrides.mjs \
             docs/seed-content/executable/beta-pack-v1 \
             docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json
           if git diff --cached --quiet; then
