@@ -66,6 +66,7 @@ jobs:
             .map((value) => value.trim())
             .filter(Boolean);
           const sentinels = new Set([
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
             'docs/seed-content/contracts/contract-content-source-v2.json',
             'player-terminal/src/features/store/store-artwork.js',
             'scripts/store-content-artwork-contract.mjs',
@@ -75,6 +76,7 @@ jobs:
           }
           const exact = new Set([
             '.github/workflows/player-terminal-verify.yml',
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
             'package.json',
           ]);
           const allowed = (path) =>
