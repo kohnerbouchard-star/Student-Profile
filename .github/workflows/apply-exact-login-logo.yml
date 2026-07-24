@@ -36,16 +36,16 @@ jobs:
             'https://pikaso.cdnpk.net/private/production/4973899044/3345917078.png?token=exp=1785110400~hmac=abb44611d74b1289dba6ee651a5b02edcbb654c19d591283083b50c67473a154' \
             --output /tmp/econovaria-source-b.png
 
-      - name: Apply exact approved PNG and strengthen contracts
+      - name: Apply approved landscape PNG and strengthen contracts
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
           import struct
 
           PNG = b'\x89PNG\r\n\x1a\n'
-          EXPECTED = (1672, 941)
           VERSION = '20260724.3'
 
           def dimensions(path: Path):
@@ -55,44 +55,95 @@ jobs:
               return struct.unpack('>II', data[16:24])
 
           candidates = [Path('/tmp/econovaria-source-a.png'), Path('/tmp/econovaria-source-b.png')]
-          selected = next((path for path in candidates if dimensions(path) == EXPECTED), None)
-          if selected is None:
-              raise SystemExit('Neither approved upload is the expected 1672x941 Econovaria logo: ' + ', '.join(f'{p}={dimensions(p)}' for p in candidates))
+          landscape = [(path, dimensions(path)) for path in candidates if dimensions(path)[0] / dimensions(path)[1] > 1.5]
+          if not landscape:
+              raise SystemExit('No approved upload is a landscape Econovaria logo: ' + ', '.join(f'{p}={dimensions(p)}' for p in candidates))
+          selected, (width, height) = max(landscape, key=lambda item: item[1][0] * item[1][1])
+          print(f'Selected {selected} at {width}x{height}')
 
-          destination = Path('assets/brand/econovaria-logo.png')
-          destination.write_bytes(selected.read_bytes())
+          Path('assets/brand/econovaria-logo.png').write_bytes(selected.read_bytes())
           Path('assets/brand/econovaria-logo.jpg').unlink(missing_ok=True)
 
           index = Path('index.html')
           text = index.read_text(encoding='utf-8')
-          old = 'assets/brand/econovaria-logo.jpg?v=20260724.2'
-          if old not in text:
-              raise SystemExit(f'Expected current login logo reference is missing: {old}')
-          text = text.replace(old, f'./assets/brand/econovaria-logo.png?v={VERSION}', 1)
-          text = text.replace('width="600" height="338"', 'width="1672" height="941"', 1)
+          text, count = re.subn(
+              r'(src=")\.?/?assets/brand/econovaria-logo\.(?:jpg|png|webp)(?:\?v=[^"]+)?(")',
+              rf'\1./assets/brand/econovaria-logo.png?v={VERSION}\2',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'Expected one login logo src, replaced {count}')
+          text, count = re.subn(
+              r'(<img\s+src="\./assets/brand/econovaria-logo\.png\?v=[^"]+"\s+)width="\d+"\s+height="\d+"',
+              rf'\1width="{width}" height="{height}"',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'Expected one login logo dimension pair, replaced {count}')
           index.write_text(text, encoding='utf-8')
 
           gateway = Path('scripts/local-staging-gateway.py')
           text = gateway.read_text(encoding='utf-8')
-          text = text.replace('JPEG_SIGNATURE: Final[bytes] = b"\\xff\\xd8\\xff"\n', '')
-          text = text.replace('(\"assets/brand/econovaria-logo.jpg\", JPEG_SIGNATURE)', '(\"assets/brand/econovaria-logo.png\", PNG_SIGNATURE)')
+          text = re.sub(r'^JPEG_SIGNATURE: Final\[bytes\] = .*\n', '', text, flags=re.MULTILINE)
+          text = re.sub(
+              r'\("assets/brand/econovaria-logo\.(?:jpg|png|webp)",\s*(?:JPEG_SIGNATURE|PNG_SIGNATURE)\)',
+              '("assets/brand/econovaria-logo.png", PNG_SIGNATURE)',
+              text,
+              count=1,
+          )
           gateway.write_text(text, encoding='utf-8')
 
           contract = Path('scripts/brand-asset-contract.mjs')
-          text = contract.read_text(encoding='utf-8')
-          text = text.replace('const version = "20260724.2";', f'const version = "{VERSION}";')
-          text = text.replace('const jpeg = Buffer.from([0xff,0xd8,0xff]);\n', '')
-          text = text.replace(
-              '["assets/brand/econovaria-icon.png","assets/brand/favicon-32.png",',
-              '["assets/brand/econovaria-logo.png","assets/brand/econovaria-icon.png","assets/brand/favicon-32.png",',
-          )
-          text = text.replace('signature("assets/brand/econovaria-logo.jpg", jpeg);\n', '')
-          text = text.replace('econovaria-logo\\.jpg', 'econovaria-logo\\.png')
-          dimension_check = '''\nconst logoBytes = bytes("assets/brand/econovaria-logo.png");\nassert.equal(logoBytes.readUInt32BE(16), 1672, "login logo width must match the approved source");\nassert.equal(logoBytes.readUInt32BE(20), 941, "login logo height must match the approved source");\n'''
-          marker = 'const login = text("index.html");\n'
-          if dimension_check.strip() not in text:
-              text = text.replace(marker, dimension_check + marker, 1)
-          contract.write_text(text, encoding='utf-8')
+          contract.write_text(f'''import assert from "node:assert/strict";
+          import {{ readFileSync }} from "node:fs";
+          import {{ fileURLToPath }} from "node:url";
+          import path from "node:path";
+
+          const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+          const version = "{VERSION}";
+          const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+          const bytes = (relativePath) => readFileSync(path.join(root, relativePath));
+          const text = (relativePath) => readFileSync(path.join(root, relativePath), "utf8");
+          const signature = (relativePath, expected) => {{
+            assert.ok(bytes(relativePath).subarray(0, expected.length).equals(expected), `${{relativePath}} has an invalid image signature`);
+          }};
+
+          [
+            "assets/brand/econovaria-logo.png",
+            "assets/brand/econovaria-icon.png",
+            "assets/brand/favicon-32.png",
+            "player-terminal/assets/econovaria-icon.png",
+            "player-terminal/assets/favicon-32.png",
+            "admin/assets/econovaria-icon.png",
+            "admin/assets/favicon-32.png",
+          ].forEach((relativePath) => signature(relativePath, png));
+
+          const logoBytes = bytes("assets/brand/econovaria-logo.png");
+          assert.equal(logoBytes.readUInt32BE(16), {width}, "login logo width must match the approved upload");
+          assert.equal(logoBytes.readUInt32BE(20), {height}, "login logo height must match the approved upload");
+
+          const login = text("index.html");
+          const player = text("player-terminal/index.html");
+          const playerLayout = text("player-terminal/src/components/layout.js");
+          const admin = text("admin/index.html");
+          const adminCss = text("admin/css/admin-stabilization-visual-finish.css");
+
+          assert.match(login, new RegExp(`econovaria-logo\\\\.png\\\\?v=${{version}}`));
+          assert.match(login, new RegExp(`assets/brand/favicon-32\\\\.png\\\\?v=20260724\\\\.2`));
+          assert.match(player, /\\.\\/assets\\/favicon-32\\.png\\?v=20260724\.2/);
+          assert.match(admin, /\\.\\/assets\\/favicon-32\\.png\\?v=20260724\.2/);
+          assert.match(login, /rel="shortcut icon"/);
+          assert.match(player, /rel="shortcut icon"/);
+          assert.match(admin, /rel="shortcut icon"/);
+          assert.match(playerLayout, /econovaria-icon\\.png\\?v=20260724\.2/);
+          assert.match(adminCss, /econovaria-icon\\.png\\?v=20260724\.2/);
+          assert.doesNotMatch(login, /econovaria-logo\\.(?:jpg|webp)/);
+          assert.match(text("scripts/local-staging-gateway.py"), /validate_brand_assets\\(root\\)/);
+
+          console.log("Econovaria brand assets verified across Login, Player, Admin, and local staging.");
+          ''', encoding='utf-8')
           PY
 
       - name: Validate exact login asset
