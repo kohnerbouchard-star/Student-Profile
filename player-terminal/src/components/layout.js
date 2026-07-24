@@ -59,9 +59,7 @@ function pendingAttributes(enabled, label) {
 }
 
 function logoMark() {
-  return `<svg viewBox="0 0 56 56" class="player-terminal-logo-svg" aria-hidden="true">
-    <circle cx="28" cy="28" r="25"></circle><path d="M28 7 L45 17 L45 39 L28 49 L11 39 L11 17 Z"></path><ellipse cx="28" cy="28" rx="11" ry="17"></ellipse><line x1="28" y1="11" x2="28" y2="45"></line><path d="M18 23 Q28 19 38 23"></path><path d="M18 33 Q28 37 38 33"></path><path class="logo-e" d="M21 21 L21 35 L33 35 M21 28 L31 28 M21 21 L33 21"></path><circle class="orbit-dot" cx="45" cy="28" r="2.4"></circle>
-  </svg>`;
+  return `<img src="./assets/econovaria-icon.webp" class="player-terminal-logo-svg" width="42" height="42" alt="" aria-hidden="true" style="display:block;width:42px;height:42px;object-fit:cover;border-radius:10px;box-shadow:0 0 16px rgba(0,212,255,.18),0 0 18px rgba(255,0,238,.10)">`;
 }
 
 function renderNavGroup(group, route, data) {
