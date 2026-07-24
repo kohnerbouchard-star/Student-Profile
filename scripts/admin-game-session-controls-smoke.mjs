@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const index = readFileSync("admin/index.html", "utf8");
+const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 const controls = readFileSync("admin/game-session-controls.js", "utf8");
+const shareLinkContract = readFileSync(
+  "admin/game-session-share-link-contract.js",
+  "utf8",
+);
 const styles = readFileSync("admin/css/game-session-controls.css", "utf8");
 const loginHandler = readFileSync(
   "backend/src/domains/players/api/playerLoginHttpHandler.ts",
@@ -23,6 +28,7 @@ function checkJavaScript(path) {
 }
 
 checkJavaScript("admin/game-session-controls.js");
+checkJavaScript("admin/game-session-share-link-contract.js");
 
 assert(
   index.includes('<link rel="stylesheet" href="./css/game-session-controls.css" />'),
@@ -36,6 +42,11 @@ assert(
   index.indexOf("./game-code-wiring.js") < index.indexOf("./game-session-controls.js"),
   "Selected-game controls must load after the canonical Game Code wiring.",
 );
+assert(
+  bootstrap.includes('name: "game-session-access"') &&
+    bootstrap.includes('modules: ["./game-session-share-link-contract.js"]'),
+  "Admin bootstrap must load the canonical selected-game share-link contract.",
+);
 
 for (const contract of [
   "econovaria.admin.selected-game.v1",
@@ -43,10 +54,23 @@ for (const contract of [
   "share-current-game",
   "data-econovaria-game-session-card",
   "Players using this code join this game instance.",
-  'url.searchParams.set("mode", "player")',
   'url.searchParams.set("gameCode", gameCode)',
 ]) {
   assert(controls.includes(contract), `Selected-game control contract is missing ${contract}.`);
+}
+
+for (const contract of [
+  '"/play"',
+  'url.searchParams.set("gameCode", normalizedCode)',
+  'url.searchParams.set("mode", "student")',
+  "repairVisibleShareSurfaces",
+  "data-econovaria-player-link",
+  "input[id*='share-admin-link']",
+]) {
+  assert(
+    shareLinkContract.includes(contract),
+    `Canonical selected-game share-link contract is missing ${contract}.`,
+  );
 }
 
 for (const contract of [
@@ -96,6 +120,7 @@ for (const contract of [
 console.log(JSON.stringify({
   selectedGameCard: true,
   sharePanelResponsive: true,
+  canonicalPlayerShareRoute: true,
   playerLinkTargetsGameCode: true,
   logoutPointerControl: true,
   logoutFallback: true,
