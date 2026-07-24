@@ -8,6 +8,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.dirname(SCRIPT_DIR);
 const PACK_ROOT = path.join(REPO_ROOT, 'docs', 'seed-content', 'executable', 'beta-pack-v1');
 const CONTRACT_PATH = path.join(REPO_ROOT, 'docs', 'operations', 'contracts', 'beta-seed-downstream-consumer-contract-v1.json');
+const INTEGRITY_FILENAME = 'integrity-manifest-v1.json';
 
 function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,7 +31,7 @@ export async function refreshSeedConsumerContract({ sourceSha = null } = {}) {
   const [contract, pack, integrity] = await Promise.all([
     readJson(CONTRACT_PATH),
     readJson(path.join(PACK_ROOT, 'pack-v1.json')),
-    readJson(path.join(PACK_ROOT, 'integrity-manifest-v1.json')),
+    readJson(path.join(PACK_ROOT, INTEGRITY_FILENAME)),
   ]);
 
   requireCondition(contract.schemaVersion === 'econovaria-beta-seed-downstream-consumer-contract-v1', 'Unexpected downstream Seed contract schema.');
@@ -43,6 +44,7 @@ export async function refreshSeedConsumerContract({ sourceSha = null } = {}) {
 
   for (const [key, binding] of Object.entries(fileBindings)) {
     const relativePath = path.relative(PACK_ROOT, path.join(REPO_ROOT, binding.path)).replaceAll(path.sep, '/');
+    requireCondition(relativePath !== INTEGRITY_FILENAME, `Downstream binding ${key} must not hash the self-referential integrity manifest.`);
     const entry = manifestByPath.get(relativePath);
     requireCondition(entry, `Downstream binding ${key} points outside the immutable pack: ${binding.path}`);
     fileBindings[key] = { ...binding, sha256: entry.sha256 };
@@ -50,6 +52,7 @@ export async function refreshSeedConsumerContract({ sourceSha = null } = {}) {
 
   const boundPaths = new Set(Object.values(fileBindings).map((binding) => binding.path));
   for (const [domainKey, relativePath] of Object.entries(pack.domainFiles ?? {})) {
+    if (relativePath === INTEGRITY_FILENAME) continue;
     const repositoryPath = `docs/seed-content/executable/beta-pack-v1/${relativePath}`;
     if (boundPaths.has(repositoryPath)) continue;
     const entry = manifestByPath.get(relativePath);
