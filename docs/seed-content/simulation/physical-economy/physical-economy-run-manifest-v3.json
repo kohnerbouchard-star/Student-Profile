@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "econovaria-physical-economy-run-manifest-v3",
+  "status": "repository-ingested-candidate-evidence",
+  "activationAuthorized": false,
+  "calibrationPassed": true,
+  "runConfiguration": {
+    "countries": 10,
+    "difficulties": 4,
+    "scenarios": 4,
+    "seeds": 100,
+    "playersPerCountry": 12,
+    "cycles": 30,
+    "runCount": 16000
+  },
+  "files": {
+    "input": "docs/seed-content/simulation/physical-economy/physical-economy-simulation-input-v3.json",
+    "script": "scripts/simulate-physical-economy-activation-v3.mjs",
+    "aggregateResults": "physical-economy-aggregate-results-v3.json",
+    "gateSummary": "physical-economy-gate-summary-v3.json",
+    "rawResults": "physical-economy-raw-results-v3.jsonl",
+    "rawResultsArchive": "physical-economy-raw-results-v3.jsonl.gz"
+  },
+  "sha256": {
+    "input": "b8021ab6112f466f5fb5c498e3d1e37804cb940d70e530a2e6ff61a170f0ed5d",
+    "script": "eb7a93af49342f83f3851c1b6dd701b0433674743b21635db1763fbcf3fcda7c",
+    "aggregateResults": "b296fc7fc37e6117f246a1971d5383d54c264010b03fc1b6c12dd0e17f04a744",
+    "gateSummary": "a19530e54c9a40ebbd0b6b34ed5f5d37bec7616a733c78070a1351b1fa5c0a4e",
+    "rawResults": "dadac64dd0bd4400b11e821f9fd982ebabbd9368ec09bbe64859c82376404973",
+    "rawResultsArchive": "0c1fe1710646db0dc133314679896b5674bfefd7b0e4f76f55a1fb27a79e5bd3"
+  },
+  "decision": "candidate_pass_requires_authority_review",
+  "failedGates": 0
+}
