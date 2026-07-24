@@ -1,0 +1,217 @@
+{
+  "schemaVersion": "econovaria-arrival-content-source-v2",
+  "status": "authored-player-arrival-source",
+  "countryCount": 10,
+  "records": [
+    {
+      "stableId": "arrival-content.northreach.frostgate.v2",
+      "country": "northreach",
+      "arrivalPackageStableId": "arrival-package.northreach.frostgate-immigrant.v1",
+      "title": "Frostgate Arrival Brief",
+      "situationBrief": "You have arrived in Frostgate, a strategic-minerals and cold-chain hub where shelter is inseparable from heat and transport. Your temporary employer accommodation expires soon, and the cheapest room can become the most expensive option once heating deposits and winter transit are included.",
+      "welcomeMessage": "Edda Veyr has registered your arrival with the Frostgate Settlement Office, but that registration does not guarantee permanent housing or employment. Confirm the accommodation deadline, protect the emergency reserve, and verify every industrial placement before paying for equipment or transport. Frostgate rewards technical competence, but a missed freight connection or heating payment can erase an otherwise strong first week.",
+      "sponsorNote": "Edda Veyr can verify the settlement referral and explain the employer-accommodation deadline, but she cannot approve private work offers or guarantee a job.",
+      "firstDayChecklist": [
+        "Confirm your Player identity, Northreach assignment, NRC currency, temporary address, and accommodation expiration time.",
+        "Separate the protected emergency reserve from money available for heating, food, transport, and deposits.",
+        "Compare employer accommodation with the Frostgate Settlement Office housing route, including heating and commute costs.",
+        "Review only currently available Store, banking, Contract, and market functions before committing funds.",
+        "Accept the official stabilization Contract and record the settlement-office recovery route before pursuing industrial work."
+      ],
+      "localTradeoffs": [
+        "Employer lodging lowers the immediate deposit but can disappear if the placement ends.",
+        "Central housing improves access to employers and services but carries higher heating and transport costs.",
+        "Strategic-industry work can pay well, but credential checks and winter freight delays make early income less certain."
+      ]
+    },
+    {
+      "stableId": "arrival-content.yrethia.sableport.v2",
+      "country": "yrethia",
+      "arrivalPackageStableId": "arrival-package.yrethia.sableport-immigrant.v1",
+      "title": "Sableport Arrival Brief",
+      "situationBrief": "Sableport moves goods faster than it corrects records. Your housing address and employment documents do not currently match, which means a legitimate port employer may be unable to place you even when shifts are available.",
+      "welcomeMessage": "Report first to the Sableport Port Records Bureau and correct the address mismatch before accepting cargo, customs, or insurance work. Informal shift offers may promise immediate cash, but undocumented access can expose you to withheld wages, customs liability, or damaged-cargo claims. Preserve enough YRC for housing and local transport while the records correction is processed.",
+      "sponsorNote": "No private sponsor is assigned. The Port Records Bureau and its supervised correction desk are the authoritative contacts for your first-day documentation problem.",
+      "firstDayChecklist": [
+        "Verify your Yrethia assignment, YRC account, current address record, and the document field causing the employment mismatch.",
+        "Book the supervised records-correction appointment before responding to port-shift offers.",
+        "Price temporary housing together with dock transit, document fees, and the risk of delayed first payment.",
+        "Check whether cargo, Store, banking, and market functions are actually available in the current game state.",
+        "Accept the official stabilization Contract and save the entry-level port-service recovery route."
+      ],
+      "localTradeoffs": [
+        "Dockside housing reduces commute time but costs more and is vulnerable to congestion surcharges.",
+        "Inland housing is cheaper but missed transit can invalidate time-sensitive port work.",
+        "Fast informal work produces earlier cash only by shifting customs, insurance, and payment risk onto the worker."
+      ]
+    },
+    {
+      "stableId": "arrival-content.thaloris.dusk-harbor.v2",
+      "country": "thaloris",
+      "arrivalPackageStableId": "arrival-package.thaloris.dusk-harbor-immigrant.v1",
+      "title": "Dusk Harbor Arrival Brief",
+      "situationBrief": "Dusk Harbor is built around repair, salvage, and re-export, but the line between a valuable recovered part and an unverified liability is strictly enforced. You need lawful lodging and a recognized work contact before the repair cooperatives will place you.",
+      "welcomeMessage": "The licensed repair cooperative can introduce you to supervised work, while the community guarantor can support a legitimate housing application. Do not buy salvage stock or accept a repair commission until its ownership, condition, and authorization are documented. Your first objective is to establish a traceable address and work relationship without consuming the cash needed for a failed repair or delayed shipment.",
+      "sponsorNote": "The community guarantor can support housing verification, and the repair cooperative can validate supervised work; neither authorizes private salvage purchases outside the regulated process.",
+      "firstDayChecklist": [
+        "Confirm your Thaloris assignment, THD balance, lodging status, and the identity of the licensed cooperative contact.",
+        "Compare cooperative-supported lodging with independent rooms, including guarantor and transport requirements.",
+        "Reject any salvage or repair offer that lacks ownership, condition, and authorization records.",
+        "Review currently supported inventory, Crafting, Store, Contract, and market functions before acquiring parts.",
+        "Accept the stabilization Contract and record the cooperative-and-guarantor recovery route."
+      ],
+      "localTradeoffs": [
+        "Cooperative work pays less initially but provides verified parts, supervision, and dispute protection.",
+        "Independent repair offers can have better margins but expose you to counterfeit or untraceable components.",
+        "Cheap lodging without a recognized guarantor may not satisfy employers or regulated workshops."
+      ]
+    },
+    {
+      "stableId": "arrival-content.solvend.aurora-spire.v2",
+      "country": "solvend",
+      "arrivalPackageStableId": "arrival-package.solvend.aurora-spire-immigrant.v1",
+      "title": "Aurora Spire Arrival Brief",
+      "situationBrief": "Aurora Spire offers high-value technical work, but employers cannot use credentials they have not verified. Housing and ordinary expenses are high, so waiting for the perfect role without a provisional skills assessment can consume the starting buffer quickly.",
+      "welcomeMessage": "Submit your credentials to the Aurora Skills Verification Directorate or book the provisional assessment immediately. A supervised research or calibration placement can establish local evidence while formal review continues. Avoid paying for advanced equipment or premium housing until you know which technical pathway is recognized and when the first payment can arrive.",
+      "sponsorNote": "The Skills Verification Directorate is the authoritative evaluator. Temporary professional placements may confirm experience, but they cannot substitute for the required credential or assessment record.",
+      "firstDayChecklist": [
+        "Confirm your Solvend assignment, SLV balance, credential status, temporary address, and assessment availability.",
+        "Choose between document verification and a provisional skills assessment based on timing and evidence requirements.",
+        "Calculate how many days of high-cost housing and ordinary expenses remain after the selected verification path.",
+        "Review currently available research, Store, banking, Contract, and market functions before buying technical equipment.",
+        "Accept the stabilization Contract and preserve the accelerated-training and supervised-placement recovery route."
+      ],
+      "localTradeoffs": [
+        "Waiting for full credential recognition protects professional status but delays income.",
+        "A provisional assessment creates faster local evidence but may restrict the first placement to supervised work.",
+        "Premium central housing improves laboratory access while sharply reducing the time available to find income."
+      ]
+    },
+    {
+      "stableId": "arrival-content.eldoran.crescent-bay.v2",
+      "country": "eldoran",
+      "arrivalPackageStableId": "arrival-package.eldoran.crescent-bay-immigrant.v1",
+      "title": "Crescent Bay Arrival Brief",
+      "situationBrief": "Crescent Bay is less expensive than several capitals, but affordable housing is useful only when food markets and work routes remain accessible. Seasonal supply changes can make a low-cost neighborhood unexpectedly expensive in transport and groceries.",
+      "welcomeMessage": "Begin with the Food Security Exchange, which can identify verified markets, basic-needs work, and legitimate distribution placements. Compare housing by total weekly cost rather than rent alone, and do not commit the emergency reserve to bulk inventory before confirming demand and storage. Stable records and reliable access are more valuable in the first week than a speculative wholesale margin.",
+      "sponsorNote": "The Food Security Exchange can verify public distribution work and market-access information. Private wholesale offers still require independent verification.",
+      "firstDayChecklist": [
+        "Confirm your Eldoran assignment, ELD balance, temporary address, and the nearest verified food-distribution point.",
+        "Compare housing using rent, transport, food access, and storage constraints rather than rent alone.",
+        "Identify one verified food-security or market-assistant opportunity with a clear payment date.",
+        "Review the active Store, banking, Contract, and market functions before purchasing household or wholesale inventory.",
+        "Accept the stabilization Contract and record the Food Security Exchange recovery route."
+      ],
+      "localTradeoffs": [
+        "Lower-rent districts can require more transport and expose households to fewer food suppliers.",
+        "Wholesale opportunities may offer margin but tie cash up in perishable or difficult-to-store inventory.",
+        "Public distribution work is less profitable but provides verified demand and a reliable local network."
+      ]
+    },
+    {
+      "stableId": "arrival-content.valerion.glassfall.v2",
+      "country": "valerion",
+      "arrivalPackageStableId": "arrival-package.valerion.glassfall-immigrant.v1",
+      "title": "Glassfall Arrival Brief",
+      "situationBrief": "Glassfall combines very high housing deposits with strong public infrastructure. A private apartment may consume the emergency reserve before you have earned local income, while shared housing and public-service placements preserve cash but reduce privacy and flexibility.",
+      "welcomeMessage": "Report to the Glassfall Water and Housing Office before paying a deposit. Confirm the address standard, inspect water-service access, and compare shared-housing support with private rental terms. Public-service and conservation placements can create a verified local record while you protect enough VAL for food, transport, and an unexpected filter or utility expense.",
+      "sponsorNote": "The Water and Housing Office can verify public placements and shared-housing eligibility. It does not endorse private landlords or guarantee deposit recovery.",
+      "firstDayChecklist": [
+        "Confirm your Valerion assignment, VAL balance, address requirement, deposit exposure, and safe-water service status.",
+        "Compare private and shared housing using deposit, weekly cost, commute, and utility obligations.",
+        "Identify one verified water, conservation, or infrastructure placement with documented acceptance criteria.",
+        "Review available Store, banking, Contract, and market functions before purchasing filters or field equipment.",
+        "Accept the stabilization Contract and save the shared-housing and public-service recovery route."
+      ],
+      "localTradeoffs": [
+        "Private housing offers control and stability but can consume most of the starting liquidity in one deposit.",
+        "Shared housing preserves the emergency reserve but may restrict location, storage, and work schedules.",
+        "Environmental work creates verified local experience, though early assignments may pay less than private services."
+      ]
+    },
+    {
+      "stableId": "arrival-content.lumenor.starfall.v2",
+      "country": "lumenor",
+      "arrivalPackageStableId": "arrival-package.lumenor.starfall-immigrant.v1",
+      "title": "Starfall Arrival Brief",
+      "situationBrief": "Starfall’s employers, banks, and residency offices all depend on a recognized address and consistent records. A small translation or spelling mismatch can block several systems at once, even when your qualifications and funds are otherwise sufficient.",
+      "welcomeMessage": "Nela Corin has opened a file with the Civic Translation Desk. Use that appointment to align your identity records, address, and terminology before submitting applications elsewhere. Protect your LUM reserve from repeated fees, and rely on verified public-information channels rather than informal summaries that may omit eligibility rules.",
+      "sponsorNote": "Nela Corin can confirm the settlement file and guide you to approved translation resources. She cannot alter eligibility decisions or validate private housing offers.",
+      "firstDayChecklist": [
+        "Confirm your Lumenor assignment, LUM balance, name spelling, translated records, and address status across all official notices.",
+        "Attend the Civic Translation Desk appointment before duplicating applications or paying correction fees.",
+        "Compare public-housing review with private rooms, including document and commute requirements.",
+        "Review currently available messaging, Store, banking, Contract, and market functions before relying on informal information.",
+        "Accept the stabilization Contract and record the settlement-support and records-correction recovery route."
+      ],
+      "localTradeoffs": [
+        "Formal translation costs time but prevents repeated rejections across banking, housing, and employment.",
+        "Private intermediaries may move faster but can introduce inconsistent terminology or unsupported promises.",
+        "Central housing improves access to institutions while increasing rent and reducing the protected reserve."
+      ]
+    },
+    {
+      "stableId": "arrival-content.xalvoria.emberhall.v2",
+      "country": "xalvoria",
+      "arrivalPackageStableId": "arrival-package.xalvoria.emberhall-immigrant.v1",
+      "title": "Emberhall Arrival Brief",
+      "situationBrief": "Emberhall offers manufacturing and construction opportunities, but employers and lenders expect a bankable identity, recognized address, and verified sponsor. Expensive equipment or debt can make a promising placement unprofitable before the first invoice is paid.",
+      "welcomeMessage": "Begin with the Emberhall Development Authority and establish which identity, address, and sponsorship documents are accepted. Separate a viable work opportunity from a financing offer: a machine, permit, or deposit is not useful if repayment starts before revenue. Use the public-project route to build evidence before taking high-cost debt or opening a production commitment.",
+      "sponsorNote": "The Development Authority can verify public placements and explain financing requirements. It does not guarantee private loans, investors, or equipment purchases.",
+      "firstDayChecklist": [
+        "Confirm your Xalvoria assignment, XAL balance, banking identity, address status, and sponsor requirement.",
+        "Identify one employment or public-project path that does not require immediate high-cost borrowing.",
+        "Separate equipment cost, deposit, operating cash, and repayment timing before evaluating any enterprise offer.",
+        "Review the active Store, banking, Contract, business, and market functions before committing to production.",
+        "Accept the stabilization Contract and record the development-authority and debt-counseling recovery route."
+      ],
+      "localTradeoffs": [
+        "Borrowed equipment creates capacity quickly but can force repayment before a project pays.",
+        "Public-project work offers slower growth but supplies verified records, buyers, and technical references.",
+        "A premium industrial address improves credibility while consuming cash needed for materials and payroll."
+      ]
+    },
+    {
+      "stableId": "arrival-content.dravenlok.ironhold.v2",
+      "country": "dravenlok",
+      "arrivalPackageStableId": "arrival-package.dravenlok.ironhold-immigrant.v1",
+      "title": "Ironhold Arrival Brief",
+      "situationBrief": "Ironhold links technical placement, safety credentials, and worker housing. A fast industrial assignment can solve both income and accommodation, but losing the placement may also remove the room, transport access, and workshop authorization attached to it.",
+      "welcomeMessage": "Report to the Technical Placement Office and complete the safety and skills review before entering a foundry, rail, or heavy-maintenance site. Treat worker housing as part of the employment contract rather than an independent benefit. Preserve enough DRV to survive a failed placement, equipment service, or temporary move to independent housing.",
+      "sponsorNote": "The Technical Placement Office can validate supervised assignments and worker-housing eligibility. The worker congress provides recovery support but does not replace required safety clearance.",
+      "firstDayChecklist": [
+        "Confirm your Dravenlok assignment, DRV balance, technical placement status, safety credentials, and worker-housing conditions.",
+        "Calculate the cash and housing consequences if the first placement ends during the initial week.",
+        "Choose only supervised industrial work with documented equipment, shift, and safety requirements.",
+        "Review available Store, inventory, Crafting, Contract, banking, and market functions before obtaining tools or materials.",
+        "Accept the stabilization Contract and save the retraining, worker-congress, and maintenance recovery route."
+      ],
+      "localTradeoffs": [
+        "Worker housing reduces immediate costs but concentrates employment and housing risk in one contract.",
+        "Independent housing preserves mobility but requires more cash and longer industrial commutes.",
+        "Heavy-industry work pays for technical skill while exposing the worker to downtime and equipment-related delays."
+      ]
+    },
+    {
+      "stableId": "arrival-content.syndalis.blacklight.v2",
+      "country": "syndalis",
+      "arrivalPackageStableId": "arrival-package.syndalis.blacklight-immigrant.v1",
+      "title": "Blacklight Arrival Brief",
+      "situationBrief": "Blacklight can recognize a verified digital identity faster than it can provide physical housing. Until both are established, you may be able to access information and limited services while remaining ineligible for employment, banking changes, or secure local channels.",
+      "welcomeMessage": "Use the Identity and Signal Authority’s verification process and keep a complete correction trail for every disputed field. Do not submit credentials through unverified channels or treat a digital confirmation as proof of a physical address. Preserve enough SYN for temporary housing and secure access while the identity appeal or community-access process is open.",
+      "sponsorNote": "No private sponsor is assigned. The Identity and Signal Authority is the authoritative source for verification status, corrections, and approved secure channels.",
+      "firstDayChecklist": [
+        "Confirm your Syndalis assignment, SYN balance, digital identity status, physical address status, and approved correction channel.",
+        "Record every disputed identity field and preserve the source and timestamp of each correction.",
+        "Secure temporary physical housing that satisfies the address requirement without using an unverified intermediary.",
+        "Review currently supported messaging, banking, Store, Contract, notification, and market functions before sharing data.",
+        "Accept the stabilization Contract and save the identity-appeal and community-access recovery route."
+      ],
+      "localTradeoffs": [
+        "Fast digital verification improves access but does not solve physical-address eligibility.",
+        "Low-cost intermediaries may offer convenience while increasing identity and data-exposure risk.",
+        "Secure channels reduce misinformation and fraud but may limit immediate access to informal work networks."
+      ]
+    }
+  ]
+}
