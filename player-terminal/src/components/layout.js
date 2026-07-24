@@ -59,7 +59,7 @@ function pendingAttributes(enabled, label) {
 }
 
 function logoMark() {
-  return `<img src="../assets/brand/econovaria-icon.webp" class="player-terminal-logo-svg" width="42" height="42" alt="" aria-hidden="true" style="display:block;width:42px;height:42px;object-fit:cover;border-radius:10px;box-shadow:0 0 16px rgba(0,212,255,.18),0 0 18px rgba(255,0,238,.10)">`;
+  return `<img src="./assets/econovaria-icon.webp" class="player-terminal-logo-svg" width="42" height="42" alt="" aria-hidden="true" style="display:block;width:42px;height:42px;object-fit:cover;border-radius:10px;box-shadow:0 0 16px rgba(0,212,255,.18),0 0 18px rgba(255,0,238,.10)">`;
 }
 
 function renderNavGroup(group, route, data) {
