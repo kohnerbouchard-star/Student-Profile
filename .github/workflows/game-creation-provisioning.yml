@@ -1,6 +1,7 @@
 name: Game Creation Provisioning
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -18,22 +19,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: game-creation-provisioning-${{ github.event.pull_request.number }}
+  group: game-creation-provisioning-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   provision:
-    if: github.event.pull_request.number == 334
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Check out exact PR head
+      - name: Check out exact workflow head
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -83,7 +83,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: game-creation-provisioning-${{ github.event.pull_request.head.sha }}
+          name: game-creation-provisioning-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /tmp/game-creation-provisioning-startup.log
             /tmp/game-creation-provisioning-local-acceptance.log
