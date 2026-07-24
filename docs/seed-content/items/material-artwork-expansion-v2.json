@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "econovaria-material-artwork-expansion-v2",
+  "status": "generated-artwork-provenance",
+  "provider": "Magnific",
+  "recordCount": 1,
+  "runtimeDelivery": {
+    "binaryFilesCommitted": false,
+    "runtimeImagePathsAvailable": false,
+    "newBinaryCount": 1,
+    "reason": "The remaining material identity has one completed individual render awaiting repository export.",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp"
+  },
+  "artDirection": {
+    "theme": "grounded cyberpunk industrial recycling catalog",
+    "aspectRatio": "1:1",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp",
+    "embeddedTextProhibited": true,
+    "peopleProhibited": true,
+    "weaponsProhibited": true
+  },
+  "records": [
+    {
+      "stableId": "artwork.material.lumenor.recycled-electronics-feedstock.v2",
+      "country": "lumenor",
+      "sourceItemStableId": "item.recycled-electronics-feedstock.v1",
+      "itemKey": "recycled-electronics-feedstock",
+      "provider": "Magnific",
+      "creationIdentifier": "MXTyzUEDCm",
+      "sourcePageUrl": "https://www.magnific.com/app/creation/MXTyzUEDCm",
+      "runtimeImagePath": null,
+      "assetStatus": "generated-awaiting-repository-export"
+    }
+  ]
+}
