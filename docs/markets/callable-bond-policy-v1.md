@@ -58,4 +58,4 @@ Focused tests cover:
 - call-schedule identity mismatch;
 - permanent fail-closed optional-pricing and activation markers.
 
-The callable-bond implementation passed 136 Financial Markets domain tests with zero failures together with the complete Financial Markets, Backend Typecheck, Repository Quality, Supply Chain Security, Exchange Calendar Runtime, and Required Game Market Timezone workflow set.
+Validation evidence: 136 Financial Markets domain tests passed with zero failures. The complete Financial Markets, Backend Typecheck, Repository Quality, Supply Chain Security, Exchange Calendar Runtime, and Required Game Market Timezone workflow set also passed.
