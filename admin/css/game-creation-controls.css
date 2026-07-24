@@ -1,6 +1,7 @@
 .econovaria-admin-create-game-button {
   width: 100%;
   min-height: 36px;
+  min-width: 0;
   padding: 0 10px;
   border: 1px solid rgba(98, 230, 167, 0.38);
   border-radius: 8px;
@@ -13,6 +14,27 @@
   text-transform: uppercase;
   cursor: pointer;
   pointer-events: auto;
+}
+
+.econovaria-admin-game-session-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 6px;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-game-session-card__heading,
+.econovaria-admin-game-session-card > strong,
+.econovaria-admin-game-session-card > .econovaria-admin-game-session-card__code-row,
+.econovaria-admin-game-session-card > p {
+  grid-column: 1 / -1;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-create-game-button {
+  grid-column: 1;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-logout-button {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .econovaria-admin-create-game-button:hover,
