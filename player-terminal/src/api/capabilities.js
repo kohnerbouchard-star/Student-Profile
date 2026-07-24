@@ -46,6 +46,12 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "travelQuote"
 ]);
 
+const LOCAL_ACTION_CAPABILITIES = new Set([
+  "bankingExport",
+  "chartRange",
+  "marketSearch"
+]);
+
 const ENDPOINT_ACTIONS = Object.freeze({
   ...Object.fromEntries(
     PLAYER_ACTION_CAPABILITIES
@@ -94,7 +100,7 @@ export function resolveCapabilities({ config, session, dashboard }) {
   ]));
   const actions = Object.fromEntries(PLAYER_ACTION_CAPABILITIES.map((action) => [
     action,
-    preview || mergedCapability(sources, action, "actions")
+    LOCAL_ACTION_CAPABILITIES.has(action) || preview || mergedCapability(sources, action, "actions")
   ]));
 
   return Object.freeze({ routes: Object.freeze(routes), actions: Object.freeze(actions) });
