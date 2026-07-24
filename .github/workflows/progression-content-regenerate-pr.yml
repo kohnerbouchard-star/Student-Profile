@@ -1,3 +1,4 @@
+# diagnostic revision: 2
 name: Progression Content Regenerate PR
 
 on:
@@ -83,17 +84,17 @@ jobs:
           set -o pipefail
           npm run build:seed-beta-pack 2>&1 | tee /tmp/progression-content-build.log
 
-      - name: Publish sanitized progression build failure
+      - name: Publish concise progression build failure
         if: steps.build.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           {
-            echo '### Progression content regeneration failure'
+            echo '### Progression content concise failure'
             echo
             echo '```text'
-            tail -n 160 /tmp/progression-content-build.log | sed -E 's#https://[^ ]+#<url-redacted>#g'
+            tail -n 30 /tmp/progression-content-build.log | sed -E 's#https://[^ ]+#<url-redacted>#g'
             echo '```'
           } > /tmp/progression-content-build-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/progression-content-build-comment.md
