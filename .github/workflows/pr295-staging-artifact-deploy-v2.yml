@@ -11,7 +11,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: pr295-staging-artifact-deploy-v7
+  group: pr295-staging-artifact-deploy-v8
   cancel-in-progress: true
 
 jobs:
@@ -21,21 +21,27 @@ jobs:
     timeout-minutes: 45
     environment: staging
     env:
-      RELEASE_COMMIT: 91ba1a6a4c68f8c67a8c3cfffb7939b8cad27bc5
-      TOOLING_COMMIT: bf121afae982389753deaa9215aa7e36e8de132c
-      SOURCE_RUN_ID: "30047109190"
-      SOURCE_ARTIFACT_ID: "8579554182"
-      EXPECTED_ARCHIVE_SHA256: d64e5f2e6033e51592c2689f72248aa5baaaeb897e7f42b22eea2dde4c373608
-      EXPECTED_MANIFEST_SHA256: 2b6d11e501bcbe6ac23fbe6dfd88c25ef0b14e6e144b9638c37f6f5c1ab3d435
-      EXPECTED_ARTIFACT_SET_SHA256: 46006e662361b754802cda78733a014373a666ec56cf990cc0fe9616f1d28d4c
-      EXPECTED_MIGRATION_COUNT: "132"
-      EXPECTED_MIGRATION_HEAD: "20260723213038"
-      EXPECTED_MIGRATION_SET_SHA256: a1a00d8a91338fdf54b35745939a86ca53ca81ce4269434262c464ae36bff54b
+      RELEASE_COMMIT: 43d2534e3f7e958119b7cb15ed474065a66f2574
+      TOOLING_COMMIT: feb32bc9d8b387bc565151e8a6c622f300c702e6
+      SOURCE_RUN_ID: "30061484368"
+      SOURCE_ARTIFACT_ID: "8584690318"
+      EXPECTED_ARCHIVE_SHA256: 5bd955fd88c24ba1abaaec66082978b18b7c3b4aa69323614a45618579409a3e
+      EXPECTED_MANIFEST_SHA256: 7fd306e1c635bc435b862ef29fc4179ef2568b50669b7a151235fcd6136e50e5
+      EXPECTED_ARTIFACT_SET_SHA256: c83135f67feaea903fb5eab2c48da4ae36de38d108e4b9ea72985a8002b4984a
+      EXPECTED_MIGRATION_COUNT: "133"
+      EXPECTED_MIGRATION_HEAD: "20260724013000"
+      EXPECTED_MIGRATION_SET_SHA256: ffd13dacec087611f1f3c04d455c7f69ee443174c3239058e98edf65a537b4b5
+      MIGRATION_VERSION: "20260724013000"
+      MIGRATION_NAME: repair_game_lifecycle_version_ambiguity_v1
+      MIGRATION_FILE: backend/supabase/migrations/20260724013000_repair_game_lifecycle_version_ambiguity_v1.sql
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-      EXPECTED_LEDGER_COUNT: "141"
-      EXPECTED_LEDGER_HEAD: "20260723213038"
-      EXPECTED_LEDGER_SHA256: fc161f70d158fcf16a586456d7831adc59a07e9b7bb7d0270ce9fec81f51f218
+      EXPECTED_LEDGER_COUNT_BEFORE: "141"
+      EXPECTED_LEDGER_HEAD_BEFORE: "20260723213038"
+      EXPECTED_LEDGER_SHA256_BEFORE: fc161f70d158fcf16a586456d7831adc59a07e9b7bb7d0270ce9fec81f51f218
+      EXPECTED_LEDGER_COUNT_AFTER: "142"
+      EXPECTED_LEDGER_HEAD_AFTER: "20260724013000"
+      EXPECTED_LEDGER_SHA256_AFTER: 27a51b513cba85ec40cc9d5b761ee74a798ff7d83d7cd8614899dca928f09d91
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -44,7 +50,7 @@ jobs:
       - name: Check out exact artifact tooling
         uses: actions/checkout@v7
         with:
-          ref: bf121afae982389753deaa9215aa7e36e8de132c
+          ref: feb32bc9d8b387bc565151e8a6c622f300c702e6
           fetch-depth: 0
           persist-credentials: false
 
@@ -61,6 +67,7 @@ jobs:
           test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
           test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test -f "$MIGRATION_FILE"
 
       - name: Verify exact artifact metadata
         shell: bash
@@ -88,8 +95,8 @@ jobs:
       - name: Download exact playable staging artifact
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 8579554182
-          run-id: 30047109190
+          artifact-ids: 8584690318
+          run-id: 30061484368
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: dist/release
           merge-multiple: true
@@ -132,7 +139,7 @@ jobs:
         with:
           version: 2.81.3
 
-      - name: Link isolated staging and verify exact ledger
+      - name: Link isolated staging and verify pre-migration ledger
         shell: bash
         run: |
           set -euo pipefail
@@ -143,6 +150,8 @@ jobs:
             "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*":5432/postgres") ;;
             *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
           esac
+          echo "::add-mask::$pooler_url"
+          printf 'POOLER_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
           export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
           read -r count head digest < <(
             psql "$pooler_url" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
@@ -152,9 +161,58 @@ jobs:
               from supabase_migrations.schema_migrations
             "
           )
-          test "$count" = "$EXPECTED_LEDGER_COUNT"
-          test "$head" = "$EXPECTED_LEDGER_HEAD"
-          test "$digest" = "$EXPECTED_LEDGER_SHA256"
+          test "$count" = "$EXPECTED_LEDGER_COUNT_BEFORE"
+          test "$head" = "$EXPECTED_LEDGER_HEAD_BEFORE"
+          test "$digest" = "$EXPECTED_LEDGER_SHA256_BEFORE"
+          test "$(psql "$pooler_url" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")" = "0"
+
+      - name: Apply exact forward lifecycle repair atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          combined="$(mktemp)"
+          python3 - "$MIGRATION_VERSION" "$MIGRATION_NAME" "$MIGRATION_FILE" "$combined" <<'PY'
+          from pathlib import Path
+          import sys
+
+          version, name, migration_path, output_path = sys.argv[1:]
+          text = Path(migration_path).read_text(encoding="utf-8")
+          tag = "econovaria_migration_ledger"
+          while f"${tag}$" in text:
+              tag += "_x"
+
+          def sql_literal(value: str) -> str:
+              return "'" + value.replace("'", "''") + "'"
+
+          payload = f"${tag}${text}${tag}$"
+          ledger = f"""
+          insert into supabase_migrations.schema_migrations(version, name, statements)
+          values ({sql_literal(version)}, {sql_literal(name)}, array[{payload}]);
+          """
+          Path(output_path).write_text(text + "\n" + ledger, encoding="utf-8")
+          PY
+          psql "$POOLER_URL" -X -v ON_ERROR_STOP=1 --single-transaction -f "$combined"
+          rm -f "$combined"
+
+      - name: Verify exact post-migration ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD" PGSSLMODE=require
+          read -r count head digest < <(
+            psql "$POOLER_URL" -X -qAt -F ' ' -v ON_ERROR_STOP=1 -c "
+              select count(*)::int,
+                     max(version),
+                     encode(extensions.digest(string_agg(version, E'\\n' order by version) || E'\\n', 'sha256'), 'hex')
+              from supabase_migrations.schema_migrations
+            "
+          )
+          test "$count" = "$EXPECTED_LEDGER_COUNT_AFTER"
+          test "$head" = "$EXPECTED_LEDGER_HEAD_AFTER"
+          test "$digest" = "$EXPECTED_LEDGER_SHA256_AFTER"
+          test "$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(name,'') from supabase_migrations.schema_migrations where version='$MIGRATION_VERSION'")" = "$MIGRATION_NAME"
+          test "$(psql "$POOLER_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.transition_game_lifecycle_atomic_v1(uuid,uuid,text,text,bigint)') is not null")" = "t"
 
       - name: Extract and deploy exact function artifacts
         id: deploy
@@ -224,6 +282,8 @@ jobs:
             echo "- Source artifact: \`$SOURCE_ARTIFACT_ID\`"
             echo "- Artifact archive: \`$EXPECTED_ARCHIVE_SHA256\`"
             echo "- Artifact set: \`$EXPECTED_ARTIFACT_SET_SHA256\`"
+            echo "- Migration applied: \`$MIGRATION_VERSION\`"
+            echo "- Staging ledger: \`$EXPECTED_LEDGER_COUNT_AFTER / $EXPECTED_LEDGER_HEAD_AFTER / $EXPECTED_LEDGER_SHA256_AFTER\`"
             echo "- Staging project: \`$SUPABASE_PROJECT_REF\`"
             echo '- Exact functions deployed: `7`'
             echo '- JWT verification: `required`'
