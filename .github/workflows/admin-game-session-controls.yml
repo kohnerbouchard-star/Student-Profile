@@ -76,7 +76,7 @@ jobs:
           node scripts/supply-chain-secret-scan.mjs
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Materialize browser runtime fixture
         run: |
