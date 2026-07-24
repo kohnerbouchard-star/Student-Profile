@@ -29,6 +29,8 @@ The source catalog covers exactly:
 
 Country and career reputation are public by default. Story and relationship reputation are private by default. Player privacy settings and authoritative server scope remain controlling.
 
+The repository core-content coverage audit counts these 12 presentation-backed achievement records alongside the existing gameplay achievement catalog. The generated JSON and Markdown coverage reports must be refreshed whenever this catalog changes.
+
 ## Generated output
 
 The deterministic build writes:
@@ -48,6 +50,7 @@ Run:
 npm run validate:progression-content
 npm run validate:seed-beta-pack
 npm run test:seed-beta-pack
+node scripts/seed-core-content-coverage-audit.mjs --check
 ```
 
 The progression quality contract verifies migration identity parity, substantive player-facing text, evidence requirements, reward disclosure, anti-farming guidance, privacy defaults, generated-pack parity, and production prohibition.
