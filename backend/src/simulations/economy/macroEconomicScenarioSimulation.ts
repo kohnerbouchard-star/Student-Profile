@@ -245,9 +245,11 @@ function calculateScarcityPropagation(
     left.exporterCountryCode.localeCompare(right.exporterCountryCode)
   );
 
-  for (const [countryCode, state] of [...states.entries()].sort(([left], [right]) =>
-    left.localeCompare(right)
-  )) {
+  for (
+    const [countryCode, state] of [...states.entries()].sort(
+      ([left], [right]) => left.localeCompare(right),
+    )
+  ) {
     const ownShock = phaseShock.supplyShockByCountry[countryCode] ?? 0;
     let importedPressure = 0;
     for (const link of orderedLinks) {
@@ -300,7 +302,9 @@ function validateConfig(config: MacroScenarioConfig): void {
     "duplicate_macro_currency_code",
   );
   for (const country of config.countries) validateCountry(country);
-  const countryCodes = new Set(config.countries.map((country) => country.countryCode));
+  const countryCodes = new Set(
+    config.countries.map((country) => country.countryCode),
+  );
   for (const link of config.tradeLinks) {
     if (
       !countryCodes.has(link.exporterCountryCode) ||
@@ -327,10 +331,18 @@ function validateConfig(config: MacroScenarioConfig): void {
     "duplicate_macro_phase_shock",
   );
   for (const shock of config.phaseShocks) {
-    if (!Number.isFinite(shock.moneyGrowthRate) || shock.moneyGrowthRate < -0.5 || shock.moneyGrowthRate > 2) {
+    if (
+      !Number.isFinite(shock.moneyGrowthRate) ||
+      shock.moneyGrowthRate < -0.5 ||
+      shock.moneyGrowthRate > 2
+    ) {
       throw new Error("macro_money_growth_invalid");
     }
-    validateShockRecord(shock.supplyShockByCountry, countryCodes, "macro_supply_shock_invalid");
+    validateShockRecord(
+      shock.supplyShockByCountry,
+      countryCodes,
+      "macro_supply_shock_invalid",
+    );
     validateShockRecord(
       shock.confidenceShockByCountry,
       countryCodes,
@@ -345,7 +357,10 @@ function validateConfig(config: MacroScenarioConfig): void {
     config.maximumCurrencyDepreciationRate,
     "macro_currency_threshold_invalid",
   );
-  if (!Number.isFinite(config.maximumScarcityIndex) || config.maximumScarcityIndex < 1) {
+  if (
+    !Number.isFinite(config.maximumScarcityIndex) ||
+    config.maximumScarcityIndex < 1
+  ) {
     throw new Error("macro_scarcity_threshold_invalid");
   }
   if (
@@ -364,17 +379,28 @@ function validateCountry(country: MacroCountryProfile): void {
   if (!/^[A-Z]{3,16}$/.test(country.currencyCode)) {
     throw new Error("macro_currency_code_invalid");
   }
-  for (const [value, errorCode] of [
-    [country.startingPriceIndex, "macro_starting_price_index_invalid"],
-    [country.startingFxRateToBase, "macro_starting_fx_rate_invalid"],
-    [country.inflationSensitivity, "macro_inflation_sensitivity_invalid"],
-    [country.currencySensitivity, "macro_currency_sensitivity_invalid"],
-  ] as const) {
+  if (
+    !Number.isFinite(country.startingPriceIndex) ||
+    country.startingPriceIndex <= 0 ||
+    country.startingPriceIndex > 1_000_000
+  ) {
+    throw new Error("macro_starting_price_index_invalid");
+  }
+  for (
+    const [value, errorCode] of [
+      [country.startingFxRateToBase, "macro_starting_fx_rate_invalid"],
+      [country.inflationSensitivity, "macro_inflation_sensitivity_invalid"],
+      [country.currencySensitivity, "macro_currency_sensitivity_invalid"],
+    ] as const
+  ) {
     if (!Number.isFinite(value) || value <= 0 || value > 10) {
       throw new Error(errorCode);
     }
   }
-  validateUnitInterval(country.importDependency, "macro_import_dependency_invalid");
+  validateUnitInterval(
+    country.importDependency,
+    "macro_import_dependency_invalid",
+  );
 }
 
 function validateShockRecord(
@@ -383,7 +409,12 @@ function validateShockRecord(
   errorCode: string,
 ): void {
   for (const [countryCode, value] of Object.entries(values)) {
-    if (!countryCodes.has(countryCode) || !Number.isFinite(value) || value < -0.75 || value > 2) {
+    if (
+      !countryCodes.has(countryCode) ||
+      !Number.isFinite(value) ||
+      value < -0.75 ||
+      value > 2
+    ) {
       throw new Error(errorCode);
     }
   }
@@ -429,7 +460,9 @@ function assertUnique(values: readonly string[], errorCode: string): void {
 }
 
 function requireValue<T>(value: T | undefined): T {
-  if (value === undefined) throw new Error("macro_scenario_internal_value_missing");
+  if (value === undefined) {
+    throw new Error("macro_scenario_internal_value_missing");
+  }
   return value;
 }
 
