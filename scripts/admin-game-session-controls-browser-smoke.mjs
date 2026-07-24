@@ -137,6 +137,7 @@ page.on("requestfailed", (request) => {
   const failure = request.failure()?.errorText || "";
   if (url.endsWith("/favicon.ico")) return;
   if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
+  if (url.includes("/auth/v1/logout") && failure.includes("ERR_ABORTED")) return;
   if (failure.includes("ERR_ABORTED") && /\?mode=admin/.test(url)) return;
   errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
 });
@@ -289,15 +290,15 @@ try {
   assert(storageState.session === null, "Admin logout left the session token in storage.");
   assert(storageState.selectedGame === null, "Admin logout left the selected game in storage.");
   assert(storageState.csrf === null, "Admin logout left the CSRF token in storage.");
-  assert(requests.some((entry) => entry.includes("POST") && entry.includes("/auth/sign-out")),
-    `Admin logout did not call the authenticated sign-out route: ${JSON.stringify(requests)}`);
+  assert(requests.some((entry) => entry.includes("POST") && entry.includes("/auth/v1/logout")),
+    `Admin logout did not issue the Supabase Auth revocation request: ${JSON.stringify(requests)}`);
 
   writeFileSync(`${ARTIFACT_DIR}/report.json`, JSON.stringify({
     cardState,
     shareState,
     logoutHitTarget,
     storageState,
-    signOutRequestObserved: true,
+    supabaseLogoutRequestObserved: true,
     errors,
   }, null, 2));
   assert(errors.length === 0, errors.join("\n"));
@@ -310,7 +311,7 @@ try {
     playerLinkTargetsSelectedGame: true,
     adminLinkHidden: true,
     logoutButtonClickable: true,
-    authenticatedSignOutObserved: true,
+    supabaseLogoutRequestObserved: true,
     sessionCleared: true,
   }, null, 2));
 } catch (error) {
