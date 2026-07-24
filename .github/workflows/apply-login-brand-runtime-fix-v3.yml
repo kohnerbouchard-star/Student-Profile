@@ -25,6 +25,18 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
 
+      - name: Correct generator quoting
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = 'scripts/apply-login-brand-runtime-fix-v3.mjs';
+          let source = fs.readFileSync(path, 'utf8');
+          source = source.replace(/^const origin = .*;$/m, 'const origin = "http://127.0.0.1:" + port;');
+          source = source.replace(/^        else if \(Date\.now\(\) > deadline\).*$/m, '        else if (Date.now() > deadline) reject(new Error("Static server returned " + response.statusCode));');
+          fs.writeFileSync(path, source);
+          NODE
+          node --check scripts/apply-login-brand-runtime-fix-v3.mjs
+
       - name: Apply deterministic login repair
         run: node scripts/apply-login-brand-runtime-fix-v3.mjs
 
