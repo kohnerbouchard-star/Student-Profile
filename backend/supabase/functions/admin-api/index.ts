@@ -10,6 +10,7 @@ import {
   SUPABASE_URL,
 } from "./common.ts";
 import { handleAccountOperation } from "./accountOperations.ts";
+import { handleGameProvisioningOperation } from "./gameProvisioningOperations.ts";
 import { handleGameRead, handleGameWrite } from "./gameRoutes.ts";
 import { handleRuntimeMutation } from "./runtimeMutations.ts";
 import { handleUnsupportedOperation } from "./unsupportedOperations.ts";
@@ -41,6 +42,23 @@ async function handleGlobalRoute(
   const body = ["GET", "HEAD"].includes(request.method)
     ? {}
     : await request.clone().json().catch(() => ({}));
+
+  const provisioningOperation = await handleGameProvisioningOperation(
+    context.service,
+    {
+      request,
+      path,
+      staffUserId: context.staff.id,
+    },
+  );
+  if (provisioningOperation.handled) {
+    return json(
+      request,
+      provisioningOperation.status || 500,
+      provisioningOperation.body,
+    );
+  }
+
   const accountOperation = await handleAccountOperation(context.service, {
     path,
     method: request.method,
@@ -281,7 +299,6 @@ Deno.serve(async (request: Request) => {
         marketplaceOperation.body,
       );
     }
-
 
     if (suffix.startsWith("/messages")) {
       const rateLimit = await guardStaffMessagingRateLimit(
