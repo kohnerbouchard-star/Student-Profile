@@ -1,0 +1,112 @@
+name: Apply Exact Login Logo
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: exact-login-logo-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/brand-asset-render-fix-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact repair branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/brand-asset-render-fix-v2
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Download approved source uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            'https://pikaso.cdnpk.net/private/production/4973898349/3345916737.png?token=exp=1785110400~hmac=93def7d24282235afa485d406a1f335b3d6847235c68b9acac2c8b909a79b028' \
+            --output /tmp/econovaria-source-a.png
+          curl --fail --location --silent --show-error \
+            'https://pikaso.cdnpk.net/private/production/4973899044/3345917078.png?token=exp=1785110400~hmac=abb44611d74b1289dba6ee651a5b02edcbb654c19d591283083b50c67473a154' \
+            --output /tmp/econovaria-source-b.png
+
+      - name: Apply exact approved PNG and strengthen contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+
+          PNG = b'\x89PNG\r\n\x1a\n'
+          EXPECTED = (1672, 941)
+          VERSION = '20260724.3'
+
+          def dimensions(path: Path):
+              data = path.read_bytes()
+              if not data.startswith(PNG) or len(data) < 24:
+                  raise SystemExit(f'{path} is not a valid PNG')
+              return struct.unpack('>II', data[16:24])
+
+          candidates = [Path('/tmp/econovaria-source-a.png'), Path('/tmp/econovaria-source-b.png')]
+          selected = next((path for path in candidates if dimensions(path) == EXPECTED), None)
+          if selected is None:
+              raise SystemExit('Neither approved upload is the expected 1672x941 Econovaria logo: ' + ', '.join(f'{p}={dimensions(p)}' for p in candidates))
+
+          destination = Path('assets/brand/econovaria-logo.png')
+          destination.write_bytes(selected.read_bytes())
+          Path('assets/brand/econovaria-logo.jpg').unlink(missing_ok=True)
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          old = 'assets/brand/econovaria-logo.jpg?v=20260724.2'
+          if old not in text:
+              raise SystemExit(f'Expected current login logo reference is missing: {old}')
+          text = text.replace(old, f'./assets/brand/econovaria-logo.png?v={VERSION}', 1)
+          text = text.replace('width="600" height="338"', 'width="1672" height="941"', 1)
+          index.write_text(text, encoding='utf-8')
+
+          gateway = Path('scripts/local-staging-gateway.py')
+          text = gateway.read_text(encoding='utf-8')
+          text = text.replace('JPEG_SIGNATURE: Final[bytes] = b"\\xff\\xd8\\xff"\n', '')
+          text = text.replace('(\"assets/brand/econovaria-logo.jpg\", JPEG_SIGNATURE)', '(\"assets/brand/econovaria-logo.png\", PNG_SIGNATURE)')
+          gateway.write_text(text, encoding='utf-8')
+
+          contract = Path('scripts/brand-asset-contract.mjs')
+          text = contract.read_text(encoding='utf-8')
+          text = text.replace('const version = "20260724.2";', f'const version = "{VERSION}";')
+          text = text.replace('const jpeg = Buffer.from([0xff,0xd8,0xff]);\n', '')
+          text = text.replace(
+              '["assets/brand/econovaria-icon.png","assets/brand/favicon-32.png",',
+              '["assets/brand/econovaria-logo.png","assets/brand/econovaria-icon.png","assets/brand/favicon-32.png",',
+          )
+          text = text.replace('signature("assets/brand/econovaria-logo.jpg", jpeg);\n', '')
+          text = text.replace('econovaria-logo\\.jpg', 'econovaria-logo\\.png')
+          dimension_check = '''\nconst logoBytes = bytes("assets/brand/econovaria-logo.png");\nassert.equal(logoBytes.readUInt32BE(16), 1672, "login logo width must match the approved source");\nassert.equal(logoBytes.readUInt32BE(20), 941, "login logo height must match the approved source");\n'''
+          marker = 'const login = text("index.html");\n'
+          if dimension_check.strip() not in text:
+              text = text.replace(marker, dimension_check + marker, 1)
+          contract.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate exact login asset
+        run: |
+          node scripts/brand-asset-contract.mjs
+          python3 -m py_compile scripts/local-staging-gateway.py
+          node --test scripts/local-staging-gateway-contract.test.mjs
+
+      - name: Commit exact-source repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(brand): use exact approved PNG on login screen'
+          git push origin HEAD:agent/brand-asset-render-fix-v2
