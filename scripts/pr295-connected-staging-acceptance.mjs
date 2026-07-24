@@ -233,25 +233,57 @@ function percentile(values, fraction) {
   return Number(sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)].toFixed(2));
 }
 
-async function runLoad(label, count) {
+async function runLoad(label, count, {
+  batchSize = 10,
+  rampDelayMs = 250,
+} = {}) {
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > count) {
+    throw new Error(`${label} load batch size is invalid`);
+  }
+  if (!Number.isInteger(rampDelayMs) || rampDelayMs < 0 || rampDelayMs > 5_000) {
+    throw new Error(`${label} load ramp delay is invalid`);
+  }
   const latencies = [];
   const statuses = [];
+  const batches = [];
+  const tokens = fixture.directSessionTokens.slice(0, count);
   const started = performance.now();
-  await Promise.all(fixture.directSessionTokens.slice(0, count).map(async (token) => {
-    try {
-      const result = await http("/functions/v1/classroom-api/players/me/capabilities", {
-        playerToken: token,
-      });
-      statuses.push(result.status);
-      latencies.push(result.latencyMs);
-    } catch {
-      statuses.push(0);
-      latencies.push(20_000);
+  for (let offset = 0; offset < tokens.length; offset += batchSize) {
+    const batchTokens = tokens.slice(offset, offset + batchSize);
+    const batchLatencies = [];
+    const batchStarted = performance.now();
+    await Promise.all(batchTokens.map(async (token) => {
+      try {
+        const result = await http("/functions/v1/classroom-api/players/me/capabilities", {
+          playerToken: token,
+        });
+        statuses.push(result.status);
+        latencies.push(result.latencyMs);
+        batchLatencies.push(result.latencyMs);
+      } catch {
+        statuses.push(0);
+        latencies.push(20_000);
+        batchLatencies.push(20_000);
+      }
+    }));
+    batches.push({
+      batchNumber: batches.length + 1,
+      players: batchTokens.length,
+      durationMs: Number((performance.now() - batchStarted).toFixed(2)),
+      p95Ms: percentile(batchLatencies, 0.95),
+    });
+    if (offset + batchSize < tokens.length && rampDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, rampDelayMs));
     }
-  }));
+  }
   const report = {
+    profile: "phased-classroom-ramp",
     players: count,
     requests: count,
+    maxConcurrency: batchSize,
+    rampDelayMs,
+    batchCount: batches.length,
+    batches,
     errors: statuses.filter((status) => status !== 200).length,
     durationMs: Number((performance.now() - started).toFixed(2)),
     p50Ms: percentile(latencies, 0.50),
