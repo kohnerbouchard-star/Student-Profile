@@ -1,0 +1,124 @@
+name: PR295 Sensitive Rate Limit Probe Repair
+
+on:
+  push:
+    branches:
+      - agent/production-integration-gate-v1
+    paths:
+      - ".github/workflows/pr295-sensitive-rate-limit-probe.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr295-sensitive-rate-limit-probe
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/production-integration-gate-v1
+      - name: Replace read probe with replay-safe sensitive probe
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("scripts/pr295-connected-staging-acceptance.mjs")
+          source = path.read_text()
+          pattern = re.compile(
+              r'async function runRateLimitProbe\(\) \{.*?\n\}\n\nfunction captureQueryPlans',
+              re.S,
+          )
+          replacement = '''async function runRateLimitProbe() {
+            const attempts = 16;
+            const batchSize = 4;
+            const rampDelayMs = 50;
+            const results = [];
+            const batches = [];
+            const body = {
+              recipientPlayerId: fixture.playerIdentifiers[1],
+              title: "Connected rate-limit acceptance",
+              body: "Replay-safe sensitive action probe.",
+              idempotencyKey: `${fixture.runTag}:message:rate-limit-probe`,
+            };
+            for (let offset = 0; offset < attempts; offset += batchSize) {
+              const batchStarted = performance.now();
+              const batch = await Promise.all(
+                Array.from({ length: Math.min(batchSize, attempts - offset) }, () =>
+                  http("/functions/v1/classroom-api/players/me/messages/threads", {
+                    method: "POST",
+                    playerToken: loginSessionToken,
+                    body,
+                    expectedStatuses: [200, 201, 429],
+                  })
+                ),
+              );
+              results.push(...batch);
+              batches.push({
+                batchNumber: batches.length + 1,
+                requests: batch.length,
+                durationMs: Number((performance.now() - batchStarted).toFixed(2)),
+                allowed: batch.filter((result) => [200, 201].includes(result.status)).length,
+                denied: batch.filter((result) => result.status === 429).length,
+              });
+              if (offset + batchSize < attempts) {
+                await new Promise((resolve) => setTimeout(resolve, rampDelayMs));
+              }
+            }
+            const denied = results.filter((result) => result.status === 429);
+            if (!denied.length) throw new Error("Sensitive rate-limit probe did not produce a bounded 429 denial");
+            if (!denied.some((result) => /^\\d+$/.test(String(result.retryAfter ?? "")))) {
+              throw new Error("Sensitive rate-limit denial did not include Retry-After");
+            }
+            const allowed = results.filter((result) => [200, 201].includes(result.status));
+            for (const result of allowed) {
+              assertSafePlayerResponse(result.body, fixture, "rate-limit replay probe");
+            }
+            evidence.metrics.rateLimitProbe = {
+              profile: "replay-safe-sensitive-action",
+              action: "player.messages.thread.create",
+              configuredActionLimit: 10,
+              configuredWindowSeconds: 300,
+              attempts,
+              batchSize,
+              rampDelayMs,
+              batchCount: batches.length,
+              batches,
+              allowed: allowed.length,
+              denied: denied.length,
+              unexpected: results.filter((result) => ![200, 201, 429].includes(result.status)).length,
+            };
+            evidence.checks.rateLimitEnforced = true;
+          }
+
+          function captureQueryPlans'''
+          updated, count = pattern.subn(replacement, source)
+          if count != 1:
+              raise SystemExit(f"Expected one rate-limit probe block, replaced {count}")
+          path.write_text(updated)
+          PY
+      - name: Record reviewed policy boundary
+        run: |
+          cat >> docs/operations/evidence/production-integration-gate-v1/pr295-load-and-drift-repair-2026-07-24.md <<'EOF'
+          - The final abuse probe targets the replay-safe `player.messages.thread.create` action, which is reviewed under the sensitive profile at 10 requests per 300 seconds.
+          - Sixteen identical requests reuse one idempotency key, so HTTP retries consume limiter capacity while the domain mutation settles once.
+          - The probe accepts only `200`, `201`, and `429`, requires at least one `429`, requires numeric `Retry-After`, and privacy-checks every allowed response.
+          EOF
+      - name: Remove one-time repair workflow
+        run: rm .github/workflows/pr295-sensitive-rate-limit-probe.yml
+      - name: Commit bounded sensitive probe
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/pr295-connected-staging-acceptance.mjs \
+            docs/operations/evidence/production-integration-gate-v1/pr295-load-and-drift-repair-2026-07-24.md \
+            .github/workflows/pr295-sensitive-rate-limit-probe.yml
+          git commit -m "ops: use replay-safe sensitive rate-limit probe"
+          git push origin HEAD:agent/production-integration-gate-v1
