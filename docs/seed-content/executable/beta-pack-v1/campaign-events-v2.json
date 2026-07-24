@@ -1,0 +1,1343 @@
+{
+  "activationAuthorized": false,
+  "chainCount": 10,
+  "chains": [
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "industrial demand can raise heating and transport costs",
+        "small suppliers may overinvest before long-term demand is confirmed",
+        "delayed wages and deliveries",
+        "higher heating, food, and transport costs",
+        "shortages and delayed wages",
+        "travel restrictions and service interruptions",
+        "misinformation about route safety"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "northreach",
+      "eventIds": [
+        "event.core.northreach.sector-expansion.v1",
+        "event.core.northreach.system-pressure.v1",
+        "event.core.global.meridian-disruption.v1"
+      ],
+      "id": "event-chain.northreach.adaptation.v1",
+      "name": "Northreach Adaptation Chain",
+      "playerFacingSummary": "Frostgate Sensor-Grade Mineral Expansion creates an economic opening before Northern Freight and Heating Constraint tests local resilience. The chain then connects the player to Meridian Corridor Infrastructure Fracture, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.northreach.sector-expansion.v1",
+          "guidance": "Diversify buyers, preserve heating reserves, and use staged procurement rather than a single capacity bet."
+        },
+        {
+          "eventId": "event.core.northreach.system-pressure.v1",
+          "guidance": "Coordinate through the Strategic Resources Office, reserve essential capacity, and substitute locally available materials where quality permits."
+        },
+        {
+          "eventId": "event.core.global.meridian-disruption.v1",
+          "guidance": "Use alternate verified routes, protect essential civilian access, and publish corrections as facts change."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "higher shipping and insurance costs can raise retail prices",
+        "informal workers may be excluded from licensed port access",
+        "delayed imported goods",
+        "temporary job losses for crews tied to held cargo",
+        "loan rejection or repricing",
+        "job and project delays",
+        "pressure to liquidate assets at weak prices"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "yrethia",
+      "eventIds": [
+        "event.core.yrethia.sector-expansion.v1",
+        "event.core.yrethia.system-pressure.v1",
+        "event.core.global.confidence-shock.v1"
+      ],
+      "id": "event-chain.yrethia.adaptation.v1",
+      "name": "Yrethia Adaptation Chain",
+      "playerFacingSummary": "Sableport Cargo Telemetry Upgrade creates an economic opening before Customs Backlog and Insurance Repricing tests local resilience. The chain then connects the player to Regional Credit and Confidence Shock, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.yrethia.sector-expansion.v1",
+          "guidance": "Use supervised records correction, split critical shipments, and document every custody or route change."
+        },
+        {
+          "eventId": "event.core.yrethia.system-pressure.v1",
+          "guidance": "Coordinate with the Port Records Bureau, use licensed rerouting, and preserve complete custody evidence."
+        },
+        {
+          "eventId": "event.core.global.confidence-shock.v1",
+          "guidance": "Use transparent briefings, bounded liquidity support, and verified restructuring rather than hidden guarantees."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "legitimate parts may become less affordable locally",
+        "workers can be liable for undocumented substitutions",
+        "repair delays for households and small firms",
+        "losses for workers who purchased unverified stock",
+        "delayed remittances and travel",
+        "loss of access for people with disputed records",
+        "fraud and rumor amplification"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "thaloris",
+      "eventIds": [
+        "event.core.thaloris.sector-expansion.v1",
+        "event.core.thaloris.system-pressure.v1",
+        "event.core.global.cyber-coordination.v1"
+      ],
+      "id": "event-chain.thaloris.adaptation.v1",
+      "name": "Thaloris Adaptation Chain",
+      "playerFacingSummary": "Certified Repair Export Program creates an economic opening before Salvage Authenticity Crackdown tests local resilience. The chain then connects the player to Cross-Border Verification Lockdown, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.thaloris.sector-expansion.v1",
+          "guidance": "Use cooperative inventory, preserve test evidence, and downgrade output rather than concealing component uncertainty."
+        },
+        {
+          "eventId": "event.core.thaloris.system-pressure.v1",
+          "guidance": "Use the cooperative appeal process, substitute documented components, and isolate disputed inventory."
+        },
+        {
+          "eventId": "event.core.global.cyber-coordination.v1",
+          "guidance": "Coordinate secure channels, supervised appeals, and source-linked corrections while denying unverified shortcuts."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "technical housing and training costs may rise",
+        "small suppliers may depend on one institutional buyer",
+        "delayed professional income",
+        "higher demand for temporary housing and training",
+        "food and heating insecurity",
+        "housing arrears",
+        "unequal access and speculative hoarding"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "solvend",
+      "eventIds": [
+        "event.core.solvend.sector-expansion.v1",
+        "event.core.solvend.system-pressure.v1",
+        "event.core.global.food-energy-squeeze.v1"
+      ],
+      "id": "event-chain.solvend.adaptation.v1",
+      "name": "Solvend Adaptation Chain",
+      "playerFacingSummary": "Aurora Research Instrument Commission creates an economic opening before Credential and Cyber Bottleneck tests local resilience. The chain then connects the player to Regional Food and Energy Affordability Squeeze, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.solvend.sector-expansion.v1",
+          "guidance": "Use shared laboratories, staged milestones, and lower-spec substitutes where the acceptance standard permits."
+        },
+        {
+          "eventId": "event.core.solvend.system-pressure.v1",
+          "guidance": "Use provisional supervised placements, preserve evidence, and avoid unverified credential brokers."
+        },
+        {
+          "eventId": "event.core.global.food-energy-squeeze.v1",
+          "guidance": "Use targeted support, transparent inventory, substitution, and protected essential access."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "speculative buying can reduce local affordability",
+        "poor storage can turn apparent inventory into losses",
+        "higher food costs",
+        "reduced access in low-income or poorly connected districts",
+        "debt accumulation",
+        "corrupt or duplicated procurement",
+        "unequal reconstruction and displacement"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "eldoran",
+      "eventIds": [
+        "event.core.eldoran.sector-expansion.v1",
+        "event.core.eldoran.system-pressure.v1",
+        "event.core.global.reconstruction-cycle.v1"
+      ],
+      "id": "event-chain.eldoran.adaptation.v1",
+      "name": "Eldoran Adaptation Chain",
+      "playerFacingSummary": "Crescent Food Logistics Modernization creates an economic opening before Harvest Shortfall and Wholesale Volatility tests local resilience. The chain then connects the player to Meridian Reconstruction and Accountability Cycle, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.eldoran.sector-expansion.v1",
+          "guidance": "Prioritize verified demand, small batches, and shared storage instead of speculative stockpiling."
+        },
+        {
+          "eventId": "event.core.eldoran.system-pressure.v1",
+          "guidance": "Use public reserves, substitute products, and transparent distribution rather than speculative accumulation."
+        },
+        {
+          "eventId": "event.core.global.reconstruction-cycle.v1",
+          "guidance": "Use phased procurement, transparent financing, independent inspection, and accessible community benefit criteria."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "private service fees can rise faster than wages",
+        "filter shortages can affect housing eligibility and health",
+        "temporary water-access interruptions",
+        "higher utility and housing costs",
+        "shortages and delayed wages",
+        "travel restrictions and service interruptions",
+        "misinformation about route safety"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "valerion",
+      "eventIds": [
+        "event.core.valerion.sector-expansion.v1",
+        "event.core.valerion.system-pressure.v1",
+        "event.core.global.meridian-disruption.v1"
+      ],
+      "id": "event-chain.valerion.adaptation.v1",
+      "name": "Valerion Adaptation Chain",
+      "playerFacingSummary": "Glassfall Water Resilience Investment creates an economic opening before Filter Allocation and Housing Utility Squeeze tests local resilience. The chain then connects the player to Meridian Corridor Infrastructure Fracture, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.valerion.sector-expansion.v1",
+          "guidance": "Use public monitoring, cartridge rotation, and ceramic substitutes while preserving essential household access."
+        },
+        {
+          "eventId": "event.core.valerion.system-pressure.v1",
+          "guidance": "Coordinate through the Water and Housing Office, rotate approved filters, and prioritize essential sites."
+        },
+        {
+          "eventId": "event.core.global.meridian-disruption.v1",
+          "guidance": "Use alternate verified routes, protect essential civilian access, and publish corrections as facts change."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "inconsistent translations can block services",
+        "fast-moving rumors can undermine public trust",
+        "delayed housing, banking, and employment decisions",
+        "heightened discrimination against unfamiliar records",
+        "loan rejection or repricing",
+        "job and project delays",
+        "pressure to liquidate assets at weak prices"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "lumenor",
+      "eventIds": [
+        "event.core.lumenor.sector-expansion.v1",
+        "event.core.lumenor.system-pressure.v1",
+        "event.core.global.confidence-shock.v1"
+      ],
+      "id": "event-chain.lumenor.adaptation.v1",
+      "name": "Lumenor Adaptation Chain",
+      "playerFacingSummary": "Starfall Translation and Public Information Expansion creates an economic opening before Credential Dispute and Trust Erosion tests local resilience. The chain then connects the player to Regional Credit and Confidence Shock, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.lumenor.sector-expansion.v1",
+          "guidance": "Use paired review, source-linked corrections, and public distribution rather than unverified summaries."
+        },
+        {
+          "eventId": "event.core.lumenor.system-pressure.v1",
+          "guidance": "Use the Civic Translation Desk, preserve originals, and publish linked corrections without erasing history."
+        },
+        {
+          "eventId": "event.core.global.confidence-shock.v1",
+          "guidance": "Use transparent briefings, bounded liquidity support, and verified restructuring rather than hidden guarantees."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "debt-funded overexpansion",
+        "delayed public repairs if projects fail financing review",
+        "construction delays",
+        "job losses and repayment pressure for small contractors",
+        "delayed remittances and travel",
+        "loss of access for people with disputed records",
+        "fraud and rumor amplification"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "xalvoria",
+      "eventIds": [
+        "event.core.xalvoria.sector-expansion.v1",
+        "event.core.xalvoria.system-pressure.v1",
+        "event.core.global.cyber-coordination.v1"
+      ],
+      "id": "event-chain.xalvoria.adaptation.v1",
+      "name": "Xalvoria Adaptation Chain",
+      "playerFacingSummary": "Emberhall Modular Infrastructure Program creates an economic opening before Project Debt and Steel Cost Audit tests local resilience. The chain then connects the player to Cross-Border Verification Lockdown, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.xalvoria.sector-expansion.v1",
+          "guidance": "Use staged procurement, public-project records, and smaller modules rather than a leveraged full-scale build."
+        },
+        {
+          "eventId": "event.core.xalvoria.system-pressure.v1",
+          "guidance": "Rescope projects, restructure verified debt, and prioritize essential repairs over prestige expansion."
+        },
+        {
+          "eventId": "event.core.global.cyber-coordination.v1",
+          "guidance": "Coordinate secure channels, supervised appeals, and source-linked corrections while denying unverified shortcuts."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "housing and wages tied to interrupted industrial work",
+        "unsafe shortcuts if repair demand exceeds capacity",
+        "lost wages and housing insecurity",
+        "delayed rail, utility, and building repairs",
+        "food and heating insecurity",
+        "housing arrears",
+        "unequal access and speculative hoarding"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "dravenlok",
+      "eventIds": [
+        "event.core.dravenlok.sector-expansion.v1",
+        "event.core.dravenlok.system-pressure.v1",
+        "event.core.global.food-energy-squeeze.v1"
+      ],
+      "id": "event-chain.dravenlok.adaptation.v1",
+      "name": "Dravenlok Adaptation Chain",
+      "playerFacingSummary": "Ironhold Rail Maintenance Drive creates an economic opening before Foundry Downtime and Worker Safety Halt tests local resilience. The chain then connects the player to Regional Food and Energy Affordability Squeeze, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.dravenlok.sector-expansion.v1",
+          "guidance": "Use supervised crews, phased closures, and documented substitute materials rather than bypassing safety controls."
+        },
+        {
+          "eventId": "event.core.dravenlok.system-pressure.v1",
+          "guidance": "Coordinate through the Workers Congress, prioritize safe repair, and protect affected workers during reassignment."
+        },
+        {
+          "eventId": "event.core.global.food-energy-squeeze.v1",
+          "guidance": "Use targeted support, transparent inventory, substitution, and protected essential access."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    },
+    {
+      "activationAuthorized": false,
+      "cancellationPolicy": "no-later-step-after-terminal-resolution",
+      "civilianFocus": [
+        "temporary access gaps",
+        "exclusion of residents with unresolved identity records",
+        "delayed banking, housing, and employment access",
+        "fraud losses and misinformation",
+        "debt accumulation",
+        "corrupt or duplicated procurement",
+        "unequal reconstruction and displacement"
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "syndalis",
+      "eventIds": [
+        "event.core.syndalis.sector-expansion.v1",
+        "event.core.syndalis.system-pressure.v1",
+        "event.core.global.reconstruction-cycle.v1"
+      ],
+      "id": "event-chain.syndalis.adaptation.v1",
+      "name": "Syndalis Adaptation Chain",
+      "playerFacingSummary": "Blacklight Secure Communications Upgrade creates an economic opening before Identity Verification Congestion and Network Fraud tests local resilience. The chain then connects the player to Meridian Reconstruction and Accountability Cycle, where recovery depends on verified evidence, legal substitutes, and protection of essential civilian activity.",
+      "progressionPolicy": "resolution-and-recovery-gated",
+      "recoveryGuidance": [
+        {
+          "eventId": "event.core.syndalis.sector-expansion.v1",
+          "guidance": "Maintain low-bandwidth verified access, supervised identity appeals, and transparent correction records."
+        },
+        {
+          "eventId": "event.core.syndalis.system-pressure.v1",
+          "guidance": "Use supervised appeals, approved secure channels, and correction lineage rather than repeated unverified submissions."
+        },
+        {
+          "eventId": "event.core.global.reconstruction-cycle.v1",
+          "guidance": "Use phased procurement, transparent financing, independent inspection, and accessible community benefit criteria."
+        }
+      ],
+      "runtimeSupport": "definition-only"
+    }
+  ],
+  "contentRevision": "campaign-content-v2",
+  "crisisArcCount": 5,
+  "crisisArcs": [
+    {
+      "activationAuthorized": false,
+      "chainIds": [
+        "event-chain.northreach.adaptation.v1",
+        "event-chain.yrethia.adaptation.v1"
+      ],
+      "civilianConsequencePolicy": "show-jobs-prices-housing-services-trust-and-recovery-before-escalation",
+      "contentRevision": "campaign-content-v2",
+      "id": "crisis-arc.corridor-fracture.v1",
+      "irreversibleLossPolicy": "prohibited-for-base-beta",
+      "name": "Corridor Fracture",
+      "playerFacingSummary": "Corridor Fracture links the civilian economies of northreach and yrethia. The arc may disrupt jobs, prices, housing, services, and trust, but every severe step retains a documented recovery path and prohibits irreversible base-beta lockout.",
+      "requiredRecovery": true,
+      "runtimeSupport": "definition-only",
+      "severityCeiling": "severe-bounded"
+    },
+    {
+      "activationAuthorized": false,
+      "chainIds": [
+        "event-chain.eldoran.adaptation.v1",
+        "event-chain.valerion.adaptation.v1"
+      ],
+      "civilianConsequencePolicy": "show-jobs-prices-housing-services-trust-and-recovery-before-escalation",
+      "contentRevision": "campaign-content-v2",
+      "id": "crisis-arc.food-and-water.v1",
+      "irreversibleLossPolicy": "prohibited-for-base-beta",
+      "name": "Food and Water Emergency",
+      "playerFacingSummary": "Food and Water Emergency links the civilian economies of eldoran and valerion. The arc may disrupt jobs, prices, housing, services, and trust, but every severe step retains a documented recovery path and prohibits irreversible base-beta lockout.",
+      "requiredRecovery": true,
+      "runtimeSupport": "definition-only",
+      "severityCeiling": "severe-bounded"
+    },
+    {
+      "activationAuthorized": false,
+      "chainIds": [
+        "event-chain.solvend.adaptation.v1",
+        "event-chain.syndalis.adaptation.v1"
+      ],
+      "civilianConsequencePolicy": "show-jobs-prices-housing-services-trust-and-recovery-before-escalation",
+      "contentRevision": "campaign-content-v2",
+      "id": "crisis-arc.technology-confidence.v1",
+      "irreversibleLossPolicy": "prohibited-for-base-beta",
+      "name": "Technology Confidence Crisis",
+      "playerFacingSummary": "Technology Confidence Crisis links the civilian economies of solvend and syndalis. The arc may disrupt jobs, prices, housing, services, and trust, but every severe step retains a documented recovery path and prohibits irreversible base-beta lockout.",
+      "requiredRecovery": true,
+      "runtimeSupport": "definition-only",
+      "severityCeiling": "severe-bounded"
+    },
+    {
+      "activationAuthorized": false,
+      "chainIds": [
+        "event-chain.dravenlok.adaptation.v1",
+        "event-chain.xalvoria.adaptation.v1"
+      ],
+      "civilianConsequencePolicy": "show-jobs-prices-housing-services-trust-and-recovery-before-escalation",
+      "contentRevision": "campaign-content-v2",
+      "id": "crisis-arc.industrial-reconstruction.v1",
+      "irreversibleLossPolicy": "prohibited-for-base-beta",
+      "name": "Industrial Reconstruction",
+      "playerFacingSummary": "Industrial Reconstruction links the civilian economies of dravenlok and xalvoria. The arc may disrupt jobs, prices, housing, services, and trust, but every severe step retains a documented recovery path and prohibits irreversible base-beta lockout.",
+      "requiredRecovery": true,
+      "runtimeSupport": "definition-only",
+      "severityCeiling": "severe-bounded"
+    },
+    {
+      "activationAuthorized": false,
+      "chainIds": [
+        "event-chain.thaloris.adaptation.v1",
+        "event-chain.lumenor.adaptation.v1"
+      ],
+      "civilianConsequencePolicy": "show-jobs-prices-housing-services-trust-and-recovery-before-escalation",
+      "contentRevision": "campaign-content-v2",
+      "id": "crisis-arc.legitimacy-and-information.v1",
+      "irreversibleLossPolicy": "prohibited-for-base-beta",
+      "name": "Legitimacy and Information Crisis",
+      "playerFacingSummary": "Legitimacy and Information Crisis links the civilian economies of thaloris and lumenor. The arc may disrupt jobs, prices, housing, services, and trust, but every severe step retains a documented recovery path and prohibits irreversible base-beta lockout.",
+      "requiredRecovery": true,
+      "runtimeSupport": "definition-only",
+      "severityCeiling": "severe-bounded"
+    }
+  ],
+  "eventCount": 25,
+  "events": [
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "industrial demand can raise heating and transport costs",
+        "small suppliers may overinvest before long-term demand is confirmed"
+      ],
+      "confirmedFacts": [
+        "Approved buyers must publish material specifications and payment schedules.",
+        "Winter freight capacity remains limited despite the new orders."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "northreach",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.northreach.sector-expansion.v1",
+      "name": "Frostgate Sensor-Grade Mineral Expansion",
+      "playerFacingSummary": "The Strategic Resources Office has opened a verified procurement round for sensor-grade rare-earth concentrate, precision optics, and cold-weather logistics support as Meridian demand accelerates.",
+      "playerHooks": [
+        "complete mineral-verification or market-analysis Contracts",
+        "supply calibrated sensor components",
+        "offer cold-chain planning without concentrating all cash in one buyer"
+      ],
+      "recoveryGuidance": "Diversify buyers, preserve heating reserves, and use staged procurement rather than a single capacity bet.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "The duration of Meridian demand and the number of suppliers that can meet purity standards remain uncertain."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed wages and deliveries",
+        "higher heating, food, and transport costs"
+      ],
+      "confirmedFacts": [
+        "Several freight windows have been consolidated.",
+        "Essential residential heating receives priority over discretionary industrial loads."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "northreach",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.northreach.system-pressure.v1",
+      "name": "Northern Freight and Heating Constraint",
+      "playerFacingSummary": "Ice damage and scheduled power maintenance have reduced northern freight capacity while residential heating demand is near its seasonal peak.",
+      "playerHooks": [
+        "identify legal route substitutes",
+        "prioritize essential deliveries",
+        "audit heating and inventory exposure"
+      ],
+      "recoveryGuidance": "Coordinate through the Strategic Resources Office, reserve essential capacity, and substitute locally available materials where quality permits.",
+      "recoveryPath": "coordination-through-strategic-resources-office",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "Officials have not confirmed how quickly full corridor capacity can be restored."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "higher shipping and insurance costs can raise retail prices",
+        "informal workers may be excluded from licensed port access"
+      ],
+      "confirmedFacts": [
+        "Participating shipments require documented custody and approved telemetry records.",
+        "Insurers will not reimburse unverified route changes."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "yrethia",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.yrethia.sector-expansion.v1",
+      "name": "Sableport Cargo Telemetry Upgrade",
+      "playerFacingSummary": "Port authorities and licensed insurers are funding cargo telemetry, seal verification, and compliant rerouting services to reduce losses across Meridian-linked shipping lanes.",
+      "playerHooks": [
+        "provide cargo-integrity evidence",
+        "compare compliant routes",
+        "support telemetry installation and documentation"
+      ],
+      "recoveryGuidance": "Use supervised records correction, split critical shipments, and document every custody or route change.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Port congestion may delay installation and customs approval even for accepted projects."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed imported goods",
+        "temporary job losses for crews tied to held cargo"
+      ],
+      "confirmedFacts": [
+        "Priority clearance is limited to essential and fully documented cargo.",
+        "Several insurers have issued revised evidence requirements."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "yrethia",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.yrethia.system-pressure.v1",
+      "name": "Customs Backlog and Insurance Repricing",
+      "playerFacingSummary": "A customs verification backlog has extended port dwell times, and insurers are repricing cargo exposed to undocumented transfers or damaged seals.",
+      "playerHooks": [
+        "correct shipment records",
+        "identify insured alternate routes",
+        "protect perishable or essential cargo"
+      ],
+      "recoveryGuidance": "Coordinate with the Port Records Bureau, use licensed rerouting, and preserve complete custody evidence.",
+      "recoveryPath": "coordination-through-maritime-insurance-council",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "The duration of the backlog and the final premium changes remain unresolved."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "legitimate parts may become less affordable locally",
+        "workers can be liable for undocumented substitutions"
+      ],
+      "confirmedFacts": [
+        "Certified outputs require traceable parts and recorded test results.",
+        "Unlicensed salvage cannot enter the approved export channel."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "thaloris",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.thaloris.sector-expansion.v1",
+      "name": "Certified Repair Export Program",
+      "playerFacingSummary": "The Trade Legitimacy Commission is approving repair cooperatives that can document component origin, testing, and warranty treatment for re-export buyers.",
+      "playerHooks": [
+        "perform supervised diagnostics",
+        "document component provenance",
+        "produce bounded repair or salvage plans"
+      ],
+      "recoveryGuidance": "Use cooperative inventory, preserve test evidence, and downgrade output rather than concealing component uncertainty.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Buyer demand is strong, but the supply of verifiable components may limit production."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "repair delays for households and small firms",
+        "losses for workers who purchased unverified stock"
+      ],
+      "confirmedFacts": [
+        "Suspended lots cannot be crafted, sold, or exported through licensed channels.",
+        "Owners may appeal with traceable acquisition and condition evidence."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "thaloris",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.thaloris.system-pressure.v1",
+      "name": "Salvage Authenticity Crackdown",
+      "playerFacingSummary": "Inspectors have suspended several salvage lots after mismatched ownership and condition records were found in the Dusk Harbor secondary market.",
+      "playerHooks": [
+        "audit inventory lineage",
+        "identify legal replacement inputs",
+        "support controlled salvage classification"
+      ],
+      "recoveryGuidance": "Use the cooperative appeal process, substitute documented components, and isolate disputed inventory.",
+      "recoveryPath": "coordination-through-trade-legitimacy-commission",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "Authorities have not established whether the mismatches reflect fraud or widespread record failure."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "technical housing and training costs may rise",
+        "small suppliers may depend on one institutional buyer"
+      ],
+      "confirmedFacts": [
+        "Supervised suppliers may qualify with verified calibration evidence.",
+        "Specialist processors and crystal substrates remain capacity constrained."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "solvend",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.solvend.sector-expansion.v1",
+      "name": "Aurora Research Instrument Commission",
+      "playerFacingSummary": "The Advanced Systems Consortium is commissioning calibration, field-research, and navigation instruments for a new Meridian observation program.",
+      "playerHooks": [
+        "complete calibration Contracts",
+        "support research reporting",
+        "supply lower-risk verified instrument components"
+      ],
+      "recoveryGuidance": "Use shared laboratories, staged milestones, and lower-spec substitutes where the acceptance standard permits.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "The program schedule may change if cyber or credential reviews delay shared laboratories."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed professional income",
+        "higher demand for temporary housing and training"
+      ],
+      "confirmedFacts": [
+        "Existing verified access remains valid unless individually suspended.",
+        "New applicants may use provisional supervised work while reviews continue."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "solvend",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.solvend.system-pressure.v1",
+      "name": "Credential and Cyber Bottleneck",
+      "playerFacingSummary": "A joint credential and cybersecurity review has slowed access to several Aurora Spire laboratories and technical placement systems.",
+      "playerHooks": [
+        "book provisional assessments",
+        "document calibration work",
+        "support secure equipment verification"
+      ],
+      "recoveryGuidance": "Use provisional supervised placements, preserve evidence, and avoid unverified credential brokers.",
+      "recoveryPath": "coordination-through-advanced-systems-consortium",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "Investigators have not disclosed the scope of the suspected access-control weakness."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "speculative buying can reduce local affordability",
+        "poor storage can turn apparent inventory into losses"
+      ],
+      "confirmedFacts": [
+        "Projects must demonstrate affordable household access.",
+        "Perishable inventory requires documented storage and delivery capacity."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "eldoran",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.eldoran.sector-expansion.v1",
+      "name": "Crescent Food Logistics Modernization",
+      "playerFacingSummary": "The Commodity Stability Board is funding low-waste inventory records, neighborhood distribution, and verified cold-storage coordination.",
+      "playerHooks": [
+        "map food access",
+        "improve inventory records",
+        "coordinate bounded distribution pilots"
+      ],
+      "recoveryGuidance": "Prioritize verified demand, small batches, and shared storage instead of speculative stockpiling.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Future harvest volume and wholesale prices remain weather dependent."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "higher food costs",
+        "reduced access in low-income or poorly connected districts"
+      ],
+      "confirmedFacts": [
+        "Public distribution reserves remain available but are not unlimited.",
+        "The Board is monitoring hoarding and misleading availability claims."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "eldoran",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.eldoran.system-pressure.v1",
+      "name": "Harvest Shortfall and Wholesale Volatility",
+      "playerFacingSummary": "Early harvest reports indicate lower output in several supplier districts, and wholesale prices are moving before final volumes are confirmed.",
+      "playerHooks": [
+        "verify market availability",
+        "identify substitutes",
+        "support fair distribution and household budgeting"
+      ],
+      "recoveryGuidance": "Use public reserves, substitute products, and transparent distribution rather than speculative accumulation.",
+      "recoveryPath": "coordination-through-commodity-stability-board",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "Final harvest volume, import substitution, and the duration of price pressure remain unknown."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "private service fees can rise faster than wages",
+        "filter shortages can affect housing eligibility and health"
+      ],
+      "confirmedFacts": [
+        "Public-service projects require water-quality evidence and maintenance records.",
+        "Shared-housing and low-income districts receive priority in the first round."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "valerion",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.valerion.sector-expansion.v1",
+      "name": "Glassfall Water Resilience Investment",
+      "playerFacingSummary": "The Water Energy Commission is commissioning filtration maintenance, public refill monitoring, and efficient pumping upgrades across high-cost districts.",
+      "playerHooks": [
+        "perform water tests",
+        "inspect infrastructure",
+        "coordinate verified filter and pump maintenance"
+      ],
+      "recoveryGuidance": "Use public monitoring, cartridge rotation, and ceramic substitutes while preserving essential household access.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Filter-media availability and private utility participation vary by district."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "temporary water-access interruptions",
+        "higher utility and housing costs"
+      ],
+      "confirmedFacts": [
+        "Emergency cartridges and ceramic media remain approved for specified systems.",
+        "Private landlords must disclose service interruptions and temporary measures."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "valerion",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.valerion.system-pressure.v1",
+      "name": "Filter Allocation and Housing Utility Squeeze",
+      "playerFacingSummary": "A filtration-membrane shortage has forced utilities to prioritize public refill stations and essential housing systems.",
+      "playerHooks": [
+        "audit water-service status",
+        "install approved substitutes",
+        "document landlord or utility compliance"
+      ],
+      "recoveryGuidance": "Coordinate through the Water and Housing Office, rotate approved filters, and prioritize essential sites.",
+      "recoveryPath": "coordination-through-water-energy-commission",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "The delivery date for full membrane replacement stock is not confirmed."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "inconsistent translations can block services",
+        "fast-moving rumors can undermine public trust"
+      ],
+      "confirmedFacts": [
+        "Approved work must preserve source and correction history.",
+        "Public institutions are prioritizing settlement, housing, and emergency information."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "lumenor",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.lumenor.sector-expansion.v1",
+      "name": "Starfall Translation and Public Information Expansion",
+      "playerFacingSummary": "The Public Media Trust is commissioning verified translation, records clarification, and accessible civic briefings for residents navigating economic and residency changes.",
+      "playerHooks": [
+        "translate verified dossiers",
+        "produce accessible briefings",
+        "audit correction lineage and public claims"
+      ],
+      "recoveryGuidance": "Use paired review, source-linked corrections, and public distribution rather than unverified summaries.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Demand may exceed the number of qualified reviewers and trusted distribution channels."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed housing, banking, and employment decisions",
+        "heightened discrimination against unfamiliar records"
+      ],
+      "confirmedFacts": [
+        "Original notices remain available with correction history.",
+        "Institutions are accepting reviewed translations and documented appeals."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "lumenor",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.lumenor.system-pressure.v1",
+      "name": "Credential Dispute and Trust Erosion",
+      "playerFacingSummary": "Conflicting translations and edited public notices have triggered credential disputes and reduced confidence in several informal information channels.",
+      "playerHooks": [
+        "verify sources",
+        "prepare correction dossiers",
+        "help residents navigate approved appeal routes"
+      ],
+      "recoveryGuidance": "Use the Civic Translation Desk, preserve originals, and publish linked corrections without erasing history.",
+      "recoveryPath": "coordination-through-starfall-public-media-trust",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "The origin and scale of the altered notices remain under investigation."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "debt-funded overexpansion",
+        "delayed public repairs if projects fail financing review"
+      ],
+      "confirmedFacts": [
+        "Projects must separate equipment finance from operating cash.",
+        "Payment milestones require inspection evidence and documented material use."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "xalvoria",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.xalvoria.sector-expansion.v1",
+      "name": "Emberhall Modular Infrastructure Program",
+      "playerFacingSummary": "The Project Accountability Office is approving modular repair, warehouse, and public-infrastructure pilots with transparent budgets and staged payments.",
+      "playerHooks": [
+        "prepare project estimates",
+        "supply bounded fabrication services",
+        "audit inventory and milestone evidence"
+      ],
+      "recoveryGuidance": "Use staged procurement, public-project records, and smaller modules rather than a leveraged full-scale build.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Steel costs, lender participation, and the number of projects reaching later stages remain uncertain."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "construction delays",
+        "job losses and repayment pressure for small contractors"
+      ],
+      "confirmedFacts": [
+        "Existing work may continue only within verified funding and material limits.",
+        "Lenders must disclose revised total cost and payment timing."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "xalvoria",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.xalvoria.system-pressure.v1",
+      "name": "Project Debt and Steel Cost Audit",
+      "playerFacingSummary": "Auditors are reviewing infrastructure projects after steel-price increases and debt concentration pushed several budgets beyond approved limits.",
+      "playerHooks": [
+        "recalculate project economics",
+        "identify material substitutes",
+        "support transparent milestone reporting"
+      ],
+      "recoveryGuidance": "Rescope projects, restructure verified debt, and prioritize essential repairs over prestige expansion.",
+      "recoveryPath": "coordination-through-project-accountability-office",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "Some projects may be resized, delayed, or cancelled after the review."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "housing and wages tied to interrupted industrial work",
+        "unsafe shortcuts if repair demand exceeds capacity"
+      ],
+      "confirmedFacts": [
+        "Safety clearance and inspection evidence are mandatory.",
+        "Essential worker-housing and freight connections receive first priority."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "dravenlok",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.dravenlok.sector-expansion.v1",
+      "name": "Ironhold Rail Maintenance Drive",
+      "playerFacingSummary": "The Workers Congress and rail operators are commissioning structural scans, maintenance rigs, and supervised repair crews for aging industrial routes.",
+      "playerHooks": [
+        "support structural inspections",
+        "perform documented maintenance",
+        "coordinate verified material and crew needs"
+      ],
+      "recoveryGuidance": "Use supervised crews, phased closures, and documented substitute materials rather than bypassing safety controls.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Foundry output and replacement-part availability may limit the repair schedule."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "lost wages and housing insecurity",
+        "delayed rail, utility, and building repairs"
+      ],
+      "confirmedFacts": [
+        "The halt is limited to identified equipment and connected production lines.",
+        "Worker pay, housing, and reassignment protections are under review."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "dravenlok",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.dravenlok.system-pressure.v1",
+      "name": "Foundry Downtime and Worker Safety Halt",
+      "playerFacingSummary": "A high-heat equipment fault has reduced foundry output, and safety officials have paused affected lines pending inspection.",
+      "playerHooks": [
+        "inspect equipment",
+        "plan substitute materials",
+        "support worker reassignment and essential repairs"
+      ],
+      "recoveryGuidance": "Coordinate through the Workers Congress, prioritize safe repair, and protect affected workers during reassignment.",
+      "recoveryPath": "coordination-through-workers-congress",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "The repair duration and impact on hardened steel supply are not yet confirmed."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "temporary access gaps",
+        "exclusion of residents with unresolved identity records"
+      ],
+      "confirmedFacts": [
+        "Approved systems must preserve authentication and correction lineage.",
+        "Sensitive data may not be transferred through unverified service providers."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "syndalis",
+      "effectBand": "moderate",
+      "effectIntent": [
+        "income-opportunity-up",
+        "selected-input-demand-up",
+        "concentration-risk-up"
+      ],
+      "eventType": "economic-opportunity",
+      "id": "event.core.syndalis.sector-expansion.v1",
+      "name": "Blacklight Secure Communications Upgrade",
+      "playerFacingSummary": "The Data Rights Tribunal and licensed network operators are commissioning verified emergency channels, identity modules, and media-correction tools.",
+      "playerHooks": [
+        "verify public notices",
+        "support secure channel deployment",
+        "audit identity and data-handling controls"
+      ],
+      "recoveryGuidance": "Maintain low-bandwidth verified access, supervised identity appeals, and transparent correction records.",
+      "recoveryPath": "diversification-and-capacity-investment",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "opportunity",
+      "triggerIntent": "scheduled-or-condition-based-after-market-capability-review",
+      "uncertainty": "Network capacity and public adoption may vary as older systems are replaced."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed banking, housing, and employment access",
+        "fraud losses and misinformation"
+      ],
+      "confirmedFacts": [
+        "Verified emergency channels remain operational.",
+        "Affected users may appeal through the Authority with source and correction evidence."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "syndalis",
+      "effectBand": "moderate-severe",
+      "effectIntent": [
+        "availability-down",
+        "cost-pressure-up",
+        "public-confidence-down"
+      ],
+      "eventType": "economic-pressure",
+      "id": "event.core.syndalis.system-pressure.v1",
+      "name": "Identity Verification Congestion and Network Fraud",
+      "playerFacingSummary": "A surge of forged notices and duplicate identity claims has slowed verification and triggered restrictions on several high-risk digital channels.",
+      "playerHooks": [
+        "preserve evidence",
+        "verify correction lineage",
+        "help residents access approved low-bandwidth channels"
+      ],
+      "recoveryGuidance": "Use supervised appeals, approved secure channels, and correction lineage rather than repeated unverified submissions.",
+      "recoveryPath": "coordination-through-data-rights-tribunal",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "pressure",
+      "triggerIntent": "scheduled-or-condition-based-after-event-authority-review",
+      "uncertainty": "The full number of compromised notices and identities remains under investigation."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "shortages and delayed wages",
+        "travel restrictions and service interruptions",
+        "misinformation about route safety"
+      ],
+      "confirmedFacts": [
+        "Multiple corridor segments are operating below normal capacity.",
+        "Essential civilian freight, power, and verified communications receive priority."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "global",
+      "effectBand": "severe-bounded",
+      "effectIntent": [
+        "shipping-cost-up",
+        "route-availability-down",
+        "substitution-demand-up"
+      ],
+      "eventType": "regional-system",
+      "id": "event.core.global.meridian-disruption.v1",
+      "name": "Meridian Corridor Infrastructure Fracture",
+      "playerFacingSummary": "Coordinated damage has interrupted several Meridian freight, energy, and data segments. Authorities confirm physical disruption but have not established a final attribution.",
+      "playerHooks": [
+        "verify local impacts",
+        "support lawful substitutes and continuity plans",
+        "avoid speculation presented as confirmed attribution"
+      ],
+      "recoveryGuidance": "Use alternate verified routes, protect essential civilian access, and publish corrections as facts change.",
+      "recoveryPath": "alternate-routes-and-repair",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "escalation",
+      "triggerIntent": "story-or-condition-based-after-authority-review",
+      "uncertainty": "The responsible actor, full damage extent, and restoration timeline remain unconfirmed."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "loan rejection or repricing",
+        "job and project delays",
+        "pressure to liquidate assets at weak prices"
+      ],
+      "confirmedFacts": [
+        "Liquidity remains available but risk reviews are stricter.",
+        "Essential accounts and verified existing obligations remain in force."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "global",
+      "effectBand": "severe-bounded",
+      "effectIntent": [
+        "risk-appetite-down",
+        "liquidity-pressure-up",
+        "safe-asset-demand-up"
+      ],
+      "eventType": "regional-system",
+      "id": "event.core.global.confidence-shock.v1",
+      "name": "Regional Credit and Confidence Shock",
+      "playerFacingSummary": "Banks, firms, and households are increasing cash buffers after the corridor disruption, tightening credit and delaying investment across several countries.",
+      "playerHooks": [
+        "review cash exposure",
+        "compare verified restructuring routes",
+        "communicate downside risk without causing panic"
+      ],
+      "recoveryGuidance": "Use transparent briefings, bounded liquidity support, and verified restructuring rather than hidden guarantees.",
+      "recoveryPath": "transparent-briefings-and-liquidity-support",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "escalation",
+      "triggerIntent": "story-or-condition-based-after-authority-review",
+      "uncertainty": "The duration of the confidence shock and the scale of future losses remain unknown."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "delayed remittances and travel",
+        "loss of access for people with disputed records",
+        "fraud and rumor amplification"
+      ],
+      "confirmedFacts": [
+        "Verified emergency channels remain active.",
+        "Cross-border identity and payment reviews may take longer."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "global",
+      "effectBand": "severe-bounded",
+      "effectIntent": [
+        "verification-friction-up",
+        "security-demand-up",
+        "fraud-risk-down-after-recovery"
+      ],
+      "eventType": "regional-system",
+      "id": "event.core.global.cyber-coordination.v1",
+      "name": "Cross-Border Verification Lockdown",
+      "playerFacingSummary": "Forged notices and compromised credentials linked to the Meridian crisis have prompted coordinated verification restrictions across borders.",
+      "playerHooks": [
+        "preserve evidence",
+        "verify corrections",
+        "support approved fallback communication and identity recovery"
+      ],
+      "recoveryGuidance": "Coordinate secure channels, supervised appeals, and source-linked corrections while denying unverified shortcuts.",
+      "recoveryPath": "shared-security-and-identity-recovery",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "crisis",
+      "triggerIntent": "story-or-condition-based-after-authority-review",
+      "uncertainty": "Investigators have not determined whether every reported compromise shares the same origin."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "food and heating insecurity",
+        "housing arrears",
+        "unequal access and speculative hoarding"
+      ],
+      "confirmedFacts": [
+        "Public support and strategic reserves are being released through verified channels.",
+        "Availability differs by country, district, and product."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "global",
+      "effectBand": "severe-bounded",
+      "effectIntent": [
+        "essential-cost-up",
+        "discretionary-demand-down",
+        "public-support-demand-up"
+      ],
+      "eventType": "regional-system",
+      "id": "event.core.global.food-energy-squeeze.v1",
+      "name": "Regional Food and Energy Affordability Squeeze",
+      "playerFacingSummary": "Route losses, precautionary buying, and energy constraints are raising essential costs unevenly across the ten countries.",
+      "playerHooks": [
+        "map local need",
+        "support fair distribution",
+        "identify legal substitutes and household recovery paths"
+      ],
+      "recoveryGuidance": "Use targeted support, transparent inventory, substitution, and protected essential access.",
+      "recoveryPath": "targeted-support-and-supply-substitution",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "civilian-crisis",
+      "triggerIntent": "story-or-condition-based-after-authority-review",
+      "uncertainty": "Future supply, weather, and political restrictions may change the duration and severity of the squeeze."
+    },
+    {
+      "activationAuthorized": false,
+      "civilianRisks": [
+        "debt accumulation",
+        "corrupt or duplicated procurement",
+        "unequal reconstruction and displacement"
+      ],
+      "confirmedFacts": [
+        "Essential repair and verified civilian recovery projects receive priority.",
+        "Procurement and financing require audit records and staged approval."
+      ],
+      "contentRevision": "campaign-content-v2",
+      "country": "global",
+      "effectBand": "severe-bounded",
+      "effectIntent": [
+        "infrastructure-demand-up",
+        "materials-demand-up",
+        "debt-and-capacity-risk-up"
+      ],
+      "eventType": "regional-system",
+      "id": "event.core.global.reconstruction-cycle.v1",
+      "name": "Meridian Reconstruction and Accountability Cycle",
+      "playerFacingSummary": "Governments, firms, and communities are planning repairs to Meridian infrastructure while debating financing, attribution, and public accountability.",
+      "playerHooks": [
+        "prepare accountable project plans",
+        "verify material and financing needs",
+        "support community recovery without exploiting scarcity"
+      ],
+      "recoveryGuidance": "Use phased procurement, transparent financing, independent inspection, and accessible community benefit criteria.",
+      "recoveryPath": "phased-procurement-and-accountability",
+      "runtimeSupport": "definition-only",
+      "storyPhase": "reconstruction",
+      "triggerIntent": "story-or-condition-based-after-authority-review",
+      "uncertainty": "The final political settlement, total cost, and distribution of responsibility remain unresolved."
+    }
+  ],
+  "packId": "econovaria.beta-seed-pack.v1",
+  "productionAuthorized": false,
+  "schemaVersion": "econovaria-beta-campaign-events-v2",
+  "status": "approved-for-isolated-staging",
+  "version": "1.0.0-beta"
+}

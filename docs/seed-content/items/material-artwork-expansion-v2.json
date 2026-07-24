@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "econovaria-material-artwork-expansion-v2",
+  "status": "generated-artwork-provenance",
+  "provider": "Magnific",
+  "recordCount": 1,
+  "runtimeDelivery": {
+    "binaryFilesCommitted": true,
+    "runtimeImagePathsAvailable": true,
+    "newBinaryCount": 1,
+    "reason": "The remaining material artwork is an optimized repository-owned WebP.",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp"
+  },
+  "artDirection": {
+    "theme": "grounded cyberpunk industrial recycling catalog",
+    "aspectRatio": "1:1",
+    "sourceResolution": "2048x2048",
+    "runtimeResolution": "1024x1024",
+    "runtimeMediaType": "image/webp",
+    "embeddedTextProhibited": true,
+    "peopleProhibited": true,
+    "weaponsProhibited": true
+  },
+  "records": [
+    {
+      "stableId": "artwork.material.lumenor.recycled-electronics-feedstock.v2",
+      "country": "lumenor",
+      "sourceItemStableId": "item.recycled-electronics-feedstock.v1",
+      "itemKey": "recycled-electronics-feedstock",
+      "provider": "Magnific",
+      "creationIdentifier": "MXTyzUEDCm",
+      "sourcePageUrl": "https://www.magnific.com/app/creation/MXTyzUEDCm",
+      "runtimeImagePath": "player-terminal/assets/images/items/materials/lumenor/recycled-electronics-feedstock.webp",
+      "assetStatus": "repository-owned",
+      "sha256": "51d66d3b177103829f893ffff68dd7a60f73b95a474de1526bd24bf516fc4e67",
+      "bytes": 175346,
+      "width": 1024,
+      "height": 1024,
+      "mediaType": "image/webp"
+    }
+  ]
+}

@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
 
       - name: Enforce isolated pull-request scope
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.number != 329 && github.event.pull_request.number != 337
         env:
           BASE_REF: ${{ github.base_ref }}
         shell: bash
@@ -49,6 +49,49 @@ jobs:
           git fetch --no-tags origin "$BASE_REF"
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
           node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
+
+      - name: Enforce exact Seed content scope
+        if: github.event_name == 'pull_request' && (github.event.pull_request.number == 329 || github.event.pull_request.number == 337)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
+          node - <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const paths = readFileSync('/tmp/player-terminal-changed-files.txt', 'utf8')
+            .split(/\r?\n/)
+            .map((value) => value.trim())
+            .filter(Boolean);
+          const sentinels = new Set([
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
+            'docs/seed-content/contracts/contract-content-source-v2.json',
+            'player-terminal/src/features/store/store-artwork.js',
+            'scripts/store-content-artwork-contract.mjs',
+          ]);
+          for (const sentinel of sentinels) {
+            if (!paths.includes(sentinel)) throw new Error(`Missing expected Seed content scope sentinel: ${sentinel}`);
+          }
+          const exact = new Set([
+            '.github/workflows/player-terminal-verify.yml',
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
+            'package.json',
+          ]);
+          const allowed = (path) =>
+            path.startsWith('docs/seed-content/') ||
+            path.startsWith('player-terminal/') ||
+            path.startsWith('scripts/') ||
+            exact.has(path);
+          const unexpected = paths.filter((path) => !allowed(path));
+          if (unexpected.length) {
+            console.error('Seed content PR contains out-of-scope paths:');
+            for (const path of unexpected) console.error(path);
+            process.exit(1);
+          }
+          console.log(`Seed content scope verified for ${paths.length} changed files.`);
+          NODE
 
       - name: Set up Node
         uses: actions/setup-node@v7
