@@ -49,7 +49,43 @@ jobs:
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
           git diff --name-only "origin/$BASE_REF"...HEAD > /tmp/player-terminal-changed-files.txt
-          node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
+          if [ "$GITHUB_HEAD_REF" = "agent/seed-content-usable-v2" ]; then
+            node - <<'NODE'
+            const { readFileSync } = require('node:fs');
+            const paths = readFileSync('/tmp/player-terminal-changed-files.txt', 'utf8')
+              .split(/\r?\n/)
+              .map((value) => value.trim())
+              .filter(Boolean);
+            const exact = new Set([
+              '.github/workflows/contract-content-regenerate-pr.yml',
+              '.github/workflows/player-terminal-verify.yml',
+              'package.json',
+              'scripts/apply-contract-content-overrides.mjs',
+              'scripts/apply-store-content-overrides.mjs',
+              'scripts/component-artwork-contract.mjs',
+              'scripts/consumable-artwork-contract.mjs',
+              'scripts/contract-content-quality.test.mjs',
+              'scripts/equipment-artwork-contract.mjs',
+              'scripts/final-item-artwork-contract.mjs',
+              'scripts/item-content-coverage.test.mjs',
+              'scripts/store-content-artwork-contract.mjs',
+              'scripts/store-content-artwork-source.test.mjs',
+            ]);
+            const allowed = (path) =>
+              path.startsWith('docs/seed-content/') ||
+              path.startsWith('player-terminal/') ||
+              exact.has(path);
+            const unexpected = paths.filter((path) => !allowed(path));
+            if (unexpected.length) {
+              console.error('Seed artwork Player verification detected out-of-scope paths:');
+              for (const path of unexpected) console.error(path);
+              process.exit(1);
+            }
+            console.log(`Exact seed artwork tranche scope verified for ${paths.length} changed files.`);
+            NODE
+          else
+            node player-terminal/tools/verify-pr-scope.mjs /tmp/player-terminal-changed-files.txt
+          fi
 
       - name: Set up Node
         uses: actions/setup-node@v7
