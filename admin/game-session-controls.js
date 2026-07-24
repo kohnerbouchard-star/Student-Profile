@@ -105,7 +105,8 @@
       if (!text(url.pathname) || url.pathname === "/") url.pathname = "/play";
       url.search = "";
       url.hash = "";
-      url.searchParams.set("gameCode", normalizedCode);
+      gameCode = normalizedCode;
+      url.searchParams.set("gameCode", gameCode);
       url.searchParams.set("mode", "student");
       // Retired alias retained in source-history contract only:
       // url.searchParams.set("mode", "player")
