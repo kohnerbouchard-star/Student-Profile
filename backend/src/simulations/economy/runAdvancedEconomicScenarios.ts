@@ -1,4 +1,4 @@
-import { writeTextFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import {
   runCreditRecoveryScenario,
   type CreditRecoveryCountryProfile,
@@ -61,7 +61,7 @@ const evidence: AdvancedScenarioEvidence = {
   deterministic: true,
 };
 
-await writeTextFile(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
+await writeFile(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
 console.log(JSON.stringify(evidence.summary));
 
 function macroConfig(): MacroScenarioConfig {
