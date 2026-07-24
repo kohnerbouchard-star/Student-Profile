@@ -1,0 +1,96 @@
+name: Game Creation Provisioning
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/game-creation-provisioning.yml"
+      - "backend/supabase/migrations/**"
+      - "backend/src/domains/game-sessions/tests/gameCreationProvisioningMigrationContract.test.ts"
+      - "backend/supabase/functions/admin-api/gameProvisioningOperations.ts"
+      - "backend/supabase/functions/admin-api/gameProvisioningOperations.test.ts"
+      - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/world-staging-provision-lib.mjs"
+      - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
+      - "docs/seed-content/executable/beta-pack-v1/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-creation-provisioning-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  provision:
+    if: github.event.pull_request.number == 334
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/game-creation-provisioning-local-acceptance.mjs
+
+      - name: Start disposable Supabase Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/game-creation-provisioning-startup.log
+          : > "$LOG"
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Execute canonical source to multiplayer game provisioning
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-creation-provisioning-local-acceptance.log
+
+      - name: Upload sanitized provisioning evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-creation-provisioning-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/game-creation-provisioning-startup.log
+            /tmp/game-creation-provisioning-local-acceptance.log
+            /tmp/game-creation-provisioning-local-acceptance.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true

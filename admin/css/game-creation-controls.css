@@ -1,0 +1,358 @@
+.econovaria-admin-create-game-button {
+  width: 100%;
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgba(98, 230, 167, 0.38);
+  border-radius: 8px;
+  background: rgba(98, 230, 167, 0.075);
+  color: #78edb6;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.econovaria-admin-game-session-controls-host {
+  container-type: inline-size;
+}
+
+.econovaria-admin-game-session-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 6px;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-game-session-card__heading,
+.econovaria-admin-game-session-card > strong,
+.econovaria-admin-game-session-card > .econovaria-admin-game-session-card__code-row,
+.econovaria-admin-game-session-card > p {
+  grid-column: 1 / -1;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-create-game-button {
+  grid-column: 1;
+}
+
+.econovaria-admin-game-session-card > .econovaria-admin-logout-button {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.econovaria-admin-create-game-button:hover,
+.econovaria-admin-create-game-button:focus-visible {
+  border-color: rgba(98, 230, 167, 0.88);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(98, 230, 167, 0.11);
+}
+
+.econovaria-game-create-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100010;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2.5vw, 30px);
+  background: rgba(0, 5, 12, 0.84);
+  backdrop-filter: blur(8px);
+}
+
+.econovaria-game-create-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(680px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  padding: clamp(18px, 3vw, 28px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid rgba(80, 214, 255, 0.34);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 103, 0, 0.1), transparent 38%),
+    linear-gradient(150deg, #071825, #04101d 70%);
+  color: #e9fbff;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.58);
+}
+
+.econovaria-game-create-dialog > header,
+.econovaria-game-create-dialog form > footer,
+.econovaria-game-create-success > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.econovaria-game-create-dialog h2,
+.econovaria-game-create-dialog h3,
+.econovaria-game-create-dialog p {
+  margin: 0;
+}
+
+.econovaria-game-create-dialog header small,
+.econovaria-game-create-success__eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #ffb166;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.econovaria-game-create-dialog header h2 {
+  color: #ffffff;
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1.1;
+}
+
+.econovaria-game-create-dialog > p {
+  max-width: 62ch;
+  color: rgba(215, 242, 249, 0.72);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.econovaria-game-create-dialog form,
+.econovaria-game-create-dialog [data-econovaria-game-create-fields] {
+  display: grid;
+  gap: 14px;
+}
+
+.econovaria-game-create-dialog label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: rgba(222, 246, 252, 0.86);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.econovaria-game-create-dialog label > small {
+  color: rgba(195, 227, 236, 0.56);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.econovaria-game-create-dialog input,
+.econovaria-game-create-dialog select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(94, 211, 244, 0.26);
+  border-radius: 9px;
+  background: rgba(0, 5, 12, 0.72);
+  color: #e9fbff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.econovaria-game-create-dialog input:focus,
+.econovaria-game-create-dialog select:focus {
+  border-color: #74e2ff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.11);
+}
+
+.econovaria-game-create-dialog aside {
+  padding: 13px 14px;
+  border: 1px solid rgba(98, 230, 167, 0.2);
+  border-radius: 10px;
+  background: rgba(98, 230, 167, 0.05);
+}
+
+.econovaria-game-create-dialog aside strong {
+  color: #8df0c1;
+  font-size: 11px;
+}
+
+.econovaria-game-create-dialog aside ul {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0;
+  padding-left: 18px;
+  color: rgba(216, 243, 249, 0.72);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.econovaria-game-create-dialog aside p {
+  color: rgba(255, 188, 132, 0.78);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+[data-econovaria-game-create-status] {
+  min-height: 18px;
+  color: rgba(210, 240, 248, 0.66);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+[data-econovaria-game-create-status][data-state="pending"] {
+  color: #74e2ff;
+}
+
+[data-econovaria-game-create-status][data-state="success"] {
+  color: #78edb6;
+}
+
+[data-econovaria-game-create-status][data-state="error"] {
+  color: #ff8994;
+}
+
+.econovaria-game-create-dialog button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(91, 214, 246, 0.3);
+  border-radius: 9px;
+  background: rgba(0, 177, 214, 0.08);
+  color: #b9effd;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.econovaria-game-create-dialog button:hover,
+.econovaria-game-create-dialog button:focus-visible {
+  border-color: #74e2ff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.econovaria-game-create-dialog [type="submit"],
+.econovaria-game-create-success [data-econovaria-created-game-share] {
+  border-color: rgba(98, 230, 167, 0.52);
+  background: rgba(98, 230, 167, 0.1);
+  color: #8df0c1;
+}
+
+.econovaria-game-create-dialog button[disabled] {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.econovaria-game-create-success {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid rgba(98, 230, 167, 0.28);
+  border-radius: 12px;
+  background: rgba(98, 230, 167, 0.06);
+}
+
+.econovaria-game-create-success__code {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid rgba(255, 177, 102, 0.28);
+  border-radius: 10px;
+  background: rgba(0, 5, 12, 0.58);
+}
+
+.econovaria-game-create-success__code small {
+  color: rgba(208, 237, 245, 0.6);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.econovaria-game-create-success__code strong {
+  overflow-wrap: anywhere;
+  color: #ffbf69;
+  font-size: clamp(18px, 4vw, 26px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
+
+.econovaria-game-create-success dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.econovaria-game-create-success dl > div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 8px;
+  background: rgba(0, 7, 14, 0.48);
+}
+
+.econovaria-game-create-success dt {
+  color: rgba(202, 233, 242, 0.56);
+  font-size: 8px;
+}
+
+.econovaria-game-create-success dd {
+  margin: 3px 0 0;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+@container (max-width: 150px) {
+  .econovaria-admin-game-session-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .econovaria-admin-game-session-card > .econovaria-admin-game-session-card__heading,
+  .econovaria-admin-game-session-card > strong,
+  .econovaria-admin-game-session-card > p {
+    display: none;
+  }
+
+  .econovaria-admin-game-session-card > .econovaria-admin-game-session-card__code-row,
+  .econovaria-admin-game-session-card > .econovaria-admin-create-game-button,
+  .econovaria-admin-game-session-card > .econovaria-admin-logout-button {
+    grid-column: 1;
+  }
+
+  .econovaria-admin-game-session-card__code-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 4px;
+  }
+
+  .econovaria-admin-game-session-card__code-row > div {
+    min-height: 30px;
+    padding: 4px 5px;
+  }
+
+  .econovaria-admin-game-session-card__code-row small {
+    display: none;
+  }
+
+  .econovaria-admin-game-session-card__code-row b {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+
+  .econovaria-admin-game-session-card [data-econovaria-share-game] {
+    min-width: 0;
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 620px) {
+  .econovaria-game-create-success dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .econovaria-game-create-dialog form > footer button,
+  .econovaria-game-create-success > footer button {
+    flex: 1 1 100%;
+  }
+}
