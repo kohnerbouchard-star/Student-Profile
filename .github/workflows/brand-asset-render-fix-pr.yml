@@ -1,0 +1,71 @@
+name: Apply Brand Repair On PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-asset-render-fix-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/brand-asset-render-fix-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact repair branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/brand-asset-render-fix-v1
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Apply repair script once
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q 'econovaria-logo.jpg?v=20260724.2' index.html; then
+            echo 'Brand repair is already applied.'
+            exit 0
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/brand-asset-render-fix-apply.yml').read_text(encoding='utf-8').splitlines()
+          start = next(i for i, line in enumerate(workflow) if line.strip() == '- name: Apply cross-surface branding repair')
+          run_line = next(i for i in range(start, len(workflow)) if workflow[i].strip() == 'run: |')
+          end = next(i for i in range(run_line + 1, len(workflow)) if workflow[i].startswith('      - name: Validate repaired assets'))
+          block = workflow[run_line + 1:end]
+          stripped = []
+          for line in block:
+              stripped.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/apply-brand-repair.sh').write_text('\n'.join(stripped) + '\n', encoding='utf-8')
+          PY
+          bash /tmp/apply-brand-repair.sh
+
+      - name: Validate repaired branch
+        run: |
+          python3 -m py_compile scripts/local-staging-gateway.py
+          node scripts/brand-asset-contract.mjs
+          node --test scripts/local-staging-gateway-contract.test.mjs
+          node --check player-terminal/src/main.js
+          node --check player-terminal/src/components/layout.js
+
+      - name: Commit repaired files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo 'No repair changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(brand): repair cross-surface logo and favicon rendering'
+          git push origin HEAD:agent/brand-asset-render-fix-v1
