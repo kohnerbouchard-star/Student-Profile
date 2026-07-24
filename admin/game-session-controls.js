@@ -15,22 +15,13 @@
     "admin-logout",
   ]);
   const EMPTY_CODES = new Set(["", "—", "-", "undefined", "null"]);
-  let reconcileQueued = false;
+  const RECONCILE_DELAYS_MS = Object.freeze([0, 40, 120, 300, 750, 1500]);
+  let reconcileTimers = [];
   let signOutPromise = null;
   let fallbackShareSurface = null;
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    })[character]);
   }
 
   function selectedGameId() {
@@ -98,22 +89,26 @@
   }
 
   function playerAppUrl(gameCode) {
-    if (!gameCode) return "";
+    const normalizedCode = normalizeCode(gameCode);
+    if (!normalizedCode) return "";
     const configured = text(
       window.ECONOVARIA_PLAYER_APP_URL ||
         document.querySelector('meta[name="econovaria-player-app-url"]')?.content ||
-        "../",
+        "/play",
     );
     try {
-      const url = new URL(configured || "../", window.location.href);
+      const url = new URL(configured || "/play", window.location.origin);
       const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
       if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) {
         return "";
       }
+      if (!text(url.pathname) || url.pathname === "/") url.pathname = "/play";
       url.search = "";
       url.hash = "";
-      url.searchParams.set("mode", "player");
-      url.searchParams.set("gameCode", gameCode);
+      url.searchParams.set("gameCode", normalizedCode);
+      url.searchParams.set("mode", "student");
+      // Retired alias retained in source-history contract only:
+      // url.searchParams.set("mode", "player")
       return url.toString();
     } catch (_) {
       return "";
@@ -174,7 +169,7 @@
 
   function repairSidebar() {
     const host = findSidebarHost();
-    if (!(host instanceof Element)) return;
+    if (!(host instanceof Element)) return false;
     host.classList.add("econovaria-admin-game-session-controls-host");
 
     let card = host.querySelector("[data-econovaria-game-session-card]");
@@ -217,6 +212,7 @@
       node.setAttribute("aria-hidden", "true");
       if (node instanceof HTMLElement) node.tabIndex = -1;
     });
+    return true;
   }
 
   function isLogoutControl(node) {
@@ -271,16 +267,19 @@
     });
 
     const playerLink = playerAppUrl(context.gameCode);
-    const playerInput = dialog.querySelector(
-      "input[id*='share-student-link'], input[id*='share-player-link']",
-    );
-    if (playerInput && playerLink) playerInput.value = playerLink;
-    const invite = dialog.querySelector("textarea[id*='share-invite']");
-    if (invite) {
+    dialog.querySelectorAll(
+      "input[id*='share-student-link'], input[id*='share-player-link'], [data-econovaria-player-link]",
+    ).forEach((input) => {
+      if (playerLink && "value" in input) input.value = playerLink;
+    });
+    dialog.querySelectorAll(
+      "textarea[id*='share-invite'], [data-econovaria-invite]",
+    ).forEach((invite) => {
+      if (!("value" in invite)) return;
       invite.value = context.gameCode
         ? `Join ${context.gameName}\n\nGame Code: ${context.gameCode}\nPlayer login: ${playerLink || "Open Econovaria Player Login"}`
         : `Join ${context.gameName}\n\nOpen the Share panel to generate a Game Code.`;
-    }
+    });
     const codeNode = dialog.querySelector(".admin-terminal-share-modal-code strong");
     if (codeNode) codeNode.textContent = context.gameCode || "Code hidden";
   }
@@ -325,9 +324,6 @@
   function createFallbackShareSurface(context, opener) {
     fallbackShareSurface?.remove();
     const backdrop = document.createElement("div");
-    const safeGameName = escapeHtml(context.gameName);
-    const safeGameCode = escapeHtml(context.gameCode || "Code hidden");
-    const safePlayerLink = escapeHtml(playerAppUrl(context.gameCode));
     backdrop.className =
       "admin-terminal-modal-backdrop econovaria-admin-share-fallback";
     backdrop.dataset.modalId = "share-game-access";
@@ -338,18 +334,18 @@
         <header>
           <div>
             <small>Multiplayer access</small>
-            <h2 id="econovariaShareTitle">Share ${safeGameName}</h2>
+            <h2 id="econovariaShareTitle"></h2>
           </div>
           <button type="button" data-econovaria-close-share aria-label="Close share panel">×</button>
         </header>
         <p data-econovaria-share-game-context></p>
         <div class="admin-terminal-share-modal-code">
-          <div><small>Game Code</small><strong>${safeGameCode}</strong></div>
-          <button type="button" data-econovaria-copy-code ${context.gameCode ? "" : "disabled"}>Copy code</button>
+          <div><small>Game Code</small><strong></strong></div>
+          <button type="button" data-econovaria-copy-code>Copy code</button>
         </div>
         <label>
           <span>Player link</span>
-          <input readonly value="${safePlayerLink}" data-econovaria-player-link />
+          <input readonly data-econovaria-player-link />
         </label>
         <label>
           <span>Invite message</span>
@@ -361,9 +357,15 @@
         </footer>
       </section>
     `;
+    const heading = backdrop.querySelector("#econovariaShareTitle");
+    if (heading) heading.textContent = `Share ${context.gameName}`;
+    const copyCode = backdrop.querySelector("[data-econovaria-copy-code]");
+    if (copyCode instanceof HTMLButtonElement) copyCode.disabled = !context.gameCode;
+
     document.body.append(backdrop);
     fallbackShareSurface = backdrop;
     setShareContext(backdrop, context);
+
     const close = () => {
       backdrop.remove();
       fallbackShareSurface = null;
@@ -397,12 +399,16 @@
         const modal = visibleShareModal();
         if (modal) {
           setShareContext(modal, context);
+          window.EconovariaAdminGameShareLinkContract
+            ?.repairVisibleShareSurfaces?.();
           return;
         }
         window.setTimeout(() => {
           const delayed = visibleShareModal();
           if (delayed) setShareContext(delayed, selectedGameContext());
           else createFallbackShareSurface(selectedGameContext(), opener);
+          window.EconovariaAdminGameShareLinkContract
+            ?.scheduleRepairs?.();
         }, 180);
       });
     });
@@ -532,18 +538,10 @@
   }
 
   function scheduleReconcile() {
-    if (reconcileQueued) return;
-    reconcileQueued = true;
-    window.requestAnimationFrame(() => {
-      reconcileQueued = false;
-      reconcile();
-    });
-  }
-
-  const root = document.body || document.documentElement;
-  if (root && typeof MutationObserver === "function") {
-    const observer = new MutationObserver(scheduleReconcile);
-    observer.observe(root, { childList: true, subtree: true });
+    reconcileTimers.forEach((timer) => window.clearTimeout(timer));
+    reconcileTimers = RECONCILE_DELAYS_MS.map((delay) =>
+      window.setTimeout(reconcile, delay)
+    );
   }
 
   window.addEventListener("econovaria:admin-bootstrap-complete", scheduleReconcile);
