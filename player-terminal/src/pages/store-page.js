@@ -2,11 +2,12 @@ import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
 import { isResourceUnavailable } from "../api/resource-status.js";
+import { resolveStoreItemImage } from "../features/store/store-artwork.js";
 
 function renderStoreItem(item, currencyCode) {
   const soldOut = item.stock <= 0;
   return `<article class="player-terminal-store-card${soldOut ? " is-sold-out" : ""}">
-    <div class="player-terminal-store-image"><img src="${escapeHtml(item.image)}" alt="" /><span>${escapeHtml(item.category)}</span></div>
+    <div class="player-terminal-store-image"><img src="${escapeHtml(resolveStoreItemImage(item))}" alt="" /><span>${escapeHtml(item.category)}</span></div>
     <div class="player-terminal-store-copy"><small>STOCK ${escapeHtml(item.stock)} · OWNED ${escapeHtml(item.owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
     <div class="player-terminal-store-footer"><strong>${escapeHtml(formatCurrency(item.price, currencyCode))}</strong><button class="player-terminal-compact-button" type="button" data-player-purchase="${escapeHtml(item.id)}" ${soldOut ? "disabled" : ""}>${icon("cart")} ${soldOut ? "Sold out" : "Purchase"}</button></div>
   </article>`;
