@@ -49,13 +49,6 @@ This tranche creates no migrations, persistence schema, shared API routes, capab
 
 ## Validation
 
-Focused tests cover:
-
-- economically beneficial call exercise;
-- refinancing savings below the configured threshold;
-- yield-to-worst selection across call and maturity candidates;
-- duplicate and out-of-term call entries;
-- call-schedule identity mismatch;
-- permanent fail-closed optional-pricing and activation markers.
+Focused tests cover economically beneficial call exercise, refinancing savings below the configured threshold, yield-to-worst selection across call and maturity candidates, duplicate and out-of-term call entries, call-schedule identity mismatch, and permanent fail-closed optional-pricing and activation markers.
 
 Validation evidence: 136 Financial Markets domain tests passed with zero failures. The complete Financial Markets, Backend Typecheck, Repository Quality, Supply Chain Security, Exchange Calendar Runtime, and Required Game Market Timezone workflow set also passed.
