@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "TODO",
   "targetEnvironment": "staging",
   "source": {
@@ -13,12 +13,18 @@
     "staging": { "identity": "TODO", "dataPolicy": "synthetic-only" },
     "production": { "identity": "TODO" }
   },
+  "variables": {
+    "configuredNames": [
+      "SUPABASE_PROJECT_REF",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_URL"
+    ]
+  },
   "secrets": {
     "configuredNames": [
       "STOCK_MARKET_RUNNER_SECRET",
-      "SUPABASE_ANON_KEY",
-      "SUPABASE_SERVICE_ROLE_KEY",
-      "SUPABASE_URL"
+      "SUPABASE_ACCESS_TOKEN",
+      "SUPABASE_SECRET_KEY"
     ]
   },
   "migrations": {
@@ -37,6 +43,9 @@
     "frontend": { "sha256": "TODO", "builtFromCommit": "TODO" },
     "edgeFunctions": [
       { "name": "admin-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "bootstrap-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "staff-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
+      { "name": "player-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
       { "name": "classroom-api", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
       { "name": "stock-market-player-read", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
       { "name": "stock-market-read", "sha256": "TODO", "builtFromCommit": "TODO", "deployedVersion": 0 },
@@ -48,23 +57,28 @@
   },
   "edgeRoutes": {
     "functions": [
-      { "name": "admin-api", "entrypoint": "backend/supabase/functions/admin-api/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/admin-api/*"] },
-      { "name": "classroom-api", "entrypoint": "backend/supabase/functions/classroom-api/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/classroom-api/*"] },
-      { "name": "stock-market-player-read", "entrypoint": "backend/supabase/functions/stock-market-player-read/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/stock-market-player-read"] },
-      { "name": "stock-market-read", "entrypoint": "backend/supabase/functions/stock-market-read/index.ts", "sourceSha256": "TODO", "routes": ["GET /functions/v1/stock-market-read"] },
-      { "name": "stock-market-runner", "entrypoint": "backend/supabase/functions/stock-market-runner/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-runner"] },
-      { "name": "stock-market-seed-copy", "entrypoint": "backend/supabase/functions/stock-market-seed-copy/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-seed-copy"] },
-      { "name": "stock-market-trading", "entrypoint": "backend/supabase/functions/stock-market-trading/index.ts", "sourceSha256": "TODO", "routes": ["POST /functions/v1/stock-market-trading"] }
+      { "name": "admin-api", "entrypoint": "backend/supabase/functions/admin-api/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-staff-jwt", "routes": ["GET|POST|PATCH|DELETE /functions/v1/admin-api/*"] },
+      { "name": "bootstrap-api", "entrypoint": "backend/supabase/functions/bootstrap-api/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-purchase-code", "routes": ["POST /functions/v1/bootstrap-api/staff/signup", "POST /functions/v1/bootstrap-api/licensing/activate"] },
+      { "name": "staff-api", "entrypoint": "backend/supabase/functions/staff-api/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-staff-jwt", "routes": ["GET|POST|PATCH|DELETE /functions/v1/staff-api/*"] },
+      { "name": "player-api", "entrypoint": "backend/supabase/functions/player-api/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-player-session", "routes": ["GET|POST|PATCH|DELETE /functions/v1/player-api/*"] },
+      { "name": "classroom-api", "entrypoint": "backend/supabase/functions/classroom-api/index.ts", "sourceSha256": "TODO", "authBoundary": "legacy-internal-staff-jwt-only", "routes": ["INTERNAL /functions/v1/classroom-api/*"] },
+      { "name": "stock-market-player-read", "entrypoint": "backend/supabase/functions/stock-market-player-read/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-runner-secret", "routes": ["GET /functions/v1/stock-market-player-read"] },
+      { "name": "stock-market-read", "entrypoint": "backend/supabase/functions/stock-market-read/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-runner-secret", "routes": ["GET /functions/v1/stock-market-read"] },
+      { "name": "stock-market-runner", "entrypoint": "backend/supabase/functions/stock-market-runner/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-runner-secret", "routes": ["POST /functions/v1/stock-market-runner"] },
+      { "name": "stock-market-seed-copy", "entrypoint": "backend/supabase/functions/stock-market-seed-copy/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-runner-secret", "routes": ["POST /functions/v1/stock-market-seed-copy"] },
+      { "name": "stock-market-trading", "entrypoint": "backend/supabase/functions/stock-market-trading/index.ts", "sourceSha256": "TODO", "authBoundary": "publishable-plus-runner-secret", "routes": ["POST /functions/v1/stock-market-trading"] }
     ],
     "placeholders": ["notification-worker"],
     "inventoryEvidence": { "path": "TODO", "sha256": "TODO", "capturedAt": "TODO" }
   },
   "configuration": {
-    "schemaVersion": 1,
-    "featureFlags": { "beta": false }
+    "schemaVersion": 2,
+    "featureFlags": { "beta": false },
+    "authBoundaryLedger": "docs/security/auth-boundary-ledger-v1.json"
   },
   "legacyRuntimes": {
     "services": [
+      { "id": "classroom-api-browser-surface", "disposition": "internal-compatibility-only", "owner": "TODO" },
       { "id": "admin-api-staging", "disposition": "TODO", "owner": "TODO" },
       { "id": "cloudflare-worker", "disposition": "TODO", "owner": "TODO" },
       { "id": "make-server-0dbf686f", "disposition": "TODO", "owner": "TODO" },
