@@ -21,6 +21,20 @@ begin
 end;
 $function$;
 
+-- Quarantine historical games created through the legacy empty-game path.
+-- Their Game Codes become unusable, while the rows remain visible for Admin
+-- review and eventual archival. No provisioned ready game is modified.
+update public.game_sessions
+set status = 'disabled',
+    lifecycle_state = 'draft',
+    game_join_code_hash = null,
+    game_join_code_status = 'pending',
+    provisioning_failure_code = 'LEGACY_UNPROVISIONED_GAME_QUARANTINED',
+    updated_at = now()
+where status = 'active'
+  and game_join_code_status = 'active'
+  and coalesce(provisioning_status, 'pending') <> 'ready';
+
 drop trigger if exists enforce_active_game_is_provisioned
   on public.game_sessions;
 create trigger enforce_active_game_is_provisioned
