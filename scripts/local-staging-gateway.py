@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve Econovaria locally and proxy Supabase Edge Function requests.
+"""Serve Econovaria locally and proxy browser-safe Supabase requests.
 
 The gateway supports two explicit modes:
 
@@ -9,7 +9,9 @@ The gateway supports two explicit modes:
 
 In both modes the browser receives a temporary deployment-scoped
 ``runtime-config.env.js`` and Edge Function traffic stays same-origin through the
-loopback gateway. The temporary configuration is restored or removed on shutdown.
+loopback gateway. In local development, Supabase Auth also stays same-origin so
+strict Content Security Policy remains effective. The temporary configuration is
+restored or removed on shutdown.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from urllib.parse import urlsplit
 
 PROXY_PREFIXES: Final[tuple[str, ...]] = (
     "/functions/v1/",
+    "/auth/v1/",
 )
 HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
     {
@@ -58,7 +61,7 @@ LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"}
 
 
 def is_proxy_path(path: str) -> bool:
-    """Return whether a request path belongs to a proxied Supabase Edge API."""
+    """Return whether a request path belongs to an approved Supabase browser API."""
     clean_path = urlsplit(path).path
     return any(clean_path.startswith(prefix) for prefix in PROXY_PREFIXES)
 
@@ -166,16 +169,20 @@ def runtime_config(
     environment: str = "staging",
     supabase_url: str | None = None,
 ) -> str:
-    resolved_supabase_url = (
+    upstream_supabase_url = (
         supabase_url.rstrip("/")
         if supabase_url
         else f"https://{project_ref}.supabase.co"
     )
+    gateway_url = f"http://127.0.0.1:{port}"
+    browser_supabase_url = (
+        gateway_url if environment == "development" else upstream_supabase_url
+    )
     config = {
         "environment": environment,
         "projectRef": project_ref,
-        "supabaseUrl": resolved_supabase_url,
-        "apiProxyUrl": f"http://127.0.0.1:{port}",
+        "supabaseUrl": browser_supabase_url,
+        "apiProxyUrl": gateway_url,
         "supabasePublishableKey": publishable_key,
     }
     return (
@@ -186,7 +193,7 @@ def runtime_config(
 
 
 class LocalStagingHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaLocalGateway/1.2"
+    server_version = "EconovariaLocalGateway/1.3"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -301,7 +308,7 @@ class LocalStagingServer(ThreadingHTTPServer):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Serve Econovaria locally with a same-origin Supabase Edge gateway."
+        description="Serve Econovaria locally with a same-origin Supabase API gateway."
     )
     parser.add_argument("--local-supabase", action="store_true")
     parser.add_argument("--project-ref")
@@ -388,7 +395,11 @@ def main() -> int:
     print(f"Econovaria {runtime_label} gateway is running at {address}")
     print(f"Admin: {address}admin/")
     print(f"Player: {address}player-terminal/")
-    print("Static assets: no-store; Supabase Auth: direct; Edge APIs: loopback proxy.")
+    auth_route = "loopback proxy" if args.local_supabase else "direct Supabase HTTPS"
+    print(
+        "Static assets: no-store; "
+        f"Supabase Auth: {auth_route}; Edge APIs: loopback proxy."
+    )
     print("Press Ctrl+C to stop.")
 
     if args.open_browser:

@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 const index = readFileSync("admin/index.html", "utf8");
 const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
 const controls = readFileSync("admin/game-session-controls.js", "utf8");
+const gameCodeWiring = readFileSync("admin/game-code-wiring.js", "utf8");
 const logoutController = readFileSync(
   "admin/admin-logout-controller.js",
   "utf8",
@@ -32,6 +33,7 @@ function checkJavaScript(path) {
 }
 
 checkJavaScript("admin/game-session-controls.js");
+checkJavaScript("admin/game-code-wiring.js");
 checkJavaScript("admin/admin-logout-controller.js");
 checkJavaScript("admin/game-session-share-link-contract.js");
 
@@ -56,7 +58,6 @@ assert(
 
 for (const contract of [
   "econovaria.admin.selected-game.v1",
-  "econovaria.admin.game-code.v1:",
   "share-current-game",
   "data-econovaria-game-session-card",
   "Players using this code join this game instance.",
@@ -64,6 +65,21 @@ for (const contract of [
 ]) {
   assert(controls.includes(contract), `Selected-game control contract is missing ${contract}.`);
 }
+assert(
+  !controls.includes("econovaria.admin.game-code.v1:") &&
+    !controls.includes("cachedCode("),
+  "Selected-game controls must not read Game Codes from browser storage.",
+);
+assert(
+  gameCodeWiring.includes("readPersistedGameCode") &&
+    gameCodeWiring.includes('method: "GET"') &&
+    gameCodeWiring.includes("Rotate Code"),
+  "Canonical Game Code wiring must read the persisted code and expose explicit rotation.",
+);
+assert(
+  !gameCodeWiring.includes("GAME_CODE_CACHE_PREFIX"),
+  "Canonical Game Code wiring must not use browser storage as an authority.",
+);
 
 for (const contract of [
   '"/play"',
@@ -82,7 +98,7 @@ for (const contract of [
 for (const contract of [
   "clearSessionSynchronously();",
   "captureSession()",
-  "window.addEventListener(\"click\"",
+  'window.addEventListener("click"',
   "event.stopImmediatePropagation()",
   "keepalive: true",
   "/auth/sign-out",
@@ -136,6 +152,7 @@ for (const contract of [
 
 console.log(JSON.stringify({
   selectedGameCard: true,
+  persistedGameCodeAuthority: true,
   sharePanelResponsive: true,
   canonicalPlayerShareRoute: true,
   playerLinkTargetsGameCode: true,

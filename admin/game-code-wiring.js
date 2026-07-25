@@ -1,13 +1,13 @@
 (function initEconovariaGameCodeWiring() {
   "use strict";
 
-  const GAME_CODE_CACHE_PREFIX = "econovaria.admin.game-code.v1:";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
   const RESET_ACTION = "reset-game-code";
   const RESET_ACTION_SELECTOR = `[data-admin-terminal-action="${RESET_ACTION}"]`;
   const SHARE_ACTIONS = new Set(["share-game-code", "share-current-game"]);
   const EMPTY_CODES = new Set(["", "—", "-", "undefined", "null"]);
   let resetInFlight = false;
+  let readInFlight = null;
   let decorationFrame = 0;
 
   function selectedGameId() {
@@ -22,30 +22,6 @@
     const code = String(value || "").trim().toUpperCase();
     if (EMPTY_CODES.has(code.toLowerCase())) return "";
     return /^[A-Z0-9-]{4,64}$/.test(code) ? code : "";
-  }
-
-  function cacheKey(gameId) {
-    return `${GAME_CODE_CACHE_PREFIX}${String(gameId || "").trim()}`;
-  }
-
-  function readCachedCode(gameId = selectedGameId()) {
-    if (!gameId) return "";
-    try {
-      return normalizeCode(
-        window.sessionStorage.getItem(cacheKey(gameId)) || "",
-      );
-    } catch (_) {
-      return "";
-    }
-  }
-
-  function writeCachedCode(gameId, code) {
-    const normalized = normalizeCode(code);
-    if (!gameId || !normalized) return "";
-    try {
-      window.sessionStorage.setItem(cacheKey(gameId), normalized);
-    } catch (_) {}
-    return normalized;
   }
 
   function randomToken() {
@@ -97,26 +73,25 @@
   }
 
   function currentCode() {
-    const gameId = selectedGameId();
-    const modelCode = currentModelCode();
-    if (modelCode) {
-      writeCachedCode(gameId, modelCode);
-      return modelCode;
-    }
-    return readCachedCode(gameId);
+    return currentModelCode();
   }
 
   function patchGameRecord(record, gameId, code) {
     if (!record || typeof record !== "object") return record;
     const recordId = String(record.id || record.gameId || "").trim();
     if (recordId && recordId !== gameId) return record;
-    return { ...record, joinCode: code, gameCode: code };
+    return {
+      ...record,
+      joinCode: code,
+      gameCode: code,
+      joinCodeStatus: "active",
+    };
   }
 
   function syncModelCode(code) {
     const adminFeature = feature();
     const gameId = selectedGameId();
-    const normalized = writeCachedCode(gameId, code);
+    const normalized = normalizeCode(code);
     if (!adminFeature || !gameId || !normalized) return normalized;
 
     const model = adminFeature.currentModel || {};
@@ -124,6 +99,7 @@
       ...model,
       gameCode: normalized,
       joinCode: normalized,
+      joinCodeStatus: "active",
       selectedGame: patchGameRecord(
         model.selectedGame || { id: gameId, gameId },
         gameId,
@@ -261,6 +237,56 @@
     node.textContent = message;
   }
 
+  function extractCode(data) {
+    return normalizeCode(
+      data?.joinCode?.gameJoinCode ||
+        data?.data?.joinCode?.gameJoinCode ||
+        data?.gameJoinCode ||
+        data?.data?.gameJoinCode ||
+        "",
+    );
+  }
+
+  async function readPersistedGameCode() {
+    if (readInFlight) return readInFlight;
+    const gameId = selectedGameId();
+    if (!gameId) return "";
+
+    readInFlight = (async () => {
+      const response = await window.fetch(
+        `/api/admin/games/${encodeURIComponent(gameId)}/join-code/reset`,
+        {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        },
+      );
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (_) {}
+
+      if (!response.ok) {
+        if (response.status === 409) return "";
+        throw new Error(
+          data?.error?.message || data?.message ||
+            `Game code could not be loaded (${response.status}).`,
+        );
+      }
+
+      const code = extractCode(data);
+      if (!code) throw new Error("The backend did not return the current game code.");
+      syncModelCode(code);
+      applyCodeToRenderedShareSurface(code);
+      return code;
+    })().finally(() => {
+      readInFlight = null;
+    });
+
+    return readInFlight;
+  }
+
   function decorateShareModal() {
     const modal = document.querySelector(
       '[data-modal-id="share-game-access"]',
@@ -280,7 +306,7 @@
       '[data-admin-terminal-action="copy-game-code"]',
     );
     if (!code) {
-      setText(codeLabel, "Not generated");
+      setText(codeLabel, "Loading…");
       if (copyButton) {
         copyButton.disabled = true;
         copyButton.dataset.gameCode = "";
@@ -295,17 +321,47 @@
       resetButton.className = "econovaria-game-code-reset";
       codeSection.appendChild(resetButton);
     }
-    resetButton.textContent = code ? "Reset Code" : "Generate Code";
+    resetButton.textContent = code ? "Rotate Code" : "Create Code";
     resetButton.title = code
       ? "Generate a replacement code. The current code will stop working immediately."
-      : "Generate a new code for this game.";
+      : "Create a readable code for this legacy game.";
 
     setInlineMessage(
       modal,
       code
-        ? "This code is cached only in this browser tab. Resetting it invalidates the previous code."
-        : "The stored code is hash-only. Generate a new readable code to share with players.",
+        ? "This Game Code is stored with the game and remains available after reloads. Rotate it only when you need to invalidate the current code."
+        : "Loading the current Game Code from the game service…",
     );
+
+    if (!code) {
+      void readPersistedGameCode()
+        .then((loaded) => {
+          if (loaded) {
+            decorateShareModal();
+            setInlineMessage(
+              modal,
+              "This Game Code is stored with the game and remains available after reloads. Rotate it only when needed.",
+              "success",
+            );
+          } else {
+            setText(codeLabel, "Legacy code unavailable");
+            resetButton.textContent = "Create Code";
+            setInlineMessage(
+              modal,
+              "This legacy game predates readable-code persistence. Create one code once; it will remain available afterward.",
+            );
+          }
+        })
+        .catch((error) => {
+          setText(codeLabel, "Unavailable");
+          setInlineMessage(
+            modal,
+            String(error?.message || "Game code could not be loaded."),
+            "error",
+          );
+        });
+    }
+
     return true;
   }
 
@@ -319,16 +375,6 @@
     });
   }
 
-  function extractResetCode(data) {
-    return normalizeCode(
-      data?.joinCode?.gameJoinCode ||
-        data?.data?.joinCode?.gameJoinCode ||
-        data?.gameJoinCode ||
-        data?.data?.gameJoinCode ||
-        "",
-    );
-  }
-
   async function resetGameCode(button) {
     if (resetInFlight) return;
     const gameId = selectedGameId();
@@ -338,7 +384,7 @@
     if (!gameId) {
       setInlineMessage(
         modal,
-        "Select a game before generating a code.",
+        "Select a game before changing its code.",
         "error",
       );
       return;
@@ -346,15 +392,15 @@
 
     if (existing) {
       const confirmed = window.confirm(
-        "Reset this game code? The current code and existing shared links will stop working immediately.",
+        "Rotate this Game Code? The current code and existing shared links will stop working immediately.",
       );
       if (!confirmed) return;
     }
 
     resetInFlight = true;
     button.disabled = true;
-    button.textContent = existing ? "Resetting…" : "Generating…";
-    setInlineMessage(modal, "Requesting a new code…", "pending");
+    button.textContent = existing ? "Rotating…" : "Creating…";
+    setInlineMessage(modal, "Saving a new Game Code…", "pending");
 
     try {
       const response = await window.fetch(
@@ -376,11 +422,11 @@
 
       if (!response.ok) {
         const message = data?.error?.message || data?.message ||
-          `Game code reset failed (${response.status}).`;
+          `Game code rotation failed (${response.status}).`;
         throw new Error(message);
       }
 
-      const nextCode = extractResetCode(data);
+      const nextCode = extractCode(data);
       if (!nextCode) {
         throw new Error("The backend did not return the new game code.");
       }
@@ -390,34 +436,27 @@
       decorateShareModal();
       setInlineMessage(
         modal,
-        "New code generated. Copy it now or reopen this panel during this browser session.",
+        "New Game Code saved. It will remain available after reloads until you rotate it again.",
         "success",
       );
     } catch (error) {
       setInlineMessage(
         modal,
-        String(error?.message || "Game code could not be reset."),
+        String(error?.message || "Game code could not be changed."),
         "error",
       );
     } finally {
       resetInFlight = false;
       button.disabled = false;
-      button.textContent = currentCode()
-        ? "Reset Code"
-        : "Generate Code";
+      button.textContent = currentCode() ? "Rotate Code" : "Create Code";
     }
   }
 
-  function synchronizeCachedCode() {
-    const code = currentCode();
-    if (!code) return;
-    syncModelCode(code);
-    applyCodeToRenderedShareSurface(code);
-  }
-
-  function scheduleInitialSynchronization() {
+  function schedulePersistedSynchronization() {
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(synchronizeCachedCode);
+      window.requestAnimationFrame(() => {
+        void readPersistedGameCode().catch(() => {});
+      });
     });
   }
 
@@ -474,10 +513,14 @@
     false,
   );
 
+  window.addEventListener("econovaria:admin-session-refreshed", () => {
+    schedulePersistedSynchronization();
+  });
+
   function init() {
     ensureActionIntegrityToken();
     installStyles();
-    scheduleInitialSynchronization();
+    schedulePersistedSynchronization();
   }
 
   if (document.readyState === "loading") {

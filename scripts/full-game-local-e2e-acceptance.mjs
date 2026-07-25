@@ -13,6 +13,7 @@ const STAFF_ID = "10000000-0000-4000-8000-000000000001";
 const SOURCE_GAME_ID = "10000000-0000-4000-8000-000000000003";
 const TARGET_GAME_NAME = "Full Game E2E Target";
 const IDEMPOTENCY_KEY = "game.create.full-e2e.acceptance.001";
+const MEMORABLE_GAME_CODE = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
 
 function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
@@ -114,7 +115,12 @@ async function createFullGame() {
   requireCondition(result.outcome === "created", `V2 provisioning returned ${result.outcome}`);
   requireCondition(result.provisioningStatus === "ready", "V2 game is not ready");
   requireCondition(typeof result.gameSessionId === "string", "V2 game ID is missing");
-  requireCondition(typeof result.joinCode === "string" && result.joinCode.length >= 8, "V2 Game Code is missing");
+  requireCondition(
+    typeof result.joinCode === "string" && MEMORABLE_GAME_CODE.test(result.joinCode),
+    "V2 memorable Game Code is missing or invalid",
+  );
+  requireCondition(result.joinCodeStatus === "active", "V2 Game Code is not active");
+  requireCondition(result.joinCodeReissueRequired === false, "V2 Game Code unexpectedly requires reissue");
   requireCondition(result.activationVersion === "full-game-feature-activation-v2", "Activation version is incorrect");
 
   const gates = result.contentGates || {};
@@ -178,6 +184,15 @@ async function verifyDatabase(created) {
         where activation_row.game_session_id = ${sqlLiteral(created.gameSessionId)}::uuid
           and activation_row.status = 'active'
           and event_row.is_active
+      ),
+      'persistedGameCode', (
+        select game_join_code from public.game_sessions
+        where id = ${sqlLiteral(created.gameSessionId)}::uuid
+      ),
+      'persistedHashMatches', (
+        select game_join_code_hash = encode(extensions.digest(game_join_code, 'sha256'), 'hex')
+        from public.game_sessions
+        where id = ${sqlLiteral(created.gameSessionId)}::uuid
       )
     )::text;
   `, "V2 database verification"), "V2 database verification");
@@ -195,7 +210,9 @@ async function verifyReplay(created) {
   `, "V2 provisioning replay"), "V2 provisioning replay");
   requireCondition(replay.outcome === "replayed", `V2 replay returned ${replay.outcome}`);
   requireCondition(replay.gameSessionId === created.gameSessionId, "V2 replay resolved another game");
-  requireCondition(replay.joinCode === null, "V2 replay exposed the Game Code");
+  requireCondition(replay.joinCode === created.joinCode, "V2 replay did not return the persisted Game Code");
+  requireCondition(replay.joinCodeStatus === "active", "V2 replay Game Code is not active");
+  requireCondition(replay.joinCodeReissueRequired === false, "V2 replay unexpectedly requires code rotation");
 
   const gameCount = Number(await runSql(`
     select count(*) from public.game_sessions
@@ -221,10 +238,12 @@ async function main() {
     availableRecipes: 60,
     storylines: 1,
     storyEvents: 3,
+    persistedHashMatches: true,
   };
   for (const [key, value] of Object.entries(expectedState)) {
     requireCondition(state[key] === value, `${key} expected ${value}, received ${state[key]}`);
   }
+  requireCondition(state.persistedGameCode === created.joinCode, "Database did not persist the created Game Code");
   await verifyReplay(created);
 
   const report = {
@@ -235,13 +254,14 @@ async function main() {
       allContentGatesActive: true,
       exactContentCountsVerified: true,
       databaseActivationEvidenceVerified: true,
+      persistentMemorableGameCodeVerified: true,
       committedSuccessReplayVerified: true,
     },
     safety: {
       disposableDatabase: true,
       productionAuthorized: false,
       productionTouched: false,
-      plaintextGameCodeRecorded: false,
+      plaintextGameCodeRecordedInEvidence: false,
       rawInternalIdentifiersRecorded: false,
     },
   };
@@ -261,6 +281,7 @@ async function main() {
     targetGameProvisionedThroughV2: true,
     allContentGatesActive: true,
     exactContentCountsVerified: true,
+    persistentMemorableGameCodeVerified: true,
     committedSuccessReplayVerified: true,
     productionTouched: false,
   }, null, 2));
@@ -269,6 +290,10 @@ async function main() {
 main().catch((error) => {
   console.error(JSON.stringify({
     error: String(error?.message || error)
+      .replace(
+        /ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g,
+        "[game-code-redacted]",
+      )
       .replace(
         /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi,
         "[uuid-redacted]",

@@ -102,6 +102,15 @@ export async function handleGameRead(
     return json(request, 200, { data: { game: gameDto(game) } });
   }
 
+  if (suffix === "/join-code/reset") {
+    return proxyClassroom(
+      request,
+      context,
+      classroomGamePath(gameId, "/join-code/reset"),
+      "GET",
+    );
+  }
+
   if (suffix === "/dashboard") {
     const players = await loadPlayersEnhanced(context.service, gameId);
     const [attendance, contracts] = await Promise.all([

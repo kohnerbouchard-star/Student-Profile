@@ -13,7 +13,11 @@ const BOOTSTRAP_PHASES = Object.freeze([
   },
   {
     name: "modal-accessibility",
-    modules: ["./modal-lifecycle-bridge.js", "./keyboard-navigation.js"],
+    modules: [
+      "./modal-lifecycle-bridge.js",
+      "./keyboard-navigation.js",
+      "./export-history-modal-accessibility.js",
+    ],
   },
   {
     name: "game-creation",
@@ -65,10 +69,28 @@ const GAME_CODE_SHARE_ACTIONS = new Set([
   "share-game-code",
   "share-current-game",
 ]);
+const GAME_CODE_SHARE_SELECTOR = [
+  '[data-admin-terminal-action="share-game-code"]',
+  '[data-admin-terminal-action="share-current-game"]',
+  "[data-admin-terminal-share-button]",
+  "[data-econovaria-share-game]",
+  'button[title="Share game code"]',
+  'button[aria-label*="Share game code"]',
+].join(",");
 const HIDDEN_GAME_CODE_LABELS = new Set([
   "Generate Code",
   "Create Replacement Code",
 ]);
+const GAME_CODE_REPAIR_DELAYS_MS = Object.freeze([
+  0,
+  40,
+  120,
+  260,
+  520,
+  1000,
+  1800,
+]);
+let gameCodeRepairTimers = [];
 
 function reportBootstrapFailure(phase, modulePath, error) {
   console.error(`[Econovaria Admin] ${phase} bootstrap failed for ${modulePath}.`, error);
@@ -104,22 +126,73 @@ function enhanceGameCodeResetButtons(root = document) {
     .forEach(enhanceHiddenGameCodeResetButton);
 }
 
+function visibleShareModal() {
+  return [...document.querySelectorAll('[data-modal-id="share-game-access"]')]
+    .reverse()
+    .find((node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      if (node.hidden || node.getAttribute("aria-hidden") === "true") return false;
+      const style = window.getComputedStyle(node);
+      return style.display !== "none" && style.visibility !== "hidden";
+    }) || null;
+}
+
+function ensureGameCodeResetButton() {
+  const modal = visibleShareModal();
+  if (!(modal instanceof HTMLElement)) return false;
+  const codeSection = modal.querySelector(".admin-terminal-share-modal-code");
+  if (!(codeSection instanceof HTMLElement)) return false;
+
+  let button = codeSection.querySelector(GAME_CODE_RESET_SELECTOR);
+  if (!(button instanceof HTMLButtonElement)) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.dataset.adminTerminalAction = "reset-game-code";
+    button.className = "econovaria-game-code-reset";
+    button.textContent = "Generate Code";
+    codeSection.appendChild(button);
+  }
+
+  const code = String(codeSection.querySelector("strong")?.textContent || "")
+    .trim()
+    .toUpperCase();
+  if (!/^[A-Z0-9-]{4,64}$/.test(code)) {
+    const label = codeSection.querySelector("strong");
+    if (label) label.textContent = "Not generated";
+    const copyButton = codeSection.querySelector(
+      '[data-admin-terminal-action="copy-game-code"]',
+    );
+    if (copyButton instanceof HTMLButtonElement) {
+      copyButton.disabled = true;
+      copyButton.dataset.gameCode = "";
+    }
+  }
+
+  enhanceHiddenGameCodeResetButton(button);
+  return true;
+}
+
 function scheduleGameCodeResetEnhancement() {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => enhanceGameCodeResetButtons());
-  });
+  gameCodeRepairTimers.forEach((timer) => window.clearTimeout(timer));
+  gameCodeRepairTimers = GAME_CODE_REPAIR_DELAYS_MS.map((delay) =>
+    window.setTimeout(() => {
+      ensureGameCodeResetButton();
+      enhanceGameCodeResetButtons();
+    }, delay)
+  );
 }
 
 function installGameCodeResetSafety() {
   document.addEventListener(
     "click",
     (event) => {
+      const shareTrigger = event.target?.closest?.(GAME_CODE_SHARE_SELECTOR);
       const action = event.target?.closest?.("[data-admin-terminal-action]");
       const actionName = String(
         action?.dataset?.adminTerminalAction || "",
       ).trim();
 
-      if (GAME_CODE_SHARE_ACTIONS.has(actionName)) {
+      if (shareTrigger || GAME_CODE_SHARE_ACTIONS.has(actionName)) {
         scheduleGameCodeResetEnhancement();
         return;
       }
@@ -142,7 +215,7 @@ function installGameCodeResetSafety() {
     true,
   );
 
-  enhanceGameCodeResetButtons();
+  scheduleGameCodeResetEnhancement();
 }
 
 if (document.readyState === "loading") {

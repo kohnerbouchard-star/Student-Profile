@@ -30,6 +30,7 @@ const expectedAdminScripts = [
   "./player-identity-wiring.js",
   "./player-create-ux.js",
   "./game-code-wiring.js",
+  "./game-code-modal-repair.js",
   "./logout-confirmation.js",
   "./game-session-controls.js",
   "./admin-stabilization.js",
@@ -72,6 +73,7 @@ const createLifecycle = readFileSync(resolve(adminRoot, "player-create-lifecycle
 const drawerWiring = readFileSync(resolve(adminRoot, "player-drawer-wiring.js"), "utf8");
 const identityWiring = readFileSync(resolve(adminRoot, "player-identity-wiring.js"), "utf8");
 const playerCreateUx = readFileSync(resolve(adminRoot, "player-create-ux.js"), "utf8");
+const gameCodeModalRepair = readFileSync(resolve(adminRoot, "game-code-modal-repair.js"), "utf8");
 const logoutConfirmation = readFileSync(resolve(adminRoot, "logout-confirmation.js"), "utf8");
 const gameSessionControls = readFileSync(resolve(adminRoot, "game-session-controls.js"), "utf8");
 const stabilization = readFileSync(resolve(adminRoot, "admin-stabilization.js"), "utf8");
@@ -163,6 +165,11 @@ assert(playerCreateUx.includes("dismissOnBackdrop: false"), "One-time credential
 assert(playerCreateUx.includes("lastCreateOpener"), "Player confirmation does not retain its opening control for focus restoration.");
 assert(!playerCreateUx.includes("window.fetch ="), "Player create UX adds another fetch wrapper.");
 
+assert(gameCodeModalRepair.includes("Generate Code"), "Empty Share Game Code modals do not expose generation.");
+assert(gameCodeModalRepair.includes('data.adminTerminalAction = "reset-game-code"'), "Share Game Code repair does not reuse the authenticated reset action.");
+assert(!gameCodeModalRepair.includes("MutationObserver"), "Share Game Code repair exceeds the Admin observer budget.");
+assert(!gameCodeModalRepair.includes("fetch("), "Share Game Code repair creates a second network owner.");
+
 assert(logoutConfirmation.includes("event.stopImmediatePropagation()"), "Owned logout confirmation does not isolate the legacy handler.");
 assert(logoutConfirmation.includes("data-econovaria-admin-logout-confirmation"), "Owned logout confirmation surface is missing.");
 assert(logoutConfirmation.includes("clearLocalStateAndRedirect"), "Logout confirmation has no local-session fallback.");
@@ -178,7 +185,7 @@ assert(gameSessionControls.includes("econovaria.admin.selected-game.v1"), "Selec
 assert(gameSessionControls.includes("Players using this code join this game instance."), "Selected-game card does not explain the multiplayer target.");
 assert(gameSessionControls.includes('url.searchParams.set("mode", "player")'), "Shared game link does not target Player login.");
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared game link omits the selected Game Code.");
-assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admin sign-out route is missing.");
+assert(gameSessionControls.includes("/api/admin/auth/sign-out"), "Dedicated Admin sign-out route is missing.");
 assert(gameSessionControls.includes("event.stopImmediatePropagation()"), "Broken delegated logout handlers are not isolated.");
 assert(gameSessionControls.includes("EconovariaAdminAuthSession?.clear?.()"), "Admin logout does not clear the session manager.");
 assert(gameSessionControls.includes("createFallbackShareSurface"), "Share Game Access has no bounded fallback surface.");

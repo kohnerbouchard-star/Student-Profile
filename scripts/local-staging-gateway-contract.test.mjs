@@ -98,16 +98,16 @@ function evaluateRuntimeConfig(config) {
   return window.EconovariaRuntimeConfig;
 }
 
-test("local staging gateway proxies only Edge Function traffic", () => {
+test("local gateway proxies Edge Functions and Supabase Auth only", () => {
   const result = probeGateway();
 
   assert.equal(result.functions, true);
-  assert.equal(result.auth, false);
+  assert.equal(result.auth, true);
   assert.equal(result.rest, false);
   assert.equal(result.storage, false);
 });
 
-test("local staging config keeps Auth on Supabase and Edge APIs on loopback", () => {
+test("connected staging keeps Auth on Supabase and Edge APIs on loopback", () => {
   const { config } = probeGateway();
 
   assert.deepEqual(config, {
@@ -119,13 +119,13 @@ test("local staging config keeps Auth on Supabase and Edge APIs on loopback", ()
   });
 });
 
-test("local Supabase mode emits an explicit development-only runtime binding", () => {
+test("local Supabase mode binds Auth and Edge APIs to the same-origin gateway", () => {
   const { localConfig, parsedStatus } = probeGateway();
 
   assert.deepEqual(localConfig, {
     environment: "development",
     projectRef: "localdevelopment0000",
-    supabaseUrl: "http://127.0.0.1:54321",
+    supabaseUrl: "http://127.0.0.1:4173",
     apiProxyUrl: "http://127.0.0.1:4173",
     supabasePublishableKey:
       "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
@@ -141,19 +141,20 @@ test("runtime validator accepts local anon keys only under the local development
   const runtime = evaluateRuntimeConfig({
     environment: "development",
     projectRef: "localdevelopment0000",
-    supabaseUrl: "http://127.0.0.1:54321",
+    supabaseUrl: "http://127.0.0.1:4173",
     apiProxyUrl: "http://127.0.0.1:4173",
     supabasePublishableKey: anonKey,
   });
 
   assert.equal(runtime.environment, "development");
+  assert.equal(runtime.supabaseUrl, "http://127.0.0.1:4173");
   assert.equal(runtime.classroomApiUrl, "http://127.0.0.1:4173/functions/v1/classroom-api");
   assert.throws(
     () =>
       evaluateRuntimeConfig({
         environment: "staging",
         projectRef: "localdevelopment0000",
-        supabaseUrl: "http://127.0.0.1:54321",
+        supabaseUrl: "http://127.0.0.1:4173",
         apiProxyUrl: "http://127.0.0.1:4173",
         supabasePublishableKey: anonKey,
       }),
