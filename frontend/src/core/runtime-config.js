@@ -139,7 +139,7 @@
       staffApiUrl,
       bootstrapApiUrl,
       adminApiUrl,
-      classroomApiUrl: playerApiUrl,
+      classroomApiUrl: staffApiUrl,
     });
   }
 
