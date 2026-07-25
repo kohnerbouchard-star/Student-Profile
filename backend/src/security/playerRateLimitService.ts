@@ -120,7 +120,10 @@ export function readPlayerRateLimitConfig(
     .trim().toLowerCase();
 
   validateRateLimitHmacSecret(hmacSecret);
-  if (!TRUSTED_IP_HEADERS.includes(header as TrustedIpHeader)) {
+  if (
+    !TRUSTED_IP_HEADERS.includes(header as TrustedIpHeader) ||
+    header === "x-forwarded-for"
+  ) {
     throw invalidConfig();
   }
 

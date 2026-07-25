@@ -11,6 +11,22 @@ const V2_MIGRATION = new URL(
   "../../../../supabase/migrations/20260724120000_add_full_game_feature_activation_v2.sql",
   import.meta.url,
 );
+const V3_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260725090000_harden_game_creation_provisioning_integrity_v3.sql",
+  import.meta.url,
+);
+const JOINABLE_GUARD_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260725092000_refine_joinable_game_provisioning_guard_v1.sql",
+  import.meta.url,
+);
+const STAFF_SIGNUP_HANDLER = new URL(
+  "../../../auth/api/staffSignupHttpHandler.ts",
+  import.meta.url,
+);
+const ADMIN_PROVISIONING_HANDLER = new URL(
+  "../../../../supabase/functions/admin-api/gameProvisioningOperations.ts",
+  import.meta.url,
+);
 
 Deno.test("Admin game creation provisions one isolated multiplayer game atomically", async () => {
   const sql = await Deno.readTextFile(V1_MIGRATION);
@@ -113,10 +129,57 @@ Deno.test("full activation v2 publishes executable Story and Arrival services wi
   assertNotIncludes(sql, "productionAuthorized', true");
 });
 
+Deno.test("provisioning v3 binds first signup and later Admin game creation to the same verified authority", async () => {
+  const [sql, joinableGuard, signup, admin] = await Promise.all([
+    Deno.readTextFile(V3_MIGRATION),
+    Deno.readTextFile(JOINABLE_GUARD_MIGRATION),
+    Deno.readTextFile(STAFF_SIGNUP_HANDLER),
+    Deno.readTextFile(ADMIN_PROVISIONING_HANDLER),
+  ]);
+
+  assertIncludes(sql, "create trigger enforce_active_game_is_provisioned");
+  assertIncludes(sql, "create or replace function public.game_provisioning_preflight_v1");
+  assertIncludes(sql, "GAME_PROVISIONING_CANONICAL_SOURCE_INCOMPLETE");
+  assertIncludes(sql, "create or replace function public.verify_provisioned_game_v1");
+  assertIncludes(sql, "v_market_assets <> 240");
+  assertIncludes(sql, "v_contracts <> 30");
+  assertIncludes(sql, "v_store_items <> 50");
+  assertIncludes(sql, "create or replace function public.redeem_purchase_code_for_game");
+  assertIncludes(sql, "public.create_provisioned_game_v2");
+  assertIncludes(sql, "public.verify_provisioned_game_v1");
+  assertIncludes(sql, "raise exception 'GAME_PROVISIONING_FAILED'");
+  assertIncludes(sql, "insert into public.entitlements");
+  assertIncludes(sql, "to service_role");
+  assertNotIncludes(sql, "to authenticated");
+
+  assertIncludes(joinableGuard, "new.status = 'active'");
+  assertIncludes(joinableGuard, "new.game_join_code_status = 'active'");
+  assertIncludes(joinableGuard, "new.provisioning_status");
+  assertIncludes(joinableGuard, "JOINABLE_GAME_REQUIRES_READY_PROVISIONING");
+  assertIncludes(joinableGuard, "update of status, game_join_code_status, provisioning_status");
+
+  assertIncludes(signup, '"game_provisioning_preflight_v1"');
+  assertBefore(signup, '"game_provisioning_preflight_v1"', "auth.admin.createUser");
+  assertIncludes(signup, 'provisioningStatus: "ready"');
+
+  assertIncludes(admin, '"game_provisioning_preflight_v1"');
+  assertBefore(admin, '"game_provisioning_preflight_v1"', '"create_provisioned_game_v2"');
+  assertIncludes(admin, '"verify_provisioned_game_v1"');
+  assertIncludes(admin, "game_provisioning_verification_failed");
+});
+
 function assertIncludes(text: string, expected: string): void {
   if (!text.includes(expected)) throw new Error(`Expected migration to include ${expected}`);
 }
 
 function assertNotIncludes(text: string, forbidden: string): void {
   if (text.includes(forbidden)) throw new Error(`Migration must not include ${forbidden}`);
+}
+
+function assertBefore(text: string, first: string, second: string): void {
+  const firstIndex = text.indexOf(first);
+  const secondIndex = text.indexOf(second);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) {
+    throw new Error(`Expected ${first} before ${second}`);
+  }
 }

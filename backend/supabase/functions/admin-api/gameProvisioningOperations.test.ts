@@ -9,42 +9,7 @@ const GAME_ID = "00000000-0000-4000-8000-000000000002";
 
 Deno.test("POST games validates input and calls the full activation provisioning RPC", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const service = {
-    async rpc(name: string, args: Record<string, unknown>) {
-      calls.push({ name, args });
-      return {
-        data: {
-          outcome: "created",
-          gameSessionId: GAME_ID,
-          gameName: "Period 4 Economy",
-          provisioningStatus: "ready",
-          packId: "econovaria.beta-seed-pack.v1",
-          packVersion: "1.0.0-beta",
-          activationVersion: "full-game-feature-activation-v2",
-          joinCode: "ECO-ABCD2345",
-          joinCodeReissueRequired: false,
-          counts: {
-            marketAssets: 240,
-            contracts: 30,
-            storeItems: 50,
-            worldLocations: 50,
-            worldRoutes: 13,
-            storylines: 1,
-            storyEvents: 3,
-            arrivalPackages: 10,
-            arrivalClassGrants: 8,
-          },
-          contentGates: {
-            crafting: "blocked",
-            story: "active",
-            arrivalGrantProcessor: "active",
-            progressionInitialization: "active",
-          },
-        },
-        error: null,
-      };
-    },
-  };
+  const service = successfulService(calls, "created", "ECO-ABCD2345", false);
 
   const result = await handleGameProvisioningOperation(service, {
     request: gameRequest({
@@ -58,12 +23,15 @@ Deno.test("POST games validates input and calls the full activation provisioning
 
   assertEquals(result.handled, true);
   assertEquals(result.status, 201);
-  assertEquals(calls.length, 1);
-  assertEquals(calls[0].name, "create_provisioned_game_v2");
-  assertEquals(calls[0].args.p_staff_user_id, STAFF_ID);
-  assertEquals(calls[0].args.p_game_name, "Period 4 Economy");
-  assertEquals(calls[0].args.p_idempotency_key, "game.create.test.001");
-  assertEquals(calls[0].args.p_pack_id, "econovaria.beta-seed-pack.v1");
+  assertEquals(calls.length, 3);
+  assertEquals(calls[0].name, "game_provisioning_preflight_v1");
+  assertEquals(calls[1].name, "create_provisioned_game_v2");
+  assertEquals(calls[2].name, "verify_provisioned_game_v1");
+  assertEquals(calls[1].args.p_staff_user_id, STAFF_ID);
+  assertEquals(calls[1].args.p_game_name, "Period 4 Economy");
+  assertEquals(calls[1].args.p_idempotency_key, "game.create.test.001");
+  assertEquals(calls[1].args.p_pack_id, "econovaria.beta-seed-pack.v1");
+  assertEquals(calls[2].args.p_game_session_id, GAME_ID);
 
   const body = result.body as Record<string, any>;
   assertEquals(body.data.game.id, GAME_ID);
@@ -78,24 +46,8 @@ Deno.test("POST games validates input and calls the full activation provisioning
 });
 
 Deno.test("replayed provisioning never returns the original plaintext Game Code", async () => {
-  const service = {
-    async rpc() {
-      return {
-        data: {
-          outcome: "replayed",
-          gameSessionId: GAME_ID,
-          gameName: "Period 4 Economy",
-          provisioningStatus: "ready",
-          packId: "econovaria.beta-seed-pack.v1",
-          packVersion: "1.0.0-beta",
-          activationVersion: "full-game-feature-activation-v2",
-          joinCode: null,
-          joinCodeReissueRequired: true,
-        },
-        error: null,
-      };
-    },
-  };
+  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  const service = successfulService(calls, "replayed", null, true);
 
   const result = await handleGameProvisioningOperation(service, {
     request: gameRequest({
@@ -108,6 +60,11 @@ Deno.test("replayed provisioning never returns the original plaintext Game Code"
   });
 
   assertEquals(result.status, 200);
+  assertEquals(calls.map((call) => call.name).join(","), [
+    "game_provisioning_preflight_v1",
+    "create_provisioned_game_v2",
+    "verify_provisioned_game_v1",
+  ].join(","));
   const body = result.body as Record<string, any>;
   assertEquals(body.data.replayed, true);
   assertEquals(body.data.joinCode, "");
@@ -152,9 +109,40 @@ Deno.test("invalid requests fail before any provisioning RPC call", async () => 
   assertEquals(calls, 0);
 });
 
-Deno.test("database failures remain sanitized and non-joinable", async () => {
+Deno.test("preflight failure creates no game and remains sanitized", async () => {
+  const calls: string[] = [];
   const service = {
-    async rpc() {
+    async rpc(name: string) {
+      calls.push(name);
+      return { data: null, error: { message: "missing canonical source" } };
+    },
+  };
+
+  const result = await handleGameProvisioningOperation(service, {
+    request: gameRequest({
+      name: "Unavailable source",
+      difficultyPreset: "hard",
+      stockMarketWindow: { timezone: "Asia/Seoul" },
+    }),
+    path: "/games",
+    staffUserId: STAFF_ID,
+  });
+
+  assertEquals(result.status, 503);
+  assertEquals(calls.join(","), "game_provisioning_preflight_v1");
+  const body = result.body as Record<string, any>;
+  assertEquals(body.code, "game_provisioning_unavailable");
+  assertEquals(JSON.stringify(body).includes("canonical source"), false);
+});
+
+Deno.test("database failures remain sanitized and non-joinable", async () => {
+  const calls: string[] = [];
+  const service = {
+    async rpc(name: string) {
+      calls.push(name);
+      if (name === "game_provisioning_preflight_v1") {
+        return { data: { ready: true }, error: null };
+      }
       return {
         data: {
           outcome: "failed",
@@ -179,12 +167,93 @@ Deno.test("database failures remain sanitized and non-joinable", async () => {
   });
 
   assertEquals(result.status, 503);
+  assertEquals(calls.join(","), [
+    "game_provisioning_preflight_v1",
+    "create_provisioned_game_v2",
+  ].join(","));
   const body = result.body as Record<string, any>;
   assertEquals(body.code, "game_provisioning_failed");
   assertEquals(body.data.transactionRolledBack, true);
   assertEquals("joinCode" in body, false);
   assertEquals(JSON.stringify(body).includes(GAME_ID), false);
 });
+
+function successfulService(
+  calls: Array<{ name: string; args: Record<string, unknown> }>,
+  outcome: "created" | "replayed",
+  joinCode: string | null,
+  joinCodeReissueRequired: boolean,
+) {
+  return {
+    async rpc(name: string, args: Record<string, unknown>) {
+      calls.push({ name, args });
+      if (name === "game_provisioning_preflight_v1") {
+        return {
+          data: {
+            ready: true,
+            packId: "econovaria.beta-seed-pack.v1",
+            packVersion: "1.0.0-beta",
+          },
+          error: null,
+        };
+      }
+      if (name === "verify_provisioned_game_v1") {
+        return {
+          data: {
+            ready: true,
+            gameSessionId: GAME_ID,
+            provisioningStatus: "ready",
+            packId: "econovaria.beta-seed-pack.v1",
+            packVersion: "1.0.0-beta",
+            counts: {
+              marketAssets: 240,
+              contracts: 30,
+              storeItems: 50,
+              worldLocations: 50,
+              worldRoutes: 13,
+              worldCountries: 10,
+              arrivalClassGrants: 8,
+              messagingPolicies: 1,
+              marketplacePolicies: 1,
+            },
+          },
+          error: null,
+        };
+      }
+      return {
+        data: {
+          outcome,
+          gameSessionId: GAME_ID,
+          gameName: "Period 4 Economy",
+          provisioningStatus: "ready",
+          packId: "econovaria.beta-seed-pack.v1",
+          packVersion: "1.0.0-beta",
+          activationVersion: "full-game-feature-activation-v2",
+          joinCode,
+          joinCodeReissueRequired,
+          counts: {
+            marketAssets: 240,
+            contracts: 30,
+            storeItems: 50,
+            worldLocations: 50,
+            worldRoutes: 13,
+            storylines: 1,
+            storyEvents: 3,
+            arrivalPackages: 10,
+            arrivalClassGrants: 8,
+          },
+          contentGates: {
+            crafting: "blocked",
+            story: "active",
+            arrivalGrantProcessor: "active",
+            progressionInitialization: "active",
+          },
+        },
+        error: null,
+      };
+    },
+  };
+}
 
 function gameRequest(body: Record<string, unknown>): Request {
   return new Request("https://example.test/admin-api/games", {

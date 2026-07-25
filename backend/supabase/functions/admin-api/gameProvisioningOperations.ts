@@ -113,6 +113,18 @@ function normalizeRpcResult(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+function unavailableResult(): OperationResult {
+  return {
+    handled: true,
+    status: 503,
+    body: {
+      code: "game_provisioning_unavailable",
+      message: "Game creation is unavailable until the canonical content pack is ready.",
+      retryable: true,
+    },
+  };
+}
+
 export async function handleGameProvisioningOperation(
   service: any,
   operation: GameProvisioningOperationInput,
@@ -156,6 +168,11 @@ export async function handleGameProvisioningOperation(
     };
   }
 
+  const preflight = await service.rpc("game_provisioning_preflight_v1", {
+    p_pack_id: CANONICAL_PACK_ID,
+  });
+  if (preflight.error) return unavailableResult();
+
   const response = await service.rpc("create_provisioned_game_v2", {
     p_staff_user_id: operation.staffUserId,
     p_game_name: parsed.input.name,
@@ -170,17 +187,7 @@ export async function handleGameProvisioningOperation(
     p_pack_id: CANONICAL_PACK_ID,
   });
 
-  if (response.error) {
-    return {
-      handled: true,
-      status: 503,
-      body: {
-        code: "game_provisioning_unavailable",
-        message: "The multiplayer game could not be provisioned.",
-        retryable: true,
-      },
-    };
-  }
+  if (response.error) return unavailableResult();
 
   const result = normalizeRpcResult(response.data);
   const outcome = text(result.outcome);
@@ -218,6 +225,40 @@ export async function handleGameProvisioningOperation(
     };
   }
 
+  const verificationResponse = await service.rpc("verify_provisioned_game_v1", {
+    p_game_session_id: gameId,
+    p_staff_user_id: operation.staffUserId,
+  });
+  if (verificationResponse.error) {
+    return {
+      handled: true,
+      status: 503,
+      body: {
+        code: "game_provisioning_verification_failed",
+        message: "The multiplayer game failed its post-provisioning content verification.",
+        retryable: false,
+      },
+    };
+  }
+
+  const verification = normalizeRpcResult(verificationResponse.data);
+  if (verification.ready !== true) {
+    return {
+      handled: true,
+      status: 503,
+      body: {
+        code: "game_provisioning_verification_failed",
+        message: "The multiplayer game failed its post-provisioning content verification.",
+        retryable: false,
+      },
+    };
+  }
+
+  const counts = {
+    ...(isRecord(result.counts) ? result.counts : {}),
+    ...(isRecord(verification.counts) ? verification.counts : {}),
+  };
+
   return {
     handled: true,
     status: replayed ? 200 : 201,
@@ -230,8 +271,8 @@ export async function handleGameProvisioningOperation(
           status: "active",
           lifecycleState: "active",
           provisioningStatus,
-          packId: text(result.packId),
-          packVersion: text(result.packVersion),
+          packId: text(result.packId) || text(verification.packId),
+          packVersion: text(result.packVersion) || text(verification.packVersion),
           activationVersion: text(result.activationVersion),
           joinCodeStatus: "active",
           joinCode,
@@ -240,7 +281,7 @@ export async function handleGameProvisioningOperation(
         joinCode,
         joinCodeStatus: "active",
         joinCodeReissueRequired: result.joinCodeReissueRequired === true,
-        counts: isRecord(result.counts) ? result.counts : {},
+        counts,
         contentGates: isRecord(result.contentGates) ? result.contentGates : {},
         activationVersion: text(result.activationVersion),
         replayed,

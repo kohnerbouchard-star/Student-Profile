@@ -44,6 +44,7 @@ interface StaffSignupInput {
 
 const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
 const MIN_PASSWORD_LENGTH = 8;
+const CANONICAL_PACK_ID = "econovaria.beta-seed-pack.v1";
 
 export async function handleStaffSignupRequest(
   request: Request,
@@ -66,6 +67,15 @@ export async function handleStaffSignupRequest(
 
     const input = parseStaffSignupInput(await readJsonBody(request));
     const serviceClient = dependencies.createServiceClient(envResult.value);
+    const provisioningPreflight = await serviceClient.rpc(
+      "game_provisioning_preflight_v1",
+      { p_pack_id: CANONICAL_PACK_ID },
+    );
+
+    if (provisioningPreflight.error) {
+      return provisioningUnavailableResponse();
+    }
+
     const authResponse = await serviceClient.auth.admin.createUser({
       email: input.email,
       password: input.password,
@@ -124,6 +134,8 @@ export async function handleStaffSignupRequest(
         },
         activation: {
           gameSessionId: activationResult.body.activation.gameSessionId,
+          provisioningStatus: "ready",
+          packId: CANONICAL_PACK_ID,
         },
       });
     } catch {
@@ -285,6 +297,14 @@ async function compensateStaffSignup(
       // Cleanup is best-effort and no internal error is exposed to the browser.
     }
   }
+}
+
+function provisioningUnavailableResponse(): Response {
+  return jsonError(503, {
+    code: "game_provisioning_unavailable",
+    message: "Game creation is unavailable until the canonical content pack is ready.",
+    retryable: true,
+  });
 }
 
 function signupFailedResponse(): Response {

@@ -1,0 +1,239 @@
+name: PR361 Staging Game Provisioning Repair
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pr361-staging-game-provisioning-repair.yml"
+      - "scripts/staging-canonical-source-bootstrap.mjs"
+      - "scripts/staging-canonical-source-resume.mjs"
+      - "scripts/staging-provisioning-probe-finalizer.mjs"
+      - "backend/supabase/migrations/**"
+      - "backend/supabase/functions/admin-api/**"
+      - "backend/supabase/functions/classroom-api/**"
+      - "backend/src/domains/auth/**"
+      - "backend/src/security/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr361-staging-game-provisioning-repair
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-provision:
+    name: Repair isolated staging and verify new-game provisioning
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 361
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging
+    env:
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+      EVIDENCE_PATH: /tmp/staging-canonical-source-bootstrap.json
+
+    steps:
+      - name: Check out exact repair head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce exact staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          echo "SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --check scripts/staging-canonical-source-bootstrap.mjs
+          node --check scripts/staging-canonical-source-resume.mjs
+          node --check scripts/staging-provisioning-probe-finalizer.mjs
+          node --test scripts/admin-economic-write-contract.test.mjs
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const contract = JSON.parse(await readFile(
+            'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json',
+            'utf8',
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Resolve protected staging service credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          service="$CONFIGURED_SERVICE_ROLE_KEY"
+          if [ -z "$service" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > /tmp/project-api-keys.json
+            node - <<'NODE'
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync('/tmp/project-api-keys.json', 'utf8'));
+          const service = rows.find((row) => row.name === 'service_role' && row.api_key)?.api_key || '';
+          fs.writeFileSync('/tmp/service-role-key', service);
+          NODE
+            service="$(cat /tmp/service-role-key)"
+          fi
+          test -n "$service"
+          echo "::add-mask::$service"
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service" >> "$GITHUB_ENV"
+          rm -f /tmp/project-api-keys.json /tmp/service-role-key
+
+      - name: Link exact isolated staging project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$pooler_url" in
+            "postgresql://postgres.${SUPABASE_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Invalid linked staging identity.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$pooler_url"
+          printf 'DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
+          printf 'PGPASSWORD=%s\n' "$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+          printf 'PGSSLMODE=require\n' >> "$GITHUB_ENV"
+
+      - name: Preview complete historical migration repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --dry-run \
+            --password "$SUPABASE_DB_PASSWORD" \
+            | tee /tmp/pr361-db-push-dry-run.log
+
+      - name: Apply complete migration chain to isolated staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push \
+            --workdir backend \
+            --linked \
+            --include-all \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Verify provisioning schema and legacy quarantine
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.create_provisioned_game_v2(uuid,text,jsonb,text,text)') is not null")" = "t"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select to_regprocedure('public.game_provisioning_preflight_v1(text)') is not null")" = "t"
+          test "$(psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from public.game_sessions where status='active' and game_join_code_status='active' and provisioning_status <> 'ready'")" = "0"
+
+      - name: Deploy repaired hosted Edge Functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy classroom-api \
+            --workdir backend \
+            --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy admin-api \
+            --workdir backend \
+            --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Resume canonical staging source and verify V2 creation
+        shell: bash
+        run: |
+          set +e
+          node scripts/staging-canonical-source-resume.mjs
+          resume_status=$?
+          set -e
+          if [ "$resume_status" -ne 0 ]; then
+            node scripts/staging-provisioning-probe-finalizer.mjs
+          fi
+
+      - name: Verify hosted function health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            "$SUPABASE_URL/functions/v1/classroom-api/health" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            > /tmp/classroom-health.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/classroom-health.json', 'utf8'));
+          if (body.ok !== true) throw new Error('classroom-api health failed');
+          NODE
+          rm -f /tmp/classroom-health.json
+
+      - name: Upload sanitized connected evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr361-staging-game-provisioning-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/pr361-db-push-dry-run.log
+            /tmp/staging-canonical-source-bootstrap.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Record staging-only result
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo '## PR #361 isolated-staging repair'
+            echo '- Complete missing migration chain applied: `true`'
+            echo '- Legacy empty joinable games quarantined: `true`'
+            echo '- Canonical Seed/World/Crafting source active: `true`'
+            echo '- Connected V2 game-creation probe verified: `true`'
+            echo '- Synthetic probe cleanup verified: `true`'
+            echo '- Production selected: `false`'
+            echo '- Production modified: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
