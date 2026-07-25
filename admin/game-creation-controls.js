@@ -1,5 +1,4 @@
 const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
-const GAME_CODE_CACHE_PREFIX = "econovaria.admin.game-code.v1:";
 const CANONICAL_PACK_ID = "econovaria.beta-seed-pack.v1";
 const MAX_MOUNT_FRAMES = 180;
 let activeModal = null;
@@ -121,13 +120,12 @@ function updateRuntimeModel(game) {
 
 function selectCreatedGame(result) {
   sessionStorage.setItem(SELECTED_GAME_KEY, result.gameId);
-  if (result.joinCode) {
-    sessionStorage.setItem(
-      `${GAME_CODE_CACHE_PREFIX}${result.gameId}`,
-      result.joinCode,
-    );
-  }
-  updateRuntimeModel(result.game);
+  updateRuntimeModel({
+    ...result.game,
+    joinCode: result.joinCode,
+    gameCode: result.joinCode,
+    joinCodeStatus: result.joinCode ? "active" : result.game.joinCodeStatus,
+  });
   window.dispatchEvent(new CustomEvent("econovaria:admin-game-created", {
     detail: Object.freeze({
       gameId: result.gameId,
@@ -184,9 +182,10 @@ function renderSuccess(form, result) {
     <h3></h3>
     <p>Players who use this Game Code will join this multiplayer game instance.</p>
     <div class="econovaria-game-create-success__code">
-      <small>One-time Game Code</small>
+      <small>Game Code</small>
       <strong></strong>
     </div>
+    <p>This code remains attached to the game until you explicitly rotate it.</p>
     <dl>
       <div><dt>Market assets</dt><dd></dd></div>
       <div><dt>Contracts</dt><dd></dd></div>
@@ -244,7 +243,7 @@ function createModal(opener) {
         <button type="button" data-econovaria-game-create-close aria-label="Close game creation">×</button>
       </header>
       <p id="econovariaCreateGameDescription">
-        Econovaria will create an isolated game, load its approved shared content, verify it, and then issue the Game Code players use to join.
+        Econovaria will create an isolated game, load its approved shared content, verify it, and issue a persistent Game Code players use to join.
       </p>
       <form novalidate>
         <div data-econovaria-game-create-fields>
