@@ -1,0 +1,212 @@
+/*
+ * Admin viewport and nested-surface scroll ownership.
+ *
+ * Desktop owns exactly one page-level scroller: the right content column.
+ * The left navigation rail remains fixed to the available viewport and the
+ * Game Code card occupies its final grid row. Drawers and specialized modals
+ * own bounded inner scrollers without chaining wheel or trackpad motion back
+ * into the page.
+ */
+
+:root {
+  --admin-scrollbar-thumb: rgba(0, 212, 255, 0.34);
+  --admin-scrollbar-track: rgba(2, 10, 20, 0.42);
+}
+
+@media (min-width: 1101px) {
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body {
+    height: 100dvh;
+  }
+
+  #adminPreview {
+    width: min(1440px, 100%);
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  #adminPreview > .admin-terminal-shell,
+  .admin-terminal-shell {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    align-items: stretch;
+  }
+
+  .admin-terminal-left-menu {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .admin-terminal-left-menu > .admin-terminal-nav {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .admin-terminal-left-menu > .econovaria-admin-game-session-card,
+  .admin-terminal-left-menu > .econovaria-admin-game-session-controls-host,
+  .econovaria-admin-game-session-card {
+    align-self: end;
+    margin-top: 0;
+  }
+
+  .admin-terminal-shell-main {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--admin-scrollbar-thumb) var(--admin-scrollbar-track);
+  }
+
+  .admin-terminal-shell-main::-webkit-scrollbar,
+  .admin-terminal-player-tab-panels-v301::-webkit-scrollbar,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .admin-terminal-shell-main::-webkit-scrollbar-track,
+  .admin-terminal-player-tab-panels-v301::-webkit-scrollbar-track,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar-track,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar-track {
+    background: var(--admin-scrollbar-track);
+  }
+
+  .admin-terminal-shell-main::-webkit-scrollbar-thumb,
+  .admin-terminal-player-tab-panels-v301::-webkit-scrollbar-thumb,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar-thumb,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar-thumb {
+    background: var(--admin-scrollbar-thumb);
+    border: 2px solid var(--admin-scrollbar-track);
+  }
+
+  .admin-terminal-overview {
+    min-height: 100%;
+  }
+}
+
+/* Player roster dossier: fixed identity/tabs, one contained panel scroller. */
+.admin-terminal-player-dossier-v296 {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  max-height: min(620px, calc(100dvh - 210px));
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.admin-terminal-player-drawer-tabs-v301 {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-terminal-player-tablist-v301 {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.admin-terminal-player-tab-panels-v301 {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-scrollbar-thumb) var(--admin-scrollbar-track);
+  touch-action: pan-y;
+}
+
+.admin-terminal-player-tab-panel-v301 {
+  min-height: 0;
+}
+
+/* Add/Edit Player modal: the two content panes scroll, not the backdrop. */
+.admin-terminal-modal.is-player-modal .admin-terminal-player-form {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.admin-terminal-modal.is-player-modal .admin-terminal-player-main,
+.admin-terminal-modal.is-player-modal .admin-terminal-player-access {
+  min-height: 0;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-scrollbar-thumb) var(--admin-scrollbar-track);
+  touch-action: pan-y;
+}
+
+/* Stacked forms need one vertical surface rather than nested pane scrollers. */
+@media (max-width: 980px) {
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-container {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    touch-action: pan-y;
+  }
+
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-form {
+    height: auto;
+    min-height: min-content;
+    overflow: visible;
+  }
+
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-main,
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-access {
+    overflow: visible !important;
+    scrollbar-gutter: auto;
+  }
+}
+
+/* Keep the frozen rail usable on short desktop viewports without scrolling it. */
+@media (min-width: 1101px) and (max-height: 760px) {
+  .admin-terminal-left-menu {
+    --menu-rail-padding: 7px;
+    --menu-item-height: 42px;
+    --menu-item-gap: 6px;
+    padding: 7px;
+  }
+
+  .admin-terminal-nav {
+    gap: 6px;
+  }
+
+  .econovaria-admin-game-session-card {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .econovaria-admin-game-session-card__actions {
+    gap: 5px;
+  }
+}
