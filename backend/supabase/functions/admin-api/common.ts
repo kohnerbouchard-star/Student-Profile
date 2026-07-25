@@ -121,7 +121,7 @@ export async function resolveContext(request) {
 
   const gamesResult = await service
     .from("game_sessions")
-    .select("id,name,status,game_join_code_status,created_at,updated_at")
+    .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
     .eq("owner_staff_user_id", staffResult.data.id)
     .order("created_at", { ascending: false });
   if (gamesResult.error) {
@@ -143,14 +143,15 @@ export async function resolveContext(request) {
 }
 
 export function gameDto(game) {
+  const gameCode = text(game.game_join_code);
   return {
     id: game.id,
     gameId: game.id,
     name: game.name,
     status: game.status,
     joinCodeStatus: game.game_join_code_status || "unknown",
-    joinCode: "",
-    gameCode: "",
+    joinCode: gameCode,
+    gameCode,
     createdAt: game.created_at,
     updatedAt: game.updated_at,
   };
