@@ -12,6 +12,10 @@ loopback-only ``x-real-ip`` value before proxying requests. Local Edge Functions
 therefore receive the same proxy-overwritten client-IP contract required by the
 fail-closed rate limiter. The server binds only to 127.0.0.1, so the authoritative
 client for this development gateway is always the loopback host.
+
+Browser requests use the publishable key only in ``apikey``. Real staff JWTs are
+preserved in ``Authorization``. The launcher does not expose or inject the legacy
+anon JWT.
 """
 
 from __future__ import annotations
@@ -89,11 +93,55 @@ def install_timeout(module: ModuleType, timeout_seconds: float) -> None:
     module.http.client.HTTPSConnection = BoundedHTTPSConnection
 
 
+def install_publishable_only_contract(module: ModuleType) -> None:
+    def local_browser_keys(values: dict[str, str]) -> tuple[str, str]:
+        publishable_key = str(values.get("PUBLISHABLE_KEY") or "").strip()
+        if not publishable_key.startswith("sb_publishable_"):
+            raise SystemExit(
+                "Supabase status did not return a valid PUBLISHABLE_KEY for the browser."
+            )
+        return publishable_key, ""
+
+    def filtered_request_headers(
+        headers,
+        upstream_host: str,
+        *,
+        path: str = "",
+        browser_publishable_key: str = "",
+        platform_anon_key: str = "",  # retained for gateway call compatibility
+    ) -> dict[str, str]:
+        del path, platform_anon_key
+        result: dict[str, str] = {}
+        for name, value in headers.items():
+            lower_name = name.lower()
+            if lower_name in module.HOP_BY_HOP_HEADERS or lower_name in {
+                "host",
+                "content-length",
+            }:
+                continue
+            if (
+                lower_name == "authorization"
+                and str(value).strip() == f"Bearer {browser_publishable_key}"
+            ):
+                continue
+            result[name] = value
+        result["Host"] = upstream_host
+        return result
+
+    module.local_browser_keys = local_browser_keys
+    module.filtered_request_headers = filtered_request_headers
+
+
 def install_trusted_client_ip(module: ModuleType) -> None:
     base_filter = module.filtered_request_headers
 
-    def filtered_request_headers(headers, upstream_host: str) -> dict[str, str]:
-        result = base_filter(headers, upstream_host)
+    def filtered_request_headers(
+        headers,
+        upstream_host: str,
+        *args,
+        **kwargs,
+    ) -> dict[str, str]:
+        result = base_filter(headers, upstream_host, *args, **kwargs)
         forwarded = {name.lower() for name in FORWARDED_IP_HEADERS}
         for name in list(result):
             if name.lower() in forwarded:
@@ -108,6 +156,7 @@ def main() -> int:
     timeout_seconds = configured_timeout()
     module = load_gateway()
     install_timeout(module, timeout_seconds)
+    install_publishable_only_contract(module)
     install_trusted_client_ip(module)
     print(
         "Econovaria gateway upstream request timeout: "
@@ -116,6 +165,11 @@ def main() -> int:
     )
     print(
         "Econovaria gateway trusted client IP: loopback proxy overwrite",
+        flush=True,
+    )
+    print(
+        "Econovaria browser credential contract: publishable apikey only; "
+        "real user JWTs preserved",
         flush=True,
     )
     return int(module.main())
