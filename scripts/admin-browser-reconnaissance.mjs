@@ -96,7 +96,7 @@ async function navigateSection(name) {
 }
 
 async function openShareModal() {
-  const shareButton = page.locator('button[title="Share game code"]:visible').first();
+  const shareButton = page.locator('[data-econovaria-share-game]:visible').first();
   await shareButton.waitFor({ state: "visible", timeout: 20_000 });
   await shareButton.click();
 
