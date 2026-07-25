@@ -46,7 +46,7 @@ const expectedStyles = [
   "./css/admin-stabilization.css", "./css/admin-stabilization-visual-finish.css",
   "./css/overview-quick-actions.css", "./css/interaction-quality.css", "./css/shape-accurate-skeletons.css",
   "./css/loading-scope-overrides.css", "./css/data-state-contracts.css", "./css/keyboard-navigation.css",
-  "./css/game-lifecycle-controls.css", "./css/game-session-controls.css", "./css/logout-confirmation.css",
+  "./css/game-lifecycle-controls.css", "./css/game-session-controls.css", "./css/admin-scroll-integrity.css", "./css/logout-confirmation.css",
 ];
 assert(JSON.stringify(styleSources) === JSON.stringify(expectedStyles), `Admin stylesheet order drifted: ${JSON.stringify(styleSources)}.`);
 const adminBootstrap = readText("admin/admin-bootstrap.js");
@@ -119,7 +119,7 @@ assert(!keyboardNavigation.includes("style.cssText"), "Keyboard navigation write
 const overviewQuickActions = readText("admin/overview-quick-actions.js");
 assert(!overviewQuickActions.includes("window.fetch ="), "Overview quick actions add a network wrapper.");
 assert(!overviewQuickActions.includes("MutationObserver"), "Overview quick actions add DOM observation.");
-assert(!overviewQuickActions.includes('createElement("style")'), "Overview quick actions inject runtime CSS.");
+assert(!overviewQuickActions.includes('createElement("style")'), "Overview quick actions injects runtime CSS.");
 assert(overviewQuickActions.includes('storeButton.hidden = true'), "Add Store Item is not removed from Overview.");
 assert(overviewQuickActions.includes('section !== "Store"'), "Add Store Item is not restricted to Store.");
 
@@ -175,6 +175,20 @@ for (const path of [
     assert(!forbidden.test(source), `${path} contains an unscoped global selector.`);
   }
 }
+
+const scrollIntegrityCss = readText("admin/css/admin-scroll-integrity.css");
+const desktopScrollBoundary = scrollIntegrityCss.indexOf("@media (min-width: 1101px)");
+assert(desktopScrollBoundary >= 0, "Scroll integrity CSS has no desktop viewport boundary.");
+assert(scrollIntegrityCss.indexOf("html,") > desktopScrollBoundary, "Scroll integrity root selectors escape the desktop viewport boundary.");
+assert(!/(^|[},\s])(?:body|html)\s*\{/m.test(scrollIntegrityCss.slice(0, desktopScrollBoundary)), "Scroll integrity CSS contains an unbounded root selector.");
+for (const token of [
+  "box-sizing: border-box", "height: calc(100dvh - 48px)", ".admin-terminal-left-menu",
+  ".admin-terminal-shell-main", "overflow-y: auto", "overscroll-behavior-y: contain",
+  ".admin-terminal-player-tab-panels-v301", ".admin-terminal-modal.is-player-modal",
+]) {
+  assert(scrollIntegrityCss.includes(token), `Scroll integrity CSS is missing ${token}.`);
+}
+assert(!scrollIntegrityCss.includes("#adminPreview *"), "Scroll integrity CSS applies a blanket page-shell selector.");
 
 const integrationCss = readText("admin/css/player-runtime-integration.css");
 assert(integrationCss.includes("[data-admin-player-profile-save-status]") && integrationCss.includes("[data-admin-player-created-confirmation]"), "External player integration stylesheet is incomplete.");
@@ -240,4 +254,4 @@ assert(!keyboardCss.includes("#adminPreview *"), "Keyboard focus CSS applies a b
 assert(html.includes("admin-session-skeleton__metrics") && html.includes("admin-session-skeleton__table-row"), "Verification shell lacks metric/table geometry.");
 assert(!html.includes("Opening administrator console"), "Legacy verification text remains visible.");
 
-console.log("Accepted v606 core files, selected multiplayer game controls, bounded logout confirmation, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
+console.log("Accepted v606 core files, bounded viewport scroll ownership, selected multiplayer game controls, bounded logout confirmation, explicit six-state data lifecycles, card-scoped loading, Overview quick-action ownership, keyboard navigation, reduced motion, single credential presentation, modal accessibility, validation, explicit request lifecycles, scanner recovery, and scoped Admin boundaries passed.");
