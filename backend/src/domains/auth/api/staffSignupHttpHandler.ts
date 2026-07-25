@@ -41,6 +41,11 @@ import { validateStaffPassword } from "../../../security/staffPasswordPolicy.ts"
 
 interface StaffSignupDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
+  readonly buildThrottleBuckets?: typeof buildAuthenticationThrottleBuckets;
+  readonly checkThrottle?: typeof checkAuthenticationThrottle;
+  readonly recordFailure?: typeof recordAuthenticationFailure;
+  readonly recordSuccess?: typeof recordAuthenticationSuccess;
 }
 
 interface StaffSignupInput {
@@ -72,17 +77,20 @@ export async function handleStaffSignupRequest(
     });
   }
 
-  let serviceClient: EdgeSupabaseClient | null = null;
-  let throttleBuckets: readonly AuthenticationThrottleBucket[] | null = null;
-
   try {
     const envResult = readSupabaseEnv();
     if (!envResult.ok) return signupFailedResponse();
 
     const input = parseStaffSignupInput(await readJsonBody(request));
-    serviceClient = dependencies.createServiceClient(envResult.value);
+    const serviceClient = dependencies.createServiceClient(envResult.value);
+    const enforceVolumetric = dependencies.enforceVolumetric ?? enforcePreAuthRateLimit;
+    const buildThrottleBuckets = dependencies.buildThrottleBuckets ??
+      buildAuthenticationThrottleBuckets;
+    const checkThrottle = dependencies.checkThrottle ?? checkAuthenticationThrottle;
+    const recordFailure = dependencies.recordFailure ?? recordAuthenticationFailure;
+    const recordSuccess = dependencies.recordSuccess ?? recordAuthenticationSuccess;
 
-    const volumetricDecision = await enforcePreAuthRateLimit({
+    const volumetricDecision = await enforceVolumetric({
       action: "staff.signup.attempt",
       profile: "login",
       request,
@@ -91,12 +99,12 @@ export async function handleStaffSignupRequest(
       return rateLimitExceededResponse(volumetricDecision);
     }
 
-    throttleBuckets = await buildAuthenticationThrottleBuckets({
+    const throttleBuckets = await buildThrottleBuckets({
       request,
       realm: "staff-signup",
       accountIdentifier: input.email,
     });
-    const throttleDecision = await checkAuthenticationThrottle(
+    const throttleDecision = await checkThrottle(
       serviceClient,
       throttleBuckets,
     );
@@ -128,10 +136,7 @@ export async function handleStaffSignupRequest(
     const authUser = authResponse.data.user;
 
     if (authResponse.error || !authUser?.id) {
-      const failure = await recordAuthenticationFailure(
-        serviceClient,
-        throttleBuckets,
-      );
+      const failure = await recordFailure(serviceClient, throttleBuckets);
       return failure.retryAfterSeconds > 0
         ? authenticationThrottledResponse(failure)
         : jsonError(409, {
@@ -171,12 +176,12 @@ export async function handleStaffSignupRequest(
       );
 
       if (!activationResult.body.ok) {
-        await recordAuthenticationFailure(serviceClient, throttleBuckets);
+        await recordFailure(serviceClient, throttleBuckets);
         await compensateStaffSignup(serviceClient, authUser.id);
         return jsonResponse(activationResult.httpStatus, activationResult.body);
       }
 
-      await recordAuthenticationSuccess(serviceClient, throttleBuckets);
+      await recordSuccess(serviceClient, throttleBuckets);
       return jsonResponse(201, {
         ok: true,
         staff: {
@@ -191,7 +196,7 @@ export async function handleStaffSignupRequest(
         },
       });
     } catch {
-      await recordAuthenticationFailure(serviceClient, throttleBuckets);
+      await recordFailure(serviceClient, throttleBuckets);
       await compensateStaffSignup(serviceClient, authUser.id);
       return signupFailedResponse();
     }
@@ -332,7 +337,10 @@ function requiredText(
   if (!normalizedValue) {
     throw new EdgeActivationError(code, message, 400);
   }
-  if (normalizedValue.length > maxLength || /[\u0000-\u001f\u007f]/u.test(normalizedValue)) {
+  if (
+    normalizedValue.length > maxLength ||
+    /[\u0000-\u001f\u007f]/u.test(normalizedValue)
+  ) {
     throw new EdgeActivationError(
       `${code}_invalid`,
       `${message.replace(/\.$/u, "")} and must be within the allowed length.`,
