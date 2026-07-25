@@ -63,7 +63,12 @@
     margin-top: 0;
   }
 
-  .admin-terminal-shell-main {
+  /*
+   * The bundle also clones this class onto its loading-stage wrapper. Only the
+   * real shell column may own scrolling; the decorative clone must inherit its
+   * geometry without creating a second gutter.
+   */
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) {
     position: relative;
     height: 100%;
     min-height: 0;
@@ -82,30 +87,30 @@
    * Allocate the same classic-scrollbar width as loaded content so the clone
    * remains shape-accurate while keeping the skeleton scrollbar transparent.
    */
-  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"] {
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"] {
     overflow-x: hidden;
     overflow-y: scroll;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
 
-  .admin-terminal-shell-main::-webkit-scrollbar,
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage)::-webkit-scrollbar,
   .admin-terminal-player-tab-panels-v301::-webkit-scrollbar,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar,
-  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar {
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
-  .admin-terminal-shell-main::-webkit-scrollbar-track,
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage)::-webkit-scrollbar-track,
   .admin-terminal-player-tab-panels-v301::-webkit-scrollbar-track,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar-track,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar-track {
     background: var(--admin-scrollbar-track);
   }
 
-  .admin-terminal-shell-main::-webkit-scrollbar-thumb,
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage)::-webkit-scrollbar-thumb,
   .admin-terminal-player-tab-panels-v301::-webkit-scrollbar-thumb,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar-thumb,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar-thumb {
@@ -113,8 +118,8 @@
     border: 2px solid var(--admin-scrollbar-track);
   }
 
-  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-track,
-  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-thumb {
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-track,
+  .admin-terminal-shell-main:not(.admin-shape-skeleton-stage) > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-thumb {
     background: transparent;
     border-color: transparent;
   }
