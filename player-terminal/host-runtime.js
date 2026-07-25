@@ -38,7 +38,7 @@
       return {
         playerSessionToken,
         sessionExpiresAt: expiresAt,
-        accessToken: SUPABASE_PUBLISHABLE_KEY
+        publishableKey: SUPABASE_PUBLISHABLE_KEY
       };
     } catch (_) {
       runtime.sessionStorage.removeItem(STORAGE_KEY);
@@ -78,7 +78,7 @@
     studentProfileMode: true,
     studentProfileApiBaseUrl: CLASSROOM_API_URL,
     apiBaseUrl: CLASSROOM_API_URL,
-    accessToken: SUPABASE_PUBLISHABLE_KEY,
+    publishableKey: SUPABASE_PUBLISHABLE_KEY,
     playerSessionToken: session?.playerSessionToken || "",
     sessionProvider: () => readStoredSession(),
     sessionExitUrl: loginUrl("session-invalid"),
