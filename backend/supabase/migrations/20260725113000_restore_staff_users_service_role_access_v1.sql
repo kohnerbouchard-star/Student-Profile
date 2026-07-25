@@ -7,15 +7,13 @@ revoke all on table public.staff_users from public, anon, authenticated;
 grant select, insert, update, delete on table public.staff_users to service_role;
 
 -- Authenticated Admin routes resolve ownership server-side and assemble their
--- dashboard, Players, Store, inventory, market, Contract, and attendance
--- projections through the service client. Grant only those reads.
+-- general dashboard, Players, Store, inventory, Contract, and attendance
+-- projections through the service client. Market and Admin-control tables are
+-- owned by the subsequent bounded Admin-control privilege migration.
 grant select on table
   public.game_sessions,
   public.players,
   public.country_profiles,
-  public.stock_holdings,
-  public.stock_trades,
-  public.stock_market_events,
   public.store_items,
   public.store_purchases,
   public.player_country_assignments,
@@ -23,8 +21,6 @@ grant select on table
   public.game_session_stock_assets,
   public.player_sessions,
   public.inventory_holdings,
-  public.player_admin_flags,
-  public.player_admin_settings,
   public.game_session_contracts,
   public.player_contract_progress,
   public.player_attendance_records
