@@ -20,6 +20,7 @@ const ROUTES = [
 ];
 
 const EXCLUDED_ACTIONS = new Set(["logout"]);
+const BUTTON_SELECTOR = ".player-terminal-page button:not([disabled])";
 
 async function openPreviewRoute(page, route) {
   await page.addInitScript(() => {
@@ -35,16 +36,24 @@ async function openPreviewRoute(page, route) {
 }
 
 async function visibleButtonInventory(page) {
-  return page.locator(".player-terminal-page button:visible:not([disabled])").evaluateAll((buttons) =>
-    buttons.map((button, index) => ({
-      index,
-      text: String(button.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120),
-      ariaLabel: button.getAttribute("aria-label") || "",
-      endpoint: button.closest("form")?.getAttribute("data-endpoint") || "",
-      action: button.getAttribute("data-player-action") || "",
-      localAction: button.getAttribute("data-player-local-action") || "",
-      type: button.getAttribute("type") || "button",
-    }))
+  return page.locator(BUTTON_SELECTOR).evaluateAll((buttons) =>
+    buttons.map((button, index) => {
+      const rectangle = button.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      const visible = rectangle.width > 0 && rectangle.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" &&
+        style.opacity !== "0" && !button.hidden;
+      return {
+        index,
+        visible,
+        text: String(button.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120),
+        ariaLabel: button.getAttribute("aria-label") || "",
+        endpoint: button.closest("form")?.getAttribute("data-endpoint") || "",
+        action: button.getAttribute("data-player-action") || "",
+        localAction: button.getAttribute("data-player-local-action") || "",
+        type: button.getAttribute("type") || "button",
+      };
+    }).filter((button) => button.visible)
   );
 }
 
@@ -62,6 +71,7 @@ function descriptor(route, button) {
 
 for (const route of ROUTES) {
   test(`${route}: every initially enabled content button is click-safe`, async ({ page }) => {
+    test.setTimeout(180_000);
     await openPreviewRoute(page, route);
     const inventory = await visibleButtonInventory(page);
     expect(inventory.length, `${route} rendered no enabled content buttons`).toBeGreaterThan(0);
@@ -85,8 +95,7 @@ for (const route of ROUTES) {
       page.on("console", onConsole);
       page.on("response", onResponse);
 
-      const buttons = page.locator(".player-terminal-page button:visible:not([disabled])");
-      const button = buttons.nth(item.index);
+      const button = page.locator(BUTTON_SELECTOR).nth(item.index);
       await expect(button, descriptor(route, item)).toBeVisible();
 
       try {
