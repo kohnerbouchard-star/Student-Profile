@@ -82,8 +82,9 @@ assert(credentialBridge.includes("if (!context) return delegatedFetch(request)")
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation is missing.");
 assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement.");
 
+assert(gameCodeWiring.includes('const RESET_ACTION = "reset-game-code"'), "Game Code reset action constant is missing.");
+assert(gameCodeWiring.includes("resetButton.dataset.adminTerminalAction = RESET_ACTION"), "Game Code generation does not reuse the authenticated reset action.");
 assert(gameCodeWiring.includes("Generate Code"), "Share Game Code does not expose generation for empty codes.");
-assert(gameCodeWiring.includes('dataset.adminTerminalAction = "reset-game-code"'), "Game Code generation does not reuse the authenticated reset action.");
 assert(!gameCodeWiring.includes("window.fetch ="), "Game Code wiring creates a second transport owner.");
 assert(!gameCodeWiring.includes("MutationObserver"), "Game Code wiring adds an unbounded DOM observer.");
 
