@@ -18,6 +18,24 @@ const ADMIN_SELECTED_GAME_STORAGE_KEY = "econovaria.admin.selected-game.v1";
 const LOGIN_LOGO_ASSET_URL = "assets/brand/Econovaria%20Logo.png?v=20260725.1";
 const PLAYER_GAME_CODE_MAX_LENGTH = 64;
 
+function installPublishableBearerGuard() {
+  const nativeFetch = window.fetch.bind(window);
+  const prohibited = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+
+  window.fetch = function guardedEconovariaFetch(input, init) {
+    const request = input instanceof Request
+      ? new Request(input, init)
+      : new Request(new URL(String(input), window.location.href).href, init);
+    const headers = new Headers(request.headers);
+    if (String(headers.get("authorization") || "").trim() === prohibited) {
+      headers.delete("authorization");
+    }
+    return nativeFetch(new Request(request, { headers }));
+  };
+}
+
+installPublishableBearerGuard();
+
 const loginLogo = document.querySelector("[data-econovaria-brand-image]");
 const loginLogoMark = loginLogo?.closest(".logo-mark");
 const loginLogoFallback = loginLogoMark?.querySelector(".logo-mark-fallback");
