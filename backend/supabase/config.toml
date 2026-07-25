@@ -57,6 +57,24 @@ verify_jwt = false
 [functions.player-api]
 verify_jwt = false
 
+# Server-to-server stock functions validate the publishable apikey and the
+# dedicated STOCK_MARKET_RUNNER_SECRET inside the function. They do not accept a
+# browser or legacy anon JWT as authorization.
+[functions.stock-market-runner]
+verify_jwt = false
+
+[functions.stock-market-read]
+verify_jwt = false
+
+[functions.stock-market-seed-copy]
+verify_jwt = false
+
+[functions.stock-market-player-read]
+verify_jwt = false
+
+[functions.stock-market-trading]
+verify_jwt = false
+
 # Legacy compatibility surface. Browser runtime must not target this function.
 [functions.classroom-api]
 verify_jwt = true
