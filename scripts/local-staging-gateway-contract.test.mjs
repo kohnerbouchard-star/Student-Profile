@@ -11,8 +11,7 @@ import { headersFor } from "../player-terminal/src/integrations/student-profile-
 import { resolvePlayerLogoutUrl } from "../player-terminal/src/integrations/player-logout-controller.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const gatewayPath = path.join(repositoryRoot, "scripts", "local-staging-gateway.py");
-const launcherPath = path.join(repositoryRoot, "scripts", "econovaria-local-gateway.py");
+const gatewayPath = path.join(repositoryRoot, "scripts", "econovaria-local-gateway.py");
 const runtimeConfigPath = path.join(repositoryRoot, "frontend", "src", "core", "runtime-config.js");
 
 function probeGateway() {
@@ -22,52 +21,40 @@ import json
 import sys
 from email.message import Message
 
-base_path = sys.argv[1]
-launcher_path = sys.argv[2]
-
-base_spec = importlib.util.spec_from_file_location("econovaria_local_gateway_base", base_path)
-base = importlib.util.module_from_spec(base_spec)
-base_spec.loader.exec_module(base)
-
-launcher_spec = importlib.util.spec_from_file_location("econovaria_local_gateway_launcher", launcher_path)
-launcher = importlib.util.module_from_spec(launcher_spec)
-launcher_spec.loader.exec_module(launcher)
-launcher.install_publishable_only_contract(base)
-launcher.install_trusted_client_ip(base)
+path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("econovaria_gateway", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
 
 publishable_key = "sb_publishable_contract_test"
 user_jwt = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature"
-parsed_status = base.parse_supabase_status_env(
+parsed_status = module.parse_supabase_status_env(
     'API_URL="http://127.0.0.1:54321"\n'
     f'PUBLISHABLE_KEY="{publishable_key}"\n'
     'ANON_KEY="eyJlegacy-unused"\n'
 )
-selected_publishable, selected_compat = base.local_browser_keys(parsed_status)
 
 public_headers = Message()
 public_headers["apikey"] = publishable_key
 public_headers["Authorization"] = f"Bearer {publishable_key}"
-public_forwarded = base.filtered_request_headers(
+public_forwarded = module.filtered_request_headers(
     public_headers,
     "127.0.0.1:54321",
-    path="/functions/v1/player-api/players/login",
     browser_publishable_key=publishable_key,
-    platform_anon_key="eyJmust-not-be-used",
 )
 
 staff_headers = Message()
 staff_headers["apikey"] = publishable_key
 staff_headers["Authorization"] = f"Bearer {user_jwt}"
-staff_forwarded = base.filtered_request_headers(
+staff_headers["x-forwarded-for"] = "203.0.113.7"
+staff_forwarded = module.filtered_request_headers(
     staff_headers,
     "127.0.0.1:54321",
-    path="/functions/v1/staff-api/staff/bootstrap",
     browser_publishable_key=publishable_key,
-    platform_anon_key="eyJmust-not-be-used",
 )
 
-generated = base.runtime_config(
-    base.LOCAL_DEVELOPMENT_PROJECT_REF,
+generated = module.runtime_config(
+    module.LOCAL_DEVELOPMENT_PROJECT_REF,
     publishable_key,
     4173,
     environment="development",
@@ -78,22 +65,22 @@ suffix = ");\n"
 config = json.loads(generated[len(prefix):-len(suffix)])
 
 print(json.dumps({
-    "functions": base.is_proxy_path("/functions/v1/player-api/players/login"),
-    "auth": base.is_proxy_path("/auth/v1/token?grant_type=password"),
-    "rest": base.is_proxy_path("/rest/v1/players"),
-    "selectedPublishable": selected_publishable,
-    "selectedCompatibility": selected_compat,
+    "functions": module.is_proxy_path("/functions/v1/player-api/players/login"),
+    "auth": module.is_proxy_path("/auth/v1/token?grant_type=password"),
+    "rest": module.is_proxy_path("/rest/v1/players"),
+    "parsedStatus": parsed_status,
     "publicForwarded": public_forwarded,
     "staffForwarded": staff_forwarded,
     "runtimeConfig": config,
+    "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
+    "maxBody": module.MAX_PROXY_BODY_BYTES,
 }))
 `;
 
-  const result = spawnSync(
-    "python3",
-    ["-c", program, gatewayPath, launcherPath],
-    { cwd: repositoryRoot, encoding: "utf8" },
-  );
+  const result = spawnSync("python3", ["-c", program, gatewayPath], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
   assert.equal(
     result.status,
     0,
@@ -114,24 +101,26 @@ function evaluateRuntimeConfig(config) {
   return window.EconovariaRuntimeConfig;
 }
 
-test("local gateway proxies only Edge Functions and Supabase Auth", () => {
+test("gateway proxies only Edge Functions and Supabase Auth", () => {
   const result = probeGateway();
   assert.equal(result.functions, true);
   assert.equal(result.auth, true);
   assert.equal(result.rest, false);
+  assert.equal(result.maxBody, 1_048_576);
 });
 
-test("local browser config contains publishable key and split endpoints", () => {
+test("local browser config contains only publishable application identity", () => {
   const result = probeGateway();
-  assert.equal(result.selectedPublishable, "sb_publishable_contract_test");
-  assert.equal(result.selectedCompatibility, "");
+  assert.equal(result.parsedStatus.PUBLISHABLE_KEY, "sb_publishable_contract_test");
   assert.equal(result.runtimeConfig.supabasePublishableKey, "sb_publishable_contract_test");
+  assert.equal(JSON.stringify(result.runtimeConfig).includes("eyJlegacy-unused"), false);
 
   const runtime = evaluateRuntimeConfig(result.runtimeConfig);
   assert.equal(runtime.playerApiUrl, "http://127.0.0.1:4173/functions/v1/player-api");
   assert.equal(runtime.staffApiUrl, "http://127.0.0.1:4173/functions/v1/staff-api");
   assert.equal(runtime.bootstrapApiUrl, "http://127.0.0.1:4173/functions/v1/bootstrap-api");
   assert.equal(runtime.adminApiUrl, "http://127.0.0.1:4173/functions/v1/admin-api");
+  assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
 });
 
 test("gateway strips publishable bearer and preserves real staff JWT", () => {
@@ -146,6 +135,8 @@ test("gateway strips publishable bearer and preserves real staff JWT", () => {
     "Bearer eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature",
   );
   assert.equal(result.staffForwarded["x-real-ip"], "127.0.0.1");
+  assert.equal(result.staffForwarded["x-forwarded-for"], undefined);
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v1");
 });
 
 test("Player Terminal sends publishable key only as apikey", async () => {
