@@ -12,6 +12,8 @@ const REQUIRED_READ_TABLES = [
   "players",
   "country_profiles",
   "stock_holdings",
+  "stock_trades",
+  "stock_market_events",
   "store_items",
   "store_purchases",
   "player_country_assignments",
