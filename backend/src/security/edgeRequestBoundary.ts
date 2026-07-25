@@ -20,7 +20,9 @@ export async function enforceEdgeRequestBoundary(
   policy: EdgeRequestBoundaryPolicy,
 ): Promise<EdgeRequestBoundaryResult> {
   const method = request.method.toUpperCase();
-  const allowedMethods = new Set(policy.allowedMethods.map((value) => value.toUpperCase()));
+  const allowedMethods = new Set(
+    policy.allowedMethods.map((value) => value.toUpperCase()),
+  );
   if (!allowedMethods.has(method)) {
     return failure(405, "method_not_allowed", "The request method is not allowed.");
   }
@@ -36,16 +38,26 @@ export async function enforceEdgeRequestBoundary(
 
   if (BODYLESS_METHODS.has(method)) {
     if (contentLength > 0) {
-      return failure(400, "request_body_prohibited", "This request must not contain a body.");
+      return failure(
+        400,
+        "request_body_prohibited",
+        "This request must not contain a body.",
+      );
     }
     return { ok: true, request };
   }
 
   const bodyMethods = new Set(
-    (policy.allowBodyMethods ?? policy.allowedMethods).map((value) => value.toUpperCase()),
+    (policy.allowBodyMethods ?? policy.allowedMethods).map((value) =>
+      value.toUpperCase()
+    ),
   );
   if (!bodyMethods.has(method)) {
-    return failure(400, "request_body_prohibited", "This request must not contain a body.");
+    return failure(
+      400,
+      "request_body_prohibited",
+      "This request must not contain a body.",
+    );
   }
 
   if (policy.requireJsonBody !== false) {
@@ -54,21 +66,33 @@ export async function enforceEdgeRequestBoundary(
       .trim()
       .toLowerCase();
     if (contentType !== "application/json") {
-      return failure(415, "unsupported_media_type", "Use application/json for this request.");
+      return failure(
+        415,
+        "unsupported_media_type",
+        "Use application/json for this request.",
+      );
     }
   }
 
-  let body: Uint8Array;
+  let body: ArrayBuffer;
   try {
-    body = new Uint8Array(await request.arrayBuffer());
+    body = await request.arrayBuffer();
   } catch {
-    return failure(400, "invalid_request_body", "The request body could not be read.");
+    return failure(
+      400,
+      "invalid_request_body",
+      "The request body could not be read.",
+    );
   }
   if (body.byteLength > policy.maxBodyBytes) {
     return failure(413, "request_body_too_large", "The request body is too large.");
   }
   if (body.byteLength === 0 && policy.requireJsonBody !== false) {
-    return failure(400, "request_body_required", "A JSON request body is required.");
+    return failure(
+      400,
+      "request_body_required",
+      "A JSON request body is required.",
+    );
   }
 
   const boundedRequest = new Request(request.url, {
