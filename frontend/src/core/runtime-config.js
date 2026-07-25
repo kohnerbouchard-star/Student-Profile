@@ -124,14 +124,22 @@
       }
     }
 
+    const playerApiUrl = `${apiBaseUrl}/functions/v1/player-api`;
+    const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
+    const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
+    const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
+
     return Object.freeze({
       environment,
       projectRef,
       supabaseUrl,
       apiProxyUrl,
       supabasePublishableKey,
-      classroomApiUrl: `${apiBaseUrl}/functions/v1/classroom-api`,
-      adminApiUrl: `${apiBaseUrl}/functions/v1/admin-api`,
+      playerApiUrl,
+      staffApiUrl,
+      bootstrapApiUrl,
+      adminApiUrl,
+      classroomApiUrl: playerApiUrl,
     });
   }
 
