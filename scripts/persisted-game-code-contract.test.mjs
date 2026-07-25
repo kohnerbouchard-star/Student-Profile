@@ -7,12 +7,22 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 const WIRING = new URL("../admin/game-code-wiring.js", import.meta.url);
+const SESSION_CONTROLS = new URL("../admin/game-session-controls.js", import.meta.url);
+const CREATION_CONTROLS = new URL("../admin/game-creation-controls.js", import.meta.url);
 const RESET_HANDLER = new URL(
   "../backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts",
   import.meta.url,
 );
 const STAFF_BOOTSTRAP = new URL(
   "../backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
+  import.meta.url,
+);
+const ADMIN_COMMON = new URL(
+  "../backend/supabase/functions/admin-api/common.ts",
+  import.meta.url,
+);
+const ADMIN_ROUTES = new URL(
+  "../backend/supabase/functions/admin-api/gameRoutes.ts",
   import.meta.url,
 );
 
@@ -35,20 +45,43 @@ test("Game Codes are persisted public identifiers with one issuance authority", 
 });
 
 test("Admin reads the authoritative persisted code instead of a browser cache", async () => {
-  const [wiring, resetHandler, bootstrap] = await Promise.all([
+  const [
+    wiring,
+    sessionControls,
+    creationControls,
+    resetHandler,
+    bootstrap,
+    adminCommon,
+    adminRoutes,
+  ] = await Promise.all([
     readFile(WIRING, "utf8"),
+    readFile(SESSION_CONTROLS, "utf8"),
+    readFile(CREATION_CONTROLS, "utf8"),
     readFile(RESET_HANDLER, "utf8"),
     readFile(STAFF_BOOTSTRAP, "utf8"),
+    readFile(ADMIN_COMMON, "utf8"),
+    readFile(ADMIN_ROUTES, "utf8"),
   ]);
 
-  assert.doesNotMatch(wiring, /GAME_CODE_CACHE_PREFIX|readCachedCode|writeCachedCode/);
+  for (const source of [wiring, sessionControls, creationControls]) {
+    assert.doesNotMatch(
+      source,
+      /GAME_CODE_CACHE_PREFIX|econovaria\.admin\.game-code\.v1:|readCachedCode|writeCachedCode|cachedCode\(/,
+    );
+  }
   assert.match(wiring, /method:\s*"GET"/);
   assert.match(wiring, /readPersistedGameCode/);
   assert.match(wiring, /remains available after reloads/);
+  assert.match(wiring, /Rotate Code/);
   assert.match(resetHandler, /new Set\(\["GET", "POST"\]\)/);
   assert.match(resetHandler, /\.select\("game_join_code,game_join_code_status,updated_at"\)/);
   assert.match(resetHandler, /\.rpc\("issue_game_join_code_v1"/);
   assert.match(bootstrap, /game_join_code,game_join_code_status/);
   assert.match(bootstrap, /joinCode:\s*session\.game_join_code/);
   assert.match(bootstrap, /gameCode:\s*session\.game_join_code/);
+  assert.match(adminCommon, /game_join_code,game_join_code_status/);
+  assert.match(adminCommon, /joinCode:\s*gameCode/);
+  assert.match(adminCommon, /gameCode,/);
+  assert.match(adminRoutes, /suffix === "\/join-code\/reset"/);
+  assert.match(adminRoutes, /classroomGamePath\(gameId, "\/join-code\/reset"\)/);
 });
