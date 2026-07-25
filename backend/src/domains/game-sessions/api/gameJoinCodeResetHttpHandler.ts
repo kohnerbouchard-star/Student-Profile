@@ -9,8 +9,6 @@ import {
   readOwnedGameSession,
   readSupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
-import { normalizeJoinCode } from "./gameJoinCodeHttpHelpers.ts";
 
 interface GameJoinCodeResetDependencies {
   readonly resolveStaffForRequest: (
@@ -49,6 +47,12 @@ interface ResetGameJoinCodeSuccessBody {
     readonly status: "active";
     readonly updatedAt: string;
   };
+}
+
+interface IssuedJoinCodeRow {
+  readonly game_join_code: string;
+  readonly game_join_code_status: string;
+  readonly updated_at: string;
 }
 
 export async function handleResetGameJoinCodeRequest(
@@ -93,7 +97,7 @@ export async function handleResetGameJoinCodeRequest(
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
-    const joinCodeResult = await resetGameJoinCode(
+    const joinCodeResult = await issueGameJoinCode(
       staffResult.serviceClient,
       gameSessionId,
       staffResult.staff.id,
@@ -125,20 +129,7 @@ export async function handleResetGameJoinCodeRequest(
   }
 }
 
-function generateGameJoinCode(): string {
-  return `ECO-${generateCompactCode(6)}`;
-}
-
-function generateCompactCode(length: number): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-
-  return [...bytes]
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join("");
-}
-
-async function resetGameJoinCode(
+async function issueGameJoinCode(
   serviceClient: EdgeSupabaseClient,
   gameSessionId: string,
   staffUserId: string,
@@ -154,51 +145,54 @@ async function resetGameJoinCode(
       readonly error: EdgeErrorBody["error"];
     }
 > {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const gameJoinCode = generateGameJoinCode();
-    const gameJoinCodeHash = await sha256Hex(normalizeJoinCode(gameJoinCode));
+  const response = await serviceClient.rpc("issue_game_join_code_v1", {
+    p_game_session_id: gameSessionId,
+    p_staff_user_id: staffUserId,
+  });
 
-    const updateResponse = await serviceClient
-      .from("game_sessions")
-      .update({
-        game_join_code_hash: gameJoinCodeHash,
-        game_join_code_status: "active",
-      })
-      .eq("id", gameSessionId)
-      .eq("owner_staff_user_id", staffUserId)
-      .select("updated_at")
-      .single();
+  if (response.error) {
+    const message = response.error.message?.toUpperCase() ?? "";
+    const conflict = message.includes("GENERATION_CONFLICT");
+    const unavailable = message.includes("GAME_UNAVAILABLE");
 
-    if (!updateResponse.error && updateResponse.data?.updated_at) {
-      return {
-        ok: true,
-        gameJoinCode,
-        updatedAt: updateResponse.data.updated_at,
-      };
-    }
+    return {
+      ok: false,
+      status: conflict ? 409 : unavailable ? 409 : 500,
+      error: {
+        code: conflict
+          ? "join_code_generation_conflict"
+          : unavailable
+          ? "join_code_game_unavailable"
+          : "join_code_reset_failed",
+        message: conflict
+          ? "A unique game join code could not be generated."
+          : unavailable
+          ? "Game join code cannot be changed for this game."
+          : "Game join code could not be reset.",
+        retryable: conflict,
+      },
+    };
+  }
 
-    const message = updateResponse.error?.message?.toLowerCase() ?? "";
+  const row = (Array.isArray(response.data) ? response.data[0] : response.data) as
+    | IssuedJoinCodeRow
+    | null;
 
-    if (!message.includes("duplicate") && !message.includes("unique")) {
-      return {
-        ok: false,
-        status: 500,
-        error: {
-          code: "join_code_reset_failed",
-          message: "Game join code could not be reset.",
-          retryable: false,
-        },
-      };
-    }
+  if (!row?.game_join_code || row.game_join_code_status !== "active" || !row.updated_at) {
+    return {
+      ok: false,
+      status: 500,
+      error: {
+        code: "join_code_reset_failed",
+        message: "Game join code could not be reset.",
+        retryable: false,
+      },
+    };
   }
 
   return {
-    ok: false,
-    status: 409,
-    error: {
-      code: "join_code_generation_conflict",
-      message: "A unique game join code could not be generated.",
-      retryable: true,
-    },
+    ok: true,
+    gameJoinCode: row.game_join_code,
+    updatedAt: row.updated_at,
   };
 }
