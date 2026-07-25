@@ -17,11 +17,11 @@ on:
       - "backend/supabase/migrations/**"
       - "scripts/admin-browser-reconnaissance.mjs"
       - "scripts/econovaria-local-gateway.py"
+      - "scripts/local-auth-readiness.mjs"
       - "scripts/staff-service-role-access-contract.test.mjs"
       - "scripts/persisted-game-code-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
-      - "scripts/local-staging-gateway.py"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
       - "docs/seed-content/executable/beta-pack-v1/**"
 
@@ -68,7 +68,9 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/admin-browser-reconnaissance.mjs
-          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
+          node --check scripts/local-auth-readiness.mjs
+          python3 -m py_compile scripts/econovaria-local-gateway.py
+          node --test scripts/local-staging-gateway-contract.test.mjs
           node --test scripts/staff-service-role-access-contract.test.mjs
           node --test scripts/persisted-game-code-contract.test.mjs
           npx playwright install --with-deps chromium
@@ -140,12 +142,19 @@ jobs:
           );
           SQL
 
+      - name: Verify Create Game RPC readiness
+        run: node scripts/local-auth-readiness.mjs
+
       - name: Start same-origin browser gateway
         shell: bash
         run: |
           set -euo pipefail
           eval "$(npx supabase status --workdir backend -o env)"
-          test -n "${ANON_KEY:-}"
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
           python3 scripts/econovaria-local-gateway.py \
             --local-supabase \
             --port 4173 \
@@ -154,17 +163,15 @@ jobs:
           for ATTEMPT in $(seq 1 90); do
             STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               http://127.0.0.1:4173/ || true)"
-            CLASSROOM_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/classroom-api || true)"
-            ADMIN_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/player-api || true)"
+            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/admin-api || true)"
-            if [ "$STATIC_STATUS" = "200" ] && [ "$CLASSROOM_STATUS" = "204" ] && [ "$ADMIN_STATUS" = "204" ]; then
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
+            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
               exit 0
             fi
             sleep 1
