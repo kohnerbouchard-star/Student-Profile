@@ -68,6 +68,7 @@ function employeeRows(business, code) {
     <div><small>${escapeHtml(employee.contractType)}</small><strong>${escapeHtml(employee.role)}</strong><p>${escapeHtml(formatCurrency(employee.wage, code))} per cycle · ${escapeHtml(employee.productivity)}× productivity</p></div>
     <form data-player-form="business-terminate" data-endpoint="businessTerminate" data-employee-id="${escapeHtml(employee.id)}">
       ${hiddenBusinessKey(business)}
+      <input name="employeeKey" type="hidden" value="${escapeHtml(employee.id)}" />
       <label>REASON<input name="reason" minlength="2" maxlength="500" required /></label>
       <button class="player-terminal-compact-button" type="submit">Terminate</button>
     </form>
