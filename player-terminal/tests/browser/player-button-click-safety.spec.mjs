@@ -30,12 +30,17 @@ async function openPreviewRoute(page, route) {
     };
   });
   await page.goto(`/?preview=1#${route}`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".player-terminal-page")).toBeVisible();
+  await expect(page.locator("#playerTerminal")).toHaveAttribute("aria-busy", "false", {
+    timeout: 30_000,
+  });
+  await expect(
+    page.locator(`.player-terminal-page[data-page="${route}"]:not(.player-terminal-route-skeleton)`),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".player-terminal-route-error")).toHaveCount(0);
 }
 
 function contentButtons(page) {
-  return page.locator(".player-terminal-page").getByRole("button");
+  return page.locator(".player-terminal-page:not(.player-terminal-route-skeleton)").getByRole("button");
 }
 
 async function visibleButtonInventory(page) {
