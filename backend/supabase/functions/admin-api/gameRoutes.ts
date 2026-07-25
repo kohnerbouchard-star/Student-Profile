@@ -102,6 +102,15 @@ export async function handleGameRead(
     return json(request, 200, { data: { game: gameDto(game) } });
   }
 
+  if (suffix === "/join-code/reset") {
+    return proxyClassroom(
+      request,
+      context,
+      classroomGamePath(gameId, "/join-code/reset"),
+      "GET",
+    );
+  }
+
   if (suffix === "/dashboard") {
     const players = await loadPlayersEnhanced(context.service, gameId);
     const [attendance, contracts] = await Promise.all([
@@ -651,139 +660,47 @@ export async function handleGameWrite(
     );
   }
 
-  const storeStatusMatch = suffix.match(/^\/store\/items\/([^/]+)\/status$/);
-  if (storeStatusMatch && ["POST", "PATCH", "PUT"].includes(request.method)) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(
-        gameId,
-        `/store/items/${encodeURIComponent(decodeURIComponent(storeStatusMatch[1]))}`,
-      ),
-      "PATCH",
-      body,
-    );
-  }
-
   const storeItemMatch = suffix.match(/^\/store\/items\/([^/]+)$/);
-  if (storeItemMatch && ["PUT", "PATCH", "DELETE"].includes(request.method)) {
+  if (storeItemMatch && ["PATCH", "PUT"].includes(request.method)) {
     return proxyClassroom(
       request,
       context,
-      classroomGamePath(
-        gameId,
-        `/store/items/${encodeURIComponent(decodeURIComponent(storeItemMatch[1]))}`,
-      ),
+      classroomGamePath(gameId, suffix),
       request.method,
     );
   }
 
-  const playerDeleteMatch = suffix.match(/^\/players\/([^/]+)$/);
-  if (playerDeleteMatch && request.method === "DELETE") {
+  if (suffix === "/settings" && ["PATCH", "PUT", "POST"].includes(request.method)) {
     return proxyClassroom(
       request,
       context,
-      classroomGamePath(gameId, suffix),
-      "DELETE",
-    );
-  }
-
-  const settingsResetMatch = suffix.match(/^\/settings\/([^/]+)\/reset$/);
-  if (settingsResetMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, suffix),
-      "POST",
+      classroomGamePath(gameId, "/settings"),
+      "PATCH",
     );
   }
 
   const settingsGroupMatch = suffix.match(/^\/settings\/([^/]+)$/);
-  if (settingsGroupMatch && ["POST", "PUT", "PATCH"].includes(request.method)) {
+  if (settingsGroupMatch && ["PATCH", "PUT", "POST"].includes(request.method)) {
     return proxyClassroom(
       request,
       context,
       classroomGamePath(gameId, "/settings"),
-      request.method,
-      body,
+      "PATCH",
     );
   }
 
-  if (suffix === "/settings" && ["POST", "PUT", "PATCH"].includes(request.method)) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(gameId, "/settings"),
-      request.method,
-    );
-  }
-
-  if (suffix === "/attendance/exports" && request.method === "POST") {
-    const params = new URLSearchParams();
-    const filters = body.filters && typeof body.filters === "object"
-      ? body.filters
-      : body;
-    for (const key of [
-      "date",
-      "period",
-      "startDate",
-      "endDate",
-      "from",
-      "to",
-      "playerId",
-      "status",
-      "search",
-    ]) {
-      const value = filters?.[key];
-      if (value != null && String(value).trim()) {
-        params.set(key, String(value).trim());
-      }
-    }
-    const query = params.toString();
-    const downloadPath = `/api/admin/games/${encodeURIComponent(gameId)}/attendance/export${query ? `?${query}` : ""}`;
-    return json(request, 200, {
-      data: {
-        jobId: crypto.randomUUID(),
-        status: "completed",
-        exportType: "attendance",
-        downloadPath,
-        downloadUrl: downloadPath,
-        fileName: `econovaria-attendance-${gameId}.csv`,
-        createdAt: new Date().toISOString(),
-      },
-    });
-  }
-
-  if (["/logs/exports", "/player-logs/exports"].includes(suffix) && request.method === "POST") {
-    return json(request, 200, {
-      data: {
-        jobId: crypto.randomUUID(),
-        status: "completed",
-        exportType: suffix.startsWith("/player-logs") ? "player_logs" : "admin_logs",
-        downloadPath: `/api/admin/games/${encodeURIComponent(gameId)}/logs/export`,
-        createdAt: new Date().toISOString(),
-      },
-    });
-  }
-
-  const logFlagMatch = suffix.match(/^\/(?:logs|player-logs)\/([^/]+)\/flag$/);
-  if (logFlagMatch && ["POST", "PATCH", "DELETE"].includes(request.method)) {
-    const auditLogId = decodeURIComponent(logFlagMatch[1]);
+  const logFlagMatch = suffix.match(/^\/(?:logs|player-logs)\/([^/]+)\/(flag|unflag)$/);
+  if (logFlagMatch && ["POST", "PATCH"].includes(request.method)) {
+    const flag = logFlagMatch[2] === "flag";
     const result = await updateAuditLogFlag(
       context.service,
       gameId,
-      auditLogId,
       context.staff.id,
-      request,
+      decodeURIComponent(logFlagMatch[1]),
+      flag,
     );
-    return result.found
-      ? json(request, 200, {
-        data: {
-          auditLogId,
-          flag: result.flag,
-          flagged: result.flag?.status === "open",
-        },
-      })
+    return result
+      ? json(request, 200, { data: { updated: true, flag: result } })
       : json(request, 404, {
         code: "audit_log_not_found",
         message: "Audit-log event was not found for this game.",
