@@ -286,9 +286,7 @@ try {
   evidence.logout.menuOpened = true;
   const accountMenu = page.locator("[data-admin-terminal-user-menu]:visible").first();
   await accountMenu.waitFor({ state: "visible", timeout: 10_000 });
-  const logoutTrigger = accountMenu.locator(
-    '[data-econovaria-admin-logout], [data-admin-terminal-action="logout"], [data-admin-terminal-action="sign-out"], button, a',
-  ).filter({ hasText: /^(?:Sign out|Log out|Logout)$/i }).last();
+  const logoutTrigger = accountMenu.getByText("Sign Out", { exact: true }).first();
   await logoutTrigger.waitFor({ state: "visible", timeout: 10_000 });
   await logoutTrigger.click();
   const logoutConfirmation = page.locator("[data-econovaria-admin-logout-confirmation]:visible");
