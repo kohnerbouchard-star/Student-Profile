@@ -173,6 +173,15 @@ async function main() {
     delete from public.audit_log
     where game_session_id in (select id from probe_game_ids);
 
+    delete from public.game_feature_activation_evidence
+    where game_session_id in (select id from probe_game_ids);
+
+    delete from public.store_items
+    where game_session_id in (select id from probe_game_ids);
+
+    delete from public.seed_content_releases
+    where game_session_id in (select id from probe_game_ids);
+
     delete from public.game_creation_provisioning_requests
     where game_session_id in (select id from probe_game_ids);
 
