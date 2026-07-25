@@ -19,8 +19,10 @@ const evidence = {
   gameName: GAME_NAME,
   createdThroughRenderedUi: false,
   adminConsoleRendered: false,
+  logoutControlVisible: false,
   requests: [],
   controls: [],
+  accountMenuControls: [],
   consoleErrors: [],
   pageErrors: [],
 };
@@ -45,6 +47,36 @@ page.on("response", async (response) => {
     status: response.status(),
   });
 });
+
+function visibleControlMetadata(nodes) {
+  return nodes
+    .filter((node) => {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+    })
+    .map((node) => ({
+      tag: node.tagName.toLowerCase(),
+      id: node.id || null,
+      text: String(node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 180),
+      action: node.getAttribute("data-admin-terminal-action") || node.getAttribute("data-action"),
+      disabled: "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true",
+      ariaLabel: node.getAttribute("aria-label"),
+      title: node.getAttribute("title"),
+      logoutOwned: node.hasAttribute("data-econovaria-admin-logout"),
+    }));
+}
+
+function isLogoutControl(control) {
+  const signals = [
+    control.action,
+    control.id,
+    control.text,
+    control.ariaLabel,
+    control.title,
+  ].filter(Boolean).join(" ");
+  return control.logoutOwned || /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i.test(` ${signals} `);
+}
 
 let failure;
 try {
@@ -86,28 +118,25 @@ try {
   evidence.adminConsoleRendered = true;
 
   await page.waitForTimeout(1500);
-  evidence.controls = await page.locator("button, [role='button'], [data-action]").evaluateAll((nodes) => nodes
-    .filter((node) => {
-      const style = window.getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
-      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
-    })
-    .map((node) => ({
-      tag: node.tagName.toLowerCase(),
-      id: node.id || null,
-      text: String(node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 180),
-      action: node.getAttribute("data-action"),
-      disabled: "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true",
-      ariaLabel: node.getAttribute("aria-label"),
-      title: node.getAttribute("title"),
-    })));
+  evidence.controls = await page.locator("button, [role='button'], [data-action], [data-admin-terminal-action]")
+    .evaluateAll(visibleControlMetadata);
 
   const failedRuntimeRequests = evidence.requests.filter((request) => request.status >= 500);
   if (failedRuntimeRequests.length) {
     throw new Error(`Browser observed server failures: ${JSON.stringify(failedRuntimeRequests)}`);
   }
-  if (!evidence.controls.some((control) => /logout/i.test(`${control.text} ${control.ariaLabel || ""}`))) {
-    throw new Error("Rendered Admin console does not expose a visible logout control.");
+
+  const accountTrigger = page.locator("[data-admin-terminal-user]").first();
+  await accountTrigger.waitFor({ state: "visible", timeout: 10_000 });
+  await accountTrigger.click();
+  const accountMenu = page.locator("[data-admin-terminal-user-menu]").first();
+  await accountMenu.waitFor({ state: "visible", timeout: 5_000 });
+  evidence.accountMenuControls = await accountMenu
+    .locator("button, a, [role='button'], [data-action], [data-admin-terminal-action]")
+    .evaluateAll(visibleControlMetadata);
+  evidence.logoutControlVisible = evidence.accountMenuControls.some(isLogoutControl);
+  if (!evidence.logoutControlVisible) {
+    throw new Error(`Rendered Admin account menu does not expose a visible logout control: ${JSON.stringify(evidence.accountMenuControls)}`);
   }
 
   await page.screenshot({ path: `${OUTPUT_DIR}/admin-console.png`, fullPage: true });
@@ -128,6 +157,7 @@ console.log(JSON.stringify({
   ok: true,
   createdThroughRenderedUi: evidence.createdThroughRenderedUi,
   adminConsoleRendered: evidence.adminConsoleRendered,
+  logoutControlVisible: evidence.logoutControlVisible,
   controlCount: evidence.controls.length,
   runtimeRequestCount: evidence.requests.length,
 }));
