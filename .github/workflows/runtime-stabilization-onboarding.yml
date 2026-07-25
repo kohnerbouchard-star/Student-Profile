@@ -1,0 +1,236 @@
+name: Runtime Stabilization Onboarding
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/runtime-stabilization-onboarding.yml"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/20260725100000_repair_arrival_grant_scope_ambiguity_v3.sql"
+      - "backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts"
+      - "admin/classroom-write-fallback.js"
+      - "scripts/admin-economic-write-contract.test.mjs"
+      - "scripts/local-edge-runtime-contract.test.mjs"
+      - "scripts/game-feature-activation-v2-local-acceptance.mjs"
+      - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/full-game-local-e2e-acceptance.mjs"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
+      - "docs/operations/runtime-stabilization-onboarding-v1.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-stabilization-onboarding-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Runtime and request contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Check acceptance script syntax
+        run: |
+          node --check scripts/game-creation-provisioning-local-acceptance.mjs
+          node --check scripts/full-game-local-e2e-acceptance.mjs
+          node --check scripts/game-feature-activation-v2-local-acceptance.mjs
+
+      - name: Verify exact Admin ledger browser contract
+        run: node --test scripts/admin-economic-write-contract.test.mjs
+
+      - name: Verify local Edge runtime contract
+        run: node --test scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Verify Arrival repair migration contract
+        run: deno test --allow-read --no-lock backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts
+
+  local-functions:
+    name: Local Edge Functions reachability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --test scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Start local Supabase with Edge Functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Prove Admin and Classroom functions are reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(npx supabase status --workdir backend -o env)"
+          test -n "${API_URL:-}"
+          test -n "${ANON_KEY:-}"
+          for FUNCTION_NAME in admin-api classroom-api; do
+            BODY="/tmp/${FUNCTION_NAME}-options.body"
+            STATUS="$(curl --silent --show-error --output "$BODY" --write-out '%{http_code}' \
+              --request OPTIONS \
+              --header "apikey: ${ANON_KEY}" \
+              --header "Authorization: Bearer ${ANON_KEY}" \
+              "${API_URL}/functions/v1/${FUNCTION_NAME}")"
+            test "$STATUS" = "204"
+            if grep -Eqi 'name resolution failed|connection refused|upstream unavailable' "$BODY"; then
+              cat "$BODY"
+              exit 1
+            fi
+          done
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  two-player-onboarding:
+    name: Two-Player Arrival onboarding
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Start disposable Supabase Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/runtime-stabilization-database-startup.log
+          : > "$LOG"
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Execute canonical V1 source provisioning
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-creation-provisioning-local-acceptance.log
+
+      - name: Execute connected full-game V2 activation
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/full-game-local-e2e-acceptance.mjs \
+            2>&1 | tee /tmp/full-game-local-e2e-acceptance.log
+
+      - name: Execute two-Player Arrival onboarding and replay
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-feature-activation-v2-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-feature-activation-v2-local-acceptance.log
+
+      - name: Upload sanitized onboarding evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-stabilization-onboarding-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/runtime-stabilization-database-startup.log
+            /tmp/game-creation-provisioning-local-acceptance.log
+            /tmp/game-creation-provisioning-local-acceptance.json
+            /tmp/full-game-local-e2e-acceptance.log
+            /tmp/full-game-local-e2e-acceptance.json
+            /tmp/game-feature-activation-v2-local-acceptance.log
+            /tmp/game-feature-activation-v2-local-acceptance.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
