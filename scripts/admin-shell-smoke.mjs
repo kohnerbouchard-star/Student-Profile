@@ -7,6 +7,7 @@ const checks = [
   ["Keyboard navigation source", "scripts/admin-keyboard-navigation-source-smoke.mjs"],
   ["Explicit mounted event", "scripts/admin-explicit-mounted-event-smoke.mjs"],
   ["Modal accessibility source", "scripts/admin-modal-accessibility-source-smoke.mjs"],
+  ["Viewport scroll ownership", "scripts/admin-scroll-integrity-contract.test.mjs"],
 ];
 
 mkdirSync(diagnosticsDirectory, { recursive: true });
@@ -29,4 +30,4 @@ for (const [label, path] of checks) {
 }
 
 writeFileSync(`${diagnosticsDirectory}/admin-shell-source-contracts.json`, JSON.stringify(report, null, 2));
-console.log("Admin shell identity, keyboard navigation, explicit mount, and modal accessibility source contracts passed.");
+console.log("Admin shell identity, keyboard navigation, explicit mount, modal accessibility, and viewport scroll ownership source contracts passed.");
