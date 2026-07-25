@@ -1,37 +1,58 @@
-import assert from "node:assert/strict";
-import test from "node:test";
 import {
   STAFF_PASSWORD_MAX_LENGTH,
   STAFF_PASSWORD_MIN_LENGTH,
   validateStaffPassword,
 } from "./staffPasswordPolicy.ts";
 
-test("accepts a 15-character mixed password", () => {
-  const result = validateStaffPassword("SecurePass123!x");
-  assert.equal(result.ok, true);
+declare const Deno: {
+  test(name: string, run: () => void | Promise<void>): void;
+};
+
+Deno.test("accepts a 15-character mixed password", () => {
+  assertEquals(validateStaffPassword("SecurePass123!x").ok, true);
 });
 
-test("rejects passwords shorter than 15 characters", () => {
+Deno.test("rejects passwords shorter than 15 characters", () => {
   const result = validateStaffPassword("Short1!Password");
-  assert.equal(result.ok, false);
-  assert.equal(result.code, "password_too_short");
-  assert.equal(STAFF_PASSWORD_MIN_LENGTH, 15);
+  assertEquals(result.ok, false);
+  assertEquals(result.code, "password_too_short");
+  assertEquals(STAFF_PASSWORD_MIN_LENGTH, 15);
 });
 
-test("requires uppercase, lowercase, number, and symbol", () => {
-  assert.equal(validateStaffPassword("lowercase123!only").code, "password_missing_uppercase");
-  assert.equal(validateStaffPassword("UPPERCASE123!ONLY").code, "password_missing_lowercase");
-  assert.equal(validateStaffPassword("NoNumbers!Included").code, "password_missing_number");
-  assert.equal(validateStaffPassword("NoSymbols123Included").code, "password_missing_symbol");
+Deno.test("requires uppercase, lowercase, number, and symbol", () => {
+  assertEquals(
+    validateStaffPassword("lowercase123!only").code,
+    "password_missing_uppercase",
+  );
+  assertEquals(
+    validateStaffPassword("UPPERCASE123!ONLY").code,
+    "password_missing_lowercase",
+  );
+  assertEquals(
+    validateStaffPassword("NoNumbers!Included").code,
+    "password_missing_number",
+  );
+  assertEquals(
+    validateStaffPassword("NoSymbols123Included").code,
+    "password_missing_symbol",
+  );
 });
 
-test("rejects control characters and excessive length", () => {
-  assert.equal(
+Deno.test("rejects control characters and excessive length", () => {
+  assertEquals(
     validateStaffPassword("SecurePass123!\nxx").code,
     "password_contains_control_character",
   );
-  assert.equal(
+  assertEquals(
     validateStaffPassword(`Aa1!${"x".repeat(STAFF_PASSWORD_MAX_LENGTH)}`).code,
     "password_too_long",
   );
 });
+
+function assertEquals(actual: unknown, expected: unknown): void {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+    );
+  }
+}
