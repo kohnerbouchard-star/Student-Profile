@@ -82,7 +82,12 @@ jobs:
           exit 1
 
       - name: Exercise viewport and nested scroll ownership
-        run: node scripts/admin-scroll-integrity-smoke.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p admin-scroll-integrity-artifacts
+          node scripts/admin-scroll-integrity-smoke.mjs \
+            2>&1 | tee admin-scroll-integrity-artifacts/run.log
 
       - name: Upload sanitized scroll evidence
         if: always()
