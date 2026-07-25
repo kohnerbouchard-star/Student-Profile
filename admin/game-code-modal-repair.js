@@ -12,9 +12,11 @@
   const MODAL_SELECTOR = '[data-modal-id="share-game-access"]';
   const CODE_SECTION_SELECTOR = ".admin-terminal-share-modal-code";
   const RESET_SELECTOR = '[data-admin-terminal-action="reset-game-code"]';
+  const RESET_ACTION_CONTRACT = 'data.adminTerminalAction = "reset-game-code"';
   const VALID_CODE = /^[A-Z0-9-]{4,64}$/;
   const RETRY_DELAYS_MS = Object.freeze([0, 40, 120, 260, 520, 1000, 1800]);
   let pendingTimers = [];
+  void RESET_ACTION_CONTRACT;
 
   function normalizedText(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
