@@ -113,11 +113,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL' \
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 2>&1 <<'SQL' \
             | tee /tmp/license-redemption-local-acceptance.log
           create temporary table license_redemption_probe_result (
             result jsonb not null
-          ) on commit drop;
+          );
 
           do $probe$
           declare
