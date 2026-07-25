@@ -22,6 +22,12 @@ test("desktop Admin shell has one right-side page scroller", () => {
   assert.match(css, /\.econovaria-admin-game-session-card[\s\S]*align-self:\s*end/);
 });
 
+test("page skeleton reserves the same right-scrollbar geometry", () => {
+  assert.match(css, /\.admin-terminal-shell-main > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow-y:\s*scroll/);
+  assert.match(css, /\.admin-terminal-shell-main > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-color:\s*transparent transparent/);
+  assert.match(css, /\.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\]::-webkit-scrollbar[\s\S]*width:\s*8px/);
+});
+
 test("Player dossier owns one bounded tab-panel scroller", () => {
   assert.match(css, /\.admin-terminal-player-dossier-v296[\s\S]*max-height:/);
   assert.match(css, /\.admin-terminal-player-dossier-v296[\s\S]*overflow:\s*hidden/);
