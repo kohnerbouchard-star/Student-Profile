@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/pr361-staging-game-provisioning-repair.yml"
       - "scripts/staging-canonical-source-bootstrap.mjs"
+      - "scripts/staging-canonical-source-resume.mjs"
       - "backend/supabase/migrations/**"
       - "backend/supabase/functions/admin-api/**"
       - "backend/supabase/functions/classroom-api/**"
@@ -70,6 +71,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/staging-canonical-source-bootstrap.mjs
+          node --check scripts/staging-canonical-source-resume.mjs
           node --test scripts/admin-economic-write-contract.test.mjs
 
       - name: Install pinned Supabase CLI
@@ -181,11 +183,11 @@ jobs:
             --workdir backend \
             --project-ref "$SUPABASE_PROJECT_REF"
 
-      - name: Activate canonical staging source and probe V2 creation
+      - name: Resume canonical staging source and probe V2 creation
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/staging-canonical-source-bootstrap.mjs
+          node scripts/staging-canonical-source-resume.mjs
 
       - name: Verify hosted function health
         shell: bash
