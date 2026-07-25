@@ -21,6 +21,9 @@ const REQUIRED_READ_TABLES = [
   "inventory_holdings",
   "player_admin_flags",
   "player_admin_settings",
+  "game_session_contracts",
+  "player_contract_progress",
+  "player_attendance_records",
 ];
 
 test("staff authentication and Admin read projections remain service-owned", async () => {
