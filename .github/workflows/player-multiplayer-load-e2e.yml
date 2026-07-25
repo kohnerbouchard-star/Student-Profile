@@ -23,6 +23,7 @@ on:
       - "scripts/player-multiplayer-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
       - "scripts/econovaria-local-gateway.py"
+      - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
@@ -73,7 +74,7 @@ jobs:
           npm ci
           node --check scripts/player-multiplayer-browser-acceptance.mjs
           node --check scripts/player-runtime-load-profile.mjs
-          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
+          python3 -m py_compile scripts/econovaria-local-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
           python3 - <<'PY'
           import importlib.util
@@ -81,17 +82,22 @@ jobs:
           from pathlib import Path
 
           path = Path("scripts/econovaria-local-gateway.py")
-          spec = importlib.util.spec_from_file_location("econovaria_gateway_wrapper", path)
+          spec = importlib.util.spec_from_file_location("econovaria_gateway", path)
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
-          gateway = module.load_gateway()
-          module.install_trusted_client_ip(gateway)
           headers = Message()
+          headers["apikey"] = "sb_publishable_contract_test"
+          headers["authorization"] = "Bearer sb_publishable_contract_test"
           headers["cf-connecting-ip"] = "203.0.113.10"
           headers["x-real-ip"] = "203.0.113.11"
           headers["x-forwarded-for"] = "203.0.113.12"
-          filtered = gateway.filtered_request_headers(headers, "127.0.0.1:54321")
+          filtered = module.filtered_request_headers(
+              headers,
+              "127.0.0.1:54321",
+              browser_publishable_key="sb_publishable_contract_test",
+          )
           assert filtered["x-real-ip"] == "127.0.0.1"
+          assert "authorization" not in {name.lower() for name in filtered}
           assert "cf-connecting-ip" not in {name.lower() for name in filtered}
           assert "x-forwarded-for" not in {name.lower() for name in filtered}
           PY
@@ -176,7 +182,11 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(npx supabase status --workdir backend -o env)"
-          test -n "${ANON_KEY:-}"
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
           python3 scripts/econovaria-local-gateway.py \
             --local-supabase \
             --port 4173 \
@@ -185,17 +195,15 @@ jobs:
           for ATTEMPT in $(seq 1 90); do
             STATIC_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               http://127.0.0.1:4173/ || true)"
-            CLASSROOM_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+            PLAYER_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/classroom-api || true)"
-            ADMIN_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/player-api || true)"
+            BOOTSTRAP_STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
-              http://127.0.0.1:4173/functions/v1/admin-api || true)"
-            if [ "$STATIC_STATUS" = "200" ] && [ "$CLASSROOM_STATUS" = "204" ] && [ "$ADMIN_STATUS" = "204" ]; then
+              --header "apikey: ${PUBLISHABLE_KEY}" \
+              http://127.0.0.1:4173/functions/v1/bootstrap-api || true)"
+            if [ "$STATIC_STATUS" = "200" ] && [ "$PLAYER_STATUS" = "204" ] && [ "$BOOTSTRAP_STATUS" = "204" ]; then
               exit 0
             fi
             sleep 1
