@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 
 const diagnosticsDirectory = "admin-browser-smoke-artifacts/source-contracts";
 const checks = [
-  ["Admin shell identity", "scripts/admin-shell-identity-smoke.mjs"],
+  ["Admin shell identity", "scripts/admin-shell-identity-v2-smoke.mjs"],
   ["Keyboard navigation source", "scripts/admin-keyboard-navigation-source-smoke.mjs"],
   ["Explicit mounted event", "scripts/admin-explicit-mounted-event-smoke.mjs"],
   ["Modal accessibility source", "scripts/admin-modal-accessibility-source-smoke.mjs"],
