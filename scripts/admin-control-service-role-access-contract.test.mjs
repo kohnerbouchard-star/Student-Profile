@@ -7,22 +7,40 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 
-const CONTROL_TABLES = [
+const MUTABLE_CONTROL_TABLES = [
   "attendance_day_locks",
   "player_admin_flags",
   "player_admin_settings",
   "staff_admin_preferences",
 ];
 
-test("Admin control tables remain browser-denied and service-owned", async () => {
+const READ_ONLY_MARKET_TABLES = [
+  "stock_holdings",
+  "stock_orders",
+  "stock_trades",
+  "stock_price_ticks",
+  "stock_market_events",
+];
+
+test("Admin runtime tables remain browser-denied and service-owned", async () => {
   const sql = (await readFile(MIGRATION, "utf8")).toLowerCase();
 
-  for (const table of CONTROL_TABLES) {
+  for (const table of MUTABLE_CONTROL_TABLES) {
     assert.match(sql, new RegExp(`public\\.${table}`));
     assert.match(
       sql,
       new RegExp(
         `has_table_privilege\\('service_role',\\s*'public\\.${table}',\\s*'select,insert,update,delete'\\)`,
+      ),
+    );
+  }
+
+  for (const table of READ_ONLY_MARKET_TABLES) {
+    assert.match(sql, new RegExp(`public\\.${table}`));
+    assert.match(
+      sql,
+      new RegExp(
+        `has_table_privilege\\('service_role',\\s*'public\\.${table}',\\s*'select'\\)`,
       ),
     );
   }
@@ -34,6 +52,10 @@ test("Admin control tables remain browser-denied and service-owned", async () =>
   assert.match(
     sql,
     /grant select, insert, update, delete on table[\s\S]+to service_role/,
+  );
+  assert.match(
+    sql,
+    /grant select on table[\s\S]+to service_role/,
   );
   assert.doesNotMatch(
     sql,
