@@ -3,7 +3,7 @@ begin;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
-create or replace function private.jsonb_object_length(value jsonb)
+create or replace function private.jsonb_object_length(p_value jsonb)
 returns integer
 language sql
 immutable
@@ -11,7 +11,7 @@ strict
 parallel safe
 set search_path = pg_catalog, pg_temp
 as $function$
-  select count(*)::integer from jsonb_object_keys(value);
+  select count(*)::integer from jsonb_object_keys(p_value);
 $function$;
 
 revoke all on function private.jsonb_object_length(jsonb)
