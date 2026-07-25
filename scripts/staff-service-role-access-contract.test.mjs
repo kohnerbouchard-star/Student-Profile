@@ -7,7 +7,7 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 
-test("staff identity persistence is service-only", async () => {
+test("staff authentication persistence remains service-owned", async () => {
   const sql = (await readFile(MIGRATION, "utf8")).toLowerCase();
 
   assert.match(sql, /revoke all on table public\.staff_users from public, anon, authenticated/);
@@ -15,5 +15,6 @@ test("staff identity persistence is service-only", async () => {
     sql,
     /grant select, insert, update, delete on table public\.staff_users to service_role/,
   );
+  assert.match(sql, /grant select on table public\.game_sessions to service_role/);
   assert.doesNotMatch(sql, /grant[^;]+to\s+(?:anon|authenticated)/);
 });
