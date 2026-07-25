@@ -3,11 +3,6 @@ begin;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
-authorization do $$
-begin
-  null;
-end $$;
-
 create or replace function private.jsonb_object_length(value jsonb)
 returns integer
 language sql
