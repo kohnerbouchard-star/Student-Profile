@@ -73,8 +73,14 @@ def install_timeout(module: ModuleType, timeout_seconds: float) -> None:
 
 
 def main() -> int:
+    timeout_seconds = configured_timeout()
     module = load_gateway()
-    install_timeout(module, configured_timeout())
+    install_timeout(module, timeout_seconds)
+    print(
+        "Econovaria gateway upstream request timeout: "
+        f"{timeout_seconds:g} seconds",
+        flush=True,
+    )
     return int(module.main())
 
 
