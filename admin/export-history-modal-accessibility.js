@@ -10,6 +10,12 @@
     '[data-admin-terminal-action="close-export-history"]',
     'button[aria-label*="Close"]',
   ].join(",");
+  const SHARE_SELECTOR = [
+    "[data-admin-terminal-share-button]",
+    '[data-admin-terminal-action="share-game-code"]',
+    '[data-admin-terminal-action="share-current-game"]',
+    "[data-econovaria-share-game]",
+  ].join(",");
 
   let opener = null;
   let timers = [];
@@ -21,6 +27,22 @@
     const style = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+  }
+
+  function preserveShareControlTitle(root = document) {
+    root.querySelectorAll(SHARE_SELECTOR).forEach((control) => {
+      if (!(control instanceof HTMLElement)) return;
+      control.title = "Share game code";
+      if (!control.getAttribute("aria-label")) {
+        control.setAttribute("aria-label", "Share game code");
+      }
+    });
+  }
+
+  function scheduleShareControlTitle() {
+    RETRY_DELAYS_MS.forEach((delay) => {
+      window.setTimeout(() => preserveShareControlTitle(), delay);
+    });
   }
 
   function visibleSurface() {
@@ -102,4 +124,7 @@
     const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
     if (controller?.backdrop === surface) controller.close("close-button");
   }, true);
+
+  document.addEventListener("econovaria:admin-bootstrap-complete", scheduleShareControlTitle);
+  scheduleShareControlTitle();
 })();
