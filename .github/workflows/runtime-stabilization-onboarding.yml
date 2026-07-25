@@ -7,16 +7,19 @@ on:
     paths:
       - ".github/workflows/runtime-stabilization-onboarding.yml"
       - "backend/supabase/config.toml"
+      - "backend/supabase/functions/**"
       - "backend/supabase/migrations/20260725100000_repair_arrival_grant_scope_ambiguity_v3.sql"
       - "backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts"
       - "admin/classroom-write-fallback.js"
       - "scripts/admin-economic-write-contract.test.mjs"
+      - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/local-edge-runtime-contract.test.mjs"
       - "scripts/game-feature-activation-v2-local-acceptance.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/full-game-local-e2e-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "docs/operations/runtime-stabilization-onboarding-v1.md"
+      - "docs/security/auth-boundary-ledger-v1.json"
 
 permissions:
   contents: read
@@ -63,14 +66,14 @@ jobs:
       - name: Verify exact Admin ledger browser contract
         run: node --test scripts/admin-economic-write-contract.test.mjs
 
-      - name: Verify local Edge runtime contract
-        run: node --test scripts/local-edge-runtime-contract.test.mjs
+      - name: Verify application authentication boundaries
+        run: npm run test:auth-boundaries
 
       - name: Verify Arrival repair migration contract
         run: deno test --allow-read --no-lock backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts
 
   local-functions:
-    name: Local Edge Functions reachability
+    name: Local custom-auth Edge Functions reachability
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -91,7 +94,7 @@ jobs:
         run: |
           npm install --global npm@10.9.8
           npm ci
-          node --test scripts/local-edge-runtime-contract.test.mjs
+          npm run test:auth-boundaries
 
       - name: Start local Supabase with Edge Functions
         shell: bash
@@ -100,19 +103,22 @@ jobs:
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           npx supabase start --workdir backend --exclude "$EXCLUDED"
 
-      - name: Prove Admin and Classroom functions are reachable
+      - name: Prove publishable-key functions are reachable
         shell: bash
         run: |
           set -euo pipefail
           eval "$(npx supabase status --workdir backend -o env)"
           test -n "${API_URL:-}"
-          test -n "${ANON_KEY:-}"
-          for FUNCTION_NAME in admin-api classroom-api; do
+          test -n "${PUBLISHABLE_KEY:-}"
+          case "$PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "Local Supabase did not expose a publishable key" >&2; exit 1 ;;
+          esac
+          for FUNCTION_NAME in player-api bootstrap-api stock-market-runner stock-market-read stock-market-seed-copy stock-market-player-read stock-market-trading; do
             BODY="/tmp/${FUNCTION_NAME}-options.body"
             STATUS="$(curl --silent --show-error --output "$BODY" --write-out '%{http_code}' \
               --request OPTIONS \
-              --header "apikey: ${ANON_KEY}" \
-              --header "Authorization: Bearer ${ANON_KEY}" \
+              --header "apikey: ${PUBLISHABLE_KEY}" \
               "${API_URL}/functions/v1/${FUNCTION_NAME}")"
             test "$STATUS" = "204"
             if grep -Eqi 'name resolution failed|connection refused|upstream unavailable' "$BODY"; then
