@@ -109,6 +109,120 @@ jobs:
           node scripts/full-game-local-e2e-acceptance.mjs \
             2>&1 | tee /tmp/full-game-local-e2e-acceptance.log
 
+      - name: Execute first-game license redemption rollback probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 2>&1 <<'SQL' \
+            | tee /tmp/license-redemption-local-acceptance.log
+          create temporary table license_redemption_probe_result (
+            result jsonb not null
+          );
+
+          do $probe$
+          declare
+            v_staff_id uuid;
+            v_code_hash text := encode(
+              extensions.digest(
+                'ECON-LOCAL-LICENSE-ROLLBACK-PROBE',
+                'sha256'
+              ),
+              'hex'
+            );
+            v_redemption record;
+            v_verification jsonb;
+            v_result jsonb;
+          begin
+            select game_row.owner_staff_user_id into v_staff_id
+            from public.seed_content_releases as release_row
+            join public.game_sessions as game_row
+              on game_row.id = release_row.game_session_id
+            where release_row.pack_id = 'econovaria.beta-seed-pack.v1'
+              and release_row.status = 'applied_active'
+              and release_row.target_environment in ('local', 'test', 'staging')
+            order by release_row.applied_at desc nulls last,
+              release_row.created_at desc
+            limit 1;
+
+            if v_staff_id is null then
+              raise exception 'LICENSE_PROBE_STAFF_MISSING';
+            end if;
+
+            begin
+              insert into public.purchase_codes (
+                code_hash, status, max_redemptions, redeemed_count
+              ) values (
+                v_code_hash, 'active', 1, 0
+              );
+
+              select * into v_redemption
+              from public.redeem_purchase_code_for_game(
+                v_staff_id,
+                v_code_hash,
+                '[SYNTHETIC] License Redemption Rollback Probe',
+                '{"difficulty_preset":"moderate","stock_market_window":{"timezone":"Asia/Seoul"}}'::jsonb,
+                '{"source":"local-license-redemption-rollback-probe"}'::jsonb
+              );
+
+              v_verification := public.verify_provisioned_game_v1(
+                v_redemption.game_session_id,
+                v_staff_id
+              );
+
+              v_result := jsonb_build_object(
+                'redeemed', true,
+                'purchaseCodeStatus', v_redemption.purchase_code_status,
+                'redeemedCount', v_redemption.redeemed_count,
+                'maxRedemptions', v_redemption.max_redemptions,
+                'gameReady', coalesce(
+                  (v_verification->>'ready')::boolean,
+                  false
+                ),
+                'counts', v_verification->'counts',
+                'entitlementCreated', exists (
+                  select 1
+                  from public.entitlements as entitlement_row
+                  where entitlement_row.id = v_redemption.entitlement_id
+                    and entitlement_row.status = 'active'
+                )
+              );
+
+              if v_redemption.purchase_code_status <> 'exhausted'
+                or v_redemption.redeemed_count <> 1
+                or coalesce(
+                  (v_verification->>'ready')::boolean,
+                  false
+                ) is not true
+                or coalesce(
+                  (v_verification #>> '{counts,marketAssets}')::integer,
+                  0
+                ) <> 240
+                or coalesce(
+                  (v_verification #>> '{counts,contracts}')::integer,
+                  0
+                ) <> 30
+                or coalesce(
+                  (v_verification #>> '{counts,storeItems}')::integer,
+                  0
+                ) <> 50
+              then
+                raise exception 'LICENSE_REDEMPTION_PROBE_ASSERTION_FAILED';
+              end if;
+
+              raise exception 'LICENSE_REDEMPTION_PROBE_ROLLBACK'
+                using errcode = 'ZX001';
+            exception
+              when sqlstate 'ZX001' then
+                insert into license_redemption_probe_result(result)
+                values (v_result);
+            end;
+          end;
+          $probe$;
+
+          select result::text as rollback_probe
+          from license_redemption_probe_result;
+          SQL
+
       - name: Upload sanitized provisioning evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,6 +234,7 @@ jobs:
             /tmp/game-creation-provisioning-local-acceptance.json
             /tmp/full-game-local-e2e-acceptance.log
             /tmp/full-game-local-e2e-acceptance.json
+            /tmp/license-redemption-local-acceptance.log
           if-no-files-found: warn
           retention-days: 30
 

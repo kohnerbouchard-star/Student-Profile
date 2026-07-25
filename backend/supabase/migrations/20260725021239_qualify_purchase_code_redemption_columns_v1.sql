@@ -1,0 +1,13 @@
+-- Connected-staging history alias.
+--
+-- ECON SIM STAGING received the purchase-code column qualification hotfix
+-- through the managed migration connector under this generated identity before
+-- the canonical repository migration was authored. On a clean replay this
+-- timestamp precedes the migration that creates redeem_purchase_code_for_game,
+-- so this file intentionally performs no DDL.
+--
+-- The durable, correctly ordered implementation is owned by:
+--   20260725093000_qualify_purchase_code_redemption_columns_canonical_v1.sql
+--
+-- Do not rename, delete, or repurpose this identity. It preserves the audited
+-- staging ledger without breaking fresh database construction.
