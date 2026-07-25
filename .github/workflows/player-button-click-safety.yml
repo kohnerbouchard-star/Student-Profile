@@ -34,6 +34,20 @@ jobs:
       - name: Install Player dependencies
         run: npm ci
 
+      - name: Materialize browser-only runtime fixture
+        run: |
+          set -euo pipefail
+          mkdir -p frontend/src/core
+          cp ../frontend/src/core/runtime-config.js frontend/src/core/runtime-config.js
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
