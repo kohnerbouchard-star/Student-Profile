@@ -83,8 +83,11 @@ assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Playe
 assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement.");
 
 assert(gameCodeWiring.includes('const RESET_ACTION = "reset-game-code"'), "Game Code reset action constant is missing.");
-assert(gameCodeWiring.includes("resetButton.dataset.adminTerminalAction = RESET_ACTION"), "Game Code generation does not reuse the authenticated reset action.");
-assert(gameCodeWiring.includes("Generate Code"), "Share Game Code does not expose generation for empty codes.");
+assert(gameCodeWiring.includes("resetButton.dataset.adminTerminalAction = RESET_ACTION"), "Game Code rotation does not reuse the authenticated reset action.");
+assert(gameCodeWiring.includes("readPersistedGameCode"), "Game Code wiring does not retrieve the persisted code.");
+assert(gameCodeWiring.includes('method: "GET"'), "Game Code wiring does not use the authenticated read route.");
+assert(gameCodeWiring.includes("Rotate Code"), "Share Game Code does not expose explicit rotation.");
+assert(!gameCodeWiring.includes("GAME_CODE_CACHE_PREFIX"), "Game Code wiring still treats browser storage as the code authority.");
 assert(!gameCodeWiring.includes("window.fetch ="), "Game Code wiring creates a second transport owner.");
 assert(!gameCodeWiring.includes("MutationObserver"), "Game Code wiring adds an unbounded DOM observer.");
 
@@ -96,4 +99,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell single-owner identity, authenticated request, bounded Player credential, Game Code, and logout contracts passed.");
+console.log("Admin shell single-owner identity, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
