@@ -22,6 +22,7 @@ test("local Supabase starts the Edge Functions runtime used by Admin and Player 
   assert.doesNotMatch(config, /verify_jwt\s*=\s*false/);
 
   const packageJson = JSON.parse(packageSource);
-  assert.match(packageJson.scripts?.["dev:local"] || "", /supabase start --workdir backend/);
-  assert.match(packageJson.scripts?.["dev:local"] || "", /local-staging-gateway\.py --local-supabase/);
+  const localCommand = packageJson.scripts?.["dev:local"] || "";
+  assert.match(localCommand, /supabase start --workdir backend/);
+  assert.match(localCommand, /econovaria-local-gateway\.py --local-supabase/);
 });
