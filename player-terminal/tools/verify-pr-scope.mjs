@@ -28,6 +28,7 @@ const exactAllowed = new Set([
   ".github/workflows/player-response-privacy.yml",
   ".github/workflows/player-button-click-safety.yml",
   ".github/workflows/button-action-coverage.yml",
+  ".github/workflows/admin-browser-e2e.yml",
   ".github/workflows/marketplace-preconvergence.yml",
   ".github/workflows/messaging-isolated-staging.yml",
   ".github/workflows/messaging-final-connected-acceptance.yml",
