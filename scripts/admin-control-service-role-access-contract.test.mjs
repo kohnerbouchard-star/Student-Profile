@@ -30,6 +30,12 @@ const READ_ONLY_REFERENCE_TABLES = [
 test("Admin runtime tables remain browser-denied and service-owned", async () => {
   const sql = (await readFile(MIGRATION, "utf8")).toLowerCase();
 
+  assert.match(sql, /public\.game_sessions/);
+  assert.match(
+    sql,
+    /has_table_privilege\('service_role',\s*'public\.game_sessions',\s*'select,update'\)/,
+  );
+
   for (const table of MUTABLE_CONTROL_TABLES) {
     assert.match(sql, new RegExp(`public\\.${table}`));
     assert.match(
@@ -54,6 +60,7 @@ test("Admin runtime tables remain browser-denied and service-owned", async () =>
     sql,
     /revoke all on table[\s\S]+from public, anon, authenticated/,
   );
+  assert.match(sql, /grant select, update on table public\.game_sessions to service_role/);
   assert.match(
     sql,
     /grant select, insert, update, delete on table[\s\S]+to service_role/,
