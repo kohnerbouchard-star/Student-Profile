@@ -26,6 +26,7 @@ spec = importlib.util.spec_from_file_location("econovaria_local_gateway", path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
+local_anon_key = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature"
 generated = module.runtime_config(
     "eecvbssdvarfcykcfrny",
     "sb_publishable_contract_test",
@@ -33,7 +34,7 @@ generated = module.runtime_config(
 )
 local_generated = module.runtime_config(
     module.LOCAL_DEVELOPMENT_PROJECT_REF,
-    "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
+    local_anon_key,
     4173,
     environment="development",
     supabase_url="http://127.0.0.1:54321",
@@ -47,8 +48,18 @@ assert local_generated.endswith(suffix)
 config = json.loads(generated[len(prefix):-len(suffix)])
 local_config = json.loads(local_generated[len(prefix):-len(suffix)])
 parsed_status = module.parse_supabase_status_env(
-    'API_URL="http://127.0.0.1:54321"\nANON_KEY="anon-contract"\nIGNORED\n'
+    'API_URL="http://127.0.0.1:54321"\n'
+    'PUBLISHABLE_KEY="sb_publishable_contract_test"\n'
+    f'ANON_KEY="{local_anon_key}"\n'
+    'IGNORED\n'
 )
+selected_local_key = module.local_edge_anon_key(parsed_status)
+try:
+    module.local_edge_anon_key({"PUBLISHABLE_KEY": "sb_publishable_contract_test"})
+except SystemExit as error:
+    publishable_only_error = str(error)
+else:
+    publishable_only_error = ""
 
 conditional_headers = Message()
 conditional_headers["If-Modified-Since"] = "Wed, 22 Jul 2026 00:00:00 GMT"
@@ -63,6 +74,8 @@ print(json.dumps({
     "config": config,
     "localConfig": local_config,
     "parsedStatus": parsed_status,
+    "selectedLocalKey": selected_local_key,
+    "publishableOnlyError": publishable_only_error,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
     "remainingConditionals": list(conditional_headers.keys()),
 }))
@@ -119,21 +132,30 @@ test("connected staging keeps Auth on Supabase and Edge APIs on loopback", () =>
   });
 });
 
-test("local Supabase mode binds Auth and Edge APIs to the same-origin gateway", () => {
-  const { localConfig, parsedStatus } = probeGateway();
+test("local Supabase mode selects the anon JWT instead of the opaque publishable key", () => {
+  const {
+    localConfig,
+    parsedStatus,
+    selectedLocalKey,
+    publishableOnlyError,
+  } = probeGateway();
+  const expectedAnonKey =
+    "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature";
 
   assert.deepEqual(localConfig, {
     environment: "development",
     projectRef: "localdevelopment0000",
     supabaseUrl: "http://127.0.0.1:4173",
     apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey:
-      "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
+    supabasePublishableKey: expectedAnonKey,
   });
   assert.deepEqual(parsedStatus, {
     API_URL: "http://127.0.0.1:54321",
-    ANON_KEY: "anon-contract",
+    PUBLISHABLE_KEY: "sb_publishable_contract_test",
+    ANON_KEY: expectedAnonKey,
   });
+  assert.equal(selectedLocalKey, expectedAnonKey);
+  assert.match(publishableOnlyError, /did not return ANON_KEY/);
 });
 
 test("runtime validator accepts local anon keys only under the local development binding", () => {
