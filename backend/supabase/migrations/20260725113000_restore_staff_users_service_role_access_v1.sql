@@ -14,6 +14,8 @@ grant select on table
   public.players,
   public.country_profiles,
   public.stock_holdings,
+  public.stock_trades,
+  public.stock_market_events,
   public.store_items,
   public.store_purchases,
   public.player_country_assignments,
