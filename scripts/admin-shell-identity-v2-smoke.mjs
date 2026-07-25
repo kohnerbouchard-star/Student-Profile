@@ -75,7 +75,10 @@ assert(fallback.includes("requestId") && fallback.includes('phase: "started"'), 
 assert(createAdapter.includes('playerIdentifier: formValue(form, "playerIdentifier")'), "Create Player omits Player ID.");
 assert(createAdapter.includes('accessCode: formValue(form, "accessCode")'), "Create Player omits Access Code.");
 assert(credentialBridge.includes("econovaria:player-access-code-issued"), "One-time Player credential event is missing.");
-assert(!credentialBridge.includes("window.fetch ="), "Credential bridge creates a second transport owner.");
+assert(credentialBridge.includes("const delegatedFetch = window.fetch.bind(window)"), "Credential bridge does not retain the prior transport owner.");
+assert(credentialBridge.includes("function createContext(request, url)"), "Credential bridge has no bounded route predicate.");
+assert(credentialBridge.includes('/^\\/api\\/admin\\/games\\/([^/]+)\\/players$/'), "Credential bridge is not bounded to the create-Player route.");
+assert(credentialBridge.includes("if (!context) return delegatedFetch(request)"), "Credential bridge does not delegate nonmatching requests unchanged.");
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation is missing.");
 assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement.");
 
@@ -92,4 +95,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell single-owner identity, authenticated request, Player credential, Game Code, and logout contracts passed.");
+console.log("Admin shell single-owner identity, authenticated request, bounded Player credential, Game Code, and logout contracts passed.");
