@@ -62,10 +62,15 @@ export type AdminSecurityGuardResult =
     readonly resetAt?: string;
   };
 
+interface AdminSecurityGuardDependencies {
+  readonly consumeRateLimit?: typeof consumeAdminProgressionRateLimit;
+}
+
 export async function guardAdminRequest(
   request: Request,
   context: AdminSecurityContext,
   path: string,
+  dependencies: AdminSecurityGuardDependencies = {},
 ): Promise<AdminSecurityGuardResult> {
   const staffResponse = await context.service
     .from("staff_users")
@@ -75,10 +80,18 @@ export async function guardAdminRequest(
   const staff = staffResponse.data as StaffSecurityRow | null;
 
   if (staffResponse.error) {
-    return failure(503, "staff_security_state_unavailable", "Staff security state is unavailable.");
+    return failure(
+      503,
+      "staff_security_state_unavailable",
+      "Staff security state is unavailable.",
+    );
   }
   if (!staff || staff.status !== "active" || staff.role !== "game_admin") {
-    return failure(403, "staff_account_inactive", "This staff account is not authorized.");
+    return failure(
+      403,
+      "staff_account_inactive",
+      "This staff account is not authorized.",
+    );
   }
 
   const permissionVersion = Number(staff.permission_version);
@@ -102,7 +115,11 @@ export async function guardAdminRequest(
 
   const assuranceLevel = readJwtAssuranceLevel(context.token);
   const isMutation = !["GET", "HEAD"].includes(request.method.toUpperCase());
-  if (isMutation && staff.mfa_required !== false && assuranceLevel !== "aal2") {
+  if (
+    isMutation &&
+    staff.mfa_required !== false &&
+    assuranceLevel !== "aal2"
+  ) {
     return failure(
       403,
       "staff_mfa_required",
@@ -113,7 +130,9 @@ export async function guardAdminRequest(
   const selectedGameId = readOwnedGameScope(path, context.games) ||
     context.games[0]?.id || context.staff.id;
   try {
-    const decision = await consumeAdminProgressionRateLimit(context.service, {
+    const consumeRateLimit = dependencies.consumeRateLimit ??
+      consumeAdminProgressionRateLimit;
+    const decision = await consumeRateLimit(context.service, {
       request,
       gameId: selectedGameId,
       staffUserId: context.staff.id,
@@ -145,7 +164,7 @@ export async function guardAdminRequest(
   };
 }
 
-function normalizedAdminAction(method: string, path: string): string {
+export function normalizedAdminAction(method: string, path: string): string {
   const normalizedPath = String(path || "/")
     .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/giu, ":uuid")
     .replace(/\/[0-9]+(?=\/|$)/gu, "/:id")
