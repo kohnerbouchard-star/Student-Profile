@@ -1,0 +1,218 @@
+{
+  "schemaVersion": "econovaria-auth-boundary-ledger-v1",
+  "status": "migration_in_progress",
+  "principles": {
+    "browserApplicationIdentity": "Supabase sb_publishable_ key in apikey only",
+    "staffIdentity": "Supabase Auth user JWT in Authorization, verified by platform and auth.getUser",
+    "playerIdentity": "Opaque player session token in x-player-session-token, resolved server-side",
+    "bootstrapAuthorization": "One-time purchase code plus rate limit, validation, atomic provisioning, and cleanup",
+    "serverPrivilege": "Supabase sb_secret_ key, with legacy service_role accepted only as a server-side transition fallback",
+    "serverRunnerAuthorization": "Dedicated STOCK_MARKET_RUNNER_SECRET after publishable apikey validation",
+    "prohibited": [
+      "sb_publishable_ key in Authorization",
+      "browser-visible sb_secret_ or service_role key",
+      "browser-visible legacy anon JWT",
+      "client-supplied durable player UUID ownership",
+      "mixed public, player, and staff authorization in one new Edge function"
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "supabase-password-sign-in",
+      "surface": "browser-auth",
+      "endpoint": "/auth/v1/token?grant_type=password",
+      "platformJwtVerification": "not_applicable",
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "email and password exchanged for user JWT",
+      "authorization": "Supabase Auth",
+      "privilegedCredential": "none",
+      "browserStorage": "admin JWT and refresh token in sessionStorage",
+      "implementation": ["frontend/src/core/api.js"],
+      "status": "migrated"
+    },
+    {
+      "id": "supabase-token-refresh",
+      "surface": "browser-auth",
+      "endpoint": "/auth/v1/token?grant_type=refresh_token",
+      "platformJwtVerification": "not_applicable",
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "refresh token",
+      "authorization": "Supabase Auth",
+      "privilegedCredential": "none",
+      "browserStorage": "admin JWT and refresh token in sessionStorage",
+      "implementation": ["admin/auth-session-manager.js"],
+      "status": "compliant"
+    },
+    {
+      "id": "password-recovery-request",
+      "surface": "browser-auth",
+      "endpoint": "/auth/v1/recover",
+      "platformJwtVerification": "not_applicable",
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "email challenge",
+      "authorization": "Supabase Auth recovery policy",
+      "privilegedCredential": "none",
+      "browserStorage": "none",
+      "implementation": ["frontend/src/core/login.js", "frontend/src/core/constants.js"],
+      "status": "guarded_pending_source_cleanup"
+    },
+    {
+      "id": "password-recovery-update",
+      "surface": "browser-auth",
+      "endpoint": "/auth/v1/user",
+      "platformJwtVerification": "not_applicable",
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "recovery JWT in Authorization",
+      "authorization": "Supabase Auth recovery token",
+      "privilegedCredential": "none",
+      "browserStorage": "recovery token kept in page memory only",
+      "implementation": ["auth/reset-password.js"],
+      "status": "compliant"
+    },
+    {
+      "id": "bootstrap-api",
+      "surface": "public-bootstrap",
+      "endpoint": "/functions/v1/bootstrap-api",
+      "platformJwtVerification": false,
+      "applicationIdentity": "apikey validated in function",
+      "principalIdentity": "none before account creation",
+      "authorization": "purchase code, request bounds, rate limit, provisioning preflight",
+      "privilegedCredential": "sb_secret_ server-side after authorization",
+      "browserStorage": "none before success",
+      "implementation": [
+        "backend/supabase/functions/bootstrap-api/index.ts",
+        "backend/src/domains/auth/api/staffSignupHttpHandler.ts"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "staff-api",
+      "surface": "staff-runtime",
+      "endpoint": "/functions/v1/staff-api",
+      "platformJwtVerification": true,
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "Supabase Auth user JWT in Authorization",
+      "authorization": "auth.getUser, staff_users lookup, controlled role and game ownership",
+      "privilegedCredential": "sb_secret_ server-side after authorization",
+      "browserStorage": "JWT and refresh token in sessionStorage",
+      "implementation": [
+        "backend/supabase/functions/staff-api/index.ts",
+        "backend/src/platform/supabase/edgeStaffSession.ts",
+        "frontend/src/core/api.js",
+        "admin/player-access-code-bridge.js"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "admin-api",
+      "surface": "admin-shell",
+      "endpoint": "/functions/v1/admin-api",
+      "platformJwtVerification": true,
+      "applicationIdentity": "apikey: sb_publishable_",
+      "principalIdentity": "Supabase Auth user JWT in Authorization",
+      "authorization": "auth.getUser, staff lookup, game ownership and operation policy",
+      "privilegedCredential": "sb_secret_ server-side after authorization",
+      "browserStorage": "JWT and refresh token in sessionStorage",
+      "implementation": [
+        "backend/supabase/functions/admin-api/index.ts",
+        "backend/supabase/functions/admin-api/common.ts",
+        "admin/admin-auth.js"
+      ],
+      "status": "compliant_with_legacy_internal_proxy"
+    },
+    {
+      "id": "player-api",
+      "surface": "player-runtime",
+      "endpoint": "/functions/v1/player-api",
+      "platformJwtVerification": false,
+      "applicationIdentity": "apikey validated in function",
+      "principalIdentity": "opaque player session token",
+      "authorization": "hashed active session lookup, game scope, player scope, rate limits",
+      "privilegedCredential": "sb_secret_ server-side after player resolution",
+      "browserStorage": "player session token in sessionStorage",
+      "implementation": [
+        "backend/supabase/functions/player-api/index.ts",
+        "player-terminal/host-runtime.js",
+        "player-terminal/src/api/http-transport.js",
+        "frontend/src/core/api.js"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "classroom-api-compatibility",
+      "surface": "legacy-internal-compatibility",
+      "endpoint": "/functions/v1/classroom-api",
+      "platformJwtVerification": true,
+      "applicationIdentity": "not a browser target",
+      "principalIdentity": "real staff JWT for remaining internal Admin compatibility calls",
+      "authorization": "existing route handlers",
+      "privilegedCredential": "server-side only",
+      "browserStorage": "none",
+      "implementation": [
+        "backend/supabase/functions/classroom-api/index.ts",
+        "backend/supabase/functions/admin-api/common.ts"
+      ],
+      "status": "retirement_required"
+    },
+    {
+      "id": "stock-market-runner-family",
+      "surface": "server-to-server",
+      "endpoint": "/functions/v1/stock-market-*",
+      "platformJwtVerification": false,
+      "applicationIdentity": "apikey validated in function",
+      "principalIdentity": "scheduled or controlled server caller",
+      "authorization": "x-stock-market-runner-secret plus method and payload validation",
+      "privilegedCredential": "sb_secret_ inside function",
+      "browserStorage": "prohibited",
+      "implementation": [
+        "backend/supabase/functions/stock-market-runner/index.ts",
+        "backend/supabase/functions/stock-market-read/index.ts",
+        "backend/supabase/functions/stock-market-seed-copy/index.ts",
+        "backend/supabase/functions/stock-market-player-read/index.ts",
+        "backend/supabase/functions/stock-market-trading/index.ts",
+        "scripts/trigger-stock-market-tick.mjs"
+      ],
+      "status": "migrated_static_secret_followup_hmac_recommended"
+    },
+    {
+      "id": "local-gateway",
+      "surface": "local-development",
+      "endpoint": "http://127.0.0.1:4173",
+      "platformJwtVerification": "per_target_function",
+      "applicationIdentity": "PUBLISHABLE_KEY exposed to browser runtime config",
+      "principalIdentity": "real staff JWT or opaque player session preserved",
+      "authorization": "target function policy",
+      "privilegedCredential": "none in gateway",
+      "browserStorage": "no anon, secret, or service role key",
+      "implementation": [
+        "scripts/econovaria-local-gateway.py",
+        "scripts/local-staging-gateway.py",
+        "frontend/src/core/runtime-config.js"
+      ],
+      "status": "migrated_under_launcher_legacy_base_cleanup_pending"
+    }
+  ],
+  "storage": [
+    {
+      "key": "econovaria.admin.auth.v1",
+      "location": "sessionStorage",
+      "contains": ["staff user access JWT", "refresh token", "user summary"],
+      "mustNotContain": ["publishable key", "secret key", "service role key", "purchase code"]
+    },
+    {
+      "key": "econovaria.player.auth.v1",
+      "location": "sessionStorage",
+      "contains": ["opaque player session token", "expiry", "safe player and game summaries"],
+      "mustNotContain": ["publishable key", "secret key", "service role key", "durable ownership UUID"]
+    }
+  ],
+  "releaseGates": [
+    "No browser source may use sb_publishable_ as a bearer token.",
+    "Only declared custom-auth functions may set verify_jwt=false.",
+    "Every verify_jwt=false function must explicitly validate apikey and its route-specific authorization.",
+    "Every staff route must validate a real user JWT with auth.getUser before privileged access.",
+    "Every player route must resolve identity from an active opaque session and reject client ownership fields.",
+    "No secret, service role, legacy anon JWT, purchase code, or raw internal UUID may appear in browser runtime config or logs.",
+    "The legacy classroom-api must receive no direct browser traffic before production cutover."
+  ]
+}
