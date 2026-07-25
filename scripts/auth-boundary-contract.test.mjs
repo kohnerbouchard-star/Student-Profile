@@ -97,6 +97,7 @@ test("Player and Admin callers remain bound to their own identities", async () =
   assert.match(transport, /headers\.apikey\s*=\s*publishableKey/);
   assert.match(transport, /headers\.Authorization\s*=\s*`Bearer \$\{userAccessToken\}`/);
   assert.match(transport, /x-player-session-token/);
+  assert.match(transport, /x-econovaria-device-id/);
 
   assert.match(adapter, /publishableKey/);
   assert.match(adapter, /playerSessionToken/);
@@ -131,9 +132,14 @@ test("server runners use publishable identity plus dedicated authorization", asy
 
 test("local launcher never injects a legacy anon bearer", async () => {
   const launcher = await read("scripts/econovaria-local-gateway.py");
-  assert.match(launcher, /install_publishable_only_contract/);
+  assert.match(launcher, /filtered_request_headers/);
+  assert.match(launcher, /safe_header_pair/);
   assert.match(launcher, /Bearer \{browser_publishable_key\}/);
-  assert.match(launcher, /continue/);
-  assert.doesNotMatch(launcher, /result\["Authorization"\]\s*=\s*f"Bearer \{platform_anon_key\}"/);
+  assert.match(launcher, /FORWARDED_IP_HEADERS/);
+  assert.match(launcher, /[\\r,?\s*"\\n",?\s*"\\x00"]/);
+  assert.doesNotMatch(
+    launcher,
+    /result\["Authorization"\]\s*=\s*f"Bearer \{platform_anon_key\}"/,
+  );
   assert.match(launcher, /x-real-ip/);
 });
