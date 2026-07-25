@@ -6,9 +6,22 @@ begin;
 revoke all on table public.staff_users from public, anon, authenticated;
 grant select, insert, update, delete on table public.staff_users to service_role;
 
--- Staff bootstrap returns only the authenticated administrator's active games.
--- The service client performs the ownership filter after Auth verification.
-grant select on table public.game_sessions to service_role;
+-- Authenticated Admin routes resolve ownership server-side and assemble their
+-- dashboard, Players, Store, inventory, and market projections through the
+-- service client. Grant only the reads those projections require.
+grant select on table
+  public.game_sessions,
+  public.players,
+  public.country_profiles,
+  public.stock_holdings,
+  public.store_items,
+  public.store_purchases,
+  public.player_country_assignments,
+  public.account_balances,
+  public.game_session_stock_assets,
+  public.player_sessions,
+  public.inventory_holdings
+  to service_role;
 
 comment on table public.staff_users is
   'Administrator identity projection. Browser roles have no direct access; service-owned authentication routes receive explicit persistence privileges.';
