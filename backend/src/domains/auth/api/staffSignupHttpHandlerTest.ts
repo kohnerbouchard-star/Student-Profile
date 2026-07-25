@@ -21,7 +21,8 @@ interface MockCalls {
 }
 
 interface MockOptions {
-  readonly rpcError?: { readonly message: string } | null;
+  readonly preflightError?: { readonly message: string } | null;
+  readonly redemptionError?: { readonly message: string } | null;
 }
 
 Deno.test("staff signup validates before creating an Auth user", async () => {
@@ -33,6 +34,7 @@ Deno.test("staff signup validates before creating an Auth user", async () => {
 
   await assertError(response, 400, "password_too_short");
   assertEquals(mock.calls.authCreates, 0);
+  assertEquals(mock.calls.rpcNames.length, 0);
 });
 
 Deno.test("staff signup requires an explicit game timezone before creating Auth", async () => {
@@ -44,9 +46,25 @@ Deno.test("staff signup requires an explicit game timezone before creating Auth"
 
   await assertError(response, 400, "invalid_stock_market_timezone");
   assertEquals(mock.calls.authCreates, 0);
+  assertEquals(mock.calls.rpcNames.length, 0);
 });
 
-Deno.test("staff signup creates the linked account and first game", async () => {
+Deno.test("staff signup fails before Auth creation when canonical provisioning is unavailable", async () => {
+  const mock = createMock({
+    preflightError: { message: "GAME_PROVISIONING_CANONICAL_SOURCE_NOT_FOUND" },
+  });
+  const response = await handleStaffSignupRequest(
+    signupRequest(),
+    mock.dependencies,
+  );
+
+  await assertError(response, 503, "game_provisioning_unavailable");
+  assertEquals(mock.calls.rpcNames.join(","), "game_provisioning_preflight_v1");
+  assertEquals(mock.calls.authCreates, 0);
+  assertEquals(mock.calls.authDeletes.length, 0);
+});
+
+Deno.test("staff signup creates the linked account and fully provisioned first game", async () => {
   const mock = createMock();
   const response = await handleStaffSignupRequest(
     signupRequest(),
@@ -58,14 +76,19 @@ Deno.test("staff signup creates the linked account and first game", async () => 
   assertEquals(body.ok, true);
   assertEquals(body.staff.id, STAFF_USER_ID);
   assertEquals(body.activation.gameSessionId, GAME_SESSION_ID);
+  assertEquals(body.activation.provisioningStatus, "ready");
+  assertEquals(body.activation.packId, "econovaria.beta-seed-pack.v1");
   assertEquals(mock.calls.authCreates, 1);
   assertEquals(mock.calls.authDeletes.length, 0);
-  assertEquals(mock.calls.rpcNames[0], "redeem_purchase_code_for_game");
+  assertEquals(mock.calls.rpcNames.join(","), [
+    "game_provisioning_preflight_v1",
+    "redeem_purchase_code_for_game",
+  ].join(","));
 });
 
 Deno.test("staff signup compensates after license redemption fails", async () => {
   const mock = createMock({
-    rpcError: { message: "PURCHASE_CODE_EXHAUSTED" },
+    redemptionError: { message: "PURCHASE_CODE_EXHAUSTED" },
   });
   const response = await handleStaffSignupRequest(
     signupRequest(),
@@ -73,6 +96,10 @@ Deno.test("staff signup compensates after license redemption fails", async () =>
   );
 
   await assertError(response, 409, "purchase_code_exhausted");
+  assertEquals(mock.calls.rpcNames.join(","), [
+    "game_provisioning_preflight_v1",
+    "redeem_purchase_code_for_game",
+  ].join(","));
   assertEquals(mock.calls.staffDeletes[0], AUTH_USER_ID);
   assertEquals(mock.calls.authDeletes[0], AUTH_USER_ID);
   assertEquals(mock.calls.authDisables.length, 0);
@@ -120,8 +147,20 @@ function createMock(options: MockOptions = {}): {
     from: () => createStaffQuery(calls),
     rpc: async (functionName: string) => {
       calls.rpcNames.push(functionName);
+      if (functionName === "game_provisioning_preflight_v1") {
+        return {
+          data: options.preflightError
+            ? null
+            : {
+              ready: true,
+              packId: "econovaria.beta-seed-pack.v1",
+              packVersion: "1.0.0-beta",
+            },
+          error: options.preflightError ?? null,
+        };
+      }
       return {
-        data: options.rpcError ? null : [{
+        data: options.redemptionError ? null : [{
           game_session_id: GAME_SESSION_ID,
           entitlement_id: "44444444-4444-4444-8444-444444444444",
           purchase_code_id: "55555555-5555-4555-8555-555555555555",
@@ -130,7 +169,7 @@ function createMock(options: MockOptions = {}): {
           max_redemptions: 1,
           activated_at: "2026-06-22T00:00:00.000Z",
         }],
-        error: options.rpcError ?? null,
+        error: options.redemptionError ?? null,
       };
     },
   } as unknown as EdgeSupabaseClient;
