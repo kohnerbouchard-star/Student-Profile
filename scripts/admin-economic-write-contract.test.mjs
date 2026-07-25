@@ -6,7 +6,7 @@ import vm from "node:vm";
 
 const SOURCE = new URL("../admin/classroom-write-fallback.js", import.meta.url);
 
-test("Admin ledger writes normalize form aliases and attach idempotency through the existing write owner", async () => {
+async function createHarness() {
   const captured = [];
   const storage = new Map();
   const document = { dispatchEvent() {} };
@@ -65,6 +65,54 @@ test("Admin ledger writes normalize form aliases and attach idempotency through 
   vm.runInContext(await readFile(SOURCE, "utf8"), context, {
     filename: "admin/classroom-write-fallback.js",
   });
+  return { captured, window };
+}
+
+test("Admin ledger writes flatten the exact nested terminal envelope and preserve idempotency", async () => {
+  const { captured, window } = await createHarness();
+  const idempotencyKey = "ledger.adjustment.browser-envelope.001";
+
+  await window.fetch(
+    "http://127.0.0.1:4173/functions/v1/admin-api/games/game-1/players/player-1/ledger-adjustments",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: "adjust-player-ledger",
+        gameId: "game-1",
+        currentSection: "players",
+        payload: {
+          playerId: "player-1",
+          amount: "25",
+          adjustmentType: "debit",
+          accountType: "cash",
+          currencyCode: "NRC",
+          reason: "Correction",
+          effectiveDate: "2026-07-25",
+        },
+        idempotencyKey,
+        requestId: "request-browser-envelope-001",
+      }),
+    },
+  );
+
+  assert.equal(captured.length, 1);
+  const request = captured[0];
+  const body = await request.json();
+  assert.equal(body.amount, "25");
+  assert.equal(body.adjustmentType, "debit");
+  assert.equal(body.reason, "Correction");
+  assert.equal(body.accountType, "cash");
+  assert.equal(body.currencyCode, "NRC");
+  assert.equal(body.playerId, "player-1");
+  assert.equal(body.effectiveDate, "2026-07-25");
+  assert.equal(body.idempotencyKey, idempotencyKey);
+  assert.equal(request.headers.get("x-idempotency-key"), idempotencyKey);
+  assert.equal(request.headers.get("content-type"), "application/json");
+});
+
+test("Admin ledger writes continue to normalize legacy form aliases", async () => {
+  const { captured, window } = await createHarness();
 
   await window.fetch(
     "http://127.0.0.1:4173/functions/v1/admin-api/games/game-1/players/player-1/ledger-adjustments",

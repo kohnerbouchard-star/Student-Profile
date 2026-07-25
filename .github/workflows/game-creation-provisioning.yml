@@ -6,12 +6,18 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/game-creation-provisioning.yml"
+      - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
       - "backend/src/domains/game-sessions/tests/gameCreationProvisioningMigrationContract.test.ts"
+      - "backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts"
       - "backend/supabase/functions/admin-api/gameProvisioningOperations.ts"
       - "backend/supabase/functions/admin-api/gameProvisioningOperations.test.ts"
+      - "admin/classroom-write-fallback.js"
+      - "scripts/admin-economic-write-contract.test.mjs"
+      - "scripts/local-edge-runtime-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/full-game-local-e2e-acceptance.mjs"
+      - "scripts/game-feature-activation-v2-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/world-staging-provision-lib.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
@@ -25,13 +31,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  provision:
+  local-functions:
+    name: Local Edge Functions reachability
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    timeout-minutes: 30
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@v7
@@ -50,8 +53,77 @@ jobs:
         run: |
           npm install --global npm@10.9.8
           npm ci
+          node --test scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Start local Supabase with Edge Functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
+          npx supabase start --workdir backend --exclude "$EXCLUDED"
+
+      - name: Prove Admin and Classroom functions are reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(npx supabase status --workdir backend -o env)"
+          test -n "${API_URL:-}"
+          test -n "${ANON_KEY:-}"
+          for FUNCTION_NAME in admin-api classroom-api; do
+            BODY="/tmp/${FUNCTION_NAME}-options.body"
+            STATUS="$(curl --silent --show-error --output "$BODY" --write-out '%{http_code}' \
+              --request OPTIONS \
+              --header "apikey: ${ANON_KEY}" \
+              --header "Authorization: Bearer ${ANON_KEY}" \
+              "${API_URL}/functions/v1/${FUNCTION_NAME}")"
+            test "$STATUS" = "204"
+            if grep -Eqi 'name resolution failed|connection refused|upstream unavailable' "$BODY"; then
+              cat "$BODY"
+              exit 1
+            fi
+          done
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
+
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
           node --check scripts/game-creation-provisioning-local-acceptance.mjs
           node --check scripts/full-game-local-e2e-acceptance.mjs
+          node --check scripts/game-feature-activation-v2-local-acceptance.mjs
+          node --test scripts/admin-economic-write-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs
+          deno test --no-lock \
+            backend/src/domains/game-sessions/tests/gameCreationProvisioningMigrationContract.test.ts \
+            backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts
 
       - name: Build exact authorized Crafting pack
         shell: bash
@@ -108,6 +180,13 @@ jobs:
           set -o pipefail
           node scripts/full-game-local-e2e-acceptance.mjs \
             2>&1 | tee /tmp/full-game-local-e2e-acceptance.log
+
+      - name: Execute two-Player Arrival onboarding and replay
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-feature-activation-v2-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-feature-activation-v2-local-acceptance.log
 
       - name: Execute first-game license redemption rollback probe
         shell: bash
@@ -234,6 +313,8 @@ jobs:
             /tmp/game-creation-provisioning-local-acceptance.json
             /tmp/full-game-local-e2e-acceptance.log
             /tmp/full-game-local-e2e-acceptance.json
+            /tmp/game-feature-activation-v2-local-acceptance.log
+            /tmp/game-feature-activation-v2-local-acceptance.json
             /tmp/license-redemption-local-acceptance.log
           if-no-files-found: warn
           retention-days: 30
