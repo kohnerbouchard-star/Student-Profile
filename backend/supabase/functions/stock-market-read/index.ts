@@ -6,6 +6,7 @@ import {
 import {
   handleStockMarketReadRequest,
 } from "../../../src/domains/stocks/api/stockMarketReadHttpHandler.ts";
+import { requirePublishableRequest } from "../_shared/econovariaAuth.ts";
 
 const createSupabaseClient = createClient as unknown as (
   url: string,
@@ -13,11 +14,11 @@ const createSupabaseClient = createClient as unknown as (
   options: unknown,
 ) => EdgeSupabaseClient;
 
-Deno.serve((request) =>
-  handleStockMarketReadRequest(request, {
-    createServiceClient,
-  })
-);
+Deno.serve(async (request) => {
+  const publishableFailure = await requirePublishableRequest(request);
+  if (publishableFailure) return publishableFailure;
+  return handleStockMarketReadRequest(request, { createServiceClient });
+});
 
 function createServiceClient(env: SupabaseEnv): EdgeSupabaseClient {
   return createSupabaseClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
