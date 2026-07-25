@@ -3,11 +3,17 @@ import {
   jsonResponse,
 } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
+  handleStaffLoginRequest,
+} from "../../../src/domains/auth/api/staffLoginHttpHandler.ts";
+import {
   handleStaffSignupRequest,
 } from "../../../src/domains/auth/api/staffSignupHttpHandler.ts";
 import {
   handleLicensingActivationRequest,
 } from "../../../src/domains/licensing/api/licensingActivationHttpHandler.ts";
+import {
+  enforceEdgeRequestBoundary,
+} from "../../../src/security/edgeRequestBoundary.ts";
 import {
   createAuthClient,
   createServiceClient,
@@ -21,10 +27,17 @@ interface EdgeHealthBody {
   readonly status: "ready";
 }
 
-Deno.serve(async (request: Request) => {
-  const url = new URL(request.url);
+Deno.serve(async (incomingRequest: Request) => {
+  if (incomingRequest.method === "OPTIONS") return jsonResponse(204, null);
 
-  if (request.method === "OPTIONS") return jsonResponse(204, null);
+  const boundary = await enforceEdgeRequestBoundary(incomingRequest, {
+    allowedMethods: ["GET", "POST"],
+    maxBodyBytes: 32_768,
+    requireJsonBody: true,
+  });
+  if (!boundary.ok) return boundary.response;
+  const request = boundary.request;
+  const url = new URL(request.url);
 
   if (url.pathname.endsWith("/health")) {
     return jsonResponse<EdgeHealthBody>(200, {
@@ -43,6 +56,13 @@ Deno.serve(async (request: Request) => {
       code: "bootstrap_runtime_not_configured",
       message: "The account bootstrap service is not configured.",
       retryable: false,
+    });
+  }
+
+  if (url.pathname.endsWith("/staff/login")) {
+    return handleStaffLoginRequest(request, {
+      createAuthClient,
+      createServiceClient,
     });
   }
 
