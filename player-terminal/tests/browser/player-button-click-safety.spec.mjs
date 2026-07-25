@@ -19,6 +19,25 @@ const ROUTES = [
   "profile",
 ];
 
+const ROUTE_SURFACES = Object.freeze({
+  dashboard: ".player-terminal-dashboard-page",
+  world: ".player-world-page",
+  news: ".player-terminal-news-page",
+  market: ".player-terminal-market-page",
+  portfolio: ".player-terminal-portfolio-page",
+  business: ".player-terminal-business-page",
+  contracts: ".player-terminal-contracts-page",
+  store: ".player-terminal-store-page",
+  marketplace: ".player-terminal-marketplace-page",
+  inventory: ".player-terminal-inventory-page",
+  crafting: ".player-terminal-crafting-page",
+  banking: ".player-terminal-banking-page",
+  loans: ".player-terminal-loans-page",
+  messages: ".player-terminal-messages-page",
+  progression: ".player-terminal-progression-page",
+  profile: ".player-terminal-profile-page",
+});
+
 const EXCLUDED_ACTIONS = new Set(["logout"]);
 const IDENTITY_ATTRIBUTES = Object.freeze([
   "data-player-action",
@@ -51,6 +70,12 @@ const IDENTITY_ATTRIBUTES = Object.freeze([
   "data-range",
 ]);
 
+function routeRoot(page, route) {
+  const selector = ROUTE_SURFACES[route];
+  if (!selector) throw new Error(`No Player route surface selector is registered for ${route}.`);
+  return page.locator(`${selector}:not(.player-terminal-route-skeleton)`).first();
+}
+
 async function openPreviewRoute(page, route) {
   await page.addInitScript(() => {
     globalThis.ECONOVARIA_PLAYER_TERMINAL_CONFIG = {
@@ -60,25 +85,20 @@ async function openPreviewRoute(page, route) {
     };
   });
   await page.goto(`/?preview=1#${route}`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(new RegExp(`#${route}$`));
   await expect(page.locator("#playerTerminal")).not.toHaveAttribute("aria-busy", "true", {
     timeout: 30_000,
   });
-  await expect(
-    page.locator(".player-terminal-page:not(.player-terminal-route-skeleton)").first(),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(routeRoot(page, route)).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".player-terminal-route-error")).toHaveCount(0);
 }
 
-function pageRoot(page) {
-  return page.locator(".player-terminal-page:not(.player-terminal-route-skeleton)").first();
+function contentButtons(page, route) {
+  return routeRoot(page, route).getByRole("button");
 }
 
-function contentButtons(page) {
-  return pageRoot(page).getByRole("button");
-}
-
-async function visibleButtonInventory(page) {
-  const buttons = contentButtons(page);
+async function visibleButtonInventory(page, route) {
+  const buttons = contentButtons(page, route);
   const inventory = [];
   const signatureCounts = new Map();
   for (let index = 0; index < await buttons.count(); index += 1) {
@@ -129,8 +149,8 @@ function descriptor(route, button) {
   ].filter(Boolean).join(" | ");
 }
 
-function buttonLocator(page, item) {
-  let scope = pageRoot(page);
+function buttonLocator(page, route, item) {
+  let scope = routeRoot(page, route);
   if (item.endpoint) {
     scope = scope.locator(`form[data-endpoint=${JSON.stringify(item.endpoint)}]`);
   }
@@ -146,10 +166,6 @@ function buttonLocator(page, item) {
       exact: true,
     });
   }
-
-  if (item.accessibleName && item.identityAttribute) {
-    candidates = candidates.filter({ hasText: item.text || undefined });
-  }
   return candidates.nth(item.occurrence);
 }
 
@@ -157,7 +173,7 @@ for (const route of ROUTES) {
   test(`${route}: every initially enabled content button is click-safe`, async ({ page }) => {
     test.setTimeout(180_000);
     await openPreviewRoute(page, route);
-    const inventory = await visibleButtonInventory(page);
+    const inventory = await visibleButtonInventory(page, route);
     expect(inventory.length, `${route} rendered no enabled content buttons`).toBeGreaterThan(0);
 
     for (const item of inventory) {
@@ -179,7 +195,7 @@ for (const route of ROUTES) {
       page.on("console", onConsole);
       page.on("response", onResponse);
 
-      const button = buttonLocator(page, item);
+      const button = buttonLocator(page, route, item);
       await expect(button, descriptor(route, item)).toBeVisible();
       await expect(button, descriptor(route, item)).toBeEnabled();
 
