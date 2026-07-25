@@ -39,7 +39,7 @@ try {
     contentType: "application/javascript",
     body: 'window.__ECONOVARIA_RUNTIME_CONFIG__=Object.freeze({environment:"staging",projectRef:"eecvbssdvarfcykcfrny",supabaseUrl:"https://eecvbssdvarfcykcfrny.supabase.co",apiProxyUrl:"http://127.0.0.1:4317",supabasePublishableKey:"sb_publishable_login_surface_test"});',
   }));
-  await page.goto(origin + "/?login-smoke=20260725.2", { waitUntil: "networkidle" });
+  await page.goto(origin + "/?login-smoke=20260725.3", { waitUntil: "networkidle" });
   await page.locator(".login-panel-frame").waitFor({ state: "visible" });
 
   const surface = await page.evaluate(async () => {
@@ -49,6 +49,7 @@ try {
     const playerForm = document.getElementById("playerForm");
     const rect = logo?.getBoundingClientRect();
     const panelStyle = panel ? getComputedStyle(panel) : null;
+    const logoStyle = logo ? getComputedStyle(logo) : null;
     const fallbackStyle = fallback ? getComputedStyle(fallback) : null;
     const logoResponse = await fetch(logo?.getAttribute("src") || "");
     const icon = document.querySelector('link[rel="icon"]');
@@ -62,6 +63,7 @@ try {
       logoNaturalHeight: logo?.naturalHeight || 0,
       logoWidth: rect?.width || 0,
       logoHeight: rect?.height || 0,
+      logoFilter: logoStyle?.filter || "",
       logoStatus: logoResponse.status,
       logoType: logoResponse.headers.get("content-type") || "",
       logoSource: logo?.getAttribute("src") || "",
@@ -83,6 +85,7 @@ try {
   assert.ok(surface.logoNaturalHeight > 0);
   assert.ok(surface.logoWidth >= 240);
   assert.ok(surface.logoHeight >= 80);
+  assert.equal(surface.logoFilter, "none");
   assert.equal(surface.logoStatus, 200);
   assert.match(surface.logoType, /image\/png/);
   assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260725.1");
