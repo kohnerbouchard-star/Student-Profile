@@ -12,6 +12,11 @@ const AUTH_USER_ID = "11111111-1111-4111-8111-111111111111";
 const STAFF_USER_ID = "22222222-2222-4222-8222-222222222222";
 const GAME_SESSION_ID = "33333333-3333-4333-8333-333333333333";
 const SECURE_PASSWORD = "SecurePassword123!";
+const THROTTLE_BUCKETS = [
+  { dimension: "account" as const, keyHash: "a".repeat(64) },
+  { dimension: "device" as const, keyHash: "b".repeat(64) },
+  { dimension: "ip" as const, keyHash: "c".repeat(64) },
+];
 
 interface MockCalls {
   authCreates: number;
@@ -127,12 +132,7 @@ Deno.test("staff signup compensates after license redemption fails", async () =>
   assertEquals(mock.calls.authDisables.length, 0);
 });
 
-function createMock(options: MockOptions = {}): {
-  readonly dependencies: {
-    readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
-  };
-  readonly calls: MockCalls;
-} {
+function createMock(options: MockOptions = {}) {
   const calls: MockCalls = {
     authCreates: 0,
     authCreateInputs: [],
@@ -171,37 +171,6 @@ function createMock(options: MockOptions = {}): {
     from: () => createStaffQuery(calls),
     rpc: async (functionName: string) => {
       calls.rpcNames.push(functionName);
-      if (functionName === "consume_pre_auth_request_rate_limits_v1") {
-        return { data: [{
-          allowed: true,
-          retry_after_seconds: 0,
-          limiting_dimension: null,
-          limit_count: 90,
-          remaining_count: 89,
-          reset_at: "2026-07-26T00:05:00.000Z",
-        }], error: null };
-      }
-      if (functionName === "check_authentication_throttle_v2") {
-        return { data: [{
-          allowed: true,
-          retry_after_seconds: 0,
-          limiting_dimension: null,
-          failure_count: 0,
-          locked_until: null,
-        }], error: null };
-      }
-      if (functionName === "record_authentication_failure_v2") {
-        return { data: [{
-          allowed: false,
-          retry_after_seconds: 0,
-          limiting_dimension: null,
-          failure_count: 1,
-          locked_until: null,
-        }], error: null };
-      }
-      if (functionName === "record_authentication_success_v2") {
-        return { data: null, error: null };
-      }
       if (functionName === "game_provisioning_preflight_v1") {
         return {
           data: options.preflightError
@@ -230,7 +199,33 @@ function createMock(options: MockOptions = {}): {
   } as unknown as EdgeSupabaseClient;
 
   return {
-    dependencies: { createServiceClient: () => client },
+    dependencies: {
+      createServiceClient: (_env: SupabaseEnv) => client,
+      enforceVolumetric: async () => ({
+        allowed: true,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        limit: 90,
+        remaining: 89,
+        resetAt: "2026-07-26T00:05:00.000Z",
+      }),
+      buildThrottleBuckets: async () => THROTTLE_BUCKETS,
+      checkThrottle: async () => ({
+        allowed: true,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        failureCount: 0,
+        lockedUntil: null,
+      }),
+      recordFailure: async () => ({
+        allowed: false,
+        retryAfterSeconds: 0,
+        limitingDimension: null,
+        failureCount: 1,
+        lockedUntil: null,
+      }),
+      recordSuccess: async () => {},
+    },
     calls,
   };
 }
@@ -248,9 +243,7 @@ function createStaffQuery(calls: MockCalls) {
       return query;
     },
     eq: (_column: string, value: unknown) => {
-      if (operation === "delete") {
-        calls.staffDeletes.push(String(value));
-      }
+      if (operation === "delete") calls.staffDeletes.push(String(value));
       return query;
     },
     single: async () => ({
@@ -269,21 +262,15 @@ function createStaffQuery(calls: MockCalls) {
         | ((value: { data: unknown[]; error: null }) => unknown)
         | null,
       onrejected: ((reason: unknown) => unknown) | null,
-    ) =>
-      Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
+    ) => Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
   };
-
   return query;
 }
 
 function signupRequest(overrides: Record<string, unknown> = {}): Request {
   return new Request("https://bootstrap-api.test/staff/signup", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-real-ip": "203.0.113.10",
-      "x-econovaria-device-id": "123e4567-e89b-42d3-a456-426614174000",
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
       email: "teacher@example.com",
       password: SECURE_PASSWORD,
