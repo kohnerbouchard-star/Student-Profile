@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const apiBase = requireEnv("CLASSROOM_API_URL").replace(/\/$/u, "");
-const anonKey = requireEnv("SUPABASE_ANON_KEY");
+const playerApiBase = requireEnv("PLAYER_API_URL").replace(/\/$/u, "");
+const staffApiBase = requireEnv("STAFF_API_URL").replace(/\/$/u, "");
+const publishableKey = requirePublishableKey();
 const confirmation = requireEnv("ECONOVARIA_STAGING_CONFIRMATION");
 if (confirmation !== "I_ACKNOWLEDGE_ISOLATED_STAGING") {
   throw new Error("Refusing to run without isolated-staging confirmation.");
@@ -23,7 +24,7 @@ const canaries = Object.freeze({
 const startedAt = new Date().toISOString();
 const loginResponses = [];
 for (let index = 0; index < 95; index += 1) {
-  loginResponses.push(await request("/players/login", {
+  loginResponses.push(await playerRequest("/players/login", {
     method: "POST",
     headers: spoofedHeaders(index),
     body: JSON.stringify({
@@ -47,7 +48,7 @@ for (const response of loginResponses) assertNoLeak(response);
 const login429 = loginResponses[firstRateLimitedIndex];
 assertRateLimitResponse(login429);
 
-const malformedSession = await request("/players/me", {
+const malformedSession = await playerRequest("/players/me", {
   method: "GET",
   headers: {
     "x-player-session-token": canaries.sessionToken,
@@ -67,7 +68,7 @@ for (const [name, tokenEnv] of [
 ]) {
   const token = process.env[tokenEnv]?.trim();
   if (!token) continue;
-  const response = await request("/players/me", {
+  const response = await playerRequest("/players/me", {
     method: "GET",
     headers: { "x-player-session-token": token },
   });
@@ -82,10 +83,19 @@ const scannerEvidence = await runOptionalScannerBurst();
 const outageEvidence = await runOptionalOutageProbe();
 
 const evidence = {
-  schemaVersion: "econovaria-beta-security-http-probe-v1",
-  target: new URL(apiBase).host,
+  schemaVersion: "econovaria-beta-security-http-probe-v2",
+  targets: {
+    player: new URL(playerApiBase).host,
+    staff: new URL(staffApiBase).host,
+  },
   startedAt,
   completedAt: new Date().toISOString(),
+  authenticationContract: {
+    publishableKeyHeader: "apikey",
+    publishableBearerProhibited: true,
+    playerIdentityHeader: "x-player-session-token",
+    staffIdentity: "Supabase Auth user JWT",
+  },
   loginSharedNat: {
     attempts: loginResponses.length,
     firstRateLimitedAttempt: firstRateLimitedIndex + 1,
@@ -117,7 +127,7 @@ async function runOptionalScannerBurst() {
 
   const responses = [];
   for (let index = 0; index < 305; index += 1) {
-    responses.push(await request(`/games/${encodeURIComponent(gameId)}/attendance/scan`, {
+    responses.push(await staffRequest(`/games/${encodeURIComponent(gameId)}/attendance/scan`, {
       method: "POST",
       headers: { authorization: `Bearer ${staffToken}` },
       body: "{}",
@@ -169,8 +179,12 @@ function spoofedHeaders(index) {
   };
 }
 
-async function request(path, options) {
-  return rawRequest(`${apiBase}${path}`, options);
+async function playerRequest(path, options) {
+  return rawRequest(`${playerApiBase}${path}`, options);
+}
+
+async function staffRequest(path, options) {
+  return rawRequest(`${staffApiBase}${path}`, options);
 }
 
 async function rawRequest(url, options) {
@@ -178,7 +192,7 @@ async function rawRequest(url, options) {
     ...options,
     redirect: "error",
     headers: {
-      apikey: anonKey,
+      apikey: publishableKey,
       "content-type": "application/json",
       "cache-control": "no-store",
       ...(options.headers ?? {}),
@@ -231,6 +245,16 @@ function assertNoLeak(response) {
       throw new Error(`Response leaked sensitive field ${forbiddenName}.`);
     }
   }
+}
+
+function requirePublishableKey() {
+  const value = String(
+    process.env.SUPABASE_PUBLISHABLE_KEY || process.env.PUBLISHABLE_KEY || "",
+  ).trim();
+  if (!value.startsWith("sb_publishable_")) {
+    throw new Error("Missing valid SUPABASE_PUBLISHABLE_KEY.");
+  }
+  return value;
 }
 
 function requireEnv(name) {
