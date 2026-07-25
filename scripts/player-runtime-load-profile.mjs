@@ -260,6 +260,12 @@ function assertReadWaveShape(label, wave, playerCount) {
   if (wave.results.length !== expectedRequests) {
     throw new Error(`${label} executed ${wave.results.length} reads instead of ${expectedRequests}.`);
   }
+  for (let player = 1; player <= playerCount; player += 1) {
+    const paths = wave.results.filter((result) => result.player === player).map((result) => result.path);
+    if (JSON.stringify(paths) !== JSON.stringify(READ_PATHS)) {
+      throw new Error(`${label} Player ${player} did not execute the reviewed read sequence exactly once.`);
+    }
+  }
 }
 
 function assertPhase(label, results, latencyLimitMs) {
