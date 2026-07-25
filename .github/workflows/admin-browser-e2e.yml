@@ -16,7 +16,7 @@ on:
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/admin-browser-reconnaissance.mjs"
-      - "scripts/admin-browser-provisioning-gateway.py"
+      - "scripts/econovaria-local-gateway.py"
       - "scripts/staff-service-role-access-contract.test.mjs"
       - "scripts/persisted-game-code-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -47,7 +47,7 @@ jobs:
       ECONOVARIA_BROWSER_ADMIN_EMAIL: browser.e2e@example.test
       ECONOVARIA_BROWSER_ADMIN_PASSWORD: Browser-E2E-Access-2026!
       ECONOVARIA_BROWSER_GAME_NAME: Browser E2E Economy
-      ECONOVARIA_BROWSER_PROVISIONING_TIMEOUT_SECONDS: "180"
+      ECONOVARIA_GATEWAY_REQUEST_TIMEOUT_SECONDS: "180"
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@v7
@@ -68,7 +68,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/admin-browser-reconnaissance.mjs
-          python3 -m py_compile scripts/admin-browser-provisioning-gateway.py
+          python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/staff-service-role-access-contract.test.mjs
           node --test scripts/persisted-game-code-contract.test.mjs
           npx playwright install --with-deps chromium
@@ -144,13 +144,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/admin-browser-provisioning-gateway.py \
+          python3 scripts/econovaria-local-gateway.py \
             --local-supabase \
             --port 4173 \
             > /tmp/admin-browser-gateway.log 2>&1 &
           echo $! > /tmp/admin-browser-gateway.pid
-          for ATTEMPT in $(seq 1 60); do
-            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+          for ATTEMPT in $(seq 1 90); do
+            STATIC_READY=false
+            CLASSROOM_READY=false
+            ADMIN_READY=false
+            curl --silent --fail --max-time 5 http://127.0.0.1:4173/ >/dev/null && STATIC_READY=true || true
+            curl --silent --fail --max-time 5 http://127.0.0.1:4173/functions/v1/classroom-api/health >/dev/null && CLASSROOM_READY=true || true
+            curl --silent --fail --max-time 5 http://127.0.0.1:4173/functions/v1/admin-api/health >/dev/null && ADMIN_READY=true || true
+            if [ "$STATIC_READY" = true ] && [ "$CLASSROOM_READY" = true ] && [ "$ADMIN_READY" = true ]; then
               exit 0
             fi
             sleep 1
