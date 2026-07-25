@@ -26,15 +26,18 @@ spec = importlib.util.spec_from_file_location("econovaria_local_gateway", path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
+publishable_key = "sb_publishable_contract_test"
 local_anon_key = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature"
+user_jwt = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature"
+
 generated = module.runtime_config(
     "eecvbssdvarfcykcfrny",
-    "sb_publishable_contract_test",
+    publishable_key,
     4173,
 )
 local_generated = module.runtime_config(
     module.LOCAL_DEVELOPMENT_PROJECT_REF,
-    local_anon_key,
+    publishable_key,
     4173,
     environment="development",
     supabase_url="http://127.0.0.1:54321",
@@ -47,19 +50,46 @@ assert local_generated.startswith(prefix)
 assert local_generated.endswith(suffix)
 config = json.loads(generated[len(prefix):-len(suffix)])
 local_config = json.loads(local_generated[len(prefix):-len(suffix)])
+
 parsed_status = module.parse_supabase_status_env(
     'API_URL="http://127.0.0.1:54321"\n'
-    'PUBLISHABLE_KEY="sb_publishable_contract_test"\n'
+    f'PUBLISHABLE_KEY="{publishable_key}"\n'
     f'ANON_KEY="{local_anon_key}"\n'
     'IGNORED\n'
 )
-selected_local_key = module.local_edge_anon_key(parsed_status)
-try:
-    module.local_edge_anon_key({"PUBLISHABLE_KEY": "sb_publishable_contract_test"})
-except SystemExit as error:
-    publishable_only_error = str(error)
-else:
-    publishable_only_error = ""
+selected_publishable, selected_anon = module.local_browser_keys(parsed_status)
+
+public_headers = Message()
+public_headers["apikey"] = publishable_key
+public_forwarded = module.filtered_request_headers(
+    public_headers,
+    "127.0.0.1:54321",
+    path="/functions/v1/classroom-api/staff/signup",
+    browser_publishable_key=publishable_key,
+    platform_anon_key=local_anon_key,
+)
+
+staff_headers = Message()
+staff_headers["apikey"] = publishable_key
+staff_headers["Authorization"] = f"Bearer {user_jwt}"
+staff_forwarded = module.filtered_request_headers(
+    staff_headers,
+    "127.0.0.1:54321",
+    path="/functions/v1/classroom-api/staff/bootstrap",
+    browser_publishable_key=publishable_key,
+    platform_anon_key=local_anon_key,
+)
+
+auth_headers = Message()
+auth_headers["apikey"] = publishable_key
+auth_headers["Authorization"] = f"Bearer {publishable_key}"
+auth_forwarded = module.filtered_request_headers(
+    auth_headers,
+    "127.0.0.1:54321",
+    path="/auth/v1/token?grant_type=password",
+    browser_publishable_key=publishable_key,
+    platform_anon_key=local_anon_key,
+)
 
 conditional_headers = Message()
 conditional_headers["If-Modified-Since"] = "Wed, 22 Jul 2026 00:00:00 GMT"
@@ -74,8 +104,11 @@ print(json.dumps({
     "config": config,
     "localConfig": local_config,
     "parsedStatus": parsed_status,
-    "selectedLocalKey": selected_local_key,
-    "publishableOnlyError": publishable_only_error,
+    "selectedPublishable": selected_publishable,
+    "selectedAnon": selected_anon,
+    "publicForwarded": public_forwarded,
+    "staffForwarded": staff_forwarded,
+    "authForwarded": auth_forwarded,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
     "remainingConditionals": list(conditional_headers.keys()),
 }))
@@ -120,7 +153,7 @@ test("local gateway proxies Edge Functions and Supabase Auth only", () => {
   assert.equal(result.storage, false);
 });
 
-test("connected staging keeps Auth on Supabase and Edge APIs on loopback", () => {
+test("connected staging exposes the publishable key to the browser", () => {
   const { config } = probeGateway();
 
   assert.deepEqual(config, {
@@ -132,56 +165,60 @@ test("connected staging keeps Auth on Supabase and Edge APIs on loopback", () =>
   });
 });
 
-test("local Supabase mode selects the anon JWT instead of the opaque publishable key", () => {
+test("local mode exposes publishable key and retains anon JWT server-side only", () => {
   const {
     localConfig,
     parsedStatus,
-    selectedLocalKey,
-    publishableOnlyError,
+    selectedPublishable,
+    selectedAnon,
   } = probeGateway();
-  const expectedAnonKey =
-    "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature";
 
   assert.deepEqual(localConfig, {
     environment: "development",
     projectRef: "localdevelopment0000",
     supabaseUrl: "http://127.0.0.1:4173",
     apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey: expectedAnonKey,
+    supabasePublishableKey: "sb_publishable_contract_test",
   });
   assert.deepEqual(parsedStatus, {
     API_URL: "http://127.0.0.1:54321",
     PUBLISHABLE_KEY: "sb_publishable_contract_test",
-    ANON_KEY: expectedAnonKey,
+    ANON_KEY:
+      "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiIsInJlZiI6ImxvY2FsaG9zdCJ9.signature",
   });
-  assert.equal(selectedLocalKey, expectedAnonKey);
-  assert.match(publishableOnlyError, /did not return ANON_KEY/);
+  assert.equal(selectedPublishable, "sb_publishable_contract_test");
+  assert.match(selectedAnon, /^eyJ/);
+  assert.notEqual(localConfig.supabasePublishableKey, selectedAnon);
 });
 
-test("runtime validator accepts local anon keys only under the local development binding", () => {
-  const anonKey = legacyAnonKey({ role: "anon", ref: "localhost" });
+test("gateway injects anon JWT only for public verified Edge requests", () => {
+  const { publicForwarded, staffForwarded, authForwarded } = probeGateway();
+
+  assert.equal(publicForwarded.apikey, "sb_publishable_contract_test");
+  assert.match(publicForwarded.Authorization, /^Bearer eyJ/);
+
+  assert.equal(staffForwarded.apikey, "sb_publishable_contract_test");
+  assert.equal(
+    staffForwarded.Authorization,
+    "Bearer eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature",
+  );
+
+  assert.equal(authForwarded.apikey, "sb_publishable_contract_test");
+  assert.equal(authForwarded.Authorization, undefined);
+});
+
+test("runtime validator accepts publishable keys under local development binding", () => {
   const runtime = evaluateRuntimeConfig({
     environment: "development",
     projectRef: "localdevelopment0000",
     supabaseUrl: "http://127.0.0.1:4173",
     apiProxyUrl: "http://127.0.0.1:4173",
-    supabasePublishableKey: anonKey,
+    supabasePublishableKey: "sb_publishable_contract_test",
   });
 
   assert.equal(runtime.environment, "development");
   assert.equal(runtime.supabaseUrl, "http://127.0.0.1:4173");
   assert.equal(runtime.classroomApiUrl, "http://127.0.0.1:4173/functions/v1/classroom-api");
-  assert.throws(
-    () =>
-      evaluateRuntimeConfig({
-        environment: "staging",
-        projectRef: "localdevelopment0000",
-        supabaseUrl: "http://127.0.0.1:4173",
-        apiProxyUrl: "http://127.0.0.1:4173",
-        supabasePublishableKey: anonKey,
-      }),
-    /ECONOVARIA_RUNTIME_CONFIG_INVALID_LOCAL_BINDING/,
-  );
 });
 
 test("remote legacy anon keys retain exact project binding", () => {
@@ -205,10 +242,10 @@ test("connected local static assets cannot reuse stale browser validators", () =
   assert.equal(result.staticHeaders["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0");
   assert.equal(result.staticHeaders.Pragma, "no-cache");
   assert.equal(result.staticHeaders.Expires, "0");
-  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "connected-no-cache-v1");
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "connected-no-cache-v2");
 });
 
-test("Player Terminal sends the canonical backend session contract", async () => {
+test("Player Terminal sends publishable key as apikey without bearer duplication", async () => {
   const originalFetch = globalThis.fetch;
   let request = null;
 
@@ -224,7 +261,7 @@ test("Player Terminal sends the canonical backend session contract", async () =>
     const transport = new HttpTransport({
       apiBaseUrl: "http://127.0.0.1:4173/functions/v1/classroom-api",
       requestTimeoutMs: 1000,
-      accessToken: "sb_publishable_contract_test",
+      publishableKey: "sb_publishable_contract_test",
       playerSessionToken: "ps_contract",
       gameSessionId: "game_contract",
     });
@@ -237,6 +274,8 @@ test("Player Terminal sends the canonical backend session contract", async () =>
       idempotencyKey: "ptr_contract_idempotency",
     });
 
+    assert.equal(request.options.headers.apikey, "sb_publishable_contract_test");
+    assert.equal(request.options.headers.Authorization, undefined);
     assert.equal(request.options.headers["x-player-session-token"], "ps_contract");
     assert.equal(request.options.headers["x-econovaria-game-id"], "game_contract");
     assert.equal(request.options.headers["x-idempotency-key"], "ptr_contract_idempotency");
@@ -245,21 +284,34 @@ test("Player Terminal sends the canonical backend session contract", async () =>
   }
 });
 
-test("Student-Profile adapter supplies platform and Player session headers when configured", () => {
-  const headers = headersFor({
+test("Student-Profile adapter separates publishable and user credentials", () => {
+  const publicHeaders = headersFor({
     endpointKey: "session",
     requestId: "ptr_adapter_contract",
     session: {
-      accessToken: "sb_publishable_contract_test",
+      publishableKey: "sb_publishable_contract_test",
       playerSessionToken: "ps_adapter_contract",
     },
     config: {},
   });
 
-  assert.equal(headers.Authorization, "Bearer sb_publishable_contract_test");
-  assert.equal(headers.apikey, "sb_publishable_contract_test");
-  assert.equal(headers["x-player-session-token"], "ps_adapter_contract");
-  assert.equal(headers["x-request-id"], "ptr_adapter_contract");
+  assert.equal(publicHeaders.Authorization, undefined);
+  assert.equal(publicHeaders.apikey, "sb_publishable_contract_test");
+  assert.equal(publicHeaders["x-player-session-token"], "ps_adapter_contract");
+
+  const userHeaders = headersFor({
+    endpointKey: "session",
+    requestId: "ptr_user_adapter_contract",
+    session: {
+      accessToken: "user.jwt.contract",
+      publishableKey: "sb_publishable_contract_test",
+      playerSessionToken: "ps_adapter_contract",
+    },
+    config: {},
+  });
+
+  assert.equal(userHeaders.Authorization, "Bearer user.jwt.contract");
+  assert.equal(userHeaders.apikey, "sb_publishable_contract_test");
 });
 
 test("Student-Profile adapter retains Player session headers in injected test adapters", () => {
