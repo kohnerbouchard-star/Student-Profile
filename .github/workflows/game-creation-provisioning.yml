@@ -53,7 +53,9 @@ jobs:
         run: |
           npm install --global npm@10.9.8
           npm ci
-          node --test scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Verify local runtime contract
+        run: node --test scripts/local-edge-runtime-contract.test.mjs
 
       - name: Start local Supabase with Edge Functions
         shell: bash
@@ -117,10 +119,21 @@ jobs:
         run: |
           npm install --global npm@10.9.8
           npm ci
+
+      - name: Check acceptance script syntax
+        run: |
           node --check scripts/game-creation-provisioning-local-acceptance.mjs
           node --check scripts/full-game-local-e2e-acceptance.mjs
           node --check scripts/game-feature-activation-v2-local-acceptance.mjs
-          node --test scripts/admin-economic-write-contract.test.mjs scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Verify Admin ledger browser contract
+        run: node --test scripts/admin-economic-write-contract.test.mjs
+
+      - name: Verify local Edge runtime contract
+        run: node --test scripts/local-edge-runtime-contract.test.mjs
+
+      - name: Verify provisioning migration contracts
+        run: |
           deno test --no-lock \
             backend/src/domains/game-sessions/tests/gameCreationProvisioningMigrationContract.test.ts \
             backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts
