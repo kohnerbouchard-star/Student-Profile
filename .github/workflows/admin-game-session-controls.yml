@@ -31,7 +31,7 @@ on:
       - "scripts/admin-logout-account-trigger-source-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke.mjs"
       - "scripts/admin-game-creation-browser-smoke-runner.mjs"
-      - "scripts/admin-shell-identity-smoke.mjs"
+      - "scripts/admin-shell-identity-v2-smoke.mjs"
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "package.json"
 
@@ -75,7 +75,7 @@ jobs:
           node --check scripts/admin-logout-confirmation-browser-smoke.mjs
           node scripts/admin-logout-account-trigger-source-smoke.mjs
           node scripts/admin-game-session-controls-smoke.mjs
-          node scripts/admin-shell-identity-smoke.mjs
+          node scripts/admin-shell-identity-v2-smoke.mjs
           node scripts/admin-v606-full-drift-audit.mjs
           node scripts/supply-chain-secret-scan.mjs
 
