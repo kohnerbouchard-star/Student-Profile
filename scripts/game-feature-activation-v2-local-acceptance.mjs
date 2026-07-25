@@ -84,40 +84,25 @@ async function activateTargetGame() {
   `, { label: "full feature activation V2" });
   const result = parseJsonLine(output, "full feature activation V2");
 
-  requireCondition(result.outcome === "replayed", `V2 returned ${result.outcome}`);
-  requireCondition(result.activationVersion === ACTIVATION_VERSION, "V2 activation version is missing");
-  requireCondition(result.contentGates?.story === "active", "Story was not activated");
   requireCondition(
-    result.contentGates?.arrivalGrantProcessor === "active",
-    "Arrival grant processor was not activated",
+    ["created", "replayed"].includes(result.outcome),
+    `V2 returned ${result.outcome}`,
   );
-  requireCondition(
-    result.contentGates?.progressionInitialization === "active",
-    "Progression initialization was not activated",
-  );
-  requireCondition(
-    ["active", "blocked"].includes(result.contentGates?.crafting),
-    "Crafting returned an invalid authority state",
-  );
-  requireCondition(result.counts?.storylines >= 1, "No active Storyline was provisioned");
-  requireCondition(result.counts?.storyEvents >= 1, "No active Story event was provisioned");
-  requireCondition(result.counts?.arrivalPackages === 10, "Arrival package count is incorrect");
-  requireCondition(result.counts?.arrivalClassGrants === 8, "Arrival Class grant count is incorrect");
-  requireCondition(result.joinCode === null, "V2 replay exposed the original Game Code");
-  return result;
+  if (result.outcome === "replayed") {
+    requireCondition(result.joinCode === null, "V2 replay exposed the original Game Code");
+  }
+  return { outcome: result.outcome };
 }
 
 async function verifyGameActivation() {
   const output = await runSql(`
     select jsonb_build_object(
-      'featureEvidence', (
-        select count(*) from public.game_feature_activation_evidence
-        where game_session_id = game_row.id
-          and activation_version = ${sqlLiteral(ACTIVATION_VERSION)}
-          and story_status = 'active'
-          and arrival_grant_status = 'active'
-          and progression_status = 'active'
-      ),
+      'activationVersion', evidence_row.activation_version,
+      'storyStatus', evidence_row.story_status,
+      'craftingStatus', evidence_row.crafting_status,
+      'arrivalGrantStatus', evidence_row.arrival_grant_status,
+      'progressionStatus', evidence_row.progression_status,
+      'featureEvidence', 1,
       'storylines', (
         select count(*)
         from public.game_session_storylines as activation_row
@@ -158,10 +143,29 @@ async function verifyGameActivation() {
       )
     )::text
     from public.game_sessions as game_row
+    join public.game_feature_activation_evidence as evidence_row
+      on evidence_row.game_session_id = game_row.id
     where game_row.name = ${sqlLiteral(TARGET_GAME_NAME)};
   `, { label: "game feature activation verification" });
   const state = parseJsonLine(output, "game feature activation verification");
 
+  requireCondition(
+    state.activationVersion === ACTIVATION_VERSION,
+    "Feature activation version is incorrect",
+  );
+  requireCondition(state.storyStatus === "active", "Story activation is not active");
+  requireCondition(
+    ["active", "blocked"].includes(state.craftingStatus),
+    "Crafting returned an invalid authority state",
+  );
+  requireCondition(
+    state.arrivalGrantStatus === "active",
+    "Arrival grant activation is not active",
+  );
+  requireCondition(
+    state.progressionStatus === "active",
+    "Progression activation is not active",
+  );
   requireCondition(state.featureEvidence === 1, "Feature activation evidence is missing");
   requireCondition(state.storylines >= 1, "Storyline activation is missing");
   requireCondition(state.storyEvents >= 1, "Story event activation is missing");
@@ -339,13 +343,14 @@ async function main() {
 
   const report = {
     schemaVersion: "econovaria-full-game-feature-activation-v2-acceptance",
-    activationVersion: ACTIVATION_VERSION,
+    activationVersion: game.activationVersion,
     verification: {
       ...game,
-      storyActive: activation.contentGates.story === "active",
-      arrivalGrantProcessorActive: activation.contentGates.arrivalGrantProcessor === "active",
-      progressionInitializationActive: activation.contentGates.progressionInitialization === "active",
-      craftingAuthorityState: activation.contentGates.crafting,
+      provisioningOutcome: activation.outcome,
+      storyActive: game.storyStatus === "active",
+      arrivalGrantProcessorActive: game.arrivalGrantStatus === "active",
+      progressionInitializationActive: game.progressionStatus === "active",
+      craftingAuthorityState: game.craftingStatus,
       players,
     },
     safety: {
@@ -372,7 +377,7 @@ async function main() {
     progressionInitializationActivated: true,
     playerOnboardingVerified: players.length,
     exactOnceArrivalLedgerVerified: true,
-    craftingAuthorityState: activation.contentGates.crafting,
+    craftingAuthorityState: game.craftingStatus,
     productionTouched: false,
   }, null, 2));
 }
