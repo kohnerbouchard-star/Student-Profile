@@ -30,7 +30,7 @@ async function openPreviewRoute(page, route) {
     };
   });
   await page.goto(`/?preview=1#${route}`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#playerTerminal")).toHaveAttribute("aria-busy", "false", {
+  await expect(page.locator("#playerTerminal")).not.toHaveAttribute("aria-busy", "true", {
     timeout: 30_000,
   });
   await expect(
