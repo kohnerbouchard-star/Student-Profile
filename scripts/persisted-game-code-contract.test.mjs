@@ -68,6 +68,10 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
       source,
       /GAME_CODE_CACHE_PREFIX|econovaria\.admin\.game-code\.v1:|readCachedCode|writeCachedCode|cachedCode\(/,
     );
+    assert.doesNotMatch(
+      source,
+      /sessionStorage\.(?:setItem|getItem)\([^\n]*(?:gameCode|joinCode|game-code)/i,
+    );
   }
   assert.match(wiring, /method:\s*"GET"/);
   assert.match(wiring, /readPersistedGameCode/);
