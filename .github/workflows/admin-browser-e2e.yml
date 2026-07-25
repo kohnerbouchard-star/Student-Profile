@@ -15,6 +15,7 @@ on:
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/admin-browser-reconnaissance.mjs"
+      - "scripts/staff-service-role-access-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "scripts/local-staging-gateway.py"
@@ -63,6 +64,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/admin-browser-reconnaissance.mjs
+          node --test scripts/staff-service-role-access-contract.test.mjs
           npx playwright install --with-deps chromium
 
       - name: Build exact authorized Crafting pack
