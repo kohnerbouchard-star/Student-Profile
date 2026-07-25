@@ -39,5 +39,27 @@ enable_signup = false
 [edge_runtime]
 enabled = true
 
+# Authenticated staff requests carry a real Supabase Auth user JWT. The platform
+# gate rejects missing or invalid JWTs before the function performs auth.getUser,
+# staff lookup, role checks, and game ownership checks.
+[functions.staff-api]
+verify_jwt = true
+
+[functions.admin-api]
+verify_jwt = true
+
+# Bootstrap and Player requests use the publishable key only as application
+# identity. Their handlers explicitly validate apikey, then enforce purchase-code
+# or opaque Player-session authorization. Opaque publishable keys are not JWTs.
+[functions.bootstrap-api]
+verify_jwt = false
+
+[functions.player-api]
+verify_jwt = false
+
+# Legacy compatibility surface. Browser runtime must not target this function.
+[functions.classroom-api]
+verify_jwt = true
+
 [analytics]
 enabled = false
