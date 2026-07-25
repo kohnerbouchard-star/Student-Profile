@@ -15,10 +15,7 @@ function getApiRouteUrl(surface, path) {
     admin: constants.ADMIN_API_URL
   };
   const baseUrl = String(baseBySurface[surface] || "").trim().replace(/\/+$/, "");
-
-  if (!baseUrl) {
-    throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
-  }
+  if (!baseUrl) throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
 
   const routePath = String(path || "").startsWith("/")
     ? String(path || "")
@@ -30,11 +27,9 @@ function getSupabaseConfig() {
   const constants = window.Econovaria?.core?.constants || {};
   const supabaseUrl = String(constants.SUPABASE_URL || "").trim().replace(/\/+$/, "");
   const publishableKey = String(constants.SUPABASE_PUBLISHABLE_KEY || "").trim();
-
   if (!supabaseUrl || !publishableKey) {
     throw new Error("[Econovaria API] Supabase frontend configuration is incomplete.");
   }
-
   return { supabaseUrl, publishableKey };
 }
 
@@ -68,11 +63,18 @@ async function readJsonResponse(response) {
   }
 }
 
+function readRetryAfterSeconds(response) {
+  const value = String(response?.headers?.get?.("retry-after") || "").trim();
+  if (!/^\d{1,8}$/.test(value)) return 0;
+  return Math.max(0, Math.min(86400, Number(value)));
+}
+
 function normalizeEdgeRouteError(
   result,
   status,
   fallbackCode = "request_failed",
-  fallbackMessage = "The request could not be completed."
+  fallbackMessage = "The request could not be completed.",
+  retryAfterSeconds = 0
 ) {
   const error = result && typeof result === "object" ? result.error : null;
   return {
@@ -80,6 +82,7 @@ function normalizeEdgeRouteError(
     status,
     code: error?.code || result?.code || fallbackCode,
     message: error?.message || result?.message || fallbackMessage,
+    retryAfterSeconds,
     error: error || null
   };
 }
@@ -94,7 +97,8 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       ok: false,
       status: 401,
       code: "publishable_key_bearer_prohibited",
-      message: "The publishable key cannot be used as a user session token."
+      message: "The publishable key cannot be used as a user session token.",
+      retryAfterSeconds: 0
     };
   }
 
@@ -103,7 +107,6 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       apikey: publishableKey,
       [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId()
     };
-
     if (token) headers.Authorization = `Bearer ${token}`;
     if (playerSessionToken) headers["x-player-session-token"] = playerSessionToken;
 
@@ -112,7 +115,6 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       headers,
       cache: "no-store"
     };
-
     if (options.body !== undefined) {
       headers["Content-Type"] = "application/json";
       requestOptions.body = JSON.stringify(options.body);
@@ -120,7 +122,6 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
 
     const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
-
     if (response.ok && result?.ok === true) {
       return { status: response.status, ...result };
     }
@@ -129,14 +130,16 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
       result,
       response.status,
       options.fallbackCode,
-      options.fallbackMessage
+      options.fallbackMessage,
+      readRetryAfterSeconds(response)
     );
   } catch (_) {
     return {
       ok: false,
       status: 0,
       code: `${options.fallbackCode || "supabase_request"}_network_failed`,
-      message: "Could not connect to Econovaria. Check your connection and try again."
+      message: "Could not connect to Econovaria. Check your connection and try again.",
+      retryAfterSeconds: 0
     };
   }
 }
@@ -160,6 +163,16 @@ function callPlayerBootstrapApi(sessionToken) {
     playerSessionToken: sessionToken,
     fallbackCode: "player_session_bootstrap_failed",
     fallbackMessage: "Your player session could not be loaded."
+  });
+}
+
+function callPlayerLogoutApi(sessionToken) {
+  return callSupabaseJsonRoute("player", "/players/me/logout", {
+    method: "POST",
+    playerSessionToken: sessionToken,
+    body: {},
+    fallbackCode: "player_logout_failed",
+    fallbackMessage: "The Player session could not be revoked."
   });
 }
 
@@ -206,9 +219,7 @@ function callStaffSignupApi(input) {
       purchaseCode: String(input?.purchaseCode || "").trim(),
       gameName: String(input?.gameName || "").trim(),
       difficultyPreset: String(input?.difficultyPreset || "").trim(),
-      stockMarketWindow: {
-        timezone: String(input?.timeZone || "").trim()
-      }
+      stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
     },
     fallbackCode: "staff_signup_failed",
     fallbackMessage: "Staff account signup failed."
@@ -223,9 +234,7 @@ function callLicensingActivationApi(bearerToken, input) {
       purchaseCode: String(input?.licenseCode || "").trim(),
       gameName: String(input?.sessionName || "").trim(),
       difficultyPreset: String(input?.difficulty || "").trim(),
-      stockMarketWindow: {
-        timezone: String(input?.timeZone || "").trim()
-      }
+      stockMarketWindow: { timezone: String(input?.timeZone || "").trim() }
     },
     fallbackCode: "licensing_activation_failed",
     fallbackMessage: "The game could not be created."
@@ -244,6 +253,7 @@ function callStaffBootstrapApi(bearerToken) {
 Object.assign(window.Econovaria.core.api, {
   callPlayerLoginApi,
   callPlayerBootstrapApi,
+  callPlayerLogoutApi,
   callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
   callStaffSignupApi,
@@ -255,6 +265,7 @@ Object.assign(window.Econovaria.core.api, {
 Object.assign(window.Econovaria.core, {
   callPlayerLoginApi,
   callPlayerBootstrapApi,
+  callPlayerLogoutApi,
   callPlayerGameDashboardApi,
   callSupabasePasswordSignIn,
   callStaffSignupApi,
