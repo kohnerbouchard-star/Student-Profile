@@ -10,14 +10,14 @@ const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 function environment(overrides = {}) {
   return {
     SUPABASE_URL: "https://example.supabase.co",
-    SUPABASE_ANON_KEY: "anon-key",
+    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_market_contract",
     STOCK_MARKET_RUNNER_SECRET: "runner-secret",
     STOCK_MARKET_GAME_SESSION_ID: GAME_SESSION_ID,
     ...overrides,
   };
 }
 
-test("builds one secret-protected, game-scoped runner request", () => {
+test("builds one publishable-identified, secret-protected runner request", () => {
   const request = buildStockMarketTickRequest(environment({
     STOCK_MARKET_TICK_INDEX: "42",
     STOCK_MARKET_TICK_SEED: "staging-minute-42",
@@ -27,7 +27,8 @@ test("builds one secret-protected, game-scoped runner request", () => {
     request.url,
     "https://example.supabase.co/functions/v1/stock-market-runner",
   );
-  assert.equal(request.headers.authorization, "Bearer anon-key");
+  assert.equal(request.headers.apikey, "sb_publishable_market_contract");
+  assert.equal(request.headers.authorization, undefined);
   assert.equal(request.headers["x-stock-market-runner-secret"], "runner-secret");
   assert.deepEqual(request.body, {
     action: "run_tick",
@@ -40,7 +41,8 @@ test("builds one secret-protected, game-scoped runner request", () => {
 test("rejects missing secrets and invalid game scope before network activity", async () => {
   for (const overrides of [
     { STOCK_MARKET_RUNNER_SECRET: "" },
-    { SUPABASE_ANON_KEY: "" },
+    { SUPABASE_PUBLISHABLE_KEY: "" },
+    { SUPABASE_PUBLISHABLE_KEY: "legacy-anon-key" },
     { STOCK_MARKET_GAME_SESSION_ID: "not-a-uuid" },
   ]) {
     let called = false;
@@ -62,6 +64,8 @@ test("returns bounded tick evidence without exposing configured secrets", async 
     environment: environment(),
     fetchImpl: async (_url, options) => {
       assert.equal(options.method, "POST");
+      assert.equal(options.headers.apikey, "sb_publishable_market_contract");
+      assert.equal(options.headers.authorization, undefined);
       assert.equal(
         options.headers["x-stock-market-runner-secret"],
         "runner-secret",
@@ -89,7 +93,7 @@ test("returns bounded tick evidence without exposing configured secrets", async 
     generatedAt: "2026-07-20T03:30:00.000Z",
   });
   assert.equal(JSON.stringify(result).includes("runner-secret"), false);
-  assert.equal(JSON.stringify(result).includes("anon-key"), false);
+  assert.equal(JSON.stringify(result).includes("sb_publishable_market_contract"), false);
 });
 
 test("preserves closed-market and duplicate-tick failures as machine-readable errors", async () => {
