@@ -1,0 +1,157 @@
+name: Runtime Stabilization and Two-Player Onboarding
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/runtime-stabilization-onboarding.yml"
+      - "backend/supabase/config.toml"
+      - "backend/supabase/migrations/20260725110000_repair_arrival_grant_scope_ambiguity_v3.sql"
+      - "admin/classroom-write-fallback.js"
+      - "scripts/admin-economic-nested-json-contract.test.mjs"
+      - "scripts/runtime-stabilization-contract.test.mjs"
+      - "scripts/game-feature-activation-v2-local-acceptance.mjs"
+      - "scripts/game-creation-provisioning-local-acceptance.mjs"
+      - "scripts/full-game-local-e2e-acceptance.mjs"
+      - "scripts/build-physical-economy-runtime-pack.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-stabilization-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Validate stabilization contracts
+        run: |
+          node --test scripts/runtime-stabilization-contract.test.mjs
+          node --test scripts/admin-economic-nested-json-contract.test.mjs
+          node --check scripts/game-feature-activation-v2-local-acceptance.mjs
+          git diff --check origin/main...HEAD
+
+  two-player-onboarding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Build exact authorized Crafting pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const contract = JSON.parse(await readFile(
+            "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json",
+            "utf8",
+          ));
+          process.stdout.write(contract.acceptedImplementationSourceSha);
+          NODE
+          )"
+          node scripts/build-physical-economy-runtime-pack.mjs \
+            --source-root . \
+            --source-commit "$SOURCE_COMMIT" \
+            --approved-source-commit "$SOURCE_COMMIT" \
+            --output "$PHYSICAL_ECONOMY_PACK"
+
+      - name: Start disposable Supabase Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/runtime-stabilization-startup.log
+          : > "$LOG"
+          EXCLUDED="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for ATTEMPT in 1 2 3; do
+            set +e
+            npx supabase start --workdir backend --exclude "$EXCLUDED" 2>&1 | tee -a "$LOG"
+            STATUS=${PIPESTATUS[0]}
+            set -e
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
+            sleep $((ATTEMPT * 10))
+          done
+          exit "$STATUS"
+
+      - name: Rebuild database from zero
+        run: npx supabase db reset --workdir backend --local
+
+      - name: Provision canonical source and full game
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-creation-provisioning-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-creation-provisioning-local-acceptance.log
+          node scripts/full-game-local-e2e-acceptance.mjs \
+            2>&1 | tee /tmp/full-game-local-e2e-acceptance.log
+
+      - name: Execute exact two-Player Arrival onboarding
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/game-feature-activation-v2-local-acceptance.mjs \
+            2>&1 | tee /tmp/game-feature-activation-v2-local-acceptance.log
+
+      - name: Upload sanitized acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-stabilization-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/runtime-stabilization-startup.log
+            /tmp/game-creation-provisioning-local-acceptance.log
+            /tmp/game-creation-provisioning-local-acceptance.json
+            /tmp/full-game-local-e2e-acceptance.log
+            /tmp/full-game-local-e2e-acceptance.json
+            /tmp/game-feature-activation-v2-local-acceptance.log
+            /tmp/game-feature-activation-v2-local-acceptance.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true
