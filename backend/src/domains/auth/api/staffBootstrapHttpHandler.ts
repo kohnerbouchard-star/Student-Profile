@@ -26,6 +26,9 @@ interface StaffBootstrapBody {
     readonly id: string;
     readonly name: string;
     readonly status: string;
+    readonly joinCode: string | null;
+    readonly gameCode: string | null;
+    readonly joinCodeStatus: string;
     readonly createdAt: string;
     readonly updatedAt: string;
   }[];
@@ -35,6 +38,8 @@ interface StaffBootstrapSessionRow {
   readonly id: string;
   readonly name: string;
   readonly status: string;
+  readonly game_join_code: string | null;
+  readonly game_join_code_status: string;
   readonly created_at: string;
   readonly updated_at: string;
 }
@@ -84,7 +89,7 @@ export async function handleStaffBootstrapRequest(
 
     const sessionsResponse = await serviceClient
       .from("game_sessions")
-      .select("id,name,status,created_at,updated_at")
+      .select("id,name,status,game_join_code,game_join_code_status,created_at,updated_at")
       .eq("owner_staff_user_id", staff.id)
       .eq("status", "active")
       .order("created_at", { ascending: false });
@@ -109,6 +114,9 @@ export async function handleStaffBootstrapRequest(
         id: session.id,
         name: session.name,
         status: session.status,
+        joinCode: session.game_join_code,
+        gameCode: session.game_join_code,
+        joinCodeStatus: session.game_join_code_status,
         createdAt: session.created_at,
         updatedAt: session.updated_at,
       })),
