@@ -14,6 +14,8 @@ test("desktop Admin shell has one right-side page scroller", () => {
   assert.match(index, /admin-scroll-integrity\.css/);
   assert.match(css, /@media \(min-width: 1101px\)/);
   assert.match(css, /html,[\s\S]*body[\s\S]*overflow:\s*hidden/);
+  assert.match(css, /body\s*\{[\s\S]*box-sizing:\s*border-box[\s\S]*height:\s*100dvh/);
+  assert.match(css, /#adminPreview\s*\{[\s\S]*height:\s*calc\(100dvh - 48px\)[\s\S]*max-height:\s*calc\(100dvh - 48px\)/);
   assert.match(css, /\.admin-terminal-left-menu[\s\S]*overflow:\s*hidden/);
   assert.match(css, /\.admin-terminal-shell-main[\s\S]*overflow-y:\s*auto/);
   assert.match(css, /\.admin-terminal-shell-main[\s\S]*overscroll-behavior-y:\s*contain/);
