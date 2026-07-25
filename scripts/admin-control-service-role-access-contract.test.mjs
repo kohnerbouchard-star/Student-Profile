@@ -14,10 +14,12 @@ const MUTABLE_CONTROL_TABLES = [
   "staff_admin_preferences",
   "game_settings",
   "game_difficulty_policy_settings",
+  "audit_log_flags",
 ];
 
 const READ_ONLY_REFERENCE_TABLES = [
   "difficulty_policy_profiles",
+  "audit_log",
   "stock_holdings",
   "stock_orders",
   "stock_trades",
