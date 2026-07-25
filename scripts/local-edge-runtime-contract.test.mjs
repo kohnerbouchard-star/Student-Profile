@@ -39,9 +39,11 @@ test("local Supabase starts the declared split Edge Functions runtime", async ()
     functionSources[name] = await readFile(new URL(`${name}/index.ts`, FUNCTION_ROOT), "utf8");
   }
 
-  const falseSections = [...config.matchAll(
-    /\[functions\.([^\]]+)\][\s\S]*?verify_jwt\s*=\s*false(?=\s|$)/g,
-  )].map((match) => match[1]).sort();
+  const declaredNames = [...config.matchAll(/\[functions\.([^\]]+)\]/g)]
+    .map((match) => match[1]);
+  const falseSections = declaredNames
+    .filter((name) => /verify_jwt\s*=\s*false/.test(section(config, `functions.${name}`)))
+    .sort();
   const expectedFalse = Object.entries(FUNCTION_POLICIES)
     .filter(([, value]) => value === false)
     .map(([name]) => name)
@@ -69,5 +71,6 @@ test("local Supabase starts the declared split Edge Functions runtime", async ()
   const packageJson = JSON.parse(packageSource);
   const localCommand = packageJson.scripts?.["dev:local"] || "";
   assert.match(localCommand, /supabase start --workdir backend/);
+  assert.match(localCommand, /local-auth-readiness\.mjs/);
   assert.match(localCommand, /econovaria-local-gateway\.py --local-supabase/);
 });
