@@ -62,20 +62,14 @@ async function callSupabaseJsonRoute(path, options = {}) {
   const token = normalizeBearerToken(options.token);
   const playerSessionToken = normalizeBearerToken(options.playerSessionToken);
 
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      code: options.fallbackCode || "missing_auth_token",
-      message: "A valid session token is required."
-    };
-  }
-
   try {
     const headers = {
-      Authorization: `Bearer ${token}`,
       apikey: publishableKey
     };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     if (playerSessionToken) {
       headers["x-player-session-token"] = playerSessionToken;
@@ -116,10 +110,8 @@ async function callSupabaseJsonRoute(path, options = {}) {
 }
 
 function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
-  const { publishableKey } = getSupabaseConfig();
   return callSupabaseJsonRoute("/players/login", {
     method: "POST",
-    token: publishableKey,
     body: {
       gameJoinCode: String(gameCode || "").trim(),
       playerIdentifier: String(playerIdentifier || "").trim(),
@@ -131,10 +123,8 @@ function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
 }
 
 function callPlayerBootstrapApi(sessionToken) {
-  const { publishableKey } = getSupabaseConfig();
   return callSupabaseJsonRoute("/players/me", {
     method: "GET",
-    token: publishableKey,
     playerSessionToken: sessionToken,
     fallbackCode: "player_session_bootstrap_failed",
     fallbackMessage: "Your player session could not be loaded."
@@ -142,10 +132,8 @@ function callPlayerBootstrapApi(sessionToken) {
 }
 
 function callPlayerGameDashboardApi(sessionToken) {
-  const { publishableKey } = getSupabaseConfig();
   return callSupabaseJsonRoute("/players/me/game/dashboard", {
     method: "GET",
-    token: publishableKey,
     playerSessionToken: sessionToken,
     fallbackCode: "player_game_dashboard_failed",
     fallbackMessage: "Your game dashboard could not be loaded."
@@ -160,8 +148,7 @@ async function callSupabasePasswordSignIn(email, password) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: publishableKey,
-        Authorization: `Bearer ${publishableKey}`
+        apikey: publishableKey
       },
       body: JSON.stringify({
         email: String(email || "").trim(),
@@ -199,10 +186,8 @@ async function callSupabasePasswordSignIn(email, password) {
 }
 
 function callStaffSignupApi(input) {
-  const { publishableKey } = getSupabaseConfig();
   return callSupabaseJsonRoute("/staff/signup", {
     method: "POST",
-    token: publishableKey,
     body: {
       email: String(input?.email || "").trim(),
       password: String(input?.password || ""),
