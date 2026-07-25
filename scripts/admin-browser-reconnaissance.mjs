@@ -148,17 +148,23 @@ try {
   evidence.shareGameCode.opened = true;
 
   const resetCode = shareModal.locator('[data-admin-terminal-action="reset-game-code"]');
-  if (await resetCode.isVisible()) {
-    const responsePromise = page.waitForResponse(
-      (response) => response.url().includes("/join-code/reset") && response.request().method() === "POST",
-      { timeout: 60_000 },
-    );
-    await resetCode.click();
-    const response = await responsePromise;
-    if (!response.ok()) throw new Error(`Generate Game Code returned ${response.status()}`);
-    evidence.shareGameCode.generated = true;
-  }
-  const renderedCode = String(await shareModal.locator(".admin-terminal-share-modal-code strong").textContent() || "").trim();
+  await resetCode.waitFor({ state: "visible", timeout: 10_000 });
+  const responsePromise = page.waitForResponse(
+    (response) => response.url().includes("/join-code/reset") && response.request().method() === "POST",
+    { timeout: 60_000 },
+  );
+  await resetCode.click();
+  const response = await responsePromise;
+  if (!response.ok()) throw new Error(`Generate Game Code returned ${response.status()}`);
+  evidence.shareGameCode.generated = true;
+
+  const codeLabel = shareModal.locator(".admin-terminal-share-modal-code strong");
+  await codeLabel.waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForFunction(() => {
+    const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
+    return /^[A-Z0-9-]{4,64}$/.test(value);
+  }, undefined, { timeout: 10_000 });
+  const renderedCode = String(await codeLabel.textContent() || "").trim();
   if (!/^[A-Z0-9-]{4,64}$/.test(renderedCode)) throw new Error("Share Game Code modal did not display a generated code.");
   evidence.shareGameCode.displayed = true;
   assertNoFailedRequests("Share Game Code", shareRequestIndex);
@@ -180,8 +186,8 @@ try {
 
   const createPlayerRequestIndex = evidence.requests.length;
   const createPlayerResponsePromise = page.waitForResponse(
-    (response) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(response.url()).pathname) &&
-      response.request().method() === "POST",
+    (candidate) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(candidate.url()).pathname) &&
+      candidate.request().method() === "POST",
     { timeout: 120_000 },
   );
   await playerForm.locator('[data-admin-terminal-action="create-player"], button[type="submit"]').first().click();
