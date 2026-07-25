@@ -13,14 +13,13 @@ const PLAYER_NAME = "Browser E2E Player";
 const PLAYER_IDENTIFIER = "BROWSER-PLAYER-001";
 const PLAYER_ACCESS_CODE = "BROWSER-ACCESS-001";
 const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+const CODE_PATTERN = /ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  baseUrl: BASE_URL,
-  adminEmail: ADMIN_EMAIL,
-  gameName: GAME_NAME,
   createdThroughRenderedUi: false,
   adminConsoleRendered: false,
   navigation: [],
@@ -28,6 +27,7 @@ const evidence = {
     opened: false,
     automatic: false,
     displayed: false,
+    formatValid: false,
     persistedAfterReload: false,
     rotated: false,
     rotationPersistedAfterReload: false,
@@ -35,8 +35,6 @@ const evidence = {
   playerCreation: { opened: false, created: false, persistedAfterReload: false },
   logout: { menuOpened: false, confirmationOpened: false, redirected: false },
   requests: [],
-  controls: [],
-  playerControls: [],
   consoleErrors: [],
   pageErrors: [],
 };
@@ -48,17 +46,24 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
+function sanitize(value) {
+  return String(value || "")
+    .replaceAll(BASE_URL, "[local-gateway]")
+    .replace(UUID_PATTERN, "[uuid-redacted]")
+    .replace(CODE_PATTERN, "[game-code-redacted]");
+}
+
 page.on("dialog", (dialog) => void dialog.accept());
 page.on("console", (message) => {
-  if (message.type() === "error") evidence.consoleErrors.push(message.text());
+  if (message.type() === "error") evidence.consoleErrors.push(sanitize(message.text()));
 });
-page.on("pageerror", (error) => evidence.pageErrors.push(String(error?.message || error)));
+page.on("pageerror", (error) => evidence.pageErrors.push(sanitize(error?.message || error)));
 page.on("response", (response) => {
   const url = response.url();
   if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
   evidence.requests.push({
     method: response.request().method(),
-    url: url.replace(BASE_URL, "[local-gateway]"),
+    url: sanitize(url),
     status: response.status(),
   });
 });
@@ -70,25 +75,6 @@ function failedRequests(startIndex = 0) {
 function assertNoFailedRequests(label, startIndex = 0) {
   const failed = failedRequests(startIndex);
   if (failed.length) throw new Error(`${label} observed failed requests: ${JSON.stringify(failed)}`);
-}
-
-async function visibleControls(root = page) {
-  return root.locator("button, [role='button'], [data-admin-terminal-action]").evaluateAll((nodes) => nodes
-    .filter((node) => {
-      const style = window.getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
-      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
-    })
-    .map((node) => ({
-      tag: node.tagName.toLowerCase(),
-      id: node.id || null,
-      text: String(node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 180),
-      action: node.getAttribute("data-admin-terminal-action"),
-      disabled: "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true",
-      ariaLabel: node.getAttribute("aria-label"),
-      title: node.getAttribute("title"),
-      logoutOwned: node.hasAttribute("data-econovaria-admin-logout"),
-    })));
 }
 
 async function waitForAdminConsole() {
@@ -110,18 +96,27 @@ async function navigateSection(name) {
 }
 
 async function openShareModal() {
-  await page.locator('button[title="Share game code"]').click();
-  const modal = page.locator('[data-modal-id="share-game-access"]');
+  const shareButton = page.locator('button[title="Share game code"]:visible').first();
+  await shareButton.waitFor({ state: "visible", timeout: 20_000 });
+  await shareButton.click();
+
+  const modal = page.locator('[data-modal-id="share-game-access"]:visible').last();
   await modal.waitFor({ state: "visible", timeout: 20_000 });
   const label = modal.locator(".admin-terminal-share-modal-code strong");
   await label.waitFor({ state: "visible", timeout: 10_000 });
   await page.waitForFunction((patternSource) => {
-    const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
-    return new RegExp(patternSource).test(value);
+    const nodes = [...document.querySelectorAll('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')];
+    const visible = nodes.reverse().find((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    });
+    return new RegExp(patternSource).test(String(visible?.textContent || "").trim());
   }, MEMORABLE_CODE_PATTERN.source, { timeout: 30_000 });
+
   const code = String(await label.textContent() || "").trim();
   if (!MEMORABLE_CODE_PATTERN.test(code)) {
-    throw new Error(`Share Game Code modal did not display a memorable persisted code: ${code}`);
+    throw new Error("Share Game Code modal did not display a memorable persisted code.");
   }
   return { modal, label, code };
 }
@@ -129,8 +124,22 @@ async function openShareModal() {
 async function closeShareModal(modal) {
   await page.keyboard.press("Escape");
   if (await modal.isVisible().catch(() => false)) {
-    await modal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]').first().click();
+    const close = modal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]:visible').first();
+    if (await close.count()) await close.click();
   }
+}
+
+async function safeScreenshot(name) {
+  const masks = [
+    page.locator("[data-econovaria-selected-game-code]"),
+    page.locator(".admin-terminal-share-modal-code strong"),
+    page.locator("[data-admin-player-created-access-code]"),
+  ];
+  await page.screenshot({
+    path: `${OUTPUT_DIR}/${name}`,
+    fullPage: true,
+    mask: masks,
+  }).catch(() => {});
 }
 
 let failure;
@@ -154,12 +163,12 @@ try {
 
   const signupResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/functions/v1/classroom-api/staff/signup"),
-    { timeout: 120_000 },
+    { timeout: 180_000 },
   );
   await page.getByRole("button", { name: "Create Game", exact: true }).click();
   const signupResponse = await signupResponsePromise;
   if (signupResponse.status() !== 201) {
-    const body = await signupResponse.text().catch(() => "");
+    const body = sanitize(await signupResponse.text().catch(() => ""));
     throw new Error(`Rendered Create Game returned ${signupResponse.status()}: ${body.slice(0, 500)}`);
   }
   evidence.createdThroughRenderedUi = true;
@@ -167,7 +176,6 @@ try {
   await waitForAdminConsole();
   evidence.adminConsoleRendered = true;
   assertNoFailedRequests("Initial Admin bootstrap");
-  evidence.controls = await visibleControls();
 
   for (const section of ["Attendance", "Players", "Contracts", "Store", "Marketplace", "Settings", "Logs", "Overview"]) {
     await navigateSection(section);
@@ -178,6 +186,7 @@ try {
   evidence.shareGameCode.opened = true;
   evidence.shareGameCode.automatic = true;
   evidence.shareGameCode.displayed = true;
+  evidence.shareGameCode.formatValid = true;
   const initialCode = initialShare.code;
   assertNoFailedRequests("Automatic Share Game Code", shareRequestIndex);
   await closeShareModal(initialShare.modal);
@@ -186,12 +195,12 @@ try {
   await waitForAdminConsole();
   const persistedShare = await openShareModal();
   if (persistedShare.code !== initialCode) {
-    throw new Error(`Game Code changed across reload: ${initialCode} -> ${persistedShare.code}`);
+    throw new Error("Game Code changed across reload.");
   }
   evidence.shareGameCode.persistedAfterReload = true;
 
   const rotateRequestIndex = evidence.requests.length;
-  const rotateButton = persistedShare.modal.locator('[data-admin-terminal-action="reset-game-code"]');
+  const rotateButton = persistedShare.modal.locator('[data-admin-terminal-action="reset-game-code"]:visible').first();
   await rotateButton.waitFor({ state: "visible", timeout: 10_000 });
   const rotateResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/join-code/reset") && response.request().method() === "POST",
@@ -201,7 +210,13 @@ try {
   const rotateResponse = await rotateResponsePromise;
   if (!rotateResponse.ok()) throw new Error(`Rotate Game Code returned ${rotateResponse.status()}`);
   await page.waitForFunction(({ prior, patternSource }) => {
-    const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
+    const nodes = [...document.querySelectorAll('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')];
+    const visible = nodes.reverse().find((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    });
+    const value = String(visible?.textContent || "").trim();
     return value !== prior && new RegExp(patternSource).test(value);
   }, { prior: initialCode, patternSource: MEMORABLE_CODE_PATTERN.source }, { timeout: 20_000 });
   const rotatedCode = String(await persistedShare.label.textContent() || "").trim();
@@ -216,14 +231,14 @@ try {
   await waitForAdminConsole();
   const rotatedPersistedShare = await openShareModal();
   if (rotatedPersistedShare.code !== rotatedCode) {
-    throw new Error(`Rotated Game Code did not persist: ${rotatedCode} -> ${rotatedPersistedShare.code}`);
+    throw new Error("Rotated Game Code did not persist across reload.");
   }
   evidence.shareGameCode.rotationPersistedAfterReload = true;
   await closeShareModal(rotatedPersistedShare.modal);
 
   await navigateSection("Overview");
-  await page.getByRole("button", { name: /Add Player/i }).click();
-  const playerForm = page.locator("[data-admin-terminal-player-form]");
+  await page.getByRole("button", { name: /Add Player/i }).first().click();
+  const playerForm = page.locator("[data-admin-terminal-player-form]:visible");
   await playerForm.waitFor({ state: "visible", timeout: 20_000 });
   evidence.playerCreation.opened = true;
   await playerForm.locator('[name="displayName"]').fill(PLAYER_NAME);
@@ -241,13 +256,13 @@ try {
   await playerForm.locator('[data-admin-terminal-action="create-player"], button[type="submit"]').first().click();
   const createPlayerResponse = await createPlayerResponsePromise;
   if (createPlayerResponse.status() !== 201) {
-    const body = await createPlayerResponse.text().catch(() => "");
+    const body = sanitize(await createPlayerResponse.text().catch(() => ""));
     throw new Error(`Rendered Add Player returned ${createPlayerResponse.status()}: ${body.slice(0, 500)}`);
   }
   evidence.playerCreation.created = true;
   assertNoFailedRequests("Add Player", createPlayerRequestIndex);
 
-  const confirmation = page.locator("[data-admin-player-created-confirmation]");
+  const confirmation = page.locator("[data-admin-player-created-confirmation]:visible");
   await confirmation.waitFor({ state: "visible", timeout: 20_000 });
   await confirmation.locator("[data-admin-player-created-identifier]").waitFor({ state: "visible" });
   await confirmation.locator("[data-admin-player-created-access-code]").waitFor({ state: "visible" });
@@ -255,8 +270,7 @@ try {
 
   await navigateSection("Players");
   await page.getByText(PLAYER_NAME, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
-  evidence.playerControls = await visibleControls();
-  await page.screenshot({ path: `${OUTPUT_DIR}/players-after-create.png`, fullPage: true });
+  await safeScreenshot("players-after-create.png");
 
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdminConsole();
@@ -265,17 +279,17 @@ try {
   evidence.playerCreation.persistedAfterReload = true;
 
   const logoutRequestIndex = evidence.requests.length;
-  const accountTrigger = page.locator("[data-admin-terminal-user]").first();
+  const accountTrigger = page.locator("[data-admin-terminal-user]:visible").first();
   await accountTrigger.click();
   evidence.logout.menuOpened = true;
-  const accountMenu = page.locator("[data-admin-terminal-user-menu]").first();
+  const accountMenu = page.locator("[data-admin-terminal-user-menu]:visible").first();
   await accountMenu.waitFor({ state: "visible", timeout: 10_000 });
   const logoutTrigger = accountMenu.locator(
     '[data-econovaria-admin-logout], [data-admin-terminal-action="logout"], [data-admin-terminal-action="sign-out"], button, a',
   ).filter({ hasText: /^(?:Sign out|Log out|Logout)$/i }).last();
   await logoutTrigger.waitFor({ state: "visible", timeout: 10_000 });
   await logoutTrigger.click();
-  const logoutConfirmation = page.locator("[data-econovaria-admin-logout-confirmation]");
+  const logoutConfirmation = page.locator("[data-econovaria-admin-logout-confirmation]:visible");
   await logoutConfirmation.waitFor({ state: "visible", timeout: 10_000 });
   evidence.logout.confirmationOpened = true;
   await logoutConfirmation.locator("[data-econovaria-logout-confirm]").click();
@@ -289,13 +303,13 @@ try {
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
     throw new Error(`Browser emitted errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
   }
-  await page.screenshot({ path: `${OUTPUT_DIR}/signed-out.png`, fullPage: true });
+  await safeScreenshot("signed-out.png");
 } catch (error) {
   failure = error;
-  evidence.failure = String(error?.stack || error);
-  await page.screenshot({ path: `${OUTPUT_DIR}/browser-failure.png`, fullPage: true }).catch(() => {});
+  evidence.failure = sanitize(error?.stack || error);
+  await safeScreenshot("browser-failure.png");
 } finally {
-  evidence.finalUrl = page.url();
+  evidence.finalUrl = sanitize(page.url());
   await writeFile(`${OUTPUT_DIR}/admin-browser-reconnaissance.json`, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
   await context.close();
   await browser.close();
