@@ -20,7 +20,9 @@ grant select on table
   public.account_balances,
   public.game_session_stock_assets,
   public.player_sessions,
-  public.inventory_holdings
+  public.inventory_holdings,
+  public.player_admin_flags,
+  public.player_admin_settings
   to service_role;
 
 comment on table public.staff_users is
