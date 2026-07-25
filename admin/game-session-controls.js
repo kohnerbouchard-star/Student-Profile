@@ -4,7 +4,6 @@
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
-  const GAME_CODE_CACHE_PREFIX = "econovaria.admin.game-code.v1:";
   const SHARE_ACTIONS = new Set(["share-current-game", "share-game-code"]);
   const LOGOUT_ACTIONS = new Set([
     "sign-out",
@@ -43,17 +42,6 @@
     return /^[A-Z0-9-]{4,64}$/.test(code) ? code : "";
   }
 
-  function cachedCode(gameId) {
-    if (!gameId) return "";
-    try {
-      return normalizeCode(
-        window.sessionStorage.getItem(`${GAME_CODE_CACHE_PREFIX}${gameId}`) || "",
-      );
-    } catch (_) {
-      return "";
-    }
-  }
-
   function gameCandidates(model, gameId) {
     return [
       model?.selectedGame,
@@ -84,7 +72,7 @@
         candidate.gameCode ||
         model.joinCode ||
         model.gameCode ||
-        cachedCode(gameId),
+        "",
     );
     return Object.freeze({ gameId, gameName, gameCode });
   }
@@ -146,7 +134,7 @@
       <div class="econovaria-admin-game-session-card__code-row">
         <div>
           <small>Game Code</small>
-          <b data-econovaria-selected-game-code>Code hidden</b>
+          <b data-econovaria-selected-game-code>Loading code</b>
         </div>
         <button type="button"
           data-admin-terminal-action="share-current-game"
@@ -188,11 +176,11 @@
     const copy = card.querySelector("[data-econovaria-game-target-copy]");
     const share = card.querySelector("[data-econovaria-share-game]");
     if (name) name.textContent = context.gameName;
-    if (code) code.textContent = context.gameCode || "Code hidden";
+    if (code) code.textContent = context.gameCode || "Loading code";
     if (copy) {
       copy.textContent = context.gameCode
         ? `Players using ${context.gameCode} join ${context.gameName}.`
-        : `Open Share to generate or reveal access for ${context.gameName}.`;
+        : `Open Share to load the current code for ${context.gameName}.`;
     }
     if (share) {
       share.dataset.gameId = context.gameId;
@@ -260,7 +248,7 @@
     if (note) {
       note.textContent = context.gameCode
         ? `Players using ${context.gameCode} will join ${context.gameName}.`
-        : `Create or reset the access code for ${context.gameName}.`;
+        : `Loading the current Game Code for ${context.gameName}.`;
     }
 
     dialog.querySelectorAll("input[id*='share-admin-link']").forEach((input) => {
@@ -280,10 +268,10 @@
       if (!("value" in invite)) return;
       invite.value = context.gameCode
         ? `Join ${context.gameName}\n\nGame Code: ${context.gameCode}\nPlayer login: ${playerLink || "Open Econovaria Player Login"}`
-        : `Join ${context.gameName}\n\nOpen the Share panel to generate a Game Code.`;
+        : `Join ${context.gameName}\n\nOpen the Share panel to load the current Game Code.`;
     });
     const codeNode = dialog.querySelector(".admin-terminal-share-modal-code strong");
-    if (codeNode) codeNode.textContent = context.gameCode || "Code hidden";
+    if (codeNode) codeNode.textContent = context.gameCode || "Loading…";
   }
 
   function visibleShareModal() {
