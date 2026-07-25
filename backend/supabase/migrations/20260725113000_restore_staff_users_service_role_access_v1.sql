@@ -7,8 +7,8 @@ revoke all on table public.staff_users from public, anon, authenticated;
 grant select, insert, update, delete on table public.staff_users to service_role;
 
 -- Authenticated Admin routes resolve ownership server-side and assemble their
--- dashboard, Players, Store, inventory, and market projections through the
--- service client. Grant only the reads those projections require.
+-- dashboard, Players, Store, inventory, market, Contract, and attendance
+-- projections through the service client. Grant only those reads.
 grant select on table
   public.game_sessions,
   public.players,
@@ -22,7 +22,10 @@ grant select on table
   public.player_sessions,
   public.inventory_holdings,
   public.player_admin_flags,
-  public.player_admin_settings
+  public.player_admin_settings,
+  public.game_session_contracts,
+  public.player_contract_progress,
+  public.player_attendance_records
   to service_role;
 
 comment on table public.staff_users is
