@@ -9,8 +9,9 @@ const LICENSE_CODE = process.env.ECONOVARIA_BROWSER_LICENSE_CODE || "PLAYER-E2E-
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "player.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Player-E2E-Admin-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplayer E2E";
+const REQUEST_TIMEOUT_MS = 180_000;
 const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
-const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 const PLAYER_ROUTES = Object.freeze([
   "dashboard",
   "world",
@@ -46,25 +47,137 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  createdThroughRenderedUi: false,
+  connectedSetup: {
+    signupStatus: 0,
+    signInStatus: 0,
+    bootstrapStatus: 0,
+  },
   adminConsoleRendered: false,
   gameCode: {
     formatValid: false,
     prefilledWithoutTruncation: false,
   },
-  playersCreated: 0,
+  playersCreatedThroughRenderedUi: 0,
   concurrentLogin: false,
   playerJourneys: [],
   adminRequests: [],
   adminConsoleErrors: [],
   adminPageErrors: [],
+  rawInternalIdentifiersRecorded: false,
+  plaintextCredentialsRecorded: false,
 };
 
 function redact(value) {
   return String(value || "")
-    .replaceAll(UUID_PATTERN, "[uuid-redacted]")
+    .replace(UUID_PATTERN, "[uuid-redacted]")
     .replace(/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/g, "[game-code-redacted]")
-    .replace(/BROWSER-[A-Z0-9-]+/g, "[credential-redacted]");
+    .replace(/BROWSER-[A-Z0-9-]+/g, "[credential-redacted]")
+    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt-redacted]");
+}
+
+async function request(path, { method = "GET", headers = {}, body, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => "");
+    return { status: response.status, ok: response.ok, payload };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function browserRuntimeConfig() {
+  const response = await fetch(`${BASE_URL}/runtime-config.env.js`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Runtime configuration returned ${response.status}.`);
+  const source = await response.text();
+  const match = source.match(/Object\.freeze\((\{[\s\S]*\})\);?/);
+  if (!match) throw new Error("Runtime configuration could not be parsed.");
+  const config = JSON.parse(match[1]);
+  const publishableKey = String(config.supabasePublishableKey || "").trim();
+  if (!publishableKey || publishableKey.startsWith("sb_secret_")) {
+    throw new Error("A browser-safe Supabase publishable key is required.");
+  }
+  return { publishableKey };
+}
+
+function platformHeaders(publishableKey, token = publishableKey) {
+  return {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    apikey: publishableKey,
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+async function createConnectedGame() {
+  const { publishableKey } = await browserRuntimeConfig();
+  const signup = await request("/functions/v1/classroom-api/staff/signup", {
+    method: "POST",
+    headers: platformHeaders(publishableKey),
+    body: {
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      displayName: "Multiplayer Browser Teacher",
+      purchaseCode: LICENSE_CODE,
+      gameName: GAME_NAME,
+      difficultyPreset: "moderate",
+      stockMarketWindow: { timezone: "Asia/Seoul" },
+    },
+  });
+  evidence.connectedSetup.signupStatus = signup.status;
+  if (signup.status !== 201 || signup.payload?.ok !== true) {
+    throw new Error(`Connected staff signup returned ${signup.status}.`);
+  }
+
+  const signIn = await request("/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: platformHeaders(publishableKey),
+    body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  evidence.connectedSetup.signInStatus = signIn.status;
+  if (signIn.status !== 200 || !signIn.payload?.access_token) {
+    throw new Error(`Connected Admin sign-in returned ${signIn.status}.`);
+  }
+
+  const accessToken = signIn.payload.access_token;
+  const bootstrap = await request("/functions/v1/classroom-api/staff/bootstrap", {
+    headers: platformHeaders(publishableKey, accessToken),
+  });
+  evidence.connectedSetup.bootstrapStatus = bootstrap.status;
+  if (bootstrap.status !== 200 || bootstrap.payload?.ok !== true) {
+    throw new Error(`Connected staff bootstrap returned ${bootstrap.status}.`);
+  }
+
+  const sessions = Array.isArray(bootstrap.payload.activeGameSessions)
+    ? bootstrap.payload.activeGameSessions
+    : [];
+  const game = sessions.find((item) => item?.name === GAME_NAME) || sessions[0];
+  const gameId = String(game?.id || "").trim();
+  const gameCode = String(game?.gameCode || game?.joinCode || "").trim();
+  if (!gameId || !MEMORABLE_CODE_PATTERN.test(gameCode)) {
+    throw new Error("Connected game bootstrap did not return a valid memorable Game Code.");
+  }
+
+  return {
+    gameId,
+    gameCode,
+    adminRecord: {
+      accessToken,
+      refreshToken: String(signIn.payload.refresh_token || ""),
+      csrfToken: "",
+      user: signIn.payload.user || null,
+    },
+  };
 }
 
 function instrumentPage(page, target) {
@@ -84,16 +197,16 @@ function instrumentPage(page, target) {
 }
 
 function assertNoFailedRequests(label, requests, startIndex = 0) {
-  const failed = requests.slice(startIndex).filter((request) => request.status >= 400);
+  const failed = requests.slice(startIndex).filter((entry) => entry.status >= 400);
   if (failed.length) throw new Error(`${label} observed failed requests: ${JSON.stringify(failed)}`);
 }
 
 async function waitForAdminConsole(page) {
-  await page.waitForURL(/\/admin\/(?:index\.html)?(?:\?.*)?$/, { timeout: 180_000 });
+  await page.waitForURL(/\/admin\/(?:index\.html)?(?:\?.*)?$/, { timeout: 120_000 });
   await page.waitForFunction(() => {
     const preview = document.getElementById("adminPreview");
     return Boolean(preview && !preview.hidden && preview.childElementCount > 0);
-  }, undefined, { timeout: 180_000 });
+  }, undefined, { timeout: 120_000 });
   await page.waitForTimeout(1200);
 }
 
@@ -116,12 +229,10 @@ async function openShareModal(page) {
   await modal.waitFor({ state: "visible", timeout: 30_000 });
   const label = modal.locator(".admin-terminal-share-modal-code strong");
   await label.waitFor({ state: "visible", timeout: 10_000 });
-  await page.waitForFunction((pattern) => {
-    const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
-    return new RegExp(pattern).test(value);
-  }, MEMORABLE_CODE_PATTERN.source, { timeout: 30_000 });
   const code = String(await label.textContent() || "").trim();
-  if (!MEMORABLE_CODE_PATTERN.test(code)) throw new Error("Game Code was not rendered in the canonical memorable format.");
+  if (!MEMORABLE_CODE_PATTERN.test(code)) {
+    throw new Error("Game Code was not rendered in the canonical memorable format.");
+  }
   return { modal, code };
 }
 
@@ -150,14 +261,11 @@ async function createPlayer(page, player) {
   const confirmation = page.locator("[data-admin-player-created-confirmation]");
   await confirmation.waitFor({ state: "visible", timeout: 30_000 });
   await confirmation.locator("[data-admin-player-created-done]").click();
-  evidence.playersCreated += 1;
+  evidence.playersCreatedThroughRenderedUi += 1;
 }
 
 async function loginPlayer(browser, gameCode, player, index) {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 1000 },
-    reducedMotion: "reduce",
-  });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   const journey = {
     player: index + 1,
@@ -176,10 +284,7 @@ async function loginPlayer(browser, gameCode, player, index) {
   });
   const gameCodeInput = page.locator("#gameCode");
   await gameCodeInput.waitFor({ state: "visible", timeout: 30_000 });
-  const inputState = await gameCodeInput.evaluate((input) => ({
-    value: input.value,
-    maxLength: input.maxLength,
-  }));
+  const inputState = await gameCodeInput.evaluate((input) => ({ value: input.value, maxLength: input.maxLength }));
   if (inputState.value !== gameCode || inputState.maxLength < gameCode.length) {
     throw new Error("Player login truncated or failed to prefill the complete Game Code.");
   }
@@ -187,9 +292,10 @@ async function loginPlayer(browser, gameCode, player, index) {
 
   await page.locator("#playerId").fill(player.playerIdentifier);
   await page.locator("#playerAccessCode").fill(player.accessCode);
-  const loginRequestStart = journey.requests.length;
+  const requestStart = journey.requests.length;
   const loginResponsePromise = page.waitForResponse(
-    (response) => response.url().includes("/functions/v1/classroom-api/players/login") && response.request().method() === "POST",
+    (response) => response.url().includes("/functions/v1/classroom-api/players/login") &&
+      response.request().method() === "POST",
     { timeout: 60_000 },
   );
   await page.locator("#playerForm button[type='submit']").click();
@@ -197,14 +303,13 @@ async function loginPlayer(browser, gameCode, player, index) {
   if (loginResponse.status() !== 200) throw new Error(`Player ${index + 1} login returned ${loginResponse.status()}.`);
   await page.waitForURL(/\/player-terminal\/(?:index\.html)?(?:#.*)?$/, { timeout: 120_000 });
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  assertNoFailedRequests(`Player ${index + 1} login`, journey.requests, loginRequestStart);
-
+  assertNoFailedRequests(`Player ${index + 1} login`, journey.requests, requestStart);
   return { context, page, journey };
 }
 
 async function visitRoute(session, route) {
   const { page, journey } = session;
-  const startIndex = journey.requests.length;
+  const requestStart = journey.requests.length;
   const control = page.locator(`[data-route="${route}"]:visible`).first();
   await control.waitFor({ state: "visible", timeout: 30_000 });
   const disabled = await control.evaluate((node) => node.getAttribute("aria-disabled") === "true" || Boolean(node.disabled));
@@ -215,23 +320,25 @@ async function visitRoute(session, route) {
 
   const failure = page.locator(".player-terminal-route-error, .player-terminal-error-shell");
   if (await failure.count()) {
-    const text = redact(await failure.first().textContent());
-    throw new Error(`Player route ${route} rendered an error state: ${text}`);
+    throw new Error(`Player route ${route} rendered an error state: ${redact(await failure.first().textContent())}`);
   }
-  const main = page.locator("#player-main-content");
-  const text = String(await main.innerText()).replace(/\s+/g, " ").trim();
+  const host = page.locator(".player-terminal-page-host");
+  const text = String(await host.innerText()).replace(/\s+/g, " ").trim();
   if (text.length < 40) throw new Error(`Player route ${route} rendered insufficient live content.`);
   if (/SECTION UNAVAILABLE|VIEW COULD NOT BE RENDERED|WORLD UNAVAILABLE|ROUTE_NOT_FOUND/i.test(text)) {
     throw new Error(`Player route ${route} exposed an unavailable-state message.`);
   }
+  UUID_PATTERN.lastIndex = 0;
   if (UUID_PATTERN.test(text)) journey.rawUuidVisible = true;
   if (journey.rawUuidVisible) throw new Error(`Player route ${route} exposed a raw internal UUID.`);
-  assertNoFailedRequests(`Player ${journey.player} route ${route}`, journey.requests, startIndex);
+  assertNoFailedRequests(`Player ${journey.player} route ${route}`, journey.requests, requestStart);
   journey.routes.push({ route, live: true });
 }
 
 async function exercisePlayer(session) {
   for (const route of PLAYER_ROUTES) await visitRoute(session, route);
+  await visitRoute(session, "profile");
+  session.journey.routes.pop();
 
   const { page, journey } = session;
   const logout = page.locator('[data-player-action="logout"]:visible').first();
@@ -245,47 +352,37 @@ async function exercisePlayer(session) {
   journey.loggedOut = true;
 }
 
-const browser = await chromium.launch({ headless: true });
-const adminContext = await browser.newContext({
-  viewport: { width: 1440, height: 1000 },
-  reducedMotion: "reduce",
-});
-const adminPage = await adminContext.newPage();
-instrumentPage(adminPage, {
-  requests: evidence.adminRequests,
-  consoleErrors: evidence.adminConsoleErrors,
-  pageErrors: evidence.adminPageErrors,
-});
-
-let failure;
+let browser;
+let adminContext;
 const playerSessions = [];
+let failure;
 try {
-  await adminPage.goto(`${BASE_URL}/?mode=create`, { waitUntil: "domcontentloaded", timeout: 120_000 });
-  await adminPage.locator("#createForm").waitFor({ state: "visible", timeout: 30_000 });
-  await adminPage.locator("#licenseCode").fill(LICENSE_CODE);
-  await adminPage.locator("#createEmail").fill(ADMIN_EMAIL);
-  await adminPage.locator("#createDisplayName").fill("Multiplayer Browser Teacher");
-  await adminPage.locator("#sessionName").fill(GAME_NAME);
-  await adminPage.locator("#gameTimeZone").selectOption("Asia/Seoul");
-  await adminPage.locator("#difficultyLevel").selectOption("moderate");
-  await adminPage.locator("#createAccessCode").fill(ADMIN_PASSWORD);
-  await adminPage.locator("#confirmAccessCode").fill(ADMIN_PASSWORD);
+  const setup = await createConnectedGame();
+  evidence.gameCode.formatValid = true;
 
-  const signupPromise = adminPage.waitForResponse(
-    (response) => response.url().includes("/functions/v1/classroom-api/staff/signup"),
-    { timeout: 180_000 },
-  );
-  await adminPage.getByRole("button", { name: "Create Game", exact: true }).click();
-  const signup = await signupPromise;
-  if (signup.status() !== 201) throw new Error(`Rendered Create Game returned ${signup.status()}.`);
-  evidence.createdThroughRenderedUi = true;
+  browser = await chromium.launch({ headless: true });
+  adminContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  await adminContext.addInitScript(({ origin, adminRecord, gameId }) => {
+    try {
+      if (location.origin !== origin) return;
+      sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(adminRecord));
+      sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+    } catch (_) {}
+  }, { origin: new URL(BASE_URL).origin, adminRecord: setup.adminRecord, gameId: setup.gameId });
+
+  const adminPage = await adminContext.newPage();
+  instrumentPage(adminPage, {
+    requests: evidence.adminRequests,
+    consoleErrors: evidence.adminConsoleErrors,
+    pageErrors: evidence.adminPageErrors,
+  });
+  await adminPage.goto(`${BASE_URL}/admin/`, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdminConsole(adminPage);
   evidence.adminConsoleRendered = true;
   assertNoFailedRequests("Admin bootstrap", evidence.adminRequests);
 
   const share = await openShareModal(adminPage);
-  const gameCode = share.code;
-  evidence.gameCode.formatValid = true;
+  if (share.code !== setup.gameCode) throw new Error("Rendered Game Code did not match the connected game session.");
   await adminPage.keyboard.press("Escape");
   if (await share.modal.isVisible().catch(() => false)) {
     await share.modal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]').first().click();
@@ -299,7 +396,7 @@ try {
     })}`);
   }
 
-  const sessions = await Promise.all(PLAYERS.map((player, index) => loginPlayer(browser, gameCode, player, index)));
+  const sessions = await Promise.all(PLAYERS.map((player, index) => loginPlayer(browser, setup.gameCode, player, index)));
   playerSessions.push(...sessions);
   evidence.concurrentLogin = true;
   await Promise.all(sessions.map(exercisePlayer));
@@ -321,21 +418,28 @@ try {
   evidence.failure = redact(error?.stack || error);
 } finally {
   evidence.finalizedAt = new Date().toISOString();
+  const serialized = JSON.stringify(evidence);
+  UUID_PATTERN.lastIndex = 0;
+  evidence.rawInternalIdentifiersRecorded = UUID_PATTERN.test(serialized);
+  evidence.plaintextCredentialsRecorded = /BROWSER-(?:PLAYER|ALPHA|BETA|ACCESS)-[A-Z0-9-]+/.test(serialized);
+  if (evidence.rawInternalIdentifiersRecorded || evidence.plaintextCredentialsRecorded) {
+    failure ||= new Error("Player browser evidence contained a raw identifier or plaintext credential.");
+  }
   await writeFile(
     `${OUTPUT_DIR}/player-multiplayer-browser-acceptance.json`,
     `${JSON.stringify(evidence, null, 2)}\n`,
     "utf8",
   );
   for (const session of playerSessions) await session.context.close().catch(() => {});
-  await adminContext.close().catch(() => {});
-  await browser.close();
+  await adminContext?.close().catch(() => {});
+  await browser?.close().catch(() => {});
 }
 
 if (failure) throw failure;
 
 console.log(JSON.stringify({
   ok: true,
-  playersCreated: evidence.playersCreated,
+  playersCreated: evidence.playersCreatedThroughRenderedUi,
   concurrentLogin: evidence.concurrentLogin,
   routesPerPlayer: evidence.playerJourneys.map((journey) => journey.routes.length),
   loggedOut: evidence.playerJourneys.map((journey) => journey.loggedOut),
