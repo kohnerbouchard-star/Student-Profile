@@ -11,6 +11,8 @@
     'button[aria-label*="Close"]',
   ].join(",");
   const SHARE_SELECTOR = [
+    ".admin-terminal-side-code-expanded",
+    ".admin-terminal-side-code-compact",
     "[data-admin-terminal-share-button]",
     '[data-admin-terminal-action="share-game-code"]',
     '[data-admin-terminal-action="share-current-game"]',
@@ -31,7 +33,8 @@
 
   function preserveShareControlTitle(root = document) {
     root.querySelectorAll(SHARE_SELECTOR).forEach((control) => {
-      if (!(control instanceof HTMLElement)) return;
+      if (!(control instanceof HTMLElement) || !visible(control)) return;
+      control.dataset.econovariaShareGame = "true";
       control.title = "Share game code";
       if (!control.getAttribute("aria-label")) {
         control.setAttribute("aria-label", "Share game code");
