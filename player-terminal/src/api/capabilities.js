@@ -28,7 +28,9 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "marketOrder",
   "marketSearch",
   "marketWatchlist",
+  "marketplaceActivate",
   "marketplaceCancel",
+  "marketplaceDispute",
   "marketplaceListing",
   "marketplacePurchase",
   "messageAttachment",
@@ -60,6 +62,8 @@ const ENDPOINT_ACTIONS = Object.freeze({
   ),
   arrivalClass: "arrivalClassSubmit",
   businessTerminate: "businessEmployeeTerminate",
+  messageThreadCreate: "messageSend",
+  messageRead: "messageSend",
   storeQuote: "storePurchase",
   storyDeliveries: "storyDeliveryState"
 });
