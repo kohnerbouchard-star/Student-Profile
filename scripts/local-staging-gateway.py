@@ -7,16 +7,16 @@ The gateway supports two explicit modes:
 * local development, using the running Supabase CLI stack discovered from
   ``supabase status -o env``.
 
-In both modes the browser receives a temporary deployment-scoped
-``runtime-config.env.js`` and Edge Function traffic stays same-origin through the
-loopback gateway. In local development, Supabase Auth also stays same-origin so
-strict Content Security Policy remains effective. The temporary configuration is
-restored or removed on shutdown.
+The browser receives only the publishable key. For legacy ``verify_jwt=true``
+Edge Functions, the gateway injects the matching anon JWT upstream only when
+the browser request does not already carry a real user JWT. The anon JWT is
+never written into the browser runtime configuration.
 """
 
 from __future__ import annotations
 
 import argparse
+import errno
 import http.client
 import json
 import os
@@ -50,7 +50,7 @@ STATIC_NO_CACHE_HEADERS: Final[tuple[tuple[str, str], ...]] = (
     ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
     ("Pragma", "no-cache"),
     ("Expires", "0"),
-    ("X-Econovaria-Local-Gateway", "connected-no-cache-v1"),
+    ("X-Econovaria-Local-Gateway", "connected-no-cache-v2"),
 )
 STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-Modified-Since",
@@ -60,10 +60,22 @@ LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
+def clean_path(path: str) -> str:
+    return urlsplit(path).path
+
+
 def is_proxy_path(path: str) -> bool:
     """Return whether a request path belongs to an approved Supabase browser API."""
-    clean_path = urlsplit(path).path
-    return any(clean_path.startswith(prefix) for prefix in PROXY_PREFIXES)
+    path_only = clean_path(path)
+    return any(path_only.startswith(prefix) for prefix in PROXY_PREFIXES)
+
+
+def is_edge_function_path(path: str) -> bool:
+    return clean_path(path).startswith("/functions/v1/")
+
+
+def is_auth_path(path: str) -> bool:
+    return clean_path(path).startswith("/auth/v1/")
 
 
 def remove_static_conditionals(headers) -> None:
@@ -73,14 +85,47 @@ def remove_static_conditionals(headers) -> None:
             del headers[name]
 
 
-def filtered_request_headers(headers, upstream_host: str) -> dict[str, str]:
-    """Copy end-to-end request headers and bind Host to the upstream runtime."""
+def authorization_token(value: str | None) -> str:
+    raw = str(value or "").strip()
+    if not raw.lower().startswith("bearer "):
+        return ""
+    return raw[7:].strip()
+
+
+def remove_header_case_insensitive(headers: dict[str, str], target: str) -> None:
+    target_lower = target.lower()
+    for name in list(headers):
+        if name.lower() == target_lower:
+            del headers[name]
+
+
+def filtered_request_headers(
+    headers,
+    upstream_host: str,
+    *,
+    path: str = "",
+    browser_publishable_key: str = "",
+    platform_anon_key: str = "",
+) -> dict[str, str]:
+    """Copy end-to-end headers and apply the publishable-key compatibility contract."""
     result: dict[str, str] = {}
     for name, value in headers.items():
         lower_name = name.lower()
         if lower_name in HOP_BY_HOP_HEADERS or lower_name in {"host", "content-length"}:
             continue
         result[name] = value
+
+    existing_authorization = headers.get("Authorization")
+    existing_token = authorization_token(existing_authorization)
+
+    if is_auth_path(path) and existing_token == browser_publishable_key:
+        remove_header_case_insensitive(result, "Authorization")
+
+    if is_edge_function_path(path):
+        if not existing_token or existing_token == browser_publishable_key:
+            remove_header_case_insensitive(result, "Authorization")
+            result["Authorization"] = f"Bearer {platform_anon_key}"
+
     result["Host"] = upstream_host
     return result
 
@@ -115,21 +160,25 @@ def parse_supabase_status_env(source: str) -> dict[str, str]:
     return values
 
 
-def local_edge_anon_key(values: dict[str, str]) -> str:
-    """Select the JWT-shaped local anon key required by verified Edge Functions."""
+def local_browser_keys(values: dict[str, str]) -> tuple[str, str]:
+    """Return the browser publishable key and server-only legacy anon JWT."""
+    publishable_key = values.get("PUBLISHABLE_KEY", "").strip()
     anon_key = values.get("ANON_KEY", "").strip()
-    if not anon_key:
+
+    if not publishable_key.startswith("sb_publishable_"):
         raise SystemExit(
-            "Supabase status did not return ANON_KEY. Local verified Edge Functions "
-            "cannot use an opaque PUBLISHABLE_KEY as a bearer JWT."
+            "Supabase status did not return a valid PUBLISHABLE_KEY for the browser."
         )
     if not anon_key.startswith("eyJ"):
-        raise SystemExit("Local Supabase ANON_KEY must be a JWT-shaped browser-safe key")
-    return anon_key
+        raise SystemExit(
+            "Supabase status did not return the legacy ANON_KEY required only for "
+            "server-side compatibility with verified Edge Functions."
+        )
+    return publishable_key, anon_key
 
 
-def local_supabase_runtime(root: Path) -> tuple[str, str]:
-    """Return local Supabase API URL and JWT-shaped browser-safe anon key."""
+def local_supabase_runtime(root: Path) -> tuple[str, str, str]:
+    """Return local API URL, browser publishable key, and server-only anon JWT."""
     command = [
         "npx",
         "supabase",
@@ -156,7 +205,7 @@ def local_supabase_runtime(root: Path) -> tuple[str, str]:
 
     values = parse_supabase_status_env(result.stdout)
     supabase_url = values.get("API_URL", "").rstrip("/")
-    browser_key = local_edge_anon_key(values)
+    publishable_key, anon_key = local_browser_keys(values)
     if not supabase_url:
         raise SystemExit("Supabase status did not return API_URL")
 
@@ -165,7 +214,7 @@ def local_supabase_runtime(root: Path) -> tuple[str, str]:
         raise SystemExit("Local Supabase API_URL must use a loopback host")
     if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
         raise SystemExit("Local Supabase API_URL must not include a path, query, or fragment")
-    return supabase_url, browser_key
+    return supabase_url, publishable_key, anon_key
 
 
 def runtime_config(
@@ -200,7 +249,7 @@ def runtime_config(
 
 
 class LocalStagingHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaLocalGateway/1.3"
+    server_version = "EconovariaLocalGateway/1.4"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -247,10 +296,34 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
     def do_OPTIONS(self) -> None:  # noqa: N802
         self._proxy_or_serve()
 
+    def _send_json_error(self, status: int, code: str, message: str) -> None:
+        payload = json.dumps({"code": code, "message": message}).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(payload)
+
     def _proxy(self) -> None:
+        server = self.server  # type: ignore[assignment]
+        browser_publishable_key = server.browser_publishable_key  # type: ignore[attr-defined]
+        platform_anon_key = server.platform_anon_key  # type: ignore[attr-defined]
+
+        if self.command != "OPTIONS":
+            incoming_key = str(self.headers.get("apikey") or "").strip()
+            if incoming_key != browser_publishable_key:
+                self._send_json_error(
+                    401,
+                    "invalid_publishable_key",
+                    "The request did not include the configured publishable API key.",
+                )
+                return
+
         content_length = int(self.headers.get("Content-Length", "0") or "0")
         body = self.rfile.read(content_length) if content_length else None
-        upstream = self.server.upstream  # type: ignore[attr-defined]
+        upstream = server.upstream  # type: ignore[attr-defined]
         connection_type = (
             http.client.HTTPSConnection
             if upstream.scheme == "https"
@@ -268,7 +341,13 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
                 self.command,
                 self.path,
                 body=body,
-                headers=filtered_request_headers(self.headers, upstream_host),
+                headers=filtered_request_headers(
+                    self.headers,
+                    upstream_host,
+                    path=self.path,
+                    browser_publishable_key=browser_publishable_key,
+                    platform_anon_key=platform_anon_key,
+                ),
             )
             upstream_response = connection.getresponse()
             payload = upstream_response.read()
@@ -284,18 +363,11 @@ class LocalStagingHandler(SimpleHTTPRequestHandler):
             if self.command != "HEAD":
                 self.wfile.write(payload)
         except (OSError, http.client.HTTPException) as error:
-            payload = json.dumps(
-                {
-                    "code": "local_gateway_upstream_failed",
-                    "message": "The local gateway could not reach the configured Supabase runtime.",
-                }
-            ).encode("utf-8")
-            self.send_response(502)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(payload)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(payload)
+            self._send_json_error(
+                502,
+                "local_gateway_upstream_failed",
+                "The local gateway could not reach the configured Supabase runtime.",
+            )
             print(f"Local gateway upstream failure: {error}", file=sys.stderr)
         finally:
             connection.close()
@@ -305,12 +377,22 @@ class LocalStagingServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, server_address, handler_class, upstream_url: str):
+    def __init__(
+        self,
+        server_address,
+        handler_class,
+        *,
+        upstream_url: str,
+        browser_publishable_key: str,
+        platform_anon_key: str,
+    ):
         super().__init__(server_address, handler_class)
         parsed = urlsplit(upstream_url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("upstream_url must be an absolute HTTP(S) URL")
         self.upstream = parsed
+        self.browser_publishable_key = browser_publishable_key
+        self.platform_anon_key = platform_anon_key
 
 
 def parse_args() -> argparse.Namespace:
@@ -320,6 +402,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-supabase", action="store_true")
     parser.add_argument("--project-ref")
     parser.add_argument("--publishable-key")
+    parser.add_argument("--anon-key")
     parser.add_argument("--port", type=int, default=4173)
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[1]))
     parser.add_argument("--open", action="store_true", dest="open_browser")
@@ -336,11 +419,12 @@ def main() -> int:
         raise SystemExit(f"Repository root does not contain index.html: {root}")
 
     if args.local_supabase:
-        if args.project_ref or args.publishable_key:
+        if args.project_ref or args.publishable_key or args.anon_key:
             raise SystemExit(
-                "--local-supabase cannot be combined with --project-ref or --publishable-key"
+                "--local-supabase cannot be combined with --project-ref, "
+                "--publishable-key, or --anon-key"
             )
-        supabase_url, publishable_key = local_supabase_runtime(root)
+        supabase_url, publishable_key, platform_anon_key = local_supabase_runtime(root)
         project_ref = LOCAL_DEVELOPMENT_PROJECT_REF
         environment = "development"
     else:
@@ -348,13 +432,23 @@ def main() -> int:
         publishable_key = args.publishable_key or os.environ.get(
             "ECONOVARIA_SUPABASE_PUBLISHABLE_KEY", ""
         )
+        platform_anon_key = args.anon_key or os.environ.get(
+            "ECONOVARIA_SUPABASE_ANON_KEY", ""
+        )
         if not project_ref.isalnum() or len(project_ref) != 20:
             raise SystemExit(
-                "--project-ref or ECONOVARIA_PROJECT_REF must be the 20-character Supabase project reference"
+                "--project-ref or ECONOVARIA_PROJECT_REF must be the 20-character "
+                "Supabase project reference"
             )
-        if not publishable_key.startswith(("sb_publishable_", "eyJ")):
+        if not publishable_key.startswith("sb_publishable_"):
             raise SystemExit(
-                "--publishable-key or ECONOVARIA_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable or legacy anon key"
+                "--publishable-key or ECONOVARIA_SUPABASE_PUBLISHABLE_KEY must be "
+                "an sb_publishable_ key"
+            )
+        if not platform_anon_key.startswith("eyJ"):
+            raise SystemExit(
+                "--anon-key or ECONOVARIA_SUPABASE_ANON_KEY must provide the "
+                "server-only legacy anon JWT used by verified Edge Functions"
             )
         supabase_url = f"https://{project_ref}.supabase.co"
         environment = "staging"
@@ -373,11 +467,21 @@ def main() -> int:
     )
 
     os.chdir(root)
-    server = LocalStagingServer(
-        ("127.0.0.1", args.port),
-        LocalStagingHandler,
-        upstream_url=supabase_url,
-    )
+    try:
+        server = LocalStagingServer(
+            ("127.0.0.1", args.port),
+            LocalStagingHandler,
+            upstream_url=supabase_url,
+            browser_publishable_key=publishable_key,
+            platform_anon_key=platform_anon_key,
+        )
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            raise SystemExit(
+                f"Port {args.port} is already in use. Stop the existing gateway "
+                f"before starting another dev session."
+            ) from error
+        raise
 
     restored = False
 
@@ -406,6 +510,10 @@ def main() -> int:
     print(
         "Static assets: no-store; "
         f"Supabase Auth: {auth_route}; Edge APIs: loopback proxy."
+    )
+    print(
+        "Browser API key: publishable; verified Edge compatibility token: "
+        "server-side only."
     )
     print("Press Ctrl+C to stop.")
 
