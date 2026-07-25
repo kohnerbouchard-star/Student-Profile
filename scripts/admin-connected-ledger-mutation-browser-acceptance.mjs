@@ -39,18 +39,20 @@ function redact(value) {
     .replace(/sb_(?:secret|publishable)_[A-Za-z0-9_-]+/g, "[supabase-key-redacted]");
 }
 
+async function parseJson(response) {
+  return response.json().catch(() => null);
+}
+
 async function runtimeConfig() {
   const response = await fetch(`${BASE_URL}/runtime-config.env.js`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Runtime configuration returned ${response.status}.`);
-  const source = await response.text();
-  const match = source.match(/Object\.freeze\((\{[\s\S]*\})\);?/);
+  const match = (await response.text()).match(/Object\.freeze\((\{[\s\S]*\})\);?/);
   if (!match) throw new Error("Runtime configuration could not be parsed.");
-  const config = JSON.parse(match[1]);
-  const publishableKey = String(config.supabasePublishableKey || "").trim();
+  const publishableKey = String(JSON.parse(match[1]).supabasePublishableKey || "").trim();
   if (!publishableKey || publishableKey.startsWith("sb_secret_")) {
     throw new Error("A browser-safe Supabase publishable key is required.");
   }
-  return { publishableKey };
+  return publishableKey;
 }
 
 function platformHeaders(publishableKey, token = publishableKey) {
@@ -69,15 +71,11 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
   });
-  const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json")
-    ? await response.json().catch(() => null)
-    : await response.text().catch(() => "");
-  return { status: response.status, ok: response.ok, payload };
+  return { status: response.status, ok: response.ok, payload: await parseJson(response) };
 }
 
 async function authenticateAdmin() {
-  const { publishableKey } = await runtimeConfig();
+  const publishableKey = await runtimeConfig();
   const signIn = await request("/auth/v1/token?grant_type=password", {
     method: "POST",
     headers: platformHeaders(publishableKey),
@@ -147,19 +145,16 @@ function playerRow(page) {
     .locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' admin-terminal-player-row ')][1]");
 }
 
-async function readCashText(page) {
+async function readCash(page) {
   const row = playerRow(page);
   await row.waitFor({ state: "visible", timeout: 30_000 });
   const text = String(await row.innerText()).replace(/\s+/g, " ").trim();
   const match = text.match(/CASH\s+[^0-9-]*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
   if (!match) throw new Error(`Could not read Player cash from row: ${redact(text)}`);
-  return {
-    text: match[0],
-    amount: Number(match[1].replace(/,/g, "")),
-  };
+  return Number(match[1].replace(/,/g, ""));
 }
 
-async function visibleMutationModal(page) {
+async function visibleModal(page) {
   const modal = page.locator([
     "[data-admin-terminal-modal-backdrop]:visible [role='dialog']",
     "[data-admin-terminal-modal-backdrop]:visible",
@@ -174,9 +169,6 @@ async function inventoryControls(modal) {
     tag: control.tagName.toLowerCase(),
     type: control.getAttribute("type") || "",
     name: control.getAttribute("name") || "",
-    value: control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement
-      ? String(control.value || "").slice(0, 80)
-      : "",
     text: String(control.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120),
     ariaLabel: control.getAttribute("aria-label") || "",
     disabled: Boolean(control.disabled),
@@ -185,19 +177,19 @@ async function inventoryControls(modal) {
 
 async function fillBalanceModal(modal) {
   const amount = modal.locator([
-    'input[name="amount"]',
-    'input[name*="amount" i]',
-    'input[type="number"]',
-  ].join(", ")).filter({ visible: true }).first();
+    'input[name="amount"]:visible',
+    'input[name*="amount" i]:visible',
+    'input[type="number"]:visible',
+  ].join(", ")).first();
   await amount.waitFor({ state: "visible", timeout: 10_000 });
   await amount.fill(String(ADJUSTMENT));
 
   const reason = modal.locator([
-    'textarea[name="reason"]',
-    'input[name="reason"]',
-    'textarea[name*="reason" i]',
-    'input[name*="reason" i]',
-  ].join(", ")).filter({ visible: true }).first();
+    'textarea[name="reason"]:visible',
+    'input[name="reason"]:visible',
+    'textarea[name*="reason" i]:visible',
+    'input[name*="reason" i]:visible',
+  ].join(", ")).first();
   if (await reason.count()) await reason.fill("Connected browser mutation verification");
 
   const selects = modal.locator("select:visible");
@@ -207,18 +199,16 @@ async function fillBalanceModal(modal) {
       value: node.value,
       text: String(node.textContent || "").trim(),
     })));
-    const credit = options.find((option) => /credit|add|increase/i.test(`${option.value} ${option.text}`));
-    const cash = options.find((option) => /cash/i.test(`${option.value} ${option.text}`));
-    const eld = options.find((option) => /^ELD$/i.test(option.value) || /\bELD\b/i.test(option.text));
-    if (credit) await select.selectOption(credit.value);
-    else if (cash) await select.selectOption(cash.value);
-    else if (eld) await select.selectOption(eld.value);
+    const preferred = options.find((option) => /credit|add|increase/i.test(`${option.value} ${option.text}`))
+      || options.find((option) => /cash/i.test(`${option.value} ${option.text}`))
+      || options.find((option) => /^ELD$/i.test(option.value) || /\bELD\b/i.test(option.text));
+    if (preferred) await select.selectOption(preferred.value);
   }
 
   const creditRadio = modal.locator([
-    'input[type="radio"][value="credit"]',
-    'input[type="radio"][value="add"]',
-    'input[type="radio"][value="increase"]',
+    'input[type="radio"][value="credit"]:visible',
+    'input[type="radio"][value="add"]:visible',
+    'input[type="radio"][value="increase"]:visible',
   ].join(", ")).first();
   if (await creditRadio.count()) await creditRadio.check();
 }
@@ -233,43 +223,27 @@ async function submitBalanceMutation(page, modal) {
   await submit.waitFor({ state: "visible", timeout: 10_000 });
   await submit.click();
   const response = await responsePromise;
-  const payload = await response.json().catch(() => null);
+  const payload = await parseJson(response);
   if (response.status() !== 200 || payload?.ok !== true || payload?.outcome !== "applied") {
     throw new Error(`Admin ledger adjustment returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
-  const request = response.request();
-  const requestHeaders = await request.allHeaders();
-  const replayHeaders = Object.fromEntries(Object.entries(requestHeaders).filter(([name]) => [
-    "accept",
-    "apikey",
-    "authorization",
-    "content-type",
-    "x-econovaria-csrf",
-    "x-econovaria-game-id",
-    "x-idempotency-key",
-    "x-request-id",
-  ].includes(name.toLowerCase())));
+  const requestRecord = response.request();
+  const requestHeaders = await requestRecord.allHeaders();
+  const allowed = new Set([
+    "accept", "apikey", "authorization", "content-type", "x-econovaria-csrf",
+    "x-econovaria-game-id", "x-idempotency-key", "x-request-id",
+  ]);
   return {
     url: response.url(),
-    body: request.postData() || "{}",
-    headers: replayHeaders,
-    balance: Number(payload.ledgerEntry?.balance),
-    currencyCode: String(payload.ledgerEntry?.currencyCode || ""),
+    body: requestRecord.postData() || "{}",
+    headers: Object.fromEntries(Object.entries(requestHeaders).filter(([name]) => allowed.has(name.toLowerCase()))),
   };
 }
 
 async function replayMutation(page, original) {
   return page.evaluate(async ({ url, headers, body }) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body,
-      cache: "no-store",
-    });
-    return {
-      status: response.status,
-      payload: await response.json().catch(() => null),
-    };
+    const response = await fetch(url, { method: "POST", headers, body, cache: "no-store" });
+    return { status: response.status, payload: await response.json().catch(() => null) };
   }, original);
 }
 
@@ -295,12 +269,11 @@ try {
   await navigatePlayers(page);
   evidence.playerLocated = true;
 
-  const before = await readCashText(page);
-  const row = playerRow(page);
-  const adjust = row.locator('[data-admin-terminal-action="adjust-player-balance"]');
+  const before = await readCash(page);
+  const adjust = playerRow(page).locator('[data-admin-terminal-action="adjust-player-balance"]');
   await adjust.waitFor({ state: "visible", timeout: 30_000 });
   await adjust.click();
-  const modal = await visibleMutationModal(page);
+  const modal = await visibleModal(page);
   evidence.modalOpened = true;
   evidence.controlInventory = await inventoryControls(modal);
   await fillBalanceModal(modal);
@@ -308,17 +281,17 @@ try {
   evidence.mutation.applied = true;
 
   await navigatePlayers(page);
-  const after = await readCashText(page);
-  if (Math.abs(after.amount - (before.amount + ADJUSTMENT)) > 0.001) {
-    throw new Error(`Rendered cash did not apply exactly one adjustment: ${before.amount} -> ${after.amount}.`);
+  const after = await readCash(page);
+  if (Math.abs(after - (before + ADJUSTMENT)) > 0.001) {
+    throw new Error(`Rendered cash did not apply exactly one adjustment: ${before} -> ${after}.`);
   }
 
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdminConsole(page);
   await navigatePlayers(page);
-  const persisted = await readCashText(page);
-  if (Math.abs(persisted.amount - after.amount) > 0.001) {
-    throw new Error(`Admin ledger adjustment did not persist after reload: ${after.amount} -> ${persisted.amount}.`);
+  const persisted = await readCash(page);
+  if (Math.abs(persisted - after) > 0.001) {
+    throw new Error(`Admin ledger adjustment did not persist after reload: ${after} -> ${persisted}.`);
   }
   evidence.mutation.persistedAfterReload = true;
 
@@ -329,9 +302,9 @@ try {
   await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await waitForAdminConsole(page);
   await navigatePlayers(page);
-  const afterReplay = await readCashText(page);
-  if (Math.abs(afterReplay.amount - persisted.amount) > 0.001) {
-    throw new Error(`Idempotent replay duplicated the balance mutation: ${persisted.amount} -> ${afterReplay.amount}.`);
+  const afterReplay = await readCash(page);
+  if (Math.abs(afterReplay - persisted) > 0.001) {
+    throw new Error(`Idempotent replay duplicated the balance mutation: ${persisted} -> ${afterReplay}.`);
   }
   evidence.mutation.replayedWithoutDuplication = true;
 
