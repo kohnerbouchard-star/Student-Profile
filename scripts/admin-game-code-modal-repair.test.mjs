@@ -12,9 +12,11 @@ test("Share Game Code repairs asynchronously mounted empty modals", async () => 
   ]);
 
   assert.match(shell, /game-code-wiring\.js[\s\S]+game-code-modal-repair\.js/);
-  assert.match(repair, /new MutationObserver/);
+  assert.match(repair, /RETRY_DELAYS/);
+  assert.match(repair, /addEventListener\("click"[\s\S]+true\)/);
   assert.match(repair, /data-admin-terminal-action\s*=\s*"reset-game-code"/);
   assert.match(repair, /Generate Code/);
   assert.match(repair, /button\[title=\\?"Share game code\\?"\]/);
+  assert.doesNotMatch(repair, /MutationObserver/);
   assert.doesNotMatch(repair, /fetch\s*\(/, "repair layer must reuse the authenticated reset handler");
 });
