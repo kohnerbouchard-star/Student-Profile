@@ -13,7 +13,7 @@
     'button[aria-label*="Share game code"]',
   ].join(",");
   const VALID_CODE = /^[A-Z0-9-]{4,64}$/;
-  const RETRY_DELAYS = Object.freeze([0, 40, 120, 260, 520]);
+  const RETRY_DELAYS = Object.freeze([0, 40, 120, 260, 520, 1000, 1800]);
   let timers = [];
 
   function text(value) {
@@ -83,24 +83,14 @@
     if (trigger) scheduleRepair();
   }, true);
 
-  const observer = new MutationObserver((records) => {
-    if (records.some((record) => record.addedNodes.length > 0)) {
-      ensureGenerateControl();
-    }
-  });
-
-  function init() {
-    observer.observe(document.body, { childList: true, subtree: true });
-    scheduleRepair();
-  }
-
   window.addEventListener("econovaria:admin-bootstrap-complete", scheduleRepair);
   window.addEventListener("econovaria:admin-session-refreshed", scheduleRepair);
   window.addEventListener("econovaria:admin-game-created", scheduleRepair);
+  window.addEventListener("econovaria:admin-modal-opened", scheduleRepair);
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", scheduleRepair, { once: true });
   } else {
-    init();
+    scheduleRepair();
   }
 })();
