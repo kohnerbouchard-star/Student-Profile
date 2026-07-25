@@ -12,6 +12,7 @@ const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Browser E2E Econo
 const PLAYER_NAME = "Browser E2E Player";
 const PLAYER_IDENTIFIER = "BROWSER-PLAYER-001";
 const PLAYER_ACCESS_CODE = "BROWSER-ACCESS-001";
+const MEMORABLE_CODE_PATTERN = /^ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}$/;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -23,7 +24,14 @@ const evidence = {
   createdThroughRenderedUi: false,
   adminConsoleRendered: false,
   navigation: [],
-  shareGameCode: { opened: false, generated: false, displayed: false },
+  shareGameCode: {
+    opened: false,
+    automatic: false,
+    displayed: false,
+    persistedAfterReload: false,
+    rotated: false,
+    rotationPersistedAfterReload: false,
+  },
   playerCreation: { opened: false, created: false, persistedAfterReload: false },
   logout: { menuOpened: false, confirmationOpened: false, redirected: false },
   requests: [],
@@ -101,6 +109,30 @@ async function navigateSection(name) {
   if (failed.length) throw new Error(`${name} navigation failed: ${JSON.stringify(failed)}`);
 }
 
+async function openShareModal() {
+  await page.locator('button[title="Share game code"]').click();
+  const modal = page.locator('[data-modal-id="share-game-access"]');
+  await modal.waitFor({ state: "visible", timeout: 20_000 });
+  const label = modal.locator(".admin-terminal-share-modal-code strong");
+  await label.waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForFunction((patternSource) => {
+    const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
+    return new RegExp(patternSource).test(value);
+  }, MEMORABLE_CODE_PATTERN.source, { timeout: 30_000 });
+  const code = String(await label.textContent() || "").trim();
+  if (!MEMORABLE_CODE_PATTERN.test(code)) {
+    throw new Error(`Share Game Code modal did not display a memorable persisted code: ${code}`);
+  }
+  return { modal, label, code };
+}
+
+async function closeShareModal(modal) {
+  await page.keyboard.press("Escape");
+  if (await modal.isVisible().catch(() => false)) {
+    await modal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]').first().click();
+  }
+}
+
 let failure;
 try {
   await page.goto(`${BASE_URL}/?mode=create`, { waitUntil: "domcontentloaded", timeout: 120_000 });
@@ -142,36 +174,52 @@ try {
   }
 
   const shareRequestIndex = evidence.requests.length;
-  await page.locator('button[title="Share game code"]').click();
-  const shareModal = page.locator('[data-modal-id="share-game-access"]');
-  await shareModal.waitFor({ state: "visible", timeout: 20_000 });
+  const initialShare = await openShareModal();
   evidence.shareGameCode.opened = true;
+  evidence.shareGameCode.automatic = true;
+  evidence.shareGameCode.displayed = true;
+  const initialCode = initialShare.code;
+  assertNoFailedRequests("Automatic Share Game Code", shareRequestIndex);
+  await closeShareModal(initialShare.modal);
 
-  const resetCode = shareModal.locator('[data-admin-terminal-action="reset-game-code"]');
-  await resetCode.waitFor({ state: "visible", timeout: 10_000 });
-  const responsePromise = page.waitForResponse(
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await waitForAdminConsole();
+  const persistedShare = await openShareModal();
+  if (persistedShare.code !== initialCode) {
+    throw new Error(`Game Code changed across reload: ${initialCode} -> ${persistedShare.code}`);
+  }
+  evidence.shareGameCode.persistedAfterReload = true;
+
+  const rotateRequestIndex = evidence.requests.length;
+  const rotateButton = persistedShare.modal.locator('[data-admin-terminal-action="reset-game-code"]');
+  await rotateButton.waitFor({ state: "visible", timeout: 10_000 });
+  const rotateResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/join-code/reset") && response.request().method() === "POST",
     { timeout: 60_000 },
   );
-  await resetCode.click();
-  const response = await responsePromise;
-  if (!response.ok()) throw new Error(`Generate Game Code returned ${response.status()}`);
-  evidence.shareGameCode.generated = true;
-
-  const codeLabel = shareModal.locator(".admin-terminal-share-modal-code strong");
-  await codeLabel.waitFor({ state: "visible", timeout: 10_000 });
-  await page.waitForFunction(() => {
+  await rotateButton.click();
+  const rotateResponse = await rotateResponsePromise;
+  if (!rotateResponse.ok()) throw new Error(`Rotate Game Code returned ${rotateResponse.status()}`);
+  await page.waitForFunction(({ prior, patternSource }) => {
     const value = String(document.querySelector('[data-modal-id="share-game-access"] .admin-terminal-share-modal-code strong')?.textContent || "").trim();
-    return /^[A-Z0-9-]{4,64}$/.test(value);
-  }, undefined, { timeout: 10_000 });
-  const renderedCode = String(await codeLabel.textContent() || "").trim();
-  if (!/^[A-Z0-9-]{4,64}$/.test(renderedCode)) throw new Error("Share Game Code modal did not display a generated code.");
-  evidence.shareGameCode.displayed = true;
-  assertNoFailedRequests("Share Game Code", shareRequestIndex);
-  await page.keyboard.press("Escape");
-  if (await shareModal.isVisible().catch(() => false)) {
-    await shareModal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]').first().click();
+    return value !== prior && new RegExp(patternSource).test(value);
+  }, { prior: initialCode, patternSource: MEMORABLE_CODE_PATTERN.source }, { timeout: 20_000 });
+  const rotatedCode = String(await persistedShare.label.textContent() || "").trim();
+  if (!MEMORABLE_CODE_PATTERN.test(rotatedCode) || rotatedCode === initialCode) {
+    throw new Error("Explicit Game Code rotation did not produce a new memorable code.");
   }
+  evidence.shareGameCode.rotated = true;
+  assertNoFailedRequests("Rotate Game Code", rotateRequestIndex);
+  await closeShareModal(persistedShare.modal);
+
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await waitForAdminConsole();
+  const rotatedPersistedShare = await openShareModal();
+  if (rotatedPersistedShare.code !== rotatedCode) {
+    throw new Error(`Rotated Game Code did not persist: ${rotatedCode} -> ${rotatedPersistedShare.code}`);
+  }
+  evidence.shareGameCode.rotationPersistedAfterReload = true;
+  await closeShareModal(rotatedPersistedShare.modal);
 
   await navigateSection("Overview");
   await page.getByRole("button", { name: /Add Player/i }).click();
