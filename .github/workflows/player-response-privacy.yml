@@ -9,6 +9,9 @@ on:
       - "backend/src/security/playerBrowserResponsePrivacy.test.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/src/security/playerRateLimitDispatch.test.ts"
+      - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
+      - "backend/src/domains/contracts/api/playerContractRoutePaths.ts"
+      - "backend/src/domains/contracts/api/playerContractRoutePaths.test.ts"
       - "backend/src/domains/game-dashboard/**"
       - "backend/src/domains/stocks/**"
       - "scripts/player-multiplayer-browser-acceptance.mjs"
@@ -38,7 +41,8 @@ jobs:
             --lock=supabase/functions/deno.lock \
             --frozen \
             src/security/playerBrowserResponsePrivacy.test.ts \
-            src/security/playerRateLimitDispatch.test.ts
+            src/security/playerRateLimitDispatch.test.ts \
+            src/domains/contracts/api/playerContractRoutePaths.test.ts
 
       - name: Typecheck Classroom API
         working-directory: backend
