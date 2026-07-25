@@ -21,6 +21,7 @@ on:
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
       - "scripts/player-multiplayer-browser-acceptance.mjs"
+      - "scripts/player-connected-mutation-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -37,7 +38,7 @@ concurrency:
 
 jobs:
   connected-player-runtime:
-    name: Two-browser Player journey and 30-40 Player load
+    name: Two-browser Player journey, mutations, and 30-40 Player load
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -72,6 +73,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           node --check scripts/player-multiplayer-browser-acceptance.mjs
+          node --check scripts/player-connected-mutation-browser-acceptance.mjs
           node --check scripts/player-runtime-load-profile.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
@@ -208,14 +210,20 @@ jobs:
         continue-on-error: true
         run: node scripts/player-multiplayer-browser-acceptance.mjs
 
+      - name: Execute connected Player mutation journey
+        id: player_mutations
+        if: steps.player_browser.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/player-connected-mutation-browser-acceptance.mjs
+
       - name: Execute 30 and 40 Player connected load profile
         id: player_load
-        if: steps.player_browser.outcome == 'success'
+        if: steps.player_browser.outcome == 'success' && steps.player_mutations.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
       - name: Capture sanitized Player diagnostics
-        if: steps.player_browser.outcome == 'failure' || steps.player_load.outcome == 'failure'
+        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_load.outcome == 'failure'
         shell: bash
         run: |
           set +e
@@ -253,6 +261,7 @@ jobs:
         shell: bash
         run: |
           test "${{ steps.player_browser.outcome }}" = "success"
+          test "${{ steps.player_mutations.outcome }}" = "success"
           test "${{ steps.player_load.outcome }}" = "success"
 
       - name: Stop local Player stack
