@@ -115,8 +115,21 @@ def parse_supabase_status_env(source: str) -> dict[str, str]:
     return values
 
 
+def local_edge_anon_key(values: dict[str, str]) -> str:
+    """Select the JWT-shaped local anon key required by verified Edge Functions."""
+    anon_key = values.get("ANON_KEY", "").strip()
+    if not anon_key:
+        raise SystemExit(
+            "Supabase status did not return ANON_KEY. Local verified Edge Functions "
+            "cannot use an opaque PUBLISHABLE_KEY as a bearer JWT."
+        )
+    if not anon_key.startswith("eyJ"):
+        raise SystemExit("Local Supabase ANON_KEY must be a JWT-shaped browser-safe key")
+    return anon_key
+
+
 def local_supabase_runtime(root: Path) -> tuple[str, str]:
-    """Return local Supabase API URL and browser-safe anon/publishable key."""
+    """Return local Supabase API URL and JWT-shaped browser-safe anon key."""
     command = [
         "npx",
         "supabase",
@@ -143,22 +156,16 @@ def local_supabase_runtime(root: Path) -> tuple[str, str]:
 
     values = parse_supabase_status_env(result.stdout)
     supabase_url = values.get("API_URL", "").rstrip("/")
-    publishable_key = values.get("PUBLISHABLE_KEY") or values.get("ANON_KEY") or ""
+    browser_key = local_edge_anon_key(values)
     if not supabase_url:
         raise SystemExit("Supabase status did not return API_URL")
-    if not publishable_key:
-        raise SystemExit("Supabase status did not return PUBLISHABLE_KEY or ANON_KEY")
 
     parsed = urlsplit(supabase_url)
     if parsed.scheme not in {"http", "https"} or parsed.hostname not in LOCAL_HOSTS:
         raise SystemExit("Local Supabase API_URL must use a loopback host")
     if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
         raise SystemExit("Local Supabase API_URL must not include a path, query, or fragment")
-    if publishable_key.startswith("sb_secret_"):
-        raise SystemExit("Local Supabase returned a secret key instead of a browser-safe key")
-    if not publishable_key.startswith(("sb_publishable_", "eyJ")):
-        raise SystemExit("Local Supabase browser key has an unsupported format")
-    return supabase_url, publishable_key
+    return supabase_url, browser_key
 
 
 def runtime_config(
