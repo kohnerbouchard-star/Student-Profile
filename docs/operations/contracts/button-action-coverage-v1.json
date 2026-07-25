@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "releasePolicy": {
+    "allowedEvidence": [
+      "connected_browser",
+      "local_browser",
+      "intentionally_disabled"
+    ],
+    "blockingEvidence": [
+      "contract_only",
+      "unverified"
+    ]
+  },
+  "playerActions": {
+    "arrivalClassSubmit": { "evidence": "contract_only", "domain": "world" },
+    "bankingExport": { "evidence": "local_browser", "domain": "banking" },
+    "bankTransfer": { "evidence": "contract_only", "domain": "banking" },
+    "businessCreate": { "evidence": "contract_only", "domain": "business" },
+    "businessEmployeeTerminate": { "evidence": "contract_only", "domain": "business" },
+    "businessHire": { "evidence": "contract_only", "domain": "business" },
+    "businessInputPurchase": { "evidence": "contract_only", "domain": "business" },
+    "businessPrice": { "evidence": "contract_only", "domain": "business" },
+    "businessProductCreate": { "evidence": "contract_only", "domain": "business" },
+    "businessProduction": { "evidence": "contract_only", "domain": "business" },
+    "businessStatus": { "evidence": "contract_only", "domain": "business" },
+    "chartRange": { "evidence": "local_browser", "domain": "markets" },
+    "contractAccept": { "evidence": "contract_only", "domain": "contracts" },
+    "contractSubmit": { "evidence": "contract_only", "domain": "contracts" },
+    "craftItem": { "evidence": "contract_only", "domain": "crafting" },
+    "craftCancel": { "evidence": "contract_only", "domain": "crafting" },
+    "craftClaim": { "evidence": "contract_only", "domain": "crafting" },
+    "equipmentEquip": { "evidence": "contract_only", "domain": "crafting" },
+    "itemEffectUse": { "evidence": "contract_only", "domain": "crafting" },
+    "itemSalvage": { "evidence": "contract_only", "domain": "crafting" },
+    "inventoryUse": { "evidence": "contract_only", "domain": "inventory" },
+    "loanApply": { "evidence": "contract_only", "domain": "banking" },
+    "loanRepay": { "evidence": "contract_only", "domain": "banking" },
+    "logout": { "evidence": "connected_browser", "domain": "identity" },
+    "marketOrder": { "evidence": "contract_only", "domain": "markets" },
+    "marketSearch": { "evidence": "local_browser", "domain": "markets" },
+    "marketWatchlist": { "evidence": "contract_only", "domain": "markets" },
+    "marketplaceCancel": { "evidence": "contract_only", "domain": "marketplace" },
+    "marketplaceListing": { "evidence": "contract_only", "domain": "marketplace" },
+    "marketplacePurchase": { "evidence": "contract_only", "domain": "marketplace" },
+    "messageAttachment": { "evidence": "intentionally_disabled", "domain": "messaging" },
+    "messageSearch": { "evidence": "contract_only", "domain": "messaging" },
+    "messageSend": { "evidence": "contract_only", "domain": "messaging" },
+    "notificationsRead": { "evidence": "contract_only", "domain": "notifications" },
+    "progressionClaim": { "evidence": "contract_only", "domain": "progression" },
+    "progressionUnlock": { "evidence": "contract_only", "domain": "progression" },
+    "residencyRequest": { "evidence": "contract_only", "domain": "world" },
+    "savingsTransfer": { "evidence": "contract_only", "domain": "banking" },
+    "storePurchase": { "evidence": "contract_only", "domain": "store" },
+    "storyDeliveryState": { "evidence": "contract_only", "domain": "story" },
+    "travelComplete": { "evidence": "contract_only", "domain": "world" },
+    "travelExecute": { "evidence": "contract_only", "domain": "world" },
+    "travelQuote": { "evidence": "contract_only", "domain": "world" }
+  },
+  "adminEvidence": {
+    "navigationAndModals": "connected_browser",
+    "gameCreation": "connected_browser",
+    "playerCreation": "connected_browser",
+    "gameCodeShare": "connected_browser",
+    "allMutationButtons": "unverified"
+  }
+}
