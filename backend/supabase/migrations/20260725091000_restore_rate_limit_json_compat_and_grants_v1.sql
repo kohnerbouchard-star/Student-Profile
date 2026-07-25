@@ -18,9 +18,9 @@ revoke all on function private.jsonb_object_length(jsonb)
   from public, anon, authenticated, service_role;
 
 alter function public.consume_request_rate_limits_v1(jsonb)
-  set search_path = public, private, pg_temp;
+  set search_path = pg_catalog, private, public, pg_temp;
 alter function public.consume_pre_auth_request_rate_limits_v1(jsonb)
-  set search_path = public, private, pg_temp;
+  set search_path = pg_catalog, private, public, pg_temp;
 
 -- The counter table remains inaccessible through the Data API. Edge Functions
 -- may only consume limits through the reviewed security-definer RPCs.
