@@ -12,6 +12,11 @@ const PLAYER = "00000000-0000-4000-8000-000000000021";
 const CREDENTIAL = "00000000-0000-4000-8000-000000000031";
 const NOW = Date.parse("2026-07-18T09:00:00.000Z");
 const EXPIRES_AT = "2026-07-18T21:00:00.000Z";
+const THROTTLE_BUCKETS = [
+  { dimension: "account" as const, keyHash: "a".repeat(64) },
+  { dimension: "device" as const, keyHash: "b".repeat(64) },
+  { dimension: "ip" as const, keyHash: "c".repeat(64) },
+];
 
 Deno.test("player login returns a one-time token without internal UUIDs", async () => {
   const fake = fakeClient({
@@ -211,6 +216,22 @@ function dependencies(
     hashValue: (value: string) => Promise.resolve(`hash:${value}`),
     generateSessionToken: overrides.generateSessionToken,
     now: () => NOW,
+    buildThrottleBuckets: async () => THROTTLE_BUCKETS,
+    checkThrottle: async () => ({
+      allowed: true,
+      retryAfterSeconds: 0,
+      limitingDimension: null,
+      failureCount: 0,
+      lockedUntil: null,
+    }),
+    recordFailure: async () => ({
+      allowed: false,
+      retryAfterSeconds: 0,
+      limitingDimension: null,
+      failureCount: 1,
+      lockedUntil: null,
+    }),
+    recordSuccess: async () => {},
   };
 }
 
@@ -290,9 +311,7 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
 
   then<TResult1 = { data: unknown; error: null }, TResult2 = never>(
     onfulfilled?:
-      | ((
-        value: { data: unknown; error: null },
-      ) => TResult1 | PromiseLike<TResult1>)
+      | ((value: { data: unknown; error: null }) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
