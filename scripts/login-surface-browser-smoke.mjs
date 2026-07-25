@@ -39,15 +39,17 @@ try {
     contentType: "application/javascript",
     body: 'window.__ECONOVARIA_RUNTIME_CONFIG__=Object.freeze({environment:"staging",projectRef:"eecvbssdvarfcykcfrny",supabaseUrl:"https://eecvbssdvarfcykcfrny.supabase.co",apiProxyUrl:"http://127.0.0.1:4317",supabasePublishableKey:"sb_publishable_login_surface_test"});',
   }));
-  await page.goto(origin + "/?login-smoke=20260725.1", { waitUntil: "networkidle" });
+  await page.goto(origin + "/?login-smoke=20260725.2", { waitUntil: "networkidle" });
   await page.locator(".login-panel-frame").waitFor({ state: "visible" });
 
   const surface = await page.evaluate(async () => {
     const logo = document.querySelector("[data-econovaria-brand-image]");
+    const fallback = document.querySelector(".logo-mark-fallback");
     const panel = document.querySelector(".login-panel-frame");
     const playerForm = document.getElementById("playerForm");
     const rect = logo?.getBoundingClientRect();
     const panelStyle = panel ? getComputedStyle(panel) : null;
+    const fallbackStyle = fallback ? getComputedStyle(fallback) : null;
     const logoResponse = await fetch(logo?.getAttribute("src") || "");
     const icon = document.querySelector('link[rel="icon"]');
     const iconResponse = await fetch(icon?.getAttribute("href") || "");
@@ -64,6 +66,8 @@ try {
       logoType: logoResponse.headers.get("content-type") || "",
       logoSource: logo?.getAttribute("src") || "",
       logoMode: logo?.getAttribute("data-econovaria-brand-source") || "",
+      fallbackHidden: Boolean(fallback?.hidden),
+      fallbackDisplay: fallbackStyle?.display || "",
       iconStatus: iconResponse.status,
       iconType: iconResponse.headers.get("content-type") || "",
       playerFormVisible: Boolean(playerForm && playerForm.getBoundingClientRect().width > 0),
@@ -83,6 +87,8 @@ try {
   assert.match(surface.logoType, /image\/png/);
   assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260725.1");
   assert.equal(surface.logoMode, "asset");
+  assert.equal(surface.fallbackHidden, true);
+  assert.equal(surface.fallbackDisplay, "none");
   assert.equal(surface.iconStatus, 200);
   assert.match(surface.iconType, /image\/png/);
   assert.equal(surface.playerFormVisible, true);
