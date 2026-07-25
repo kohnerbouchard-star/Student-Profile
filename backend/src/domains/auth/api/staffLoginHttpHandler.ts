@@ -20,6 +20,12 @@ import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
 interface StaffLoginDependencies {
   readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
+  readonly readEnvironment?: typeof readSupabaseEnv;
+  readonly enforceVolumetric?: typeof enforcePreAuthRateLimit;
+  readonly buildThrottleBuckets?: typeof buildAuthenticationThrottleBuckets;
+  readonly checkThrottle?: typeof checkAuthenticationThrottle;
+  readonly recordFailure?: typeof recordAuthenticationFailure;
+  readonly recordSuccess?: typeof recordAuthenticationSuccess;
 }
 
 interface StaffLoginInput {
@@ -33,7 +39,7 @@ interface StaffSecurityRow {
   readonly display_name: string;
   readonly status: string;
   readonly role: string;
-  readonly permission_version: number;
+  readonly permission_version: number | string;
   readonly security_version: number | string;
   readonly mfa_required: boolean;
 }
@@ -76,22 +82,26 @@ export async function handleStaffLoginRequest(
   }
 
   try {
-    const contentLength = Number(request.headers.get("content-length") || "0");
-    if (Number.isFinite(contentLength) && contentLength > MAX_LOGIN_BODY_BYTES) {
-      return jsonError(413, {
-        code: "request_body_too_large",
-        message: "The sign-in request is too large.",
-        retryable: false,
-      });
-    }
+    const inputResult = await readStaffLoginInput(request);
+    if (!inputResult.ok) return inputResult.response;
 
-    const envResult = readSupabaseEnv();
+    const envResult = (dependencies.readEnvironment ?? readSupabaseEnv)();
     if (!envResult.ok) return loginUnavailableResponse();
 
-    const input = parseStaffLoginInput(await request.json());
+    const input = inputResult.value;
     const serviceClient = dependencies.createServiceClient(envResult.value);
+    const enforceVolumetric = dependencies.enforceVolumetric ??
+      enforcePreAuthRateLimit;
+    const buildThrottleBuckets = dependencies.buildThrottleBuckets ??
+      buildAuthenticationThrottleBuckets;
+    const checkThrottle = dependencies.checkThrottle ??
+      checkAuthenticationThrottle;
+    const recordFailure = dependencies.recordFailure ??
+      recordAuthenticationFailure;
+    const recordSuccess = dependencies.recordSuccess ??
+      recordAuthenticationSuccess;
 
-    const volumetricDecision = await enforcePreAuthRateLimit({
+    const volumetricDecision = await enforceVolumetric({
       action: "staff.login.attempt",
       profile: "login",
       request,
@@ -100,12 +110,12 @@ export async function handleStaffLoginRequest(
       return rateLimitExceededResponse(volumetricDecision);
     }
 
-    const buckets = await buildAuthenticationThrottleBuckets({
+    const buckets = await buildThrottleBuckets({
       request,
       realm: "staff",
       accountIdentifier: input.email,
     });
-    const before = await checkAuthenticationThrottle(serviceClient, buckets);
+    const before = await checkThrottle(serviceClient, buckets);
     if (!before.allowed) return authenticationThrottledResponse(before);
 
     const authClient = dependencies.createAuthClient(envResult.value);
@@ -115,7 +125,7 @@ export async function handleStaffLoginRequest(
     const authUser = authResult.data.user;
 
     if (authResult.error || !session?.access_token || !authUser?.id) {
-      const failure = await recordAuthenticationFailure(serviceClient, buckets);
+      const failure = await recordFailure(serviceClient, buckets);
       return failure.retryAfterSeconds > 0
         ? authenticationThrottledResponse(failure)
         : invalidCredentialsResponse();
@@ -136,11 +146,31 @@ export async function handleStaffLoginRequest(
       staff.status !== "active" ||
       staff.role !== "game_admin"
     ) {
-      await recordAuthenticationFailure(serviceClient, buckets);
+      await recordFailure(serviceClient, buckets);
       return invalidCredentialsResponse();
     }
 
-    await recordAuthenticationSuccess(serviceClient, buckets);
+    const permissionVersion = Number(staff.permission_version);
+    const securityVersion = Number(staff.security_version);
+    const metadata = authUser.app_metadata ?? {};
+    if (
+      !Number.isSafeInteger(permissionVersion) ||
+      permissionVersion < 1 ||
+      !Number.isSafeInteger(securityVersion) ||
+      securityVersion < 1 ||
+      metadata.econovaria_role !== staff.role ||
+      Number(metadata.permission_version) !== permissionVersion ||
+      Number(metadata.security_version) !== securityVersion
+    ) {
+      await recordFailure(serviceClient, buckets);
+      return jsonError(403, {
+        code: "staff_authorization_outdated",
+        message: "Staff authorization must be reconciled before sign-in.",
+        retryable: false,
+      });
+    }
+
+    await recordSuccess(serviceClient, buckets);
     const assuranceLevel = readJwtAssuranceLevel(session.access_token);
 
     return jsonResponse(200, {
@@ -158,8 +188,8 @@ export async function handleStaffLoginRequest(
         email: staff.email,
         displayName: staff.display_name,
         role: staff.role,
-        permissionVersion: staff.permission_version,
-        securityVersion: Number(staff.security_version),
+        permissionVersion,
+        securityVersion,
       },
     }, {
       "cache-control": "private, no-store, max-age=0",
@@ -171,14 +201,42 @@ export async function handleStaffLoginRequest(
   }
 }
 
-function parseStaffLoginInput(value: unknown): StaffLoginInput {
+async function readStaffLoginInput(request: Request): Promise<
+  | { readonly ok: true; readonly value: StaffLoginInput }
+  | { readonly ok: false; readonly response: Response }
+> {
+  const contentLength = String(request.headers.get("content-length") || "").trim();
+  if (contentLength && (!/^\d{1,10}$/u.test(contentLength) || Number(contentLength) > MAX_LOGIN_BODY_BYTES)) {
+    return inputFailure(413, "request_body_too_large", "The sign-in request is too large.");
+  }
+
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await request.arrayBuffer();
+  } catch {
+    return inputFailure(400, "invalid_request_body", "The sign-in request could not be read.");
+  }
+  if (bytes.byteLength === 0) {
+    return inputFailure(400, "request_body_required", "A JSON sign-in request is required.");
+  }
+  if (bytes.byteLength > MAX_LOGIN_BODY_BYTES) {
+    return inputFailure(413, "request_body_too_large", "The sign-in request is too large.");
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    return inputFailure(400, "invalid_request_body", "The sign-in request must be valid JSON.");
+  }
+
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("invalid login body");
+    return inputFailure(400, "invalid_request_body", "The sign-in request must be a JSON object.");
   }
   const record = value as Record<string, unknown>;
   const suppliedKeys = Object.keys(record);
   if (suppliedKeys.some((key) => !["email", "password"].includes(key))) {
-    throw new Error("unknown login field");
+    return inputFailure(400, "unknown_request_field", "The sign-in request contains an unsupported field.");
   }
 
   const email = typeof record.email === "string"
@@ -190,11 +248,20 @@ function parseStaffLoginInput(value: unknown): StaffLoginInput {
     email.length > MAX_EMAIL_LENGTH ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) ||
     !password ||
-    password.length > MAX_PASSWORD_LENGTH
+    password.length > MAX_PASSWORD_LENGTH ||
+    /[\u0000-\u001f\u007f]/u.test(email)
   ) {
-    throw new Error("invalid login input");
+    return inputFailure(400, "invalid_login_input", "Email and password are required in the allowed format.");
   }
-  return { email, password };
+
+  return { ok: true, value: { email, password } };
+}
+
+function inputFailure(status: number, code: string, message: string) {
+  return {
+    ok: false as const,
+    response: jsonError(status, { code, message, retryable: false }),
+  };
 }
 
 function authenticationThrottledResponse(
@@ -239,7 +306,11 @@ function readJwtAssuranceLevel(token: string): "aal1" | "aal2" | "unknown" {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
     const claims = JSON.parse(atob(padded));
-    return claims?.aal === "aal2" ? "aal2" : claims?.aal === "aal1" ? "aal1" : "unknown";
+    return claims?.aal === "aal2"
+      ? "aal2"
+      : claims?.aal === "aal1"
+      ? "aal1"
+      : "unknown";
   } catch {
     return "unknown";
   }
