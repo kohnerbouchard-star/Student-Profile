@@ -4,7 +4,9 @@ const DEFAULT_TIMEOUT_MS = 20_000;
 
 export function buildStockMarketTickRequest(environment = process.env) {
   const supabaseUrl = requiredUrl(environment.SUPABASE_URL, "SUPABASE_URL");
-  const anonKey = requiredSecret(environment.SUPABASE_ANON_KEY, "SUPABASE_ANON_KEY");
+  const publishableKey = requiredPublishableKey(
+    environment.SUPABASE_PUBLISHABLE_KEY || environment.PUBLISHABLE_KEY,
+  );
   const runnerSecret = requiredSecret(
     environment.STOCK_MARKET_RUNNER_SECRET,
     "STOCK_MARKET_RUNNER_SECRET",
@@ -19,7 +21,7 @@ export function buildStockMarketTickRequest(environment = process.env) {
   return Object.freeze({
     url: new URL("/functions/v1/stock-market-runner", supabaseUrl).toString(),
     headers: Object.freeze({
-      authorization: `Bearer ${anonKey}`,
+      apikey: publishableKey,
       "content-type": "application/json",
       "x-stock-market-runner-secret": runnerSecret,
     }),
@@ -115,6 +117,14 @@ function requiredSecret(value, name) {
   const text = String(value || "").trim();
   if (!text) throw new Error(`${name} is required.`);
   return text;
+}
+
+function requiredPublishableKey(value) {
+  const key = requiredSecret(value, "SUPABASE_PUBLISHABLE_KEY");
+  if (!key.startsWith("sb_publishable_")) {
+    throw new Error("SUPABASE_PUBLISHABLE_KEY must use the sb_publishable_ format.");
+  }
+  return key;
 }
 
 function requiredUuid(value, name) {
