@@ -16,6 +16,7 @@ on:
       - "backend/src/domains/economy/**"
       - "backend/src/domains/inventory/**"
       - "backend/src/domains/progression/**"
+      - "backend/src/security/**"
       - "backend/supabase/config.toml"
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
