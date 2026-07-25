@@ -15,6 +15,10 @@ const V3_MIGRATION = new URL(
   "../../../../supabase/migrations/20260725090000_harden_game_creation_provisioning_integrity_v3.sql",
   import.meta.url,
 );
+const JOINABLE_GUARD_MIGRATION = new URL(
+  "../../../../supabase/migrations/20260725092000_refine_joinable_game_provisioning_guard_v1.sql",
+  import.meta.url,
+);
 const STAFF_SIGNUP_HANDLER = new URL(
   "../../../auth/api/staffSignupHttpHandler.ts",
   import.meta.url,
@@ -126,14 +130,14 @@ Deno.test("full activation v2 publishes executable Story and Arrival services wi
 });
 
 Deno.test("provisioning v3 binds first signup and later Admin game creation to the same verified authority", async () => {
-  const [sql, signup, admin] = await Promise.all([
+  const [sql, joinableGuard, signup, admin] = await Promise.all([
     Deno.readTextFile(V3_MIGRATION),
+    Deno.readTextFile(JOINABLE_GUARD_MIGRATION),
     Deno.readTextFile(STAFF_SIGNUP_HANDLER),
     Deno.readTextFile(ADMIN_PROVISIONING_HANDLER),
   ]);
 
   assertIncludes(sql, "create trigger enforce_active_game_is_provisioned");
-  assertIncludes(sql, "ACTIVE_GAME_REQUIRES_READY_PROVISIONING");
   assertIncludes(sql, "create or replace function public.game_provisioning_preflight_v1");
   assertIncludes(sql, "GAME_PROVISIONING_CANONICAL_SOURCE_INCOMPLETE");
   assertIncludes(sql, "create or replace function public.verify_provisioned_game_v1");
@@ -147,6 +151,12 @@ Deno.test("provisioning v3 binds first signup and later Admin game creation to t
   assertIncludes(sql, "insert into public.entitlements");
   assertIncludes(sql, "to service_role");
   assertNotIncludes(sql, "to authenticated");
+
+  assertIncludes(joinableGuard, "new.status = 'active'");
+  assertIncludes(joinableGuard, "new.game_join_code_status = 'active'");
+  assertIncludes(joinableGuard, "new.provisioning_status");
+  assertIncludes(joinableGuard, "JOINABLE_GAME_REQUIRES_READY_PROVISIONING");
+  assertIncludes(joinableGuard, "update of status, game_join_code_status, provisioning_status");
 
   assertIncludes(signup, '"game_provisioning_preflight_v1"');
   assertBefore(signup, '"game_provisioning_preflight_v1"', "auth.admin.createUser");
