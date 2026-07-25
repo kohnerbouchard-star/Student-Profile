@@ -1,6 +1,14 @@
 import { ApiRequestError, normalizeApiError, playerSafeErrorMessage } from "./errors.js";
 import { parseRetryAfter } from "./request-context.js";
 
+function normalizedCredential(value) {
+  return String(value || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function isPublishableKey(value) {
+  return /^sb_publishable_/i.test(normalizedCredential(value));
+}
+
 export class HttpTransport {
   constructor(config) {
     this.config = config;
@@ -23,7 +31,20 @@ export class HttpTransport {
     };
 
     if (payload !== undefined) headers["Content-Type"] = "application/json";
-    if (this.config.accessToken) headers.Authorization = `Bearer ${this.config.accessToken}`;
+
+    const configuredAccessToken = normalizedCredential(this.config.accessToken);
+    const publishableKey = normalizedCredential(
+      this.config.publishableKey ||
+      (isPublishableKey(configuredAccessToken) ? configuredAccessToken : "")
+    );
+    const userAccessToken =
+      configuredAccessToken && configuredAccessToken !== publishableKey
+        ? configuredAccessToken
+        : "";
+
+    if (publishableKey) headers.apikey = publishableKey;
+    if (userAccessToken) headers.Authorization = `Bearer ${userAccessToken}`;
+
     if (this.config.playerSessionToken) {
       headers["x-player-session-token"] = this.config.playerSessionToken;
       headers["x-econovaria-player-session-token"] = this.config.playerSessionToken;
