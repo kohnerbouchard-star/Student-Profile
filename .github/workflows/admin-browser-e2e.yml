@@ -9,6 +9,8 @@ on:
       - "index.html"
       - "admin/**"
       - "frontend/src/core/**"
+      - "backend/src/domains/auth/**"
+      - "backend/src/domains/licensing/**"
       - "backend/supabase/config.toml"
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
@@ -149,7 +151,28 @@ jobs:
           exit 1
 
       - name: Execute rendered Create Game and Admin journey
+        id: browser
+        continue-on-error: true
         run: node scripts/admin-browser-reconnaissance.mjs
+
+      - name: Capture sanitized server diagnostics
+        if: steps.browser.outcome == 'failure'
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "== database state =="
+            psql "$DATABASE_URL" -X -qAt -c "select jsonb_build_object('authUsers', (select count(*) from auth.users where email = 'browser.e2e@example.test'), 'staffUsers', (select count(*) from public.staff_users where email = 'browser.e2e@example.test'), 'games', (select count(*) from public.game_sessions where name = 'Browser E2E Economy'), 'licenseStatus', (select status from public.purchase_codes where code_hash = encode(extensions.digest('BROWSER-E2E-LICENSE-001', 'sha256'), 'hex')), 'licenseRedeemedCount', (select redeemed_count from public.purchase_codes where code_hash = encode(extensions.digest('BROWSER-E2E-LICENSE-001', 'sha256'), 'hex')))::text;"
+            echo "== container logs =="
+            for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
+              echo "-- ${CONTAINER} --"
+              docker logs --since 10m "$CONTAINER" 2>&1 | tail -n 500
+            done
+          } \
+            | sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi' \
+            > /tmp/admin-browser-server-diagnostics.log
+          cat /tmp/admin-browser-server-diagnostics.log
+          exit 0
 
       - name: Upload sanitized browser evidence
         if: always()
@@ -161,8 +184,14 @@ jobs:
             /tmp/admin-browser-supabase-startup.log
             /tmp/admin-browser-source-provisioning.log
             /tmp/admin-browser-gateway.log
+            /tmp/admin-browser-server-diagnostics.log
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Enforce rendered browser result
+        if: always()
+        shell: bash
+        run: test "${{ steps.browser.outcome }}" = "success"
 
       - name: Stop local browser stack
         if: always()
