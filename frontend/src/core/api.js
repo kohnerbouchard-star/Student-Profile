@@ -167,7 +167,7 @@ function callPlayerBootstrapApi(sessionToken) {
 }
 
 function callPlayerLogoutApi(sessionToken) {
-  return callSupabaseJsonRoute("player", "/players/me/logout", {
+  return callSupabaseJsonRoute("player", "/players/me/session/logout", {
     method: "POST",
     playerSessionToken: sessionToken,
     body: {},
