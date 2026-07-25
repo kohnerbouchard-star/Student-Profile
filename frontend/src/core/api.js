@@ -2,13 +2,18 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.core = window.Econovaria.core || {};
 window.Econovaria.core.api = window.Econovaria.core.api || {};
 
-function getApiRouteUrl(path) {
-  const baseUrl = String(
-    window.Econovaria?.core?.constants?.CLASSROOM_API_URL || ""
-  ).trim().replace(/\/+$/, "");
+function getApiRouteUrl(surface, path) {
+  const constants = window.Econovaria?.core?.constants || {};
+  const baseBySurface = {
+    player: constants.PLAYER_API_URL,
+    staff: constants.STAFF_API_URL,
+    bootstrap: constants.BOOTSTRAP_API_URL,
+    admin: constants.ADMIN_API_URL
+  };
+  const baseUrl = String(baseBySurface[surface] || "").trim().replace(/\/+$/, "");
 
   if (!baseUrl) {
-    throw new Error("[Econovaria API] Supabase classroom API URL is not configured.");
+    throw new Error(`[Econovaria API] ${surface} API URL is not configured.`);
   }
 
   const routePath = String(path || "").startsWith("/")
@@ -57,23 +62,25 @@ function normalizeEdgeRouteError(
   };
 }
 
-async function callSupabaseJsonRoute(path, options = {}) {
+async function callSupabaseJsonRoute(surface, path, options = {}) {
   const { publishableKey } = getSupabaseConfig();
   const token = normalizeBearerToken(options.token);
   const playerSessionToken = normalizeBearerToken(options.playerSessionToken);
 
-  try {
-    const headers = {
-      apikey: publishableKey
+  if (token === publishableKey || /^sb_publishable_/i.test(token)) {
+    return {
+      ok: false,
+      status: 401,
+      code: "publishable_key_bearer_prohibited",
+      message: "The publishable key cannot be used as a user session token."
     };
+  }
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+  try {
+    const headers = { apikey: publishableKey };
 
-    if (playerSessionToken) {
-      headers["x-player-session-token"] = playerSessionToken;
-    }
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (playerSessionToken) headers["x-player-session-token"] = playerSessionToken;
 
     const requestOptions = {
       method: options.method || "GET",
@@ -86,7 +93,7 @@ async function callSupabaseJsonRoute(path, options = {}) {
       requestOptions.body = JSON.stringify(options.body);
     }
 
-    const response = await fetch(getApiRouteUrl(path), requestOptions);
+    const response = await fetch(getApiRouteUrl(surface, path), requestOptions);
     const result = await readJsonResponse(response);
 
     if (response.ok && result?.ok === true) {
@@ -110,7 +117,7 @@ async function callSupabaseJsonRoute(path, options = {}) {
 }
 
 function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
-  return callSupabaseJsonRoute("/players/login", {
+  return callSupabaseJsonRoute("player", "/players/login", {
     method: "POST",
     body: {
       gameJoinCode: String(gameCode || "").trim(),
@@ -123,7 +130,7 @@ function callPlayerLoginApi(gameCode, playerIdentifier, accessCode) {
 }
 
 function callPlayerBootstrapApi(sessionToken) {
-  return callSupabaseJsonRoute("/players/me", {
+  return callSupabaseJsonRoute("player", "/players/me", {
     method: "GET",
     playerSessionToken: sessionToken,
     fallbackCode: "player_session_bootstrap_failed",
@@ -132,7 +139,7 @@ function callPlayerBootstrapApi(sessionToken) {
 }
 
 function callPlayerGameDashboardApi(sessionToken) {
-  return callSupabaseJsonRoute("/players/me/game/dashboard", {
+  return callSupabaseJsonRoute("player", "/players/me/game/dashboard", {
     method: "GET",
     playerSessionToken: sessionToken,
     fallbackCode: "player_game_dashboard_failed",
@@ -186,7 +193,7 @@ async function callSupabasePasswordSignIn(email, password) {
 }
 
 function callStaffSignupApi(input) {
-  return callSupabaseJsonRoute("/staff/signup", {
+  return callSupabaseJsonRoute("bootstrap", "/staff/signup", {
     method: "POST",
     body: {
       email: String(input?.email || "").trim(),
@@ -205,7 +212,7 @@ function callStaffSignupApi(input) {
 }
 
 function callLicensingActivationApi(bearerToken, input) {
-  return callSupabaseJsonRoute("/licensing/activate", {
+  return callSupabaseJsonRoute("staff", "/licensing/activate", {
     method: "POST",
     token: bearerToken,
     body: {
@@ -222,7 +229,7 @@ function callLicensingActivationApi(bearerToken, input) {
 }
 
 function callStaffBootstrapApi(bearerToken) {
-  return callSupabaseJsonRoute("/staff/bootstrap", {
+  return callSupabaseJsonRoute("staff", "/staff/bootstrap", {
     method: "GET",
     token: bearerToken,
     fallbackCode: "staff_bootstrap_failed",
