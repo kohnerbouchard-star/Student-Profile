@@ -10,6 +10,7 @@ on:
       - "admin/classroom-write-fallback.js"
       - "scripts/admin-economic-nested-json-contract.test.mjs"
       - "scripts/runtime-stabilization-contract.test.mjs"
+      - "scripts/runtime-stabilization-two-player-onboarding.mjs"
       - "scripts/game-feature-activation-v2-local-acceptance.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
       - "scripts/full-game-local-e2e-acceptance.mjs"
@@ -49,6 +50,7 @@ jobs:
         run: |
           node --test scripts/runtime-stabilization-contract.test.mjs
           node --test scripts/admin-economic-nested-json-contract.test.mjs
+          node --check scripts/runtime-stabilization-two-player-onboarding.mjs
           node --check scripts/game-feature-activation-v2-local-acceptance.mjs
           git diff --check origin/main...HEAD
 
@@ -133,7 +135,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node scripts/game-feature-activation-v2-local-acceptance.mjs \
+          node scripts/runtime-stabilization-two-player-onboarding.mjs \
             2>&1 | tee /tmp/game-feature-activation-v2-local-acceptance.log
 
       - name: Upload sanitized acceptance evidence
