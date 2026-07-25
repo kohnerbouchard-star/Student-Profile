@@ -74,6 +74,26 @@ jobs:
           node --check scripts/player-runtime-load-profile.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
+          python3 - <<'PY'
+          import importlib.util
+          from email.message import Message
+          from pathlib import Path
+
+          path = Path("scripts/econovaria-local-gateway.py")
+          spec = importlib.util.spec_from_file_location("econovaria_gateway_wrapper", path)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          gateway = module.load_gateway()
+          module.install_trusted_client_ip(gateway)
+          headers = Message()
+          headers["cf-connecting-ip"] = "203.0.113.10"
+          headers["x-real-ip"] = "203.0.113.11"
+          headers["x-forwarded-for"] = "203.0.113.12"
+          filtered = gateway.filtered_request_headers(headers, "127.0.0.1:54321")
+          assert filtered["x-real-ip"] == "127.0.0.1"
+          assert "cf-connecting-ip" not in {name.lower() for name in filtered}
+          assert "x-forwarded-for" not in {name.lower() for name in filtered}
+          PY
           npx playwright install --with-deps chromium
 
       - name: Build exact authorized Crafting pack
@@ -101,6 +121,13 @@ jobs:
           set -euo pipefail
           LOG=/tmp/player-runtime-supabase-startup.log
           : > "$LOG"
+          mkdir -p backend/supabase/functions
+          node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" \
+            | awk '{print "ECONOVARIA_RATE_LIMIT_HMAC_SECRET=" $0}' \
+            > backend/supabase/functions/.env
+          printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip' \
+            >> backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           for ATTEMPT in 1 2 3; do
             set +e
@@ -234,4 +261,5 @@ jobs:
           if [ -f /tmp/player-runtime-gateway.pid ]; then
             kill "$(cat /tmp/player-runtime-gateway.pid)" 2>/dev/null || true
           fi
+          rm -f backend/supabase/functions/.env
           npx supabase stop --workdir backend --no-backup || true
