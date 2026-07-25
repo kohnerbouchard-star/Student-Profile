@@ -133,9 +133,15 @@ jobs:
             v_verification jsonb;
             v_result jsonb;
           begin
-            select staff_row.id into v_staff_id
-            from public.staff_users as staff_row
-            where staff_row.email = 'canonical-source@econovaria.internal'
+            select game_row.owner_staff_user_id into v_staff_id
+            from public.seed_content_releases as release_row
+            join public.game_sessions as game_row
+              on game_row.id = release_row.game_session_id
+            where release_row.pack_id = 'econovaria.beta-seed-pack.v1'
+              and release_row.status = 'applied_active'
+              and release_row.target_environment in ('local', 'test', 'staging')
+            order by release_row.applied_at desc nulls last,
+              release_row.created_at desc
             limit 1;
 
             if v_staff_id is null then
