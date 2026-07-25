@@ -5,10 +5,6 @@ The browser receives one deployment-scoped ``sb_publishable_`` key in runtime
 configuration. The gateway validates that key in ``apikey``, removes accidental
 publishable-key bearer headers, preserves real staff JWTs, preserves opaque Player
 session headers, and never reads, exposes, or injects the legacy anon JWT.
-
-Local mode discovers the running Supabase CLI stack. Connected staging mode binds
-an explicit project reference and publishable key. The server always binds to
-127.0.0.1 and restores the prior runtime configuration on shutdown.
 """
 
 from __future__ import annotations
@@ -18,6 +14,7 @@ import errno
 import http.client
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -32,9 +29,13 @@ DEFAULT_REQUEST_TIMEOUT_SECONDS = 180.0
 MINIMUM_REQUEST_TIMEOUT_SECONDS = 30.0
 MAXIMUM_REQUEST_TIMEOUT_SECONDS = 300.0
 MAX_PROXY_BODY_BYTES = 1_048_576
+MAX_HEADER_VALUE_BYTES = 8_192
 LOCAL_DEVELOPMENT_PROJECT_REF: Final[str] = "localdevelopment0000"
 LOCAL_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 PROXY_PREFIXES: Final[tuple[str, ...]] = ("/functions/v1/", "/auth/v1/")
+HEADER_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,128}$"
+)
 HOP_BY_HOP_HEADERS: Final[frozenset[str]] = frozenset(
     {
         "connection",
@@ -62,7 +63,7 @@ STATIC_NO_CACHE_HEADERS: Final[tuple[tuple[str, str], ...]] = (
     ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
     ("Pragma", "no-cache"),
     ("Expires", "0"),
-    ("X-Econovaria-Local-Gateway", "publishable-only-v1"),
+    ("X-Econovaria-Local-Gateway", "publishable-only-v2"),
 )
 STATIC_CONDITIONAL_HEADERS: Final[tuple[str, ...]] = (
     "If-Modified-Since",
@@ -194,6 +195,19 @@ def runtime_config(
     )
 
 
+def safe_header_pair(name: object, value: object) -> tuple[str, str] | None:
+    """Return a bounded RFC token/value pair or drop untrusted header material."""
+    normalized_name = str(name)
+    normalized_value = str(value)
+    if not HEADER_NAME_PATTERN.fullmatch(normalized_name):
+        return None
+    if any(character in normalized_value for character in ("\r", "\n", "\x00")):
+        return None
+    if len(normalized_value.encode("utf-8", errors="strict")) > MAX_HEADER_VALUE_BYTES:
+        return None
+    return normalized_name, normalized_value
+
+
 def filtered_request_headers(
     headers,
     upstream_host: str,
@@ -203,7 +217,11 @@ def filtered_request_headers(
     result: dict[str, str] = {}
     prohibited_bearer = f"Bearer {browser_publishable_key}"
     for name, value in headers.items():
-        lower_name = name.lower()
+        pair = safe_header_pair(name, value)
+        if pair is None:
+            continue
+        safe_name, safe_value = pair
+        lower_name = safe_name.lower()
         if lower_name in HOP_BY_HOP_HEADERS or lower_name in {
             "host",
             "content-length",
@@ -211,9 +229,9 @@ def filtered_request_headers(
             continue
         if lower_name in FORWARDED_IP_HEADERS:
             continue
-        if lower_name == "authorization" and str(value).strip() == prohibited_bearer:
+        if lower_name == "authorization" and safe_value.strip() == prohibited_bearer:
             continue
-        result[name] = value
+        result[safe_name] = safe_value
     result["Host"] = upstream_host
     result["x-real-ip"] = "127.0.0.1"
     return result
@@ -222,15 +240,19 @@ def filtered_request_headers(
 def filtered_response_headers(headers) -> list[tuple[str, str]]:
     result: list[tuple[str, str]] = []
     for name, value in headers:
-        lower_name = name.lower()
+        pair = safe_header_pair(name, value)
+        if pair is None:
+            continue
+        safe_name, safe_value = pair
+        lower_name = safe_name.lower()
         if lower_name in HOP_BY_HOP_HEADERS or lower_name.startswith("access-control-"):
             continue
-        result.append((name, value))
+        result.append((safe_name, safe_value))
     return result
 
 
 class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
-    server_version = "EconovariaGateway/2.0"
+    server_version = "EconovariaGateway/2.1"
 
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
@@ -283,6 +305,7 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(payload)
@@ -342,13 +365,14 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
             upstream_response = connection.getresponse()
             payload = upstream_response.read()
 
-            self.send_response(upstream_response.status, upstream_response.reason)
+            self.send_response(upstream_response.status)
             for name, value in filtered_response_headers(upstream_response.getheaders()):
                 if name.lower() == "content-length":
                     continue
                 self.send_header(name, value)
             self.send_header("Content-Length", str(len(payload)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(payload)
