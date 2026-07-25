@@ -182,7 +182,7 @@ export async function resolveStaffSessionForRequest(
   const authHeader = request.headers.get("authorization");
   const accessToken = extractBearerToken(authHeader);
 
-  if (!accessToken) {
+  if (!accessToken || /^sb_publishable_/i.test(accessToken)) {
     return missingStaffAuthUser(options.missingMessage);
   }
 
@@ -196,14 +196,10 @@ export async function resolveStaffSessionForRequest(
 
   if (options.beforeStaffLookup) {
     const prerequisiteResult = await options.beforeStaffLookup();
-
-    if (!prerequisiteResult.ok) {
-      return prerequisiteResult;
-    }
+    if (!prerequisiteResult.ok) return prerequisiteResult;
   }
 
   const serviceClient = dependencies.createServiceClient(env);
-
   const staffResponse = await serviceClient
     .from("staff_users")
     .select("id,supabase_auth_user_id,email,display_name")
@@ -219,7 +215,6 @@ export async function resolveStaffSessionForRequest(
   }
 
   const staff = staffResponse.data as EdgeStaffSessionStaff | null;
-
   if (!staff?.id) {
     return {
       ok: false,
@@ -232,32 +227,50 @@ export async function resolveStaffSessionForRequest(
     };
   }
 
-  return {
-    ok: true,
-    authUser,
-    staff,
-    serviceClient,
-  };
+  return { ok: true, authUser, staff, serviceClient };
 }
 
-function missingStaffAuthUser(message: string): EdgeStaffSessionFailure {
-  return {
-    ok: false,
-    status: 401,
-    error: {
-      code: "missing_staff_auth_user",
-      message,
-      retryable: false,
-    },
-  };
+function environmentValue(name: string): string {
+  try {
+    return String(Deno.env.get(name) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function dictionaryValues(raw: string): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+    return Object.values(parsed)
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function firstConfigured(values: readonly string[]): string {
+  return values.find((value) => Boolean(value)) || "";
 }
 
 export function readSupabaseEnv():
   | { readonly ok: true; readonly value: SupabaseEnv }
   | { readonly ok: false } {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = environmentValue("SUPABASE_URL");
+  const supabaseAnonKey = firstConfigured([
+    environmentValue("SUPABASE_PUBLISHABLE_KEY"),
+    environmentValue("PUBLISHABLE_KEY"),
+    ...dictionaryValues(environmentValue("SUPABASE_PUBLISHABLE_KEYS")),
+    environmentValue("SUPABASE_ANON_KEY"),
+  ]);
+  const supabaseServiceRoleKey = firstConfigured([
+    environmentValue("SUPABASE_SECRET_KEY"),
+    environmentValue("SECRET_KEY"),
+    ...dictionaryValues(environmentValue("SUPABASE_SECRET_KEYS")),
+    environmentValue("SUPABASE_SERVICE_ROLE_KEY"),
+  ]);
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return { ok: false };
@@ -265,11 +278,7 @@ export function readSupabaseEnv():
 
   return {
     ok: true,
-    value: {
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseServiceRoleKey,
-    },
+    value: { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey },
   };
 }
 
@@ -312,7 +321,6 @@ export async function readOwnedGameSession(
   }
 
   const gameSession = gameResponse.data;
-
   if (!gameSession?.id) {
     return {
       ok: false,
@@ -331,6 +339,18 @@ export async function readOwnedGameSession(
       id: gameSession.id,
       name: gameSession.name,
       status: gameSession.status,
+    },
+  };
+}
+
+function missingStaffAuthUser(message: string): EdgeStaffSessionFailure {
+  return {
+    ok: false,
+    status: 401,
+    error: {
+      code: "missing_staff_auth_user",
+      message,
+      retryable: false,
     },
   };
 }
