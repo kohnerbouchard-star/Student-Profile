@@ -6,6 +6,10 @@ begin;
 revoke all on table public.staff_users from public, anon, authenticated;
 grant select, insert, update, delete on table public.staff_users to service_role;
 
+-- Staff bootstrap returns only the authenticated administrator's active games.
+-- The service client performs the ownership filter after Auth verification.
+grant select on table public.game_sessions to service_role;
+
 comment on table public.staff_users is
   'Administrator identity projection. Browser roles have no direct access; service-owned authentication routes receive explicit persistence privileges.';
 
