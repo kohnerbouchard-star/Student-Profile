@@ -20,7 +20,6 @@ const ROUTES = [
 ];
 
 const EXCLUDED_ACTIONS = new Set(["logout"]);
-const BUTTON_SELECTOR = ".player-terminal-page button:not([disabled])";
 
 async function openPreviewRoute(page, route) {
   await page.addInitScript(() => {
@@ -35,26 +34,27 @@ async function openPreviewRoute(page, route) {
   await expect(page.locator(".player-terminal-route-error")).toHaveCount(0);
 }
 
+function contentButtons(page) {
+  return page.locator(".player-terminal-page").getByRole("button");
+}
+
 async function visibleButtonInventory(page) {
-  return page.locator(BUTTON_SELECTOR).evaluateAll((buttons) =>
-    buttons.map((button, index) => {
-      const rectangle = button.getBoundingClientRect();
-      const style = getComputedStyle(button);
-      const visible = rectangle.width > 0 && rectangle.height > 0 &&
-        style.display !== "none" && style.visibility !== "hidden" &&
-        style.opacity !== "0" && !button.hidden;
-      return {
-        index,
-        visible,
-        text: String(button.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120),
-        ariaLabel: button.getAttribute("aria-label") || "",
-        endpoint: button.closest("form")?.getAttribute("data-endpoint") || "",
-        action: button.getAttribute("data-player-action") || "",
-        localAction: button.getAttribute("data-player-local-action") || "",
-        type: button.getAttribute("type") || "button",
-      };
-    }).filter((button) => button.visible)
-  );
+  const buttons = contentButtons(page);
+  const inventory = [];
+  for (let index = 0; index < await buttons.count(); index += 1) {
+    const button = buttons.nth(index);
+    if (!(await button.isVisible()) || !(await button.isEnabled())) continue;
+    inventory.push(await button.evaluate((element, stableIndex) => ({
+      index: stableIndex,
+      text: String(element.textContent || "").trim().replace(/\s+/g, " ").slice(0, 120),
+      ariaLabel: element.getAttribute("aria-label") || "",
+      endpoint: element.closest("form")?.getAttribute("data-endpoint") || "",
+      action: element.getAttribute("data-player-action") || "",
+      localAction: element.getAttribute("data-player-local-action") || "",
+      type: element.getAttribute("type") || "button",
+    }), index));
+  }
+  return inventory;
 }
 
 function descriptor(route, button) {
@@ -95,8 +95,9 @@ for (const route of ROUTES) {
       page.on("console", onConsole);
       page.on("response", onResponse);
 
-      const button = page.locator(BUTTON_SELECTOR).nth(item.index);
+      const button = contentButtons(page).nth(item.index);
       await expect(button, descriptor(route, item)).toBeVisible();
+      await expect(button, descriptor(route, item)).toBeEnabled();
 
       try {
         await button.click({ timeout: 10_000 });
