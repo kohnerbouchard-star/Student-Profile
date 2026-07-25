@@ -134,9 +134,11 @@ test("local launcher never injects a legacy anon bearer", async () => {
   const launcher = await read("scripts/econovaria-local-gateway.py");
   assert.match(launcher, /filtered_request_headers/);
   assert.match(launcher, /safe_header_pair/);
-  assert.match(launcher, /Bearer \{browser_publishable_key\}/);
+  assert.match(launcher, /HEADER_NAME_PATTERN/);
+  assert.match(launcher, /MAX_HEADER_VALUE_BYTES/);
   assert.match(launcher, /FORWARDED_IP_HEADERS/);
-  assert.match(launcher, /[\\r,?\s*"\\n",?\s*"\\x00"]/);
+  assert.match(launcher, /"\\r",\s*"\\n",\s*"\\x00"/);
+  assert.match(launcher, /Bearer \{browser_publishable_key\}/);
   assert.doesNotMatch(
     launcher,
     /result\["Authorization"\]\s*=\s*f"Bearer \{platform_anon_key\}"/,
