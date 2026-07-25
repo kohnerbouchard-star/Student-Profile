@@ -23,6 +23,7 @@ on:
       - "scripts/player-multiplayer-browser-acceptance.mjs"
       - "scripts/player-connected-mutation-browser-acceptance.mjs"
       - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
+      - "scripts/business-banking-player-business-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -41,7 +42,7 @@ jobs:
   connected-player-runtime:
     name: Two-browser Player journey, secure mutations, and 30-40 Player load
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 105
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -76,6 +77,7 @@ jobs:
           node --check scripts/player-multiplayer-browser-acceptance.mjs
           node --check scripts/player-connected-mutation-browser-acceptance.mjs
           node --check scripts/business-banking-player-commerce-browser-acceptance.mjs
+          node --check scripts/business-banking-player-business-browser-acceptance.mjs
           node --check scripts/player-runtime-load-profile.mjs
           python3 -m py_compile scripts/econovaria-local-gateway.py scripts/local-staging-gateway.py
           node --test scripts/local-staging-gateway-contract.test.mjs
@@ -224,14 +226,20 @@ jobs:
         continue-on-error: true
         run: node scripts/business-banking-player-commerce-browser-acceptance.mjs
 
+      - name: Execute connected Business lifecycle
+        id: player_business
+        if: steps.player_browser.outcome == 'success' && steps.player_mutations.outcome == 'success' && steps.player_commerce.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-business-browser-acceptance.mjs
+
       - name: Execute 30 and 40 Player connected load profile
         id: player_load
-        if: steps.player_browser.outcome == 'success' && steps.player_mutations.outcome == 'success' && steps.player_commerce.outcome == 'success'
+        if: steps.player_browser.outcome == 'success' && steps.player_mutations.outcome == 'success' && steps.player_commerce.outcome == 'success' && steps.player_business.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
       - name: Capture sanitized Player diagnostics
-        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_load.outcome == 'failure'
+        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_business.outcome == 'failure' || steps.player_load.outcome == 'failure'
         shell: bash
         run: |
           set +e
@@ -271,6 +279,7 @@ jobs:
           test "${{ steps.player_browser.outcome }}" = "success"
           test "${{ steps.player_mutations.outcome }}" = "success"
           test "${{ steps.player_commerce.outcome }}" = "success"
+          test "${{ steps.player_business.outcome }}" = "success"
           test "${{ steps.player_load.outcome }}" = "success"
 
       - name: Stop local Player stack
