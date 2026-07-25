@@ -12,9 +12,12 @@ const MUTABLE_CONTROL_TABLES = [
   "player_admin_flags",
   "player_admin_settings",
   "staff_admin_preferences",
+  "game_settings",
+  "game_difficulty_policy_settings",
 ];
 
-const READ_ONLY_MARKET_TABLES = [
+const READ_ONLY_REFERENCE_TABLES = [
+  "difficulty_policy_profiles",
   "stock_holdings",
   "stock_orders",
   "stock_trades",
@@ -35,7 +38,7 @@ test("Admin runtime tables remain browser-denied and service-owned", async () =>
     );
   }
 
-  for (const table of READ_ONLY_MARKET_TABLES) {
+  for (const table of READ_ONLY_REFERENCE_TABLES) {
     assert.match(sql, new RegExp(`public\\.${table}`));
     assert.match(
       sql,
