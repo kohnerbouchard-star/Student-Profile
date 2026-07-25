@@ -7,7 +7,21 @@ const MIGRATION = new URL(
   import.meta.url,
 );
 
-test("staff authentication persistence remains service-owned", async () => {
+const REQUIRED_READ_TABLES = [
+  "game_sessions",
+  "players",
+  "country_profiles",
+  "stock_holdings",
+  "store_items",
+  "store_purchases",
+  "player_country_assignments",
+  "account_balances",
+  "game_session_stock_assets",
+  "player_sessions",
+  "inventory_holdings",
+];
+
+test("staff authentication and Admin read projections remain service-owned", async () => {
   const sql = (await readFile(MIGRATION, "utf8")).toLowerCase();
 
   assert.match(sql, /revoke all on table public\.staff_users from public, anon, authenticated/);
@@ -15,6 +29,10 @@ test("staff authentication persistence remains service-owned", async () => {
     sql,
     /grant select, insert, update, delete on table public\.staff_users to service_role/,
   );
-  assert.match(sql, /grant select on table public\.game_sessions to service_role/);
+
+  for (const table of REQUIRED_READ_TABLES) {
+    assert.match(sql, new RegExp(`public\\.${table}`));
+  }
+  assert.match(sql, /to service_role/);
   assert.doesNotMatch(sql, /grant[^;]+to\s+(?:anon|authenticated)/);
 });
