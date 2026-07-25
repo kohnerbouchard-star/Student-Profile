@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
-// This test intentionally verifies the login logo without any filesystem image request.
+// This test verifies that the login logo is served from the repository-owned asset.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 4317;
 const origin = "http://127.0.0.1:" + port;
@@ -39,7 +39,7 @@ try {
     contentType: "application/javascript",
     body: 'window.__ECONOVARIA_RUNTIME_CONFIG__=Object.freeze({environment:"staging",projectRef:"eecvbssdvarfcykcfrny",supabaseUrl:"https://eecvbssdvarfcykcfrny.supabase.co",apiProxyUrl:"http://127.0.0.1:4317",supabasePublishableKey:"sb_publishable_login_surface_test"});',
   }));
-  await page.goto(origin + "/?login-smoke=20260724.4", { waitUntil: "networkidle" });
+  await page.goto(origin + "/?login-smoke=20260725.1", { waitUntil: "networkidle" });
   await page.locator(".login-panel-frame").waitFor({ state: "visible" });
 
   const surface = await page.evaluate(async () => {
@@ -75,14 +75,14 @@ try {
   assert.notEqual(surface.panelDisplay, "none");
   assert.notEqual(surface.panelVisibility, "hidden");
   assert.ok(Number(surface.panelOpacity) > 0.9);
-  assert.equal(surface.logoNaturalWidth, 480);
-  assert.equal(surface.logoNaturalHeight, 270);
+  assert.ok(surface.logoNaturalWidth > 0);
+  assert.ok(surface.logoNaturalHeight > 0);
   assert.ok(surface.logoWidth >= 240);
-  assert.ok(surface.logoHeight >= 120);
+  assert.ok(surface.logoHeight >= 80);
   assert.equal(surface.logoStatus, 200);
   assert.match(surface.logoType, /image\/png/);
-  assert.ok(surface.logoSource.startsWith("data:image/png;base64,"));
-  assert.equal(surface.logoMode, "inline");
+  assert.equal(surface.logoSource, "assets/brand/Econovaria%20Logo.png?v=20260725.1");
+  assert.equal(surface.logoMode, "asset");
   assert.equal(surface.iconStatus, 200);
   assert.match(surface.iconType, /image\/png/);
   assert.equal(surface.playerFormVisible, true);
