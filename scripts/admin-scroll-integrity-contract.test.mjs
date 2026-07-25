@@ -17,15 +17,16 @@ test("desktop Admin shell has one right-side page scroller", () => {
   assert.match(css, /body\s*\{[\s\S]*box-sizing:\s*border-box[\s\S]*height:\s*100dvh/);
   assert.match(css, /#adminPreview\s*\{[\s\S]*height:\s*calc\(100dvh - 48px\)[\s\S]*max-height:\s*calc\(100dvh - 48px\)/);
   assert.match(css, /\.admin-terminal-left-menu[\s\S]*overflow:\s*hidden/);
-  assert.match(css, /\.admin-terminal-shell-main[\s\S]*overflow-y:\s*auto/);
-  assert.match(css, /\.admin-terminal-shell-main[\s\S]*overscroll-behavior-y:\s*contain/);
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\)[\s\S]*overflow-y:\s*auto/);
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\)[\s\S]*overscroll-behavior-y:\s*contain/);
   assert.match(css, /\.econovaria-admin-game-session-card[\s\S]*align-self:\s*end/);
 });
 
-test("page skeleton reserves the same right-scrollbar geometry", () => {
-  assert.match(css, /\.admin-terminal-shell-main > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow-y:\s*scroll/);
-  assert.match(css, /\.admin-terminal-shell-main > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-color:\s*transparent transparent/);
+test("page skeleton reserves one gutter without becoming the scroll owner", () => {
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*overflow-y:\s*scroll/);
+  assert.match(css, /\.admin-terminal-shell-main:not\(\.admin-shape-skeleton-stage\) > \.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\][\s\S]*scrollbar-color:\s*transparent transparent/);
   assert.match(css, /\.admin-qol-page-skeleton\[data-admin-shape-skeleton="page"\]::-webkit-scrollbar[\s\S]*width:\s*8px/);
+  assert.doesNotMatch(css, /(?:^|\n)\s*\.admin-terminal-shell-main\s*\{[\s\S]*?scrollbar-gutter:/);
 });
 
 test("Player dossier owns one bounded tab-panel scroller", () => {
