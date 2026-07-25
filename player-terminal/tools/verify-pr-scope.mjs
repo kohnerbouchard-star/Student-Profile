@@ -81,6 +81,7 @@ const exactAllowed = new Set([
   "scripts/runtime-interaction-wiring-audit.mjs",
   "scripts/button-action-coverage-contract.mjs",
   "scripts/player-connected-mutation-browser-acceptance.mjs",
+  "scripts/player-contracts-browser-acceptance.mjs",
   "scripts/staging/probe-messaging-lifecycle.mjs",
   "scripts/staging/probe-messaging-inactive-sessions.mjs",
   "scripts/staging/messaging-connected-acceptance.sql",
