@@ -3,6 +3,7 @@ begin;
 -- Browser roles remain denied. Authenticated Admin Edge Functions verify the
 -- staff session and game ownership, then use the server-owned service client.
 revoke all on table
+  public.game_sessions,
   public.attendance_day_locks,
   public.player_admin_flags,
   public.player_admin_settings,
@@ -18,6 +19,10 @@ revoke all on table
   public.stock_price_ticks,
   public.stock_market_events
   from public, anon, authenticated;
+
+-- Game lifecycle and Game Code routes update only the already ownership-checked
+-- game row. Direct browser access remains denied.
+grant select, update on table public.game_sessions to service_role;
 
 grant select, insert, update, delete on table
   public.attendance_day_locks,
@@ -44,6 +49,9 @@ grant select on table
 -- Fail the migration instead of leaving a partially usable Admin runtime.
 do $$
 begin
+  if not has_table_privilege('service_role', 'public.game_sessions', 'select,update') then
+    raise exception 'service_role privilege contract failed for game_sessions';
+  end if;
   if not has_table_privilege('service_role', 'public.attendance_day_locks', 'select,insert,update,delete') then
     raise exception 'service_role privilege contract failed for attendance_day_locks';
   end if;
@@ -89,6 +97,8 @@ begin
 end;
 $$;
 
+comment on table public.game_sessions is
+  'Game lifecycle and Game Code mutations are exposed only through authenticated, ownership-checked server routes.';
 comment on table public.player_admin_flags is
   'Staff-only Player review flags. Browser roles have no direct privileges; authenticated Admin Edge Functions use the service-owned client after game-ownership checks.';
 comment on table public.player_admin_settings is
