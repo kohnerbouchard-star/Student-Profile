@@ -27,6 +27,17 @@ import {
   createSupabaseStaffRepository,
   type SupabaseStaffRepositoryClient,
 } from "../../../supabase/staffRepository.ts";
+import {
+  buildAuthenticationThrottleBuckets,
+  checkAuthenticationThrottle,
+  recordAuthenticationFailure,
+  recordAuthenticationSuccess,
+  type AuthenticationThrottleBucket,
+  type AuthenticationThrottleDecision,
+} from "../../../security/authenticationThrottle.ts";
+import { enforcePreAuthRateLimit } from "../../../security/playerRateLimitService.ts";
+import { rateLimitExceededResponse } from "../../../security/rateLimitHttp.ts";
+import { validateStaffPassword } from "../../../security/staffPasswordPolicy.ts";
 
 interface StaffSignupDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
@@ -43,8 +54,11 @@ interface StaffSignupInput {
 }
 
 const VALID_DIFFICULTIES = new Set(["easy", "moderate", "hard", "insane"]);
-const MIN_PASSWORD_LENGTH = 8;
 const CANONICAL_PACK_ID = "econovaria.beta-seed-pack.v1";
+const MAX_EMAIL_LENGTH = 320;
+const MAX_DISPLAY_NAME_LENGTH = 120;
+const MAX_PURCHASE_CODE_LENGTH = 256;
+const MAX_GAME_NAME_LENGTH = 160;
 
 export async function handleStaffSignupRequest(
   request: Request,
@@ -58,20 +72,42 @@ export async function handleStaffSignupRequest(
     });
   }
 
+  let serviceClient: EdgeSupabaseClient | null = null;
+  let throttleBuckets: readonly AuthenticationThrottleBucket[] | null = null;
+
   try {
     const envResult = readSupabaseEnv();
-
-    if (!envResult.ok) {
-      return signupFailedResponse();
-    }
+    if (!envResult.ok) return signupFailedResponse();
 
     const input = parseStaffSignupInput(await readJsonBody(request));
-    const serviceClient = dependencies.createServiceClient(envResult.value);
+    serviceClient = dependencies.createServiceClient(envResult.value);
+
+    const volumetricDecision = await enforcePreAuthRateLimit({
+      action: "staff.signup.attempt",
+      profile: "login",
+      request,
+    }, serviceClient);
+    if (!volumetricDecision.allowed) {
+      return rateLimitExceededResponse(volumetricDecision);
+    }
+
+    throttleBuckets = await buildAuthenticationThrottleBuckets({
+      request,
+      realm: "staff-signup",
+      accountIdentifier: input.email,
+    });
+    const throttleDecision = await checkAuthenticationThrottle(
+      serviceClient,
+      throttleBuckets,
+    );
+    if (!throttleDecision.allowed) {
+      return authenticationThrottledResponse(throttleDecision);
+    }
+
     const provisioningPreflight = await serviceClient.rpc(
       "game_provisioning_preflight_v1",
       { p_pack_id: CANONICAL_PACK_ID },
     );
-
     if (provisioningPreflight.error) {
       return provisioningUnavailableResponse();
     }
@@ -80,15 +116,29 @@ export async function handleStaffSignupRequest(
       email: input.email,
       password: input.password,
       email_confirm: true,
-    });
+      app_metadata: {
+        econovaria_role: "game_admin",
+        permission_version: 1,
+        security_version: 1,
+      },
+      user_metadata: {
+        display_name: input.displayName,
+      },
+    } as never);
     const authUser = authResponse.data.user;
 
     if (authResponse.error || !authUser?.id) {
-      return jsonError(409, {
-        code: "staff_signup_failed",
-        message: "Staff account could not be created.",
-        retryable: false,
-      });
+      const failure = await recordAuthenticationFailure(
+        serviceClient,
+        throttleBuckets,
+      );
+      return failure.retryAfterSeconds > 0
+        ? authenticationThrottledResponse(failure)
+        : jsonError(409, {
+          code: "staff_signup_failed",
+          message: "Staff account could not be created.",
+          retryable: false,
+        });
     }
 
     try {
@@ -113,7 +163,7 @@ export async function handleStaffSignupRequest(
         {
           staffUserId: staff.id,
           requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
-          source: "classroom_api_edge_staff_signup",
+          source: "bootstrap_api_edge_staff_signup_v2",
         },
         createLicensingActivationRouteAdapterDependencies({
           activationRepository,
@@ -121,16 +171,18 @@ export async function handleStaffSignupRequest(
       );
 
       if (!activationResult.body.ok) {
+        await recordAuthenticationFailure(serviceClient, throttleBuckets);
         await compensateStaffSignup(serviceClient, authUser.id);
         return jsonResponse(activationResult.httpStatus, activationResult.body);
       }
 
+      await recordAuthenticationSuccess(serviceClient, throttleBuckets);
       return jsonResponse(201, {
         ok: true,
         staff: {
-          id: staff.id,
           email: staff.email,
           displayName: staff.display_name,
+          role: "game_admin",
         },
         activation: {
           gameSessionId: activationResult.body.activation.gameSessionId,
@@ -139,6 +191,7 @@ export async function handleStaffSignupRequest(
         },
       });
     } catch {
+      await recordAuthenticationFailure(serviceClient, throttleBuckets);
       await compensateStaffSignup(serviceClient, authUser.id);
       return signupFailedResponse();
     }
@@ -150,7 +203,6 @@ export async function handleStaffSignupRequest(
         retryable: error.retryable,
       });
     }
-
     return signupFailedResponse();
   }
 }
@@ -176,33 +228,51 @@ function parseStaffSignupInput(value: unknown): StaffSignupInput {
     );
   }
 
+  const allowedKeys = new Set([
+    "email",
+    "password",
+    "displayName",
+    "purchaseCode",
+    "gameName",
+    "difficultyPreset",
+    "stockMarketWindow",
+  ]);
+  if (Object.keys(value).some((key) => !allowedKeys.has(key))) {
+    throw new EdgeActivationError(
+      "unknown_request_field",
+      "Request body contains an unsupported field.",
+      400,
+    );
+  }
+
   const email = requiredText(
     value.email,
     "email_required",
     "email is required.",
+    MAX_EMAIL_LENGTH,
   ).toLowerCase();
   const password = typeof value.password === "string" ? value.password : "";
+  const passwordResult = validateStaffPassword(password);
   const difficultyPreset = requiredText(
     value.difficultyPreset,
     "difficulty_required",
     "difficultyPreset is required.",
+    32,
   ).toLowerCase();
   const stockMarketWindow = parseRequiredStockMarketWindow(
     value.stockMarketWindow,
   );
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
     throw new EdgeActivationError("invalid_email", "email must be valid.", 400);
   }
-
-  if (password.length < MIN_PASSWORD_LENGTH) {
+  if (!passwordResult.ok) {
     throw new EdgeActivationError(
-      "password_too_short",
-      `password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      passwordResult.code || "invalid_password",
+      passwordResult.message || "Password does not meet the security policy.",
       400,
     );
   }
-
   if (!VALID_DIFFICULTIES.has(difficultyPreset)) {
     throw new EdgeActivationError(
       "invalid_difficulty",
@@ -218,16 +288,19 @@ function parseStaffSignupInput(value: unknown): StaffSignupInput {
       value.displayName,
       "display_name_required",
       "displayName is required.",
+      MAX_DISPLAY_NAME_LENGTH,
     ),
     purchaseCode: requiredText(
       value.purchaseCode,
       "purchase_code_required",
       "purchaseCode is required.",
+      MAX_PURCHASE_CODE_LENGTH,
     ),
     gameName: requiredText(
       value.gameName,
       "game_name_required",
       "gameName is required.",
+      MAX_GAME_NAME_LENGTH,
     ),
     difficultyPreset,
     stockMarketWindow,
@@ -253,13 +326,19 @@ function requiredText(
   value: unknown,
   code: string,
   message: string,
+  maxLength: number,
 ): string {
   const normalizedValue = typeof value === "string" ? value.trim() : "";
-
   if (!normalizedValue) {
     throw new EdgeActivationError(code, message, 400);
   }
-
+  if (normalizedValue.length > maxLength || /[\u0000-\u001f\u007f]/u.test(normalizedValue)) {
+    throw new EdgeActivationError(
+      `${code}_invalid`,
+      `${message.replace(/\.$/u, "")} and must be within the allowed length.`,
+      400,
+    );
+  }
   return normalizedValue;
 }
 
@@ -282,7 +361,6 @@ async function compensateStaffSignup(
 
   try {
     const deleteResult = await serviceClient.auth.admin.deleteUser(authUserId);
-
     if (deleteResult.error) {
       await serviceClient.auth.admin.updateUserById(authUserId, {
         ban_duration: "876000h",
@@ -297,6 +375,23 @@ async function compensateStaffSignup(
       // Cleanup is best-effort and no internal error is exposed to the browser.
     }
   }
+}
+
+function authenticationThrottledResponse(
+  decision: AuthenticationThrottleDecision,
+): Response {
+  return jsonResponse(429, {
+    ok: false,
+    error: {
+      code: "authentication_temporarily_locked",
+      message: "Too many failed account-creation attempts. Try again later.",
+      retryable: true,
+    },
+  }, {
+    "retry-after": String(Math.max(1, decision.retryAfterSeconds)),
+    "x-ratelimit-reset": decision.lockedUntil || "",
+    "vary": "Origin, X-Econovaria-Device-Id",
+  });
 }
 
 function provisioningUnavailableResponse(): Response {
