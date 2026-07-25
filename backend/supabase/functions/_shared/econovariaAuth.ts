@@ -82,16 +82,16 @@ export async function requirePublishableRequest(
   }
 
   const supplied = String(request.headers.get("apikey") || "").trim();
-  const configured = configuredPublishableKeys();
-  if (!configured.length) {
-    return jsonError(500, {
-      code: "publishable_key_not_configured",
-      message: "The API identity boundary is not configured.",
+  if (!supplied.startsWith("sb_publishable_")) {
+    return jsonError(401, {
+      code: "invalid_publishable_key",
+      message: "The request API key is invalid.",
       retryable: false,
     });
   }
 
-  if (!supplied || !configured.includes(supplied)) {
+  const configured = configuredPublishableKeys();
+  if (configured.length && !configured.includes(supplied)) {
     return jsonError(401, {
       code: "invalid_publishable_key",
       message: "The request API key is invalid.",
