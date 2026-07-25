@@ -4,18 +4,21 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-const SOURCE = new URL("../admin/auth-session-manager.js", import.meta.url);
+const SOURCE = new URL("../admin/classroom-write-fallback.js", import.meta.url);
 
-test("Admin ledger writes normalize amount aliases and attach idempotency before terminal transport capture", async () => {
+test("Admin ledger writes normalize form aliases and attach idempotency through the existing write owner", async () => {
   const captured = [];
   const storage = new Map();
+  const document = { dispatchEvent() {} };
   const window = {
     EconovariaRuntimeConfig: {
       supabaseUrl: "https://staging.supabase.co",
       supabasePublishableKey: "sb_publishable_test",
+      classroomApiUrl: "https://staging.supabase.co/functions/v1/classroom-api",
     },
     location: { href: "http://127.0.0.1:4173/admin/" },
     crypto: webcrypto,
+    document,
     sessionStorage: {
       getItem(key) {
         return storage.get(key) ?? null;
@@ -27,7 +30,6 @@ test("Admin ledger writes normalize amount aliases and attach idempotency before
         storage.delete(key);
       },
     },
-    dispatchEvent() {},
     fetch: async (request) => {
       captured.push(request);
       return new Response(JSON.stringify({ ok: true }), {
@@ -36,8 +38,17 @@ test("Admin ledger writes normalize amount aliases and attach idempotency before
       });
     },
   };
+  const CustomEvent = class CustomEvent {
+    constructor(type, init) {
+      this.type = type;
+      this.detail = init?.detail;
+    }
+  };
+  window.CustomEvent = CustomEvent;
+
   const context = vm.createContext({
     window,
+    globalThis: { crypto: webcrypto, CustomEvent },
     Request,
     Response,
     Headers,
@@ -48,18 +59,11 @@ test("Admin ledger writes normalize amount aliases and attach idempotency before
     String,
     Date,
     JSON,
-    Math,
-    atob,
-    CustomEvent: class CustomEvent {
-      constructor(type, init) {
-        this.type = type;
-        this.detail = init?.detail;
-      }
-    },
+    CustomEvent,
   });
 
   vm.runInContext(await readFile(SOURCE, "utf8"), context, {
-    filename: "admin/auth-session-manager.js",
+    filename: "admin/classroom-write-fallback.js",
   });
 
   await window.fetch(
@@ -85,5 +89,5 @@ test("Admin ledger writes normalize amount aliases and attach idempotency before
   assert.equal(body.currencyCode, "ECO");
   assert.match(body.idempotencyKey, /^[0-9a-f-]{36}$/i);
   assert.equal(request.headers.get("x-idempotency-key"), body.idempotencyKey);
-  assert.equal(typeof window.EconovariaAdminAuthSession.getUsableSession, "function");
+  assert.equal(typeof window.EconovariaClassroomWriteFallback.canonicalWrite, "function");
 });
