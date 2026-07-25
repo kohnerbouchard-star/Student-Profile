@@ -14,6 +14,7 @@ const CREATE_CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 30_000;
 const LOGIN_P95_LIMIT_MS = 15_000;
 const READ_P95_LIMIT_MS = 8_000;
+const READ_SCHEDULING = "sequential-per-player";
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 const READ_PATHS = Object.freeze([
   "/players/me",
@@ -216,8 +217,9 @@ async function loginPlayer(player, gameCode, publishableKey) {
 
 async function readWave(sessions, publishableKey) {
   const startedAt = performance.now();
-  const results = await Promise.all(sessions.flatMap((session, playerIndex) =>
-    READ_PATHS.map(async (path) => {
+  const perPlayerResults = await Promise.all(sessions.map(async (session, playerIndex) => {
+    const results = [];
+    for (const path of READ_PATHS) {
       const response = await requestJson(`/functions/v1/classroom-api${path}`, {
         headers: {
           ...platformHeaders(publishableKey),
@@ -226,17 +228,22 @@ async function readWave(sessions, publishableKey) {
           "x-request-id": crypto.randomUUID(),
         },
       });
-      return {
+      results.push({
         player: playerIndex + 1,
         path,
         ok: response.ok,
         status: response.status,
         elapsedMs: response.elapsedMs,
         error: response.ok ? "" : sanitize(response.payload?.error?.message || response.networkError),
-      };
-    })
-  ));
-  return { elapsedMs: performance.now() - startedAt, results };
+      });
+    }
+    return results;
+  }));
+  return {
+    elapsedMs: performance.now() - startedAt,
+    peakConcurrentRequests: sessions.length,
+    results: perPlayerResults.flat(),
+  };
 }
 
 function statuses(results) {
@@ -245,13 +252,27 @@ function statuses(results) {
   return counts;
 }
 
+function assertReadWaveShape(label, wave, playerCount) {
+  const expectedRequests = playerCount * READ_PATHS.length;
+  if (wave.peakConcurrentRequests !== playerCount) {
+    throw new Error(`${label} peak concurrency ${wave.peakConcurrentRequests} did not equal ${playerCount} Players.`);
+  }
+  if (wave.results.length !== expectedRequests) {
+    throw new Error(`${label} executed ${wave.results.length} reads instead of ${expectedRequests}.`);
+  }
+}
+
 function assertPhase(label, results, latencyLimitMs) {
   const failures = results.filter((result) => !result.ok);
   const serverErrors = results.filter((result) => result.status >= 500);
   const p95 = percentile(results.map((result) => result.elapsedMs), 0.95);
   if (serverErrors.length) throw new Error(`${label} produced ${serverErrors.length} server errors.`);
   if (failures.length) {
-    const summary = failures.slice(0, 5).map((failure) => ({ status: failure.status, error: failure.error }));
+    const summary = failures.slice(0, 5).map((failure) => ({
+      status: failure.status,
+      path: failure.path,
+      error: failure.error,
+    }));
     throw new Error(`${label} produced ${failures.length} failed requests: ${JSON.stringify(summary)}`);
   }
   if (p95 > latencyLimitMs) throw new Error(`${label} p95 ${Math.round(p95)}ms exceeded ${latencyLimitMs}ms.`);
@@ -263,6 +284,7 @@ const evidence = {
     expectedConcurrentPlayers: EXPECTED_PLAYERS,
     maximumConcurrentPlayers: MAX_PLAYERS,
     readPathsPerPlayer: READ_PATHS.length,
+    readScheduling: READ_SCHEDULING,
   },
   players: { requested: MAX_PLAYERS, createdOrExisting: 0, createFailures: 0 },
   baseline30: null,
@@ -289,9 +311,11 @@ try {
   assertPhase("30-player concurrent login", baselineLogins, LOGIN_P95_LIMIT_MS);
   const baselineSessions = baselineLogins.map(({ token }) => ({ token }));
   const baselineReads = await readWave(baselineSessions, publishableKey);
+  assertReadWaveShape("30-player connected read wave", baselineReads, EXPECTED_PLAYERS);
   assertPhase("30-player connected read wave", baselineReads.results, READ_P95_LIMIT_MS);
   evidence.baseline30 = {
     elapsedMs: Math.round((performance.now() - baselineStart) * 100) / 100,
+    peakConcurrentRequests: baselineReads.peakConcurrentRequests,
     login: summarize(baselineLogins.map((result) => result.elapsedMs)),
     loginStatuses: statuses(baselineLogins),
     reads: summarize(baselineReads.results.map((result) => result.elapsedMs)),
@@ -307,9 +331,11 @@ try {
   const allSessions = [...baselineSessions, ...remainingLogins.map(({ token }) => ({ token }))];
   const burstStart = performance.now();
   const burstReads = await readWave(allSessions, publishableKey);
+  assertReadWaveShape("40-player connected read wave", burstReads, MAX_PLAYERS);
   assertPhase("40-player connected read wave", burstReads.results, READ_P95_LIMIT_MS);
   evidence.burst40 = {
     elapsedMs: Math.round((performance.now() - burstStart) * 100) / 100,
+    peakConcurrentRequests: burstReads.peakConcurrentRequests,
     addedLogin: summarize(remainingLogins.map((result) => result.elapsedMs)),
     addedLoginStatuses: statuses(remainingLogins),
     reads: summarize(burstReads.results.map((result) => result.elapsedMs)),
@@ -336,6 +362,7 @@ console.log(JSON.stringify({
   ok: true,
   expectedPlayers: EXPECTED_PLAYERS,
   maximumPlayers: MAX_PLAYERS,
+  readScheduling: READ_SCHEDULING,
   baselineLoginP95Ms: evidence.baseline30.login.p95Ms,
   baselineReadP95Ms: evidence.baseline30.reads.p95Ms,
   burstReadP95Ms: evidence.burst40.reads.p95Ms,
