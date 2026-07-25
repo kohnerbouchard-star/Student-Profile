@@ -1,12 +1,38 @@
 import { ApiRequestError, normalizeApiError, playerSafeErrorMessage } from "./errors.js";
 import { parseRetryAfter } from "./request-context.js";
 
+const DEVICE_STORAGE_KEY = "econovaria.device.v1";
+const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function normalizedCredential(value) {
   return String(value || "").replace(/^Bearer\s+/i, "").trim();
 }
 
 function isPublishableKey(value) {
   return /^sb_publishable_/i.test(normalizedCredential(value));
+}
+
+function deviceId(config) {
+  const configured = String(config.deviceId || "").trim().toLowerCase();
+  if (DEVICE_ID_PATTERN.test(configured)) return configured;
+
+  try {
+    const existing = String(globalThis.localStorage?.getItem(DEVICE_STORAGE_KEY) || "")
+      .trim()
+      .toLowerCase();
+    if (DEVICE_ID_PATTERN.test(existing)) return existing;
+
+    const generated = String(globalThis.crypto?.randomUUID?.() || "").toLowerCase();
+    if (!DEVICE_ID_PATTERN.test(generated)) {
+      throw new Error("secure device identifier generation unavailable");
+    }
+    globalThis.localStorage?.setItem(DEVICE_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    throw new ApiRequestError("This device could not initialize a secure game session.", {
+      code: "DEVICE_ID_UNAVAILABLE"
+    });
+  }
 }
 
 export class HttpTransport {
@@ -27,7 +53,8 @@ export class HttpTransport {
 
     const headers = {
       Accept: "application/json",
-      "x-request-id": requestId
+      "x-request-id": requestId,
+      "x-econovaria-device-id": deviceId(this.config)
     };
 
     if (payload !== undefined) headers["Content-Type"] = "application/json";
