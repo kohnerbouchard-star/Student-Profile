@@ -77,10 +77,23 @@
     scrollbar-color: var(--admin-scrollbar-thumb) var(--admin-scrollbar-track);
   }
 
+  /*
+   * The page skeleton is absolutely positioned inside the right scrollport.
+   * Allocate the same classic-scrollbar width as loaded content so the clone
+   * remains shape-accurate while keeping the skeleton scrollbar transparent.
+   */
+  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"] {
+    overflow-x: hidden;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
   .admin-terminal-shell-main::-webkit-scrollbar,
   .admin-terminal-player-tab-panels-v301::-webkit-scrollbar,
   .admin-terminal-modal.is-player-modal .admin-terminal-player-main::-webkit-scrollbar,
-  .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar {
+  .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar,
+  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
@@ -98,6 +111,12 @@
   .admin-terminal-modal.is-player-modal .admin-terminal-player-access::-webkit-scrollbar-thumb {
     background: var(--admin-scrollbar-thumb);
     border: 2px solid var(--admin-scrollbar-track);
+  }
+
+  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-track,
+  .admin-terminal-shell-main > .admin-qol-page-skeleton[data-admin-shape-skeleton="page"]::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-color: transparent;
   }
 
   .admin-terminal-overview {
