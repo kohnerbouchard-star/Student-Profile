@@ -2,6 +2,10 @@ window.Econovaria = window.Econovaria || {};
 window.Econovaria.core = window.Econovaria.core || {};
 window.Econovaria.core.api = window.Econovaria.core.api || {};
 
+const ECONOVARIA_DEVICE_STORAGE_KEY = "econovaria.device.v1";
+const ECONOVARIA_DEVICE_HEADER = "x-econovaria-device-id";
+const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getApiRouteUrl(surface, path) {
   const constants = window.Econovaria?.core?.constants || {};
   const baseBySurface = {
@@ -36,6 +40,24 @@ function getSupabaseConfig() {
 
 function normalizeBearerToken(value) {
   return String(value || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function getOrCreateDeviceId() {
+  try {
+    const existing = String(window.localStorage.getItem(ECONOVARIA_DEVICE_STORAGE_KEY) || "")
+      .trim()
+      .toLowerCase();
+    if (DEVICE_ID_PATTERN.test(existing)) return existing;
+
+    const generated = String(window.crypto?.randomUUID?.() || "").toLowerCase();
+    if (!DEVICE_ID_PATTERN.test(generated)) {
+      throw new Error("Secure device identifier generation is unavailable.");
+    }
+    window.localStorage.setItem(ECONOVARIA_DEVICE_STORAGE_KEY, generated);
+    return generated;
+  } catch (_) {
+    throw new Error("[Econovaria API] A secure device identifier could not be initialized.");
+  }
 }
 
 async function readJsonResponse(response) {
@@ -77,7 +99,10 @@ async function callSupabaseJsonRoute(surface, path, options = {}) {
   }
 
   try {
-    const headers = { apikey: publishableKey };
+    const headers = {
+      apikey: publishableKey,
+      [ECONOVARIA_DEVICE_HEADER]: getOrCreateDeviceId()
+    };
 
     if (token) headers.Authorization = `Bearer ${token}`;
     if (playerSessionToken) headers["x-player-session-token"] = playerSessionToken;
@@ -148,48 +173,27 @@ function callPlayerGameDashboardApi(sessionToken) {
 }
 
 async function callSupabasePasswordSignIn(email, password) {
-  const { supabaseUrl, publishableKey } = getSupabaseConfig();
+  const result = await callSupabaseJsonRoute("bootstrap", "/staff/login", {
+    method: "POST",
+    body: {
+      email: String(email || "").trim(),
+      password: String(password || "")
+    },
+    fallbackCode: "admin_login_failed",
+    fallbackMessage: "Admin email or password is invalid."
+  });
 
-  try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: publishableKey
-      },
-      body: JSON.stringify({
-        email: String(email || "").trim(),
-        password: String(password || "")
-      }),
-      cache: "no-store"
-    });
-    const result = await readJsonResponse(response);
-
-    if (response.ok && result?.access_token) {
-      return {
-        ok: true,
-        status: response.status,
-        accessToken: result.access_token,
-        refreshToken: result.refresh_token || "",
-        user: result.user || null
-      };
-    }
-
-    return {
-      ok: false,
-      status: response.status,
-      code: result?.error_code || result?.code || "admin_login_failed",
-      message: result?.msg || result?.message || result?.error_description ||
-        "Admin email or Access Code is invalid."
-    };
-  } catch (_) {
-    return {
-      ok: false,
-      status: 0,
-      code: "admin_login_network_failed",
-      message: "Could not connect to admin sign-in. Check your connection and try again."
-    };
-  }
+  if (!result?.ok || !result.session?.accessToken) return result;
+  return {
+    ok: true,
+    status: result.status,
+    accessToken: result.session.accessToken,
+    refreshToken: result.session.refreshToken || "",
+    expiresAt: result.session.expiresAt || null,
+    assuranceLevel: result.session.assuranceLevel || "unknown",
+    mfaRequired: result.session.mfaRequired === true,
+    user: result.user || null
+  };
 }
 
 function callStaffSignupApi(input) {
@@ -244,7 +248,8 @@ Object.assign(window.Econovaria.core.api, {
   callSupabasePasswordSignIn,
   callStaffSignupApi,
   callLicensingActivationApi,
-  callStaffBootstrapApi
+  callStaffBootstrapApi,
+  getOrCreateDeviceId
 });
 
 Object.assign(window.Econovaria.core, {
@@ -254,5 +259,6 @@ Object.assign(window.Econovaria.core, {
   callSupabasePasswordSignIn,
   callStaffSignupApi,
   callLicensingActivationApi,
-  callStaffBootstrapApi
+  callStaffBootstrapApi,
+  getOrCreateDeviceId
 });
