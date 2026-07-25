@@ -7,6 +7,10 @@ if (!runtimeConfig) {
 }
 const SUPABASE_URL = runtimeConfig.supabaseUrl;
 const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
+const PLAYER_API_URL = runtimeConfig.playerApiUrl;
+const STAFF_API_URL = runtimeConfig.staffApiUrl;
+const BOOTSTRAP_API_URL = runtimeConfig.bootstrapApiUrl;
+const ADMIN_API_URL = runtimeConfig.adminApiUrl;
 const CLASSROOM_API_URL = runtimeConfig.classroomApiUrl;
 const PLAYER_SESSION_STORAGE_KEY = "econovaria.player.auth.v1";
 const ADMIN_SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
@@ -57,6 +61,10 @@ configurePlayerGameCodeInput();
 window.Econovaria.core.constants = Object.freeze({
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY,
+  PLAYER_API_URL,
+  STAFF_API_URL,
+  BOOTSTRAP_API_URL,
+  ADMIN_API_URL,
   CLASSROOM_API_URL,
   PLAYER_SESSION_STORAGE_KEY,
   ADMIN_SESSION_STORAGE_KEY,
