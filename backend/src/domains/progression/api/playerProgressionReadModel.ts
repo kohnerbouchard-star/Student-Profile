@@ -118,9 +118,13 @@ function normalizeAchievement(value: unknown): Record<string, unknown> {
   const id = safeText(source.id, 1, 80);
   const rewardId = optionalPatternText(source.rewardId, PROGRESSION_REWARD_ID_PATTERN);
   const rewardKind = optionalText(source.rewardKind, 32);
+  const claimable = optionalBoolean(source.claimable, false);
+  const rewardAmount = optionalBoundedInteger(source.rewardAmount, 0, 20, 0);
   if (
     !ACHIEVEMENT_ID_PATTERN.test(id) ||
-    (rewardKind !== null && !REWARD_KINDS.has(rewardKind))
+    (rewardKind !== null && !REWARD_KINDS.has(rewardKind)) ||
+    (rewardId === null && (rewardKind !== null || rewardAmount !== 0 || claimable)) ||
+    (rewardId !== null && rewardKind === null)
   ) invalid();
   return {
     id,
@@ -131,10 +135,10 @@ function normalizeAchievement(value: unknown): Record<string, unknown> {
     progressText: safeText(source.progressText, 1, 64),
     complete: bool(source.complete),
     completedAt: optionalTimestamp(source.completedAt),
-    claimable: bool(source.claimable),
+    claimable,
     rewardId,
     rewardKind,
-    rewardAmount: boundedInteger(source.rewardAmount, 0, 20),
+    rewardAmount,
   };
 }
 
@@ -190,9 +194,22 @@ function boundedInteger(value: unknown, min: number, max: number): number {
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) invalid();
   return parsed;
 }
+function optionalBoundedInteger(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  return value === null || value === undefined
+    ? fallback
+    : boundedInteger(value, min, max);
+}
 function bool(value: unknown): boolean {
   if (typeof value !== "boolean") invalid();
   return value;
+}
+function optionalBoolean(value: unknown, fallback: boolean): boolean {
+  return value === null || value === undefined ? fallback : bool(value);
 }
 function optionalTimestamp(value: unknown): string | null {
   if (value === null || value === undefined) return null;
