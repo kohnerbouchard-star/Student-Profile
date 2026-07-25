@@ -49,9 +49,18 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run typecheck:all > /tmp/backend-typecheck.log 2>&1
+          {
+            npm run typecheck:all
+            deno check \
+              --config supabase/functions/classroom-api/deno.json \
+              --lock=supabase/functions/deno.lock \
+              --frozen \
+              supabase/functions/bootstrap-api/index.ts \
+              supabase/functions/staff-api/index.ts \
+              supabase/functions/player-api/index.ts
+          } > /tmp/backend-typecheck.log 2>&1
           echo $? > /tmp/backend-typecheck.status
-          tail -n 160 /tmp/backend-typecheck.log
+          tail -n 220 /tmp/backend-typecheck.log
           exit 0
 
       - name: Upload backend typecheck diagnostics
