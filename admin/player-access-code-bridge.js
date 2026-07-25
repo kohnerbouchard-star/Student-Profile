@@ -5,9 +5,8 @@
   if (!runtimeConfig) {
     throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
   }
-  const SUPABASE_URL = runtimeConfig.supabaseUrl;
   const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
-  const CLASSROOM_API_BASE = runtimeConfig.classroomApiUrl;
+  const STAFF_API_BASE = runtimeConfig.staffApiUrl;
   const LOCAL_API_PREFIX = "/api/admin";
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
@@ -96,7 +95,7 @@
     return { gameId: decodeURIComponent(match[1]) };
   }
 
-  function classroomHeaders(request, accessToken, gameId) {
+  function staffHeaders(request, accessToken, gameId) {
     const headers = new Headers(request?.headers || {});
     headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
     headers.set("Authorization", `Bearer ${accessToken}`);
@@ -116,8 +115,6 @@
   }
 
   function emitAccessCode(detail) {
-    // Presentation belongs to the accepted Admin modal controller. This bridge
-    // emits credential state only and never creates a second dialog.
     dispatchCredentialEvent("econovaria:player-access-code-issued", detail);
   }
 
@@ -249,10 +246,10 @@
     }
 
     const resetResponse = await delegatedFetch(
-      `${CLASSROOM_API_BASE}/games/${encodeURIComponent(context.gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      `${STAFF_API_BASE}/games/${encodeURIComponent(context.gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
       {
         method: "POST",
-        headers: classroomHeaders(request, accessToken, context.gameId),
+        headers: staffHeaders(request, accessToken, context.gameId),
         body: JSON.stringify({
           playerIdentifier: requestedIdentifier,
           accessCode: requestedAccessCode,
