@@ -55,14 +55,44 @@
 
   function first(source, keys) {
     for (const key of keys) {
-      if (source[key] !== undefined && source[key] !== null) return source[key];
+      if (
+        source[key] !== undefined &&
+        source[key] !== null &&
+        source[key] !== ""
+      ) {
+        return source[key];
+      }
     }
     return undefined;
   }
 
   async function requestJson(request) {
+    if (["GET", "HEAD"].includes(request.method)) return {};
+    const contentType = text(request.headers.get("content-type")).toLowerCase();
     try {
-      return record(await request.clone().json());
+      if (contentType.includes("application/json")) {
+        return record(await request.clone().json());
+      }
+      if (contentType.includes("application/x-www-form-urlencoded")) {
+        return Object.fromEntries(
+          new URLSearchParams(await request.clone().text()),
+        );
+      }
+      if (contentType.includes("multipart/form-data")) {
+        const result = {};
+        for (const [key, value] of (await request.clone().formData()).entries()) {
+          if (typeof value === "string") result[key] = value;
+        }
+        return result;
+      }
+
+      const raw = await request.clone().text();
+      if (!raw) return {};
+      try {
+        return record(JSON.parse(raw));
+      } catch (_) {
+        return Object.fromEntries(new URLSearchParams(raw));
+      }
     } catch (_) {
       return {};
     }
@@ -145,6 +175,53 @@
       /\/players\/[^/]+\/ledger-adjustments$/.test(pathname);
   }
 
+  function normalizedLedgerMutation(source, pathname) {
+    const normalized = { ...source };
+    const amount = first(source, [
+      "amount",
+      "value",
+      "delta",
+      "adjustmentAmount",
+      "ledgerAmount",
+      "balanceAdjustment",
+      "rewardAdjustment",
+    ]);
+    if (amount !== undefined) normalized.amount = amount;
+
+    const adjustmentType = first(source, [
+      "adjustmentType",
+      "entryType",
+      "direction",
+      "transactionType",
+    ]);
+    if (adjustmentType !== undefined) normalized.adjustmentType = adjustmentType;
+
+    const reason = first(source, ["reason", "note", "ledgerNote", "memo"]);
+    if (reason !== undefined) normalized.reason = reason;
+
+    normalized.accountType = text(
+      first(source, ["accountType", "account"]),
+    ) || "cash";
+    normalized.currencyCode = (
+      text(first(source, ["currencyCode", "currency"])) || "ECO"
+    ).toUpperCase();
+
+    if (/\/attendance\/reward-adjustments$/.test(pathname)) {
+      const playerId = first(source, ["playerId", "studentId", "id"]);
+      if (playerId !== undefined) normalized.playerId = playerId;
+      const attendanceDate = first(source, [
+        "attendanceDate",
+        "date",
+        "recordDate",
+      ]);
+      if (attendanceDate !== undefined) {
+        normalized.attendanceDate = attendanceDate;
+      }
+    }
+
+    return normalized;
+  }
+
   async function withEconomicIdempotency(request, url, lifecycle) {
     if (
       request.method !== "POST" ||
@@ -153,10 +230,11 @@
     ) {
       return request;
     }
-    const source = await requestJson(request);
+    const source = flattened(await requestJson(request));
+    const normalized = normalizedLedgerMutation(source, url.pathname);
     // Default contract: idempotencyKey: lifecycle.requestId.
     const idempotencyKey = text(
-      source.idempotencyKey ||
+      normalized.idempotencyKey ||
       request.headers.get("x-idempotency-key") ||
       request.headers.get("x-request-id") ||
       lifecycle.requestId,
@@ -164,9 +242,10 @@
     const headers = new Headers(request.headers);
     headers.set("Content-Type", "application/json");
     headers.set("X-Idempotency-Key", idempotencyKey);
+    headers.delete("Content-Length");
     return new Request(request, {
       headers,
-      body: JSON.stringify({ ...source, idempotencyKey }),
+      body: JSON.stringify({ ...normalized, idempotencyKey }),
     });
   }
 
