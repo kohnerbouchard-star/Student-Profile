@@ -254,6 +254,11 @@ export async function handleGameProvisioningOperation(
     };
   }
 
+  const counts = {
+    ...(isRecord(result.counts) ? result.counts : {}),
+    ...(isRecord(verification.counts) ? verification.counts : {}),
+  };
+
   return {
     handled: true,
     status: replayed ? 200 : 201,
@@ -276,11 +281,7 @@ export async function handleGameProvisioningOperation(
         joinCode,
         joinCodeStatus: "active",
         joinCodeReissueRequired: result.joinCodeReissueRequired === true,
-        counts: isRecord(verification.counts)
-          ? verification.counts
-          : isRecord(result.counts)
-          ? result.counts
-          : {},
+        counts,
         contentGates: isRecord(result.contentGates) ? result.contentGates : {},
         activationVersion: text(result.activationVersion),
         replayed,
