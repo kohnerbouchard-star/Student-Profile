@@ -28,6 +28,10 @@ import {
   rateLimitExceededResponse,
   rateLimitUnavailableResponse,
 } from "./rateLimitHttp.ts";
+import {
+  enforcePlayerBrowserResponsePrivacy,
+  unsafePlayerBrowserResponse,
+} from "./playerBrowserResponsePrivacy.ts";
 
 export interface ReviewedPlayerRateLimitOperation {
   readonly action: string;
@@ -272,17 +276,24 @@ export async function dispatchRateLimitedReviewedPlayerRequest(
     endpointKey,
     request.method,
   );
-  if (!operation) return next();
 
-  const limited = await guardReviewedPlayerRequest(
-    request,
-    {
-      ...operation,
-      action: threadScopedMessagingAction(request, endpointKey) ?? operation.action,
-    },
-    dependencies,
-  );
-  return limited ?? next();
+  try {
+    if (!operation) {
+      return await enforcePlayerBrowserResponsePrivacy(await next());
+    }
+
+    const limited = await guardReviewedPlayerRequest(
+      request,
+      {
+        ...operation,
+        action: threadScopedMessagingAction(request, endpointKey) ?? operation.action,
+      },
+      dependencies,
+    );
+    return await enforcePlayerBrowserResponsePrivacy(limited ?? await next());
+  } catch {
+    return unsafePlayerBrowserResponse();
+  }
 }
 
 export async function dispatchRateLimitedPlayerLoginRequest(
