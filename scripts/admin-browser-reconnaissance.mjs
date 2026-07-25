@@ -9,6 +9,9 @@ const LICENSE_CODE = process.env.ECONOVARIA_BROWSER_LICENSE_CODE || "BROWSER-E2E
 const ADMIN_EMAIL = process.env.ECONOVARIA_BROWSER_ADMIN_EMAIL || "browser.e2e@example.test";
 const ADMIN_PASSWORD = process.env.ECONOVARIA_BROWSER_ADMIN_PASSWORD || "Browser-E2E-Access-2026!";
 const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Browser E2E Economy";
+const PLAYER_NAME = "Browser E2E Player";
+const PLAYER_IDENTIFIER = "BROWSER-PLAYER-001";
+const PLAYER_ACCESS_CODE = "BROWSER-ACCESS-001";
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -19,10 +22,13 @@ const evidence = {
   gameName: GAME_NAME,
   createdThroughRenderedUi: false,
   adminConsoleRendered: false,
-  logoutControlVisible: false,
+  navigation: [],
+  shareGameCode: { opened: false, generated: false, displayed: false },
+  playerCreation: { opened: false, created: false, persistedAfterReload: false },
+  logout: { menuOpened: false, confirmationOpened: false, redirected: false },
   requests: [],
   controls: [],
-  accountMenuControls: [],
+  playerControls: [],
   consoleErrors: [],
   pageErrors: [],
 };
@@ -34,11 +40,12 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
+page.on("dialog", (dialog) => void dialog.accept());
 page.on("console", (message) => {
   if (message.type() === "error") evidence.consoleErrors.push(message.text());
 });
 page.on("pageerror", (error) => evidence.pageErrors.push(String(error?.message || error)));
-page.on("response", async (response) => {
+page.on("response", (response) => {
   const url = response.url();
   if (!url.includes("/functions/v1/") && !url.includes("/auth/v1/")) return;
   evidence.requests.push({
@@ -48,8 +55,17 @@ page.on("response", async (response) => {
   });
 });
 
-function visibleControlMetadata(nodes) {
-  return nodes
+function failedRequests(startIndex = 0) {
+  return evidence.requests.slice(startIndex).filter((request) => request.status >= 400);
+}
+
+function assertNoFailedRequests(label, startIndex = 0) {
+  const failed = failedRequests(startIndex);
+  if (failed.length) throw new Error(`${label} observed failed requests: ${JSON.stringify(failed)}`);
+}
+
+async function visibleControls(root = page) {
+  return root.locator("button, [role='button'], [data-admin-terminal-action]").evaluateAll((nodes) => nodes
     .filter((node) => {
       const style = window.getComputedStyle(node);
       const rect = node.getBoundingClientRect();
@@ -59,23 +75,30 @@ function visibleControlMetadata(nodes) {
       tag: node.tagName.toLowerCase(),
       id: node.id || null,
       text: String(node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 180),
-      action: node.getAttribute("data-admin-terminal-action") || node.getAttribute("data-action"),
+      action: node.getAttribute("data-admin-terminal-action"),
       disabled: "disabled" in node ? Boolean(node.disabled) : node.getAttribute("aria-disabled") === "true",
       ariaLabel: node.getAttribute("aria-label"),
       title: node.getAttribute("title"),
       logoutOwned: node.hasAttribute("data-econovaria-admin-logout"),
-    }));
+    })));
 }
 
-function isLogoutControl(control) {
-  const signals = [
-    control.action,
-    control.id,
-    control.text,
-    control.ariaLabel,
-    control.title,
-  ].filter(Boolean).join(" ");
-  return control.logoutOwned || /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i.test(` ${signals} `);
+async function waitForAdminConsole() {
+  await page.waitForURL(/\/admin\/(?:index\.html)?(?:\?.*)?$/, { timeout: 120_000 });
+  await page.waitForFunction(() => {
+    const preview = document.getElementById("adminPreview");
+    return Boolean(preview && !preview.hidden && preview.childElementCount > 0);
+  }, undefined, { timeout: 120_000 });
+  await page.waitForTimeout(1200);
+}
+
+async function navigateSection(name) {
+  const requestIndex = evidence.requests.length;
+  await page.getByRole("button", { name, exact: true }).click();
+  await page.waitForTimeout(900);
+  const failed = failedRequests(requestIndex);
+  evidence.navigation.push({ name, failedRequests: failed });
+  if (failed.length) throw new Error(`${name} navigation failed: ${JSON.stringify(failed)}`);
 }
 
 let failure;
@@ -107,39 +130,112 @@ try {
     const body = await signupResponse.text().catch(() => "");
     throw new Error(`Rendered Create Game returned ${signupResponse.status()}: ${body.slice(0, 500)}`);
   }
-
-  await page.waitForURL(/\/admin\/(?:index\.html)?(?:\?.*)?$/, { timeout: 120_000 });
   evidence.createdThroughRenderedUi = true;
 
-  await page.waitForFunction(() => {
-    const preview = document.getElementById("adminPreview");
-    return Boolean(preview && !preview.hidden && preview.childElementCount > 0);
-  }, undefined, { timeout: 120_000 });
+  await waitForAdminConsole();
   evidence.adminConsoleRendered = true;
+  assertNoFailedRequests("Initial Admin bootstrap");
+  evidence.controls = await visibleControls();
 
-  await page.waitForTimeout(1500);
-  evidence.controls = await page.locator("button, [role='button'], [data-action], [data-admin-terminal-action]")
-    .evaluateAll(visibleControlMetadata);
-
-  const failedRuntimeRequests = evidence.requests.filter((request) => request.status >= 500);
-  if (failedRuntimeRequests.length) {
-    throw new Error(`Browser observed server failures: ${JSON.stringify(failedRuntimeRequests)}`);
+  for (const section of ["Attendance", "Players", "Contracts", "Store", "Marketplace", "Settings", "Logs", "Overview"]) {
+    await navigateSection(section);
   }
 
+  const shareRequestIndex = evidence.requests.length;
+  await page.locator('button[title="Share game code"]').click();
+  const shareModal = page.locator('[data-modal-id="share-game-access"]');
+  await shareModal.waitFor({ state: "visible", timeout: 20_000 });
+  evidence.shareGameCode.opened = true;
+
+  const resetCode = shareModal.locator('[data-admin-terminal-action="reset-game-code"]');
+  if (await resetCode.isVisible()) {
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes("/join-code/reset") && response.request().method() === "POST",
+      { timeout: 60_000 },
+    );
+    await resetCode.click();
+    const response = await responsePromise;
+    if (!response.ok()) throw new Error(`Generate Game Code returned ${response.status()}`);
+    evidence.shareGameCode.generated = true;
+  }
+  const renderedCode = String(await shareModal.locator(".admin-terminal-share-modal-code strong").textContent() || "").trim();
+  if (!/^[A-Z0-9-]{4,64}$/.test(renderedCode)) throw new Error("Share Game Code modal did not display a generated code.");
+  evidence.shareGameCode.displayed = true;
+  assertNoFailedRequests("Share Game Code", shareRequestIndex);
+  await page.keyboard.press("Escape");
+  if (await shareModal.isVisible().catch(() => false)) {
+    await shareModal.locator('[data-admin-terminal-modal-close], button[aria-label*="Close"]').first().click();
+  }
+
+  await navigateSection("Overview");
+  await page.getByRole("button", { name: /Add Player/i }).click();
+  const playerForm = page.locator("[data-admin-terminal-player-form]");
+  await playerForm.waitFor({ state: "visible", timeout: 20_000 });
+  evidence.playerCreation.opened = true;
+  await playerForm.locator('[name="displayName"]').fill(PLAYER_NAME);
+  const roster = playerForm.locator('[name="rosterLabel"]');
+  if (await roster.count()) await roster.fill("Browser E2E Roster");
+  await playerForm.locator('[name="playerIdentifier"]').fill(PLAYER_IDENTIFIER);
+  await playerForm.locator('[name="accessCode"]').fill(PLAYER_ACCESS_CODE);
+
+  const createPlayerRequestIndex = evidence.requests.length;
+  const createPlayerResponsePromise = page.waitForResponse(
+    (response) => /\/functions\/v1\/admin-api\/games\/[^/]+\/players$/.test(new URL(response.url()).pathname) &&
+      response.request().method() === "POST",
+    { timeout: 120_000 },
+  );
+  await playerForm.locator('[data-admin-terminal-action="create-player"], button[type="submit"]').first().click();
+  const createPlayerResponse = await createPlayerResponsePromise;
+  if (createPlayerResponse.status() !== 201) {
+    const body = await createPlayerResponse.text().catch(() => "");
+    throw new Error(`Rendered Add Player returned ${createPlayerResponse.status()}: ${body.slice(0, 500)}`);
+  }
+  evidence.playerCreation.created = true;
+  assertNoFailedRequests("Add Player", createPlayerRequestIndex);
+
+  const confirmation = page.locator("[data-admin-player-created-confirmation]");
+  await confirmation.waitFor({ state: "visible", timeout: 20_000 });
+  await confirmation.locator("[data-admin-player-created-identifier]").waitFor({ state: "visible" });
+  await confirmation.locator("[data-admin-player-created-access-code]").waitFor({ state: "visible" });
+  await confirmation.locator("[data-admin-player-created-done]").click();
+
+  await navigateSection("Players");
+  await page.getByText(PLAYER_NAME, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  evidence.playerControls = await visibleControls();
+  await page.screenshot({ path: `${OUTPUT_DIR}/players-after-create.png`, fullPage: true });
+
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
+  await waitForAdminConsole();
+  await navigateSection("Players");
+  await page.getByText(PLAYER_NAME, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  evidence.playerCreation.persistedAfterReload = true;
+
+  const logoutRequestIndex = evidence.requests.length;
   const accountTrigger = page.locator("[data-admin-terminal-user]").first();
-  await accountTrigger.waitFor({ state: "visible", timeout: 10_000 });
   await accountTrigger.click();
+  evidence.logout.menuOpened = true;
   const accountMenu = page.locator("[data-admin-terminal-user-menu]").first();
-  await accountMenu.waitFor({ state: "visible", timeout: 5_000 });
-  evidence.accountMenuControls = await accountMenu
-    .locator("button, a, [role='button'], [data-action], [data-admin-terminal-action]")
-    .evaluateAll(visibleControlMetadata);
-  evidence.logoutControlVisible = evidence.accountMenuControls.some(isLogoutControl);
-  if (!evidence.logoutControlVisible) {
-    throw new Error(`Rendered Admin account menu does not expose a visible logout control: ${JSON.stringify(evidence.accountMenuControls)}`);
-  }
+  await accountMenu.waitFor({ state: "visible", timeout: 10_000 });
+  const logoutTrigger = accountMenu.locator(
+    '[data-econovaria-admin-logout], [data-admin-terminal-action="logout"], [data-admin-terminal-action="sign-out"], button, a',
+  ).filter({ hasText: /^(?:Sign out|Log out|Logout)$/i }).last();
+  await logoutTrigger.waitFor({ state: "visible", timeout: 10_000 });
+  await logoutTrigger.click();
+  const logoutConfirmation = page.locator("[data-econovaria-admin-logout-confirmation]");
+  await logoutConfirmation.waitFor({ state: "visible", timeout: 10_000 });
+  evidence.logout.confirmationOpened = true;
+  await logoutConfirmation.locator("[data-econovaria-logout-confirm]").click();
+  await page.waitForURL(/reason=signed-out/, { timeout: 60_000 });
+  evidence.logout.redirected = true;
 
-  await page.screenshot({ path: `${OUTPUT_DIR}/admin-console.png`, fullPage: true });
+  const retainedSession = await page.evaluate(() => sessionStorage.getItem("econovaria.admin.auth.v1"));
+  if (retainedSession) throw new Error("Admin session remained in sessionStorage after logout.");
+  assertNoFailedRequests("Logout", logoutRequestIndex);
+
+  if (evidence.consoleErrors.length || evidence.pageErrors.length) {
+    throw new Error(`Browser emitted errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
+  }
+  await page.screenshot({ path: `${OUTPUT_DIR}/signed-out.png`, fullPage: true });
 } catch (error) {
   failure = error;
   evidence.failure = String(error?.stack || error);
@@ -157,7 +253,9 @@ console.log(JSON.stringify({
   ok: true,
   createdThroughRenderedUi: evidence.createdThroughRenderedUi,
   adminConsoleRendered: evidence.adminConsoleRendered,
-  logoutControlVisible: evidence.logoutControlVisible,
-  controlCount: evidence.controls.length,
+  navigationCount: evidence.navigation.length,
+  shareGameCode: evidence.shareGameCode,
+  playerCreation: evidence.playerCreation,
+  logout: evidence.logout,
   runtimeRequestCount: evidence.requests.length,
 }));
