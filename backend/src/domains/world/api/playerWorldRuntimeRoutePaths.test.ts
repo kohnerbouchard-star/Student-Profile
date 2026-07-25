@@ -12,14 +12,24 @@ Deno.test("Player world runtime routes expose only reviewed public paths", () =>
     operation: "context",
     journeyId: null,
   });
+  assertEquals(
+    parsePlayerWorldRuntimeRoute("/functions/v1/classroom-api/players/me/world-runtime"),
+    {
+      operation: "context",
+      journeyId: null,
+    },
+  );
   assertEquals(parsePlayerWorldRuntimeRoute("/players/me/arrival-class/"), {
     operation: "arrivalClass",
     journeyId: null,
   });
-  assertEquals(parsePlayerWorldRuntimeRoute("/players/me/travel/quotes"), {
-    operation: "travelQuote",
-    journeyId: null,
-  });
+  assertEquals(
+    parsePlayerWorldRuntimeRoute("/classroom-api/players/me/travel/quotes"),
+    {
+      operation: "travelQuote",
+      journeyId: null,
+    },
+  );
   assertEquals(parsePlayerWorldRuntimeRoute("/players/me/travel"), {
     operation: "travelExecute",
     journeyId: null,
@@ -33,9 +43,19 @@ Deno.test("Player world runtime routes expose only reviewed public paths", () =>
     operation: "travelComplete",
     journeyId,
   });
+  assertEquals(
+    parsePlayerWorldRuntimeRoute(
+      `/functions/v1/classroom-api/players/me/travel/${journeyId}/complete`,
+    ),
+    {
+      operation: "travelComplete",
+      journeyId,
+    },
+  );
   assertEquals(parsePlayerWorldRuntimeRoute("/games/internal-id/world-runtime"), null);
   assertEquals(parsePlayerWorldRuntimeRoute("/players/uuid/world-runtime"), null);
   assertEquals(parsePlayerWorldRuntimeRoute("/players/me/travel/not-public/complete"), null);
+  assertEquals(parsePlayerWorldRuntimeRoute("/admin-api/players/me/world-runtime"), null);
 });
 
 Deno.test("route methods are bounded and operation-owned", () => {
