@@ -10,8 +10,10 @@ on:
       - "admin/session-timeout-safe-exit.js"
       - "auth/reset-password.js"
       - "frontend/src/core/api.js"
+      - "frontend/src/core/admin-mfa.js"
       - "frontend/src/core/login.js"
       - "frontend/src/core/runtime-config.js"
+      - "frontend/src/styles/admin-mfa.css"
       - "backend/src/security/**"
       - "backend/src/platform/supabase/edgeAuth.ts"
       - "backend/src/platform/supabase/edgeStaffSession.ts"
@@ -40,6 +42,7 @@ on:
       - "docs/operations/beta-security-rate-limit-staging-runbook.md"
       - "docs/operations/staff-access-security-policy.md"
       - "scripts/admin-session-manager-smoke.mjs"
+      - "scripts/admin-mfa-bff-contract.test.mjs"
       - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
@@ -135,11 +138,13 @@ jobs:
           node --check admin/session-timeout-safe-exit.js
           node --check auth/reset-password.js
           node --check frontend/src/core/api.js
+          node --check frontend/src/core/admin-mfa.js
           node --check frontend/src/core/login.js
 
       - name: Validate browser and gateway auth boundaries
         run: |
           node --test scripts/auth-boundary-contract.test.mjs
+          node --test scripts/admin-mfa-bff-contract.test.mjs
           node scripts/admin-session-manager-smoke.mjs
           node --test scripts/local-staging-gateway-contract.test.mjs
           node --test scripts/vercel-auth-proxy-contract.test.mjs
