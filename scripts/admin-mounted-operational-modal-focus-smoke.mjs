@@ -69,7 +69,31 @@ async function authorizationDiagnostics(page) {
     const session = window.EconovariaAdminAuth?.getSession?.() || null;
     const legacy = window.currentSession || null;
     const stateStaff = window.state?.staffSession || null;
-    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || null;
+    const feature = window.Econovaria?.features?.adminOverviewTerminal || null;
+    const model = feature?.currentModel || null;
+    const featureFunctions = {};
+    for (const [key, value] of Object.entries(feature || {})) {
+      if (typeof value !== "function") continue;
+      const source = Function.prototype.toString.call(value);
+      if (
+        /permission|access|section|role|session|renderShell/i.test(`${key}\n${source}`)
+      ) {
+        featureFunctions[key] = source.slice(0, 20_000);
+      }
+    }
+    const relatedGlobals = {};
+    for (const key of Object.keys(window).filter(name =>
+      /^EconovariaAdmin/i.test(name) && /permission|access|session|overview/i.test(name)
+    )) {
+      const value = window[key];
+      relatedGlobals[key] = {
+        type: typeof value,
+        keys: value && typeof value === "object" ? Object.keys(value).sort() : [],
+        source: typeof value === "function"
+          ? Function.prototype.toString.call(value).slice(0, 10_000)
+          : "",
+      };
+    }
     return {
       auth: {
         authenticated: session?.authenticated === true,
@@ -92,6 +116,11 @@ async function authorizationDiagnostics(page) {
         staffSession: authorization(model?.staffSession),
         keys: model && typeof model === "object" ? Object.keys(model).sort() : [],
       },
+      feature: {
+        keys: feature && typeof feature === "object" ? Object.keys(feature).sort() : [],
+        functions: featureFunctions,
+      },
+      relatedGlobals,
       navigation: [...document.querySelectorAll("[data-admin-section]")].map(node => ({
         section: node.getAttribute("data-admin-section") || "",
         disabled: node.hasAttribute("disabled"),
