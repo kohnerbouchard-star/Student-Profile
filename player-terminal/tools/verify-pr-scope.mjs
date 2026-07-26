@@ -42,6 +42,7 @@ const exactAllowed = new Set([
   ".github/workflows/business-banking-runtime.yml",
   ".github/workflows/crafting-item-runtime.yml",
   ".github/workflows/runtime-interaction-wiring.yml",
+  ".github/workflows/beta-security-contract.yml",
   "README.md",
   "admin/admin-bootstrap.js",
   "admin/messaging-moderation.css",
