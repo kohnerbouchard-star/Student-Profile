@@ -9,6 +9,7 @@ const browserCredentialFiles = [
   "frontend/src/core/api.js",
   "frontend/src/core/constants.js",
   "frontend/src/core/runtime-config.js",
+  "frontend/src/core/login.js",
   "player-terminal/host-runtime.js",
   "player-terminal/src/api/http-transport.js",
   "player-terminal/src/integrations/student-profile-api-call.js",
@@ -18,17 +19,35 @@ const browserCredentialFiles = [
   "auth/reset-password.js",
 ];
 
+const adminBrowserFiles = [
+  "frontend/src/core/api.js",
+  "frontend/src/core/login.js",
+  "admin/admin-auth.js",
+  "admin/auth-session-manager.js",
+  "admin/player-access-code-bridge.js",
+];
+
 const privilegedPatterns = [
   /sb_secret_[A-Za-z0-9_-]+/,
   /service_role[^\n]{0,30}(?:key|token)/i,
   /SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*["'`][^"'`]+/,
 ];
 
+const browserStaffCredentialPatterns = [
+  /\baccessToken\b/,
+  /\brefreshToken\b/,
+  /\baccess_token\b/,
+  /\brefresh_token\b/,
+  /Authorization\s*[:=]/,
+  /headers\.set\(["']Authorization["']/,
+  /Bearer\s+\$\{/,
+];
+
 test("auth ledger is complete, unique, and machine-readable", async () => {
   const ledger = JSON.parse(await read("docs/security/auth-boundary-ledger-v1.json"));
   assert.equal(ledger.schemaVersion, "econovaria-auth-boundary-ledger-v1");
   assert.ok(Array.isArray(ledger.boundaries));
-  assert.ok(ledger.boundaries.length >= 10);
+  assert.ok(ledger.boundaries.length >= 11);
   const ids = ledger.boundaries.map((entry) => entry.id);
   assert.equal(new Set(ids).size, ids.length);
 
@@ -37,6 +56,7 @@ test("auth ledger is complete, unique, and machine-readable", async () => {
     "staff-api",
     "admin-api",
     "player-api",
+    "web-session-api",
     "classroom-api-compatibility",
     "stock-market-runner-family",
     "local-gateway",
@@ -48,7 +68,7 @@ test("auth ledger is complete, unique, and machine-readable", async () => {
     ledger.principles.prohibited.includes("sb_publishable_ key in Authorization"),
   );
   assert.ok(Array.isArray(ledger.releaseGates));
-  assert.ok(ledger.releaseGates.length >= 7);
+  assert.ok(ledger.releaseGates.length >= 8);
 });
 
 test("browser runtime exposes only publishable application identity", async () => {
@@ -66,6 +86,8 @@ test("browser runtime exposes only publishable application identity", async () =
   assert.match(runtime, /staffApiUrl/);
   assert.match(runtime, /bootstrapApiUrl/);
   assert.match(runtime, /adminApiUrl/);
+  assert.match(runtime, /webSessionApiUrl/);
+  assert.match(runtime, /adminBffApiUrl/);
   assert.match(runtime, /classroomApiUrl:\s*staffApiUrl/);
   assert.match(runtime, /SECRET_KEY_PROHIBITED/);
 
@@ -75,10 +97,39 @@ test("browser runtime exposes only publishable application identity", async () =
 
   const api = await read("frontend/src/core/api.js");
   assert.match(api, /callSupabaseJsonRoute\("player"/);
-  assert.match(api, /callSupabaseJsonRoute\("staff"/);
   assert.match(api, /callSupabaseJsonRoute\("bootstrap"/);
+  assert.match(api, /callSupabaseJsonRoute\("webSession",\s*"\/login"/);
+  assert.doesNotMatch(api, /grant_type=password/);
   assert.doesNotMatch(api, /token:\s*publishableKey/);
   assert.doesNotMatch(api, /Authorization:\s*`Bearer \$\{publishableKey\}`/);
+});
+
+test("Admin browser storage and transport contain no Staff credential", async () => {
+  for (const path of adminBrowserFiles) {
+    const source = await read(path);
+    for (const pattern of browserStaffCredentialPatterns) {
+      assert.doesNotMatch(
+        source,
+        pattern,
+        `${path} must not contain browser-readable Staff credential transport`,
+      );
+    }
+  }
+
+  const [login, manager, adminAuth, playerBridge] = await Promise.all([
+    read("frontend/src/core/login.js"),
+    read("admin/auth-session-manager.js"),
+    read("admin/admin-auth.js"),
+    read("admin/player-access-code-bridge.js"),
+  ]);
+  assert.match(login, /authenticated:\s*result\?\.session\?\.authenticated/);
+  assert.match(manager, /credentials:\s*"include"/);
+  assert.match(adminAuth, /credentials:\s*"include"/);
+  assert.match(adminAuth, /x-econovaria-csrf-token/);
+  assert.match(adminAuth, /http-only-bff/);
+  assert.doesNotMatch(adminAuth, /permissions:\s*\["\*"\]/);
+  assert.doesNotMatch(playerBridge, /staffApiUrl/);
+  assert.doesNotMatch(playerBridge, /Authorization/);
 });
 
 test("Player and Admin callers remain bound to their own identities", async () => {
@@ -104,9 +155,31 @@ test("Player and Admin callers remain bound to their own identities", async () =
   assert.doesNotMatch(adapter, /Authorization\s*=\s*`Bearer \$\{publishableKey\}`/);
 
   assert.match(adminAuth, /headers\.set\("apikey", SUPABASE_PUBLISHABLE_KEY\)/);
-  assert.match(adminAuth, /Bearer \$\{session\.accessToken\}/);
-  assert.match(playerBridge, /runtimeConfig\.staffApiUrl/);
-  assert.match(playerBridge, /Bearer \$\{accessToken\}/);
+  assert.match(adminAuth, /headers\.set\(CSRF_HEADER, session\.csrfToken\)/);
+  assert.match(adminAuth, /ADMIN_BFF_BASE/);
+  assert.doesNotMatch(adminAuth, /Bearer/);
+  assert.match(playerBridge, /LOCAL_API_PREFIX/);
+  assert.doesNotMatch(playerBridge, /STAFF_API_BASE/);
+});
+
+test("server-side Admin BFF is the only Staff credential transport", async () => {
+  const [edge, vercel, adminRoute, sessionRoute] = await Promise.all([
+    read("backend/supabase/functions/web-session-api/index.ts"),
+    read("api/_admin-bff-proxy.js"),
+    read("api/admin/[...path].js"),
+    read("api/admin-session/[...path].js"),
+  ]);
+
+  assert.match(edge, /WEB_ADMIN_SESSION_COOKIE/);
+  assert.match(edge, /HttpOnly/);
+  assert.match(edge, /SameSite=Strict/);
+  assert.match(edge, /constantTimeTextEqual/);
+  assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
+  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN/);
+  assert.match(vercel, /proxyAdminBff/);
+  assert.doesNotMatch(vercel, /authorization/i);
+  assert.match(adminRoute, /proxyAdmin:\s*true/);
+  assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
 
 test("server runners use publishable identity plus dedicated authorization", async () => {
@@ -130,14 +203,16 @@ test("server runners use publishable identity plus dedicated authorization", asy
   }
 });
 
-test("local launcher never injects a legacy anon bearer", async () => {
+test("local launcher never injects a legacy anon bearer or arbitrary cookie", async () => {
   const launcher = await read("scripts/econovaria-local-gateway.py");
   assert.match(launcher, /filtered_request_headers/);
   assert.match(launcher, /safe_header_pair/);
   assert.match(launcher, /HEADER_NAME_PATTERN/);
   assert.match(launcher, /MAX_HEADER_VALUE_BYTES/);
   assert.match(launcher, /FORWARDED_IP_HEADERS/);
-  assert.match(launcher, /"\\r",\s*"\\n",\s*"\\x00"/);
+  assert.match(launcher, /normalized_session_request_cookie/);
+  assert.match(launcher, /normalized_session_response_cookie/);
+  assert.match(launcher, /"\r",\s*"\n",\s*"\x00"/);
   assert.match(launcher, /Bearer \{browser_publishable_key\}/);
   assert.doesNotMatch(
     launcher,
