@@ -112,13 +112,17 @@ async function requestJson(path, {
     });
     const elapsedMs = performance.now() - startedAt;
     const payload = await response.json().catch(() => null);
-    return { ok: response.ok, status: response.status, elapsedMs, payload };
+    const setCookies = typeof response.headers.getSetCookie === "function"
+      ? response.headers.getSetCookie()
+      : [response.headers.get("set-cookie")].filter(Boolean);
+    return { ok: response.ok, status: response.status, elapsedMs, payload, setCookies };
   } catch (error) {
     return {
       ok: false,
       status: 0,
       elapsedMs: performance.now() - startedAt,
       payload: null,
+      setCookies: [],
       networkError: error?.name === "AbortError" ? "timeout" : sanitize(error?.message || error),
     };
   } finally {
@@ -126,35 +130,52 @@ async function requestJson(path, {
   }
 }
 
-function platformHeaders(publishableKey, token = publishableKey) {
+function publicHeaders(publishableKey, deviceId, extras = {}) {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
+    Origin: new URL(BASE_URL).origin,
     apikey: publishableKey,
-    Authorization: `Bearer ${token}`,
+    "x-econovaria-device-id": deviceId,
+    ...extras,
   };
 }
 
+function cookieHeader(setCookies) {
+  return setCookies
+    .map((cookie) => String(cookie || "").split(";", 1)[0].trim())
+    .filter(Boolean)
+    .join("; ");
+}
+
 async function adminSession(publishableKey) {
-  const signIn = await requestJson("/auth/v1/token?grant_type=password", {
+  const deviceId = crypto.randomUUID();
+  const signIn = await requestJson("/functions/v1/web-session-api/login", {
     method: "POST",
-    headers: platformHeaders(publishableKey),
+    headers: publicHeaders(publishableKey, deviceId),
     body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   });
-  if (!signIn.ok || !signIn.payload?.access_token) {
-    throw new Error(`Admin sign-in failed with status ${signIn.status}.`);
+  const cookie = cookieHeader(signIn.setCookies);
+  if (!signIn.ok || signIn.payload?.ok !== true || !cookie) {
+    throw new Error(`Admin web-session sign-in failed with status ${signIn.status}.`);
   }
-  const accessToken = signIn.payload.access_token;
-  const bootstrap = await requestJson("/functions/v1/classroom-api/staff/bootstrap", {
-    headers: platformHeaders(publishableKey, accessToken),
+
+  const status = await requestJson("/functions/v1/web-session-api/status", {
+    headers: publicHeaders(publishableKey, deviceId, { Cookie: cookie }),
   });
-  if (!bootstrap.ok || bootstrap.payload?.ok !== true) {
-    throw new Error(`Staff bootstrap failed with status ${bootstrap.status}.`);
+  if (!status.ok || status.payload?.ok !== true || !status.payload?.csrfToken) {
+    throw new Error(`Admin web-session status failed with status ${status.status}.`);
   }
-  const game = (bootstrap.payload.activeGameSessions || []).find((item) => item?.name === GAME_NAME) ||
-    bootstrap.payload.activeGameSessions?.[0];
+  const game = (status.payload.activeGameSessions || []).find((item) => item?.name === GAME_NAME) ||
+    status.payload.activeGameSessions?.[0];
   if (!game?.id || !game?.gameCode) throw new Error("The load-test game or readable Game Code is unavailable.");
-  return { accessToken, gameId: game.id, gameCode: game.gameCode };
+  return {
+    cookie,
+    csrfToken: status.payload.csrfToken,
+    deviceId,
+    gameId: game.id,
+    gameCode: game.gameCode,
+  };
 }
 
 async function runPool(items, concurrency, operation) {
@@ -171,16 +192,17 @@ async function runPool(items, concurrency, operation) {
   return results;
 }
 
-async function ensurePlayers({ publishableKey, accessToken, gameId }) {
+async function ensurePlayers({ publishableKey, cookie, csrfToken, deviceId, gameId }) {
   const additional = players.slice(2);
   return runPool(additional, CREATE_CONCURRENCY, async (player) => {
-    const response = await requestJson(`/functions/v1/admin-api/games/${encodeURIComponent(gameId)}/players`, {
+    const response = await requestJson(`/functions/v1/web-session-api/proxy/games/${encodeURIComponent(gameId)}/players`, {
       method: "POST",
-      headers: {
-        ...platformHeaders(publishableKey, accessToken),
+      headers: publicHeaders(publishableKey, deviceId, {
+        Cookie: cookie,
+        "x-econovaria-csrf-token": csrfToken,
         "x-econovaria-game-id": gameId,
         "x-request-id": crypto.randomUUID(),
-      },
+      }),
       body: {
         displayName: player.displayName,
         rosterLabel: "Connected load profile",
@@ -189,17 +211,17 @@ async function ensurePlayers({ publishableKey, accessToken, gameId }) {
       },
     });
     if (response.status === 201 || response.status === 409) return { ok: true, status: response.status };
-    return { ok: false, status: response.status, error: sanitize(response.payload?.error?.message || response.networkError) };
+    return { ok: false, status: response.status, error: sanitize(response.payload?.error?.message || response.payload?.message || response.networkError) };
   });
 }
 
 async function loginPlayer(player, gameCode, publishableKey) {
-  const response = await requestJson("/functions/v1/classroom-api/players/login", {
+  const deviceId = crypto.randomUUID();
+  const response = await requestJson("/functions/v1/player-api/players/login", {
     method: "POST",
-    headers: {
-      ...platformHeaders(publishableKey),
+    headers: publicHeaders(publishableKey, deviceId, {
       "x-request-id": crypto.randomUUID(),
-    },
+    }),
     body: {
       gameJoinCode: gameCode,
       playerIdentifier: player.playerIdentifier,
@@ -211,6 +233,7 @@ async function loginPlayer(player, gameCode, publishableKey) {
     status: response.status,
     elapsedMs: response.elapsedMs,
     token: response.payload?.session?.token || "",
+    deviceId,
     error: response.ok ? "" : sanitize(response.payload?.error?.message || response.networkError),
   };
 }
@@ -220,13 +243,11 @@ async function readWave(sessions, publishableKey) {
   const perPlayerResults = await Promise.all(sessions.map(async (session, playerIndex) => {
     const results = [];
     for (const path of READ_PATHS) {
-      const response = await requestJson(`/functions/v1/classroom-api${path}`, {
-        headers: {
-          ...platformHeaders(publishableKey),
+      const response = await requestJson(`/functions/v1/player-api${path}`, {
+        headers: publicHeaders(publishableKey, session.deviceId, {
           "x-player-session-token": session.token,
-          "x-econovaria-player-session-token": session.token,
           "x-request-id": crypto.randomUUID(),
-        },
+        }),
       });
       results.push({
         player: playerIndex + 1,
@@ -291,6 +312,8 @@ const evidence = {
     maximumConcurrentPlayers: MAX_PLAYERS,
     readPathsPerPlayer: READ_PATHS.length,
     readScheduling: READ_SCHEDULING,
+    adminTransport: "http-only-bff",
+    playerTransport: "player-api",
   },
   players: { requested: MAX_PLAYERS, createdOrExisting: 0, createFailures: 0 },
   baseline30: null,
@@ -315,7 +338,7 @@ try {
     loginPlayer(player, session.gameCode, publishableKey)
   ));
   assertPhase("30-player concurrent login", baselineLogins, LOGIN_P95_LIMIT_MS);
-  const baselineSessions = baselineLogins.map(({ token }) => ({ token }));
+  const baselineSessions = baselineLogins.map(({ token, deviceId }) => ({ token, deviceId }));
   const baselineReads = await readWave(baselineSessions, publishableKey);
   assertReadWaveShape("30-player connected read wave", baselineReads, EXPECTED_PLAYERS);
   assertPhase("30-player connected read wave", baselineReads.results, READ_P95_LIMIT_MS);
@@ -334,7 +357,7 @@ try {
     loginPlayer(player, session.gameCode, publishableKey)
   ));
   assertPhase("10-player maximum-capacity login", remainingLogins, LOGIN_P95_LIMIT_MS);
-  const allSessions = [...baselineSessions, ...remainingLogins.map(({ token }) => ({ token }))];
+  const allSessions = [...baselineSessions, ...remainingLogins.map(({ token, deviceId }) => ({ token, deviceId }))];
   const burstStart = performance.now();
   const burstReads = await readWave(allSessions, publishableKey);
   assertReadWaveShape("40-player connected read wave", burstReads, MAX_PLAYERS);
@@ -355,6 +378,7 @@ try {
 } finally {
   evidence.completedAt = new Date().toISOString();
   const serialized = JSON.stringify(evidence, null, 2);
+  UUID_PATTERN.lastIndex = 0;
   evidence.rawInternalIdentifiersRecorded = UUID_PATTERN.test(serialized);
   if (evidence.rawInternalIdentifiersRecorded) {
     failure ||= new Error("Load evidence contained a raw internal identifier.");
