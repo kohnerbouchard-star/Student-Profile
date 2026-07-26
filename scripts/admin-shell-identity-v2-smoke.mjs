@@ -85,9 +85,11 @@ assert(boot.includes("session?.authenticated"), "Admin boot does not use the saf
 assert(boot.includes("session.permissions"), "Admin boot does not consume granular Staff permissions.");
 assert(boot.includes("econovaria:admin-session-refreshed"), "Admin boot does not install authorization after session refresh.");
 assert(boot.includes("installLegacySessionPermissionBoundary"), "Admin boot does not constrain legacy session assignments.");
+assert(boot.includes("installLegacyStaffStateBoundary"), "Admin boot does not constrain legacy window state assignments.");
 assert(boot.includes("sanitizeLegacySession"), "Admin boot does not sanitize legacy authorization state.");
 assert(boot.includes("authorizedStaffSession"), "Admin boot does not propagate authenticated grants into nested legacy Staff state.");
-assert(boot.includes("staffSession: authorizedStaffSession"), "Admin boot can lose granular grants while synchronizing legacy Staff state.");
+assert(boot.includes("modelStaffSessionSource"), "Admin boot does not resolve the terminal's nested Staff authorization source.");
+assert(boot.includes("staffSession: authorizedStaffSession("), "Admin terminal model can lose its nested granular Staff grants.");
 assert(!boot.includes("session?.accessToken"), "Admin boot still requires a browser-readable Staff token.");
 assert(!boot.includes('["*"]'), "Admin boot still restores wildcard authorization.");
 
