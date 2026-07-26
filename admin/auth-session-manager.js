@@ -39,6 +39,8 @@
   ]);
   const nativeFetch = window.fetch.bind(window);
   let statusPromise = null;
+  let sessionGeneration = 0;
+  let signingOut = false;
 
   function deviceId() {
     const existing = String(window.localStorage.getItem(DEVICE_KEY) || "")
@@ -83,6 +85,9 @@
   }
 
   function store(result) {
+    if (signingOut) {
+      throw new Error("Administrator sign-out is in progress.");
+    }
     const user = result?.user || null;
     const permissions = normalizePermissions(
       result?.permissions || result?.data?.permissions
@@ -133,6 +138,7 @@
   }
 
   function clear({ includeSelectedGame = true } = {}) {
+    sessionGeneration += 1;
     try {
       window.sessionStorage.removeItem(SESSION_KEY);
       if (includeSelectedGame) window.sessionStorage.removeItem(SELECTED_GAME_KEY);
@@ -148,6 +154,7 @@
   }
 
   async function requestAuthorizationSummary() {
+    if (signingOut) return null;
     const headers = {
       apikey: PUBLISHABLE_KEY,
       [DEVICE_HEADER]: deviceId()
@@ -165,7 +172,7 @@
       redirect: "error",
       referrerPolicy: "no-referrer"
     });
-    if (!response.ok) return null;
+    if (!response.ok || signingOut) return null;
     const payload = await readResponseJson(response);
     const data = payload?.data;
     if (!data || typeof data !== "object") return null;
@@ -181,6 +188,8 @@
   }
 
   async function requestStatus() {
+    if (signingOut) return null;
+    const requestGeneration = sessionGeneration;
     const response = await nativeFetch(`${WEB_SESSION_API}/status`, {
       method: "GET",
       headers: {
@@ -192,25 +201,29 @@
       redirect: "error",
       referrerPolicy: "no-referrer"
     });
+    if (signingOut || requestGeneration !== sessionGeneration) return null;
     if (!response.ok) {
       clear();
       return null;
     }
     try {
       const status = await readResponseJson(response);
+      if (signingOut || requestGeneration !== sessionGeneration) return null;
       const authorization = await requestAuthorizationSummary();
+      if (signingOut || requestGeneration !== sessionGeneration) return null;
       if (!status?.ok || !authorization) {
         clear();
         return null;
       }
       return store({ ...status, ...authorization });
     } catch (_) {
-      clear();
+      if (!signingOut && requestGeneration === sessionGeneration) clear();
       return null;
     }
   }
 
   function refresh() {
+    if (signingOut) return Promise.resolve(null);
     if (!statusPromise) {
       statusPromise = requestStatus().finally(() => {
         statusPromise = null;
@@ -220,6 +233,7 @@
   }
 
   async function getUsableSession({ minimumValidityMs = DEFAULT_EXPIRY_SKEW_MS } = {}) {
+    if (signingOut) return null;
     const cached = read();
     if (
       cached &&
@@ -232,6 +246,12 @@
   }
 
   async function signOut() {
+    if (signingOut) {
+      clear();
+      return;
+    }
+    signingOut = true;
+    clear();
     try {
       await nativeFetch(`${WEB_SESSION_API}/logout`, {
         method: "POST",
