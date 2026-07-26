@@ -1,10 +1,9 @@
 import {
-  createAuthClient,
-  createServiceClient,
   readEdgeSupabaseEnv,
   requirePublishableRequest,
   resolveStaffForRequest,
 } from "../_shared/econovariaAuth.ts";
+import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import { validateStaffPassword } from "../../../src/security/staffPasswordPolicy.ts";
 
 const MAX_BODY_BYTES = 4_096;
@@ -44,9 +43,9 @@ Deno.serve(async (request: Request) => {
   }
 
   const bodyResult = await readBody(request);
-  if (!bodyResult.ok) return bodyResult.response;
+  if (bodyResult.ok === false) return bodyResult.response;
   const policy = validateStaffPassword(bodyResult.password);
-  if (!policy.ok) {
+  if (policy.ok === false) {
     return json(request, 400, errorBody(policy.code, policy.message));
   }
 
@@ -55,7 +54,20 @@ Deno.serve(async (request: Request) => {
   const resolved = await resolveStaffForRequest(request, env.value, {
     missingMessage: "A valid password-recovery session is required.",
   });
-  if (!resolved.ok) return withCors(request, resolved.response);
+  if (resolved.ok === false) {
+    return json(request, resolved.status, {
+      ok: false,
+      error: resolved.error,
+    });
+  }
+
+  const accessToken = extractBearerToken(request.headers.get("authorization"));
+  if (!accessToken) {
+    return json(request, 401, errorBody(
+      "invalid_recovery_session",
+      "A valid password-recovery session is required.",
+    ));
+  }
 
   const service = resolved.serviceClient as any;
   const passwordUpdate = await service.auth.admin.updateUserById(
@@ -72,7 +84,7 @@ Deno.serve(async (request: Request) => {
   await revokeAllSessions(
     env.value.supabaseUrl,
     env.value.supabaseAnonKey,
-    resolved.accessToken,
+    accessToken,
   );
 
   const transitionResponse = await resolved.serviceClient.rpc<
