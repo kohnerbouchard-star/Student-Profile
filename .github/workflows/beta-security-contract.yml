@@ -162,13 +162,20 @@ jobs:
         shell: bash
         run: test "${{ steps.security_typecheck.outputs.status }}" = "0"
 
-      - name: Validate browser and gateway auth boundaries
-        run: |
-          node --test scripts/auth-boundary-contract.test.mjs
-          node --test scripts/admin-mfa-bff-contract.test.mjs
-          node scripts/admin-session-manager-smoke.mjs
-          node --test scripts/local-staging-gateway-contract.test.mjs
-          node --test scripts/vercel-auth-proxy-contract.test.mjs
+      - name: Validate authentication boundary ratchet
+        run: node --test scripts/auth-boundary-contract.test.mjs
+
+      - name: Validate Admin MFA BFF boundary
+        run: node --test scripts/admin-mfa-bff-contract.test.mjs
+
+      - name: Validate Admin session manager boundary
+        run: node scripts/admin-session-manager-smoke.mjs
+
+      - name: Validate local gateway boundary
+        run: node --test scripts/local-staging-gateway-contract.test.mjs
+
+      - name: Validate Vercel proxy boundary
+        run: node --test scripts/vercel-auth-proxy-contract.test.mjs
 
       - name: Validate connected probe contracts
         run: npm run test:security-probes
