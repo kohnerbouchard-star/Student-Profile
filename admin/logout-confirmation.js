@@ -186,9 +186,15 @@
     button.textContent = "Signing out…";
 
     signOutPromise = (async () => {
-      // This confirmation owns the transition so module load order cannot route
-      // sign-out through a retired local Admin endpoint or a second navigator.
-      await revokeWebSession();
+      // The session manager captured native fetch before later Admin adapters wrap
+      // window.fetch. Use that transport when available, then retain a bounded
+      // BFF-native fallback for partial bootstrap failures.
+      const manager = window.EconovariaAdminAuthSession;
+      if (typeof manager?.signOut === "function") {
+        await manager.signOut();
+      } else {
+        await revokeWebSession();
+      }
       clearLocalStateAndRedirect();
     })().finally(() => {
       signOutPromise = null;
