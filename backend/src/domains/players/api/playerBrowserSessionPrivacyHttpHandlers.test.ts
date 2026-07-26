@@ -38,6 +38,11 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
         id: CREDENTIAL,
         player_id: PLAYER,
         status: "active",
+        normalized_student_code_hash: "d".repeat(64),
+        credential_version: "pbkdf2-sha256-v2",
+        credential_salt: "A".repeat(22),
+        credential_verifier: "B".repeat(43),
+        credential_iterations: 600_000,
       })],
     },
     {
@@ -241,6 +246,7 @@ function dependencies(
       lockedUntil: null,
     }),
     recordSuccess: async () => {},
+    verifyCredential: async () => true,
   };
 }
 
