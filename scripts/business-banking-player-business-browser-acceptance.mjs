@@ -18,6 +18,7 @@ const PRODUCT_NAME = "Connected Classroom Kit";
 const EMPLOYEE_ROLE = "Connected Quality Specialist";
 const FIXTURE_CREDIT = 6_000;
 const CAPITALIZATION = 2_000;
+const CURRENCY_PATTERN = /^[A-Z][A-Z0-9_]{2,15}$/;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
@@ -25,6 +26,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 const evidence = {
   generatedAt: new Date().toISOString(),
   fixtureCreditApplied: false,
+  fixtureCreditVisible: false,
   mutations: {
     businessCreated: false,
     businessPersisted: false,
@@ -109,6 +111,14 @@ function replayed(value) {
   return walk(value).some((item) => item.replayed === true);
 }
 
+function assignedCurrency(record) {
+  const currencyCode = String(record?.currencyCode || record?.currency_code || "").trim().toUpperCase();
+  if (!CURRENCY_PATTERN.test(currencyCode)) {
+    throw new Error("Admin fixture could not resolve the Business Player's assigned country currency.");
+  }
+  return currencyCode;
+}
+
 async function resolveAdminFixture() {
   const publishableKey = await runtimeKey();
   const signIn = await request("/auth/v1/token?grant_type=password", {
@@ -143,10 +153,17 @@ async function resolveAdminFixture() {
   });
   const playerId = String(player?.id || player?.playerId || "");
   if (!playerId) throw new Error("Admin fixture could not resolve the connected Player.");
-  return { publishableKey, token, gameId, gameCode, playerId };
+  return {
+    publishableKey,
+    token,
+    gameId,
+    gameCode,
+    playerId,
+    currencyCode: assignedCurrency(player),
+  };
 }
 
-async function creditPlayer(admin, currencyCode) {
+async function creditPlayer(admin) {
   const idempotencyKey = `business-fixture-${Date.now()}`;
   const response = await request(
     `/functions/v1/admin-api/games/${encodeURIComponent(admin.gameId)}/players/${encodeURIComponent(admin.playerId)}/ledger-adjustments`,
@@ -160,7 +177,7 @@ async function creditPlayer(admin, currencyCode) {
         amount: FIXTURE_CREDIT,
         reason: "Disposable connected Business acceptance fixture",
         accountType: "checking",
-        currencyCode,
+        currencyCode: admin.currencyCode,
         idempotencyKey,
       },
     },
@@ -171,7 +188,7 @@ async function creditPlayer(admin, currencyCode) {
     response.status !== 200 ||
     !applied ||
     adjustment?.ledger?.accountType !== "checking" ||
-    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== currencyCode
+    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== admin.currencyCode
   ) {
     throw new Error(`Business fixture credit returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
   }
@@ -228,15 +245,18 @@ async function openRoute(page, route, selector) {
   await page.locator(selector).waitFor({ state: "visible", timeout: 30_000 });
 }
 
-async function cashContext(page) {
+async function checkingBalance(page, currencyCode, { optional = false } = {}) {
   await openRoute(page, "banking", ".player-terminal-banking-page");
-  const card = page.locator('[data-player-banking-balance^="cash:"], [data-player-banking-balance^="checking:"]').first();
+  const card = page.locator(`[data-player-banking-balance="checking:${currencyCode}"]`).first();
+  if (!(await card.count())) {
+    if (optional) return 0;
+    throw new Error(`The Player Banking page did not render the ${currencyCode} checking balance.`);
+  }
   await card.waitFor({ state: "visible", timeout: 30_000 });
-  const key = String(await card.getAttribute("data-player-banking-balance"));
   const text = String(await card.locator("h3").innerText()).replace(/,/g, "");
   const amount = Number(text.match(/-?[0-9]+(?:\.[0-9]{1,2})?/)?.[0]);
-  if (!Number.isFinite(amount)) throw new Error(`Could not parse Player cash from ${redact(text)}.`);
-  return { currencyCode: key.split(":").at(-1).toUpperCase(), amount };
+  if (!Number.isFinite(amount)) throw new Error(`Could not parse the ${currencyCode} checking balance from ${redact(text)}.`);
+  return amount;
 }
 
 async function openBusiness(page) {
@@ -451,10 +471,15 @@ try {
   browser = await chromium.launch({ headless: true });
   const player = await login(browser, admin.gameCode);
   context = player.context;
-  const initialCash = await cashContext(player.page);
-  await creditPlayer(admin, initialCash.currencyCode);
+  const balanceBeforeCredit = await checkingBalance(player.page, admin.currencyCode, { optional: true });
+  await creditPlayer(admin);
   await player.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await player.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
+  const balanceAfterCredit = await checkingBalance(player.page, admin.currencyCode);
+  if (balanceAfterCredit < balanceBeforeCredit + FIXTURE_CREDIT) {
+    throw new Error(`Business fixture credit did not become Player-visible: ${balanceBeforeCredit} -> ${balanceAfterCredit}.`);
+  }
+  evidence.fixtureCreditVisible = true;
 
   const originalCreate = await createBusiness(player.page);
   await createProduct(player.page);
@@ -482,8 +507,12 @@ try {
       pageErrors: evidence.pageErrors,
     })}`);
   }
-  if (!Object.values(evidence.mutations).every(Boolean)) {
-    throw new Error(`Connected Player Business evidence is incomplete: ${JSON.stringify(evidence.mutations)}`);
+  if (!evidence.fixtureCreditApplied || !evidence.fixtureCreditVisible || !Object.values(evidence.mutations).every(Boolean)) {
+    throw new Error(`Connected Player Business evidence is incomplete: ${JSON.stringify({
+      fixtureCreditApplied: evidence.fixtureCreditApplied,
+      fixtureCreditVisible: evidence.fixtureCreditVisible,
+      mutations: evidence.mutations,
+    })}`);
   }
 } catch (error) {
   failure = error;
@@ -503,6 +532,8 @@ if (failure) throw failure;
 
 console.log(JSON.stringify({
   ok: true,
+  fixtureCreditApplied: evidence.fixtureCreditApplied,
+  fixtureCreditVisible: evidence.fixtureCreditVisible,
   mutations: evidence.mutations,
   requestCount: evidence.requests.length,
 }));
