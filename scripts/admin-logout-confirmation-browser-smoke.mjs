@@ -146,18 +146,24 @@ try {
 
   await clickRealAccountLogout();
   await modal.waitFor({ state: "visible", timeout: 5_000 });
-  await Promise.all([
+  const storageClearedBeforeNavigation = page.waitForFunction(() => {
+    const storage = {
+      session: sessionStorage.getItem("econovaria.admin.auth.v1"),
+      selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+      csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
+    };
+    return storage.session === null && storage.selectedGame === null && storage.csrf === null
+      ? storage
+      : false;
+  }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue());
+  const [storage] = await Promise.all([
+    storageClearedBeforeNavigation,
     page.waitForURL((url) => url.searchParams.get("mode") === "admin" && url.searchParams.get("reason") === "signed-out",
       { timeout: 10_000 }),
     modal.locator("[data-econovaria-logout-confirm]").click(),
   ]);
-  const storage = await page.evaluate(() => ({
-    session: sessionStorage.getItem("econovaria.admin.auth.v1"),
-    selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
-    csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
-  }));
   assert(storage.session === null && storage.selectedGame === null && storage.csrf === null,
-    `Logout left local state: ${JSON.stringify(storage)}`);
+    `Logout left local state before navigation: ${JSON.stringify(storage)}`);
   assert(requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`);
   assert(errors.length === 0, errors.join("\n"));
