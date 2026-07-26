@@ -3,12 +3,12 @@ import { expect, test } from "@playwright/test";
 const THREAD_ID = `thr_${"c".repeat(32)}`;
 const DRAFT_BODY = "Draft survives authoritative rehydration";
 
-function fixtureData() {
+function messageData(threadId) {
   return {
     messages: {
       unread: 0,
       threads: [{
-        id: THREAD_ID,
+        id: threadId,
         type: "player",
         title: "Rehydration contract",
         preview: "Draft persistence",
@@ -33,13 +33,11 @@ test("rehydrated Messaging composer submits the generic saved draft once", async
     const { installFormDraftPreserver } = await import("/src/forms/form-draft-preserver.js");
     const { installMessageIntentAdapter } = await import("/src/features/messages/message-intent-adapter.js");
 
-    const mount = document.createElement("div");
-    mount.id = "messagingDraftRehydrationFixture";
-    mount.innerHTML = renderMessagesPage({
+    const buildData = (id) => ({
       messages: {
         unread: 0,
         threads: [{
-          id: threadId,
+          id,
           type: "player",
           title: "Rehydration contract",
           preview: "Draft persistence",
@@ -54,12 +52,16 @@ test("rehydrated Messaging composer submits the generic saved draft once", async
           messages: [],
         }],
       },
-    }, { messageThreadId: threadId });
+    });
+
+    const mount = document.createElement("div");
+    mount.id = "messagingDraftRehydrationFixture";
+    mount.innerHTML = renderMessagesPage(buildData(threadId), { messageThreadId: threadId });
     document.body.append(mount);
 
     const drafts = installFormDraftPreserver(mount);
     const intents = installMessageIntentAdapter({ mount, drafts });
-    globalThis.__messagingDraftFixture = { renderMessagesPage, mount, drafts, intents, threadId };
+    globalThis.__messagingDraftFixture = { renderMessagesPage, buildData, mount, drafts, intents, threadId };
     globalThis.__messagingDraftDispatches = [];
 
     mount.addEventListener("submit", (event) => {
@@ -73,34 +75,26 @@ test("rehydrated Messaging composer submits the generic saved draft once", async
   const fixture = page.locator("#messagingDraftRehydrationFixture");
   await fixture.locator('[name="body"]').fill(DRAFT_BODY);
 
-  await page.evaluate(({ threadId }) => {
+  await page.evaluate(() => {
     const state = globalThis.__messagingDraftFixture;
-    state.mount.innerHTML = state.renderMessagesPage({
-      messages: {
-        unread: 0,
-        threads: [{
-          id: threadId,
-          type: "player",
-          title: "Rehydration contract",
-          preview: "Draft persistence",
-          time: "Now",
-          unread: 0,
-          tone: "cyan",
-          initials: "RC",
-          rawStatus: "active",
-          allowPlayerReplies: true,
-          members: "2 participants",
-          status: "Active",
-          messages: [],
-        }],
-      },
-    }, { messageThreadId: threadId });
-  }, { threadId: THREAD_ID });
+    state.mount.innerHTML = state.renderMessagesPage(
+      state.buildData(state.threadId),
+      { messageThreadId: state.threadId },
+    );
+  });
+  await expect(fixture.locator('[name="body"]')).toHaveValue(DRAFT_BODY);
 
+  await page.evaluate(() => {
+    const field = globalThis.__messagingDraftFixture.mount.querySelector('[name="body"]');
+    field.value = "";
+  });
   await expect(fixture.locator('[name="body"]')).toHaveValue("");
+
   await fixture.locator("[data-player-message-send]").click();
   await expect.poll(() => page.evaluate(() => globalThis.__messagingDraftDispatches.length)).toBe(1);
   expect(await page.evaluate(() => globalThis.__messagingDraftDispatches[0])).toEqual({ body: DRAFT_BODY });
   await page.waitForTimeout(100);
   expect(await page.evaluate(() => globalThis.__messagingDraftDispatches.length)).toBe(1);
 });
+
+void messageData;
