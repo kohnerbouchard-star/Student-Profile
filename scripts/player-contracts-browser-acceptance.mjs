@@ -326,8 +326,18 @@ try {
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
     throw new Error(`Contract browser errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);
   }
-  for (const [key, value] of Object.entries(evidence)) {
-    if (typeof value === "boolean" && value !== true) throw new Error(`Contract evidence ${key} is incomplete.`);
+  for (const key of [
+    "accepted",
+    "acceptancePersisted",
+    "acceptanceReplaySafe",
+    "submitted",
+    "submissionPersisted",
+    "submissionReplaySafe",
+    "unauthenticatedAcceptRejected",
+    "unauthenticatedSubmitRejected",
+    "requestBoundaryValid",
+  ]) {
+    if (evidence[key] !== true) throw new Error(`Contract evidence ${key} is incomplete.`);
   }
 } catch (error) {
   failure = error;
