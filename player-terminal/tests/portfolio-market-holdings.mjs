@@ -5,6 +5,7 @@ import {
   marketPositionForAsset,
   normalizePortfolioHoldings,
 } from "../src/api/portfolio-market-holdings.js";
+import { ROUTE_RESOURCE_PLAN } from "../src/api/resource-plan.js";
 import { renderMarketPage } from "../src/pages/market-page.js";
 
 const asset = {
@@ -31,6 +32,12 @@ const asset = {
   history: [100, 110],
   newsIds: [],
 };
+
+assert.deepEqual(
+  ROUTE_RESOURCE_PLAN.market.optional,
+  ["news", "banking", "portfolio"],
+  "Market route reloads must include the authoritative Portfolio read.",
+);
 
 const portfolio = attachPortfolioHoldings(
   { netWorth: 1220 },
@@ -90,4 +97,4 @@ const soldHtml = renderMarketPage(
 );
 assert.match(soldHtml, />0 shares</, "Market must render zero after the authoritative holding disappears.");
 
-console.log("Portfolio-to-Market holdings reconciliation passed: purchases, average cost, and sold-out resets remain authoritative.");
+console.log("Portfolio-to-Market holdings reconciliation passed: route loading, purchases, average cost, and sold-out resets remain authoritative.");
