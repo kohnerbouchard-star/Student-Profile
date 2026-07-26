@@ -291,6 +291,9 @@ export async function createQualityHarness(name) {
     failScan: false,
     delayReads: true,
     writeDelay: 420,
+    injectSettingsReadFailure: name === "attendance-reward-settings",
+    settingsWriteCount: 0,
+    settingsReadFailureInjected: false,
   };
 
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
@@ -357,6 +360,23 @@ export async function createQualityHarness(name) {
       ? pathname.slice(marker.length) || "/"
       : pathname;
 
+    if (
+      state.injectSettingsReadFailure &&
+      state.settingsWriteCount >= 1 &&
+      !state.settingsReadFailureInjected &&
+      method === "GET" &&
+      /\/games\/[^/]+\/settings$/.test(path)
+    ) {
+      state.settingsReadFailureInjected = true;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        headers: corsHeaders(),
+        body: JSON.stringify({ message: "Settings temporarily unavailable." }),
+      });
+      return;
+    }
+
     if (["GET", "HEAD"].includes(method) && state.delayReads && !path.endsWith("/session/bootstrap")) {
       await new Promise((resolve) => setTimeout(resolve, 450));
     }
@@ -368,6 +388,9 @@ export async function createQualityHarness(name) {
         path,
         body: request.postData() || "",
       });
+      if (method === "PATCH" && /\/games\/[^/]+\/settings$/.test(path)) {
+        state.settingsWriteCount += 1;
+      }
       await new Promise((resolve) => setTimeout(resolve, state.writeDelay));
 
       if (/\/contracts$/.test(path) && state.failContract) {
