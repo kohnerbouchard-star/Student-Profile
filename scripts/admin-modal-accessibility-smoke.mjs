@@ -1,234 +1,19 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
-
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts/modal-accessibility";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-const CSRF_TOKEN = "C".repeat(43);
-const ADMIN_PERMISSIONS = [
-  "account.read",
-  "audit.read",
-  "attendance.manage",
-  "business.manage",
-  "contracts.manage",
-  "economy.adjust",
-  "game.create",
-  "game.read",
-  "game.switch",
-  "game.update",
-  "inventory.redeem",
-  "market.manage",
-  "marketplace.moderate",
-  "messaging.moderate",
-  "players.manage",
-  "progression.review",
-  "settings.manage",
-  "store.manage",
-  "world.manage",
-];
-
-mkdirSync(ARTIFACT_DIR, { recursive: true });
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createQualityHarness,
+} from "./admin-quality-smoke-fixture.mjs";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-const game = {
-  id: GAME_ID,
-  gameSessionId: GAME_ID,
-  title: "Modal Accessibility Game",
-  name: "Modal Accessibility Game",
-  status: "active",
-  gameCode: "MODAL1",
-};
-
-const common = {
-  gameId: GAME_ID,
-  gameSessionId: GAME_ID,
-  activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID,
-  permissions: ADMIN_PERMISSIONS,
-  roles: ["game_admin"],
-  adminRole: "game_admin",
-  game,
-  activeGame: game,
-  players: [],
-  attendance: [],
-  attendanceRows: [],
-  attendanceHistory: [],
-  attendanceLedger: [],
-  attendanceSummary: {
-    presentCount: 0,
-    lateCount: 0,
-    absentCount: 0,
-    activePlayerCount: 0,
-    rewardsIssuedCount: 0,
-    rewardsIssuedTotal: 0,
-  },
-  attendanceCounts: { present: 0, late: 0, absent: 0, total: 0 },
-  contracts: [],
-  store: [],
-  storeItems: [],
-  assets: [],
-  trades: [],
-  events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: {
-    difficultyPreset: "moderate",
-    backendDifficultyPreset: "moderate",
-    difficultyBasePreset: "moderate",
-    priceMultiplier: 1,
-    incomeMultiplier: 1,
-    shockFrequency: 1,
-    shockSeverity: 1,
-    recoverySupport: 1,
-    tradeMultiplier: 1,
-    configSaveState: "saved",
-  },
-  logs: [],
-  dashboard: {
-    activePlayerCount: 0,
-    totalPlayers: 0,
-    onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [],
-    recentActivity: [],
-    marketStatus: "open",
-  },
-};
-
-function responseFor(pathname) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return {
-      data: {
-        admin: {
-          id: ADMIN_ID,
-          accountId: ADMIN_ID,
-          displayName: "Modal Administrator",
-          email: "admin@example.test",
-          role: "game_admin",
-          roles: ["game_admin"],
-        },
-        activeGame: game,
-        games: [game],
-        permissions: ADMIN_PERMISSIONS,
-        roles: ["game_admin"],
-        adminRole: "game_admin",
-        csrfToken: "",
-        session: {
-          id: ADMIN_ID,
-          csrfToken: "",
-          assuranceLevel: "aal1",
-          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-        },
-        capabilities: {
-          notifications: false,
-          securityHistory: "current_session_only",
-          helpArticles: true,
-          auditLogFlags: true,
-          auditLogExport: true,
-          overallScore: false,
-          marketplaceAdminTrading: false,
-          progressionReview: true,
-          progressionCorrection: true,
-          multiFactorAuthentication: false,
-        },
-      },
-    };
-  }
-  return { data: common };
-}
-
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-const page = await context.newPage();
-const errors = [];
 const report = { parent: {}, nested: {}, blocked: {}, fallback: {} };
+const harness = await createQualityHarness("modal-accessibility");
+const { page, errors, dir } = harness;
 
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
-});
-page.on("requestfailed", (request) => {
-  const url = request.url();
-  const failure = request.failure()?.errorText || "";
-  if (url.endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
-});
-
-await page.addInitScript(({ game, gameId, adminId, csrfToken, permissions }) => {
-  const now = Date.now();
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    authenticated: true,
-    expiresAt: new Date(now + 3600_000).toISOString(),
-    absoluteExpiresAt: new Date(now + 8 * 3600_000).toISOString(),
-    assuranceLevel: "aal1",
-    mfaRequired: true,
-    user: {
-      id: adminId,
-      email: "admin@example.test",
-      displayName: "Modal Administrator",
-      role: "game_admin",
-      permissionVersion: 1,
-      securityVersion: 1,
-    },
-    csrfToken,
-    activeGameSessions: [game],
-    storedAt: new Date(now).toISOString(),
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
-  window.__ECONOVARIA_MODAL_TEST_PERMISSIONS__ = permissions;
-}, {
-  game,
-  gameId: GAME_ID,
-  adminId: ADMIN_ID,
-  csrfToken: CSRF_TOKEN,
-  permissions: ADMIN_PERMISSIONS,
-});
-
-await page.route("**/functions/v1/web-session-api/proxy/**", async (route) => {
-  const request = route.request();
-  const origin = "http://127.0.0.1:4173";
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({
-      status: 204,
-      headers: {
-        "access-control-allow-origin": origin,
-        "access-control-allow-credentials": "true",
-        "access-control-allow-headers":
-          "apikey,content-type,x-econovaria-csrf-token,x-econovaria-device-id,x-econovaria-game-id,x-idempotency-key,x-request-id",
-        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS",
-      },
-      body: "",
-    });
-    return;
-  }
-  assert(
-    !request.headers().authorization,
-    "Admin browser request exposed a Staff bearer token.",
-  );
-  assert(
-    request.headers()["x-econovaria-game-id"] === GAME_ID,
-    "Admin BFF request omitted selected game scope.",
-  );
-  if (!["GET", "HEAD"].includes(request.method())) {
-    assert(
-      request.headers()["x-econovaria-csrf-token"] === CSRF_TOKEN,
-      "Admin mutation omitted the BFF CSRF token.",
-    );
-  }
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    headers: {
-      "access-control-allow-origin": origin,
-      "access-control-allow-credentials": "true",
-      "cache-control": "no-store",
-    },
-    body: JSON.stringify(responseFor(new URL(request.url()).pathname)),
-  });
 });
 
 try {
@@ -447,9 +232,9 @@ try {
     errors.length === 0,
     `Admin modal accessibility emitted browser errors: ${errors[0]}`,
   );
-  report.errors = errors;
+  report.errors = [...errors];
   writeFileSync(
-    `${ARTIFACT_DIR}/modal-accessibility.json`,
+    `${dir}/modal-accessibility.json`,
     JSON.stringify(report, null, 2),
   );
   console.log(
@@ -457,18 +242,14 @@ try {
   );
 } catch (error) {
   report.failure = error.stack || error.message || String(error);
-  report.errors = errors;
-  await page.screenshot({
-    path: `${ARTIFACT_DIR}/modal-accessibility-failure.png`,
-    fullPage: true,
-  });
+  report.errors = [...errors];
+  await harness.capture("modal-accessibility-failure").catch(() => {});
   writeFileSync(
-    `${ARTIFACT_DIR}/modal-accessibility.json`,
+    `${dir}/modal-accessibility.json`,
     JSON.stringify(report, null, 2),
   );
   console.error(report.failure);
   process.exitCode = 1;
 } finally {
-  await context.close();
-  await browser.close();
+  await harness.finish(report);
 }
