@@ -11,6 +11,13 @@ import { previewData } from "../src/data/preview-data.js";
 
 const data = structuredClone(previewData);
 data.session.currencyCode = "ECO";
+data.capabilities = {
+  routes: {},
+  actions: {
+    bankTransfer: false,
+    savingsTransfer: false,
+  },
+};
 data.banking = {
   checking: { accountId: "CHECKING", balance: 1250, available: 1250, pending: 0, currencyCode: "ECO" },
   savings: {
@@ -78,7 +85,7 @@ assert.ok(html.includes('name="recipientPlayerIdentifier"'));
 assert.ok(!html.includes('name="recipientPlayerUuid"'));
 assert.ok(!html.includes('pattern="[A-Za-z]{2}-[0-9]{4}-[0-9]{3}"'));
 assert.ok(html.includes("resolved to the recipient UUID by the backend"));
-assert.match(html, /data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Player transfers must remain visible but disabled until the UUID-authoritative route exists.");
+assert.match(html, /data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Player transfers must remain visible but disabled without the authenticated bankTransfer grant.");
 assert.match(html, /data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Internal transfers must remain visible but disabled when savings is not configured.");
 assert.ok(html.includes("+ECO 25"));
 assert.ok(html.includes("LUM -4"), "Each ledger entry must use its authoritative currency code.");
@@ -179,15 +186,29 @@ configuredData.banking.savings = {
 };
 configuredData.banking.balances.push({ accountType: "savings", balance: 200, currencyCode: "LUM" });
 configuredData.banking.creditConfigured = true;
-configuredData.banking.transfersConfigured = true;
 configuredData.banking.creditScore = 720;
 configuredData.banking.transferLimit = 500;
+configuredData.capabilities.actions.bankTransfer = true;
+configuredData.capabilities.actions.savingsTransfer = true;
 const configuredHtml = renderBankingPage(configuredData);
 assert.ok(configuredHtml.includes("CREDIT 720"));
 assert.ok(configuredHtml.includes("LUM 200"), "Savings must render with the authoritative account currency.");
 assert.ok(configuredHtml.includes('max="500"'));
 assert.ok(!configuredHtml.includes("STALE DATA"));
-assert.ok(!configuredHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/));
+assert.ok(!configuredHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "The authenticated bankTransfer grant must enable the Player transfer submit control.");
+assert.ok(!configuredHtml.match(/data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "The authenticated savingsTransfer grant plus a real savings account must enable internal transfers.");
+
+const blockedBankTransferData = structuredClone(configuredData);
+blockedBankTransferData.capabilities.actions.bankTransfer = false;
+const blockedBankTransferHtml = renderBankingPage(blockedBankTransferData);
+assert.match(blockedBankTransferHtml, /data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Player transfer must fail closed when the authenticated bankTransfer grant is absent.");
+assert.ok(!blockedBankTransferHtml.match(/data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "Savings transfer remains independently controlled by its own grant and account provisioning.");
+
+const blockedSavingsTransferData = structuredClone(configuredData);
+blockedSavingsTransferData.capabilities.actions.savingsTransfer = false;
+const blockedSavingsTransferHtml = renderBankingPage(blockedSavingsTransferData);
+assert.ok(!blockedSavingsTransferHtml.match(/data-player-form="bank-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/), "Player transfer remains independently controlled by its own grant.");
+assert.match(blockedSavingsTransferHtml, /data-player-form="savings-transfer"[\s\S]*?<button[^>]*type="submit" disabled>/, "Savings transfer must fail closed when its authenticated grant is absent.");
 
 const emptyData = structuredClone(data);
 emptyData.banking.transactions = [];
@@ -215,4 +236,4 @@ const serialized = JSON.stringify({ data, ledgerRoute, nextPageRoute, merged });
 assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized), false);
 assert.equal(serialized.includes('"accountType":"cash"'), false);
 
-console.log("Banking read model passed: checking terminology, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
+console.log("Banking read model passed: checking terminology, capability-gated transfers, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
