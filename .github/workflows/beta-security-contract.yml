@@ -61,8 +61,33 @@ jobs:
         run: npm run test:player-security
 
       - name: Typecheck all backend surfaces
+        id: backend-typecheck
         working-directory: backend
-        run: npm run typecheck:all
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck:all > "$RUNNER_TEMP/beta-security-backend-typecheck.log" 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          tail -n 200 "$RUNNER_TEMP/beta-security-backend-typecheck.log"
+          exit 0
+
+      - name: Upload backend typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-security-backend-typecheck-diagnostics
+          path: ${{ runner.temp }}/beta-security-backend-typecheck.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce backend typecheck
+        shell: bash
+        run: |
+          if [ "${{ steps.backend-typecheck.outputs.status }}" != "0" ]; then
+            echo "Beta Security backend typecheck failed. Download the diagnostics artifact."
+            false
+          fi
 
       - name: Validate connected probe contracts
         run: npm run test:security-probes
