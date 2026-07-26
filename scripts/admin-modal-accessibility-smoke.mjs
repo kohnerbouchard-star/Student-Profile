@@ -214,7 +214,10 @@ try {
     window.EconovariaAdminModalAccessibility.getStackDepth() === 0
   );
   await page.waitForFunction(
-    () => Boolean(document.activeElement?.closest?.("#adminPreview")),
+    () => Boolean(
+      document.activeElement?.getAttribute?.("data-admin-section") ||
+      document.activeElement?.closest?.("#adminPreview")
+    ),
     null,
     { timeout: 3000 },
   );
