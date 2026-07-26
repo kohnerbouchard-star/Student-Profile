@@ -7,6 +7,7 @@ import { renderMessagesPage } from "../src/pages/messages-page.js";
 
 const THREAD = `thr_${"a".repeat(32)}`;
 const MESSAGE = `msg_${"b".repeat(32)}`;
+const REPLY = `msg_${"c".repeat(32)}`;
 const requests = [];
 const apiCall = createStudentProfileApiCall({
   request: async (request) => {
@@ -21,6 +22,17 @@ const apiCall = createStudentProfileApiCall({
           title: "Trade coordination",
           recipientPlayerId: "PLAYER-002",
           createdAt: "2026-07-21T03:30:00.000Z",
+        },
+      };
+    }
+    if (request.method === "POST" && request.path === `/players/me/messages/threads/${THREAD}/messages`) {
+      return {
+        ok: true,
+        data: {
+          outcome: "applied",
+          threadId: THREAD,
+          messageId: REPLY,
+          createdAt: "2026-07-21T03:31:00.000Z",
         },
       };
     }
@@ -73,10 +85,29 @@ assert.equal("gameSessionId" in write.payload, false);
 assert.equal("playerId" in write.payload, false);
 assert.equal("playerUuid" in write.payload, false);
 
+const replyCommand = normalizeWritePayload("messageSend", {
+  body: "Reply through the centralized route.",
+  gameSessionId: "must-not-cross-boundary",
+});
+const reply = await api.execute("messageSend", replyCommand, { threadId: THREAD });
+assert.equal(reply.result.outcome, "applied");
+assert.equal(reply.result.threadId, THREAD);
+assert.equal(reply.result.messageId, REPLY);
+
+const replyWrite = requests[1];
+assert.equal(replyWrite.method, "POST");
+assert.equal(replyWrite.path, `/players/me/messages/threads/${THREAD}/messages`);
+assert.deepEqual(Object.keys(replyWrite.payload).sort(), ["body", "idempotencyKey"]);
+assert.equal(replyWrite.payload.body, "Reply through the centralized route.");
+assert.equal(typeof replyWrite.payload.idempotencyKey, "string");
+assert.equal(replyWrite.payload.idempotencyKey.length > 0, true);
+assert.equal("threadId" in replyWrite.payload, false, "Public route identifiers must not leak into the backend body.");
+
 const refresh = await api.refreshResources(["messages"]);
 assert.equal(Boolean(refresh.errors.messages), true);
 assert.equal(committed.result.outcome, "applied", "A failed refresh must not reverse a committed thread creation.");
 assert.equal(committed.result.threadId, THREAD);
+assert.equal(reply.result.outcome, "applied", "A failed refresh must not reverse a committed reply.");
 
 const html = renderMessagesPage({
   messages: {
@@ -113,4 +144,4 @@ assert.match(html, /&lt;SCRIPT&gt;Trade&lt;\/SCRIPT&gt;/);
 assert.match(html, /&lt;IMG src=x onerror=alert\(1\)&gt;/);
 assert.doesNotMatch(html, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 
-console.log("Connected Messaging lifecycle and committed-success boundary passed.");
+console.log("Connected Messaging lifecycle, route-parameter propagation, and committed-success boundary passed.");
