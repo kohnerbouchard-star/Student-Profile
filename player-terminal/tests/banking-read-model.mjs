@@ -86,6 +86,7 @@ assert.ok(html.includes("POSTED LEDGER ACTIVITY"));
 assert.ok(html.includes("data-player-banking-load-more"), "A real continuation control must render when the Backend returns a next cursor.");
 
 const legacyData = structuredClone(data);
+legacyData.banking.checking.accountId = "CASH";
 legacyData.banking.balances = [
   { accountType: "cash", balance: 1250, currencyCode: "ECO" },
 ];
@@ -96,6 +97,8 @@ assert.ok(
 );
 assert.ok(!legacyHtml.includes('data-player-banking-balance="cash:ECO"'));
 assert.ok(!legacyHtml.includes("CASH ACCOUNT"));
+assert.ok(legacyHtml.includes("Checking · CHECKING"));
+assert.ok(!legacyHtml.includes("Checking · CASH"));
 
 const fallbackData = structuredClone(data);
 fallbackData.banking.balances = [];
@@ -109,6 +112,7 @@ assert.ok(
   !fallbackHtml.includes('data-player-banking-balance="account_public_123:ECO"'),
   "A public account key must not be substituted for the account type used by browser controls and acceptance selectors.",
 );
+assert.ok(fallbackHtml.includes("Checking · account_public_123"));
 
 const ledgerRoute = resolvePlayerBackendRequest({
   endpointKey: "banking",
