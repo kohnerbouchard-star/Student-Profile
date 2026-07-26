@@ -11,6 +11,7 @@ const GAME_NAME = process.env.ECONOVARIA_BROWSER_GAME_NAME || "Player Multiplaye
 const CREDIT_AMOUNT = 10_000;
 const TRANSFER_AMOUNT = 40;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const CURRENCY_PATTERN = /^[A-Z0-9]{3,16}$/;
 const PLAYERS = Object.freeze([
   { label: "Alpha", displayName: "Browser Player Alpha", playerIdentifier: "BROWSER-PLAYER-ALPHA", accessCode: "BROWSER-ALPHA-ACCESS-001" },
   { label: "Beta", displayName: "Browser Player Beta", playerIdentifier: "BROWSER-PLAYER-BETA", accessCode: "BROWSER-BETA-ACCESS-002" },
@@ -20,7 +21,7 @@ await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
   generatedAt: new Date().toISOString(),
-  fixtureCredit: { applied: false, amount: CREDIT_AMOUNT },
+  fixtureCredit: { applied: false, amount: CREDIT_AMOUNT, currencyCode: "" },
   transfer: {
     sent: false,
     senderPersisted: false,
@@ -106,6 +107,14 @@ function findPlayer(payload, expected) {
   }) || null;
 }
 
+function assignedCurrency(record, label) {
+  const currencyCode = String(record?.currencyCode || record?.currency_code || "").trim().toUpperCase();
+  if (!CURRENCY_PATTERN.test(currencyCode)) {
+    throw new Error(`Admin fixture could not resolve ${label}'s assigned country currency.`);
+  }
+  return currencyCode;
+}
+
 async function adminContext() {
   const publishableKey = await runtimeConfig();
   const signIn = await request("/auth/v1/token?grant_type=password", {
@@ -140,7 +149,11 @@ async function adminContext() {
   const players = PLAYERS.map((expected) => {
     const record = findPlayer(playersResponse.payload, expected);
     if (!record) throw new Error(`Admin fixture could not resolve ${expected.label}.`);
-    return { ...expected, internalId: String(record.id || record.playerId) };
+    return {
+      ...expected,
+      internalId: String(record.id || record.playerId),
+      currencyCode: assignedCurrency(record, expected.label),
+    };
   });
   return { publishableKey, token, gameId, gameCode, players };
 }
@@ -169,7 +182,8 @@ async function creditPlayer(admin, player, currencyCode) {
   if (
     response.status !== 200 ||
     !applied ||
-    adjustment?.ledger?.accountType !== "checking"
+    adjustment?.ledger?.accountType !== "checking" ||
+    String(adjustment?.ledger?.currencyCode || "").toUpperCase() !== currencyCode
   ) {
     throw new Error(`Admin fixture credit returned ${response.status}: ${redact(JSON.stringify(response.payload))}`);
   }
@@ -224,27 +238,6 @@ function parseCurrencyAmount(text) {
   return Number(match[1]);
 }
 
-async function nativeCheckingContext(session) {
-  await openRoute(session, "banking", ".player-terminal-banking-page");
-  const currencyCode = await session.page.evaluate(() => {
-    const state = globalThis.Econovaria?.playerTerminal?.getState?.();
-    return String(
-      state?.data?.session?.currencyCode ||
-      state?.data?.banking?.checking?.currencyCode ||
-      "",
-    ).trim().toUpperCase();
-  });
-  if (!/^[A-Z0-9]{3,16}$/.test(currencyCode)) {
-    throw new Error("The authenticated Player session did not expose an assigned currency.");
-  }
-  const card = session.page.locator(
-    `[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`,
-  ).first();
-  await card.waitFor({ state: "visible", timeout: 30_000 });
-  const amount = parseCurrencyAmount(await card.locator("h3").innerText());
-  return { currencyCode, amount };
-}
-
 async function balanceForCurrency(session, currencyCode) {
   await openRoute(session, "banking", ".player-terminal-banking-page");
   const card = session.page.locator(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`).first();
@@ -270,6 +263,10 @@ async function sendTransfer(sender, recipient, currencyCode) {
   if (response.status() !== 200 || payload?.ok !== true) {
     throw new Error(`Player transfer returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
+  const resultCurrency = String(payload?.transfer?.currencyCode || payload?.currencyCode || "").toUpperCase();
+  if (resultCurrency && resultCurrency !== currencyCode) {
+    throw new Error(`Player transfer settled in ${resultCurrency} instead of ${currencyCode}.`);
+  }
   evidence.transfer.sent = true;
   const requestRecord = response.request();
   const headers = await requestRecord.allHeaders();
@@ -293,7 +290,7 @@ function includesReplayTrue(value) {
   return walkObjects(value).some((candidate) => candidate.replayed === true);
 }
 
-async function purchaseStoreItem(session) {
+async function purchaseStoreItem(session, currencyCode) {
   await openRoute(session, "store", ".player-terminal-store-page");
   const button = session.page.locator("[data-player-purchase]:not([disabled])").first();
   await button.waitFor({ state: "visible", timeout: 30_000 });
@@ -301,7 +298,7 @@ async function purchaseStoreItem(session) {
   const card = button.locator("xpath=ancestor::article[1]");
   const beforeText = String(await card.innerText());
   const beforeOwned = Number(beforeText.match(/OWNED\s+(\d+)/i)?.[1] || 0);
-  const checkingBefore = await nativeCheckingContext(session);
+  const checkingBefore = await balanceForCurrency(session, currencyCode);
   await openRoute(session, "store", ".player-terminal-store-page");
   await session.page.locator(`[data-player-purchase="${itemKey}"]`).click();
   const modal = session.page.locator('[aria-labelledby="storePurchaseModalTitle"]').last();
@@ -344,9 +341,9 @@ async function purchaseStoreItem(session) {
   }
   evidence.store.ownershipPersisted = true;
 
-  const checkingAfter = await nativeCheckingContext(session);
-  if (!(checkingAfter.amount < checkingBefore.amount)) {
-    throw new Error(`Store purchase did not reduce authoritative checking: ${checkingBefore.amount} -> ${checkingAfter.amount}.`);
+  const checkingAfter = await balanceForCurrency(session, currencyCode);
+  if (!(checkingAfter < checkingBefore)) {
+    throw new Error(`Store purchase did not reduce authoritative checking: ${checkingBefore} -> ${checkingAfter}.`);
   }
   evidence.store.checkingPersisted = true;
   return { url: purchaseResponse.url(), body: unauthorizedBody };
@@ -357,29 +354,35 @@ const sessions = [];
 let failure;
 try {
   const admin = await adminContext();
+  const currencyCode = admin.players[0].currencyCode;
+  if (admin.players[1].currencyCode !== currencyCode) {
+    throw new Error("Connected transfer players must share the same assigned currency for this acceptance journey.");
+  }
+  evidence.fixtureCredit.currencyCode = currencyCode;
+
   browser = await chromium.launch({ headless: true });
   const alpha = await loginPlayer(browser, admin.gameCode, admin.players[0]);
   const beta = await loginPlayer(browser, admin.gameCode, admin.players[1]);
   sessions.push(alpha, beta);
 
-  const alphaInitial = await nativeCheckingContext(alpha);
-  await creditPlayer(admin, admin.players[0], alphaInitial.currencyCode);
+  const alphaInitial = await balanceForCurrency(alpha, currencyCode);
+  await creditPlayer(admin, admin.players[0], currencyCode);
   evidence.fixtureCredit.applied = true;
   await alpha.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await alpha.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const alphaFunded = await balanceForCurrency(alpha, alphaInitial.currencyCode);
-  if (Math.abs(alphaFunded - (alphaInitial.amount + CREDIT_AMOUNT)) > 0.001) {
-    throw new Error(`Fixture credit did not persist: ${alphaInitial.amount} -> ${alphaFunded}.`);
+  const alphaFunded = await balanceForCurrency(alpha, currencyCode);
+  if (Math.abs(alphaFunded - (alphaInitial + CREDIT_AMOUNT)) > 0.001) {
+    throw new Error(`Fixture credit did not persist: ${alphaInitial} -> ${alphaFunded}.`);
   }
 
-  const betaBefore = await balanceForCurrency(beta, alphaInitial.currencyCode);
-  const transfer = await sendTransfer(alpha, beta, alphaInitial.currencyCode);
+  const betaBefore = await balanceForCurrency(beta, currencyCode);
+  const transfer = await sendTransfer(alpha, beta, currencyCode);
   await alpha.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await beta.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await alpha.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await beta.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  const alphaAfter = await balanceForCurrency(alpha, alphaInitial.currencyCode);
-  const betaAfter = await balanceForCurrency(beta, alphaInitial.currencyCode);
+  const alphaAfter = await balanceForCurrency(alpha, currencyCode);
+  const betaAfter = await balanceForCurrency(beta, currencyCode);
   if (Math.abs(alphaAfter - (alphaFunded - TRANSFER_AMOUNT)) > 0.001) {
     throw new Error(`Sender transfer balance mismatch: ${alphaFunded} -> ${alphaAfter}.`);
   }
@@ -397,8 +400,8 @@ try {
   await beta.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await alpha.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await beta.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
-  if (Math.abs((await balanceForCurrency(alpha, alphaInitial.currencyCode)) - alphaAfter) > 0.001 ||
-      Math.abs((await balanceForCurrency(beta, alphaInitial.currencyCode)) - betaAfter) > 0.001) {
+  if (Math.abs((await balanceForCurrency(alpha, currencyCode)) - alphaAfter) > 0.001 ||
+      Math.abs((await balanceForCurrency(beta, currencyCode)) - betaAfter) > 0.001) {
     throw new Error("Transfer replay duplicated a ledger mutation.");
   }
   evidence.transfer.replayedWithoutDuplication = true;
@@ -413,7 +416,7 @@ try {
   }
   evidence.transfer.unauthenticatedRejected = true;
 
-  const purchase = await purchaseStoreItem(alpha);
+  const purchase = await purchaseStoreItem(alpha, currencyCode);
   const unauthPurchase = await request(new URL(purchase.url).pathname, {
     method: "POST",
     headers: platformHeaders(admin.publishableKey),
