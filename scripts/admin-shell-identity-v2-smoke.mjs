@@ -67,8 +67,17 @@ const gameCodeWiring = readAdmin("game-code-wiring.js");
 const logoutConfirmation = readAdmin("logout-confirmation.js");
 const gameSessionControls = readAdmin("game-session-controls.js");
 
-assert(sessionManager.includes("grant_type=refresh_token"), "Admin refresh-token grant is missing.");
-assert(sessionManager.includes("refreshPromise"), "Concurrent Admin refresh is not deduplicated.");
+assert(sessionManager.includes("/status"), "Admin BFF status route is missing.");
+assert(sessionManager.includes("statusPromise"), "Concurrent Admin status checks are not deduplicated.");
+assert(sessionManager.includes('credentials: "include"'), "Admin BFF cookies are not included.");
+assert(!sessionManager.includes("grant_type=refresh_token"), "Browser still refreshes Staff credentials directly.");
+assert(!sessionManager.includes("accessToken"), "Browser session manager still stores a Staff access token.");
+assert(!sessionManager.includes("refreshToken"), "Browser session manager still stores a Staff refresh token.");
+assert(!sessionManager.includes("Authorization"), "Browser session manager still sends Staff bearer authorization.");
+assert(auth.includes("ADMIN_BFF_BASE"), "Admin transport does not target the BFF.");
+assert(auth.includes("x-econovaria-csrf-token"), "Admin mutations do not carry the BFF CSRF token.");
+assert(auth.includes('credentials: "include"'), "Admin requests omit the HttpOnly session cookie.");
+assert(!auth.includes("Bearer"), "Admin shell still constructs a bearer credential.");
 assert(auth.includes("completeInitialBootstrapRender(feature)"), "Authenticated Admin bootstrap completion is missing.");
 assert(fallback.includes("econovaria:admin-request-lifecycle"), "Admin requests do not publish explicit lifecycle events.");
 assert(fallback.includes("requestId") && fallback.includes('phase: "started"'), "Admin request correlation is incomplete.");
@@ -79,6 +88,8 @@ assert(credentialBridge.includes("const delegatedFetch = window.fetch.bind(windo
 assert(credentialBridge.includes("function createContext(request, url)"), "Credential bridge has no bounded route predicate.");
 assert(credentialBridge.includes('/^\\/api\\/admin\\/games\\/([^/]+)\\/players$/'), "Credential bridge is not bounded to the create-Player route.");
 assert(credentialBridge.includes("if (!context) return delegatedFetch(request)"), "Credential bridge does not delegate nonmatching requests unchanged.");
+assert(!credentialBridge.includes("Authorization"), "Player credential bridge bypasses the Admin BFF.");
+assert(!credentialBridge.includes("STAFF_API_BASE"), "Player credential bridge still targets Staff API directly.");
 assert(playerCreateUx.includes("data-admin-player-created-confirmation"), "Player creation confirmation is missing.");
 assert(playerCreateUx.includes("dismissOnEscape: false"), "One-time credentials can be dismissed before acknowledgement.");
 
@@ -99,4 +110,4 @@ assert(gameSessionControls.includes('/api/admin/auth/sign-out'), "Dedicated Admi
 assert(gameSessionControls.includes('url.searchParams.set("gameCode", gameCode)'), "Shared Player link omits the Game Code.");
 assert(!gameSessionControls.includes("window.fetch ="), "Game-session controls replace the global transport.");
 
-console.log("Admin shell single-owner identity, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
+console.log("Admin shell HttpOnly BFF identity, authenticated request, persisted Game Code, bounded Player credential, and logout contracts passed.");
