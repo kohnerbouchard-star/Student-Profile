@@ -128,6 +128,12 @@
     const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
     const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
     const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
+    const webSessionApiUrl = environment === "production"
+      ? "/api/admin-session"
+      : `${apiBaseUrl}/functions/v1/web-session-api`;
+    const adminBffApiUrl = environment === "production"
+      ? "/api/admin"
+      : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
 
     return Object.freeze({
       environment,
@@ -139,6 +145,8 @@
       staffApiUrl,
       bootstrapApiUrl,
       adminApiUrl,
+      webSessionApiUrl,
+      adminBffApiUrl,
       classroomApiUrl: staffApiUrl,
     });
   }
@@ -155,5 +163,5 @@
   const adminApiMeta = documentObject?.querySelector?.(
     'meta[name="econovaria-admin-api-base"]'
   );
-  if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminApiUrl;
+  if (adminApiMeta) adminApiMeta.content = runtimeConfig.adminBffApiUrl;
 })(window);
