@@ -143,7 +143,7 @@ try {
       assertPublicRequest(request);
       if (!loggedIn) {
         await route.fulfill({
-          status: 401,
+          status: 200,
           headers: commonHeaders,
           body: JSON.stringify({
             ok: false,
