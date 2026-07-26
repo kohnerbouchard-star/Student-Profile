@@ -72,7 +72,6 @@ window.Econovaria.login = window.Econovaria.login || {};
   function setFormBusy(form, busy, label) {
     if (!form) return;
     const button = form.querySelector("button[type='submit']");
-
     form.querySelectorAll("input, select, textarea, button").forEach((control) => {
       if (busy) {
         control.dataset.loginWasDisabled = String(control.disabled);
@@ -82,7 +81,6 @@ window.Econovaria.login = window.Econovaria.login || {};
         delete control.dataset.loginWasDisabled;
       }
     });
-
     if (!button) return;
     if (busy) {
       button.dataset.loginIdleLabel = button.textContent || "Continue";
@@ -99,7 +97,6 @@ window.Econovaria.login = window.Econovaria.login || {};
     loginMode = LOGIN_MODES.has(mode) ? mode : "player";
     const screen = runtime.document.getElementById("loginScreen");
     if (screen) screen.dataset.mode = loginMode;
-
     runtime.document.querySelectorAll(".mode-tab").forEach((tab) => {
       const active = tab.dataset.mode === loginMode;
       tab.classList.toggle("active", active);
@@ -115,7 +112,7 @@ window.Econovaria.login = window.Econovaria.login || {};
     return constants().PLAYER_SESSION_STORAGE_KEY || "econovaria.player.auth.v1";
   }
 
-  function adminStorageKey() {
+  function adminStateKey() {
     return constants().ADMIN_SESSION_STORAGE_KEY || "econovaria.admin.auth.v1";
   }
 
@@ -139,15 +136,24 @@ window.Econovaria.login = window.Econovaria.login || {};
     return record;
   }
 
-  function persistAdminSession(signIn) {
-    runtime.sessionStorage.setItem(adminStorageKey(), JSON.stringify({
-      accessToken: signIn.accessToken,
-      refreshToken: signIn.refreshToken || "",
-      csrfToken: "",
-      assuranceLevel: signIn.assuranceLevel || "unknown",
-      mfaRequired: signIn.mfaRequired === true,
-      user: signIn.user || null
-    }));
+  function persistAdminState(result) {
+    const record = {
+      authenticated: result?.session?.authenticated === true,
+      expiresAt: String(result?.session?.expiresAt || ""),
+      absoluteExpiresAt: String(result?.session?.absoluteExpiresAt || ""),
+      assuranceLevel: String(result?.session?.assuranceLevel || "aal1"),
+      mfaRequired: result?.session?.mfaRequired !== false,
+      user: result?.user || null,
+      csrfToken: String(result?.csrfToken || ""),
+      storedAt: new Date().toISOString()
+    };
+    runtime.sessionStorage.setItem(adminStateKey(), JSON.stringify(record));
+    return record;
+  }
+
+  function clearAdminState() {
+    runtime.sessionStorage.removeItem(adminStateKey());
+    runtime.sessionStorage.removeItem(selectedGameStorageKey());
   }
 
   function openPlayerTerminal() {
@@ -179,7 +185,6 @@ window.Econovaria.login = window.Econovaria.login || {};
         showMessage(node, errorMessage(login, "Player login failed."), "bad");
         return;
       }
-
       const bootstrap = await api().callPlayerBootstrapApi?.(login.session.token);
       if (!bootstrap?.ok) {
         await api().callPlayerLogoutApi?.(login.session.token).catch?.(() => {});
@@ -190,7 +195,6 @@ window.Econovaria.login = window.Econovaria.login || {};
         );
         return;
       }
-
       persistPlayerSession(login, bootstrap);
       form.reset();
       showMessage(node, "Access granted.");
@@ -220,23 +224,12 @@ window.Econovaria.login = window.Econovaria.login || {};
     setFormBusy(form, true, "Verifying access...");
     try {
       const signIn = await api().callSupabasePasswordSignIn?.(email, password);
-      if (!signIn?.ok || !signIn.accessToken) {
+      if (!signIn?.ok || signIn.session?.authenticated !== true) {
         showMessage(node, errorMessage(signIn, "Admin sign-in failed."), "bad");
         return;
       }
-
-      const bootstrap = await api().callStaffBootstrapApi?.(signIn.accessToken);
-      if (!bootstrap?.ok) {
-        showMessage(
-          node,
-          errorMessage(bootstrap, "The administrator session could not be loaded."),
-          "bad"
-        );
-        return;
-      }
-
-      persistAdminSession(signIn);
-      renderGameSelection(bootstrap.activeGameSessions || []);
+      persistAdminState(signIn);
+      renderGameSelection(signIn.activeGameSessions || []);
     } catch (error) {
       showMessage(node, errorMessage(error, "Admin sign-in failed."), "bad");
     } finally {
@@ -297,12 +290,12 @@ window.Econovaria.login = window.Econovaria.login || {};
     runtime.location.assign(new URL("admin/", runtime.document.baseURI).href);
   }
 
-  function resetAdminLogin() {
+  async function resetAdminLogin() {
     runtime.document.getElementById("adminGamesStep")?.classList.add("hidden");
     runtime.document.getElementById("adminLoginStep")?.classList.remove("hidden");
     runtime.document.getElementById("adminForm")?.reset();
-    runtime.sessionStorage.removeItem(adminStorageKey());
-    runtime.sessionStorage.removeItem(selectedGameStorageKey());
+    await api().callAdminWebSessionLogout?.().catch?.(() => {});
+    clearAdminState();
     runtime.document.querySelectorAll(".login-message").forEach(clearMessage);
   }
 
@@ -404,12 +397,11 @@ window.Econovaria.login = window.Econovaria.login || {};
         showMessage(node, errorMessage(signup, "Staff account signup failed."), "bad");
         return;
       }
-
       const signIn = await api().callSupabasePasswordSignIn?.(
         input.email,
         input.password
       );
-      if (!signIn?.ok || !signIn.accessToken) {
+      if (!signIn?.ok || signIn.session?.authenticated !== true) {
         showMessage(
           node,
           errorMessage(signIn, "Account created, but sign-in failed."),
@@ -417,21 +409,10 @@ window.Econovaria.login = window.Econovaria.login || {};
         );
         return;
       }
-
-      const bootstrap = await api().callStaffBootstrapApi?.(signIn.accessToken);
-      if (!bootstrap?.ok) {
-        showMessage(
-          node,
-          errorMessage(bootstrap, "Account created, but its game could not be loaded."),
-          "bad"
-        );
-        return;
-      }
-
-      persistAdminSession(signIn);
+      persistAdminState(signIn);
       const createdId = String(signup?.activation?.gameSessionId || "");
-      const sessions = Array.isArray(bootstrap.activeGameSessions)
-        ? bootstrap.activeGameSessions
+      const sessions = Array.isArray(signIn.activeGameSessions)
+        ? signIn.activeGameSessions
         : [];
       const selected = sessions.find((session) =>
         String(session?.id || "") === createdId
@@ -453,6 +434,18 @@ window.Econovaria.login = window.Econovaria.login || {};
     }
   }
 
+  async function resumeAdminSession() {
+    const requested = new URLSearchParams(runtime.location.search).get("mode");
+    if (requested !== "admin") return;
+    const status = await api().callAdminWebSessionStatus?.().catch?.(() => null);
+    if (!status?.ok || status.session?.authenticated !== true) {
+      clearAdminState();
+      return;
+    }
+    persistAdminState(status);
+    renderGameSelection(status.activeGameSessions || []);
+  }
+
   function initializeStaffPasswordFields() {
     const adminPassword = runtime.document.getElementById("adminAccessCode");
     const createPassword = runtime.document.getElementById("createAccessCode");
@@ -464,7 +457,6 @@ window.Econovaria.login = window.Econovaria.login || {};
       const label = adminPassword.closest("label")?.querySelector("span");
       if (label) label.textContent = "Password";
     }
-
     [createPassword, confirmPassword].forEach((input) => {
       if (!input) return;
       input.minLength = STAFF_PASSWORD_MIN_LENGTH;
@@ -523,7 +515,6 @@ window.Econovaria.login = window.Econovaria.login || {};
     const button = runtime.document.getElementById("musicToggle");
     const slider = runtime.document.getElementById("musicVolume");
     if (!audio || !button || !slider) return;
-
     const apply = () => {
       const volume = Math.max(0, Math.min(1, Number(slider.value || 0) / 100));
       audio.volume = volume;
@@ -531,7 +522,6 @@ window.Econovaria.login = window.Econovaria.login || {};
       button.classList.toggle("is-on", volume > 0 && !audio.paused);
       button.setAttribute("aria-pressed", String(volume > 0 && !audio.paused));
     };
-
     button.addEventListener("click", async () => {
       if (audio.paused) {
         try { await audio.play(); } catch (_) {}
@@ -555,12 +545,12 @@ window.Econovaria.login = window.Econovaria.login || {};
     const reason = params.get("reason");
     if (reason === "logged-out" || reason === "signed-out") {
       runtime.sessionStorage.removeItem(playerStorageKey());
-      runtime.sessionStorage.removeItem(adminStorageKey());
-      runtime.sessionStorage.removeItem(selectedGameStorageKey());
+      clearAdminState();
       showMessage(messageNode("player"), "You have been signed out securely.");
     } else if (reason === "session-expired" || reason === "session-invalid") {
       runtime.sessionStorage.removeItem(playerStorageKey());
-      showMessage(messageNode("player"), "Your Player session ended. Sign in again.", "bad");
+      clearAdminState();
+      showMessage(messageNode("player"), "Your session ended. Sign in again.", "bad");
     }
   }
 
@@ -583,7 +573,7 @@ window.Econovaria.login = window.Econovaria.login || {};
     );
     runtime.document.getElementById("backToAdminLogin")?.addEventListener(
       "click",
-      resetAdminLogin
+      () => void resetAdminLogin()
     );
     runtime.document.querySelectorAll(".mode-tab").forEach((tab) => {
       tab.addEventListener("click", () => setMode(tab.dataset.mode));
@@ -596,6 +586,7 @@ window.Econovaria.login = window.Econovaria.login || {};
     const requested = new URLSearchParams(runtime.location.search).get("mode");
     setMode(LOGIN_MODES.has(requested) ? requested : "player");
     initializeReasonMessage();
+    void resumeAdminSession();
     runtime.document.documentElement.classList.remove("preload");
   }
 
