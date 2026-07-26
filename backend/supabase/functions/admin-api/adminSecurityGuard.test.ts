@@ -3,6 +3,7 @@ import {
   guardAdminRequest,
   normalizedAdminAction,
 } from "./adminSecurityGuard.ts";
+import { buildStaffRateLimitBuckets } from "../../../src/security/rateLimitKeying.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -10,6 +11,8 @@ declare const Deno: {
 
 const STAFF_ID = "11111111-1111-4111-8111-111111111111";
 const GAME_ID = "22222222-2222-4222-8222-222222222222";
+const RATE_LIMIT_SECRET =
+  "EconovariaSecurityConvergenceRateLimitSecret_2026_07";
 
 Deno.test("allows an AAL1 Admin read with matching controlled claims", async () => {
   const context = contextWith({ aal: "aal1" });
@@ -65,7 +68,7 @@ Deno.test("allows an AAL2 Admin mutation after the rate gate", async () => {
   );
 
   assertEquals(result.ok, true);
-  assertEquals(capturedAction, "admin.POST./games/:uuid/players/:id");
+  assertEquals(capturedAction, "staff.admin.write.players");
 });
 
 Deno.test("rejects stale role and security version claims", async () => {
@@ -107,14 +110,41 @@ Deno.test("returns Retry-After metadata when the Admin route is limited", async 
   }
 });
 
-Deno.test("normalizes identifiers out of rate-limit action names", () => {
+Deno.test("maps identifiers to one canonical bounded Admin action", () => {
   assertEquals(
     normalizedAdminAction(
       "DELETE",
       `/games/${GAME_ID}/contracts/12345`,
     ),
-    "admin.DELETE./games/:uuid/contracts/:id",
+    "staff.admin.delete.contracts",
   );
+  assertEquals(
+    normalizedAdminAction("GET", "/unreviewed-attacker-route/anything"),
+    "staff.admin.read.unknown",
+  );
+});
+
+Deno.test("canonical Admin actions satisfy shared rate-limit keying", async () => {
+  const action = normalizedAdminAction(
+    "PATCH",
+    `/games/${GAME_ID}/settings`,
+  );
+  const buckets = await buildStaffRateLimitBuckets({
+    action,
+    gameUuid: GAME_ID,
+    ipAddress: "203.0.113.15",
+    staffUuid: STAFF_ID,
+    profile: "sensitive",
+  }, RATE_LIMIT_SECRET);
+
+  assertEquals(action, "staff.admin.write.settings");
+  assertEquals(buckets.length, 4);
+  assertEquals(buckets.map((bucket) => bucket.dimension).sort(), [
+    "action",
+    "game",
+    "identity",
+    "ip",
+  ]);
 });
 
 function contextWith(options: { readonly aal: "aal1" | "aal2" }) {
