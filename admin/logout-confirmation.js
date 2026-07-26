@@ -4,6 +4,8 @@
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
+  const DEVICE_KEY = "econovaria.device.v1";
+  const DEVICE_HEADER = "x-econovaria-device-id";
   const LOGOUT_ACTIONS = new Set([
     "sign-out",
     "signout",
@@ -117,57 +119,34 @@
     window.location.replace(loginUrl());
   }
 
-  async function revokeSession() {
-    const session = window.EconovariaAdminAuthSession?.read?.() || storedSession();
-    const token = text(session?.accessToken);
+  async function revokeWebSession() {
     const config = window.EconovariaRuntimeConfig || {};
-    const directAdminApi = text(config.adminApiUrl);
-    const gameId = selectedGameId();
+    const webSessionApiUrl = text(config.webSessionApiUrl).replace(/\/+$/, "");
+    const publishableKey = text(config.supabasePublishableKey);
+    if (!webSessionApiUrl || !publishableKey) return false;
 
-    if (directAdminApi) {
-      const headers = {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      };
-      if (config.supabasePublishableKey) headers.apikey = config.supabasePublishableKey;
-      if (token) headers.Authorization = `Bearer ${token}`;
-      if (gameId) headers["X-Econovaria-Game-Id"] = gameId;
-      try {
-        await window.fetch(`${directAdminApi.replace(/\/$/, "")}/auth/sign-out`, {
-          method: "POST",
-          headers,
-          body: "{}",
-          credentials: "omit",
-          cache: "no-store",
-        });
-      } catch (_) {}
-    } else {
-      try {
-        await window.fetch("/api/admin/auth/sign-out", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: "{}",
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-      } catch (_) {}
-    }
+    const headers = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      apikey: publishableKey,
+    };
+    const deviceId = text(window.localStorage.getItem(DEVICE_KEY));
+    if (deviceId) headers[DEVICE_HEADER] = deviceId;
 
-    if (token && config.supabaseUrl && config.supabasePublishableKey) {
-      try {
-        await window.fetch(`${config.supabaseUrl.replace(/\/$/, "")}/auth/v1/logout`, {
-          method: "POST",
-          headers: {
-            apikey: config.supabasePublishableKey,
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "omit",
-          cache: "no-store",
-        });
-      } catch (_) {}
+    try {
+      const response = await window.fetch(`${webSessionApiUrl}/logout`, {
+        method: "POST",
+        headers,
+        body: "{}",
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+        referrerPolicy: "no-referrer",
+        keepalive: true,
+      });
+      return response.ok;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -202,7 +181,10 @@
         await controller.beginLogout(button);
         return;
       }
-      await revokeSession();
+      // The confirmation can be available before the dynamically loaded owner.
+      // Its fallback must use the same cookie-backed boundary, never legacy
+      // browser bearer or direct Admin/Auth routes.
+      await revokeWebSession();
       clearLocalStateAndRedirect();
     })().finally(() => {
       signOutPromise = null;
