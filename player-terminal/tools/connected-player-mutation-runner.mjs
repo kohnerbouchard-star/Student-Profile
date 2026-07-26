@@ -175,6 +175,14 @@ async function openThreadCreationForm(page) {
   return form;
 }
 
+function threadByTitle(page, title) {
+  return page.locator("[data-player-message-thread]").filter({ hasText: title }).first();
+}
+
+function messageInLog(page, message) {
+  return page.locator(".player-terminal-message-log p").filter({ hasText: message }).first();
+}
+
 async function createThread(sender, recipient) {
   await openMessages(sender);
   const message = `Connected mutation message ${Date.now()}`;
@@ -194,15 +202,16 @@ async function createThread(sender, recipient) {
     throw new Error(`Create message thread returned ${response.status()}: ${redact(await response.text().catch(() => ""))}`);
   }
   assertNoFailedRequests("Create message thread", requestIndex);
-  await sender.page.getByText(message, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await messageInLog(sender.page, message).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.threadCreated = true;
 
   await sender.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await sender.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMessages(sender);
-  const threadButton = sender.page.getByText(title, { exact: true }).first();
-  if (await threadButton.count()) await threadButton.click();
-  await sender.page.getByText(message, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  const threadButton = threadByTitle(sender.page, title);
+  await threadButton.waitFor({ state: "visible", timeout: 30_000 });
+  await threadButton.click();
+  await messageInLog(sender.page, message).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.initialMessagePersisted = true;
   return { message, title };
 }
@@ -212,7 +221,7 @@ async function receiveReadAndReply(recipientSession, initial) {
   await recipientSession.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMessages(recipientSession);
 
-  const threadControl = recipientSession.page.getByText(initial.title, { exact: true }).first();
+  const threadControl = threadByTitle(recipientSession.page, initial.title);
   await threadControl.waitFor({ state: "visible", timeout: 30_000 });
   const requestIndex = evidence.requests.length;
   const readResponse = recipientSession.page.waitForResponse(
@@ -225,7 +234,7 @@ async function receiveReadAndReply(recipientSession, initial) {
   assertNoFailedRequests("Mark message thread read", requestIndex);
   evidence.messaging.recipientMarkedRead = true;
 
-  await recipientSession.page.getByText(initial.message, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await messageInLog(recipientSession.page, initial.message).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.recipientObservedThread = true;
 
   const reply = `Connected mutation reply ${Date.now()}`;
@@ -241,7 +250,7 @@ async function receiveReadAndReply(recipientSession, initial) {
   const sent = await sendResponse;
   if (![200, 201].includes(sent.status())) throw new Error(`Send message returned ${sent.status()}.`);
   assertNoFailedRequests("Send message reply", sendIndex);
-  await recipientSession.page.getByText(reply, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  await messageInLog(recipientSession.page, reply).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.replySent = true;
   return reply;
 }
@@ -250,9 +259,10 @@ async function verifyReply(sender, initial, reply) {
   await sender.page.reload({ waitUntil: "domcontentloaded", timeout: 120_000 });
   await sender.page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await openMessages(sender);
-  const threadControl = sender.page.getByText(initial.title, { exact: true }).first();
-  if (await threadControl.count()) await threadControl.click();
-  await sender.page.getByText(reply, { exact: true }).waitFor({ state: "visible", timeout: 30_000 });
+  const threadControl = threadByTitle(sender.page, initial.title);
+  await threadControl.waitFor({ state: "visible", timeout: 30_000 });
+  await threadControl.click();
+  await messageInLog(sender.page, reply).waitFor({ state: "visible", timeout: 30_000 });
   evidence.messaging.replyPersisted = true;
 }
 
