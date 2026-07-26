@@ -4,6 +4,8 @@
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
+  const DEVICE_KEY = "econovaria.device.v1";
+  const DEVICE_HEADER = "x-econovaria-device-id";
   const LOGOUT_ACTIONS = new Set([
     "sign-out",
     "signout",
@@ -29,17 +31,6 @@
         node.textContent,
     ).toLowerCase();
     return /^(?:sign out|log out|logout)$/.test(label);
-  }
-
-  function captureSession() {
-    const session = window.EconovariaAdminAuthSession?.read?.() || null;
-    return Object.freeze({
-      accessToken: text(session?.accessToken),
-      selectedGameId: text(
-        window.EconovariaAdminAuth?.getSelectedGameId?.() ||
-          window.sessionStorage.getItem(SELECTED_GAME_KEY),
-      ),
-    });
   }
 
   function clearSessionSynchronously() {
@@ -73,44 +64,40 @@
     }).catch(() => null).finally(() => window.clearTimeout(timer));
   }
 
-  async function revokeCapturedSession(captured) {
+  function fallbackWebSessionLogout() {
     const config = window.EconovariaRuntimeConfig || {};
+    const webSessionApiUrl = text(config.webSessionApiUrl).replace(/\/+$/, "");
     const publishableKey = text(config.supabasePublishableKey);
-    const accessToken = captured.accessToken;
-    const requests = [];
+    if (!webSessionApiUrl || !publishableKey) return Promise.resolve();
 
-    const adminApiUrl = text(config.adminApiUrl).replace(/\/$/, "");
-    if (adminApiUrl) {
-      const headers = {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      };
-      if (publishableKey) headers.apikey = publishableKey;
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-      if (captured.selectedGameId) {
-        headers["X-Econovaria-Game-Id"] = captured.selectedGameId;
+    const headers = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      apikey: publishableKey,
+    };
+    const deviceId = text(window.localStorage.getItem(DEVICE_KEY));
+    if (deviceId) headers[DEVICE_HEADER] = deviceId;
+
+    return boundedRequest(`${webSessionApiUrl}/logout`, {
+      method: "POST",
+      headers,
+      body: "{}",
+      credentials: "include",
+    });
+  }
+
+  function revokeServerSession() {
+    const authSession = window.EconovariaAdminAuthSession;
+    if (typeof authSession?.signOut === "function") {
+      try {
+        return Promise.resolve(authSession.signOut());
+      } catch (_) {
+        clearSessionSynchronously();
+        return fallbackWebSessionLogout();
       }
-      requests.push(boundedRequest(`${adminApiUrl}/auth/sign-out`, {
-        method: "POST",
-        headers,
-        body: "{}",
-        credentials: "omit",
-      }));
     }
-
-    const supabaseUrl = text(config.supabaseUrl).replace(/\/$/, "");
-    if (supabaseUrl && publishableKey && accessToken) {
-      requests.push(boundedRequest(`${supabaseUrl}/auth/v1/logout`, {
-        method: "POST",
-        headers: {
-          apikey: publishableKey,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "omit",
-      }));
-    }
-
-    await Promise.allSettled(requests);
+    clearSessionSynchronously();
+    return fallbackWebSessionLogout();
   }
 
   function markControlsBusy() {
@@ -122,14 +109,12 @@
 
   function beginLogout(control) {
     if (logoutPromise) return logoutPromise;
-    const captured = captureSession();
     markControlsBusy();
     if (control instanceof HTMLElement) control.dataset.logoutState = "pending";
 
-    clearSessionSynchronously();
-
-    logoutPromise = revokeCapturedSession(captured)
+    logoutPromise = revokeServerSession()
       .finally(() => {
+        clearSessionSynchronously();
         window.location.replace(loginUrl());
       });
     return logoutPromise;
