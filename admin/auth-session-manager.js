@@ -5,18 +5,35 @@
   if (!runtimeConfig) {
     throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
   }
-  const SUPABASE_URL = runtimeConfig.supabaseUrl;
-  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
+
+  const WEB_SESSION_API = String(runtimeConfig.webSessionApiUrl || "").replace(/\/+$/, "");
+  const PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
+  const DEVICE_KEY = "econovaria.device.v1";
+  const DEVICE_HEADER = "x-econovaria-device-id";
   const DEFAULT_EXPIRY_SKEW_MS = 30000;
+  const DEVICE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const nativeFetch = window.fetch.bind(window);
-  let refreshPromise = null;
+  let statusPromise = null;
+
+  function deviceId() {
+    const existing = String(window.localStorage.getItem(DEVICE_KEY) || "")
+      .trim()
+      .toLowerCase();
+    if (DEVICE_PATTERN.test(existing)) return existing;
+    const generated = String(window.crypto?.randomUUID?.() || "").toLowerCase();
+    if (!DEVICE_PATTERN.test(generated)) {
+      throw new Error("Secure device identifier generation is unavailable.");
+    }
+    window.localStorage.setItem(DEVICE_KEY, generated);
+    return generated;
+  }
 
   function read() {
     try {
       const value = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null");
-      return value && typeof value.accessToken === "string" && value.accessToken.trim()
+      return value && value.authenticated === true && typeof value.csrfToken === "string"
         ? value
         : null;
     } catch (_) {
@@ -24,38 +41,36 @@
     }
   }
 
-  function parseJwt(token) {
-    try {
-      const payload = String(token || "").split(".")[1] || "";
-      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-      return JSON.parse(atob(padded));
-    } catch (_) {
-      return {};
+  function store(result) {
+    const record = {
+      authenticated: result?.session?.authenticated === true,
+      expiresAt: String(result?.session?.expiresAt || ""),
+      absoluteExpiresAt: String(result?.session?.absoluteExpiresAt || ""),
+      assuranceLevel: String(result?.session?.assuranceLevel || "aal1"),
+      mfaRequired: result?.session?.mfaRequired !== false,
+      user: result?.user || null,
+      csrfToken: String(result?.csrfToken || ""),
+      activeGameSessions: Array.isArray(result?.activeGameSessions)
+        ? result.activeGameSessions
+        : [],
+      refreshedAt: new Date().toISOString()
+    };
+    if (!record.authenticated || !/^[A-Za-z0-9_-]{43}$/.test(record.csrfToken)) {
+      throw new Error("Administrator web-session response is invalid.");
     }
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(record));
+    window.dispatchEvent(new CustomEvent("econovaria:admin-session-refreshed", {
+      detail: { refreshedAt: record.refreshedAt }
+    }));
+    return record;
   }
 
   function isExpired(session, skewMs = DEFAULT_EXPIRY_SKEW_MS) {
-    const expiresAt = Number(parseJwt(session?.accessToken || "").exp || 0) * 1000;
-    return Boolean(expiresAt && expiresAt <= Date.now() + Math.max(0, Number(skewMs) || 0));
-  }
-
-  function storeTokenResponse(payload, previousSession) {
-    const accessToken = String(payload?.access_token || "").trim();
-    if (!accessToken) throw new Error("Refresh response did not contain an access token.");
-
-    const session = {
-      ...(previousSession || {}),
-      accessToken,
-      refreshToken: String(payload?.refresh_token || previousSession?.refreshToken || "").trim(),
-      user: payload?.user || previousSession?.user || null,
-      refreshedAt: new Date().toISOString()
-    };
-    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    window.dispatchEvent(new CustomEvent("econovaria:admin-session-refreshed", {
-      detail: { refreshedAt: session.refreshedAt }
-    }));
-    return session;
+    const expiry = Math.min(
+      Date.parse(String(session?.expiresAt || "")) || 0,
+      Date.parse(String(session?.absoluteExpiresAt || "")) || 0
+    );
+    return !expiry || expiry <= Date.now() + Math.max(0, Number(skewMs) || 0);
   }
 
   function clear({ includeSelectedGame = true } = {}) {
@@ -65,71 +80,71 @@
     } catch (_) {}
   }
 
-  async function performRefresh() {
-    const previousSession = read();
-    const refreshToken = String(previousSession?.refreshToken || "").trim();
-    if (!previousSession || !refreshToken) {
-      clear();
-      throw new Error("Administrator refresh token is unavailable.");
-    }
-
-    let response;
-    try {
-      response = await nativeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        credentials: "omit",
-        cache: "no-store",
-        redirect: "error",
-        referrerPolicy: "no-referrer"
-      });
-    } catch (error) {
-      throw new Error("Administrator session refresh could not reach the identity service.", {
-        cause: error
-      });
-    }
-
+  async function requestStatus() {
+    const response = await nativeFetch(`${WEB_SESSION_API}/status`, {
+      method: "GET",
+      headers: {
+        apikey: PUBLISHABLE_KEY,
+        [DEVICE_HEADER]: deviceId()
+      },
+      credentials: "include",
+      cache: "no-store",
+      redirect: "error",
+      referrerPolicy: "no-referrer"
+    });
     if (!response.ok) {
       clear();
-      throw new Error(`Administrator session refresh was rejected (${response.status}).`);
+      return null;
     }
-
     try {
-      return storeTokenResponse(await response.json(), previousSession);
-    } catch (error) {
+      return store(await response.json());
+    } catch (_) {
       clear();
-      throw new Error("Administrator session refresh returned an invalid response.", {
-        cause: error
-      });
+      return null;
     }
   }
 
   function refresh() {
-    if (!refreshPromise) {
-      refreshPromise = performRefresh().finally(() => {
-        refreshPromise = null;
+    if (!statusPromise) {
+      statusPromise = requestStatus().finally(() => {
+        statusPromise = null;
       });
     }
-    return refreshPromise;
+    return statusPromise;
   }
 
   async function getUsableSession({ minimumValidityMs = DEFAULT_EXPIRY_SKEW_MS } = {}) {
-    const session = read();
-    if (!session) return null;
-    if (!isExpired(session, minimumValidityMs)) return session;
+    const cached = read();
+    if (cached && !isExpired(cached, minimumValidityMs)) return cached;
     return refresh();
+  }
+
+  async function signOut() {
+    try {
+      await nativeFetch(`${WEB_SESSION_API}/logout`, {
+        method: "POST",
+        headers: {
+          apikey: PUBLISHABLE_KEY,
+          [DEVICE_HEADER]: deviceId()
+        },
+        body: "{}",
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+        referrerPolicy: "no-referrer"
+      });
+    } finally {
+      clear();
+    }
   }
 
   window.EconovariaAdminAuthSession = Object.freeze({
     read,
+    store,
     clear,
-    parseJwt,
     isExpired,
     refresh,
-    getUsableSession
+    getUsableSession,
+    signOut
   });
 })();
