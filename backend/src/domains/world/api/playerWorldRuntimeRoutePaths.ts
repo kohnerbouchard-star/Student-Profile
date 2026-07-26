@@ -1,3 +1,5 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 export type PlayerWorldRuntimeOperation =
   | "context"
   | "arrivalClass"
@@ -14,10 +16,12 @@ export interface ParsedPlayerWorldRuntimeRoute {
 export function parsePlayerWorldRuntimeRoute(
   pathname: string,
 ): ParsedPlayerWorldRuntimeRoute | null {
-  const normalized = normalize(pathname);
-  const routePath = readPlayerRoutePath(normalized);
-  if (!routePath) return null;
+  const segments = readPlayerApiRouteSegments(normalize(pathname));
+  if (!segments || segments[0] !== "players" || segments[1] !== "me") {
+    return null;
+  }
 
+  const routePath = `/${segments.join("/")}`;
   if (routePath === "/players/me/world-runtime") {
     return Object.freeze({ operation: "context", journeyId: null });
   }
@@ -49,15 +53,6 @@ export function playerWorldRuntimeAllowedMethods(
   operation: PlayerWorldRuntimeOperation,
 ): readonly string[] {
   return operation === "context" ? Object.freeze(["GET"]) : Object.freeze(["POST"]);
-}
-
-function readPlayerRoutePath(pathname: string): string | null {
-  if (pathname.startsWith("/players/")) return pathname;
-  const marker = "/classroom-api/";
-  const markerIndex = pathname.lastIndexOf(marker);
-  if (markerIndex < 0) return null;
-  const suffix = pathname.slice(markerIndex + marker.length);
-  return suffix ? `/${suffix}` : null;
 }
 
 function normalize(pathname: string): string {
