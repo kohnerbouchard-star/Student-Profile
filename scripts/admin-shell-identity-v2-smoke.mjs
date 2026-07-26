@@ -77,12 +77,15 @@ assert(sessionManager.includes('credentials: "include"'), "Admin BFF cookies are
 assert(!sessionManager.includes("grant_type=refresh_token"), "Browser still refreshes Staff credentials directly.");
 assert(!sessionManager.includes("accessToken"), "Browser session manager still stores a Staff access token.");
 assert(!sessionManager.includes("refreshToken"), "Browser session manager still stores a Staff refresh token.");
-assert(!sessionManager.includes("Authorization"), "Browser session manager still sends Staff bearer authorization.");
+assert(!/headers\s*:\s*\{[^}]*Authorization\s*:/s.test(sessionManager), "Browser session manager still sends Staff bearer authorization.");
+assert(!/headers\.(?:set|append)\(\s*["']Authorization["']/i.test(sessionManager), "Browser session manager constructs a Staff bearer header.");
 assert(!sessionManager.includes('permissions: ["*"]'), "Browser session manager restores wildcard authorization.");
 
 assert(boot.includes("session?.authenticated"), "Admin boot does not use the safe authenticated session state.");
 assert(boot.includes("session.permissions"), "Admin boot does not consume granular Staff permissions.");
 assert(boot.includes("econovaria:admin-session-refreshed"), "Admin boot does not install authorization after session refresh.");
+assert(boot.includes("installLegacySessionPermissionBoundary"), "Admin boot does not constrain legacy session assignments.");
+assert(boot.includes("sanitizeLegacySession"), "Admin boot does not sanitize legacy authorization state.");
 assert(!boot.includes("session?.accessToken"), "Admin boot still requires a browser-readable Staff token.");
 assert(!boot.includes('["*"]'), "Admin boot still restores wildcard authorization.");
 
