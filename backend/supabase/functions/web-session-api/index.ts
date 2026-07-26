@@ -6,6 +6,7 @@ import {
 } from "../_shared/econovariaAuth.ts";
 import { handleStaffLoginRequest } from "../../../src/domains/auth/api/staffLoginHttpHandler.ts";
 import { handleStaffBootstrapRequest } from "../../../src/domains/auth/api/staffBootstrapHttpHandler.ts";
+import { readTrustedClientIp } from "../../../src/security/rateLimitKeying.ts";
 import {
   constantTimeTextEqual,
   createWebAdminSessionPayload,
@@ -21,10 +22,12 @@ import {
 } from "../../../src/security/webAdminSession.ts";
 
 const MAX_BODY_BYTES = 1_048_576;
+const MAX_MFA_BODY_BYTES = 8_192;
 const MAX_PROXY_PATH_BYTES = 2_048;
 const CSRF_HEADER = "x-econovaria-csrf-token";
 const GAME_HEADER = "x-econovaria-game-id";
 const DEVICE_HEADER = "x-econovaria-device-id";
+const TRUSTED_IP_HEADER = "x-real-ip";
 const FORWARDED_REQUEST_HEADERS = new Map([
   ["content-type", "Content-Type"],
   ["x-idempotency-key", "X-Idempotency-Key"],
@@ -64,6 +67,16 @@ interface RefreshBody {
   readonly access_token?: string;
   readonly refresh_token?: string;
   readonly expires_at?: number;
+}
+
+interface StaffMfaVerifyBody {
+  readonly ok?: unknown;
+  readonly session?: {
+    readonly accessToken?: unknown;
+    readonly refreshToken?: unknown;
+    readonly assuranceLevel?: unknown;
+    readonly expiresAt?: unknown;
+  };
 }
 
 interface CurrentSession {
@@ -119,6 +132,15 @@ Deno.serve(async (request: Request) => {
           env.value.supabaseAnonKey,
         )
         : methodNotAllowed(request, "POST");
+    }
+    if (route === "/mfa" || route.startsWith("/mfa/")) {
+      return handleMfa(
+        request,
+        route,
+        key,
+        env.value.supabaseUrl,
+        env.value.supabaseAnonKey,
+      );
     }
     if (route.startsWith("/proxy/")) {
       return handleProxy(
@@ -209,7 +231,9 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
 
 async function handleStatus(request: Request, key: Uint8Array): Promise<Response> {
   const resolved = await resolveCurrentSession(request, key);
-  if (!resolved.ok) return clearSessionResponse(request, 401, resolved.code);
+  if (resolved.ok === false) {
+    return clearSessionResponse(request, 401, resolved.code);
+  }
   const bootstrap = await loadStaffBootstrap(resolved.payload.accessToken);
   if (!bootstrap.ok) {
     return clearSessionResponse(request, 401, "staff_session_invalid");
@@ -234,7 +258,7 @@ async function handleLogout(
   publishableKey: string,
 ): Promise<Response> {
   const resolved = await resolveSession(request, key);
-  if (resolved.ok) {
+  if (resolved.ok === true) {
     await fetch(`${supabaseUrl}/auth/v1/logout?scope=local`, {
       method: "POST",
       headers: {
@@ -245,6 +269,138 @@ async function handleLogout(
     }).catch(() => null);
   }
   return clearSessionResponse(request, 200, "signed_out", { ok: true });
+}
+
+async function handleMfa(
+  request: Request,
+  route: string,
+  key: Uint8Array,
+  supabaseUrl: string,
+  publishableKey: string,
+): Promise<Response> {
+  const routeContract = mfaRouteContract(route, request.method);
+  if (!routeContract) {
+    return json(request, 404, errorBody(
+      "route_not_found",
+      "Administrator MFA route was not found.",
+    ));
+  }
+
+  const current = await resolveCurrentSession(request, key);
+  if (current.ok === false) {
+    return clearSessionResponse(request, 401, current.code);
+  }
+
+  if (routeContract.mutation) {
+    const suppliedCsrf = String(request.headers.get(CSRF_HEADER) || "");
+    if (!constantTimeTextEqual(suppliedCsrf, current.payload.csrfToken)) {
+      return json(request, 403, errorBody(
+        "csrf_validation_failed",
+        "Administrator request verification failed.",
+      ));
+    }
+  }
+
+  const clientIp = trustedClientIp(request);
+  if (!clientIp) {
+    return json(request, 400, errorBody(
+      "trusted_client_ip_unavailable",
+      "Trusted client network metadata is unavailable.",
+    ));
+  }
+
+  const bodyResult = await readBoundedBody(request);
+  if (bodyResult.ok === false) return bodyResult.response;
+  if ((bodyResult.body?.byteLength || 0) > MAX_MFA_BODY_BYTES) {
+    return json(request, 413, errorBody(
+      "request_body_too_large",
+      "Administrator MFA request is too large.",
+    ));
+  }
+
+  const upstream = await fetch(
+    `${supabaseUrl}/functions/v1/staff-mfa-api${routeContract.upstreamPath}`,
+    {
+      method: routeContract.method,
+      headers: mfaRequestHeaders(
+        request,
+        publishableKey,
+        current.payload.accessToken,
+        clientIp,
+        Boolean(bodyResult.body),
+      ),
+      body: bodyResult.body && routeContract.mutation
+        ? bodyResult.body
+        : undefined,
+      cache: "no-store",
+      redirect: "manual",
+    },
+  ).catch(() => null);
+  if (!upstream) {
+    return json(request, 502, errorBody(
+      "staff_mfa_unavailable",
+      "Administrator MFA service is unavailable.",
+    ));
+  }
+
+  const responseBody = await readBoundedResponse(request, upstream);
+  if (responseBody.ok === false) return responseBody.response;
+  const parsed = parseJsonBytes<Record<string, unknown>>(responseBody.body);
+
+  if (upstream.status === 401 && parsed?.error && route !== "/mfa/verify") {
+    return clearSessionResponse(request, 401, "staff_session_invalid");
+  }
+
+  if (route === "/mfa/verify" && upstream.ok) {
+    const verified = parsed as StaffMfaVerifyBody | null;
+    const accessToken = String(verified?.session?.accessToken || "");
+    const refreshToken = String(verified?.session?.refreshToken || "");
+    if (!accessToken || !refreshToken) {
+      return json(request, 502, errorBody(
+        "mfa_session_invalid",
+        "MFA verification did not return a valid elevated session.",
+      ));
+    }
+
+    const elevated: WebAdminSessionPayload = {
+      ...current.payload,
+      accessToken,
+      refreshToken,
+      accessExpiresAt: parseAccessExpiry(
+        typeof verified?.session?.expiresAt === "string"
+          ? verified.session.expiresAt
+          : null,
+        accessToken,
+      ),
+      csrfToken: randomWebAdminCsrfToken(),
+    };
+    const bootstrap = await loadStaffBootstrap(elevated.accessToken);
+    if (!bootstrap.ok) {
+      return clearSessionResponse(request, 401, "staff_session_invalid");
+    }
+    return sessionJson(request, 200, {
+      ok: true,
+      verified: true,
+      session: publicSession(elevated, "aal2", true),
+      user: {
+        ...elevated.user,
+        displayName: bootstrap.body.staff.displayName,
+      },
+      activeGameSessions: bootstrap.body.activeGameSessions,
+      csrfToken: elevated.csrfToken,
+    }, elevated, key);
+  }
+
+  const headers = responseHeaders(request, upstream.headers.get("content-type"));
+  const retryAfter = normalizeRetryAfter(upstream.headers.get("retry-after"));
+  if (retryAfter) headers.set("Retry-After", retryAfter);
+  if (current.refreshed) {
+    await appendSessionCookie(headers, current.payload, key, request);
+  }
+  return new Response(responseBody.body, {
+    status: upstream.status,
+    headers,
+  });
 }
 
 async function handleProxy(
@@ -262,7 +418,9 @@ async function handleProxy(
   }
 
   let current = await resolveCurrentSession(request, key);
-  if (!current.ok) return clearSessionResponse(request, 401, current.code);
+  if (current.ok === false) {
+    return clearSessionResponse(request, 401, current.code);
+  }
 
   const method = request.method.toUpperCase();
   const isMutation = !["GET", "HEAD"].includes(method);
@@ -283,9 +441,16 @@ async function handleProxy(
       "Administrator game scope is invalid.",
     ));
   }
+  const clientIp = trustedClientIp(request);
+  if (!clientIp) {
+    return json(request, 400, errorBody(
+      "trusted_client_ip_unavailable",
+      "Trusted client network metadata is unavailable.",
+    ));
+  }
 
   const bodyResult = await readBoundedBody(request);
-  if (!bodyResult.ok) return bodyResult.response;
+  if (bodyResult.ok === false) return bodyResult.response;
   const target = `${supabaseUrl}/functions/v1/admin-api${suffix}${new URL(request.url).search}`;
 
   let upstream = await sendAdminRequest(
@@ -295,6 +460,7 @@ async function handleProxy(
     current.payload.accessToken,
     publishableKey,
     selectedGameId,
+    clientIp,
   );
   if (upstream.status === 401 && current.payload.refreshToken) {
     const refreshed = await refreshSession(
@@ -302,7 +468,7 @@ async function handleProxy(
       supabaseUrl,
       publishableKey,
     );
-    if (!refreshed.ok) {
+    if (refreshed.ok === false) {
       return clearSessionResponse(request, 401, refreshed.code);
     }
     current = refreshed;
@@ -313,6 +479,7 @@ async function handleProxy(
       current.payload.accessToken,
       publishableKey,
       selectedGameId,
+      clientIp,
     );
   }
 
@@ -321,7 +488,7 @@ async function handleProxy(
   }
 
   const responseBody = await readBoundedResponse(request, upstream);
-  if (!responseBody.ok) return responseBody.response;
+  if (responseBody.ok === false) return responseBody.response;
   const headers = responseHeaders(request, upstream.headers.get("content-type"));
   const retryAfter = normalizeRetryAfter(upstream.headers.get("retry-after"));
   if (retryAfter) headers.set("Retry-After", retryAfter);
@@ -342,7 +509,7 @@ async function resolveCurrentSession(
   | { readonly ok: false; readonly code: string }
 > {
   const resolved = await resolveSession(request, key);
-  if (!resolved.ok) return resolved;
+  if (resolved.ok === false) return resolved;
   return refreshIfNeeded(resolved.payload);
 }
 
@@ -353,12 +520,18 @@ async function sendAdminRequest(
   accessToken: string,
   publishableKey: string,
   selectedGameId: string,
+  clientIp: string,
 ): Promise<Response> {
   const headers = new Headers({
     apikey: publishableKey,
     Authorization: `Bearer ${accessToken}`,
+    [TRUSTED_IP_HEADER]: clientIp,
   });
   if (selectedGameId) headers.set("X-Econovaria-Game-Id", selectedGameId);
+  const deviceId = source.headers.get(DEVICE_HEADER);
+  if (deviceId && isSafeHeaderValue(deviceId)) {
+    headers.set(DEVICE_HEADER, deviceId);
+  }
   for (const [sourceName, targetName] of FORWARDED_REQUEST_HEADERS) {
     const value = source.headers.get(sourceName);
     if (value && isSafeHeaderValue(value)) headers.set(targetName, value);
@@ -370,6 +543,55 @@ async function sendAdminRequest(
     cache: "no-store",
     redirect: "manual",
   });
+}
+
+function mfaRequestHeaders(
+  source: Request,
+  publishableKey: string,
+  accessToken: string,
+  clientIp: string,
+  hasBody: boolean,
+): Headers {
+  const headers = new Headers({
+    apikey: publishableKey,
+    Authorization: `Bearer ${accessToken}`,
+    [TRUSTED_IP_HEADER]: clientIp,
+  });
+  const deviceId = source.headers.get(DEVICE_HEADER);
+  if (deviceId && isSafeHeaderValue(deviceId)) {
+    headers.set(DEVICE_HEADER, deviceId);
+  }
+  if (hasBody) headers.set("Content-Type", "application/json");
+  return headers;
+}
+
+function mfaRouteContract(
+  route: string,
+  method: string,
+): {
+  readonly method: "GET" | "POST";
+  readonly mutation: boolean;
+  readonly upstreamPath: string;
+} | null {
+  const normalizedMethod = method.toUpperCase();
+  if (route === "/mfa" && normalizedMethod === "GET") {
+    return { method: "GET", mutation: false, upstreamPath: "/staff/mfa" };
+  }
+  if (route === "/mfa/enroll" && normalizedMethod === "POST") {
+    return {
+      method: "POST",
+      mutation: true,
+      upstreamPath: "/staff/mfa/enroll",
+    };
+  }
+  if (route === "/mfa/verify" && normalizedMethod === "POST") {
+    return {
+      method: "POST",
+      mutation: true,
+      upstreamPath: "/staff/mfa/verify",
+    };
+  }
+  return null;
 }
 
 async function loadStaffBootstrap(accessToken: string): Promise<
@@ -502,6 +724,14 @@ function allowedOrigins(): ReadonlySet<string> {
   ]);
 }
 
+function trustedClientIp(request: Request): string | null {
+  try {
+    return readTrustedClientIp(request, TRUSTED_IP_HEADER);
+  } catch {
+    return null;
+  }
+}
+
 function publicSession(
   payload: WebAdminSessionPayload,
   assuranceLevel = String(parseJwtClaim(payload.accessToken, "aal") || "aal1"),
@@ -577,6 +807,14 @@ async function readBoundedResponse(
     )) };
   }
   return { ok: true, body: bytes };
+}
+
+function parseJsonBytes<T>(bytes: Uint8Array): T | null {
+  try {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as T;
+  } catch {
+    return null;
+  }
 }
 
 function sessionJson(
