@@ -178,14 +178,19 @@ export class SupabasePlayerStockWatchlistRepository
     const rows = response.data ?? [];
     if (rows.length !== 1) throw writeFailed();
     const row = rows[0];
-    const result = {
-      gameId: requireUuid(row.game_session_id),
-      playerUuid: requireUuid(row.player_id),
-      internalAssetUuid: requireUuid(row.stock_asset_id),
-      ticker: requireTicker(row.ticker),
-      isWatchlisted: requireBoolean(row.is_watchlisted),
-      changed: requireBoolean(row.changed),
-    };
+    let result: PlayerStockWatchlistMutationRepositoryResult;
+    try {
+      result = {
+        gameId: requireUuid(row.game_session_id),
+        playerUuid: requireUuid(row.player_id),
+        internalAssetUuid: requireUuid(row.stock_asset_id),
+        ticker: requireTicker(row.ticker),
+        isWatchlisted: requireBoolean(row.is_watchlisted),
+        changed: requireBoolean(row.changed),
+      };
+    } catch {
+      throw writeFailed();
+    }
 
     if (
       result.gameId !== input.gameId ||
