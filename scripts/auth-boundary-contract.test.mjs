@@ -224,7 +224,7 @@ test("local launcher never injects a legacy anon bearer or arbitrary cookie", as
   assert.match(launcher, /FORWARDED_IP_HEADERS/);
   assert.match(launcher, /normalized_session_request_cookie/);
   assert.match(launcher, /normalized_session_response_cookie/);
-  assert.match(launcher, /"\r",\s*"\n",\s*"\x00"/);
+  assert.match(launcher, /"\\r",\s*"\\n",\s*"\\x00"/);
   assert.match(launcher, /Bearer \{browser_publishable_key\}/);
   assert.doesNotMatch(
     launcher,
