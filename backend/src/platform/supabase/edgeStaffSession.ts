@@ -219,7 +219,7 @@ export async function resolveStaffSessionForRequest(
 
   if (options.beforeStaffLookup) {
     const prerequisiteResult = await options.beforeStaffLookup();
-    if (!prerequisiteResult.ok) return prerequisiteResult;
+    if (prerequisiteResult.ok === false) return prerequisiteResult;
   }
 
   const serviceClient = dependencies.createServiceClient(env);
