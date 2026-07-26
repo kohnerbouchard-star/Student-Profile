@@ -326,6 +326,20 @@ function callPlayerGameDashboardApi(sessionToken) {
   });
 }
 
+async function ensureAdminAal2(status) {
+  if (
+    !status?.ok ||
+    status?.session?.mfaRequired === false ||
+    status?.session?.assuranceLevel === "aal2"
+  ) {
+    return status;
+  }
+  const mfa = await loadAdminMfaModule();
+  const elevated = await mfa.ensureAal2(status);
+  rememberAdminCsrf(elevated);
+  return elevated;
+}
+
 async function callSupabasePasswordSignIn(email, password) {
   const signIn = await callSupabaseJsonRoute("webSession", "/login", {
     method: "POST",
@@ -338,14 +352,25 @@ async function callSupabasePasswordSignIn(email, password) {
     fallbackMessage: "Admin email or password is invalid."
   });
   if (!signIn?.ok) return signIn;
+  return callAdminWebSessionStatus();
+}
 
-  const status = await callAdminWebSessionStatus();
-  if (!status?.ok) return status;
+async function readAdminWebSessionStatus() {
+  const result = await callSupabaseJsonRoute("webSession", "/status", {
+    method: "GET",
+    credentials: "include",
+    fallbackCode: "staff_session_invalid",
+    fallbackMessage: "The administrator session could not be loaded."
+  });
+  if (result?.ok) rememberAdminCsrf(result);
+  return result;
+}
+
+async function callAdminWebSessionStatus(options = {}) {
+  const status = await readAdminWebSessionStatus();
+  if (!status?.ok || options.requireAal2 === false) return status;
   try {
-    const mfa = await loadAdminMfaModule();
-    const elevated = await mfa.ensureAal2(status);
-    rememberAdminCsrf(elevated);
-    return elevated;
+    return await ensureAdminAal2(status);
   } catch (error) {
     clearAdminCsrf();
     return {
@@ -356,17 +381,6 @@ async function callSupabasePasswordSignIn(email, password) {
       retryAfterSeconds: 0
     };
   }
-}
-
-async function callAdminWebSessionStatus() {
-  const result = await callSupabaseJsonRoute("webSession", "/status", {
-    method: "GET",
-    credentials: "include",
-    fallbackCode: "staff_session_invalid",
-    fallbackMessage: "The administrator session could not be loaded."
-  });
-  if (result?.ok) rememberAdminCsrf(result);
-  return result;
 }
 
 async function callAdminWebSessionLogout() {
