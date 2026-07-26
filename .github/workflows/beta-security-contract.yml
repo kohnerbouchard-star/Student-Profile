@@ -7,10 +7,13 @@ on:
       - "api/**"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"
+      - "admin/session-timeout-safe-exit.js"
+      - "auth/reset-password.js"
       - "frontend/src/core/api.js"
       - "frontend/src/core/login.js"
       - "frontend/src/core/runtime-config.js"
       - "backend/src/security/**"
+      - "backend/src/platform/supabase/edgeAuth.ts"
       - "backend/src/platform/supabase/edgeStaffSession.ts"
       - "backend/src/platform/supabase/edgeResponse.ts"
       - "backend/src/domains/auth/api/**"
@@ -23,10 +26,13 @@ on:
       - "backend/supabase/functions/staff-api/**"
       - "backend/supabase/functions/staff-mfa-api/**"
       - "backend/supabase/functions/web-session-api/**"
+      - "backend/supabase/functions/password-reset-api/**"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
       - "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts"
       - "backend/supabase/migrations/*authentication_throttle*.sql"
       - "backend/supabase/migrations/*staff_security_state*.sql"
+      - "backend/supabase/migrations/*staff_permission_grants*.sql"
+      - "backend/supabase/migrations/*password_reset_security*.sql"
       - "backend/supabase/migrations/20260721002625_harden_request_rate_limit_operations_v3.sql"
       - "backend/package.json"
       - "backend/docs/beta-security-rate-limit-hardening-2026-07-20.md"
@@ -117,12 +123,16 @@ jobs:
             backend/supabase/functions/staff-api/index.ts \
             backend/supabase/functions/staff-mfa-api/index.ts \
             backend/supabase/functions/player-api/index.ts \
-            backend/supabase/functions/web-session-api/index.ts
+            backend/supabase/functions/web-session-api/index.ts \
+            backend/supabase/functions/password-reset-api/index.ts
           node --check api/_admin-bff-proxy.js
           node --check 'api/admin-session/[...path].js'
           node --check 'api/admin/[...path].js'
+          node --check api/password-reset.js
           node --check admin/auth-session-manager.js
           node --check admin/admin-auth.js
+          node --check admin/session-timeout-safe-exit.js
+          node --check auth/reset-password.js
           node --check frontend/src/core/api.js
           node --check frontend/src/core/login.js
 
