@@ -27,6 +27,7 @@ on:
       - "scripts/business-banking-player-state-controls-browser-acceptance.mjs"
       - "scripts/business-banking-player-commerce-browser-acceptance.mjs"
       - "scripts/business-banking-player-business-browser-acceptance.mjs"
+      - "scripts/business-banking-player-world-browser-acceptance.mjs"
       - "scripts/player-contracts-browser-acceptance.mjs"
       - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
       - "scripts/business-banking-player-market-browser-acceptance.mjs"
@@ -85,6 +86,7 @@ jobs:
           node --check scripts/business-banking-player-state-controls-browser-acceptance.mjs
           node --check scripts/business-banking-player-commerce-browser-acceptance.mjs
           node --check scripts/business-banking-player-business-browser-acceptance.mjs
+          node --check scripts/business-banking-player-world-browser-acceptance.mjs
           node --check scripts/player-contracts-browser-acceptance.mjs
           node --check scripts/business-banking-player-inventory-browser-acceptance.mjs
           node --check scripts/business-banking-player-market-browser-acceptance.mjs
@@ -266,14 +268,20 @@ jobs:
         continue-on-error: true
         run: node scripts/business-banking-player-business-browser-acceptance.mjs
 
+      - name: Execute connected World lifecycle
+        id: player_world
+        if: steps.player_business.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/business-banking-player-world-browser-acceptance.mjs
+
       - name: Execute 30 and 40 Player connected load profile
         id: player_load
-        if: steps.player_business.outcome == 'success'
+        if: steps.player_world.outcome == 'success'
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
       - name: Capture sanitized Player diagnostics
-        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_state_controls.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_inventory.outcome == 'failure' || steps.player_contracts.outcome == 'failure' || steps.player_market.outcome == 'failure' || steps.player_business.outcome == 'failure' || steps.player_load.outcome == 'failure'
+        if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_state_controls.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_inventory.outcome == 'failure' || steps.player_contracts.outcome == 'failure' || steps.player_market.outcome == 'failure' || steps.player_business.outcome == 'failure' || steps.player_world.outcome == 'failure' || steps.player_load.outcome == 'failure'
         shell: bash
         run: |
           set +e
@@ -318,6 +326,7 @@ jobs:
           test "${{ steps.player_contracts.outcome }}" = "success"
           test "${{ steps.player_market.outcome }}" = "success"
           test "${{ steps.player_business.outcome }}" = "success"
+          test "${{ steps.player_world.outcome }}" = "success"
           test "${{ steps.player_load.outcome }}" = "success"
 
       - name: Stop local Player stack
