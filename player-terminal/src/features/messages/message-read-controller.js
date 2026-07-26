@@ -65,6 +65,16 @@ function watchForCommittedThread(threadId, form) {
   queueMicrotask(selectCommittedThread);
 }
 
+function dispatchReadSubmission(form, control) {
+  const SubmitEventConstructor = globalThis.SubmitEvent || Event;
+  return form.dispatchEvent(new SubmitEventConstructor("submit", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    submitter: control,
+  }));
+}
+
 function handleUnreadThreadClick(event) {
   const target = event.target instanceof Element ? event.target : null;
   const control = target?.closest(MESSAGE_THREAD_CONTROL);
@@ -88,7 +98,7 @@ function handleUnreadThreadClick(event) {
   form.dataset.messageReadSubmitting = "true";
   control.setAttribute("aria-busy", "true");
   watchForCommittedThread(threadId, form);
-  form.requestSubmit();
+  dispatchReadSubmission(form, control);
 }
 
 document.addEventListener("click", handleUnreadThreadClick, true);
