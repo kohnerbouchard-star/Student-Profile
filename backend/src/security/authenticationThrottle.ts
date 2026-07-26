@@ -70,21 +70,21 @@ export async function checkAuthenticationThrottle(
   client: EdgeSupabaseClient,
   buckets: readonly AuthenticationThrottleBucket[],
 ): Promise<AuthenticationThrottleDecision> {
-  return invokeThrottleRpc(client, "check_authentication_throttle_v2", buckets);
+  return invokeThrottleRpc(client, "auth_throttle_check_v2", buckets);
 }
 
 export async function recordAuthenticationFailure(
   client: EdgeSupabaseClient,
   buckets: readonly AuthenticationThrottleBucket[],
 ): Promise<AuthenticationThrottleDecision> {
-  return invokeThrottleRpc(client, "record_authentication_failure_v2", buckets);
+  return invokeThrottleRpc(client, "auth_throttle_record_failure_v2", buckets);
 }
 
 export async function recordAuthenticationSuccess(
   client: EdgeSupabaseClient,
   buckets: readonly AuthenticationThrottleBucket[],
 ): Promise<void> {
-  const result = await client.rpc("record_authentication_success_v2", {
+  const result = await client.rpc("auth_throttle_record_success_v2", {
     p_buckets: buckets,
   });
   if (result.error) throw new Error("authentication throttle success update failed");
@@ -129,8 +129,8 @@ async function bucket(
 async function invokeThrottleRpc(
   client: EdgeSupabaseClient,
   functionName:
-    | "check_authentication_throttle_v2"
-    | "record_authentication_failure_v2",
+    | "auth_throttle_check_v2"
+    | "auth_throttle_record_failure_v2",
   buckets: readonly AuthenticationThrottleBucket[],
 ): Promise<AuthenticationThrottleDecision> {
   const result = await client.rpc<readonly AuthenticationThrottleRpcRow[]>(
