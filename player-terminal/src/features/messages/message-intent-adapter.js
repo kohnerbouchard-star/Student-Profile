@@ -42,7 +42,7 @@ function createCommandForm(mount, { endpointKey, commandName, threadId, fields =
   return { form, submit };
 }
 
-export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
+export function installMessageIntentAdapter({ mount, drafts = null, runtime = globalThis }) {
   if (!(mount instanceof HTMLElement)) return Object.freeze({ destroy() {} });
 
   const pending = new Map();
@@ -91,7 +91,9 @@ export function installMessageIntentAdapter({ mount, runtime = globalThis }) {
     if (!(composer instanceof HTMLFormElement)) return true;
 
     const threadId = boundedThreadId(composer.dataset.threadId);
-    const body = String(composer.elements.namedItem("body")?.value || "").trim();
+    const visibleBody = String(composer.elements.namedItem("body")?.value || "").trim();
+    const savedBody = typeof drafts?.value === "function" ? String(drafts.value(composer, "body") || "").trim() : "";
+    const body = visibleBody || savedBody;
     if (!threadId || !body) return true;
 
     event.preventDefault();
