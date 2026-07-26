@@ -24,7 +24,7 @@ const formDrafts = installFormDraftPreserver(mount, {
   sessionReadyEvent: config.sessionReadyEvent,
   sessionInvalidEvent: config.sessionInvalidEvent,
 });
-const messageIntents = installMessageIntentAdapter({ mount });
+const messageIntents = installMessageIntentAdapter({ mount, drafts: formDrafts });
 
 const terminal = createPlayerTerminal({ mount, config });
 const sessionSafeExit = installPlayerSessionSafeExit({ terminal, config, mount });
