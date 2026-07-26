@@ -43,6 +43,7 @@ on:
       - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
+      - "scripts/vercel-auth-proxy-contract.test.mjs"
       - "scripts/staging/probe-beta-security-http.mjs"
       - "scripts/staging/probe-beta-security-rate-limit-sql.mjs"
       - "scripts/staging/scan-beta-security-evidence.mjs"
@@ -141,6 +142,7 @@ jobs:
           node --test scripts/auth-boundary-contract.test.mjs
           node scripts/admin-session-manager-smoke.mjs
           node --test scripts/local-staging-gateway-contract.test.mjs
+          node --test scripts/vercel-auth-proxy-contract.test.mjs
 
       - name: Validate connected probe contracts
         run: npm run test:security-probes
