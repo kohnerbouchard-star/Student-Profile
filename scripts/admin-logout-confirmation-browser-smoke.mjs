@@ -29,6 +29,7 @@ function corsHeaders() {
 const harness = await createQualityHarness("logout-confirmation");
 const { page, errors, dir } = harness;
 const requests = [];
+let logoutResponseFulfilled = false;
 
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
@@ -70,6 +71,7 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
     headers: corsHeaders(),
     body: JSON.stringify({ ok: true }),
   });
+  logoutResponseFulfilled = true;
 });
 
 async function clickRealAccountLogout() {
@@ -249,13 +251,21 @@ try {
     ),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`,
   );
-  assert(errors.length === 0, errors.join("\n"));
+  assert(logoutResponseFulfilled, "The mocked web-session logout response did not complete.");
+
+  const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
+  const remainingErrors = errors.filter((error) =>
+    !(logoutResponseFulfilled && expectedNavigationAbort.test(error))
+  );
+  assert(remainingErrors.length === 0, remainingErrors.join("\n"));
   Object.assign(report, {
     realControl,
     state,
     storage,
     serverMediatedLogoutObserved: true,
-    errors: [...errors],
+    logoutResponseFulfilled,
+    ignoredNavigationAbort: errors.length !== remainingErrors.length,
+    errors: [...remainingErrors],
   });
   writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify({
@@ -266,6 +276,7 @@ try {
     confirmationClearsSession: true,
     confirmationRedirects: true,
     serverMediatedLogoutObserved: true,
+    logoutResponseFulfilled: true,
   }, null, 2));
 } catch (error) {
   report.failure = String(error?.stack || error?.message || error);
