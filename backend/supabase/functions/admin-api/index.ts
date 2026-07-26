@@ -30,6 +30,12 @@ import {
   type AdminSecurityGuardResult,
 } from "./adminSecurityGuard.ts";
 
+type AuthorizedAdminContext = Parameters<typeof guardAdminRequest>[1];
+type AdminSecurityFailure = Extract<
+  AdminSecurityGuardResult,
+  { readonly ok: false }
+>;
+
 function routePath(url: URL): string {
   const marker = "/admin-api";
   const markerIndex = url.pathname.indexOf(marker);
@@ -40,7 +46,7 @@ function routePath(url: URL): string {
 
 function adminSecurityFailureResponse(
   request: Request,
-  failure: Extract<AdminSecurityGuardResult, { readonly ok: false }>,
+  failure: AdminSecurityFailure,
 ): Response {
   const headers = {
     ...corsHeaders(request),
@@ -242,22 +248,27 @@ Deno.serve(async (request: Request) => {
   }
 
   const context = await resolveContext(request);
-  if (!context.ok) {
+  if (context.ok !== true) {
     return json(request, context.status, {
       code: "auth_failed",
       message: context.message,
     });
   }
+  const authorizedContext = context as AuthorizedAdminContext;
 
   const url = new URL(request.url);
   const path = routePath(url);
 
   try {
-    const security = await guardAdminRequest(request, context, path);
-    if (!security.ok) {
+    const security = await guardAdminRequest(
+      request,
+      authorizedContext,
+      path,
+    );
+    if (security.ok === false) {
       return adminSecurityFailureResponse(request, security);
     }
-    const securedContext = { ...context, security };
+    const securedContext = { ...authorizedContext, security };
 
     const globalResponse = await handleGlobalRoute(
       request,
