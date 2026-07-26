@@ -26,6 +26,15 @@ Deno.test("Inventory redemption routes recognize direct and Edge public-ID paths
   );
   assertEquals(
     readPlayerInventoryRedemptionRoutePath(
+      "/classroom-api/players/me/inventory/meal-pass/redemptions",
+    ),
+    {
+      kind: "request",
+      itemId: "meal-pass",
+    },
+  );
+  assertEquals(
+    readPlayerInventoryRedemptionRoutePath(
       `/functions/v1/classroom-api/players/me/inventory/redemptions/${REQUEST_ID}`,
     ),
     {
