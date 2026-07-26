@@ -39,8 +39,8 @@ function capabilities() {
   ].map(([key, method, pathTemplate]) => ({ key, operations: [{ method, pathTemplate }] }));
   return {
     schemaVersion: 1,
-    manifestVersion: "2026-07-22.2",
-    service: "player-api",
+    manifestVersion: "2026-07-23.2",
+    service: "classroom-api",
     capabilities: {
       routes: {
         dashboard: true,
