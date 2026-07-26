@@ -16,6 +16,7 @@ const browserCredentialFiles = [
   "admin/admin-auth.js",
   "admin/auth-session-manager.js",
   "admin/player-access-code-bridge.js",
+  "admin/classroom-write-fallback.js",
   "auth/reset-password.js",
 ];
 
@@ -25,6 +26,7 @@ const adminBrowserFiles = [
   "admin/admin-auth.js",
   "admin/auth-session-manager.js",
   "admin/player-access-code-bridge.js",
+  "admin/classroom-write-fallback.js",
 ];
 
 const privilegedPatterns = [
@@ -119,11 +121,12 @@ test("Admin browser storage and transport contain no Staff credential", async ()
     }
   }
 
-  const [login, manager, adminAuth, playerBridge] = await Promise.all([
+  const [login, manager, adminAuth, playerBridge, writeAdapter] = await Promise.all([
     read("frontend/src/core/login.js"),
     read("admin/auth-session-manager.js"),
     read("admin/admin-auth.js"),
     read("admin/player-access-code-bridge.js"),
+    read("admin/classroom-write-fallback.js"),
   ]);
   assert.match(login, /function persistSafeAdminStatus\(status\)/);
   assert.match(login, /persistSafeAdminStatus\(status\)/);
@@ -137,15 +140,20 @@ test("Admin browser storage and transport contain no Staff credential", async ()
   assert.doesNotMatch(adminAuth, /permissions:\s*\["\*"\]/);
   assert.doesNotMatch(playerBridge, /staffApiUrl/);
   assert.doesNotMatch(playerBridge, /Authorization/);
+  assert.match(writeAdapter, /legacyClassroomFallbackRetired:\s*true/);
+  assert.doesNotMatch(writeAdapter, /CLASSROOM_API_BASE/);
+  assert.doesNotMatch(writeAdapter, /classroom-api/);
+  assert.doesNotMatch(writeAdapter, /retryStatuses/);
 });
 
 test("Player and Admin callers remain bound to their own identities", async () => {
-  const [host, transport, adapter, adminAuth, playerBridge] = await Promise.all([
+  const [host, transport, adapter, adminAuth, playerBridge, writeAdapter] = await Promise.all([
     read("player-terminal/host-runtime.js"),
     read("player-terminal/src/api/http-transport.js"),
     read("player-terminal/src/integrations/student-profile-api-call.js"),
     read("admin/admin-auth.js"),
     read("admin/player-access-code-bridge.js"),
+    read("admin/classroom-write-fallback.js"),
   ]);
 
   assert.match(host, /runtimeConfig\.playerApiUrl/);
@@ -167,6 +175,8 @@ test("Player and Admin callers remain bound to their own identities", async () =
   assert.doesNotMatch(adminAuth, /Bearer/);
   assert.match(playerBridge, /LOCAL_API_PREFIX/);
   assert.doesNotMatch(playerBridge, /STAFF_API_BASE/);
+  assert.match(writeAdapter, /url\.origin === window\.location\.origin/);
+  assert.match(writeAdapter, /url\.pathname\.startsWith\(LOCAL_API_PREFIX\)/);
 });
 
 test("server-side Admin BFF is the only Staff credential transport", async () => {
