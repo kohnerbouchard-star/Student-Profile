@@ -65,6 +65,7 @@ const readModels = {
   notifications: [],
   store: structuredClone(previewData.store),
   banking: structuredClone(previewData.banking),
+  inventory: structuredClone(previewData.inventory),
   news: structuredClone(previewData.news)
 };
 const api = new PlayerApi({
@@ -87,7 +88,7 @@ const api = new PlayerApi({
 await api.bootstrap();
 assert.deepEqual(calls, ["session", "dashboard", "notifications"], "Bootstrap must load only shell resources.");
 await api.loadRoute("store");
-assert.deepEqual(calls.slice(3).sort(), ["banking", "store"], "Store navigation must load only its route resource plan.");
+assert.deepEqual(calls.slice(3).sort(), ["banking", "inventory", "store"], "Store navigation must load Store, Banking, and Inventory together.");
 assert.ok(!calls.includes("business") && !calls.includes("marketplace"), "Unvisited systems must not load during bootstrap.");
 
 let newsReads = 0;
