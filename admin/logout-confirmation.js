@@ -119,11 +119,21 @@
     window.location.replace(loginUrl());
   }
 
+  function webSessionLogoutUrl() {
+    const config = window.EconovariaRuntimeConfig || {};
+    const explicit = text(config.webSessionApiUrl).replace(/\/+$/, "");
+    if (explicit) return `${explicit}/logout`;
+    const supabaseUrl = text(config.supabaseUrl).replace(/\/+$/, "");
+    return supabaseUrl
+      ? `${supabaseUrl}/functions/v1/web-session-api/logout`
+      : "";
+  }
+
   async function revokeWebSession() {
     const config = window.EconovariaRuntimeConfig || {};
-    const webSessionApiUrl = text(config.webSessionApiUrl).replace(/\/+$/, "");
+    const logoutUrl = webSessionLogoutUrl();
     const publishableKey = text(config.supabasePublishableKey);
-    if (!webSessionApiUrl || !publishableKey) return false;
+    if (!logoutUrl || !publishableKey) return false;
 
     const headers = {
       Accept: "application/json",
@@ -134,7 +144,7 @@
     if (deviceId) headers[DEVICE_HEADER] = deviceId;
 
     try {
-      const response = await window.fetch(`${webSessionApiUrl}/logout`, {
+      const response = await window.fetch(logoutUrl, {
         method: "POST",
         headers,
         body: "{}",
@@ -176,14 +186,8 @@
     button.textContent = "Signing out…";
 
     signOutPromise = (async () => {
-      const controller = window.EconovariaAdminLogoutController;
-      if (typeof controller?.beginLogout === "function") {
-        await controller.beginLogout(button);
-        return;
-      }
-      // The confirmation can be available before the dynamically loaded owner.
-      // Its fallback must use the same cookie-backed boundary, never legacy
-      // browser bearer or direct Admin/Auth routes.
+      // This confirmation owns the transition so module load order cannot route
+      // sign-out through a retired local Admin endpoint or a second navigator.
       await revokeWebSession();
       clearLocalStateAndRedirect();
     })().finally(() => {
