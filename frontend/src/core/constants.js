@@ -13,6 +13,7 @@ const BOOTSTRAP_API_URL = runtimeConfig.bootstrapApiUrl;
 const ADMIN_API_URL = runtimeConfig.adminApiUrl;
 const WEB_SESSION_API_URL = runtimeConfig.webSessionApiUrl;
 const ADMIN_BFF_API_URL = runtimeConfig.adminBffApiUrl;
+const PASSWORD_RESET_API_URL = runtimeConfig.passwordResetApiUrl;
 const CLASSROOM_API_URL = runtimeConfig.classroomApiUrl;
 const PLAYER_SESSION_STORAGE_KEY = "econovaria.player.auth.v1";
 const ADMIN_SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
@@ -87,6 +88,7 @@ window.Econovaria.core.constants = Object.freeze({
   ADMIN_API_URL,
   WEB_SESSION_API_URL,
   ADMIN_BFF_API_URL,
+  PASSWORD_RESET_API_URL,
   CLASSROOM_API_URL,
   PLAYER_SESSION_STORAGE_KEY,
   ADMIN_SESSION_STORAGE_KEY,
