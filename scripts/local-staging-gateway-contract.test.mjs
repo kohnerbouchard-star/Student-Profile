@@ -16,6 +16,7 @@ const runtimeConfigPath = path.join(repositoryRoot, "frontend", "src", "core", "
 
 function probeGateway() {
   const program = String.raw`
+import base64
 import importlib.util
 import json
 import sys
@@ -29,6 +30,9 @@ spec.loader.exec_module(module)
 
 publishable_key = "sb_publishable_contract_test"
 user_jwt = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJzdGFmZi11c2VyIn0.signature"
+iv = base64.urlsafe_b64encode(bytes(range(12))).decode("ascii").rstrip("=")
+ciphertext = base64.urlsafe_b64encode(bytes(range(17, 81))).decode("ascii").rstrip("=")
+envelope = f"v1.{iv}.{ciphertext}"
 parsed_status = module.parse_supabase_status_env(
     'API_URL="http://127.0.0.1:54321"\n'
     f'PUBLISHABLE_KEY="{publishable_key}"\n'
@@ -55,19 +59,35 @@ staff_forwarded = module.filtered_request_headers(
     browser_publishable_key=publishable_key,
 )
 
+web_headers = Message()
+web_headers["apikey"] = publishable_key
+web_headers["Cookie"] = f"analytics=secret; econovaria_admin_session={envelope}; unrelated=value"
+web_headers["x-econovaria-csrf-token"] = "C" * 43
+web_forwarded = module.filtered_request_headers(
+    web_headers,
+    "127.0.0.1:54321",
+    browser_publishable_key=publishable_key,
+    request_path="/functions/v1/web-session-api/proxy/games",
+    browser_origin="http://127.0.0.1:4173",
+)
+
 response_metadata = module.filtered_response_headers([
     ("Content-Type", "application/json; charset=iso-8859-1"),
     ("Retry-After", "00045"),
     ("X-Request-Id", "req.contract-1"),
-    ("Set-Cookie", "privileged=value"),
+    ("Set-Cookie", f"econovaria_admin_session={envelope}; Path=/; HttpOnly; SameSite=Strict"),
     ("Location", "https://attacker.invalid/"),
     ("Access-Control-Allow-Origin", "*"),
     ("X-Attacker\r\nInjected", "yes"),
+])
+clear_metadata = module.filtered_response_headers([
+    ("Set-Cookie", "__Host-econovaria_admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"),
 ])
 invalid_response_metadata = module.filtered_response_headers([
     ("Content-Type", "text/html"),
     ("Retry-After", "Thu, 01 Jan 2099 00:00:00 GMT"),
     ("X-Request-Id", "bad request id"),
+    ("Set-Cookie", "econovaria_admin_session=v1.bad.bad; Path=/; HttpOnly"),
 ])
 
 generated = module.runtime_config(
@@ -88,19 +108,24 @@ print(json.dumps({
     "parsedStatus": parsed_status,
     "publicForwarded": public_forwarded,
     "staffForwarded": staff_forwarded,
+    "webForwarded": web_forwarded,
     "responseMetadata": {
         "contentType": response_metadata.content_type,
         "retryAfter": response_metadata.retry_after,
         "requestId": response_metadata.request_id,
+        "sessionCookie": response_metadata.session_cookie,
     },
+    "clearCookie": clear_metadata.session_cookie,
     "invalidResponseMetadata": {
         "contentType": invalid_response_metadata.content_type,
         "retryAfter": invalid_response_metadata.retry_after,
         "requestId": invalid_response_metadata.request_id,
+        "sessionCookie": invalid_response_metadata.session_cookie,
     },
     "runtimeConfig": config,
     "staticHeaders": dict(module.STATIC_NO_CACHE_HEADERS),
     "maxBody": module.MAX_PROXY_BODY_BYTES,
+    "envelope": envelope,
 }))
 `;
 
@@ -147,6 +172,8 @@ test("local browser config contains only publishable application identity", () =
   assert.equal(runtime.staffApiUrl, "http://127.0.0.1:4173/functions/v1/staff-api");
   assert.equal(runtime.bootstrapApiUrl, "http://127.0.0.1:4173/functions/v1/bootstrap-api");
   assert.equal(runtime.adminApiUrl, "http://127.0.0.1:4173/functions/v1/admin-api");
+  assert.equal(runtime.webSessionApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api");
+  assert.equal(runtime.adminBffApiUrl, "http://127.0.0.1:4173/functions/v1/web-session-api/proxy");
   assert.equal(runtime.classroomApiUrl, runtime.staffApiUrl);
 });
 
@@ -164,22 +191,39 @@ test("gateway strips publishable bearer and preserves real staff JWT", () => {
   assert.equal(result.staffForwarded["x-real-ip"], "127.0.0.1");
   assert.equal(result.staffForwarded["x-forwarded-for"], undefined);
   assert.equal(result.staffForwarded["x-unreviewed-header"], undefined);
-  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v2");
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v3");
 });
 
-test("gateway reconstructs a bounded response-header contract", () => {
+test("gateway carries only the encrypted Admin session and CSRF", () => {
+  const result = probeGateway();
+  assert.equal(
+    result.webForwarded.Cookie,
+    `econovaria_admin_session=${result.envelope}`,
+  );
+  assert.equal(result.webForwarded.Origin, "http://127.0.0.1:4173");
+  assert.equal(result.webForwarded["x-econovaria-csrf-token"], "C".repeat(43));
+  assert.equal(result.webForwarded.Cookie.includes("analytics"), false);
+  assert.equal(result.webForwarded.Cookie.includes("unrelated"), false);
+});
+
+test("gateway reconstructs a bounded response-header and cookie contract", () => {
   const result = probeGateway();
   assert.deepEqual(result.responseMetadata, {
     contentType: "application/json; charset=utf-8",
     retryAfter: "45",
     requestId: "req.contract-1",
+    sessionCookie: `econovaria_admin_session=${result.envelope}; Path=/; Max-Age=28800; HttpOnly; SameSite=Strict`,
   });
+  assert.equal(
+    result.clearCookie,
+    "econovaria_admin_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict",
+  );
   assert.deepEqual(result.invalidResponseMetadata, {
     contentType: "application/octet-stream",
     retryAfter: null,
     requestId: null,
+    sessionCookie: null,
   });
-  assert.equal(JSON.stringify(result.responseMetadata).includes("Set-Cookie"), false);
   assert.equal(JSON.stringify(result.responseMetadata).includes("attacker.invalid"), false);
 });
 
