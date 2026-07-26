@@ -9,6 +9,7 @@ const NOTIFICATION_UUID = "00000000-0000-4000-8000-000000000201";
 const PUBLIC_DELIVERY = "ndl_00000000000000000000000000000001";
 const PUBLIC_NOTIFICATION = "ntf_00000000000000000000000000000001";
 const NOW = "2026-07-18T08:00:00.000Z";
+const DATABASE_NOW = "2026-07-18 08:00:00+00";
 
 Deno.test("notification repository joins scoped deliveries to public notification metadata", async () => {
   const repository = new SupabasePlayerNotificationRepository(client({
@@ -33,13 +34,13 @@ Deno.test("notification repository resolves and updates public delivery IDs", as
   const repository = new SupabasePlayerNotificationRepository(client({
     notification_deliveries: [
       [deliveryRow(null)],
-      [deliveryRow(NOW)],
+      [deliveryRow(DATABASE_NOW)],
     ],
     notifications: [
       [notificationIdentityRow()],
       [notificationIdentityRow()],
     ],
-  }, [deliveryRow(NOW)]) as never);
+  }, [deliveryRow(DATABASE_NOW)]) as never);
 
   const read = await repository.readDeliveriesByPublicIds({
     gameId: GAME,
