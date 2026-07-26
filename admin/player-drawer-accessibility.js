@@ -139,7 +139,7 @@
       if (!(row instanceof HTMLElement)) return;
       row.dataset.adminLedgerRefreshStale = "true";
       row.setAttribute("aria-busy", "true");
-      row.style.visibility = "hidden";
+      row.hidden = true;
     });
   }
 
@@ -148,7 +148,7 @@
       if (!(row instanceof HTMLElement)) return;
       row.removeAttribute("data-admin-ledger-refresh-stale");
       row.removeAttribute("aria-busy");
-      row.style.removeProperty("visibility");
+      row.hidden = false;
     });
   }
 
