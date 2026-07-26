@@ -100,6 +100,14 @@ jobs:
           set -euo pipefail
           LOG=/tmp/admin-browser-supabase-startup.log
           : > "$LOG"
+          mkdir -p backend/supabase/functions
+          {
+            node -e "process.stdout.write('ECONOVARIA_RATE_LIMIT_HMAC_SECRET=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_WEB_SESSION_ENCRYPTION_KEY=' + require('node:crypto').randomBytes(32).toString('base64url') + '\n')"
+            node -e "process.stdout.write('ECONOVARIA_PLAYER_CREDENTIAL_PEPPER=' + require('node:crypto').randomBytes(48).toString('base64url') + '\n')"
+            printf '%s\n' 'ECONOVARIA_TRUSTED_CLIENT_IP_HEADER=x-real-ip'
+          } > backend/supabase/functions/.env
+          chmod 600 backend/supabase/functions/.env
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           for ATTEMPT in 1 2 3; do
             set +e
@@ -229,4 +237,5 @@ jobs:
           if [ -f /tmp/admin-browser-gateway.pid ]; then
             kill "$(cat /tmp/admin-browser-gateway.pid)" 2>/dev/null || true
           fi
+          rm -f backend/supabase/functions/.env
           npx supabase stop --workdir backend --no-backup || true
