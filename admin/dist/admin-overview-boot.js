@@ -5,6 +5,36 @@
   const mount = document.getElementById("adminPreview");
   const feature = window.Econovaria?.features?.adminOverviewTerminal;
   const auth = window.EconovariaAdminAuth;
+  const TERMINAL_PERMISSION_ALIASES = Object.freeze({
+    "account.read": Object.freeze(["account:read", "help:read"]),
+    "audit.read": Object.freeze(["logs:read"]),
+    "attendance.manage": Object.freeze(["attendance:read", "attendance:write"]),
+    "business.manage": Object.freeze(["business:read", "business:write"]),
+    "contracts.manage": Object.freeze(["contracts:read", "contracts:write"]),
+    "economy.adjust": Object.freeze(["economy:read", "economy:write"]),
+    "game.create": Object.freeze(["games:write"]),
+    "game.read": Object.freeze(["overview:read", "games:read"]),
+    "game.switch": Object.freeze(["games:read", "games:write"]),
+    "game.update": Object.freeze(["games:write"]),
+    "inventory.redeem": Object.freeze(["inventory:read", "inventory:write"]),
+    "market.manage": Object.freeze(["market:read", "market:write"]),
+    "marketplace.moderate": Object.freeze(["marketplace:read", "marketplace:write"]),
+    "messaging.moderate": Object.freeze([
+      "messaging:read",
+      "messaging:write",
+      "notifications:read"
+    ]),
+    "players.manage": Object.freeze(["players:read", "players:write"]),
+    "progression.review": Object.freeze(["progression:read", "progression:write"]),
+    "settings.manage": Object.freeze([
+      "settings:read",
+      "settings:write",
+      "security:read",
+      "security:write"
+    ]),
+    "store.manage": Object.freeze(["store:read", "store:write"]),
+    "world.manage": Object.freeze(["world:read", "world:write"])
+  });
 
   if (!mount || !feature || typeof feature.renderShell !== "function") {
     console.error("Eco Novaria admin overview failed to initialize.");
@@ -30,6 +60,22 @@
       permissions,
       roles,
       adminRole: session.adminRole === "game_admin" ? "game_admin" : ""
+    };
+  }
+
+  function terminalAuthorization(authorization) {
+    if (!authorization) return null;
+    const aliases = [];
+    for (const permission of authorization.permissions) {
+      aliases.push(...(TERMINAL_PERMISSION_ALIASES[permission] || []));
+    }
+    return {
+      permissions: normalizedAuthorizationList([
+        ...authorization.permissions,
+        ...aliases
+      ]),
+      roles: authorization.roles,
+      adminRole: authorization.adminRole
     };
   }
 
@@ -61,7 +107,7 @@
 
   function normalizeAuthenticatedModel(value) {
     const next = value && typeof value === "object" ? value : {};
-    const authorization = authenticatedAuthorization();
+    const authorization = terminalAuthorization(authenticatedAuthorization());
     return {
       ...next,
       permissions: authorization?.permissions || [],
