@@ -108,31 +108,6 @@ if (reconciledSource === redirectedSource) {
   throw new Error("Mounted modal focus reconciliation contract changed.");
 }
 
-const controllerHelperSource = `async function controllerDialogForSurface(page, surface, markerName, label) {
-  await surface.waitFor({ state: "visible", timeout: 5000 });
-  const ownership = await surface.evaluate((root, marker) => {
-    const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
-    const dialog = controller?.dialog;
-    const related = dialog instanceof HTMLElement && (
-      dialog === root || root.contains(dialog) || dialog.contains(root)
-    );
-    if (related) dialog.dataset[marker] = "true";
-    return {
-      related,
-      surfaceTag: root.tagName,
-      surfaceClass: root.className,
-      surfaceRole: root.getAttribute("role") || "",
-      controllerDialogTag: dialog?.tagName || "",
-      controllerDialogClass: dialog?.className || "",
-    };
-  }, markerName);
-  assert(ownership.related, label + " is not owned by the shared modal controller: " + JSON.stringify(ownership) + ".");
-  return {
-    dialog: page.locator(\`[data-\${markerName.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase())}="true"]\`),
-    ownership,
-  };
-}`;
-
 const stabilizedControllerHelper = `async function controllerDialogForSurface(page, surface, markerName, label) {
   await surface.waitFor({ state: "visible", timeout: 5000 });
   await surface.evaluate(async (root, input) => {
@@ -173,8 +148,8 @@ const stabilizedControllerHelper = `async function controllerDialogForSurface(pa
 }`;
 
 const controllerReconciledSource = reconciledSource.replace(
-  controllerHelperSource,
-  stabilizedControllerHelper,
+  /async function controllerDialogForSurface\(page, surface, markerName, label\) \{[\s\S]*?\n\}\n\nasync function exercisePlayerProfileModal/,
+  `${stabilizedControllerHelper}\n\nasync function exercisePlayerProfileModal`,
 );
 if (controllerReconciledSource === reconciledSource) {
   throw new Error("Mounted modal controller ownership fixture contract changed.");
