@@ -33,6 +33,16 @@
     };
   }
 
+  function authorizedStaffSession(value, authorization) {
+    const next = value && typeof value === "object" ? value : {};
+    return {
+      ...next,
+      permissions: authorization.permissions,
+      roles: authorization.roles,
+      adminRole: authorization.adminRole
+    };
+  }
+
   function normalizeAuthenticatedModel(value) {
     const next = value && typeof value === "object" ? value : {};
     const authorization = authenticatedAuthorization();
@@ -42,7 +52,10 @@
       ...next,
       permissions: authorization.permissions,
       roles: authorization.roles,
-      adminRole: authorization.adminRole
+      adminRole: authorization.adminRole,
+      ...(next.staffSession && typeof next.staffSession === "object"
+        ? { staffSession: authorizedStaffSession(next.staffSession, authorization) }
+        : {})
     };
   }
 
@@ -54,7 +67,8 @@
       ...next,
       permissions: authorization.permissions,
       roles: authorization.roles,
-      adminRole: authorization.adminRole
+      adminRole: authorization.adminRole,
+      staffSession: authorizedStaffSession(next.staffSession, authorization)
     };
   }
 
