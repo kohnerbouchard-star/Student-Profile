@@ -4,6 +4,7 @@ import { markResourceInvalidations } from "../../api/invalidation-registry.js";
 
 const MESSAGE_READ_FORM = 'form[data-endpoint="messageRead"]';
 const MESSAGE_SEND_FORM = 'form[data-endpoint="messageSend"]';
+const MESSAGE_SEND_CONTROL = "[data-player-message-send]";
 const MESSAGE_THREAD_CONTROL = "[data-player-message-thread]";
 const MESSAGE_SURFACE = ".player-terminal-messages-page";
 const PUBLIC_THREAD_ID = /^thr_[0-9a-f]{32}$/;
@@ -179,7 +180,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
 
   function handleMessagingClick(event) {
     const target = event.target instanceof Element ? event.target : null;
-    const sendButton = target?.closest(`${MESSAGE_SEND_FORM} button[type="submit"]`);
+    const sendButton = target?.closest(MESSAGE_SEND_CONTROL);
     const sendForm = sendButton?.closest(MESSAGE_SEND_FORM);
     if (sendButton instanceof HTMLButtonElement && sendForm instanceof HTMLFormElement && mount.contains(sendForm)) {
       beginSend(event, sendForm, sendButton);
@@ -204,7 +205,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     const target = event.target instanceof Element ? event.target : null;
     const form = target?.closest(MESSAGE_SEND_FORM);
     if (!(form instanceof HTMLFormElement) || !mount.contains(form)) return;
-    beginSend(event, form, form.querySelector('button[type="submit"]'));
+    beginSend(event, form, form.querySelector(MESSAGE_SEND_CONTROL));
   }
 
   mount.addEventListener("click", handleMessagingClick, true);
