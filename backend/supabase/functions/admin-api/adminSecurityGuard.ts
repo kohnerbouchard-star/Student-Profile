@@ -66,6 +66,31 @@ interface AdminSecurityGuardDependencies {
   readonly consumeRateLimit?: typeof consumeAdminProgressionRateLimit;
 }
 
+const ADMIN_RATE_LIMIT_RESOURCES = new Set([
+  "account",
+  "attendance",
+  "auth",
+  "business",
+  "capabilities",
+  "contracts",
+  "dashboard",
+  "games",
+  "inventory",
+  "logs",
+  "market",
+  "marketplace",
+  "messaging",
+  "notifications",
+  "players",
+  "progression",
+  "session",
+  "settings",
+  "store",
+  "world",
+]);
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 export async function guardAdminRequest(
   request: Request,
   context: AdminSecurityContext,
@@ -165,12 +190,51 @@ export async function guardAdminRequest(
 }
 
 export function normalizedAdminAction(method: string, path: string): string {
-  const normalizedPath = String(path || "/")
-    .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/giu, ":uuid")
-    .replace(/\/[0-9]+(?=\/|$)/gu, "/:id")
-    .replace(/\/{2,}/gu, "/")
-    .slice(0, 240);
-  return `admin.${method.toUpperCase()}.${normalizedPath}`;
+  const verb = ["GET", "HEAD"].includes(method.toUpperCase())
+    ? "read"
+    : method.toUpperCase() === "DELETE"
+    ? "delete"
+    : "write";
+  return `staff.admin.${verb}.${adminRateLimitResource(path)}`;
+}
+
+function adminRateLimitResource(path: string): string {
+  const segments = String(path || "/")
+    .split("/", 8)
+    .map((segment) => decodePathSegment(segment))
+    .filter(Boolean);
+
+  let candidate = segments[0] || "unknown";
+  if (
+    candidate === "games" &&
+    segments[1] &&
+    UUID_PATTERN.test(segments[1])
+  ) {
+    candidate = segments[2] || "games";
+  } else if (
+    candidate === "staff" &&
+    segments[1] === "game-sessions" &&
+    segments[2] &&
+    UUID_PATTERN.test(segments[2])
+  ) {
+    candidate = segments[3] || "games";
+  }
+
+  const normalized = candidate
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 32);
+  return ADMIN_RATE_LIMIT_RESOURCES.has(normalized) ? normalized : "unknown";
+}
+
+function decodePathSegment(value: string): string {
+  if (!value) return "";
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
 }
 
 function readOwnedGameScope(
