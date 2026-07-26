@@ -251,9 +251,9 @@
       return;
     }
     signingOut = true;
-    clear();
+    let logoutRequest = Promise.resolve(null);
     try {
-      await nativeFetch(`${WEB_SESSION_API}/logout`, {
+      logoutRequest = nativeFetch(`${WEB_SESSION_API}/logout`, {
         method: "POST",
         headers: {
           apikey: PUBLISHABLE_KEY,
@@ -263,8 +263,14 @@
         credentials: "include",
         cache: "no-store",
         redirect: "error",
-        referrerPolicy: "no-referrer"
+        referrerPolicy: "no-referrer",
+        keepalive: true
       });
+    } finally {
+      clear();
+    }
+    try {
+      await logoutRequest;
     } finally {
       clear();
     }
