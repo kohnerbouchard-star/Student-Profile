@@ -59,6 +59,56 @@ async function visibleAction(page, action) {
   return page.locator(`[data-admin-terminal-action="${action}"]:visible`).first();
 }
 
+async function authorizationDiagnostics(page) {
+  return page.evaluate(() => {
+    const authorization = value => ({
+      permissions: Array.isArray(value?.permissions) ? [...value.permissions] : [],
+      roles: Array.isArray(value?.roles) ? [...value.roles] : [],
+      adminRole: String(value?.adminRole || ""),
+    });
+    const session = window.EconovariaAdminAuth?.getSession?.() || null;
+    const legacy = window.currentSession || null;
+    const stateStaff = window.state?.staffSession || null;
+    const model = window.Econovaria?.features?.adminOverviewTerminal?.currentModel || null;
+    return {
+      auth: {
+        authenticated: session?.authenticated === true,
+        assuranceLevel: String(session?.assuranceLevel || ""),
+        ...authorization(session),
+      },
+      legacy: {
+        ...authorization(legacy),
+        staffSession: authorization(legacy?.staffSession),
+        keys: legacy && typeof legacy === "object" ? Object.keys(legacy).sort() : [],
+      },
+      stateStaff: {
+        ...authorization(stateStaff),
+        keys: stateStaff && typeof stateStaff === "object"
+          ? Object.keys(stateStaff).sort()
+          : [],
+      },
+      model: {
+        ...authorization(model),
+        staffSession: authorization(model?.staffSession),
+        keys: model && typeof model === "object" ? Object.keys(model).sort() : [],
+      },
+      navigation: [...document.querySelectorAll("[data-admin-section]")].map(node => ({
+        section: node.getAttribute("data-admin-section") || "",
+        disabled: node.hasAttribute("disabled"),
+        ariaDisabled: node.getAttribute("aria-disabled") || "",
+        title: node.getAttribute("title") || "",
+      })),
+      quickActions: [...document.querySelectorAll("[data-admin-terminal-action]")].map(node => ({
+        action: node.getAttribute("data-admin-terminal-action") || "",
+        hidden: node.hidden,
+        disabled: node.hasAttribute("disabled"),
+      })).filter(entry => entry.action),
+      gate: document.querySelector(".admin-terminal-session-gate-v604")?.textContent
+        ?.trim().replace(/\s+/g, " ") || "",
+    };
+  });
+}
+
 async function tabTo(page, start, target, label) {
   await start.focus();
   for (let count = 0; count <= 50; count += 1) {
@@ -200,6 +250,7 @@ async function exercise([action, section, key]) {
   } catch (error) {
     result.failure = error?.stack || error?.message || String(error);
     result.errors = [...errors];
+    result.authorization = await authorizationDiagnostics(page).catch(() => null);
     await harness.capture(`${action}-failure`).catch(() => {});
     throw error;
   } finally {
