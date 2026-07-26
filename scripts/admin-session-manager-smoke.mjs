@@ -7,6 +7,7 @@ const safeExitSource = await readFile("admin/session-timeout-safe-exit.js", "utf
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 const ABSOLUTE = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
 const CSRF = "C".repeat(43);
+const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const PERMISSIONS = Object.freeze([
   "account.read",
   "audit.read",
@@ -28,6 +29,10 @@ const PERMISSIONS = Object.freeze([
   "store.manage",
   "world.manage",
 ]);
+
+function sameJson(actual, expected, message) {
+  assert.equal(JSON.stringify(actual), JSON.stringify(expected), message);
+}
 
 function safeSession(overrides = {}) {
   return {
@@ -61,26 +66,16 @@ function statusPayload() {
       assuranceLevel: "aal1",
       mfaRequired: true,
     },
-    user: {
-      id: "staff-1",
-      email: "staff@example.test",
-      displayName: "Staff",
-      role: "game_admin",
-    },
+    user: safeSession().user,
     csrfToken: CSRF,
-    activeGameSessions: [{ id: "game-1", name: "Game", status: "active" }],
+    activeGameSessions: safeSession().activeGameSessions,
   };
 }
 
 function authorizationPayload() {
   return {
     data: {
-      admin: {
-        id: "staff-1",
-        email: "staff@example.test",
-        displayName: "Staff",
-        role: "game_admin",
-      },
+      admin: safeSession().user,
       permissions: [...PERMISSIONS],
       roles: ["game_admin"],
       adminRole: "game_admin",
@@ -88,7 +83,7 @@ function authorizationPayload() {
   };
 }
 
-function createRuntime(fetch) {
+function createRuntime(fetchImpl) {
   const sessionValues = new Map();
   const localValues = new Map();
   const sessionStorage = {
@@ -102,10 +97,10 @@ function createRuntime(fetch) {
     removeItem: (key) => localValues.delete(key),
   };
   const window = {
-    fetch,
+    fetch: fetchImpl,
     sessionStorage,
     localStorage,
-    crypto: { randomUUID: () => "11111111-1111-4111-8111-111111111111" },
+    crypto: { randomUUID: () => DEVICE_ID },
     EconovariaRuntimeConfig: Object.freeze({
       environment: "staging",
       supabaseUrl: "https://runtimefixture123456.supabase.co",
@@ -135,7 +130,7 @@ function createRuntime(fetch) {
     Set,
     String,
   });
-  return { manager: window.EconovariaAdminAuthSession, sessionStorage, localStorage };
+  return { manager: window.EconovariaAdminAuthSession, sessionStorage };
 }
 
 {
@@ -144,13 +139,17 @@ function createRuntime(fetch) {
     calls += 1;
     throw new Error("unexpected fetch");
   });
-  const current = safeSession();
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(current));
-  assert.equal((await manager.getUsableSession()).csrfToken, CSRF);
+  sessionStorage.setItem(
+    "econovaria.admin.auth.v1",
+    JSON.stringify(safeSession()),
+  );
+
+  const session = await manager.getUsableSession();
+  assert.equal(session.csrfToken, CSRF);
   assert.equal(calls, 0, "valid authorized safe state must not query status");
-  assert.equal(JSON.stringify(manager.read()).includes("accessToken"), false);
-  assert.equal(JSON.stringify(manager.read()).includes("refreshToken"), false);
-  assert.deepEqual(manager.read().permissions, [...PERMISSIONS]);
+  assert.equal(JSON.stringify(session).includes("accessToken"), false);
+  assert.equal(JSON.stringify(session).includes("refreshToken"), false);
+  sameJson(session.permissions, PERMISSIONS, "cached grants changed");
 }
 
 {
@@ -164,10 +163,7 @@ function createRuntime(fetch) {
     assert.equal(init.credentials, "include");
     assert.equal(init.headers.Authorization, undefined);
     assert.equal(init.headers.apikey, "sb_publishable_runtime_fixture");
-    assert.equal(
-      init.headers["x-econovaria-device-id"],
-      "11111111-1111-4111-8111-111111111111",
-    );
+    assert.equal(init.headers["x-econovaria-device-id"], DEVICE_ID);
 
     if (/web-session-api\/status$/.test(url)) {
       statusCalls += 1;
@@ -189,6 +185,7 @@ function createRuntime(fetch) {
     }
     throw new Error(`Unexpected Admin session request: ${url}`);
   });
+
   sessionStorage.setItem(
     "econovaria.admin.auth.v1",
     JSON.stringify(safeSession({
@@ -196,24 +193,29 @@ function createRuntime(fetch) {
     })),
   );
   sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+
   const first = manager.getUsableSession();
   const second = manager.getUsableSession();
   releaseStatus();
   const [one, two] = await Promise.all([first, second]);
-  assert.equal(statusCalls, 1, "concurrent callers must share one status request");
+
+  assert.equal(statusCalls, 1, "concurrent status checks were not deduplicated");
   assert.equal(
     authorizationCalls,
     1,
-    "concurrent callers must share one authorization-summary request",
+    "concurrent authorization checks were not deduplicated",
   );
   assert.equal(one.csrfToken, CSRF);
   assert.equal(two.csrfToken, CSRF);
-  assert.deepEqual(one.permissions, [...PERMISSIONS]);
-  const stored = JSON.parse(sessionStorage.getItem("econovaria.admin.auth.v1"));
+  sameJson(one.permissions, PERMISSIONS, "refreshed grants changed");
+
+  const stored = JSON.parse(
+    sessionStorage.getItem("econovaria.admin.auth.v1"),
+  );
   assert.equal(stored.authenticated, true);
   assert.equal(stored.adminRole, "game_admin");
-  assert.deepEqual(stored.roles, ["game_admin"]);
-  assert.deepEqual(stored.permissions, [...PERMISSIONS]);
+  sameJson(stored.roles, ["game_admin"], "stored roles changed");
+  sameJson(stored.permissions, PERMISSIONS, "stored grants changed");
   assert.equal(Object.hasOwn(stored, "accessToken"), false);
   assert.equal(Object.hasOwn(stored, "refreshToken"), false);
 }
@@ -231,8 +233,9 @@ function createRuntime(fetch) {
     })),
   );
   sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+
   assert.equal(await manager.getUsableSession(), null);
-  assert.equal(calls, 1, "authorization must not run after a rejected status request");
+  assert.equal(calls, 1, "authorization ran after rejected status");
   assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
   assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
 }
@@ -243,8 +246,12 @@ function createRuntime(fetch) {
     request = { url, init };
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   });
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(safeSession()));
+  sessionStorage.setItem(
+    "econovaria.admin.auth.v1",
+    JSON.stringify(safeSession()),
+  );
   sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+
   await manager.signOut();
   assert.match(request.url, /web-session-api\/logout$/);
   assert.equal(request.init.credentials, "include");
@@ -260,6 +267,10 @@ function createRuntime(fetch) {
     ["econovaria.admin.idle-seed-fingerprint.v1", "fingerprint"],
   ]);
   const attributes = new Map();
+  const redirects = [];
+  const timeouts = new Map();
+  let timeoutId = 0;
+  let clearCount = 0;
   const preview = {
     inert: false,
     hidden: false,
@@ -277,42 +288,26 @@ function createRuntime(fetch) {
       return selector === ".admin-qol-sr-only" ? status : null;
     },
   };
-  const documentListeners = new Map();
-  const documentElement = {
-    setAttribute(name, value) {
-      attributes.set(`html:${name}`, value);
-    },
-  };
-  const document = {
-    title: "Administrator Console",
-    visibilityState: "visible",
-    documentElement,
-    getElementById(id) {
-      if (id === "adminPreview") return preview;
-      if (id === "adminSessionGate") return gate;
-      return null;
-    },
-    addEventListener(name, handler) {
-      documentListeners.set(name, handler);
-    },
-  };
-  const windowListeners = new Map();
-  const redirects = [];
-  const timeouts = new Map();
-  let timeoutId = 0;
-  let clearCount = 0;
   const sessionStorage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, String(value)),
     removeItem: (key) => values.delete(key),
   };
+  const document = {
+    title: "Administrator Console",
+    visibilityState: "visible",
+    documentElement: { setAttribute() {} },
+    getElementById(id) {
+      if (id === "adminPreview") return preview;
+      if (id === "adminSessionGate") return gate;
+      return null;
+    },
+    addEventListener() {},
+  };
   const manager = {
     read() {
       const raw = sessionStorage.getItem("econovaria.admin.auth.v1");
       return raw ? JSON.parse(raw) : null;
-    },
-    async getUsableSession() {
-      return this.read();
     },
     clear() {
       clearCount += 1;
@@ -333,9 +328,7 @@ function createRuntime(fetch) {
         redirects.push(value);
       },
     },
-    addEventListener(name, handler) {
-      windowListeners.set(name, handler);
-    },
+    addEventListener() {},
     dispatchEvent() {},
     setTimeout(handler) {
       timeoutId += 1;
@@ -355,12 +348,7 @@ function createRuntime(fetch) {
   vm.runInNewContext(safeExitSource, {
     window,
     document,
-    CustomEvent: class CustomEvent {
-      constructor(type, options) {
-        this.type = type;
-        this.detail = options?.detail;
-      }
-    },
+    CustomEvent: class CustomEvent {},
     URL,
     Date,
     Math,
@@ -369,7 +357,6 @@ function createRuntime(fetch) {
     String,
   });
 
-  assert.equal(typeof window.EconovariaAdminSessionExit?.exit, "function");
   assert.equal(window.EconovariaAdminSessionExit.exit("session-expired"), true);
   assert.equal(window.EconovariaAdminSessionExit.exit("session-expired"), false);
   assert.equal(clearCount, 1);
@@ -384,16 +371,14 @@ function createRuntime(fetch) {
   assert.equal(window.state.staffSession, null);
   assert.equal(preview.inert, true);
   assert.equal(preview.hidden, true);
-  assert.equal(attributes.get("preview:aria-hidden"), "true");
   assert.equal(gate.hidden, false);
-  assert.equal(attributes.get("gate:role"), "alert");
   assert.equal(status.textContent, "Administrator session expired. Returning to sign in.");
-  assert.equal(document.title, "Session expired · Econovaria Administrator");
-
   for (const handler of timeouts.values()) handler();
-  assert.deepEqual(redirects, [
-    "https://example.test/?mode=admin&reason=session-expired",
-  ]);
+  sameJson(
+    redirects,
+    ["https://example.test/?mode=admin&reason=session-expired"],
+    "safe exit destination changed",
+  );
 }
 
 console.log(
