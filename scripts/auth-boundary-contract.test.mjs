@@ -204,13 +204,31 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(sessionRoute, /proxyAdmin:\s*false/);
 });
 
-test("server runners use publishable identity plus dedicated authorization", async () => {
-  const trigger = await read("scripts/trigger-stock-market-tick.mjs");
+test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
+  const [trigger, runner, auth, migration] = await Promise.all([
+    read("scripts/trigger-stock-market-tick.mjs"),
+    read("backend/supabase/functions/stock-market-runner/index.ts"),
+    read("backend/src/security/internalRunnerAuth.ts"),
+    read("backend/supabase/migrations/20260726097000_add_internal_runner_nonce_replay_v2.sql"),
+  ]);
   assert.match(trigger, /SUPABASE_PUBLISHABLE_KEY/);
   assert.match(trigger, /apikey:\s*publishableKey/);
-  assert.match(trigger, /x-stock-market-runner-secret/);
+  assert.match(trigger, /x-econovaria-runner-timestamp/);
+  assert.match(trigger, /x-econovaria-runner-nonce/);
+  assert.match(trigger, /x-econovaria-runner-signature/);
+  assert.match(trigger, /createHmac\("sha256", runnerSecret\)/);
+  assert.doesNotMatch(trigger, /"x-stock-market-runner-secret"\s*:/);
   assert.doesNotMatch(trigger, /SUPABASE_ANON_KEY/);
   assert.doesNotMatch(trigger, /authorization:\s*`Bearer/);
+
+  assert.match(runner, /requirePublishableRequest\(request\)/);
+  assert.match(runner, /authorizeInternalRunnerRequest\(request/);
+  assert.match(runner, /claim_internal_runner_nonce_v2/);
+  assert.match(auth, /econovaria-internal-runner-v1/);
+  assert.match(auth, /crypto\.subtle\.verify/);
+  assert.match(auth, /internal_runner_replay_denied/);
+  assert.match(migration, /internal_runner_nonce_claims/);
+  assert.match(migration, /auth\.role\(\) <> 'service_role'/);
 
   for (const name of [
     "stock-market-runner",
