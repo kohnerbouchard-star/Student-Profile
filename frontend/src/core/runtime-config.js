@@ -134,6 +134,9 @@
     const adminBffApiUrl = environment === "production"
       ? "/api/admin"
       : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
+    const passwordResetApiUrl = environment === "production"
+      ? "/api/password-reset"
+      : `${apiBaseUrl}/functions/v1/password-reset-api`;
 
     return Object.freeze({
       environment,
@@ -147,6 +150,7 @@
       adminApiUrl,
       webSessionApiUrl,
       adminBffApiUrl,
+      passwordResetApiUrl,
       classroomApiUrl: staffApiUrl,
     });
   }
