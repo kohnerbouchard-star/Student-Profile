@@ -2,6 +2,7 @@ import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent,
 import { icon } from "../components/icons.js";
 import { renderChange, renderEmptyState, renderStatusPill } from "../components/ui.js";
 import { isResourceUnavailable } from "../api/resource-status.js";
+import { marketPositionForAsset } from "../api/portfolio-market-holdings.js";
 
 function chartPath(values, width = 720, height = 260, padding = 18) {
   const safeValues = Array.isArray(values) && values.length ? values : [0, 0];
@@ -36,8 +37,9 @@ export function renderMarketPage(data, ui) {
   const path = chartPath(selected.history);
   const chartHistory = escapeHtml(JSON.stringify(Array.isArray(selected.history) ? selected.history : []));
   const currencyCode = data.session.currencyCode;
-  const positionValue = selected.owned * selected.price;
-  const gain = selected.owned ? positionValue - selected.owned * selected.averageCost : 0;
+  const position = marketPositionForAsset(data.portfolio, selected);
+  const positionValue = position.owned * selected.price;
+  const gain = position.owned ? positionValue - position.owned * position.averageCost : 0;
   const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
   const bankingUnavailable = isResourceUnavailable(data, "banking");
   const newsUnavailable = isResourceUnavailable(data, "news");
@@ -99,8 +101,8 @@ export function renderMarketPage(data, ui) {
           <span><small>RISK / OUTLOOK</small><strong>${escapeHtml(selected.risk)} · ${escapeHtml(selected.outlook)}</strong></span>
         </div>
         <div class="player-terminal-position-strip">
-          <div><small>YOUR POSITION</small><strong>${escapeHtml(formatNumber(selected.owned))} shares</strong></div>
-          <div><small>AVERAGE COST</small><strong>${selected.owned ? escapeHtml(formatCurrency(selected.averageCost, currencyCode)) : "—"}</strong></div>
+          <div><small>YOUR POSITION</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></div>
+          <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, currencyCode)) : "—"}</strong></div>
           <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, currencyCode))}</strong></div>
           <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, currencyCode))}</strong></div>
         </div>
