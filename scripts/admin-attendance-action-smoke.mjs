@@ -86,18 +86,28 @@ try {
     throw new Error(`Expected one BFF attendance mutation: ${JSON.stringify(writes)}.`);
   }
   const write = attendanceWrites[0];
-  const payload = flatten(write.parsedBody);
-  if (payload.playerId !== "PLAYER-CODE-123") {
+  const command = write.parsedBody || {};
+  const payload = flatten(command);
+  if (
+    command.action !== "submit-attendance-scan" ||
+    payload.code !== "PLAYER-CODE-123" ||
+    payload.scanMode !== "manual" ||
+    payload.source !== "confirm"
+  ) {
     throw new Error(`Attendance mutation sent unexpected body ${JSON.stringify(write.parsedBody)}.`);
+  }
+  if (!command.idempotencyKey || command.idempotencyKey !== command.requestId) {
+    throw new Error("Attendance mutation omitted its canonical idempotency/request identity.");
   }
   if (write.headers.authorization !== undefined) {
     throw new Error("Attendance mutation exposed Staff Authorization.");
   }
   if (
     write.headers["x-econovaria-game-id"] !== GAME_ID ||
-    !write.headers["x-econovaria-csrf-token"]
+    !write.headers["x-econovaria-csrf-token"] ||
+    write.headers["x-idempotency-key"] !== command.idempotencyKey
   ) {
-    throw new Error("Attendance mutation omitted BFF game scope or cookie-bound CSRF.");
+    throw new Error("Attendance mutation omitted BFF game scope, cookie-bound CSRF, or idempotency.");
   }
   if (result.resultHidden || !result.emptyHidden || !/confirmed|completed/i.test(result.scannerState)) {
     throw new Error(`Attendance result did not reach confirmed visible state: ${JSON.stringify(result)}.`);
