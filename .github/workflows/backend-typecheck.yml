@@ -7,7 +7,7 @@ on:
       - "api/**"
       - "admin/**"
       - "auth/**"
-      - "frontend/src/core/**"
+      - "frontend/src/**"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:
@@ -17,7 +17,7 @@ on:
       - "api/**"
       - "admin/**"
       - "auth/**"
-      - "frontend/src/core/**"
+      - "frontend/src/**"
       - ".github/workflows/backend-typecheck.yml"
 
 permissions:
@@ -78,6 +78,7 @@ jobs:
             node --check ../admin/session-timeout-safe-exit.js
             node --check ../auth/reset-password.js
             node --check ../frontend/src/core/api.js
+            node --check ../frontend/src/core/admin-mfa.js
             node --check ../frontend/src/core/login.js
           } > /tmp/backend-typecheck.log 2>&1
           echo $? > /tmp/backend-typecheck.status
