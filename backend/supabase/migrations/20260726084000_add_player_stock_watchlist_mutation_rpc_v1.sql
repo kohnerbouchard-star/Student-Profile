@@ -73,7 +73,8 @@ begin
       p_player_id,
       v_asset_id
     )
-    on conflict (game_session_id, player_id, stock_asset_id) do nothing;
+    on conflict on constraint player_stock_watchlist_game_player_asset_unique
+    do nothing;
     get diagnostics v_changed_rows = row_count;
   else
     delete from public.player_stock_watchlist as watchlist
