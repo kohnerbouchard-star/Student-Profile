@@ -69,12 +69,13 @@ test("MFA UI keeps enrollment material in page memory only", async () => {
   assert.doesNotMatch(source, /refreshToken/);
 });
 
-test("Staff MFA direct service remains platform-JWT verified", async () => {
+test("Staff MFA direct service and disposable local TOTP remain enabled", async () => {
   const [config, source] = await Promise.all([
     read("backend/supabase/config.toml"),
     read("backend/supabase/functions/staff-mfa-api/index.ts"),
   ]);
 
+  assert.match(config, /\[auth\.mfa\.totp\]\s*enroll_enabled = true\s*verify_enabled = true/s);
   assert.match(config, /\[functions\.staff-mfa-api\]\s*verify_jwt = true/s);
   assert.match(source, /resolveStaffSessionForRequest/);
   assert.match(source, /requiredRole: "game_admin"/);
