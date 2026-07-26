@@ -136,7 +136,7 @@ test("gateway strips publishable bearer and preserves real staff JWT", () => {
   );
   assert.equal(result.staffForwarded["x-real-ip"], "127.0.0.1");
   assert.equal(result.staffForwarded["x-forwarded-for"], undefined);
-  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v1");
+  assert.equal(result.staticHeaders["X-Econovaria-Local-Gateway"], "publishable-only-v2");
 });
 
 test("Player Terminal sends publishable key only as apikey", async () => {
