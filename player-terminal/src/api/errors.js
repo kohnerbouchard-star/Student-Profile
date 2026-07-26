@@ -32,7 +32,7 @@ const CODE_MESSAGES = Object.freeze({
   REQUEST_TIMEOUT: "The game service took too long to respond. Try again.",
   ROUTE_DATA_UNAVAILABLE: "This section could not be loaded. Other terminal sections remain available.",
   STORE_IDEMPOTENCY_CONFLICT: "This purchase request conflicts with an earlier Store request. Review the purchase and try again.",
-  STORE_INSUFFICIENT_BALANCE: "You do not have enough available cash for this Store purchase.",
+  STORE_INSUFFICIENT_BALANCE: "You do not have enough available checking funds for this Store purchase.",
   STORE_INSUFFICIENT_STOCK: "The requested quantity is no longer available. Request a new Store quote.",
   STORE_ITEM_NOT_AVAILABLE: "This Store item is no longer available.",
   STORE_PURCHASE_IN_PROGRESS: "This Store purchase is still processing. Wait a moment before retrying.",
