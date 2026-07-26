@@ -19,11 +19,13 @@ interface QueryResponse<T> {
 interface FilterBuilder
   extends PromiseLike<QueryResponse<readonly Record<string, unknown>[]>> {
   eq(column: string, value: unknown): FilterBuilder;
+  in(column: string, values: readonly unknown[]): FilterBuilder;
   order(
     column: string,
     options?: { readonly ascending?: boolean },
   ): FilterBuilder;
   range(from: number, to: number): FilterBuilder;
+  limit(count: number): FilterBuilder;
 }
 
 interface QueryBuilder {
@@ -31,7 +33,9 @@ interface QueryBuilder {
 }
 
 interface PlayerStockAssetListClient {
-  from(tableName: "game_session_stock_assets"): QueryBuilder;
+  from(
+    tableName: "game_session_stock_assets" | "player_stock_watchlist",
+  ): QueryBuilder;
   rpc<T>(
     functionName: string,
     args?: unknown,
@@ -56,6 +60,7 @@ const ASSET_SELECT = [
   "long_run_volatility",
   "is_active",
 ].join(",");
+const WATCHLIST_SELECT = "game_session_id,player_id,stock_asset_id";
 
 export class SupabasePlayerStockAssetListRepository
   implements PlayerStockAssetListRepository {
@@ -63,6 +68,7 @@ export class SupabasePlayerStockAssetListRepository
 
   async listAssets(input: {
     readonly gameId: string;
+    readonly playerUuid: string;
     readonly limit: number;
     readonly offset: number;
   }): Promise<PlayerStockAssetListRepositoryResult> {
@@ -87,10 +93,45 @@ export class SupabasePlayerStockAssetListRepository
     if (assetResponse.error) throw mapPersistenceError(assetResponse.error);
     if (tickResponse.error) throw mapPersistenceError(tickResponse.error);
 
+    const assets = (assetResponse.data ?? []).map(toAssetRecord);
+    const assetIds = assets.map((asset) => asset.internalAssetUuid);
+    let watchlistedAssetUuids: string[] = [];
+
+    if (assetIds.length > 0) {
+      const watchlistResponse = await this.client
+        .from("player_stock_watchlist")
+        .select(WATCHLIST_SELECT)
+        .eq("game_session_id", input.gameId)
+        .eq("player_id", input.playerUuid)
+        .in("stock_asset_id", assetIds)
+        .limit(assetIds.length + 1);
+      if (watchlistResponse.error) {
+        throw mapPersistenceError(watchlistResponse.error);
+      }
+
+      const assetIdSet = new Set(assetIds);
+      watchlistedAssetUuids = (watchlistResponse.data ?? []).map((row) => {
+        if (
+          requireUuid(row.game_session_id) !== input.gameId ||
+          requireUuid(row.player_id) !== input.playerUuid
+        ) {
+          throw readFailed();
+        }
+        const assetUuid = requireUuid(row.stock_asset_id);
+        if (!assetIdSet.has(assetUuid)) throw readFailed();
+        return assetUuid;
+      });
+      if (new Set(watchlistedAssetUuids).size !== watchlistedAssetUuids.length) {
+        throw readFailed();
+      }
+    }
+
     return {
       gameId: input.gameId,
-      assets: (assetResponse.data ?? []).map(toAssetRecord),
+      playerUuid: input.playerUuid,
+      assets,
       latestTicks: (tickResponse.data ?? []).map(toLatestTickRecord),
+      watchlistedAssetUuids,
     };
   }
 }
