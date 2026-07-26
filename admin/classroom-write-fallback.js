@@ -1,18 +1,12 @@
-(function initEconovariaClassroomWriteFallback() {
+(function initEconovariaAdminWriteLifecycleAdapter() {
   "use strict";
 
-  const runtimeConfig = window.EconovariaRuntimeConfig;
-  if (!runtimeConfig) {
+  if (!window.EconovariaRuntimeConfig) {
     throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
   }
-  const SUPABASE_URL = runtimeConfig.supabaseUrl;
-  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
-  const CLASSROOM_API_BASE = runtimeConfig.classroomApiUrl;
+
   const LOCAL_API_PREFIX = "/api/admin";
-  const SESSION_KEY = "econovaria.admin.auth.v1";
-  const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const LIFECYCLE_EVENT = "econovaria:admin-request-lifecycle";
-  const retryStatuses = new Set([400, 404, 501]);
   const delegatedFetch = window.fetch.bind(window);
   const eventTarget = window.document || null;
   const cryptoRuntime = window.crypto || globalThis.crypto || null;
@@ -85,7 +79,6 @@
         }
         return result;
       }
-
       const raw = await request.clone().text();
       if (!raw) return {};
       try {
@@ -99,9 +92,8 @@
   }
 
   function isAdminRequest(url) {
-    return url.pathname.startsWith(LOCAL_API_PREFIX) ||
-      url.pathname.includes("/functions/v1/admin-api/") ||
-      url.pathname.includes("/functions/v1/classroom-api/");
+    return url.origin === window.location.origin &&
+      url.pathname.startsWith(LOCAL_API_PREFIX);
   }
 
   function inferLifecycleAction(source, url, method) {
@@ -198,10 +190,7 @@
 
     const reason = first(source, ["reason", "note", "ledgerNote", "memo"]);
     if (reason !== undefined) normalized.reason = reason;
-
-    normalized.accountType = text(
-      first(source, ["accountType", "account"]),
-    ) || "cash";
+    normalized.accountType = text(first(source, ["accountType", "account"])) || "cash";
     normalized.currencyCode = (
       text(first(source, ["currencyCode", "currency"])) || "ECO"
     ).toUpperCase();
@@ -214,11 +203,8 @@
         "date",
         "recordDate",
       ]);
-      if (attendanceDate !== undefined) {
-        normalized.attendanceDate = attendanceDate;
-      }
+      if (attendanceDate !== undefined) normalized.attendanceDate = attendanceDate;
     }
-
     return normalized;
   }
 
@@ -232,7 +218,6 @@
     }
     const source = flattened(await requestJson(request));
     const normalized = normalizedLedgerMutation(source, url.pathname);
-    // Default contract: idempotencyKey: lifecycle.requestId.
     const idempotencyKey = text(
       normalized.idempotencyKey ||
       request.headers.get("x-idempotency-key") ||
@@ -250,8 +235,7 @@
   }
 
   function beginLifecycle(lifecycle) {
-    if (!lifecycle) return;
-    emitLifecycle({ ...lifecycle, phase: "started" });
+    if (lifecycle) emitLifecycle({ ...lifecycle, phase: "started" });
   }
 
   async function finishLifecycle(lifecycle, response) {
@@ -281,9 +265,7 @@
   }
 
   async function canonicalWrite(request, url) {
-    if (request.method !== "POST" || !url.pathname.startsWith(LOCAL_API_PREFIX)) {
-      return null;
-    }
+    if (request.method !== "POST" || !isAdminRequest(url)) return null;
 
     const playerMatch = url.pathname.match(
       /^\/api\/admin\/games\/([^/]+)\/players$/,
@@ -363,19 +345,10 @@
         body: { playerId, deviceTimezone: deviceTimezone || null },
       };
     }
-
     return null;
   }
 
-  function storedSession() {
-    try {
-      return record(JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null"));
-    } catch (_) {
-      return {};
-    }
-  }
-
-  window.fetch = async function econovariaClassroomWriteFallback(input, init) {
+  window.fetch = async function econovariaAdminWriteLifecycle(input, init) {
     const rawUrl = input instanceof Request
       ? input.url
       : new URL(String(input), window.location.href).href;
@@ -388,48 +361,7 @@
     beginLifecycle(lifecycle);
 
     try {
-      const canonical = await canonicalWrite(request, url);
-      if (!canonical) {
-        const response = await delegatedFetch(request);
-        await finishLifecycle(lifecycle, response);
-        return response;
-      }
-
-      const primary = await delegatedFetch(request);
-      if (primary.ok || !retryStatuses.has(primary.status)) {
-        await finishLifecycle(lifecycle, primary);
-        return primary;
-      }
-
-      const session = storedSession();
-      const accessToken = text(session.accessToken);
-      const selectedGameId = text(
-        window.sessionStorage.getItem(SELECTED_GAME_KEY),
-      );
-      if (!accessToken || (selectedGameId && selectedGameId !== canonical.gameId)) {
-        await finishLifecycle(lifecycle, primary);
-        return primary;
-      }
-
-      const headers = new Headers(request.headers);
-      headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
-      headers.set("Authorization", `Bearer ${accessToken}`);
-      headers.set("Content-Type", "application/json");
-      headers.set("X-Econovaria-Game-Id", canonical.gameId);
-      headers.delete("Content-Length");
-      headers.delete("X-CSRF-Token");
-      headers.delete("X-Econovaria-CSRF");
-      headers.delete("X-Econovaria-Admin-Read");
-
-      const response = await delegatedFetch(`${CLASSROOM_API_BASE}${canonical.path}`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(canonical.body),
-        credentials: "omit",
-        cache: "no-store",
-        redirect: "follow",
-        referrerPolicy: "no-referrer",
-      });
+      const response = await delegatedFetch(request);
       await finishLifecycle(lifecycle, response);
       return response;
     } catch (error) {
@@ -438,9 +370,10 @@
     }
   };
 
-  window.EconovariaClassroomWriteFallback = {
+  window.EconovariaClassroomWriteFallback = Object.freeze({
     canonicalWrite,
     unwrapAdminTerminalResponsePayload: unwrapResponsePayload,
     lifecycleEvent: LIFECYCLE_EVENT,
-  };
+    legacyClassroomFallbackRetired: true,
+  });
 })();
