@@ -12,7 +12,7 @@ import { previewData } from "../src/data/preview-data.js";
 const data = structuredClone(previewData);
 data.session.currencyCode = "ECO";
 data.banking = {
-  checking: { accountId: "CASH", balance: 1250, available: 1250, pending: 0, currencyCode: "ECO" },
+  checking: { accountId: "CHECKING", balance: 1250, available: 1250, pending: 0, currencyCode: "ECO" },
   savings: {
     configured: false,
     accountId: "NOT CONFIGURED",
@@ -23,8 +23,8 @@ data.banking = {
     currencyCode: ""
   },
   balances: [
-    { accountType: "cash", balance: 1250, currencyCode: "ECO" },
-    { accountType: "cash", balance: 40, currencyCode: "LUM" }
+    { accountType: "checking", balance: 1250, currencyCode: "ECO" },
+    { accountType: "checking", balance: 40, currencyCode: "LUM" }
   ],
   generatedAt: "2026-07-19T04:00:00.000Z",
   staleAt: "2026-07-19T04:02:00.000Z",
@@ -42,7 +42,7 @@ data.banking = {
       category: "contracts",
       amount: 25,
       status: "Posted",
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO"
     },
     {
@@ -52,17 +52,20 @@ data.banking = {
       category: "economy",
       amount: -4,
       status: "Posted",
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "LUM"
     }
   ]
 };
 
 const html = renderBankingPage(data);
-assert.ok(html.includes("ECO 1,250"), "The authoritative ECO balance must render.");
-assert.ok(html.includes("LUM 40"), "Every returned balance currency must render, not only the first cash row.");
-assert.ok(html.includes('data-player-banking-balance="cash:ECO"'));
-assert.ok(html.includes('data-player-banking-balance="cash:LUM"'));
+assert.ok(html.includes("ECO 1,250"), "The authoritative ECO checking balance must render.");
+assert.ok(html.includes("LUM 40"), "Every returned checking currency must render.");
+assert.ok(html.includes('data-player-banking-balance="checking:ECO"'));
+assert.ok(html.includes('data-player-banking-balance="checking:LUM"'));
+assert.ok(html.includes("CHECKING ACCOUNT"));
+assert.ok(!html.includes("CASH ACCOUNT"));
+assert.ok(!html.includes("Cash ·"));
 assert.ok(html.includes("STALE DATA"), "Expired freshness metadata must be visible.");
 assert.ok(html.includes("NOT CONFIGURED"));
 assert.ok(html.includes("CREDIT NOT CONFIGURED"));
@@ -82,13 +85,25 @@ assert.ok(html.includes("LUM -4"), "Each ledger entry must use its authoritative
 assert.ok(html.includes("POSTED LEDGER ACTIVITY"));
 assert.ok(html.includes("data-player-banking-load-more"), "A real continuation control must render when the Backend returns a next cursor.");
 
+const legacyData = structuredClone(data);
+legacyData.banking.balances = [
+  { accountType: "cash", balance: 1250, currencyCode: "ECO" },
+];
+const legacyHtml = renderBankingPage(legacyData);
+assert.ok(
+  legacyHtml.includes('data-player-banking-balance="checking:ECO"'),
+  "Legacy cash rows must be translated to the canonical checking account at the browser boundary.",
+);
+assert.ok(!legacyHtml.includes('data-player-banking-balance="cash:ECO"'));
+assert.ok(!legacyHtml.includes("CASH ACCOUNT"));
+
 const fallbackData = structuredClone(data);
 fallbackData.banking.balances = [];
 fallbackData.banking.checking.accountId = "account_public_123";
 const fallbackHtml = renderBankingPage(fallbackData);
 assert.ok(
-  fallbackHtml.includes('data-player-banking-balance="cash:ECO"'),
-  "The checking fallback must retain the semantic cash account type even when the public account key is non-semantic.",
+  fallbackHtml.includes('data-player-banking-balance="checking:ECO"'),
+  "The checking fallback must retain the semantic checking account type when the public account key is non-semantic.",
 );
 assert.ok(
   !fallbackHtml.includes('data-player-banking-balance="account_public_123:ECO"'),
@@ -122,8 +137,8 @@ assert.equal(nextPageRoute.path.includes("playerId"), false);
 const nextPage = {
   ...data.banking,
   balances: [
-    { accountType: "cash", balance: 1275, currencyCode: "ECO" },
-    { accountType: "cash", balance: 40, currencyCode: "LUM" }
+    { accountType: "checking", balance: 1275, currencyCode: "ECO" },
+    { accountType: "checking", balance: 40, currencyCode: "LUM" }
   ],
   transactions: [
     data.banking.transactions[1],
@@ -134,7 +149,7 @@ const nextPage = {
       category: "store",
       amount: -10,
       status: "Posted",
-      accountType: "cash",
+      accountType: "checking",
       currencyCode: "ECO"
     }
   ],
@@ -194,5 +209,6 @@ assert.match(controllerSource, /state\.data\.banking = banking/);
 
 const serialized = JSON.stringify({ data, ledgerRoute, nextPageRoute, merged });
 assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized), false);
+assert.equal(serialized.includes('"accountType":"cash"'), false);
 
-console.log("Banking read model passed: connected pagination, all balances, freshness, empty state, and UUID privacy are valid.");
+console.log("Banking read model passed: checking terminology, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
