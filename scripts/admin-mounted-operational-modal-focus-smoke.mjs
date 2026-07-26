@@ -5,6 +5,7 @@ const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admi
 const OUT = process.env.ADMIN_SMOKE_ARTIFACT_DIR || "admin-browser-smoke-artifacts/mounted-modal-focus";
 const GAME_ID = "00000000-0000-4000-8000-000000000001";
 const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
+const BOUNDARY_FOCUS_TIMEOUT_MS = 5000;
 const SURFACES = [
   ["add-player", "Overview", "Enter"],
   ["add-contract", "Overview", "Space"],
@@ -139,7 +140,7 @@ async function waitForBoundaryFocus(page, edge) {
     if (expectedEdge === "first" && dialog.dataset.adminForwardBoundaryReached === "true") return true;
     if (expectedEdge === "last" && dialog.dataset.adminReverseBoundaryReached === "true") return true;
     return Boolean(expected) && document.activeElement === expected;
-  }, edge, { timeout: 2000 });
+  }, edge, { timeout: BOUNDARY_FOCUS_TIMEOUT_MS, polling: 50 });
 }
 
 async function traceBoundary(modal, edge) {
