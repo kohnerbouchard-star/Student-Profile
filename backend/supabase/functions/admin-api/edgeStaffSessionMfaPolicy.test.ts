@@ -23,8 +23,9 @@ Deno.test("AAL1 mutation is denied when the controlled Staff row requires MFA", 
     },
   );
 
-  assertEquals(result.ok, false);
-  if (result.ok) throw new Error("Expected MFA-required Staff mutation to fail.");
+  if (result.ok !== false) {
+    throw new Error("Expected MFA-required Staff mutation to fail.");
+  }
   assertEquals(result.status, 403);
   assertEquals(result.error.code, "staff_mfa_required");
 });
@@ -40,8 +41,9 @@ Deno.test("AAL1 mutation is allowed only when the controlled Staff row disables 
     },
   );
 
-  assertEquals(result.ok, true);
-  if (!result.ok) throw new Error(`Expected controlled exemption to pass: ${result.error.code}`);
+  if (result.ok !== true) {
+    throw new Error(`Expected controlled exemption to pass: ${result.error.code}`);
+  }
   assertEquals(result.assuranceLevel, "aal1");
   assertEquals(result.staff.mfa_required, false);
 });
@@ -58,8 +60,9 @@ Deno.test("explicit AAL2 requirements cannot be weakened by a Staff exemption", 
     },
   );
 
-  assertEquals(result.ok, false);
-  if (result.ok) throw new Error("Expected explicit AAL2 requirement to fail.");
+  if (result.ok !== false) {
+    throw new Error("Expected explicit AAL2 requirement to fail.");
+  }
   assertEquals(result.status, 403);
   assertEquals(result.error.code, "staff_mfa_required");
 });
