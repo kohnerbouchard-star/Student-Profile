@@ -258,7 +258,7 @@ async function executeRenderedOrder(page, ticker, side) {
   const dialog = page.locator("[data-player-market-order-dialog]");
   await dialog.waitFor({ state: "visible", timeout: 30_000 });
   const responsePromise = page.waitForResponse(
-    (response) => new URL(response.url()).pathname.endsWith("/players/me/market/orders") && response.request().method() === "POST",
+    (response) => new URL(response.url()).pathname.endsWith("/players/me/stocks/orders") && response.request().method() === "POST",
     { timeout: 60_000 },
   );
   await dialog.locator("[data-player-market-order-confirm]").click();
