@@ -151,8 +151,52 @@ jobs:
           done
           exit "$STATUS"
 
-      - name: Rebuild database from zero
-        run: npx supabase db reset --workdir backend --local
+      - name: Rebuild database from zero and refresh REST schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local
+
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+
+          eval "$(npx supabase status --workdir backend -o env)"
+          SERVER_KEY="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$SERVER_KEY"
+
+          cat > /tmp/auth-throttle-readiness-request.json <<'JSON'
+          {
+            "p_buckets": [
+              {"dimension":"account","keyHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+              {"dimension":"device","keyHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+              {"dimension":"ip","keyHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+            ]
+          }
+          JSON
+
+          for ATTEMPT in $(seq 1 60); do
+            STATUS="$(curl --silent --show-error \
+              --output /tmp/auth-throttle-readiness-response.json \
+              --write-out '%{http_code}' \
+              --max-time 5 \
+              --request POST \
+              --header "apikey: ${SERVER_KEY}" \
+              --header "Authorization: Bearer ${SERVER_KEY}" \
+              --header "Content-Type: application/json" \
+              --data-binary @/tmp/auth-throttle-readiness-request.json \
+              http://127.0.0.1:54321/rest/v1/rpc/auth_throttle_check_v2 || true)"
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Authentication throttle RPC was not ready after PostgREST restart." >&2
+          sed -E \
+            's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{64}/[digest-redacted]/gi' \
+            /tmp/auth-throttle-readiness-response.json >&2 || true
+          exit 1
 
       - name: Provision canonical source content
         shell: bash
