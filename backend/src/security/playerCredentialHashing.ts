@@ -179,7 +179,7 @@ async function derivePbkdf2(
 ): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     "raw",
-    passwordMaterial,
+    concreteArrayBuffer(passwordMaterial),
     "PBKDF2",
     false,
     ["deriveBits"],
@@ -188,12 +188,18 @@ async function derivePbkdf2(
     {
       name: "PBKDF2",
       hash: "SHA-256",
-      salt,
+      salt: concreteArrayBuffer(salt),
       iterations,
     },
     key,
     PLAYER_CREDENTIAL_DERIVED_BYTES * 8,
   ));
+}
+
+function concreteArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
