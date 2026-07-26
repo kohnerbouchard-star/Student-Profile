@@ -37,22 +37,20 @@
     const next = value && typeof value === "object" ? value : {};
     return {
       ...next,
-      permissions: authorization.permissions,
-      roles: authorization.roles,
-      adminRole: authorization.adminRole
+      permissions: authorization?.permissions || [],
+      roles: authorization?.roles || [],
+      adminRole: authorization?.adminRole || ""
     };
   }
 
   function normalizeAuthenticatedModel(value) {
     const next = value && typeof value === "object" ? value : {};
     const authorization = authenticatedAuthorization();
-    if (!authorization) return next;
-
     return {
       ...next,
-      permissions: authorization.permissions,
-      roles: authorization.roles,
-      adminRole: authorization.adminRole,
+      permissions: authorization?.permissions || [],
+      roles: authorization?.roles || [],
+      adminRole: authorization?.adminRole || "",
       ...(next.staffSession && typeof next.staffSession === "object"
         ? { staffSession: authorizedStaffSession(next.staffSession, authorization) }
         : {})
@@ -61,13 +59,13 @@
 
   function sanitizeLegacySession(value) {
     const next = value && typeof value === "object" ? value : value;
+    if (!next || typeof next !== "object") return next;
     const authorization = authenticatedAuthorization();
-    if (!authorization || !next || typeof next !== "object") return next;
     return {
       ...next,
-      permissions: authorization.permissions,
-      roles: authorization.roles,
-      adminRole: authorization.adminRole,
+      permissions: authorization?.permissions || [],
+      roles: authorization?.roles || [],
+      adminRole: authorization?.adminRole || "",
       staffSession: authorizedStaffSession(next.staffSession, authorization)
     };
   }
@@ -91,23 +89,54 @@
     return true;
   }
 
+  function installLegacyStaffStateBoundary() {
+    window.state = window.state && typeof window.state === "object"
+      ? window.state
+      : {};
+    const descriptor = Object.getOwnPropertyDescriptor(window.state, "staffSession");
+    if (descriptor && descriptor.configurable === false) return false;
+    if (descriptor?.get && descriptor?.set) return true;
+
+    let currentValue = authorizedStaffSession(
+      window.state.staffSession,
+      authenticatedAuthorization()
+    );
+    Object.defineProperty(window.state, "staffSession", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return currentValue;
+      },
+      set(value) {
+        currentValue = authorizedStaffSession(
+          value,
+          authenticatedAuthorization()
+        );
+      }
+    });
+    return true;
+  }
+
   function installAuthenticatedAdminModelBridge() {
     const authorization = authenticatedAuthorization();
-    if (!authorization) return false;
 
     installLegacySessionPermissionBoundary();
+    installLegacyStaffStateBoundary();
     if (window.currentSession) {
       window.currentSession = window.currentSession;
+    }
+    if (window.state?.staffSession) {
+      window.state.staffSession = window.state.staffSession;
     }
 
     const descriptor = Object.getOwnPropertyDescriptor(feature, "currentModel");
     if (descriptor?.get && descriptor?.set) {
       feature.currentModel = normalizeAuthenticatedModel(feature.currentModel);
-      return true;
+      return Boolean(authorization);
     }
     if (descriptor && descriptor.configurable === false) {
       feature.currentModel = normalizeAuthenticatedModel(feature.currentModel);
-      return true;
+      return Boolean(authorization);
     }
 
     let currentModelValue = normalizeAuthenticatedModel(feature.currentModel);
@@ -122,10 +151,11 @@
       }
     });
     feature.currentModel = currentModelValue;
-    return true;
+    return Boolean(authorization);
   }
 
   installLegacySessionPermissionBoundary();
+  installLegacyStaffStateBoundary();
   window.addEventListener(
     "econovaria:admin-session-refreshed",
     installAuthenticatedAdminModelBridge
