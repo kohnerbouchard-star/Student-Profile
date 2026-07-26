@@ -5,6 +5,12 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
+const standaloneAdminClients = [
+  "admin/progression-review-client.js",
+  "admin/messaging-policy-client.js",
+  "admin/messaging-moderation-client.js",
+];
+
 const browserCredentialFiles = [
   "frontend/src/core/api.js",
   "frontend/src/core/constants.js",
@@ -17,6 +23,7 @@ const browserCredentialFiles = [
   "admin/auth-session-manager.js",
   "admin/player-access-code-bridge.js",
   "admin/classroom-write-fallback.js",
+  ...standaloneAdminClients,
   "auth/reset-password.js",
 ];
 
@@ -27,6 +34,7 @@ const adminBrowserFiles = [
   "admin/auth-session-manager.js",
   "admin/player-access-code-bridge.js",
   "admin/classroom-write-fallback.js",
+  ...standaloneAdminClients,
 ];
 
 const privilegedPatterns = [
@@ -144,6 +152,25 @@ test("Admin browser storage and transport contain no Staff credential", async ()
   assert.doesNotMatch(writeAdapter, /CLASSROOM_API_BASE/);
   assert.doesNotMatch(writeAdapter, /classroom-api/);
   assert.doesNotMatch(writeAdapter, /retryStatuses/);
+});
+
+test("standalone Admin clients are scoped to the HttpOnly BFF", async () => {
+  for (const path of standaloneAdminClients) {
+    const source = await read(path);
+    assert.match(source, /adminBffApiUrl/);
+    assert.match(source, /supabasePublishableKey/);
+    assert.match(source, /apikey:\s*publishableKey/);
+    assert.match(source, /x-econovaria-device-id/);
+    assert.match(source, /x-econovaria-game-id/);
+    assert.match(source, /x-econovaria-csrf-token/);
+    assert.match(source, /getUsableSession/);
+    assert.match(source, /credentials:\s*"include"/);
+    assert.match(source, /redirect:\s*"error"/);
+    assert.match(source, /referrerPolicy:\s*"no-referrer"/);
+    assert.doesNotMatch(source, /AdminAuthSessionManager/);
+    assert.doesNotMatch(source, /authorization/i);
+    assert.doesNotMatch(source, /credentials:\s*"same-origin"/);
+  }
 });
 
 test("Player and Admin callers remain bound to their own identities", async () => {
