@@ -5,3 +5,4 @@ import "../player-terminal/tools/connected-banking-loans-mutation-runner.mjs";
 import "../player-terminal/tools/connected-marketplace-mutation-runner.mjs";
 import "../player-terminal/tools/connected-progression-mutation-runner.mjs";
 import "../player-terminal/tools/connected-story-delivery-mutation-runner.mjs";
+import "../player-terminal/tools/connected-crafting-mutation-runner.mjs";
