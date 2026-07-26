@@ -316,7 +316,9 @@ async function exerciseScanner() {
     const body = parseBody(write.body);
     const payload = body.payload || body;
     assert(
-      payload.playerId === "PLAYER-CODE-123" || payload.playerIdentifier === "PLAYER-CODE-123",
+      payload.code === "PLAYER-CODE-123" ||
+        payload.playerId === "PLAYER-CODE-123" ||
+        payload.playerIdentifier === "PLAYER-CODE-123",
       `Scanner sent the wrong Player identifier: ${JSON.stringify(body)}.`,
     );
     await page.waitForFunction(() =>
