@@ -65,6 +65,7 @@ test("browser URL owners use the validated runtime authority", () => {
     "admin/auth-session-manager.js",
     "player-terminal/host-runtime.js",
     "admin/admin-auth.js",
+    "admin/classroom-write-fallback.js",
   ]) {
     assert.match(
       read(relativePath),
@@ -74,17 +75,12 @@ test("browser URL owners use the validated runtime authority", () => {
   }
 });
 
-test("same-origin Admin adapters do not create independent remote authorities", () => {
-  for (const relativePath of [
-    "admin/player-access-code-bridge.js",
-    "admin/classroom-write-fallback.js",
-  ]) {
-    const source = read(relativePath);
-    assert.doesNotMatch(source, /supabase\.co/);
-    assert.doesNotMatch(source, /sb_publishable_/);
-    assert.doesNotMatch(source, /Authorization/);
-    assert.match(source, /\/api\/admin/);
-  }
+test("same-origin Player credential adapter creates no remote authority", () => {
+  const source = read("admin/player-access-code-bridge.js");
+  assert.doesNotMatch(source, /supabase\.co/);
+  assert.doesNotMatch(source, /sb_publishable_/);
+  assert.doesNotMatch(source, /Authorization/);
+  assert.match(source, /\/api\/admin/);
 });
 
 test("entry points load deployment config and validator before consumers", () => {
