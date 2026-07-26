@@ -1,3 +1,5 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+
 export type PlayerMessageThreadLifecycleRoute =
   | { readonly kind: "policy" }
   | { readonly kind: "createThread" }
@@ -6,7 +8,7 @@ export type PlayerMessageThreadLifecycleRoute =
 export function readPlayerMessageThreadLifecycleRoutePath(
   pathname: string,
 ): PlayerMessageThreadLifecycleRoute | null {
-  const segments = readRouteSegments(pathname.split("/").filter(Boolean));
+  const segments = readPlayerApiRouteSegments(pathname);
   if (!segments) return null;
 
   if (
@@ -29,14 +31,14 @@ export function readPlayerMessageThreadLifecycleRoutePath(
     return { kind: "createThread" };
   }
 
-  return null;
-}
+  if (
+    segments.length >= 3 &&
+    segments[0] === "players" &&
+    segments[1] === "me" &&
+    segments[2] === "messages"
+  ) {
+    return { kind: "malformed" };
+  }
 
-function readRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-  const classroomApiIndex = segments.lastIndexOf("classroom-api");
-  if (classroomApiIndex < 0) return null;
-  return segments.slice(classroomApiIndex + 1);
+  return null;
 }
