@@ -87,9 +87,12 @@
   }
 
   function revokeServerSession() {
-    // The logout controller owns the transition. It waits for the cookie-backed
-    // revocation request before deleting the sanitized local summary so session
-    // guards cannot navigate away and abort the server request mid-flight.
+    // Prefer the session manager because it owns an unwrapped native fetch and
+    // therefore cannot be suppressed by later browser request instrumentation.
+    const manager = window.EconovariaAdminAuthSession;
+    if (typeof manager?.signOut === "function") {
+      return Promise.resolve(manager.signOut());
+    }
     return fallbackWebSessionLogout();
   }
 
