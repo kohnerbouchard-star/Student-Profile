@@ -8,6 +8,7 @@ import {
 const GAME_CODE = "QUALITY1";
 const GAME_NAME = "Quality Game";
 const ADMIN_EMAIL = "admin@example.test";
+const LOGOUT_SNAPSHOT_KEY = "econovaria.admin.logout-snapshot.v1";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -16,16 +17,27 @@ function assert(condition, message) {
 const harness = await createQualityHarness("logout-confirmation");
 const { page, errors, dir } = harness;
 const requests = [];
-let storageBeforeSignedOutNavigation = null;
 
 page.on("console", (message) => {
   if (message.type() === "error") errors.push(`console: ${message.text()}`);
 });
 page.on("request", (request) => requests.push(`${request.method()} ${request.url()}`));
 
-await page.addInitScript(({ gameId, gameCode }) => {
+await page.addInitScript(({ gameId, gameCode, snapshotKey }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
-}, { gameId: GAME_ID, gameCode: GAME_CODE });
+  if (!window.__econovariaLogoutSnapshotInstalled) {
+    window.__econovariaLogoutSnapshotInstalled = true;
+    window.addEventListener("beforeunload", () => {
+      try {
+        localStorage.setItem(snapshotKey, JSON.stringify({
+          session: sessionStorage.getItem("econovaria.admin.auth.v1"),
+          selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
+          csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
+        }));
+      } catch (_) {}
+    });
+  }
+}, { gameId: GAME_ID, gameCode: GAME_CODE, snapshotKey: LOGOUT_SNAPSHOT_KEY });
 
 await page.route("**/functions/v1/web-session-api/logout", async (route) => {
   const request = route.request();
@@ -36,25 +48,6 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
     headers: { "cache-control": "private, no-store" },
     body: JSON.stringify({ ok: true }),
   });
-});
-
-await page.route("**/*", async (route) => {
-  const request = route.request();
-  const url = new URL(request.url());
-  if (
-    request.isNavigationRequest() &&
-    url.searchParams.get("mode") === "admin" &&
-    url.searchParams.get("reason") === "signed-out"
-  ) {
-    storageBeforeSignedOutNavigation = await page.evaluate(() => ({
-      session: sessionStorage.getItem("econovaria.admin.auth.v1"),
-      selectedGame: sessionStorage.getItem("econovaria.admin.selected-game.v1"),
-      csrf: sessionStorage.getItem("econovaria.admin.csrf.v1"),
-    }));
-    await route.continue();
-    return;
-  }
-  await route.fallback();
 });
 
 async function clickRealAccountLogout() {
@@ -96,6 +89,7 @@ async function clickRealAccountLogout() {
 const report = {};
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.evaluate((snapshotKey) => localStorage.removeItem(snapshotKey), LOGOUT_SNAPSHOT_KEY);
   await page.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15_000 });
   await page.locator("[data-admin-terminal-user]").first().waitFor({ state: "visible", timeout: 10_000 });
 
@@ -171,7 +165,13 @@ try {
       { timeout: 10_000 }),
     modal.locator("[data-econovaria-logout-confirm]").click(),
   ]);
-  const storage = storageBeforeSignedOutNavigation;
+  const storage = await page.evaluate((snapshotKey) => {
+    try {
+      return JSON.parse(localStorage.getItem(snapshotKey) || "null");
+    } catch (_) {
+      return null;
+    }
+  }, LOGOUT_SNAPSHOT_KEY);
   assert(storage && storage.session === null && storage.selectedGame === null && storage.csrf === null,
     `Logout left local state before navigation: ${JSON.stringify(storage)}`);
   assert(requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
