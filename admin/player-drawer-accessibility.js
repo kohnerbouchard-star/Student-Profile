@@ -119,57 +119,27 @@
     window.setTimeout(reconcile, 120);
   }
 
-  function playersNavigationControl() {
-    const selectors = [
-      '[data-admin-terminal-section="players"]',
-      '[data-admin-terminal-action="open-players"]',
-      '[data-route="players"]',
-    ];
-    for (const selector of selectors) {
-      const control = [...document.querySelectorAll(selector)].find((element) => visible(element) && enabled(element));
-      if (control instanceof HTMLElement) return control;
-    }
-    return [...document.querySelectorAll("button, [role='button']")].find((element) => {
-      return element instanceof HTMLElement && visible(element) && enabled(element) && String(element.textContent || "").trim() === "Players";
-    }) || null;
-  }
-
-  function concealStalePlayerRows() {
+  function markLedgerRefreshPending() {
+    document.documentElement.setAttribute("aria-busy", "true");
     document.querySelectorAll(PLAYER_ROW_SELECTOR).forEach((row) => {
       if (!(row instanceof HTMLElement)) return;
-      row.dataset.adminLedgerRefreshStale = "true";
       row.setAttribute("aria-busy", "true");
-      row.hidden = true;
-    });
-  }
-
-  function restoreRowsIfRefreshDidNotMount() {
-    document.querySelectorAll(`${PLAYER_ROW_SELECTOR}[data-admin-ledger-refresh-stale="true"]`).forEach((row) => {
-      if (!(row instanceof HTMLElement)) return;
-      row.removeAttribute("data-admin-ledger-refresh-stale");
-      row.removeAttribute("aria-busy");
-      row.hidden = false;
     });
   }
 
   function scheduleLedgerReconciliation(detail) {
     if (ledgerRefreshScheduled) return;
     ledgerRefreshScheduled = true;
-    concealStalePlayerRows();
-    const refresh = () => {
-      const control = playersNavigationControl();
-      if (control) control.click();
-      document.dispatchEvent(new CustomEvent("econovaria:admin-player-ledger-reconcile", {
-        detail: Object.freeze({ requestId: String(detail?.requestId || "") }),
-      }));
-    };
-    window.requestAnimationFrame(refresh);
-    window.setTimeout(refresh, 80);
+    markLedgerRefreshPending();
+    document.dispatchEvent(new CustomEvent("econovaria:admin-player-ledger-reconcile", {
+      detail: Object.freeze({
+        requestId: String(detail?.requestId || ""),
+        strategy: "authoritative_reload",
+      }),
+    }));
     window.setTimeout(() => {
-      ledgerRefreshScheduled = false;
-      restoreRowsIfRefreshDidNotMount();
-      schedule();
-    }, 4000);
+      window.location.reload();
+    }, 0);
   }
 
   document.addEventListener("click", (event) => {
