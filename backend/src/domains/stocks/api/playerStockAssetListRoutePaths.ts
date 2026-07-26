@@ -1,3 +1,4 @@
+import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
 import type {
   PlayerStockAssetRoute,
 } from "../contracts/playerStockAssetListContracts.ts";
@@ -20,8 +21,7 @@ export function readPlayerStockMarketPublicRoutePath(
   const watchlistRoute = readPlayerStockWatchlistRoutePath(pathname);
   if (watchlistRoute) return watchlistRoute;
 
-  const segments = pathname.split("/").filter(Boolean);
-  const routeSegments = readExactRouteSegments(segments);
+  const routeSegments = readPlayerApiRouteSegments(pathname);
 
   if (
     !routeSegments ||
@@ -59,26 +59,3 @@ export const readPlayerStockAssetRoutePath =
   readPlayerStockMarketPublicRoutePath;
 export const readPlayerStockAssetListRoutePath =
   readPlayerStockMarketPublicRoutePath;
-
-function readExactRouteSegments(
-  segments: readonly string[],
-): readonly string[] | null {
-  if (segments[0] === "players") return segments;
-
-  if (
-    segments[0] === "classroom-api" &&
-    segments[1] === "players"
-  ) {
-    return segments.slice(1);
-  }
-
-  if (
-    segments[0] === "functions" &&
-    segments[1] === "v1" &&
-    segments[2] === "classroom-api"
-  ) {
-    return segments.slice(3);
-  }
-
-  return null;
-}
