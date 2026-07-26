@@ -1,8 +1,19 @@
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 const DEFAULT_TIMEOUT_MS = 20_000;
+const RUNNER_NAME = "stock-market-runner";
+const TIMESTAMP_HEADER = "x-econovaria-runner-timestamp";
+const NONCE_HEADER = "x-econovaria-runner-nonce";
+const SIGNATURE_HEADER = "x-econovaria-runner-signature";
 
-export function buildStockMarketTickRequest(environment = process.env) {
+export function buildStockMarketTickRequest(
+  environment = process.env,
+  {
+    now = () => new Date(),
+    nonceFactory = randomUUID,
+  } = {},
+) {
   const supabaseUrl = requiredUrl(environment.SUPABASE_URL, "SUPABASE_URL");
   const publishableKey = requiredPublishableKey(
     environment.SUPABASE_PUBLISHABLE_KEY || environment.PUBLISHABLE_KEY,
@@ -17,27 +28,63 @@ export function buildStockMarketTickRequest(environment = process.env) {
   );
   const tickIndex = optionalPositiveInteger(environment.STOCK_MARKET_TICK_INDEX);
   const seed = optionalText(environment.STOCK_MARKET_TICK_SEED, 200);
+  const url = new URL("/functions/v1/stock-market-runner", supabaseUrl).toString();
+  const body = Object.freeze({
+    action: "run_tick",
+    gameSessionId,
+    ...(tickIndex === null ? {} : { tickIndex }),
+    ...(seed === null ? {} : { seed }),
+  });
+  const bodyText = JSON.stringify(body);
+  const timestampSeconds = Math.floor(normalizedNow(now).getTime() / 1000);
+  const nonce = requiredUuid(nonceFactory(), "internal runner nonce");
+  const bodyHash = createHash("sha256").update(bodyText).digest("hex");
+  const canonicalPayload = buildInternalRunnerSignaturePayload({
+    runnerName: RUNNER_NAME,
+    timestampSeconds,
+    nonce,
+    method: "POST",
+    url,
+    bodyHash,
+  });
+  const signature = createHmac("sha256", runnerSecret)
+    .update(canonicalPayload)
+    .digest("base64url");
 
   return Object.freeze({
-    url: new URL("/functions/v1/stock-market-runner", supabaseUrl).toString(),
+    url,
     headers: Object.freeze({
       apikey: publishableKey,
       "content-type": "application/json",
-      "x-stock-market-runner-secret": runnerSecret,
+      [TIMESTAMP_HEADER]: String(timestampSeconds),
+      [NONCE_HEADER]: nonce,
+      [SIGNATURE_HEADER]: `v1=${signature}`,
     }),
-    body: Object.freeze({
-      action: "run_tick",
-      gameSessionId,
-      ...(tickIndex === null ? {} : { tickIndex }),
-      ...(seed === null ? {} : { seed }),
-    }),
+    body,
+    bodyText,
   });
+}
+
+export function buildInternalRunnerSignaturePayload(input) {
+  const url = new URL(input.url);
+  return [
+    "econovaria-internal-runner-v1",
+    `runner:${String(input.runnerName || "").trim().toLowerCase()}`,
+    `timestamp:${input.timestampSeconds}`,
+    `nonce:${String(input.nonce || "").trim().toLowerCase()}`,
+    `method:${String(input.method || "").trim().toUpperCase()}`,
+    `origin:${url.origin}`,
+    `path:${url.pathname}${url.search}`,
+    `body-sha256:${String(input.bodyHash || "").trim().toLowerCase()}`,
+  ].join("\n");
 }
 
 export async function triggerStockMarketTick({
   environment = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  now,
+  nonceFactory,
 } = {}) {
   if (typeof fetchImpl !== "function") {
     throw new TypeError("A fetch implementation is required.");
@@ -46,7 +93,10 @@ export async function triggerStockMarketTick({
     throw new TypeError("timeoutMs must be an integer between 1 and 120000.");
   }
 
-  const request = buildStockMarketTickRequest(environment);
+  const request = buildStockMarketTickRequest(environment, {
+    ...(now ? { now } : {}),
+    ...(nonceFactory ? { nonceFactory } : {}),
+  });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -54,7 +104,7 @@ export async function triggerStockMarketTick({
     const response = await fetchImpl(request.url, {
       method: "POST",
       headers: request.headers,
-      body: JSON.stringify(request.body),
+      body: request.bodyText,
       signal: controller.signal,
     });
     const payload = await readJsonResponse(response);
@@ -133,6 +183,15 @@ function requiredUuid(value, name) {
     throw new Error(`${name} must be a UUID.`);
   }
   return text;
+}
+
+function normalizedNow(now) {
+  const value = now();
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error("Internal runner timestamp source is invalid.");
+  }
+  return date;
 }
 
 function optionalPositiveInteger(value) {
