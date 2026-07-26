@@ -1,12 +1,6 @@
 (function initEconovariaPlayerAccessCodeBridge() {
   "use strict";
 
-  const runtimeConfig = window.EconovariaRuntimeConfig;
-  if (!runtimeConfig) {
-    throw new Error("ECONOVARIA_RUNTIME_CONFIG_NOT_INITIALIZED");
-  }
-  const SUPABASE_PUBLISHABLE_KEY = runtimeConfig.supabasePublishableKey;
-  const STAFF_API_BASE = runtimeConfig.staffApiUrl;
   const LOCAL_API_PREFIX = "/api/admin";
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
@@ -24,10 +18,18 @@
 
   function storedSession() {
     try {
-      return record(JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null"));
+      return record(
+        JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "null")
+      );
     } catch (_) {
       return {};
     }
+  }
+
+  function hasSafeAdminSession() {
+    const session = storedSession();
+    return session.authenticated === true &&
+      /^[A-Za-z0-9_-]{43}$/.test(text(session.csrfToken));
   }
 
   async function responseJson(response) {
@@ -68,7 +70,7 @@
       codeRecord.accessCode ||
       codeRecord.code ||
       source.studentCode ||
-      source.generatedAccessCode,
+      source.generatedAccessCode
     );
   }
 
@@ -82,7 +84,7 @@
       source.playerId ||
       source.rfidCardId ||
       source.rfidId ||
-      source.cardId,
+      source.cardId
     );
   }
 
@@ -93,19 +95,6 @@
     const match = url.pathname.match(/^\/api\/admin\/games\/([^/]+)\/players$/);
     if (!match) return null;
     return { gameId: decodeURIComponent(match[1]) };
-  }
-
-  function staffHeaders(request, accessToken, gameId) {
-    const headers = new Headers(request?.headers || {});
-    headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
-    headers.set("Authorization", `Bearer ${accessToken}`);
-    headers.set("Content-Type", "application/json");
-    headers.set("X-Econovaria-Game-Id", gameId);
-    headers.delete("Content-Length");
-    headers.delete("X-CSRF-Token");
-    headers.delete("X-Econovaria-CSRF");
-    headers.delete("X-Econovaria-Admin-Read");
-    return headers;
   }
 
   function dispatchCredentialEvent(name, detail) {
@@ -131,8 +120,8 @@
       data: {
         ...record(source.data),
         player: Object.keys(player).length ? player : playerFrom(primaryBody),
-        accessCode,
-      },
+        accessCode
+      }
     };
     const headers = new Headers(primary.headers);
     headers.set("Content-Type", "application/json");
@@ -140,8 +129,17 @@
     return new Response(JSON.stringify(body), {
       status: primary.status,
       statusText: primary.statusText,
-      headers,
+      headers
     });
+  }
+
+  function resetPath(gameId, playerId) {
+    return `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`;
+  }
+
+  function selectedGameMatches(gameId) {
+    const selected = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
+    return !selected || selected === gameId;
   }
 
   async function updatePlayerIdentity(input) {
@@ -149,37 +147,33 @@
     const playerId = text(input?.playerId);
     const playerIdentifier = text(input?.playerIdentifier);
     const accessCode = text(input?.accessCode);
-    const session = storedSession();
-    const accessToken = text(session.accessToken);
-    const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
 
     if (!gameId || !playerId || !playerIdentifier) {
       throw new Error("Player and Player ID / RFID card are required.");
     }
-    if (!accessToken || (selectedGameId && selectedGameId !== gameId)) {
-      throw new Error("Sign in again before changing player credentials.");
+    if (!hasSafeAdminSession() || !selectedGameMatches(gameId)) {
+      throw new Error("Sign in again before changing Player credentials.");
     }
 
     const payload = { playerIdentifier };
     if (accessCode) payload.accessCode = accessCode;
-
-    const response = await delegatedFetch(
-      `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
-      {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        credentials: "same-origin",
-        cache: "no-store",
+    const response = await delegatedFetch(resetPath(gameId, playerId), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
       },
-    );
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+      cache: "no-store"
+    });
     const body = await responseJson(response);
     if (!response.ok || body.ok === false) {
       const error = record(body.error);
-      throw new Error(text(error.message || body.message) || "Player credentials could not be updated.");
+      throw new Error(
+        text(error.message || body.message) ||
+          "Player credentials could not be updated."
+      );
     }
 
     const player = playerFrom(body);
@@ -189,7 +183,7 @@
       playerId,
       displayName: text(player.displayName || player.name || input?.displayName),
       playerIdentifier: savedIdentifier,
-      studentCode,
+      studentCode
     };
 
     dispatchCredentialEvent("econovaria:player-identity-updated", detail);
@@ -218,56 +212,54 @@
     const primaryBody = await responseJson(primary);
     const primaryPlayer = playerFrom(primaryBody);
     const existingCode = accessCodeFrom(primaryBody);
-    const existingIdentifier = playerIdentifierFrom(primaryBody) || requestedIdentifier;
+    const existingIdentifier = playerIdentifierFrom(primaryBody) ||
+      requestedIdentifier;
 
     if (existingCode) {
       emitAccessCode({
         playerId: text(primaryPlayer.id || primaryPlayer.playerId),
         displayName: text(primaryPlayer.displayName || primaryPlayer.name),
         playerIdentifier: existingIdentifier,
-        studentCode: existingCode,
+        studentCode: existingCode
       });
       return primary;
     }
 
     const playerId = text(primaryPlayer.id || primaryPlayer.playerId);
-    const session = storedSession();
-    const accessToken = text(session.accessToken);
-    const selectedGameId = text(window.sessionStorage.getItem(SELECTED_GAME_KEY));
-
     if (
       !playerId ||
       !requestedIdentifier ||
       !requestedAccessCode ||
-      !accessToken ||
-      (selectedGameId && selectedGameId !== context.gameId)
+      !hasSafeAdminSession() ||
+      !selectedGameMatches(context.gameId)
     ) {
       return primary;
     }
 
     const resetResponse = await delegatedFetch(
-      `${STAFF_API_BASE}/games/${encodeURIComponent(context.gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+      resetPath(context.gameId, playerId),
       {
         method: "POST",
-        headers: staffHeaders(request, accessToken, context.gameId),
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           playerIdentifier: requestedIdentifier,
           accessCode: requestedAccessCode,
-          reason: "player_created_without_identity_credentials",
+          reason: "player_created_without_identity_credentials"
         }),
-        credentials: "omit",
+        credentials: "same-origin",
         cache: "no-store",
-        redirect: "follow",
-        referrerPolicy: "no-referrer",
-      },
+        redirect: "error",
+        referrerPolicy: "no-referrer"
+      }
     );
 
     if (!resetResponse.ok) return primary;
-
     const resetBody = await responseJson(resetResponse);
     const studentCode = accessCodeFrom(resetBody);
     const resetPlayer = playerFrom(resetBody);
-
     if (!studentCode) return primary;
 
     emitAccessCode({
@@ -276,12 +268,11 @@
         resetPlayer.displayName ||
         resetPlayer.name ||
         primaryPlayer.displayName ||
-        primaryPlayer.name,
+        primaryPlayer.name
       ),
       playerIdentifier: playerIdentifierFrom(resetBody) || requestedIdentifier,
-      studentCode,
+      studentCode
     });
-
     return mergedResponse(primary, primaryBody, resetBody);
   };
 
@@ -289,6 +280,6 @@
     accessCodeFrom,
     playerFrom,
     playerIdentifierFrom,
-    updatePlayerIdentity,
+    updatePlayerIdentity
   };
 })();
