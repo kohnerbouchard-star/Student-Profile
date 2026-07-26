@@ -50,6 +50,7 @@ const exactAllowed = new Set([
   "admin/modal-accessibility.js",
   "admin/modal-lifecycle-bridge.js",
   "admin/player-create-ux.js",
+  "admin/player-drawer-accessibility.js",
   "admin/scanner-auto-refresh.js",
   "admin/interaction-quality-control-reset.js",
   "admin/world-runtime-console.js",
