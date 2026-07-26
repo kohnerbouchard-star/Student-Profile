@@ -48,6 +48,9 @@ verify_jwt = true
 [functions.admin-api]
 verify_jwt = true
 
+[functions.staff-mfa-api]
+verify_jwt = true
+
 # Bootstrap and Player requests use the publishable key only as application
 # identity. Their handlers explicitly validate apikey, then enforce purchase-code
 # or opaque Player-session authorization. Opaque publishable keys are not JWTs.
@@ -55,6 +58,12 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.player-api]
+verify_jwt = false
+
+# The Admin web-session BFF authenticates the public application key internally,
+# verifies allowed origins, decrypts an HttpOnly session envelope, enforces CSRF,
+# and forwards a server-held real Staff JWT to the platform-verified Admin API.
+[functions.web-session-api]
 verify_jwt = false
 
 # Server-to-server stock functions validate the publishable apikey and the
