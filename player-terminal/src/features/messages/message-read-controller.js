@@ -71,6 +71,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
   }
 
   const api = injectedApi || new PlayerApi(config);
+  const eventRoot = mount.ownerDocument || mount;
   const pending = new Set();
   const replyDrafts = new Map();
   let destroyed = false;
@@ -180,7 +181,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
   function handleMessagingInput(event) {
     const field = event.target instanceof HTMLTextAreaElement ? event.target : null;
     const form = field?.closest(MESSAGE_SEND_FORM);
-    if (!(form instanceof HTMLFormElement) || field.name !== "body") return;
+    if (!(form instanceof HTMLFormElement) || !mount.contains(form) || field.name !== "body") return;
     const threadId = publicThreadId(null, form);
     if (!threadId) return;
     const body = String(field.value || "").slice(0, 1000);
@@ -198,7 +199,7 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     }
 
     const control = target?.closest(MESSAGE_THREAD_CONTROL);
-    if (!(control instanceof HTMLButtonElement) || !control.matches(MESSAGE_UNREAD_CONTROL)) return;
+    if (!(control instanceof HTMLButtonElement) || !mount.contains(control) || !control.matches(MESSAGE_UNREAD_CONTROL)) return;
 
     const threadId = publicThreadId(control);
     if (!threadId) return;
@@ -220,16 +221,16 @@ export function installMessageReadController({ mount, terminal, config, api: inj
     beginSend(event, form, form.querySelector(MESSAGE_SEND_CONTROL));
   }
 
-  mount.addEventListener("input", handleMessagingInput, true);
-  mount.addEventListener("click", handleMessagingClick, true);
-  mount.addEventListener("submit", handleMessageSendSubmit, true);
+  eventRoot.addEventListener("input", handleMessagingInput, true);
+  eventRoot.addEventListener("click", handleMessagingClick, true);
+  eventRoot.addEventListener("submit", handleMessageSendSubmit, true);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
-      mount.removeEventListener("input", handleMessagingInput, true);
-      mount.removeEventListener("click", handleMessagingClick, true);
-      mount.removeEventListener("submit", handleMessageSendSubmit, true);
+      eventRoot.removeEventListener("input", handleMessagingInput, true);
+      eventRoot.removeEventListener("click", handleMessagingClick, true);
+      eventRoot.removeEventListener("submit", handleMessageSendSubmit, true);
       pending.clear();
       replyDrafts.clear();
     },
