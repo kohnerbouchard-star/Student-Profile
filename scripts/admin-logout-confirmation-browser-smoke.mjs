@@ -1,100 +1,41 @@
-import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import {
+  BASE_URL,
+  createQualityHarness,
+  GAME_ID,
+} from "./admin-quality-smoke-fixture.mjs";
 
-const BASE_URL = process.env.ADMIN_SMOKE_BASE_URL || "http://127.0.0.1:4173/admin/";
-const ARTIFACT_DIR = "admin-browser-smoke-artifacts/logout-confirmation";
-const GAME_ID = "00000000-0000-4000-8000-000000000001";
-const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
-const GAME_CODE = "SMOKE1";
-const GAME_NAME = "Browser Smoke Game";
+const GAME_CODE = "QUALITY1";
+const GAME_NAME = "Quality Game";
 const ADMIN_EMAIL = "admin@example.test";
-mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
-function base64Url(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64")
-    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-const now = Math.floor(Date.now() / 1000);
-const token = `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
-  sub: ADMIN_ID, email: ADMIN_EMAIL, role: "authenticated", iat: now, exp: now + 3600,
-})}.signature`;
-const game = {
-  id: GAME_ID, gameSessionId: GAME_ID, title: GAME_NAME, name: GAME_NAME,
-  status: "active", lifecycleState: "active", gameCode: GAME_CODE, joinCode: GAME_CODE,
-};
-const common = {
-  gameId: GAME_ID, gameSessionId: GAME_ID, activeGameId: GAME_ID,
-  selectedGameSessionId: GAME_ID, permissions: ["*"], roles: ["game_admin"],
-  adminRole: "game_admin", game, activeGame: game, selectedGame: game, games: [game],
-  players: [], attendance: [], attendanceRows: [], attendanceHistory: [], attendanceLedger: [],
-  contracts: [], store: [], storeItems: [], assets: [], trades: [], events: [],
-  market: { assets: [], trades: [], events: [] },
-  settings: { difficultyPreset: "moderate", priceMultiplier: 1, incomeMultiplier: 1 },
-  logs: [], dashboard: {
-    activePlayerCount: 0, totalPlayers: 0, onlinePlayerCount: 0,
-    attendanceSummary: { presentCount: 0, lateCount: 0, absentCount: 0 },
-    leaderboard: [], recentActivity: [], marketStatus: "open",
-  },
-};
-function responseFor(pathname) {
-  if (pathname.endsWith("/session/bootstrap")) {
-    return { data: {
-      admin: { id: ADMIN_ID, accountId: ADMIN_ID, displayName: "Smoke Test Administrator",
-        email: ADMIN_EMAIL, role: "game_admin", roles: ["game_admin"] },
-      activeGame: game, games: [game], permissions: ["*"], roles: ["game_admin"],
-      adminRole: "game_admin", csrfToken: "",
-      session: { id: ADMIN_ID, csrfToken: "", expiresAt: new Date(Date.now() + 3600_000).toISOString() },
-      capabilities: { notifications: false, securityHistory: "current_session_only",
-        helpArticles: true, auditLogFlags: true, auditLogExport: true,
-        overallScore: false, marketplaceAdminTrading: false },
-    } };
-  }
-  if (pathname.endsWith("/auth/sign-out")) return { data: { signedOut: true } };
-  return { data: common };
-}
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1728, height: 912 } });
-const page = await context.newPage();
-const errors = [];
+const harness = await createQualityHarness("logout-confirmation");
+const { page, errors, dir } = harness;
 const requests = [];
-page.on("pageerror", (error) => errors.push(`pageerror: ${error.stack || error.message}`));
-page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
+
+page.on("console", (message) => {
+  if (message.type() === "error") errors.push(`console: ${message.text()}`);
+});
 page.on("request", (request) => requests.push(`${request.method()} ${request.url()}`));
-page.on("requestfailed", (request) => {
-  const url = request.url();
-  const failure = request.failure()?.errorText || "";
-  if (url.endsWith("/favicon.ico")) return;
-  if (/\/admin\/assets\/videos\/[^/]+\.mp4$/i.test(url) && failure.includes("ERR_ABORTED")) return;
-  if (url.includes("/auth/v1/logout") && failure.includes("ERR_ABORTED")) return;
-  if (failure.includes("ERR_ABORTED") && /\?mode=admin/.test(url)) return;
-  errors.push(`requestfailed: ${request.method()} ${url} ${failure}`);
-});
-await page.addInitScript(({ accessToken, gameId, adminId, gameCode, adminEmail }) => {
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken, refreshToken: "smoke-refresh-token", user: { id: adminId, email: adminEmail },
-  }));
-  sessionStorage.setItem("econovaria.admin.selected-game.v1", gameId);
+
+await page.addInitScript(({ gameId, gameCode }) => {
   sessionStorage.setItem(`econovaria.admin.game-code.v1:${gameId}`, gameCode);
-}, { accessToken: token, gameId: GAME_ID, adminId: ADMIN_ID, gameCode: GAME_CODE, adminEmail: ADMIN_EMAIL });
-await page.route("**/functions/v1/admin-api/**", async (route) => {
+}, { gameId: GAME_ID, gameCode: GAME_CODE });
+
+await page.route("**/functions/v1/web-session-api/logout", async (route) => {
   const request = route.request();
-  if (request.method() === "OPTIONS") {
-    await route.fulfill({ status: 204, headers: {
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "authorization, apikey, content-type, x-econovaria-game-id, x-econovaria-csrf",
-      "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    }, body: "" });
-    return;
-  }
-  await route.fulfill({ status: 200, contentType: "application/json",
-    headers: { "access-control-allow-origin": "*", "cache-control": "no-store" },
-    body: JSON.stringify(responseFor(new URL(request.url()).pathname)) });
+  assert(!request.headers().authorization, "Admin logout exposed a Staff bearer token.");
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    headers: { "cache-control": "private, no-store" },
+    body: JSON.stringify({ ok: true }),
+  });
 });
-await page.route("**/auth/v1/logout", async (route) => route.fulfill({ status: 204, body: "" }));
 
 async function clickRealAccountLogout() {
   const user = page.locator("[data-admin-terminal-user]").first();
@@ -121,9 +62,9 @@ async function clickRealAccountLogout() {
       visible: style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0,
     };
   }));
-  writeFileSync(`${ARTIFACT_DIR}/real-account-menu-controls.json`, JSON.stringify(metadata, null, 2));
+  writeFileSync(`${dir}/real-account-menu-controls.json`, JSON.stringify(metadata, null, 2));
   const logoutIndex = metadata.findIndex((entry) => entry.visible && entry.signals.some((signal) =>
-    /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i.test(` ${signal} `),
+    /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i.test(` ${signal} `)
   ));
   assert(logoutIndex >= 0, `No real account-menu logout control found: ${JSON.stringify(metadata)}`);
   const logoutControl = candidates.nth(logoutIndex);
@@ -132,6 +73,7 @@ async function clickRealAccountLogout() {
   return selected;
 }
 
+const report = {};
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15_000 });
@@ -165,10 +107,16 @@ try {
       code: surface.querySelector("[data-econovaria-logout-code]")?.textContent?.trim(),
       dialog: { width: dialogRect.width, height: dialogRect.height, top: dialogRect.top, bottom: dialogRect.bottom },
       viewport: { width: innerWidth, height: innerHeight },
-      titleBottom: title.bottom, descriptionTop: description.top, descriptionBottom: description.bottom,
-      contextTop: context.top, contextBottom: context.bottom, actionsTop: actions.top,
-      actionsHeight: actions.height, actionsDisplay: getComputedStyle(actionsNode).display,
-      actionsDirection: getComputedStyle(actionsNode).flexDirection, buttons,
+      titleBottom: title.bottom,
+      descriptionTop: description.top,
+      descriptionBottom: description.bottom,
+      contextTop: context.top,
+      contextBottom: context.bottom,
+      actionsTop: actions.top,
+      actionsHeight: actions.height,
+      actionsDisplay: getComputedStyle(actionsNode).display,
+      actionsDirection: getComputedStyle(actionsNode).flexDirection,
+      buttons,
       horizontalOverflow: dialog.scrollWidth > dialog.clientWidth + 1,
     };
   });
@@ -189,8 +137,7 @@ try {
     `Logout buttons are not fixed at 44px: ${JSON.stringify(state.buttons)}`);
   assert(Math.abs(state.buttons[0].y - state.buttons[1].y) <= 1, "Logout buttons are not aligned.");
   assert(!state.horizontalOverflow, "Logout modal overflows horizontally.");
-  await page.screenshot({ path: `${ARTIFACT_DIR}/logout-confirmation-real-account-control.png`, fullPage: true });
-  writeFileSync(`${ARTIFACT_DIR}/logout-confirmation.html`, await page.content());
+  await harness.capture("logout-confirmation-real-account-control");
 
   await modal.locator("[data-econovaria-logout-cancel]").last().click();
   await modal.waitFor({ state: "detached", timeout: 5_000 });
@@ -211,18 +158,32 @@ try {
   }));
   assert(storage.session === null && storage.selectedGame === null && storage.csrf === null,
     `Logout left local state: ${JSON.stringify(storage)}`);
-  assert(requests.some((entry) => entry.includes("POST") && entry.includes("/auth/v1/logout")),
-    `Supabase Auth revocation was not attempted: ${JSON.stringify(requests)}`);
+  assert(requests.some((entry) => entry.includes("POST") && entry.includes("/web-session-api/logout")),
+    `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`);
   assert(errors.length === 0, errors.join("\n"));
-  writeFileSync(`${ARTIFACT_DIR}/report.json`, JSON.stringify({ realControl, state, storage, errors }, null, 2));
-  console.log(JSON.stringify({ realAccountLogoutControl: true, boundedLogoutModal: true,
-    legacyModalSuppressed: true, cancelPreservesSession: true,
-    confirmationClearsSession: true, confirmationRedirects: true }, null, 2));
+  Object.assign(report, {
+    realControl,
+    state,
+    storage,
+    serverMediatedLogoutObserved: true,
+    errors: [...errors],
+  });
+  writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
+  console.log(JSON.stringify({
+    realAccountLogoutControl: true,
+    boundedLogoutModal: true,
+    legacyModalSuppressed: true,
+    cancelPreservesSession: true,
+    confirmationClearsSession: true,
+    confirmationRedirects: true,
+    serverMediatedLogoutObserved: true,
+  }, null, 2));
 } catch (error) {
-  await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }).catch(() => {});
-  writeFileSync(`${ARTIFACT_DIR}/failure.html`, await page.content().catch(() => ""));
-  writeFileSync(`${ARTIFACT_DIR}/failure.txt`, String(error?.stack || error?.message || error));
+  report.failure = String(error?.stack || error?.message || error);
+  report.errors = [...errors];
+  await harness.capture("failure").catch(() => {});
+  writeFileSync(`${dir}/report.json`, JSON.stringify(report, null, 2));
   throw error;
 } finally {
-  await browser.close();
+  await harness.finish(report);
 }
