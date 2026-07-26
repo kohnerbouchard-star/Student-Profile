@@ -4,33 +4,53 @@ import vm from "node:vm";
 
 const managerSource = await readFile("admin/auth-session-manager.js", "utf8");
 const safeExitSource = await readFile("admin/session-timeout-safe-exit.js", "utf8");
+const FUTURE = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+const ABSOLUTE = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+const CSRF = "C".repeat(43);
 
-function token(exp) {
-  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
-  return `${encode({ alg: "none" })}.${encode({ exp, sub: "staff-1" })}.signature`;
+function safeSession(overrides = {}) {
+  return {
+    authenticated: true,
+    expiresAt: FUTURE,
+    absoluteExpiresAt: ABSOLUTE,
+    assuranceLevel: "aal1",
+    mfaRequired: true,
+    user: { id: "staff-1", email: "staff@example.test", displayName: "Staff" },
+    csrfToken: CSRF,
+    activeGameSessions: [{ id: "game-1", name: "Game", status: "active" }],
+    ...overrides
+  };
 }
 
 function createRuntime(fetch) {
-  const values = new Map();
+  const sessionValues = new Map();
+  const localValues = new Map();
   const sessionStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, String(value)),
-    removeItem: (key) => values.delete(key)
+    getItem: (key) => sessionValues.get(key) ?? null,
+    setItem: (key, value) => sessionValues.set(key, String(value)),
+    removeItem: (key) => sessionValues.delete(key)
+  };
+  const localStorage = {
+    getItem: (key) => localValues.get(key) ?? null,
+    setItem: (key, value) => localValues.set(key, String(value)),
+    removeItem: (key) => localValues.delete(key)
   };
   const window = {
     fetch,
     sessionStorage,
+    localStorage,
+    crypto: { randomUUID: () => "11111111-1111-4111-8111-111111111111" },
     EconovariaRuntimeConfig: Object.freeze({
       environment: "staging",
-      supabaseUrl: "https://runtime-fixture.supabase.co",
-      supabasePublishableKey: "runtime-fixture-publishable-key"
+      supabaseUrl: "https://runtimefixture123456.supabase.co",
+      supabasePublishableKey: "sb_publishable_runtime_fixture",
+      webSessionApiUrl: "https://runtimefixture123456.supabase.co/functions/v1/web-session-api"
     }),
     dispatchEvent() {}
   };
   window.window = window;
   vm.runInNewContext(managerSource, {
     window,
-    atob: (value) => Buffer.from(value, "base64").toString("utf8"),
     CustomEvent: class CustomEvent {
       constructor(type, options) {
         this.type = type;
@@ -45,7 +65,7 @@ function createRuntime(fetch) {
     Object,
     String
   });
-  return { manager: window.EconovariaAdminAuthSession, sessionStorage };
+  return { manager: window.EconovariaAdminAuthSession, sessionStorage, localStorage };
 }
 
 {
@@ -54,10 +74,12 @@ function createRuntime(fetch) {
     calls += 1;
     throw new Error("unexpected fetch");
   });
-  const current = { accessToken: token(Math.floor(Date.now() / 1000) + 3600), refreshToken: "r1" };
+  const current = safeSession();
   sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(current));
-  assert.equal((await manager.getUsableSession()).accessToken, current.accessToken);
-  assert.equal(calls, 0, "valid sessions must not refresh");
+  assert.equal((await manager.getUsableSession()).csrfToken, CSRF);
+  assert.equal(calls, 0, "valid safe state must not query status");
+  assert.equal(JSON.stringify(manager.read()).includes("accessToken"), false);
+  assert.equal(JSON.stringify(manager.read()).includes("refreshToken"), false);
 }
 
 {
@@ -66,49 +88,76 @@ function createRuntime(fetch) {
   const pending = new Promise((resolve) => { releaseFetch = resolve; });
   const { manager, sessionStorage } = createRuntime(async (url, init) => {
     calls += 1;
-    assert.match(url, /grant_type=refresh_token/);
-    assert.equal(JSON.parse(init.body).refresh_token, "old-refresh");
+    assert.match(url, /web-session-api\/status$/);
+    assert.equal(init.method, "GET");
+    assert.equal(init.credentials, "include");
+    assert.equal(init.headers.Authorization, undefined);
+    assert.equal(init.headers.apikey, "sb_publishable_runtime_fixture");
+    assert.equal(init.headers["x-econovaria-device-id"], "11111111-1111-4111-8111-111111111111");
     await pending;
     return new Response(JSON.stringify({
-      access_token: token(Math.floor(Date.now() / 1000) + 3600),
-      refresh_token: "rotated-refresh",
-      user: { id: "staff-1" }
+      ok: true,
+      session: {
+        authenticated: true,
+        expiresAt: FUTURE,
+        absoluteExpiresAt: ABSOLUTE,
+        assuranceLevel: "aal1",
+        mfaRequired: true
+      },
+      user: { id: "staff-1", email: "staff@example.test", displayName: "Staff" },
+      csrfToken: CSRF,
+      activeGameSessions: [{ id: "game-1", name: "Game", status: "active" }]
     }), { status: 200, headers: { "content-type": "application/json" } });
   });
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken: token(Math.floor(Date.now() / 1000) - 5),
-    refreshToken: "old-refresh"
-  }));
+  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(safeSession({
+    expiresAt: new Date(Date.now() - 5000).toISOString()
+  })));
   const first = manager.getUsableSession();
   const second = manager.getUsableSession();
   releaseFetch();
   const [one, two] = await Promise.all([first, second]);
-  assert.equal(calls, 1, "concurrent callers must share one refresh");
-  assert.equal(one.refreshToken, "rotated-refresh");
-  assert.equal(two.accessToken, one.accessToken);
-  assert.equal(JSON.parse(sessionStorage.getItem("econovaria.admin.auth.v1")).refreshToken, "rotated-refresh");
+  assert.equal(calls, 1, "concurrent callers must share one status request");
+  assert.equal(one.csrfToken, CSRF);
+  assert.equal(two.csrfToken, CSRF);
+  const stored = JSON.parse(sessionStorage.getItem("econovaria.admin.auth.v1"));
+  assert.equal(stored.authenticated, true);
+  assert.equal(Object.hasOwn(stored, "accessToken"), false);
+  assert.equal(Object.hasOwn(stored, "refreshToken"), false);
 }
 
 {
-  const { manager, sessionStorage } = createRuntime(async () => new Response("rejected", { status: 401 }));
-  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify({
-    accessToken: token(Math.floor(Date.now() / 1000) - 5),
-    refreshToken: "revoked"
-  }));
+  const { manager, sessionStorage } = createRuntime(async () =>
+    new Response(JSON.stringify({ ok: false }), { status: 401 })
+  );
+  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(safeSession({
+    expiresAt: new Date(Date.now() - 5000).toISOString()
+  })));
   sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
-  await assert.rejects(() => manager.getUsableSession(), /rejected/);
+  assert.equal(await manager.getUsableSession(), null);
+  assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
+  assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
+}
+
+{
+  let request = null;
+  const { manager, sessionStorage } = createRuntime(async (url, init) => {
+    request = { url, init };
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  });
+  sessionStorage.setItem("econovaria.admin.auth.v1", JSON.stringify(safeSession()));
+  sessionStorage.setItem("econovaria.admin.selected-game.v1", "game-1");
+  await manager.signOut();
+  assert.match(request.url, /web-session-api\/logout$/);
+  assert.equal(request.init.credentials, "include");
+  assert.equal(request.init.headers.Authorization, undefined);
   assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
   assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
 }
 
 {
   const values = new Map([
-    ["econovaria.admin.auth.v1", JSON.stringify({
-      accessToken: token(Math.floor(Date.now() / 1000) + 3600),
-      refreshToken: "refresh"
-    })],
+    ["econovaria.admin.auth.v1", JSON.stringify(safeSession())],
     ["econovaria.admin.selected-game.v1", "game-1"],
-    ["econovaria.admin.csrf.v1", "csrf"],
     ["econovaria.admin.idle-seed-fingerprint.v1", "fingerprint"]
   ]);
   const attributes = new Map();
@@ -153,13 +202,7 @@ function createRuntime(fetch) {
       const raw = sessionStorage.getItem("econovaria.admin.auth.v1");
       return raw ? JSON.parse(raw) : null;
     },
-    parseJwt(accessToken) {
-      const payload = accessToken.split(".")[1];
-      return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    },
-    async getUsableSession() {
-      return this.read();
-    },
+    async getUsableSession() { return this.read(); },
     clear() {
       clearCount += 1;
       sessionStorage.removeItem("econovaria.admin.auth.v1");
@@ -170,7 +213,7 @@ function createRuntime(fetch) {
     document,
     sessionStorage,
     EconovariaAdminAuthSession: manager,
-    ECONOVARIA_CSRF_TOKEN: "csrf",
+    ECONOVARIA_CSRF_TOKEN: CSRF,
     currentSession: { role: "ADMIN" },
     state: { staffSession: { staffId: "staff-1" } },
     location: {
@@ -209,11 +252,10 @@ function createRuntime(fetch) {
 
   assert.equal(typeof window.EconovariaAdminSessionExit?.exit, "function");
   assert.equal(window.EconovariaAdminSessionExit.exit("session-expired"), true);
-  assert.equal(window.EconovariaAdminSessionExit.exit("session-expired"), false, "safe exit must be idempotent");
+  assert.equal(window.EconovariaAdminSessionExit.exit("session-expired"), false);
   assert.equal(clearCount, 1);
   assert.equal(sessionStorage.getItem("econovaria.admin.auth.v1"), null);
   assert.equal(sessionStorage.getItem("econovaria.admin.selected-game.v1"), null);
-  assert.equal(sessionStorage.getItem("econovaria.admin.csrf.v1"), null);
   assert.equal(sessionStorage.getItem("econovaria.admin.idle-seed-fingerprint.v1"), null);
   assert.equal(window.ECONOVARIA_CSRF_TOKEN, "");
   assert.equal(window.currentSession, null);
@@ -223,7 +265,7 @@ function createRuntime(fetch) {
   assert.equal(attributes.get("preview:aria-hidden"), "true");
   assert.equal(gate.hidden, false);
   assert.equal(attributes.get("gate:role"), "alert");
-  assert.equal(attributes.get("gate:aria-live"), "assertive");
+  assert.equal(gate.hidden, false);
   assert.equal(status.textContent, "Administrator session expired. Returning to sign in.");
   assert.equal(document.title, "Session expired · Econovaria Administrator");
 
@@ -231,4 +273,4 @@ function createRuntime(fetch) {
   assert.deepEqual(redirects, ["https://example.test/?mode=admin&reason=session-expired"]);
 }
 
-console.log("Admin session refresh, rotation, deduplication, rejection, and safe timeout exit passed.");
+console.log("Admin HttpOnly BFF session state, deduplication, rejection, logout, and safe timeout exit passed.");
