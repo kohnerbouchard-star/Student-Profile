@@ -20,6 +20,7 @@ Deno.test("seals and opens an authenticated Admin web session", async () => {
     refreshToken: "refresh-token-value",
     accessExpiresAt: NOW + 3_600,
     csrfToken: "A".repeat(43),
+    mfaRequired: false,
     nowSeconds: NOW,
     user: {
       id: "staff-user",
@@ -33,6 +34,7 @@ Deno.test("seals and opens an authenticated Admin web session", async () => {
   const opened = await openWebAdminSession(envelope, KEY, NOW + 60);
 
   assertEquals(opened, payload);
+  assertEquals(opened.mfaRequired, false);
   assertEquals(opened.absoluteExpiresAt - opened.issuedAt, WEB_ADMIN_SESSION_ABSOLUTE_SECONDS);
   assertEquals(envelope.includes("teacher@example.com"), false);
   assertEquals(envelope.includes("refresh-token-value"), false);
@@ -44,6 +46,7 @@ Deno.test("rejects tampered and expired Admin web sessions", async () => {
     refreshToken: "refresh-token-value",
     accessExpiresAt: NOW + 3_600,
     csrfToken: "B".repeat(43),
+    mfaRequired: true,
     nowSeconds: NOW,
     user: {
       id: "staff-user",
