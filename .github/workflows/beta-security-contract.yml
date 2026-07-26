@@ -117,7 +117,7 @@ jobs:
             backend/supabase/functions/admin-api/adminSecurityGuard.test.ts
 
       - name: Typecheck all security surfaces
-        id: security-typecheck
+        id: security_typecheck
         shell: bash
         run: |
           set +e
@@ -146,7 +146,7 @@ jobs:
             node --check frontend/src/core/login.js
           } 2>&1 | tee "$RUNNER_TEMP/beta-security-typecheck.log"
           status=${PIPESTATUS[0]}
-          echo "status=$status" >> "$GITHUB_OUTPUT"
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload Beta Security typecheck diagnostics
@@ -160,7 +160,7 @@ jobs:
 
       - name: Enforce security-surface typecheck
         shell: bash
-        run: test "${{ steps.security-typecheck.outputs.status }}" = "0"
+        run: test "${{ steps.security_typecheck.outputs.status }}" = "0"
 
       - name: Validate browser and gateway auth boundaries
         run: |
