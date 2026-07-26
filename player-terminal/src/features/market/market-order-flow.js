@@ -49,7 +49,7 @@ export function renderMarketOrderDialog(transaction) {
   if (transaction.stage === "receipt") {
     const result = transaction.receipt || {};
     const order = result.order || {};
-    const cash = result.cash || {};
+    const checking = result.checking || result.cash || {};
     const holding = result.holding || {};
     const rejected = String(order.status || "").toLowerCase() === "rejected";
     const detail = transaction.refreshWarning
@@ -65,11 +65,11 @@ export function renderMarketOrderDialog(transaction) {
           <dl class="player-terminal-connector-meta">
             <div><dt>SIDE</dt><dd>${escapeHtml(String(order.side || transaction.side).toUpperCase())}</dd></div>
             <div><dt>QUANTITY</dt><dd>${escapeHtml(order.quantity ?? transaction.quantity)}</dd></div>
-            <div><dt>EXECUTION PRICE</dt><dd>${escapeHtml(formatCurrency(order.executionPrice, cash.currencyCode || code))}</dd></div>
-            <div><dt>GROSS VALUE</dt><dd>${escapeHtml(formatCurrency(order.grossValue, cash.currencyCode || code))}</dd></div>
-            <div><dt>CASH BALANCE</dt><dd>${escapeHtml(formatCurrency(cash.balance, cash.currencyCode || code))}</dd></div>
+            <div><dt>EXECUTION PRICE</dt><dd>${escapeHtml(formatCurrency(order.executionPrice, checking.currencyCode || code))}</dd></div>
+            <div><dt>GROSS VALUE</dt><dd>${escapeHtml(formatCurrency(order.grossValue, checking.currencyCode || code))}</dd></div>
+            <div><dt>CHECKING BALANCE</dt><dd>${escapeHtml(formatCurrency(checking.balance, checking.currencyCode || code))}</dd></div>
             <div><dt>RESULTING HOLDING</dt><dd>${escapeHtml(formatNumber(holding.quantity))} shares</dd></div>
-            <div><dt>AVERAGE COST</dt><dd>${escapeHtml(formatCurrency(holding.averageCost, cash.currencyCode || code))}</dd></div>
+            <div><dt>AVERAGE COST</dt><dd>${escapeHtml(formatCurrency(holding.averageCost, checking.currencyCode || code))}</dd></div>
           </dl>
         </div>
         <footer class="player-terminal-modal-footer"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Open portfolio</button><button class="player-terminal-primary-button" type="button" data-player-market-order-close>Close receipt</button></footer>
@@ -81,14 +81,14 @@ export function renderMarketOrderDialog(transaction) {
     <section class="player-terminal-modal player-terminal-connector-modal" data-player-market-order-dialog role="dialog" aria-modal="true" aria-labelledby="marketOrderModalTitle">
       <header class="player-terminal-modal-head"><div><small>MARKET ORDER REVIEW</small><h3 id="marketOrderModalTitle">${escapeHtml(orderLabel(transaction))}</h3></div><button class="player-terminal-icon-button" type="button" data-player-market-order-close aria-label="Close">${icon("close")}</button></header>
       <div class="player-terminal-modal-body">
-        <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>Current price and gross value are estimates. The backend determines the final execution price, validates cash or holdings, and returns the authoritative result.</p></div>
+        <div class="player-terminal-connector-status">${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}<p>Current price and gross value are estimates. The backend determines the final execution price, validates checking funds or holdings, and returns the authoritative result.</p></div>
         <dl class="player-terminal-connector-meta">
           <div><dt>ASSET</dt><dd>${escapeHtml(asset.symbol)} · ${escapeHtml(asset.name)}</dd></div>
           <div><dt>SIDE</dt><dd>${escapeHtml(transaction.side.toUpperCase())}</dd></div>
           <div><dt>QUANTITY</dt><dd>${escapeHtml(transaction.quantity)}</dd></div>
           <div><dt>CURRENT PRICE</dt><dd>${escapeHtml(formatCurrency(asset.price, code))}</dd></div>
           <div><dt>ESTIMATED GROSS</dt><dd>${escapeHtml(formatCurrency(transaction.estimatedGross, code))}</dd></div>
-          <div><dt>${transaction.side === "buy" ? "AVAILABLE CASH" : "SHARES OWNED"}</dt><dd>${transaction.side === "buy" ? escapeHtml(transaction.availableCashLabel) : escapeHtml(formatNumber(asset.owned))}</dd></div>
+          <div><dt>${transaction.side === "buy" ? "AVAILABLE CHECKING" : "SHARES OWNED"}</dt><dd>${transaction.side === "buy" ? escapeHtml(transaction.availableCheckingLabel) : escapeHtml(formatNumber(asset.owned))}</dd></div>
         </dl>
         ${transaction.error ? `<p class="player-terminal-form-error" role="alert">${escapeHtml(transaction.error)}</p>` : ""}
       </div>
@@ -153,10 +153,10 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
 
     opener = form.querySelector('button[type="submit"]');
     const bankingUnavailable = state.data?.resourceStatus?.banking?.state === "unavailable";
-    const availableCash = Number(state.data?.banking?.checking?.available);
-    const availableCashLabel = bankingUnavailable || !Number.isFinite(availableCash)
+    const availableChecking = Number(state.data?.banking?.checking?.available);
+    const availableCheckingLabel = bankingUnavailable || !Number.isFinite(availableChecking)
       ? "Unavailable · backend validation required"
-      : formatCurrency(availableCash, state.data.session.currencyCode);
+      : formatCurrency(availableChecking, state.data.session.currencyCode);
 
     if (orderType === "limit") {
       transaction = {
@@ -175,7 +175,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     let error = "";
     const estimatedGross = quantity * Number(asset.price || 0);
     if (side === "sell" && quantity > Number(asset.owned || 0)) error = `You currently own ${Number(asset.owned || 0)} shares.`;
-    if (side === "buy" && Number.isFinite(availableCash) && estimatedGross > availableCash) error = "The estimated gross value exceeds available cash. The backend will make the final balance decision.";
+    if (side === "buy" && Number.isFinite(availableChecking) && estimatedGross > availableChecking) error = "The estimated gross value exceeds available checking funds. The backend will make the final balance decision.";
 
     transaction = {
       stage: "review",
@@ -184,7 +184,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
       orderType: "market",
       quantity,
       estimatedGross,
-      availableCashLabel,
+      availableCheckingLabel,
       currencyCode: state.data.session.currencyCode,
       error,
       receipt: null,
