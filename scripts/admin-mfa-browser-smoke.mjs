@@ -84,6 +84,7 @@ try {
   const page = await context.newPage();
   const browserErrors = [];
   const requests = [];
+  let loggedIn = false;
 
   page.on("pageerror", (error) => browserErrors.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
@@ -126,6 +127,7 @@ try {
       const body = request.postDataJSON();
       assert.equal(body.email, "admin@example.test");
       assert.equal(body.password, "SecurePassword123!");
+      loggedIn = true;
       await route.fulfill({
         status: 200,
         headers: {
@@ -139,6 +141,20 @@ try {
 
     if (pathname.endsWith("/status")) {
       assertPublicRequest(request);
+      if (!loggedIn) {
+        await route.fulfill({
+          status: 401,
+          headers: commonHeaders,
+          body: JSON.stringify({
+            ok: false,
+            error: {
+              code: "staff_session_missing",
+              message: "Administrator sign-in is required.",
+            },
+          }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         headers: commonHeaders,
@@ -149,6 +165,7 @@ try {
 
     if (pathname.endsWith("/mfa")) {
       assertPublicRequest(request);
+      assert.equal(loggedIn, true);
       await route.fulfill({
         status: 200,
         headers: commonHeaders,
@@ -242,16 +259,17 @@ try {
   assert.equal(serializedStorage.includes(SECRET), false);
   assert.equal(serializedStorage.includes(FACTOR_HANDLE), false);
 
-  assert.deepEqual(
-    requests.filter((entry) => entry.method !== "OPTIONS").map((entry) => entry.pathname),
-    [
-      "/functions/v1/web-session-api/login",
-      "/functions/v1/web-session-api/status",
-      "/functions/v1/web-session-api/mfa",
-      "/functions/v1/web-session-api/mfa/enroll",
-      "/functions/v1/web-session-api/mfa/verify",
-    ],
-  );
+  const paths = requests
+    .filter((entry) => entry.method !== "OPTIONS")
+    .map((entry) => entry.pathname);
+  assert.equal(paths[0], "/functions/v1/web-session-api/status");
+  assert.deepEqual(paths.slice(-5), [
+    "/functions/v1/web-session-api/login",
+    "/functions/v1/web-session-api/status",
+    "/functions/v1/web-session-api/mfa",
+    "/functions/v1/web-session-api/mfa/enroll",
+    "/functions/v1/web-session-api/mfa/verify",
+  ]);
   assert.deepEqual(browserErrors, []);
   console.log("Admin password login, TOTP enrollment, AAL2 elevation, and browser secrecy smoke passed.");
 } finally {
