@@ -213,7 +213,7 @@ try {
   await use.click();
   const response = await responsePromise;
   const payload = await parseJson(response);
-  if (response.status() !== 200 || payload?.ok !== true || payload?.outcome !== "created") {
+  if (response.status() !== 201 || payload?.ok !== true || payload?.outcome !== "created") {
     throw new Error(`Inventory redemption returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
   const original = await capture(response);
