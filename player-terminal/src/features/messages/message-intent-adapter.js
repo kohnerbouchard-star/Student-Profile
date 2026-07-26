@@ -5,6 +5,7 @@ const MESSAGE_SEND_FORM = 'form[data-endpoint="messageSend"]';
 const COMMIT_EVENT = "econovaria:player-message-read-committed";
 const COMMAND_TIMEOUT_MS = 60_000;
 const COMMIT_POLL_MS = 50;
+const DIAGNOSTIC_DELAY_MS = 500;
 
 function boundedThreadId(value) {
   const threadId = String(value || "").trim().toLowerCase();
@@ -15,13 +16,14 @@ function publicThreadId(control) {
   return boundedThreadId(control?.dataset?.playerMessageThread);
 }
 
-function createCommandForm(mount, { endpointKey, commandName, threadId, fields = {} }) {
+function createCommandForm(mount, { endpointKey, commandName, threadId, fields = {}, diagnosticId = "" }) {
   const form = mount.ownerDocument.createElement("form");
   form.hidden = true;
   form.setAttribute("aria-hidden", "true");
   form.dataset.playerForm = commandName;
   form.dataset.endpoint = endpointKey;
   form.dataset.threadId = threadId;
+  if (diagnosticId) form.dataset.messageDiagnosticId = diagnosticId;
 
   for (const [name, value] of Object.entries(fields)) {
     const input = mount.ownerDocument.createElement("input");
@@ -46,7 +48,53 @@ export function installMessageIntentAdapter({ mount, drafts = null, runtime = gl
   if (!(mount instanceof HTMLElement)) return Object.freeze({ destroy() {} });
 
   const pending = new Map();
+  const diagnostics = new Map();
+  const diagnosticsEnabled = mount.id === "playerTerminal";
+  let diagnosticSequence = 0;
   let destroyed = false;
+
+  function completeDiagnostic(id) {
+    const diagnostic = diagnostics.get(id);
+    if (!diagnostic) return;
+    runtime.clearTimeout(diagnostic.timerId);
+    diagnostics.delete(id);
+  }
+
+  function beginDiagnostic(detail) {
+    if (!diagnosticsEnabled) return "";
+    const id = String(++diagnosticSequence);
+    const diagnostic = {
+      ...detail,
+      submitObserved: false,
+      apiDispatchObserved: false,
+      timerId: 0,
+    };
+    diagnostic.timerId = runtime.setTimeout(() => {
+      if (destroyed || !diagnostics.has(id)) return;
+      console.error(
+        `[Messaging command diagnostic] thread=${diagnostic.hasThreadId} visibleBody=${diagnostic.hasVisibleBody} savedBody=${diagnostic.hasSavedBody} body=${diagnostic.hasBody} submit=${diagnostic.submitObserved} api=${diagnostic.apiDispatchObserved}`,
+      );
+      diagnostics.delete(id);
+    }, DIAGNOSTIC_DELAY_MS);
+    diagnostics.set(id, diagnostic);
+    return id;
+  }
+
+  function handleDiagnosticSubmit(event) {
+    const form = event.target instanceof HTMLFormElement ? event.target : null;
+    const id = form?.dataset?.messageDiagnosticId || "";
+    const diagnostic = diagnostics.get(id);
+    if (diagnostic) diagnostic.submitObserved = true;
+  }
+
+  function handleDiagnosticApiRequest(event) {
+    if (event?.detail?.endpointKey !== "messageSend") return;
+    const next = [...diagnostics.entries()].find(([, diagnostic]) => !diagnostic.apiDispatchObserved);
+    if (!next) return;
+    const [id, diagnostic] = next;
+    diagnostic.apiDispatchObserved = true;
+    completeDiagnostic(id);
+  }
 
   function release(threadId) {
     const state = pending.get(threadId);
@@ -94,6 +142,12 @@ export function installMessageIntentAdapter({ mount, drafts = null, runtime = gl
     const visibleBody = String(composer.elements.namedItem("body")?.value || "").trim();
     const savedBody = typeof drafts?.value === "function" ? String(drafts.value(composer, "body") || "").trim() : "";
     const body = visibleBody || savedBody;
+    const diagnosticId = beginDiagnostic({
+      hasThreadId: Boolean(threadId),
+      hasVisibleBody: Boolean(visibleBody),
+      hasSavedBody: Boolean(savedBody),
+      hasBody: Boolean(body),
+    });
     if (!threadId || !body) return true;
 
     event.preventDefault();
@@ -104,6 +158,7 @@ export function installMessageIntentAdapter({ mount, drafts = null, runtime = gl
         commandName: "message-send-command",
         threadId,
         fields: { body },
+        diagnosticId,
       });
     });
     return true;
@@ -138,12 +193,17 @@ export function installMessageIntentAdapter({ mount, drafts = null, runtime = gl
   }
 
   mount.addEventListener("click", handleClick, true);
+  mount.addEventListener("submit", handleDiagnosticSubmit, true);
+  mount.addEventListener("econovaria:player-api-request", handleDiagnosticApiRequest);
 
   return Object.freeze({
     destroy() {
       destroyed = true;
       mount.removeEventListener("click", handleClick, true);
+      mount.removeEventListener("submit", handleDiagnosticSubmit, true);
+      mount.removeEventListener("econovaria:player-api-request", handleDiagnosticApiRequest);
       for (const threadId of [...pending.keys()]) release(threadId);
+      for (const id of [...diagnostics.keys()]) completeDiagnostic(id);
     },
   });
 }
