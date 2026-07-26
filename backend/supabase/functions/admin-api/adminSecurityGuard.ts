@@ -20,7 +20,9 @@ export const ADMIN_PERMISSIONS = Object.freeze([
   "settings.manage",
   "store.manage",
   "world.manage",
-]);
+] as const);
+
+export type AdminPermission = typeof ADMIN_PERMISSIONS[number];
 
 interface AdminSecurityContext {
   readonly token: string;
@@ -47,11 +49,16 @@ interface StaffSecurityRow {
   readonly mfa_required: boolean;
 }
 
+interface StaffPermissionRow {
+  readonly permission?: unknown;
+}
+
 export type AdminSecurityGuardResult =
   | {
     readonly ok: true;
     readonly assuranceLevel: "aal1" | "aal2";
-    readonly permissions: readonly string[];
+    readonly permissions: readonly AdminPermission[];
+    readonly requiredPermission: AdminPermission;
   }
   | {
     readonly ok: false;
@@ -66,6 +73,7 @@ interface AdminSecurityGuardDependencies {
   readonly consumeRateLimit?: typeof consumeAdminProgressionRateLimit;
 }
 
+const ADMIN_PERMISSION_SET = new Set<string>(ADMIN_PERMISSIONS);
 const ADMIN_RATE_LIMIT_RESOURCES = new Set([
   "account",
   "attendance",
@@ -138,6 +146,37 @@ export async function guardAdminRequest(
     );
   }
 
+  const requiredPermission = requiredAdminPermission(request.method, path);
+  if (!requiredPermission) {
+    return failure(
+      403,
+      "admin_route_policy_missing",
+      "This administrator operation is not authorized.",
+    );
+  }
+
+  const grantsResponse = await context.service
+    .from("staff_permission_grants")
+    .select("permission")
+    .eq("staff_user_id", context.staff.id);
+  if (grantsResponse.error || !Array.isArray(grantsResponse.data)) {
+    return failure(
+      503,
+      "staff_permissions_unavailable",
+      "Staff authorization grants are unavailable.",
+    );
+  }
+  const permissions = normalizePermissions(
+    grantsResponse.data as readonly StaffPermissionRow[],
+  );
+  if (!permissions.includes(requiredPermission)) {
+    return failure(
+      403,
+      "staff_permission_denied",
+      "This administrator account does not have permission for that operation.",
+    );
+  }
+
   const assuranceLevel = readJwtAssuranceLevel(context.token);
   const isMutation = !["GET", "HEAD"].includes(request.method.toUpperCase());
   if (
@@ -185,8 +224,64 @@ export async function guardAdminRequest(
   return {
     ok: true,
     assuranceLevel,
-    permissions: ADMIN_PERMISSIONS,
+    permissions,
+    requiredPermission,
   };
+}
+
+export function requiredAdminPermission(
+  method: string,
+  path: string,
+): AdminPermission | null {
+  const normalizedMethod = String(method || "GET").toUpperCase();
+  const isRead = ["GET", "HEAD"].includes(normalizedMethod);
+  const normalizedPath = String(path || "/").split("?", 1)[0];
+
+  if (normalizedPath === "/session/bootstrap") return "account.read";
+  if (normalizedPath === "/games") {
+    return isRead ? "game.read" : "game.create";
+  }
+  if (
+    normalizedPath.startsWith("/account/") ||
+    normalizedPath === "/notifications" ||
+    normalizedPath === "/auth/sign-out" ||
+    normalizedPath.startsWith("/help/")
+  ) {
+    return "account.read";
+  }
+  if (/^\/games\/[^/]+\/switch$/u.test(normalizedPath)) {
+    return "game.switch";
+  }
+
+  const gameMatch = normalizedPath.match(/^\/games\/[^/]+(?:\/([^/]+))?/u);
+  if (!gameMatch) return null;
+  const resource = decodePathSegment(gameMatch[1] || "").toLowerCase();
+  if (!resource) return isRead ? "game.read" : "game.update";
+
+  const permissionByResource: Readonly<Record<string, AdminPermission>> = {
+    attendance: "attendance.manage",
+    banking: "economy.adjust",
+    balances: "economy.adjust",
+    business: "business.manage",
+    contracts: "contracts.manage",
+    economy: "economy.adjust",
+    inventory: "inventory.redeem",
+    ledger: "economy.adjust",
+    logs: "audit.read",
+    market: "market.manage",
+    marketplace: "marketplace.moderate",
+    messages: "messaging.moderate",
+    players: "players.manage",
+    progression: "progression.review",
+    settings: "settings.manage",
+    stocks: "market.manage",
+    store: "store.manage",
+    stories: "world.manage",
+    storyline: "world.manage",
+    world: "world.manage",
+  };
+  return permissionByResource[resource] ??
+    (isRead ? "game.read" : "game.update");
 }
 
 export function normalizedAdminAction(method: string, path: string): string {
@@ -196,6 +291,16 @@ export function normalizedAdminAction(method: string, path: string): string {
     ? "delete"
     : "write";
   return `staff.admin.${verb}.${adminRateLimitResource(path)}`;
+}
+
+function normalizePermissions(
+  rows: readonly StaffPermissionRow[],
+): readonly AdminPermission[] {
+  return [...new Set(rows
+    .map((row) => String(row.permission || "").trim())
+    .filter((permission): permission is AdminPermission =>
+      ADMIN_PERMISSION_SET.has(permission)
+    ))].sort();
 }
 
 function adminRateLimitResource(path: string): string {
