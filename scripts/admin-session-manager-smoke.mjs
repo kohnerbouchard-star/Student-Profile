@@ -10,8 +10,8 @@ const CSRF = "C".repeat(43);
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const PERMISSIONS = Object.freeze([
   "account.read",
-  "audit.read",
   "attendance.manage",
+  "audit.read",
   "business.manage",
   "contracts.manage",
   "economy.adjust",
