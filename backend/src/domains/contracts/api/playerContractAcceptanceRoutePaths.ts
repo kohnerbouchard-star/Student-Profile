@@ -25,9 +25,10 @@ export function readPlayerContractAcceptanceRoutePath(
     return null;
   }
 
-  if (routeSegments.length !== 5 || routeSegments[4] !== "accept") {
-    return routeSegments.length > 3 ? { kind: "malformed" } : null;
+  if (routeSegments.length !== 5) {
+    return routeSegments[4] === "accept" ? { kind: "malformed" } : null;
   }
+  if (routeSegments[4] !== "accept") return null;
 
   let contractKey = "";
   try {
